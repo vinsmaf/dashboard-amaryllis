@@ -2,83 +2,121 @@ import { useState, useEffect, useRef, useCallback } from "react";
 
 const STRIPE_PK = "pk_test_51N1fVbAM2ySp09YCENcn4NcGi4xM7BzNCra9HU3ildZKLAHPzCOsY6ItlpxrttT1owXCUSKQrfPrIXsZSWPLrQsd00SDmMsWvX";
 
+const AB = "https://a0.muscache.com/im/pictures/";
+
 const BIENS = [
   {
     id: "amaryllis",
     nom: "Villa Amaryllis",
-    lieu: "Le Vauclin, Martinique",
+    lieu: "Sainte-Luce, Martinique",
     tag: "Coup de cœur",
     desc: "Villa d'exception face à la mer des Caraïbes. Piscine à débordement, 4 chambres climatisées, vue panoramique sur l'océan et les îlets.",
     prix: 280,
     capacite: 8,
     chambres: 4,
     couleur: "#e91e8c",
-    photo: "https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?auto=format&fit=crop&w=800&q=80",
+    photos: [
+      AB+"miso/Hosting-54269844/original/735d43eb-5738-440a-965a-795113b942b0.jpeg",
+      AB+"hosting/Hosting-U3RheVN1cHBseUxpc3Rpbmc6NTQyNjk4NDQ=/original/f09065db-ef09-440c-9631-fffa796042eb.jpeg",
+      AB+"hosting/Hosting-U3RheVN1cHBseUxpc3Rpbmc6NTQyNjk4NDQ=/original/ed612b06-7abf-49d8-97b3-344bfa556264.jpeg",
+      AB+"miso/Hosting-54269844/original/9bbddd9d-0b65-4705-a51a-dda4c1c9e439.jpeg",
+      AB+"hosting/Hosting-54269844/original/7ddc5186-f42b-4706-98c1-9163aab4dc6d.jpeg",
+    ],
     amenities: ["Piscine", "Vue mer", "Clim", "BBQ", "Wifi"],
   },
   {
     id: "zandoli",
     nom: "Villa Zandoli",
-    lieu: "Le Vauclin, Martinique",
+    lieu: "Sainte-Luce, Martinique",
     tag: null,
     desc: "Villa tropicale nichée dans un jardin luxuriant. Piscine privée, grande terrasse couverte, idéale pour les familles.",
     prix: 220,
     capacite: 6,
     chambres: 3,
     couleur: "#06b6d4",
-    photo: "https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=800&q=80",
+    photos: [
+      AB+"hosting/Hosting-792768220924504884/original/87d71613-6f4b-4730-8101-c15f88d34221.jpeg",
+      AB+"hosting/Hosting-792768220924504884/original/417079fe-ae00-458f-b589-4b61487788d5.jpeg",
+      AB+"hosting/Hosting-792768220924504884/original/f3de185b-36ac-4bc7-8a28-ddf2aab2dd68.jpeg",
+      AB+"hosting/Hosting-792768220924504884/original/6c090336-0211-4c51-8f66-6e760a37fee9.jpeg",
+      AB+"hosting/Hosting-792768220924504884/original/64c63a70-79ad-4626-92d4-d20c5916349b.jpeg",
+    ],
     amenities: ["Piscine", "Jardin", "Clim", "Terrasse", "Wifi"],
   },
   {
     id: "iguana",
     nom: "Villa Iguana",
-    lieu: "Le Vauclin, Martinique",
+    lieu: "Sainte-Luce, Martinique",
     tag: null,
-    desc: "Villa moderne avec piscine à débordement et vue imprenable sur la baie du Vauclin. Architecture contemporaine.",
+    desc: "Villa moderne avec piscine à débordement et vue imprenable sur le rocher du Diamant. Architecture contemporaine, 3 chambres.",
     prix: 180,
     capacite: 6,
     chambres: 3,
     couleur: "#22c55e",
-    photo: "https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?auto=format&fit=crop&w=800&q=80",
-    amenities: ["Piscine", "Vue baie", "Clim", "Terrasse", "Wifi"],
+    photos: [
+      AB+"afdbde92-b993-4561-b150-114f36bfe545.jpg",
+      AB+"dc251801-0050-4edc-8bec-d347c4ffa7bf.jpg",
+      AB+"miso/Hosting-661013712794640840/original/f2c846ce-3c86-4e8a-8c21-7d1c0190ad63.jpeg",
+      AB+"hosting/Hosting-661013712794640840/original/47f479ea-6667-492b-929d-616ed86b0791.jpeg",
+      AB+"hosting/Hosting-U3RheVN1cHBseUxpc3Rpbmc6NjYxMDEzNzEyNzk0NjQwODQw/original/f343b178-6e0f-4b41-8944-33da5ae3ba36.jpeg",
+    ],
+    amenities: ["Piscine", "Vue Diamant", "Clim", "Terrasse", "Wifi"],
   },
   {
     id: "geko",
     nom: "Villa Geko",
-    lieu: "Le Vauclin, Martinique",
+    lieu: "Sainte-Luce, Martinique",
     tag: null,
-    desc: "Charmante villa avec piscine, 2 chambres, terrasse avec barbecue et jardin tropical pour des vacances authentiques.",
+    desc: "Charmante villa zen avec piscine, jardin tropical fleuri, terrasse barbecue. Ambiance détente garantie.",
     prix: 150,
     capacite: 4,
     chambres: 2,
     couleur: "#f59e0b",
-    photo: "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?auto=format&fit=crop&w=800&q=80",
+    photos: [
+      AB+"hosting/Hosting-1263155865459755724/original/62cb1f91-7147-483b-b4c7-0cba1b717f28.jpeg",
+      AB+"hosting/Hosting-1263155865459755724/original/ec05d0b0-3284-4844-8cac-c4800d4f6b0b.jpeg",
+      AB+"hosting/Hosting-1263155865459755724/original/60c58f78-a59b-4da2-aa05-576b65cf9ab9.jpeg",
+      AB+"hosting/Hosting-1263155865459755724/original/b501ee9a-e617-495e-9ee9-6552c83160a2.jpeg",
+      AB+"hosting/Hosting-1263155865459755724/original/44a86db1-fb7e-49f0-bd8f-5760fabe76ed.jpeg",
+    ],
     amenities: ["Piscine", "BBQ", "Clim", "Jardin", "Wifi"],
   },
   {
     id: "mabouya",
     nom: "Villa Mabouya",
-    lieu: "Le Vauclin, Martinique",
+    lieu: "Sainte-Luce, Martinique",
     tag: null,
-    desc: "Villa cosy au cœur de la végétation tropicale. Piscine, 2 chambres, atmosphère intimiste et calme absolu.",
+    desc: "Villa cosy avec jacuzzi privatif, jardin fleuri et vue mer. Atmosphère intimiste, calme absolu et nature tropicale.",
     prix: 110,
     capacite: 4,
     chambres: 2,
     couleur: "#84cc16",
-    photo: "https://images.unsplash.com/photo-1510798831971-661eb04b3739?auto=format&fit=crop&w=800&q=80",
-    amenities: ["Piscine", "Nature", "Clim", "Terrasse", "Wifi"],
+    photos: [
+      AB+"miso/Hosting-1046596752160926069/original/61cd5a5f-0a20-4043-ba57-9b35d7dd276a.jpeg",
+      AB+"miso/Hosting-1046596752160926069/original/267544c9-a0f4-497b-9506-1c617f9dd304.jpeg",
+      AB+"miso/Hosting-1046596752160926069/original/bd7afe4d-5863-4bb3-898e-79377737c5e3.jpeg",
+      AB+"miso/Hosting-1046596752160926069/original/5414f301-4647-49af-b4f3-2ad10985eb29.jpeg",
+      AB+"miso/Hosting-1046596752160926069/original/f68c6704-d68b-4001-b671-f3c2eb009ebd.jpeg",
+    ],
+    amenities: ["Jacuzzi", "Vue mer", "Clim", "Jardin", "Wifi"],
   },
   {
     id: "schoelcher",
     nom: "T2 Schœlcher",
     lieu: "Schœlcher, Martinique",
     tag: null,
-    desc: "Appartement moderne avec terrasse vue mer, à 5 minutes à pied de la plage, proche de Fort-de-France.",
+    desc: "Appartement de standing calme, splendide vue mer, terrasse. À 5 min de la plage, proche de Fort-de-France.",
     prix: 100,
     capacite: 4,
     chambres: 1,
     couleur: "#8b5cf6",
-    photo: "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80",
+    photos: [
+      AB+"miso/Hosting-24242415/original/8fa46b75-28f0-4b0c-bfc7-24a4ccd323fd.jpeg",
+      AB+"67d28a00-2b86-48c8-ad24-101fe136aa8a.jpg",
+      AB+"miso/Hosting-24242415/original/271329a6-0166-4654-a6df-cabafa456deb.jpeg",
+      AB+"hosting/Hosting-24242415/original/c2d6324a-715f-4567-acf8-5722ea54e2e2.jpeg",
+      AB+"miso/Hosting-24242415/original/d05cb282-f261-4f54-9211-90766aaa2684.jpeg",
+    ],
     amenities: ["Vue mer", "Plage 5mn", "Clim", "Terrasse", "Wifi"],
   },
   {
@@ -86,13 +124,15 @@ const BIENS = [
     nom: "T2 Nogent-sur-Marne",
     lieu: "Nogent-sur-Marne, Île-de-France",
     tag: null,
-    desc: "Bel appartement T2 lumineux au bord de la Marne. Décoré avec soin, à 20 min de Paris par le RER A.",
+    desc: "Bel appartement avec jardin au bord de la Marne, lumineux et décoré avec soin. Paris à 20 min (RER A).",
     prix: 85,
     capacite: 3,
     chambres: 1,
     couleur: "#64748b",
-    photo: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80",
-    amenities: ["Bord Marne", "RER A", "Parking", "Balcon", "Wifi"],
+    photos: [
+      AB+"35de3bd4-d391-4b8b-9b8d-7b2d07fdb0b7.jpg",
+    ],
+    amenities: ["Bord Marne", "Jardin", "RER A", "Parking", "Wifi"],
   },
 ];
 
@@ -443,8 +483,13 @@ function FormField({ label, value, onChange, type = "text", multiline, style }) 
 
 // ── Property Card ────────────────────────────────────────────────
 function BienCard({ bien, onBook }) {
-  const [imgErr, setImgErr] = useState(false);
+  const [photoIdx, setPhotoIdx] = useState(0);
   const [hovered, setHovered] = useState(false);
+  const photos = bien.photos || [];
+  const currentPhoto = photos[photoIdx] || "";
+
+  function prev(e) { e.stopPropagation(); setPhotoIdx(i => (i - 1 + photos.length) % photos.length); }
+  function next(e) { e.stopPropagation(); setPhotoIdx(i => (i + 1) % photos.length); }
 
   return (
     <div
@@ -452,20 +497,38 @@ function BienCard({ bien, onBook }) {
       onMouseLeave={() => setHovered(false)}
       style={{ background: "#0d1526", borderRadius: 20, overflow: "hidden", border: `1px solid ${hovered ? bien.couleur + "44" : "#1e293b"}`, transition: "transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease", transform: hovered ? "translateY(-6px)" : "none", boxShadow: hovered ? `0 24px 48px rgba(0,0,0,0.5), 0 0 0 1px ${bien.couleur}22` : "0 4px 16px rgba(0,0,0,0.3)", display: "flex", flexDirection: "column" }}
     >
-      {/* Photo */}
+      {/* Photo carousel */}
       <div style={{ position: "relative", height: 220, overflow: "hidden", background: `linear-gradient(135deg, ${bien.couleur}22, ${bien.couleur}44)` }}>
-        {!imgErr ? (
+        {currentPhoto ? (
           <img
-            src={bien.photo}
+            key={photoIdx}
+            src={currentPhoto}
             alt={bien.nom}
-            onError={() => setImgErr(true)}
-            style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.4s ease", transform: hovered ? "scale(1.06)" : "scale(1)" }}
+            style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.4s ease, opacity 0.3s", transform: hovered ? "scale(1.04)" : "scale(1)" }}
           />
         ) : (
           <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64 }}>🏡</div>
         )}
+
         {/* Overlay gradient */}
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(13,21,38,0.7) 0%, transparent 50%)" }} />
+
+        {/* Carousel nav — visible on hover */}
+        {photos.length > 1 && hovered && (
+          <>
+            <button onClick={prev} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(0,0,0,0.55)", border: "none", color: "#fff", width: 32, height: 32, borderRadius: "50%", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>‹</button>
+            <button onClick={next} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(0,0,0,0.55)", border: "none", color: "#fff", width: 32, height: 32, borderRadius: "50%", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>›</button>
+          </>
+        )}
+
+        {/* Dots */}
+        {photos.length > 1 && (
+          <div style={{ position: "absolute", bottom: 44, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 4 }}>
+            {photos.map((_, i) => (
+              <div key={i} onClick={e => { e.stopPropagation(); setPhotoIdx(i); }} style={{ width: i === photoIdx ? 16 : 6, height: 6, borderRadius: 3, background: i === photoIdx ? "#fff" : "rgba(255,255,255,0.4)", cursor: "pointer", transition: "all 0.2s" }} />
+            ))}
+          </div>
+        )}
 
         {/* Tag */}
         {bien.tag && (
