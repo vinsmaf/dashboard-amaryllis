@@ -37,6 +37,7 @@ if (typeof document !== "undefined" && !document.getElementById("__site_styles")
       75%      { border-radius:70% 30% 60% 40%/70% 50% 60% 30%; transform:scale(1.03) rotate(2deg); }
     }
     @keyframes carouselProgress { from { transform:scaleX(0); } to { transform:scaleX(1); } }
+    @keyframes ctaPulse { 0%,100% { box-shadow:0 4px 22px rgba(196,114,84,0.4); } 50% { box-shadow:0 6px 36px rgba(196,114,84,0.7); } }
     @keyframes curtainLift { 0% { transform:translateY(0); } 100% { transform:translateY(-100%); } }
     @keyframes curtainFadeIn { from { opacity:0; } to { opacity:1; } }
     @keyframes curtainPetalSpin { from { transform:rotate(0deg) scale(1); } 50% { transform:rotate(180deg) scale(1.08); } to { transform:rotate(360deg) scale(1); } }
@@ -886,6 +887,7 @@ function BienCard({ bien, onDetail, onBook }) {
               width: "100%", height: "100%", objectFit: "cover",
               transition: "transform 0.6s cubic-bezier(0.23,1,0.32,1), opacity 0.3s",
               transform: hovered ? "scale(1.06)" : "scale(1)",
+              filter: "saturate(1.15) contrast(1.05) brightness(1.02)",
             }}
           />
         ) : (
@@ -1247,6 +1249,128 @@ function PropertyDetail({ bien, onClose, onBook }) {
   );
 }
 
+// ── Benefits Strip ───────────────────────────────────────────────
+const BENEFITS = [
+  { icon: "🏊", label: "Piscine infinity" },
+  { icon: "🌊", label: "Vue mer 180°" },
+  { icon: "🛁", label: "Jacuzzi privatif" },
+  { icon: "🏝", label: "Plages à 5 min" },
+  { icon: "⭐", label: "Coup de cœur Airbnb" },
+];
+
+function BenefitsStrip() {
+  return (
+    <div style={{
+      background: NAVY, borderBottom: `1px solid rgba(250,245,233,0.07)`,
+      padding: "0 32px",
+    }}>
+      <div style={{
+        maxWidth: 1280, margin: "0 auto",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        gap: "clamp(16px, 4vw, 56px)", flexWrap: "wrap",
+        padding: "18px 0",
+      }}>
+        {BENEFITS.map(({ icon, label }, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            <span style={{ fontSize: 18 }}>{icon}</span>
+            <span style={{
+              fontFamily: "'Jost', sans-serif", fontWeight: 300,
+              fontSize: 12, letterSpacing: "0.1em", textTransform: "uppercase",
+              color: "rgba(250,245,233,0.6)", whiteSpace: "nowrap",
+            }}>{label}</span>
+            {i < BENEFITS.length - 1 && (
+              <span style={{ marginLeft: "clamp(8px, 2vw, 28px)", color: "rgba(250,245,233,0.12)", fontSize: 14 }}>·</span>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Quick Book ────────────────────────────────────────────────────
+function QuickBook({ biens, onBook }) {
+  const amaryllis = biens.find(b => b.id === "amaryllis") || biens[0];
+  const [selectedId, setSelectedId] = useState(amaryllis?.id || biens[0]?.id);
+  const selected = biens.find(b => b.id === selectedId) || biens[0];
+
+  return (
+    <div style={{
+      background: CREAM, borderBottom: `1px solid ${SAND}`,
+      padding: "0 32px",
+    }}>
+      <div style={{
+        maxWidth: 1280, margin: "0 auto",
+        display: "flex", alignItems: "center", gap: 16,
+        padding: "20px 0", flexWrap: "wrap",
+      }}>
+        {/* Label */}
+        <div style={{
+          fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 11,
+          letterSpacing: "0.35em", textTransform: "uppercase", color: MUTED,
+          flexShrink: 0, whiteSpace: "nowrap",
+        }}>Réserver</div>
+
+        {/* Property selector */}
+        <select
+          value={selectedId}
+          onChange={e => setSelectedId(e.target.value)}
+          style={{
+            fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 13,
+            color: NAVY, background: "#fff", border: `1px solid ${SAND}`,
+            borderRadius: 8, padding: "10px 14px", outline: "none",
+            cursor: "pointer", flexShrink: 0,
+            appearance: "none", WebkitAppearance: "none",
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7' viewBox='0 0 12 7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a6b5a' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,
+            backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center",
+            paddingRight: 36,
+          }}
+        >
+          {biens.map(b => (
+            <option key={b.id} value={b.id}>{b.nom} — {b.lieu}</option>
+          ))}
+        </select>
+
+        {/* Divider */}
+        <div style={{ width: 1, height: 32, background: SAND, flexShrink: 0 }} />
+
+        {/* Price + rating */}
+        <div style={{ display: "flex", gap: 16, alignItems: "center", flexShrink: 0 }}>
+          <span style={{ fontFamily: "'Jost', sans-serif", fontSize: 13, color: NAVY, fontWeight: 600 }}>
+            À partir de {selected?.prix}€<span style={{ fontWeight: 300, color: MUTED, fontSize: 11 }}> / nuit</span>
+          </span>
+          {selected?.rating && (
+            <span style={{ fontFamily: "'Jost', sans-serif", fontSize: 12, color: MUTED }}>
+              <span style={{ color: GOLD }}>★</span> {selected.rating} · {selected.reviews} avis
+            </span>
+          )}
+        </div>
+
+        {/* Spacer */}
+        <div style={{ flex: 1 }} />
+
+        {/* CTA */}
+        <button
+          onClick={() => onBook(selected)}
+          style={{
+            background: CORAL, border: "none", color: "#fff",
+            borderRadius: 8, padding: "13px 32px",
+            fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12,
+            letterSpacing: "0.12em", textTransform: "uppercase", cursor: "pointer",
+            flexShrink: 0, whiteSpace: "nowrap",
+            transition: "opacity 0.2s, transform 0.15s",
+            boxShadow: "0 4px 18px rgba(196,114,84,0.3)",
+          }}
+          onMouseEnter={e => { e.currentTarget.style.opacity = "0.88"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+          onMouseLeave={e => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.transform = "translateY(0)"; }}
+        >
+          Vérifier les disponibilités →
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Hero Carousel ────────────────────────────────────────────────
 const CAROUSEL_DELAY = 6000;
 
@@ -1291,12 +1415,20 @@ function HeroCarousel({ biens, onDetail, onBook }) {
             display: "block",
             WebkitMaskImage: "linear-gradient(to right, transparent 0%, rgba(0,0,0,0.45) 18%, rgba(0,0,0,0.82) 38%, black 55%)",
             maskImage: "linear-gradient(to right, transparent 0%, rgba(0,0,0,0.45) 18%, rgba(0,0,0,0.82) 38%, black 55%)",
-            opacity: 0.75,
+            opacity: 0.82,
+            filter: "saturate(1.18) contrast(1.06) brightness(1.02)",
             animation: "fadeIn 0.9s ease both",
             zIndex: 1,
           }}
         />
       )}
+
+      {/* Text scrim */}
+      <div style={{
+        position: "absolute", inset: 0, zIndex: 2,
+        background: "linear-gradient(to right, rgba(7,38,38,0.72) 0%, rgba(7,38,38,0.55) 35%, rgba(7,38,38,0.15) 65%, transparent 100%)",
+        pointerEvents: "none",
+      }} />
 
       {/* Content — left */}
       <div
@@ -1335,33 +1467,38 @@ function HeroCarousel({ biens, onDetail, onBook }) {
         }}>
           {bien.desc}
         </p>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <button
-            onClick={() => onDetail(bien)}
-            style={{
-              background: "rgba(250,245,233,0.08)", border: "1px solid rgba(250,245,233,0.22)",
-              color: "#faf5e9", borderRadius: 6, padding: "13px 24px",
-              fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 12, letterSpacing: "0.1em",
-              cursor: "pointer", textTransform: "uppercase", backdropFilter: "blur(10px)",
-              transition: "background 0.2s",
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = "rgba(250,245,233,0.14)"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "rgba(250,245,233,0.08)"; }}
-          >
-            Découvrir →
-          </button>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "flex-start" }}>
+          {/* Primary CTA */}
           <button
             onClick={() => onBook(bien)}
             style={{
-              background: CORAL, border: "none", color: "#fff", borderRadius: 6,
-              padding: "13px 28px",
-              fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 12, letterSpacing: "0.1em",
-              cursor: "pointer", textTransform: "uppercase", transition: "opacity 0.2s",
+              background: CORAL, border: "none", color: "#fff",
+              borderRadius: 8, padding: "15px 36px",
+              fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 13, letterSpacing: "0.12em",
+              cursor: "pointer", textTransform: "uppercase",
+              animation: "ctaPulse 2.8s ease-in-out infinite",
+              transition: "opacity 0.2s, transform 0.15s",
+              whiteSpace: "nowrap",
             }}
-            onMouseEnter={e => { e.currentTarget.style.opacity = "0.88"; }}
-            onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
+            onMouseEnter={e => { e.currentTarget.style.opacity = "0.9"; e.currentTarget.style.transform = "translateY(-2px)"; }}
+            onMouseLeave={e => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.transform = "translateY(0)"; }}
           >
-            À partir de {bien.prix}€ · Réserver
+            Réserver — À partir de {bien.prix}€ / nuit
+          </button>
+          {/* Secondary CTA */}
+          <button
+            onClick={() => onDetail(bien)}
+            style={{
+              background: "none", border: "none", color: "rgba(250,245,233,0.6)",
+              fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 12, letterSpacing: "0.1em",
+              cursor: "pointer", textTransform: "uppercase", padding: "4px 0",
+              textDecoration: "underline", textDecorationColor: "rgba(250,245,233,0.25)",
+              textUnderlineOffset: 4,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.color = "rgba(250,245,233,0.9)"; }}
+            onMouseLeave={e => { e.currentTarget.style.color = "rgba(250,245,233,0.6)"; }}
+          >
+            Voir les photos et détails →
           </button>
         </div>
       </div>
@@ -1817,6 +1954,8 @@ export default function PublicSite() {
     return () => window.removeEventListener("amaryllis_prices_updated", fn);
   }, []);
 
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+
   // Biens with live price overrides from admin
   const biensList = BIENS.map(b => ({ ...b, prix: priceOverrides[b.id] ?? b.prix }));
 
@@ -1889,6 +2028,12 @@ export default function PublicSite() {
       {/* ── HERO CAROUSEL ── */}
       <HeroCarousel biens={biensList} onDetail={setDetailBien} onBook={openBien} />
 
+      {/* ── BENEFITS STRIP ── */}
+      <BenefitsStrip />
+
+      {/* ── QUICK BOOK ── */}
+      <QuickBook biens={biensList} onBook={openBien} />
+
       {/* ── PROPERTIES SECTION ── */}
       <div id="properties" style={{ maxWidth: 1280, margin: "0 auto", padding: "80px 32px", background: IVORY }}>
 
@@ -1942,6 +2087,33 @@ export default function PublicSite() {
       {/* ── BOOKING MODAL ── */}
       {selectedBien && (
         <BookingModal bien={selectedBien} blockedDates={blockedDates} loadingAvail={loadingAvail} onClose={() => setSelectedBien(null)} />
+      )}
+
+      {/* Sticky mobile CTA */}
+      {isMobile && !selectedBien && !detailBien && (
+        <div style={{
+          position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 150,
+          background: NAVY, borderTop: "1px solid rgba(250,245,233,0.1)",
+          padding: "12px 20px",
+          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+        }}>
+          <div>
+            <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 10, color: "rgba(250,245,233,0.45)", letterSpacing: "0.2em", textTransform: "uppercase" }}>Villa Amaryllis</div>
+            <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 14, color: "#faf5e9" }}>
+              À partir de {biensList.find(b => b.id === "amaryllis")?.prix ?? 280}€<span style={{ fontWeight: 300, fontSize: 11, color: "rgba(250,245,233,0.5)" }}> / nuit</span>
+            </div>
+          </div>
+          <button
+            onClick={() => openBien(biensList.find(b => b.id === "amaryllis") || biensList[0])}
+            style={{
+              background: CORAL, border: "none", color: "#fff",
+              borderRadius: 8, padding: "12px 24px",
+              fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12,
+              letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >Réserver →</button>
+        </div>
       )}
     </div>
   );
