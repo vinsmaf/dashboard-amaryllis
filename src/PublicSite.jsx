@@ -250,6 +250,12 @@ const BIENS = [
   },
 ];
 
+// ── Price helpers ─────────────────────────────────────────────────
+function loadPriceOverrides() {
+  try { return JSON.parse(localStorage.getItem("amaryllis_prices") || "{}"); }
+  catch { return {}; }
+}
+
 // ── Utilities ────────────────────────────────────────────────────
 function today() {
   const d = new Date();
@@ -871,6 +877,7 @@ function BienCard({ bien, onDetail, onBook }) {
           border: "1px solid rgba(255,255,255,0.1)",
           borderRadius: 10, padding: "8px 14px", textAlign: "right",
         }}>
+          <div style={{ fontSize: 11, color: "rgba(250,247,242,0.5)", marginBottom: 1, fontFamily: "'Jost', sans-serif", fontWeight: 300, letterSpacing: "0.05em" }}>À partir de</div>
           <div style={{ fontSize: 22, fontWeight: 800, color: "#fff", lineHeight: 1 }}>{bien.prix}€</div>
           <div style={{ fontSize: 11, color: "rgba(250,247,242,0.6)" }}>/ nuit</div>
         </div>
@@ -1023,7 +1030,7 @@ function PropertyDetail({ bien, onClose, onBook }) {
           onClick={() => onBook(bien)}
           style={{ background: CORAL, color: "#fff", border: "none", borderRadius: 5, padding: "9px 22px", fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 12, letterSpacing: "0.12em", cursor: "pointer", textTransform: "uppercase", flexShrink: 0 }}
         >
-          Réserver — {bien.prix}€/nuit
+          À partir de {bien.prix}€/nuit
         </button>
       </div>
 
@@ -1144,9 +1151,11 @@ function PropertyDetail({ bien, onClose, onBook }) {
           <div style={{ height: 1, background: SAND, margin: "36px 0 28px" }} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
-              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 36, color: NAVY, lineHeight: 1 }}>
-                {bien.prix}€
-                <span style={{ fontSize: 14, fontWeight: 300, color: MUTED, marginLeft: 6 }}>/ nuit</span>
+              <div>
+                <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 10, color: MUTED, letterSpacing: "0.2em", textTransform: "uppercase", marginBottom: 4 }}>À partir de</div>
+                <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 36, color: NAVY, lineHeight: 1 }}>
+                  {bien.prix}€<span style={{ fontSize: 14, fontWeight: 300, color: MUTED, marginLeft: 6 }}>/ nuit</span>
+                </div>
               </div>
               {bien.rating && (
                 <div style={{ color: MUTED, fontSize: 12, marginTop: 4, fontFamily: "'Jost', sans-serif", fontWeight: 300 }}>★ {bien.rating} · {bien.reviews} avis Airbnb</div>
@@ -1170,7 +1179,7 @@ function PropertyDetail({ bien, onClose, onBook }) {
 // ── Hero Carousel ────────────────────────────────────────────────
 const CAROUSEL_DELAY = 6000;
 
-function HeroCarousel({ onDetail, onBook }) {
+function HeroCarousel({ biens, onDetail, onBook }) {
   const [idx, setIdx] = useState(0);
   const [animKey, setAnimKey] = useState(0);
   const idxRef = useRef(0);
@@ -1181,52 +1190,41 @@ function HeroCarousel({ onDetail, onBook }) {
     setIdx(next);
     setAnimKey(k => k + 1);
     clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => goTo((idxRef.current + 1) % BIENS.length), CAROUSEL_DELAY);
+    timerRef.current = setTimeout(() => goTo((idxRef.current + 1) % biens.length), CAROUSEL_DELAY);
   }
 
   useEffect(() => {
-    timerRef.current = setTimeout(() => goTo((idxRef.current + 1) % BIENS.length), CAROUSEL_DELAY);
+    timerRef.current = setTimeout(() => goTo((idxRef.current + 1) % biens.length), CAROUSEL_DELAY);
     return () => clearTimeout(timerRef.current);
   }, []);
 
-  const bien = BIENS[idx];
+  const bien = biens[idx];
   const photo = bien.photos && bien.photos[0];
 
   return (
-    <div style={{ position: "relative", height: "94vh", minHeight: 560, overflow: "hidden", background: "#072626" }}>
+    <div style={{ position: "relative", height: "calc(100vh - 100px)", minHeight: 520, overflow: "hidden", background: "#072626" }}>
       {/* Animated shader wallpaper */}
       <ShaderBg />
 
-      {/* Property photo — sliding card on the right */}
+      {/* Property photo — right half, masked to fade into shader */}
       {photo && (
-        <div
+        <img
           key={`photo-${animKey}`}
+          src={photo}
+          alt={bien.nom}
           style={{
             position: "absolute",
-            right: "6vw", top: "50%",
-            transform: "translateY(-50%)",
-            width: "clamp(260px, 38vw, 520px)",
-            aspectRatio: "3/4",
-            borderRadius: 16,
-            overflow: "hidden",
-            boxShadow: "0 40px 100px rgba(0,0,0,0.55)",
-            animation: "slideInRight 0.75s cubic-bezier(0.23,1,0.32,1) both",
-            zIndex: 2,
+            right: 0, top: 0, bottom: 0,
+            width: "62%", height: "100%",
+            objectFit: "cover", objectPosition: "center top",
+            display: "block",
+            WebkitMaskImage: "linear-gradient(to right, transparent 0%, rgba(0,0,0,0.45) 18%, rgba(0,0,0,0.82) 38%, black 55%)",
+            maskImage: "linear-gradient(to right, transparent 0%, rgba(0,0,0,0.45) 18%, rgba(0,0,0,0.82) 38%, black 55%)",
+            opacity: 0.75,
+            animation: "fadeIn 0.9s ease both",
+            zIndex: 1,
           }}
-        >
-          <img src={photo} alt={bien.nom} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-          {/* Price badge */}
-          <div style={{ position: "absolute", bottom: 16, left: 16, background: "rgba(14,59,58,0.88)", backdropFilter: "blur(10px)", borderRadius: 10, padding: "8px 14px" }}>
-            <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 22, color: "#faf5e9", lineHeight: 1 }}>{bien.prix}€</div>
-            <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 10, color: "rgba(250,245,233,0.55)", letterSpacing: "0.1em" }}>/ nuit</div>
-          </div>
-          {/* Photo count */}
-          {bien.photos.length > 1 && (
-            <div style={{ position: "absolute", top: 12, right: 12, background: "rgba(0,0,0,0.4)", backdropFilter: "blur(6px)", borderRadius: 20, padding: "3px 10px", fontSize: 10, fontFamily: "'Jost', sans-serif", color: "rgba(250,245,233,0.8)", letterSpacing: "0.05em" }}>
-              {bien.photos.length} photos
-            </div>
-          )}
-        </div>
+        />
       )}
 
       {/* Content — left */}
@@ -1235,8 +1233,8 @@ function HeroCarousel({ onDetail, onBook }) {
         style={{
           position: "absolute", left: "8vw", top: "50%",
           transform: "translateY(-50%)",
-          maxWidth: "clamp(280px, 44vw, 540px)",
-          zIndex: 3,
+          maxWidth: "clamp(280px, 42vw, 520px)",
+          zIndex: 4,
           animation: "slideInLeft 0.65s cubic-bezier(0.23,1,0.32,1) both",
         }}
       >
@@ -1292,7 +1290,7 @@ function HeroCarousel({ onDetail, onBook }) {
             onMouseEnter={e => { e.currentTarget.style.opacity = "0.88"; }}
             onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
           >
-            Réserver
+            À partir de {bien.prix}€ · Réserver
           </button>
         </div>
       </div>
@@ -1301,7 +1299,7 @@ function HeroCarousel({ onDetail, onBook }) {
       <div style={{ position: "absolute", bottom: 28, left: "8vw", right: "8vw", zIndex: 4, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         {/* Dots */}
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-          {BIENS.map((b, i) => (
+          {biens.map((b, i) => (
             <button
               key={b.id}
               onClick={() => goTo(i)}
@@ -1318,7 +1316,7 @@ function HeroCarousel({ onDetail, onBook }) {
         {/* Arrows + counter */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11, color: "rgba(250,245,233,0.35)", letterSpacing: "0.1em" }}>
-            {String(idx + 1).padStart(2, "0")} / {String(BIENS.length).padStart(2, "0")}
+            {String(idx + 1).padStart(2, "0")} / {String(biens.length).padStart(2, "0")}
           </span>
           <button
             onClick={() => goTo((idx - 1 + BIENS.length) % BIENS.length)}
@@ -1368,7 +1366,7 @@ function ContactSection() {
   const waMsg = encodeURIComponent("Bonjour, je souhaite obtenir des informations sur une location Amaryllis.");
 
   return (
-    <section style={{ background: CREAM, borderTop: `1px solid ${SAND}` }}>
+    <section id="contact" style={{ background: CREAM, borderTop: `1px solid ${SAND}` }}>
       <div style={{ maxWidth: 1280, margin: "0 auto", padding: "80px 32px", display: "flex", gap: 64, flexWrap: "wrap", alignItems: "flex-start" }}>
 
         {/* ─── Left: info ─── */}
@@ -1529,6 +1527,84 @@ function MerciPage() {
   );
 }
 
+// ── Logo Nav Dropdown ─────────────────────────────────────────────
+function LogoDropdown() {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const fn = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", fn);
+    return () => document.removeEventListener("mousedown", fn);
+  }, []);
+
+  const NAV = [
+    { label: "Accueil", href: "#top" },
+    { label: "Nos propriétés", href: "#properties" },
+    { label: "Contact", href: "#contact" },
+    { label: "Réservations", href: "#properties" },
+  ];
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{ display: "flex", alignItems: "center", gap: 14, background: "none", border: "none", cursor: "pointer", padding: 0 }}
+      >
+        <svg width="30" height="30" viewBox="0 0 92 92">
+          <g transform="translate(46 46)" stroke="#f4ecdc" strokeWidth="1" fill="none">
+            {[0, 60, 120, 180, 240, 300].map((rot, i) => (
+              <g key={i} transform={`rotate(${rot})`}>
+                <path d="M 0 0 L 0 -38 L 8 -20 Z" fill="#f4ecdc" />
+                <path d="M 0 0 L 0 -38 L -8 -20 Z" fill="none" stroke="#f4ecdc" strokeWidth="0.8" />
+              </g>
+            ))}
+            <circle r="3" fill="#c9a673" />
+          </g>
+        </svg>
+        <div style={{ textAlign: "left" }}>
+          <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 15, letterSpacing: "0.55em", color: "#faf5e9", textTransform: "uppercase" }}>AMARYLLIS</div>
+          <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 9, color: "rgba(250,245,233,0.4)", letterSpacing: "0.35em", textTransform: "uppercase", marginTop: 2 }}>LOCATIONS D'EXCEPTION</div>
+        </div>
+        <span style={{ fontSize: 9, color: "rgba(250,245,233,0.35)", marginLeft: -4, transform: open ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s", display: "inline-block" }}>▾</span>
+      </button>
+
+      {open && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 14px)", left: 0,
+          background: "#0e3b3a",
+          border: "1px solid rgba(250,245,233,0.1)",
+          borderRadius: 14, padding: "8px",
+          zIndex: 500, minWidth: 220,
+          boxShadow: "0 20px 56px rgba(0,0,0,0.45)",
+          animation: "fadeUp 0.18s ease both",
+        }}>
+          <div style={{ position: "absolute", top: -5, left: 24, transform: "rotate(45deg)", width: 10, height: 10, background: "#0e3b3a", borderTop: "1px solid rgba(250,245,233,0.1)", borderLeft: "1px solid rgba(250,245,233,0.1)" }} />
+          {NAV.map(({ label, href }) => (
+            <a
+              key={label}
+              href={href}
+              onClick={() => setOpen(false)}
+              style={{
+                display: "block", padding: "11px 16px",
+                color: "rgba(250,245,233,0.8)",
+                textDecoration: "none",
+                fontFamily: "'Jost', sans-serif", fontWeight: 300,
+                fontSize: 13, letterSpacing: "0.08em",
+                borderRadius: 8, transition: "background 0.15s, color 0.15s",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(196,114,84,0.12)"; e.currentTarget.style.color = "#faf5e9"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "rgba(250,245,233,0.8)"; }}
+            >
+              {label}
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Property Dropdown (header) ────────────────────────────────────
 function PropertyDropdown({ onSelect }) {
   const [open, setOpen] = useState(false);
@@ -1591,7 +1667,6 @@ function PropertyDropdown({ onSelect }) {
                 <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13, letterSpacing: "0.05em" }}>{b.nom}</div>
                 <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 10, color: "rgba(250,245,233,0.4)", letterSpacing: "0.05em", marginTop: 2 }}>{b.lieu}</div>
               </div>
-              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 13, color: CORAL, flexShrink: 0 }}>{b.prix}€</div>
             </button>
           ))}
         </div>
@@ -1601,7 +1676,7 @@ function PropertyDropdown({ onSelect }) {
 }
 
 // ── Hover Contact Preview ─────────────────────────────────────────
-function HoverContact({ light = false }) {
+function HoverContact({ light = false, direction = "up" }) {
   const [show, setShow] = useState(false);
   const waMsg = encodeURIComponent("Bonjour, je souhaite obtenir des informations sur une location Amaryllis.");
   const baseColor = light ? "rgba(14,59,58,0.75)" : "rgba(250,245,233,0.6)";
@@ -1625,7 +1700,11 @@ function HoverContact({ light = false }) {
 
       {show && (
         <div style={{
-          position: "absolute", bottom: "calc(100% + 10px)", left: "50%",
+          position: "absolute",
+          ...(direction === "down"
+            ? { top: "calc(100% + 10px)" }
+            : { bottom: "calc(100% + 10px)" }),
+          left: "50%",
           transform: "translateX(-50%)",
           background: "#0e3b3a",
           border: "1px solid rgba(250,245,233,0.1)",
@@ -1636,7 +1715,12 @@ function HoverContact({ light = false }) {
           pointerEvents: "all",
         }}>
           {/* Arrow */}
-          <div style={{ position: "absolute", bottom: -5, left: "50%", transform: "translateX(-50%) rotate(45deg)", width: 10, height: 10, background: "#0e3b3a", border: "0 solid transparent", borderRight: "1px solid rgba(250,245,233,0.1)", borderBottom: "1px solid rgba(250,245,233,0.1)" }} />
+          {direction === "up" && (
+            <div style={{ position: "absolute", bottom: -5, left: "50%", transform: "translateX(-50%) rotate(45deg)", width: 10, height: 10, background: "#0e3b3a", borderRight: "1px solid rgba(250,245,233,0.1)", borderBottom: "1px solid rgba(250,245,233,0.1)" }} />
+          )}
+          {direction === "down" && (
+            <div style={{ position: "absolute", top: -5, left: "50%", transform: "translateX(-50%) rotate(45deg)", width: 10, height: 10, background: "#0e3b3a", borderTop: "1px solid rgba(250,245,233,0.1)", borderLeft: "1px solid rgba(250,245,233,0.1)" }} />
+          )}
 
           <a
             href={`https://wa.me/${WA_NUMBER}?text=${waMsg}`}
@@ -1672,6 +1756,17 @@ export default function PublicSite() {
   const [scrolled, setScrolled] = useState(false);
   const [blockedDates, setBlockedDates] = useState([]);
   const [loadingAvail, setLoadingAvail] = useState(false);
+  const [priceOverrides, setPriceOverrides] = useState(loadPriceOverrides);
+
+  // Listen for admin price updates in same tab
+  useEffect(() => {
+    const fn = () => setPriceOverrides(loadPriceOverrides());
+    window.addEventListener("amaryllis_prices_updated", fn);
+    return () => window.removeEventListener("amaryllis_prices_updated", fn);
+  }, []);
+
+  // Biens with live price overrides from admin
+  const biensList = BIENS.map(b => ({ ...b, prix: priceOverrides[b.id] ?? b.prix }));
 
   async function openBien(bien) {
     setDetailBien(null);
@@ -1703,10 +1798,10 @@ export default function PublicSite() {
     { key: "Île-de-France", label: "Île-de-France" },
   ];
 
-  const filtered = filterLieu === "all" ? BIENS : BIENS.filter(b => b.lieu.includes(filterLieu));
+  const filtered = filterLieu === "all" ? biensList : biensList.filter(b => b.lieu.includes(filterLieu));
 
   return (
-    <div style={{ minHeight: "100vh", background: IVORY, color: TEXT, fontFamily: "'Jost', system-ui, -apple-system, sans-serif" }}>
+    <div id="top" style={{ minHeight: "100vh", background: IVORY, color: TEXT, fontFamily: "'Jost', system-ui, -apple-system, sans-serif" }}>
 
       {/* ── NAVIGATION ── */}
       <header style={{ position: "sticky", top: 0, zIndex: 200 }}>
@@ -1718,28 +1813,8 @@ export default function PublicSite() {
           borderBottom: "1px solid rgba(250,245,233,0.08)",
         }}>
           <div style={{ maxWidth: 1280, margin: "0 auto", width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              {/* Logo03 — 6-petal amaryllis mark */}
-              <svg width="30" height="30" viewBox="0 0 92 92">
-                <g transform="translate(46 46)" stroke="#f4ecdc" strokeWidth="1" fill="none">
-                  {[0, 60, 120, 180, 240, 300].map((rot) => (
-                    <g key={rot} transform={`rotate(${rot})`}>
-                      <path d="M 0 0 L 0 -38 L 8 -20 Z" fill="#f4ecdc" />
-                      <path d="M 0 0 L 0 -38 L -8 -20 Z" fill="none" stroke="#f4ecdc" strokeWidth="0.8" />
-                    </g>
-                  ))}
-                  <circle r="3" fill="#c9a673" />
-                </g>
-              </svg>
-              <div>
-                <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 15, letterSpacing: "0.55em", color: "#faf5e9", textTransform: "uppercase" }}>AMARYLLIS</div>
-                <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 9, color: "rgba(250,245,233,0.4)", letterSpacing: "0.35em", textTransform: "uppercase", marginTop: 2 }}>LOCATIONS D'EXCEPTION</div>
-              </div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
-              <div style={{ fontSize: 12, color: "rgba(250,247,242,0.5)", fontFamily: "'Jost', sans-serif", fontWeight: 300 }}>Sans commission</div>
-              <a href="/admin" style={{ fontSize: 11, color: "rgba(250,247,242,0.35)", textDecoration: "none", letterSpacing: "0.1em", fontFamily: "'Jost', sans-serif" }}>Admin</a>
-            </div>
+            <LogoDropdown />
+            <a href="/admin" style={{ fontSize: 11, color: "rgba(250,247,242,0.3)", textDecoration: "none", letterSpacing: "0.1em", fontFamily: "'Jost', sans-serif" }}>Admin</a>
           </div>
         </div>
 
@@ -1753,12 +1828,12 @@ export default function PublicSite() {
         }}>
           <PropertyDropdown onSelect={setDetailBien} />
           <div style={{ height: 16, width: 1, background: "rgba(250,245,233,0.1)" }} />
-          <HoverContact />
+          <HoverContact direction="down" />
         </div>
       </header>
 
       {/* ── HERO CAROUSEL ── */}
-      <HeroCarousel onDetail={setDetailBien} onBook={openBien} />
+      <HeroCarousel biens={biensList} onDetail={setDetailBien} onBook={openBien} />
 
       {/* ── PROPERTIES SECTION ── */}
       <div id="properties" style={{ maxWidth: 1280, margin: "0 auto", padding: "80px 32px", background: IVORY }}>

@@ -3095,6 +3095,104 @@ function Comparatif({ biens, n, mob }) {
 }
 
 // ============================================================================
+// ============================================================================
+// TARIFS (gestion des prix publics)
+// ============================================================================
+const DEFAULT_PRIX = { amaryllis: 280, zandoli: 220, iguana: 180, geko: 150, mabouya: 110, schoelcher: 100, nogent: 85 };
+const BIEN_LABELS  = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", iguana: "Villa Iguana", geko: "Géko", mabouya: "Mabouya", schoelcher: "T2 Schœlcher", nogent: "T2 Nogent-sur-Marne" };
+
+function Tarifs() {
+  const [prices, setPrices] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("amaryllis_prices") || "{}");
+      return Object.fromEntries(Object.keys(DEFAULT_PRIX).map(id => [id, stored[id] ?? DEFAULT_PRIX[id]]));
+    } catch { return { ...DEFAULT_PRIX }; }
+  });
+  const [saved, setSaved] = useState(false);
+
+  function save() {
+    localStorage.setItem("amaryllis_prices", JSON.stringify(prices));
+    window.dispatchEvent(new Event("amaryllis_prices_updated"));
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  }
+
+  function reset() {
+    setPrices({ ...DEFAULT_PRIX });
+  }
+
+  return (
+    <div style={{ maxWidth: 640, margin: "0 auto", padding: "32px 24px" }}>
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ fontSize: 20, fontWeight: 700, color: "#e2e8f0", marginBottom: 6 }}>Tarifs publics</div>
+        <div style={{ fontSize: 13, color: "#64748b", lineHeight: 1.6 }}>
+          Ces prix s'affichent sur le site public comme <em>« À partir de X€ / nuit »</em>.<br />
+          Sauvegarde pour appliquer immédiatement (même navigateur, même domaine).
+        </div>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
+        {Object.keys(DEFAULT_PRIX).map(id => (
+          <div key={id} style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            background: "rgba(255,255,255,0.04)",
+            border: "1px solid rgba(255,255,255,0.07)",
+            borderRadius: 12, padding: "14px 20px",
+          }}>
+            <div>
+              <div style={{ color: "#e2e8f0", fontWeight: 600, fontSize: 14 }}>{BIEN_LABELS[id]}</div>
+              <div style={{ color: "#475569", fontSize: 11, marginTop: 2 }}>Prix par défaut : {DEFAULT_PRIX[id]}€</div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <input
+                type="number"
+                min="0"
+                value={prices[id] ?? ""}
+                onChange={e => setPrices(p => ({ ...p, [id]: parseInt(e.target.value) || 0 }))}
+                style={{
+                  width: 88, padding: "9px 12px", textAlign: "right",
+                  background: "#0f172a",
+                  border: `1px solid ${prices[id] !== DEFAULT_PRIX[id] ? "#f59e0b44" : "rgba(255,255,255,0.1)"}`,
+                  borderRadius: 8, color: "#e2e8f0", fontSize: 15, outline: "none",
+                }}
+              />
+              <span style={{ color: "#475569", fontSize: 12, width: 32 }}>€/nuit</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: "flex", gap: 10 }}>
+        <button
+          onClick={save}
+          style={{
+            flex: 1, padding: "13px", borderRadius: 9, border: "none",
+            background: saved ? "#10b981" : "#0ea5e9",
+            color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer",
+            transition: "background 0.25s",
+          }}
+        >
+          {saved ? "✓ Sauvegardé — site public mis à jour" : "Sauvegarder les tarifs"}
+        </button>
+        <button
+          onClick={reset}
+          style={{
+            padding: "13px 18px", borderRadius: 9,
+            border: "1px solid rgba(255,255,255,0.1)",
+            background: "transparent", color: "#64748b", fontSize: 13, cursor: "pointer",
+          }}
+          title="Réinitialiser aux valeurs par défaut"
+        >
+          ↺
+        </button>
+      </div>
+      <div style={{ marginTop: 12, fontSize: 11, color: "#334155", textAlign: "center" }}>
+        Stocké en localStorage · visible immédiatement sur le site public ouvert dans ce navigateur
+      </div>
+    </div>
+  );
+}
+
 // FAB
 // ============================================================================
 function FAB({ onTab }) {
@@ -3276,6 +3374,7 @@ export default function App() {
     { id: "pilotage", l: mob ? "💼" : "💼 Pilotage" },
     { id: "historique", l: mob ? "📈" : "📈 Historique" },
     { id: "vs2025", l: mob ? "📊" : "📊 vs 2025" },
+    { id: "tarifs", l: mob ? "🏷️" : "🏷️ Tarifs" },
   ];
 
   return (
@@ -3342,6 +3441,7 @@ export default function App() {
         {tab === "pilotage" && <Pilotage biens={biens} n={n} mob={mob} />}
         {tab === "historique" && <Historique biens={biens} n={n} mob={mob} hist={hist} />}
         {tab === "vs2025" && <Comparatif biens={biens} n={n} mob={mob} />}
+        {tab === "tarifs" && <Tarifs />}
       </div>
 
       <FAB onTab={setTab} />
