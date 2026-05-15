@@ -33,6 +33,8 @@ function doGet(e) {
   if (action === "addReservation") return addReservation_(e.parameter);
   if (action === "deleteReservation") return deleteReservation_(e.parameter);
   if (action === "fetchIcal") return fetchIcal_(e.parameter);
+  if (action === "syncReservations") return syncReservations_(e.parameter);
+  if (action === "sendCheckinAlerts") { sendCheckinAlerts_(); return json_({ ok: true }); }
 
   return json_({ error: "action inconnue: " + action });
 }
@@ -176,4 +178,77 @@ function fetchIcal_(p) {
   } catch(err) {
     return json_({ error: err.toString() });
   }
+}
+
+// ?action=syncReservations&data=[{...}]
+function syncReservations_(p) {
+  if (!p.data) return json_({ error: "data manquante" });
+  var resas;
+  try { resas = JSON.parse(p.data); } catch(e) { return json_({ error: "JSON invalide" }); }
+
+  var ss = SpreadsheetApp.openById("1xuhU0KraEMxF9NAWO5MKEt23JI_V8mnNnWktzHy6q2U");
+  var sheet = ss.getSheetByName("alertes_sync");
+  if (!sheet) sheet = ss.insertSheet("alertes_sync");
+  sheet.clearContents();
+  sheet.appendRow(["id","bienId","voyageur","canal","checkin","checkout","checkin_time","nb_guests","phone"]);
+  resas.forEach(function(r) {
+    sheet.appendRow([r.id||"", r.bienId||"", r.voyageur||"", r.canal||"", r.checkin||"", r.checkout||"", r.checkin_time||"", r.nb_guests||"", r.phone||""]);
+  });
+  return json_({ ok: true, count: resas.length });
+}
+
+// Fonction déclenchée automatiquement chaque jour
+// Déclencheurs > Ajouter un déclencheur > sendCheckinAlerts_ > Quotidien > 07h-08h
+function sendCheckinAlerts_() {
+  var ss = SpreadsheetApp.openById("1xuhU0KraEMxF9NAWO5MKEt23JI_V8mnNnWktzHy6q2U");
+  var sheet = ss.getSheetByName("alertes_sync");
+  if (!sheet || sheet.getLastRow() < 2) return;
+
+  var tz = "Europe/Paris";
+  var today = new Date();
+  var j2 = new Date(today);
+  j2.setDate(j2.getDate() + 2);
+  var j2str = Utilities.formatDate(j2, tz, "yyyy-MM-dd");
+  var j1str = Utilities.formatDate(new Date(today.getTime() + 86400000), tz, "yyyy-MM-dd");
+  var todayStr = Utilities.formatDate(today, tz, "yyyy-MM-dd");
+
+  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 9).getValues();
+
+  var bienNames = {
+    nogent: "T2 Nogent", amaryllis: "Villa Amaryllis", iguana: "Villa Iguana",
+    geko: "Geko", zandoli: "Zandoli", mabouya: "Mabouya", schoelcher: "T2 Schœlcher"
+  };
+
+  function formatAlert(rows, label, emoji) {
+    if (rows.length === 0) return "";
+    var lines = rows.map(function(r) {
+      return emoji + " " + (bienNames[r[1]] || r[1]) + " — " + r[2] +
+        (r[6] ? " à " + r[6] : "") + (r[7] ? " · " + r[7] + " pers." : "") +
+        (r[8] ? " · 📞 " + r[8] : "");
+    });
+    return label + "\n" + lines.join("\n");
+  }
+
+  var j2rows = data.filter(function(r) { return r[4] === j2str; });
+  var j1rows = data.filter(function(r) { return r[4] === j1str; });
+  var todayRows = data.filter(function(r) { return r[4] === todayStr; });
+
+  if (j2rows.length === 0 && j1rows.length === 0 && todayRows.length === 0) return;
+
+  var sections = [
+    formatAlert(todayRows, "📅 AUJOURD'HUI", "🔑"),
+    formatAlert(j1rows, "⏰ DEMAIN", "🔑"),
+    formatAlert(j2rows, "📌 DANS 2 JOURS", "🔑"),
+  ].filter(Boolean);
+
+  var subject = "🏠 Dashboard Amaryllis — " +
+    (todayRows.length ? todayRows.length + " check-in(s) aujourd'hui · " : "") +
+    (j1rows.length ? j1rows.length + " demain · " : "") +
+    (j2rows.length ? j2rows.length + " dans 2 jours" : "");
+
+  var body = "Bonjour,\n\n" + sections.join("\n\n") +
+    "\n\n— Dashboard Amaryllis\nhttps://dashboardamaryllis.netlify.app";
+
+  var email = Session.getActiveUser().getEmail();
+  GmailApp.sendEmail(email, subject.trim().replace(/ ·\s*$/, ""), body);
 }

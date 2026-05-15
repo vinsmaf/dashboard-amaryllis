@@ -688,7 +688,7 @@ function Cockpit({ biens, n, mob, onUpdateRevenu }) {
 // ============================================================================
 const EMPTY_FORM = { bienId: "amaryllis", voyageur: "", canal: "booking", checkin: "", checkout: "", checkin_time: "", checkout_time: "", nb_guests: "", montant: "", notes: "", menage: "", reservation_code: "", phone: "" };
 
-function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalUrlsBooking, saveUrlsBooking, scriptUrl, onApplyRevenusFromResas }) {
+function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalUrlsBooking, saveUrlsBooking, scriptUrl, onApplyRevenusFromResas, pushReservationsToScript }) {
   const [showUrls, setShowUrls] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [showForm, setShowForm] = useState(false);
@@ -741,6 +741,7 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
         current = await importIcal(s.bienId, s.canal, s.url, current) || current;
       }
       if (onApplyRevenusFromResas) onApplyRevenusFromResas(computeRevenusFromResas(current));
+      pushReservationsToScript(current);
     })();
   }, []);
 
@@ -779,6 +780,7 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
     }
   };
   const togRes = (id, field) => saveRes(reservations.map(r => r.id === id ? { ...r, [field]: !r[field] } : r));
+
   const syncAll = () => {
     const sources = [];
     Object.keys(icalUrls).forEach(k => { if (icalUrls[k]) sources.push({ bienId: k, canal: "airbnb", url: icalUrls[k] }); });
@@ -789,6 +791,7 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
         current = await importIcal(s.bienId, s.canal, s.url, current) || current;
       }
       if (onApplyRevenusFromResas) onApplyRevenusFromResas(computeRevenusFromResas(current));
+      pushReservationsToScript(current);
     })();
   };
 
@@ -3320,7 +3323,7 @@ export default function App() {
       </div>
 
       <div style={{ padding: mob ? "12px" : "18px 22px", maxWidth: 1200, paddingBottom: 76 }}>
-        {tab === "planning" && <Planning biens={biens} mob={mob} reservations={reservations} saveRes={saveRes} icalUrls={icalUrls} saveUrls={saveUrls} icalUrlsBooking={icalUrlsBooking} saveUrlsBooking={saveUrlsBooking} scriptUrl={scriptUrl} onApplyRevenusFromResas={onApplyRevenusFromResas} />}
+        {tab === "planning" && <Planning biens={biens} mob={mob} reservations={reservations} saveRes={saveRes} icalUrls={icalUrls} saveUrls={saveUrls} icalUrlsBooking={icalUrlsBooking} saveUrlsBooking={saveUrlsBooking} scriptUrl={scriptUrl} onApplyRevenusFromResas={onApplyRevenusFromResas} pushReservationsToScript={pushReservationsToScript} />}
         {tab === "cockpit" && <Cockpit biens={biens} n={n} mob={mob} onUpdateRevenu={onUpdateRevenu} />}
         {tab === "previsionnel" && <Previsionnel biens={biens} n={n} mob={mob} hist={hist} />}
         {tab === "charges" && <Charges biens={biens} n={n} mob={mob} />}
