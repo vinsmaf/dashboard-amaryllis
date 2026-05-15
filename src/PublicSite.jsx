@@ -37,6 +37,9 @@ if (typeof document !== "undefined" && !document.getElementById("__site_styles")
       75%      { border-radius:70% 30% 60% 40%/70% 50% 60% 30%; transform:scale(1.03) rotate(2deg); }
     }
     @keyframes carouselProgress { from { transform:scaleX(0); } to { transform:scaleX(1); } }
+    @keyframes curtainLift { 0% { transform:translateY(0); } 100% { transform:translateY(-100%); } }
+    @keyframes curtainFadeIn { from { opacity:0; } to { opacity:1; } }
+    @keyframes curtainPetalSpin { from { transform:rotate(0deg) scale(1); } 50% { transform:rotate(180deg) scale(1.08); } to { transform:rotate(360deg) scale(1); } }
     ::selection { background:rgba(196,114,84,0.2); color:#0e3b3a; }
     ::-webkit-scrollbar { width:4px; }
     ::-webkit-scrollbar-track { background:#faf5e9; }
@@ -256,6 +259,48 @@ function loadPriceOverrides() {
   catch { return {}; }
 }
 
+function Curtain({ onDone }) {
+  const [lifting, setLifting] = useState(false);
+
+  useEffect(() => {
+    const t1 = setTimeout(() => setLifting(true), 1800);
+    const t2 = setTimeout(() => onDone(), 2700);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, []);
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 9999,
+      background: "#0e3b3a",
+      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+      animation: lifting ? "curtainLift 0.9s cubic-bezier(0.76,0,0.24,1) forwards" : "curtainFadeIn 0.4s ease forwards",
+      pointerEvents: lifting ? "none" : "auto",
+    }}>
+      {/* Amaryllis mark */}
+      <div style={{ marginBottom: 24, animation: "curtainPetalSpin 2.5s ease-in-out infinite" }}>
+        <svg width="64" height="64" viewBox="-50 -50 100 100">
+          {[0,60,120,180,240,300].map(rot => (
+            <g key={rot} transform={`rotate(${rot})`}>
+              <path d="M 0 0 L 0 -38 L 8 -20 Z" fill="#c47254" opacity="0.9" />
+            </g>
+          ))}
+          <circle cx="0" cy="0" r="4" fill="#c9a673" />
+        </svg>
+      </div>
+      <div style={{
+        fontFamily: "'Jost', sans-serif", fontWeight: 200,
+        fontSize: "clamp(24px, 6vw, 48px)",
+        letterSpacing: "0.28em", textTransform: "uppercase",
+        color: "#faf5e9", lineHeight: 1, marginBottom: 10,
+      }}>Amaryllis</div>
+      <div style={{
+        fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic",
+        fontSize: 15, color: "#c9a673", letterSpacing: "0.08em", opacity: 0.8,
+      }}>Locations d'exception</div>
+    </div>
+  );
+}
+
 // ── Utilities ────────────────────────────────────────────────────
 function today() {
   const d = new Date();
@@ -284,8 +329,9 @@ function formatDateShort(ds) {
 const WEEKDAYS = ["Lu", "Ma", "Me", "Je", "Ve", "Sa", "Di"];
 const MONTHS_FR = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
 
-function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, onSelect, onHover }) {
+function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, onSelect, onHover, dailyPricesMap = {}, basePrice = 0 }) {
   const todayStr = today();
+  const [hoveredCell, setHoveredCell] = useState(null);
   const firstDay = new Date(year, month, 1);
   const lastDate = new Date(year, month + 1, 0).getDate();
   const startDow = (firstDay.getDay() + 6) % 7;
@@ -338,7 +384,11 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
           return (
             <div
               key={i}
-              onMouseEnter={() => !disabled && checkin && !checkout && onHover(ds)}
+              onMouseEnter={() => {
+                if (!disabled && checkin && !checkout) onHover(ds);
+                if (!disabled && ds) setHoveredCell(ds);
+              }}
+              onMouseLeave={() => setHoveredCell(null)}
               onClick={() => !disabled && onSelect(ds)}
               style={{
                 height: 36,
@@ -359,6 +409,23 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
               }}
             >
               {ds ? parseInt(ds.split("-")[2]) : ""}
+              {hoveredCell === ds && !disabled && ds && (() => {
+                const p = dailyPricesMap[ds] ?? basePrice;
+                if (!p) return null;
+                return (
+                  <div style={{
+                    position: "absolute", bottom: "calc(100% + 5px)", left: "50%",
+                    transform: "translateX(-50%)",
+                    background: "#0e3b3a", color: "#faf5e9",
+                    fontSize: 10, fontWeight: 700,
+                    padding: "3px 7px", borderRadius: 5,
+                    whiteSpace: "nowrap", zIndex: 50,
+                    pointerEvents: "none",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
+                    fontFamily: "'Jost', sans-serif",
+                  }}>{p}€/nuit</div>
+                );
+              })()}
             </div>
           );
         })}
@@ -367,7 +434,7 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
   );
 }
 
-function DateRangePicker({ checkin, checkout, blockedDates = [], onChange }) {
+function DateRangePicker({ checkin, checkout, blockedDates = [], onChange, dailyPricesMap = {}, basePrice = 0 }) {
   const todayStr = today();
   const initY = new Date().getFullYear();
   const initM = new Date().getMonth();
@@ -410,8 +477,8 @@ function DateRangePicker({ checkin, checkout, blockedDates = [], onChange }) {
         <button onClick={() => setOffset(o => o + 1)} style={iconBtn}>›</button>
       </div>
       <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
-        <CalendarMonth year={y1} month={m1} checkin={checkin} checkout={checkout} hovered={hovered} blockedDates={blockedDates} onSelect={handleSelect} onHover={setHovered} />
-        <CalendarMonth year={y2} month={m2} checkin={checkin} checkout={checkout} hovered={hovered} blockedDates={blockedDates} onSelect={handleSelect} onHover={setHovered} />
+        <CalendarMonth year={y1} month={m1} checkin={checkin} checkout={checkout} hovered={hovered} blockedDates={blockedDates} onSelect={handleSelect} onHover={setHovered} dailyPricesMap={dailyPricesMap} basePrice={basePrice} />
+        <CalendarMonth year={y2} month={m2} checkin={checkin} checkout={checkout} hovered={hovered} blockedDates={blockedDates} onSelect={handleSelect} onHover={setHovered} dailyPricesMap={dailyPricesMap} basePrice={basePrice} />
       </div>
       {checkin && checkout && (
         <div style={{ marginTop: 12, textAlign: "right" }}>
@@ -556,6 +623,10 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
     setPaying(false);
   }
 
+  const dailyPricesMap = (() => {
+    try { return JSON.parse(localStorage.getItem("amaryllis_daily_prices") || "{}")[bien.id] || {}; } catch { return {}; }
+  })();
+
   const steps = ["Dates", "Coordonnées", "Paiement"];
 
   return (
@@ -632,7 +703,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
                 Chargement des disponibilités…
               </div>
             )}
-            <DateRangePicker checkin={checkin} checkout={checkout} blockedDates={blockedDates} onChange={(ci, co) => { setCheckin(ci); setCheckout(co); }} />
+            <DateRangePicker checkin={checkin} checkout={checkout} blockedDates={blockedDates} onChange={(ci, co) => { setCheckin(ci); setCheckout(co); }} dailyPricesMap={dailyPricesMap} basePrice={bien.prix} />
 
             {nights > 0 ? (
               <div style={{
@@ -1408,15 +1479,6 @@ function FooterSection() {
             <HoverContact light />
           </div>
 
-          {/* Nav links */}
-          <div style={{ marginTop: 36, display: "flex", gap: 32, flexWrap: "wrap" }}>
-            <div>
-              <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 9, letterSpacing: "0.3em", textTransform: "uppercase", color: "rgba(250,245,233,0.3)", marginBottom: 10 }}>Propriétés</div>
-              {BIENS.slice(0, 4).map(b => (
-                <div key={b.id} style={{ fontSize: 12, color: "rgba(250,245,233,0.5)", fontFamily: "'Jost', sans-serif", fontWeight: 300, marginBottom: 5 }}>{b.nom}</div>
-              ))}
-            </div>
-          </div>
         </div>
 
         {/* Right: form */}
@@ -1746,6 +1808,7 @@ export default function PublicSite() {
   const [blockedDates, setBlockedDates] = useState([]);
   const [loadingAvail, setLoadingAvail] = useState(false);
   const [priceOverrides, setPriceOverrides] = useState(loadPriceOverrides);
+  const [curtainDone, setCurtainDone] = useState(false);
 
   // Listen for admin price updates in same tab
   useEffect(() => {
@@ -1791,6 +1854,7 @@ export default function PublicSite() {
 
   return (
     <div id="top" style={{ minHeight: "100vh", background: IVORY, color: TEXT, fontFamily: "'Jost', system-ui, -apple-system, sans-serif" }}>
+      {!curtainDone && <Curtain onDone={() => setCurtainDone(true)} />}
 
       {/* ── NAVIGATION ── */}
       <header style={{ position: "sticky", top: 0, zIndex: 200 }}>
