@@ -1,10 +1,30 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
-// Inject spinner keyframe once
-if (typeof document !== "undefined" && !document.getElementById("__spin_style")) {
+// ── Color palette ────────────────────────────────────────────────
+const BG    = "#020818";
+const SURF  = "#060f1f";
+const CYAN  = "#00d4ff";
+const GOLD  = "#f59e0b";
+const CORAL = "#ff6b6b";
+const TEXT  = "#e2e8f0";
+const MUTED = "#475569";
+
+// ── CSS Animations ────────────────────────────────────────────────
+if (typeof document !== "undefined" && !document.getElementById("__site_styles")) {
   const s = document.createElement("style");
-  s.id = "__spin_style";
-  s.textContent = "@keyframes spin { to { transform: rotate(360deg); } }";
+  s.id = "__site_styles";
+  s.textContent = `
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(36px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes scan { from { transform:translateY(-60px); } to { transform:translateY(110vh); } }
+    @keyframes drift { 0%,100% { transform:translateY(0) scale(1); } 50% { transform:translateY(-14px) scale(1.01); } }
+    @keyframes glowPulse { 0%,100% { opacity:0.35; } 50% { opacity:0.9; } }
+    @keyframes borderGlow { 0%,100% { box-shadow:0 0 20px 2px var(--c); } 50% { box-shadow:0 0 40px 8px var(--c); } }
+    ::selection { background:rgba(0,212,255,0.25); color:#fff; }
+    ::-webkit-scrollbar { width:3px; }
+    ::-webkit-scrollbar-track { background:#020818; }
+    ::-webkit-scrollbar-thumb { background:rgba(0,212,255,0.25); border-radius:2px; }
+  `;
   document.head.appendChild(s);
 }
 
@@ -232,12 +252,12 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
 
   return (
     <div style={{ flex: "1 1 240px" }}>
-      <div style={{ textAlign: "center", fontWeight: 700, fontSize: 15, marginBottom: 12, color: "#e2e8f0" }}>
+      <div style={{ textAlign: "center", fontWeight: 700, fontSize: 15, marginBottom: 12, color: TEXT }}>
         {MONTHS_FR[month]} {year}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 0 }}>
         {WEEKDAYS.map(w => (
-          <div key={w} style={{ textAlign: "center", fontSize: 11, color: "#475569", padding: "4px 0", fontWeight: 600 }}>{w}</div>
+          <div key={w} style={{ textAlign: "center", fontSize: 11, color: MUTED, padding: "4px 0", fontWeight: 600 }}>{w}</div>
         ))}
         {cells.map((ds, i) => {
           const state = getState(ds);
@@ -253,8 +273,8 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
           let borderRadius = "8px";
           let fontWeight = 400;
 
-          if (isCI || isCO) { bg = "#22c55e"; color = "#000"; fontWeight = 700; }
-          else if (inRange) { bg = "rgba(34,197,94,0.12)"; color = "#dcfce7"; borderRadius = "0"; }
+          if (isCI || isCO) { bg = CYAN; color = "#000"; fontWeight = 700; }
+          else if (inRange) { bg = `rgba(0,212,255,0.12)`; color = "#cffafe"; borderRadius = "0"; }
           if (isCI) borderRadius = "8px 0 0 8px";
           if (isCO) borderRadius = "0 8px 8px 0";
 
@@ -271,7 +291,7 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
                 fontSize: 13,
                 cursor: disabled ? "default" : "pointer",
                 background: bg,
-                color: blocked ? "#374151" : past ? "#374151" : color,
+                color: blocked ? "#1e293b" : past ? "#1e293b" : color,
                 borderRadius,
                 fontWeight,
                 textDecoration: blocked ? "line-through" : "none",
@@ -327,7 +347,7 @@ function DateRangePicker({ checkin, checkout, blockedDates = [], onChange }) {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <button onClick={() => canPrev && setOffset(o => o - 1)} style={{ ...iconBtn, opacity: canPrev ? 1 : 0.2 }}>‹</button>
-        <div style={{ fontSize: 13, color: "#64748b" }}>
+        <div style={{ fontSize: 13, color: MUTED }}>
           {!checkin ? "Choisir la date d'arrivée" : !checkout ? "Choisir la date de départ" : `${formatDateShort(checkin)} → ${formatDateShort(checkout)}`}
         </div>
         <button onClick={() => setOffset(o => o + 1)} style={iconBtn}>›</button>
@@ -338,7 +358,7 @@ function DateRangePicker({ checkin, checkout, blockedDates = [], onChange }) {
       </div>
       {checkin && checkout && (
         <div style={{ marginTop: 12, textAlign: "right" }}>
-          <button onClick={() => { onChange(null, null); setHovered(null); }} style={{ fontSize: 12, color: "#64748b", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
+          <button onClick={() => { onChange(null, null); setHovered(null); }} style={{ fontSize: 12, color: MUTED, background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
             Effacer les dates
           </button>
         </div>
@@ -347,7 +367,19 @@ function DateRangePicker({ checkin, checkout, blockedDates = [], onChange }) {
   );
 }
 
-const iconBtn = { background: "none", border: "1px solid #1e293b", color: "#94a3b8", width: 32, height: 32, borderRadius: 8, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center" };
+const iconBtn = {
+  background: "none",
+  border: `1px solid rgba(0,212,255,0.15)`,
+  color: MUTED,
+  width: 32,
+  height: 32,
+  borderRadius: 8,
+  cursor: "pointer",
+  fontSize: 18,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+};
 
 // ── Booking Modal ────────────────────────────────────────────────
 function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
@@ -386,7 +418,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-      const el = stripe.elements({ clientSecret: data.clientSecret, appearance: { theme: "night", variables: { colorPrimary: "#22c55e", borderRadius: "8px" } } });
+      const el = stripe.elements({ clientSecret: data.clientSecret, appearance: { theme: "night", variables: { colorPrimary: bien.couleur, borderRadius: "8px", colorBackground: SURF, colorText: TEXT } } });
       const pe = el.create("payment");
       setElements(el);
       setStep(3);
@@ -406,17 +438,43 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
   const steps = ["Dates", "Coordonnées", "Paiement"];
 
   return (
-    <div onClick={(e) => e.target === e.currentTarget && onClose()} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", backdropFilter: "blur(8px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}>
-      <div style={{ background: "#0d1526", border: "1px solid #1e293b", borderRadius: 24, padding: "32px", maxWidth: 680, width: "100%", maxHeight: "92vh", overflowY: "auto", position: "relative", boxShadow: "0 40px 80px rgba(0,0,0,0.6)" }}>
+    <div
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+      style={{
+        position: "fixed", inset: 0,
+        background: "rgba(2,8,24,0.9)",
+        backdropFilter: "blur(12px)",
+        zIndex: 1000,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: "16px",
+      }}
+    >
+      <div style={{
+        background: SURF,
+        border: "1px solid rgba(0,212,255,0.12)",
+        borderRadius: 20,
+        padding: "32px",
+        maxWidth: 680, width: "100%",
+        maxHeight: "92vh", overflowY: "auto",
+        position: "relative",
+        boxShadow: `0 40px 80px rgba(0,0,0,0.7), 0 0 60px rgba(0,212,255,0.04)`,
+      }}>
 
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28 }}>
           <div>
-            <div style={{ fontSize: 12, color: bien.couleur, fontWeight: 700, letterSpacing: 1, marginBottom: 4 }}>RÉSERVATION DIRECTE</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: "#f1f5f9" }}>{bien.nom}</div>
-            <div style={{ color: "#475569", fontSize: 13, marginTop: 2 }}>📍 {bien.lieu}</div>
+            <div style={{ fontSize: 11, color: bien.couleur, fontWeight: 700, letterSpacing: 3, marginBottom: 6, textTransform: "uppercase" }}>RÉSERVATION DIRECTE</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: TEXT }}>{bien.nom}</div>
+            <div style={{ color: MUTED, fontSize: 13, marginTop: 4 }}>📍 {bien.lieu}</div>
           </div>
-          <button onClick={onClose} style={{ background: "#1e293b", border: "none", color: "#94a3b8", width: 36, height: 36, borderRadius: 10, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>✕</button>
+          <button
+            onClick={onClose}
+            style={{
+              background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
+              color: MUTED, width: 36, height: 36, borderRadius: 10,
+              cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+            }}
+          >✕</button>
         </div>
 
         {/* Step indicator */}
@@ -424,12 +482,22 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
           {steps.map((s, i) => (
             <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, flex: i < steps.length - 1 ? 1 : 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                <div style={{ width: 26, height: 26, borderRadius: "50%", background: step > i + 1 ? "#22c55e" : step === i + 1 ? bien.couleur : "#1e293b", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: step > i + 1 ? "#000" : "#fff", transition: "background 0.3s" }}>
+                <div style={{
+                  width: 26, height: 26, borderRadius: "50%",
+                  background: step > i + 1 ? bien.couleur : step === i + 1 ? bien.couleur : "rgba(255,255,255,0.04)",
+                  border: `1px solid ${step >= i + 1 ? bien.couleur : "rgba(255,255,255,0.08)"}`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 11, fontWeight: 700,
+                  color: step > i + 1 ? "#000" : "#fff",
+                  transition: "background 0.3s",
+                }}>
                   {step > i + 1 ? "✓" : i + 1}
                 </div>
-                <span style={{ fontSize: 12, fontWeight: step === i + 1 ? 700 : 400, color: step === i + 1 ? "#f1f5f9" : "#475569" }}>{s}</span>
+                <span style={{ fontSize: 12, fontWeight: step === i + 1 ? 700 : 400, color: step === i + 1 ? TEXT : MUTED }}>{s}</span>
               </div>
-              {i < steps.length - 1 && <div style={{ flex: 1, height: 1, background: step > i + 1 ? "#22c55e" : "#1e293b", transition: "background 0.3s" }} />}
+              {i < steps.length - 1 && (
+                <div style={{ flex: 1, height: 1, background: step > i + 1 ? bien.couleur : "rgba(255,255,255,0.06)", transition: "background 0.3s" }} />
+              )}
             </div>
           ))}
         </div>
@@ -438,26 +506,40 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
         {step === 1 && (
           <>
             {loadingAvail && (
-              <div style={{ textAlign: "center", padding: "8px 0 4px", color: "#475569", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                <span style={{ display: "inline-block", width: 12, height: 12, border: "2px solid #22c55e", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
+              <div style={{ textAlign: "center", padding: "8px 0 4px", color: MUTED, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                <span style={{ display: "inline-block", width: 12, height: 12, border: `2px solid ${CYAN}`, borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
                 Chargement des disponibilités Airbnb…
               </div>
             )}
             <DateRangePicker checkin={checkin} checkout={checkout} blockedDates={blockedDates} onChange={(ci, co) => { setCheckin(ci); setCheckout(co); }} />
 
             {nights > 0 ? (
-              <div style={{ marginTop: 24, background: "#111d35", border: "1px solid #1e3a5f", borderRadius: 16, padding: "20px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
+              <div style={{
+                marginTop: 24,
+                background: "rgba(0,212,255,0.03)",
+                border: "1px solid rgba(0,212,255,0.1)",
+                borderRadius: 16,
+                padding: "20px 24px",
+                display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16,
+              }}>
                 <div>
-                  <div style={{ color: "#64748b", fontSize: 13 }}>{formatDateLong(checkin)} → {formatDateLong(checkout)}</div>
+                  <div style={{ color: MUTED, fontSize: 13 }}>{formatDateLong(checkin)} → {formatDateLong(checkout)}</div>
                   <div style={{ fontSize: 14, color: "#94a3b8", marginTop: 4 }}>{nights} nuit{nights > 1 ? "s" : ""} × {bien.prix}€ / nuit</div>
-                  <div style={{ fontSize: 26, fontWeight: 800, color: "#f1f5f9", marginTop: 4 }}>{total}€</div>
+                  <div style={{ fontSize: 26, fontWeight: 800, color: TEXT, marginTop: 4 }}>{total}€</div>
                 </div>
-                <button onClick={() => setStep(2)} style={{ ...btnPrimary, background: bien.couleur, color: bien.couleur === "#f59e0b" || bien.couleur === "#84cc16" ? "#000" : "#fff" }}>
+                <button
+                  onClick={() => setStep(2)}
+                  style={{
+                    ...btnPrimary,
+                    background: `linear-gradient(135deg, ${bien.couleur}, ${bien.couleur}cc)`,
+                    color: bien.couleur === "#f59e0b" || bien.couleur === "#84cc16" ? "#000" : "#fff",
+                  }}
+                >
                   Continuer →
                 </button>
               </div>
             ) : (
-              <div style={{ marginTop: 24, textAlign: "center", color: "#475569", fontSize: 14, padding: "20px 0" }}>
+              <div style={{ marginTop: 24, textAlign: "center", color: MUTED, fontSize: 14, padding: "20px 0" }}>
                 Sélectionnez vos dates d'arrivée et de départ
               </div>
             )}
@@ -467,9 +549,15 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
         {/* STEP 2 — Form */}
         {step === 2 && (
           <>
-            <div style={{ background: "#111d35", borderRadius: 12, padding: "14px 18px", marginBottom: 24, fontSize: 14, color: "#64748b", display: "flex", justifyContent: "space-between" }}>
+            <div style={{
+              background: "rgba(0,212,255,0.03)",
+              border: "1px solid rgba(0,212,255,0.08)",
+              borderRadius: 12, padding: "14px 18px", marginBottom: 24,
+              fontSize: 14, color: MUTED,
+              display: "flex", justifyContent: "space-between",
+            }}>
               <span>{formatDateLong(checkin)} → {formatDateLong(checkout)}</span>
-              <span style={{ fontWeight: 700, color: "#f1f5f9" }}>{nights} nuits · {total}€</span>
+              <span style={{ fontWeight: 700, color: TEXT }}>{nights} nuits · {total}€</span>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
@@ -482,7 +570,17 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
 
             <div style={{ marginTop: 24, display: "flex", gap: 12, justifyContent: "space-between" }}>
               <button onClick={() => setStep(1)} style={btnBack}>← Retour</button>
-              <button onClick={goToPayment} disabled={!formOk || paying || !stripe} style={{ ...btnPrimary, background: formOk && !paying && stripe ? bien.couleur : "#1e293b", color: bien.couleur === "#f59e0b" || bien.couleur === "#84cc16" ? "#000" : "#fff", opacity: formOk && !paying && stripe ? 1 : 0.6, cursor: formOk && !paying && stripe ? "pointer" : "not-allowed" }}>
+              <button
+                onClick={goToPayment}
+                disabled={!formOk || paying || !stripe}
+                style={{
+                  ...btnPrimary,
+                  background: formOk && !paying && stripe ? `linear-gradient(135deg, ${bien.couleur}, ${bien.couleur}cc)` : "rgba(255,255,255,0.04)",
+                  color: bien.couleur === "#f59e0b" || bien.couleur === "#84cc16" ? "#000" : "#fff",
+                  opacity: formOk && !paying && stripe ? 1 : 0.5,
+                  cursor: formOk && !paying && stripe ? "pointer" : "not-allowed",
+                }}
+              >
                 {paying ? "Chargement…" : `Payer ${total}€ →`}
               </button>
             </div>
@@ -493,19 +591,34 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
         {/* STEP 3 — Payment */}
         {step === 3 && (
           <>
-            <div style={{ background: "#111d35", borderRadius: 12, padding: "14px 18px", marginBottom: 24, fontSize: 14, color: "#64748b", display: "flex", justifyContent: "space-between" }}>
+            <div style={{
+              background: "rgba(0,212,255,0.03)",
+              border: "1px solid rgba(0,212,255,0.08)",
+              borderRadius: 12, padding: "14px 18px", marginBottom: 24,
+              fontSize: 14, color: MUTED,
+              display: "flex", justifyContent: "space-between",
+            }}>
               <span>{form.prenom} {form.nom} · {formatDateLong(checkin)} → {formatDateLong(checkout)}</span>
-              <span style={{ fontWeight: 700, color: "#f1f5f9" }}>{total}€</span>
+              <span style={{ fontWeight: 700, color: TEXT }}>{total}€</span>
             </div>
             <div id="spe" style={{ marginBottom: 24 }} />
             <div style={{ display: "flex", gap: 12, justifyContent: "space-between" }}>
               <button onClick={() => setStep(2)} style={btnBack}>← Retour</button>
-              <button onClick={handlePay} disabled={paying} style={{ ...btnPrimary, background: paying ? "#1e293b" : "#22c55e", color: "#000", opacity: paying ? 0.6 : 1 }}>
+              <button
+                onClick={handlePay}
+                disabled={paying}
+                style={{
+                  ...btnPrimary,
+                  background: paying ? "rgba(255,255,255,0.04)" : `linear-gradient(135deg, ${CYAN}, #0099cc)`,
+                  color: "#000",
+                  opacity: paying ? 0.6 : 1,
+                }}
+              >
                 {paying ? "Traitement…" : `✓ Confirmer et payer ${total}€`}
               </button>
             </div>
             {payError && <div style={errStyle}>⚠ {payError}</div>}
-            <div style={{ marginTop: 16, textAlign: "center", color: "#374151", fontSize: 12 }}>🔒 Paiement sécurisé par Stripe</div>
+            <div style={{ marginTop: 16, textAlign: "center", color: MUTED, fontSize: 12 }}>🔒 Paiement sécurisé par Stripe</div>
           </>
         )}
       </div>
@@ -516,13 +629,22 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
 function FormField({ label, value, onChange, type = "text", multiline, style }) {
   const [focused, setFocused] = useState(false);
   const s = {
-    background: "#0a0f1e", border: `1px solid ${focused ? "#22c55e" : "#1e293b"}`, borderRadius: 10,
-    color: "#f1f5f9", padding: "11px 14px", width: "100%", fontSize: 14, outline: "none",
-    fontFamily: "inherit", resize: "vertical", transition: "border-color 0.2s", boxSizing: "border-box",
+    background: BG,
+    border: `1px solid ${focused ? CYAN + "55" : "rgba(255,255,255,0.06)"}`,
+    borderRadius: 10,
+    color: TEXT,
+    padding: "11px 14px",
+    width: "100%",
+    fontSize: 14,
+    outline: "none",
+    fontFamily: "inherit",
+    resize: "vertical",
+    transition: "border-color 0.2s",
+    boxSizing: "border-box",
   };
   return (
     <div style={style}>
-      <label style={{ display: "block", fontSize: 12, color: "#64748b", marginBottom: 6, fontWeight: 500 }}>{label}</label>
+      <label style={{ display: "block", fontSize: 12, color: MUTED, marginBottom: 6, fontWeight: 500 }}>{label}</label>
       {multiline
         ? <textarea rows={3} style={s} value={value} onChange={e => onChange(e.target.value)} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} />
         : <input type={type} style={s} value={value} onChange={e => onChange(e.target.value)} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} />}
@@ -544,91 +666,169 @@ function BienCard({ bien, onBook }) {
     <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      style={{ background: "#0d1526", borderRadius: 20, overflow: "hidden", border: `1px solid ${hovered ? bien.couleur + "44" : "#1e293b"}`, transition: "transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease", transform: hovered ? "translateY(-6px)" : "none", boxShadow: hovered ? `0 24px 48px rgba(0,0,0,0.5), 0 0 0 1px ${bien.couleur}22` : "0 4px 16px rgba(0,0,0,0.3)", display: "flex", flexDirection: "column" }}
+      style={{
+        background: SURF,
+        borderRadius: 16,
+        overflow: "hidden",
+        border: `1px solid ${hovered ? bien.couleur + "66" : "rgba(255,255,255,0.06)"}`,
+        transition: "all 0.4s cubic-bezier(0.23,1,0.32,1)",
+        transform: hovered ? "translateY(-8px)" : "none",
+        boxShadow: hovered
+          ? `0 32px 64px rgba(0,0,0,0.6), 0 0 0 1px ${bien.couleur}22, 0 0 40px 2px ${bien.couleur}18`
+          : "0 4px 24px rgba(0,0,0,0.4)",
+        display: "flex",
+        flexDirection: "column",
+      }}
     >
-      {/* Photo carousel */}
-      <div style={{ position: "relative", height: 220, overflow: "hidden", background: `linear-gradient(135deg, ${bien.couleur}22, ${bien.couleur}44)` }}>
+      {/* Photo section */}
+      <div style={{ position: "relative", height: 260, overflow: "hidden", background: `linear-gradient(135deg, ${bien.couleur}18, ${bien.couleur}30)` }}>
+        {/* Color line top */}
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: bien.couleur, zIndex: 2 }} />
+
         {currentPhoto ? (
           <img
             key={photoIdx}
             src={currentPhoto}
             alt={bien.nom}
-            style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.4s ease, opacity 0.3s", transform: hovered ? "scale(1.04)" : "scale(1)" }}
+            style={{
+              width: "100%", height: "100%", objectFit: "cover",
+              transition: "transform 0.6s cubic-bezier(0.23,1,0.32,1), opacity 0.3s",
+              transform: hovered ? "scale(1.06)" : "scale(1)",
+            }}
           />
         ) : (
           <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64 }}>🏡</div>
         )}
 
-        {/* Overlay gradient */}
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(13,21,38,0.7) 0%, transparent 50%)" }} />
+        {/* Dark overlay gradient bottom */}
+        <div style={{ position: "absolute", inset: 0, background: `linear-gradient(to top, ${BG} 0%, transparent 60%)` }} />
 
         {/* Carousel nav — visible on hover */}
         {photos.length > 1 && hovered && (
           <>
-            <button onClick={prev} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(0,0,0,0.55)", border: "none", color: "#fff", width: 32, height: 32, borderRadius: "50%", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>‹</button>
-            <button onClick={next} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(0,0,0,0.55)", border: "none", color: "#fff", width: 32, height: 32, borderRadius: "50%", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>›</button>
+            <button onClick={prev} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(2,8,24,0.7)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", width: 32, height: 32, borderRadius: "50%", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 3 }}>‹</button>
+            <button onClick={next} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(2,8,24,0.7)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", width: 32, height: 32, borderRadius: "50%", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 3 }}>›</button>
           </>
         )}
 
         {/* Dots */}
         {photos.length > 1 && (
-          <div style={{ position: "absolute", bottom: 44, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 4 }}>
+          <div style={{ position: "absolute", bottom: 52, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 4, zIndex: 2 }}>
             {photos.map((_, i) => (
-              <div key={i} onClick={e => { e.stopPropagation(); setPhotoIdx(i); }} style={{ width: i === photoIdx ? 16 : 6, height: 6, borderRadius: 3, background: i === photoIdx ? "#fff" : "rgba(255,255,255,0.4)", cursor: "pointer", transition: "all 0.2s" }} />
+              <div
+                key={i}
+                onClick={e => { e.stopPropagation(); setPhotoIdx(i); }}
+                style={{
+                  width: i === photoIdx ? 16 : 6,
+                  height: 6,
+                  borderRadius: 3,
+                  background: i === photoIdx ? bien.couleur : "rgba(255,255,255,0.35)",
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                }}
+              />
             ))}
           </div>
         )}
 
-        {/* Tag */}
+        {/* Tag badge */}
         {bien.tag && (
-          <div style={{ position: "absolute", top: 14, left: 14, background: bien.couleur, color: "#fff", fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 20, letterSpacing: 0.5 }}>
-            ✦ {bien.tag}
+          <div style={{
+            position: "absolute", top: 16, right: 14, zIndex: 3,
+            background: "rgba(2,8,24,0.75)", backdropFilter: "blur(8px)",
+            border: `1px solid ${bien.couleur}55`,
+            color: bien.couleur, fontSize: 10, fontWeight: 700,
+            padding: "4px 10px", borderRadius: 20, letterSpacing: 0.5,
+            textTransform: "uppercase",
+          }}>
+            {bien.tag}
           </div>
         )}
 
         {/* Price badge */}
-        <div style={{ position: "absolute", bottom: 14, right: 14, background: "rgba(10,15,30,0.9)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, padding: "8px 14px", textAlign: "right" }}>
-          <div style={{ fontSize: 20, fontWeight: 800, color: bien.couleur, lineHeight: 1 }}>{bien.prix}€</div>
-          <div style={{ fontSize: 11, color: "#64748b" }}>/ nuit</div>
+        <div style={{
+          position: "absolute", bottom: 14, right: 14, zIndex: 2,
+          background: "rgba(2,8,24,0.85)", backdropFilter: "blur(10px)",
+          border: "1px solid rgba(255,255,255,0.1)",
+          borderRadius: 10, padding: "8px 14px", textAlign: "right",
+        }}>
+          <div style={{ fontSize: 22, fontWeight: 800, color: "#fff", lineHeight: 1 }}>{bien.prix}€</div>
+          <div style={{ fontSize: 11, color: MUTED }}>/ nuit</div>
         </div>
       </div>
 
-      <div style={{ padding: "20px 22px 24px", flex: 1, display: "flex", flexDirection: "column" }}>
-        <div style={{ marginBottom: 10 }}>
-          <div style={{ fontWeight: 800, fontSize: 18, color: "#f1f5f9", marginBottom: 4 }}>{bien.nom}</div>
-          <div style={{ color: "#475569", fontSize: 13, display: "flex", alignItems: "center", gap: 4 }}>
-            <span>📍</span> {bien.lieu}
-          </div>
+      {/* Info section */}
+      <div style={{ padding: "20px 22px 22px", flex: 1, display: "flex", flexDirection: "column" }}>
+        {/* Location */}
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: bien.couleur, marginBottom: 8, display: "flex", alignItems: "center", gap: 4 }}>
+          <span>📍</span> {bien.lieu}
         </div>
 
-        <p style={{ color: "#64748b", fontSize: 13, lineHeight: 1.65, margin: "10px 0 16px", flex: 1 }}>{bien.desc}</p>
+        {/* Name */}
+        <div style={{ fontWeight: 800, fontSize: 21, color: TEXT, marginBottom: 10 }}>{bien.nom}</div>
 
-        {/* Rating badge */}
+        {/* Rating row */}
         {bien.rating && (
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
-            <span style={{ background: "#1e293b", border: "1px solid #2d3f5e", borderRadius: 8, padding: "4px 10px", fontSize: 13, color: "#f1f5f9", fontWeight: 700, display: "flex", alignItems: "center", gap: 5 }}>
-              ⭐ {bien.rating}
-            </span>
-            {bien.reviews && <span style={{ color: "#475569", fontSize: 12 }}>{bien.reviews} avis</span>}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, fontSize: 13, color: MUTED }}>
+            <span style={{ color: GOLD }}>★ {bien.rating}</span>
+            <span>·</span>
+            {bien.reviews && <span>{bien.reviews} avis</span>}
+            <span>·</span>
+            <span>{bien.capacite} pers.</span>
+            <span>·</span>
+            <span>{bien.lits} lit{bien.lits > 1 ? "s" : ""}</span>
           </div>
         )}
 
-        {/* Capacité */}
-        <div style={{ display: "flex", gap: 14, marginBottom: 18, flexWrap: "wrap" }}>
-          <Stat icon="👤" label={`${bien.capacite} pers.`} />
-          <Stat icon="🛏️" label={`${bien.lits} lit${bien.lits > 1 ? "s" : ""}`} />
-          <Stat icon="🚿" label={`${bien.sdb} sdb`} />
-        </div>
+        {/* Description */}
+        <p style={{
+          color: MUTED, fontSize: 13, lineHeight: 1.65,
+          margin: "0 0 14px",
+          flex: 1,
+          display: "-webkit-box",
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: "vertical",
+          overflow: "hidden",
+        }}>{bien.desc}</p>
 
         {/* Amenities */}
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 20 }}>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 18 }}>
           {bien.amenities.map(a => (
-            <span key={a} style={{ background: "#111d35", border: "1px solid #1e293b", borderRadius: 6, fontSize: 11, color: "#64748b", padding: "3px 8px" }}>{a}</span>
+            <span key={a} style={{
+              background: "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(255,255,255,0.07)",
+              borderRadius: 5, fontSize: 11, color: MUTED, padding: "3px 8px",
+            }}>{a}</span>
           ))}
         </div>
 
-        <button onClick={() => onBook(bien)} style={{ ...btnPrimary, width: "100%", background: `linear-gradient(135deg, ${bien.couleur} 0%, ${bien.couleur}bb 100%)`, color: bien.couleur === "#f59e0b" || bien.couleur === "#84cc16" ? "#000" : "#fff", fontSize: 15 }}>
-          Voir les disponibilités
+        {/* CTA */}
+        <button
+          onClick={() => onBook(bien)}
+          style={{
+            width: "100%",
+            background: `linear-gradient(135deg, ${bien.couleur}18, ${bien.couleur}08)`,
+            border: `1px solid ${bien.couleur}45`,
+            color: bien.couleur,
+            borderRadius: 4,
+            padding: "13px 20px",
+            fontWeight: 700,
+            fontSize: 13,
+            letterSpacing: 1,
+            cursor: "pointer",
+            transition: "background 0.2s, border-color 0.2s",
+            textTransform: "uppercase",
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.background = `linear-gradient(135deg, ${bien.couleur}25, ${bien.couleur}15)`;
+            e.currentTarget.style.borderColor = `${bien.couleur}80`;
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.background = `linear-gradient(135deg, ${bien.couleur}18, ${bien.couleur}08)`;
+            e.currentTarget.style.borderColor = `${bien.couleur}45`;
+          }}
+        >
+          Voir les disponibilités →
         </button>
       </div>
     </div>
@@ -637,7 +837,7 @@ function BienCard({ bien, onBook }) {
 
 function Stat({ icon, label }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 5, color: "#64748b", fontSize: 13 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 5, color: MUTED, fontSize: 13 }}>
       <span>{icon}</span> {label}
     </div>
   );
@@ -646,14 +846,14 @@ function Stat({ icon, label }) {
 // ── Thank you page ───────────────────────────────────────────────
 function MerciPage() {
   return (
-    <div style={{ minHeight: "100vh", background: "#0a0f1e", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", textAlign: "center", padding: 32 }}>
+    <div style={{ minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", textAlign: "center", padding: 32 }}>
       <div>
-        <div style={{ width: 80, height: 80, borderRadius: "50%", background: "rgba(34,197,94,0.15)", border: "2px solid #22c55e", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36, margin: "0 auto 28px" }}>✓</div>
-        <h1 style={{ fontSize: 34, fontWeight: 900, marginBottom: 12, color: "#f1f5f9" }}>Réservation confirmée !</h1>
-        <p style={{ color: "#64748b", fontSize: 16, maxWidth: 420, margin: "0 auto 32px", lineHeight: 1.6 }}>
+        <div style={{ width: 80, height: 80, borderRadius: "50%", background: `rgba(0,212,255,0.1)`, border: `2px solid ${CYAN}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36, margin: "0 auto 28px" }}>✓</div>
+        <h1 style={{ fontSize: 34, fontWeight: 900, marginBottom: 12, color: TEXT }}>Réservation confirmée !</h1>
+        <p style={{ color: MUTED, fontSize: 16, maxWidth: 420, margin: "0 auto 32px", lineHeight: 1.6 }}>
           Merci pour votre réservation. Un email de confirmation vous sera envoyé dans quelques minutes.
         </p>
-        <a href="/" style={{ ...btnPrimary, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 8, background: "#22c55e", color: "#000" }}>← Retour à l'accueil</a>
+        <a href="/" style={{ ...btnPrimary, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 8, background: `linear-gradient(135deg, ${CYAN}, #0099cc)`, color: "#000" }}>← Retour à l'accueil</a>
       </div>
     </div>
   );
@@ -691,90 +891,242 @@ export default function PublicSite() {
   }, []);
 
   const lieux = [
-    { key: "all", label: "Tous les biens (7)" },
-    { key: "Martinique", label: "🌴 Martinique (6)" },
-    { key: "Île-de-France", label: "🗼 Île-de-France (1)" },
+    { key: "all", label: "Tous" },
+    { key: "Martinique", label: "Martinique" },
+    { key: "Île-de-France", label: "Île-de-France" },
   ];
 
   const filtered = filterLieu === "all" ? BIENS : BIENS.filter(b => b.lieu.includes(filterLieu));
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0a0f1e", color: "#fff", fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: BG, color: TEXT, fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}>
 
-      {/* Header */}
-      <header style={{ position: "sticky", top: 0, zIndex: 200, borderBottom: scrolled ? "1px solid #1e293b" : "1px solid transparent", background: scrolled ? "rgba(10,15,30,0.96)" : "transparent", backdropFilter: scrolled ? "blur(16px)" : "none", transition: "all 0.3s ease", padding: "0 24px" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", height: 68, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg, #22c55e, #16a34a)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🌺</div>
+      {/* ── NAVIGATION ── */}
+      <header style={{
+        position: "sticky", top: 0, zIndex: 200,
+        height: 60,
+        background: "rgba(2,8,24,0.85)",
+        backdropFilter: "blur(20px)",
+        borderBottom: "1px solid rgba(0,212,255,0.08)",
+        padding: "0 32px",
+        display: "flex", alignItems: "center",
+      }}>
+        <div style={{ maxWidth: 1280, margin: "0 auto", width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 20 }}>🌺</span>
             <div>
-              <div style={{ fontWeight: 800, fontSize: 17, lineHeight: 1 }}>Amaryllis <span style={{ color: "#22c55e" }}>Locations</span></div>
-              <div style={{ fontSize: 11, color: "#475569", marginTop: 1 }}>France · Martinique</div>
+              <div style={{ fontWeight: 900, fontSize: 15, letterSpacing: 2, color: TEXT, textTransform: "uppercase" }}>AMARYLLIS</div>
+              <div style={{ fontSize: 10, color: MUTED, letterSpacing: 1 }}>Martinique · Paris</div>
             </div>
           </div>
-          <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-            <div style={{ fontSize: 13, color: "#64748b" }}>📞 Réservation directe — sans frais</div>
-            <a href="/admin" style={{ fontSize: 12, color: "#374151", textDecoration: "none", background: "#1e293b", padding: "6px 14px", borderRadius: 8 }}>Admin</a>
+          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+            <div style={{ fontSize: 12, color: MUTED }}>📞 Réservation directe</div>
+            <a href="/admin" style={{ fontSize: 11, color: MUTED, textDecoration: "none", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", padding: "5px 12px", borderRadius: 4, letterSpacing: 1, textTransform: "uppercase" }}>Admin</a>
           </div>
         </div>
       </header>
 
-      {/* Hero */}
-      <div style={{ padding: "80px 24px 72px", textAlign: "center", position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 80% 50% at 50% 0%, rgba(34,197,94,0.08) 0%, transparent 70%)", pointerEvents: "none" }} />
-        <div style={{ maxWidth: 720, margin: "0 auto", position: "relative" }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.25)", borderRadius: 20, padding: "6px 16px", fontSize: 12, color: "#22c55e", fontWeight: 600, letterSpacing: 1, marginBottom: 24 }}>
-            ✦ LOCATION DIRECTE · SANS COMMISSION
+      {/* ── HERO ── */}
+      <div style={{ position: "relative", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+
+        {/* Atmospheric background */}
+        <div style={{
+          position: "absolute", inset: 0,
+          background: `
+            radial-gradient(ellipse 70% 60% at 15% 20%, rgba(0,212,255,0.07) 0%, transparent 60%),
+            radial-gradient(ellipse 50% 50% at 85% 30%, rgba(255,107,107,0.06) 0%, transparent 60%),
+            radial-gradient(ellipse 60% 50% at 50% 90%, rgba(139,92,246,0.06) 0%, transparent 60%),
+            ${BG}
+          `,
+          pointerEvents: "none",
+        }} />
+
+        {/* Grid lines overlay */}
+        <div style={{
+          position: "absolute", inset: 0,
+          backgroundImage: `
+            linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px)
+          `,
+          backgroundSize: "60px 60px",
+          pointerEvents: "none",
+        }} />
+
+        {/* Animated scan line */}
+        <div style={{
+          position: "absolute", left: 0, right: 0, height: 1,
+          background: "linear-gradient(90deg, transparent, rgba(0,212,255,0.15), transparent)",
+          animation: "scan 8s linear infinite",
+          pointerEvents: "none",
+          zIndex: 1,
+        }} />
+
+        {/* Hero content */}
+        <div style={{
+          position: "relative", zIndex: 2,
+          maxWidth: 800, margin: "0 auto",
+          padding: "0 32px",
+          textAlign: "center",
+        }}>
+          {/* Small label */}
+          <div style={{
+            animation: "fadeUp 0.6s ease forwards",
+            opacity: 0,
+            animationDelay: "0.1s",
+            marginBottom: 28,
+          }}>
+            <span style={{
+              fontSize: 11, color: CYAN, letterSpacing: 3,
+              textTransform: "uppercase", fontWeight: 600,
+            }}>✦ LOCATIONS DIRECTES AUX ANTILLES</span>
           </div>
-          <h1 style={{ fontSize: "clamp(36px, 7vw, 64px)", fontWeight: 900, lineHeight: 1.08, marginBottom: 20, background: "linear-gradient(160deg, #f1f5f9 0%, #94a3b8 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-            Villas & Appartements<br />d'Exception
-          </h1>
-          <p style={{ color: "#64748b", fontSize: 18, lineHeight: 1.65, maxWidth: 540, margin: "0 auto 36px" }}>
-            7 propriétés sélectionnées en <strong style={{ color: "#94a3b8" }}>Martinique</strong> et <strong style={{ color: "#94a3b8" }}>Île-de-France</strong>. Réservez directement auprès du propriétaire.
-          </p>
+
+          {/* Main title */}
+          <div style={{
+            animation: "fadeUp 0.7s ease forwards",
+            opacity: 0,
+            animationDelay: "0.25s",
+          }}>
+            <h1 style={{
+              fontSize: 96, fontWeight: 900, lineHeight: 1,
+              color: "#ffffff", margin: "0 0 20px",
+              letterSpacing: 0,
+            }}>AMARYLLIS</h1>
+          </div>
+
+          {/* Subtitle */}
+          <div style={{
+            animation: "fadeUp 0.7s ease forwards",
+            opacity: 0,
+            animationDelay: "0.4s",
+            marginBottom: 48,
+          }}>
+            <p style={{ fontSize: 18, fontWeight: 300, color: MUTED, fontStyle: "italic", margin: 0 }}>
+              Martinique · Paris · Réservez sans commission
+            </p>
+          </div>
+
           {/* Stats */}
-          <div style={{ display: "flex", gap: 32, justifyContent: "center", flexWrap: "wrap" }}>
-            {[["7", "Propriétés"], ["0%", "Frais de service"], ["⭐ 4.9", "Note moyenne"]].map(([v, l]) => (
-              <div key={l} style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 24, fontWeight: 800, color: "#f1f5f9" }}>{v}</div>
-                <div style={{ fontSize: 12, color: "#475569" }}>{l}</div>
+          <div style={{
+            animation: "fadeUp 0.7s ease forwards",
+            opacity: 0,
+            animationDelay: "0.55s",
+            display: "flex", gap: 20, justifyContent: "center", flexWrap: "wrap", marginBottom: 48,
+          }}>
+            {[
+              { v: "7 propriétés", icon: "🏝" },
+              { v: "⭐ 4.8 moyen", icon: null },
+            ].map(({ v, icon }) => (
+              <div key={v} style={{
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(255,255,255,0.07)",
+                borderRadius: 8,
+                padding: "10px 20px",
+                fontSize: 13, color: TEXT, fontWeight: 600,
+              }}>
+                {icon && <span style={{ marginRight: 6 }}>{icon}</span>}{v}
               </div>
             ))}
           </div>
+
+          {/* CTA */}
+          <div style={{
+            animation: "fadeUp 0.7s ease forwards",
+            opacity: 0,
+            animationDelay: "0.7s",
+          }}>
+            <a
+              href="#properties"
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 8,
+                background: `linear-gradient(135deg, ${CYAN}22, ${CYAN}10)`,
+                border: `1px solid ${CYAN}55`,
+                color: CYAN,
+                padding: "14px 32px",
+                borderRadius: 4,
+                fontWeight: 700, fontSize: 14,
+                letterSpacing: 1, textTransform: "uppercase",
+                textDecoration: "none",
+                boxShadow: `0 0 24px rgba(0,212,255,0.12)`,
+                transition: "all 0.3s",
+              }}
+            >
+              Explorer les villas →
+            </a>
+          </div>
+
+          {/* Scroll indicator */}
+          <div style={{
+            animation: "fadeUp 0.7s ease forwards",
+            opacity: 0,
+            animationDelay: "1s",
+            marginTop: 64,
+            color: MUTED, fontSize: 11, letterSpacing: 2,
+          }}>↓ défiler</div>
         </div>
       </div>
 
-      {/* Filters + Grid */}
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px 80px" }}>
-        <div style={{ display: "flex", gap: 8, marginBottom: 36, flexWrap: "wrap" }}>
-          {lieux.map(({ key, label }) => (
-            <button key={key} onClick={() => setFilterLieu(key)} style={{ padding: "9px 20px", borderRadius: 24, border: `1px solid ${filterLieu === key ? "#22c55e" : "#1e293b"}`, background: filterLieu === key ? "rgba(34,197,94,0.1)" : "transparent", color: filterLieu === key ? "#22c55e" : "#475569", cursor: "pointer", fontSize: 14, fontWeight: filterLieu === key ? 700 : 400, transition: "all 0.2s" }}>
-              {label}
-            </button>
-          ))}
+      {/* ── PROPERTIES SECTION ── */}
+      <div id="properties" style={{ maxWidth: 1280, margin: "0 auto", padding: "80px 32px" }}>
+
+        {/* Section header + filters */}
+        <div style={{ marginBottom: 40 }}>
+          <h2 style={{ fontSize: 32, fontWeight: 800, color: TEXT, margin: "0 0 24px" }}>Nos propriétés</h2>
+
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 24 }}>
+            {lieux.map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => setFilterLieu(key)}
+                style={{
+                  padding: "8px 20px",
+                  borderRadius: 20,
+                  border: `1px solid ${filterLieu === key ? CYAN + "88" : "rgba(255,255,255,0.1)"}`,
+                  background: filterLieu === key ? `rgba(0,212,255,0.12)` : "transparent",
+                  color: filterLieu === key ? CYAN : MUTED,
+                  cursor: "pointer",
+                  fontSize: 13,
+                  fontWeight: filterLieu === key ? 700 : 400,
+                  transition: "all 0.2s",
+                  letterSpacing: 0.5,
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Separator */}
+          <div style={{ height: 1, background: "linear-gradient(90deg, rgba(0,212,255,0.15), transparent)" }} />
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 28 }}>
+        {/* Grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: 24 }}>
           {filtered.map(b => (
             <BienCard key={b.id} bien={b} onBook={openBien} />
           ))}
         </div>
       </div>
 
-      {/* Footer */}
-      <footer style={{ borderTop: "1px solid #111d35", padding: "48px 24px" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 20 }}>
+      {/* ── FOOTER ── */}
+      <footer style={{
+        background: SURF,
+        borderTop: `1px solid rgba(0,212,255,0.1)`,
+        padding: "40px 32px",
+      }}>
+        <div style={{ maxWidth: 1280, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
           <div>
-            <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 6 }}>🌺 Amaryllis <span style={{ color: "#22c55e" }}>Locations</span></div>
-            <div style={{ color: "#374151", fontSize: 13 }}>7 propriétés · Réservation directe sans intermédiaire</div>
+            <div style={{ fontWeight: 900, fontSize: 15, letterSpacing: 2, color: TEXT, textTransform: "uppercase", marginBottom: 6 }}>🌺 AMARYLLIS</div>
+            <div style={{ color: MUTED, fontSize: 12 }}>Locations de vacances directes — sans commission</div>
           </div>
-          <div style={{ color: "#374151", fontSize: 13, textAlign: "right" }}>
-            <div>Paiement sécurisé par Stripe 🔒</div>
-            <a href="/admin" style={{ color: "#374151", textDecoration: "none", marginTop: 4, display: "block" }}>Espace propriétaire →</a>
+          <div style={{ textAlign: "right", display: "flex", flexDirection: "column", gap: 6 }}>
+            <div style={{ fontSize: 12, color: MUTED }}>🔒 Paiement sécurisé Stripe</div>
+            <a href="/admin" style={{ fontSize: 11, color: MUTED, textDecoration: "none", letterSpacing: 1 }}>Admin →</a>
           </div>
         </div>
       </footer>
 
-      {/* Modal */}
+      {/* ── MODAL ── */}
       {selectedBien && (
         <BookingModal bien={selectedBien} blockedDates={blockedDates} loadingAvail={loadingAvail} onClose={() => setSelectedBien(null)} />
       )}
@@ -784,11 +1136,35 @@ export default function PublicSite() {
 
 // ── Shared styles ────────────────────────────────────────────────
 const btnPrimary = {
-  border: "none", borderRadius: 12, padding: "13px 26px", fontWeight: 700, fontSize: 14,
-  cursor: "pointer", transition: "opacity 0.2s, transform 0.1s", display: "inline-flex", alignItems: "center", justifyContent: "center",
+  border: "none",
+  borderRadius: 4,
+  padding: "13px 26px",
+  fontWeight: 700,
+  fontSize: 14,
+  cursor: "pointer",
+  transition: "opacity 0.2s, transform 0.1s",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  letterSpacing: 1,
+  textTransform: "uppercase",
 };
 const btnBack = {
-  background: "transparent", border: "1px solid #1e293b", color: "#64748b", borderRadius: 12,
-  padding: "13px 20px", fontWeight: 600, fontSize: 14, cursor: "pointer",
+  background: "transparent",
+  border: "1px solid rgba(255,255,255,0.08)",
+  color: MUTED,
+  borderRadius: 4,
+  padding: "13px 20px",
+  fontWeight: 600,
+  fontSize: 14,
+  cursor: "pointer",
 };
-const errStyle = { color: "#f87171", marginTop: 14, fontSize: 13, background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.2)", borderRadius: 8, padding: "10px 14px" };
+const errStyle = {
+  color: CORAL,
+  marginTop: 14,
+  fontSize: 13,
+  background: "rgba(255,107,107,0.06)",
+  border: "1px solid rgba(255,107,107,0.2)",
+  borderRadius: 8,
+  padding: "10px 14px",
+};
