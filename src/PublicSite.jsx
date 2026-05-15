@@ -1,5 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
+// Inject spinner keyframe once
+if (typeof document !== "undefined" && !document.getElementById("__spin_style")) {
+  const s = document.createElement("style");
+  s.id = "__spin_style";
+  s.textContent = "@keyframes spin { to { transform: rotate(360deg); } }";
+  document.head.appendChild(s);
+}
+
 const STRIPE_PK = "pk_test_51N1fVbAM2ySp09YCENcn4NcGi4xM7BzNCra9HU3ildZKLAHPzCOsY6ItlpxrttT1owXCUSKQrfPrIXsZSWPLrQsd00SDmMsWvX";
 
 const AB = "https://a0.muscache.com/im/pictures/";
@@ -342,7 +350,7 @@ function DateRangePicker({ checkin, checkout, blockedDates = [], onChange }) {
 const iconBtn = { background: "none", border: "1px solid #1e293b", color: "#94a3b8", width: 32, height: 32, borderRadius: 8, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center" };
 
 // ── Booking Modal ────────────────────────────────────────────────
-function BookingModal({ bien, blockedDates, onClose }) {
+function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
   const [step, setStep] = useState(1);
   const [checkin, setCheckin] = useState(null);
   const [checkout, setCheckout] = useState(null);
@@ -429,6 +437,12 @@ function BookingModal({ bien, blockedDates, onClose }) {
         {/* STEP 1 — Dates */}
         {step === 1 && (
           <>
+            {loadingAvail && (
+              <div style={{ textAlign: "center", padding: "8px 0 4px", color: "#475569", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                <span style={{ display: "inline-block", width: 12, height: 12, border: "2px solid #22c55e", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
+                Chargement des disponibilités Airbnb…
+              </div>
+            )}
             <DateRangePicker checkin={checkin} checkout={checkout} blockedDates={blockedDates} onChange={(ci, co) => { setCheckin(ci); setCheckout(co); }} />
 
             {nights > 0 ? (
@@ -650,6 +664,22 @@ export default function PublicSite() {
   const [selectedBien, setSelectedBien] = useState(null);
   const [filterLieu, setFilterLieu] = useState("all");
   const [scrolled, setScrolled] = useState(false);
+  const [blockedDates, setBlockedDates] = useState([]);
+  const [loadingAvail, setLoadingAvail] = useState(false);
+
+  async function openBien(bien) {
+    setSelectedBien(bien);
+    setBlockedDates([]);
+    setLoadingAvail(true);
+    try {
+      const r = await fetch(`/api/get-availability?bienId=${bien.id}`);
+      if (r.ok) {
+        const d = await r.json();
+        setBlockedDates(d.blockedDates || []);
+      }
+    } catch (_) {}
+    setLoadingAvail(false);
+  }
 
   const path = window.location.pathname;
   if (path === "/merci") return <MerciPage />;
@@ -725,7 +755,7 @@ export default function PublicSite() {
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 28 }}>
           {filtered.map(b => (
-            <BienCard key={b.id} bien={b} onBook={setSelectedBien} />
+            <BienCard key={b.id} bien={b} onBook={openBien} />
           ))}
         </div>
       </div>
@@ -746,7 +776,7 @@ export default function PublicSite() {
 
       {/* Modal */}
       {selectedBien && (
-        <BookingModal bien={selectedBien} blockedDates={[]} onClose={() => setSelectedBien(null)} />
+        <BookingModal bien={selectedBien} blockedDates={blockedDates} loadingAvail={loadingAvail} onClose={() => setSelectedBien(null)} />
       )}
     </div>
   );
