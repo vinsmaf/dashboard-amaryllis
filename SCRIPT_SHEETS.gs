@@ -35,6 +35,7 @@ function doGet(e) {
   if (action === "fetchIcal") return fetchIcal_(e.parameter);
   if (action === "syncReservations") return syncReservations_(e.parameter);
   if (action === "sendCheckinAlerts") { sendCheckinAlerts_(); return json_({ ok: true }); }
+  if (action === "setNtfyTopic") return setNtfyTopic_(e.parameter);
 
   return json_({ error: "action inconnue: " + action });
 }
@@ -251,4 +252,24 @@ function sendCheckinAlerts_() {
 
   var email = Session.getActiveUser().getEmail();
   GmailApp.sendEmail(email, subject.trim().replace(/ ·\s*$/, ""), body);
+  sendNtfyPush_("🏠 " + subject.trim().replace(/ ·\s*$/, "").replace("🏠 Dashboard Amaryllis — ", ""), sections.join("\n\n"));
+}
+
+// ?action=setNtfyTopic&topic=mon-topic-secret
+function setNtfyTopic_(p) {
+  PropertiesService.getScriptProperties().setProperty("ntfyTopic", p.topic || "");
+  return json_({ ok: true });
+}
+
+function sendNtfyPush_(title, body) {
+  var topic = PropertiesService.getScriptProperties().getProperty("ntfyTopic");
+  if (!topic) return;
+  try {
+    UrlFetchApp.fetch("https://ntfy.sh/" + topic, {
+      method: "post",
+      payload: body,
+      headers: { "Title": title, "Priority": "high", "Tags": "key,house" },
+      muteHttpExceptions: true
+    });
+  } catch(e) {}
 }

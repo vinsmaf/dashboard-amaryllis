@@ -3186,6 +3186,8 @@ export default function App() {
   const [lastSync, setLastSync] = useState(null);
   const [scriptUrl, setScriptUrl] = useState(() => localStorage.getItem("sheets_script_url") || "");
   const [showScriptSetup, setShowScriptSetup] = useState(false);
+  const [showPushSetup, setShowPushSetup] = useState(false);
+  const [ntfyTopic, setNtfyTopic] = useState(() => localStorage.getItem("ntfy_topic") || "");
   const [hist, setHist] = useState(HIST_SEED);
   const [reservations, setReservations] = useState(() => {
     try { const r = localStorage.getItem("reservations_v2"); return r ? JSON.parse(r) : []; } catch { return []; }
@@ -3289,6 +3291,9 @@ export default function App() {
                 <button onClick={() => setShowScriptSetup(true)} title="Configurer Apps Script" style={{ padding: "5px 7px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: scriptUrl ? "#10b981" : "#64748b", fontSize: 11, cursor: "pointer" }}>
                   {scriptUrl ? "⚙✓" : "⚙"}
                 </button>
+                <button onClick={() => setShowPushSetup(true)} title="Notifications push" style={{ padding: "5px 7px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: ntfyTopic ? "#f59e0b" : "#64748b", fontSize: 11, cursor: "pointer" }}>
+                  {ntfyTopic ? "🔔" : "🔕"}
+                </button>
                 <button onClick={() => { localStorage.removeItem(PWD_KEY); setAuthed(false); }} title="Déconnexion" style={{ padding: "5px 7px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.08)", background: "transparent", color: "#475569", fontSize: 11, cursor: "pointer" }}>🔒</button>
               </div>
               {!mob && <span style={{ fontSize: 9, color: sync.status === "error" ? "#ef4444" : sync.status === "ok" ? "#10b981" : "#64748b" }}>{sync.msg}</span>}
@@ -3337,6 +3342,59 @@ export default function App() {
       <div style={{ padding: "8px 22px", borderTop: "1px solid rgba(255,255,255,0.04)", fontSize: 9, color: "#334155", textAlign: "center" }}>
         Locatif Dashboard · {lastSync ? "Synchro : " + lastSync : "Non synchronisé"}
       </div>
+
+      {showPushSetup && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={() => setShowPushSetup(false)}>
+          <div style={{ background: "#1e293b", borderRadius: 14, padding: 24, maxWidth: 480, width: "100%", border: "1px solid rgba(255,255,255,0.1)" }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>🔔 Notifications push</div>
+            <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 16 }}>Alerte sur ton téléphone même app fermée — via ntfy.sh (gratuit, sans compte).</div>
+
+            <div style={{ background: "#0f172a", borderRadius: 8, padding: 12, fontSize: 10, color: "#94a3b8", marginBottom: 16, lineHeight: 1.8 }}>
+              <b style={{ color: "#e2e8f0" }}>1.</b> Choisis un nom de topic secret ci-dessous (ex: <code style={{ color: "#f59e0b" }}>amaryllis-{Math.random().toString(36).slice(2,8)}</code>)<br />
+              <b style={{ color: "#e2e8f0" }}>2.</b> Clique <b style={{ color: "#0ea5e9" }}>S'abonner</b> → autorise les notifications dans le navigateur<br />
+              <b style={{ color: "#e2e8f0" }}>3.</b> Sur iPhone : installe l'app <b>ntfy</b> (App Store) et abonne-toi au même topic<br />
+              <b style={{ color: "#e2e8f0" }}>4.</b> Enregistre → le Apps Script enverra le push chaque matin
+            </div>
+
+            <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+              <input
+                type="text"
+                placeholder="ex: amaryllis-mon-topic-secret"
+                value={ntfyTopic}
+                onChange={e => setNtfyTopic(e.target.value)}
+                style={{ flex: 1, padding: "9px 11px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.15)", background: "#0f172a", color: "#e2e8f0", fontSize: 12, boxSizing: "border-box" }}
+              />
+              <button
+                onClick={() => { if (ntfyTopic) window.open(`https://ntfy.sh/${ntfyTopic}`, "_blank"); }}
+                disabled={!ntfyTopic}
+                style={{ padding: "9px 12px", borderRadius: 7, border: "none", background: ntfyTopic ? "#f59e0b" : "#334155", color: ntfyTopic ? "#000" : "#64748b", cursor: ntfyTopic ? "pointer" : "default", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}
+              >S'abonner</button>
+            </div>
+
+            {ntfyTopic && (
+              <div style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 8, padding: "8px 12px", fontSize: 10, color: "#f59e0b", marginBottom: 12 }}>
+                Topic actif : <code>{ntfyTopic}</code> · Les alertes seront envoyées via ce canal.
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button onClick={() => setShowPushSetup(false)} style={{ padding: "7px 14px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "#94a3b8", cursor: "pointer", fontSize: 12 }}>Annuler</button>
+              <button
+                onClick={() => {
+                  const t = ntfyTopic.trim();
+                  localStorage.setItem("ntfy_topic", t);
+                  setNtfyTopic(t);
+                  if (scriptUrl && t) {
+                    fetch(`${scriptUrl}?action=setNtfyTopic&topic=${encodeURIComponent(t)}`, { redirect: "follow" }).catch(() => {});
+                  }
+                  setShowPushSetup(false);
+                }}
+                style={{ padding: "7px 14px", borderRadius: 7, border: "none", background: "#f59e0b", color: "#000", cursor: "pointer", fontSize: 12, fontWeight: 600 }}
+              >Enregistrer</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showScriptSetup && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={() => setShowScriptSetup(false)}>
