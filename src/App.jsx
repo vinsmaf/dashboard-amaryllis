@@ -686,15 +686,21 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
     if (!url) return currentResas;
     const statusKey = `${bienId}_${canal}`;
     setIcalStatus(s => ({ ...s, [statusKey]: "loading" }));
+    const tryFetch = async (fetchUrl) => {
+      const r = await fetch(fetchUrl, { cache: "no-store" });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.text();
+    };
     try {
       let text = "";
-      try {
-        const r = await fetch(url, { cache: "no-store" });
-        if (!r.ok) throw new Error("HTTP " + r.status);
-        text = await r.text();
-      } catch {
-        const r2 = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`, { cache: "no-store" });
-        text = await r2.text();
+      const proxies = [
+        () => tryFetch(url),
+        scriptUrl ? () => tryFetch(`${scriptUrl}?action=fetchIcal&url=${encodeURIComponent(url)}`) : null,
+        () => tryFetch(`https://corsproxy.io/?${encodeURIComponent(url)}`),
+        () => tryFetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`),
+      ].filter(Boolean);
+      for (const fn of proxies) {
+        try { text = await fn(); if (text.includes("VCALENDAR")) break; } catch {}
       }
       if (!text.includes("VCALENDAR")) throw new Error("Format invalide");
       const newEvents = parseICS(text, bienId, canal);
@@ -706,7 +712,7 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
       setIcalStatus(s => ({ ...s, [statusKey]: `⚠ ${e.message}` }));
       return currentResas;
     }
-  }, [saveRes]);
+  }, [saveRes, scriptUrl]);
 
   useEffect(() => {
     const sources = [];

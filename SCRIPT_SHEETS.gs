@@ -32,6 +32,7 @@ function doGet(e) {
   if (action === "updateRevenu") return updateRevenu_(e.parameter);
   if (action === "addReservation") return addReservation_(e.parameter);
   if (action === "deleteReservation") return deleteReservation_(e.parameter);
+  if (action === "fetchIcal") return fetchIcal_(e.parameter);
 
   return json_({ error: "action inconnue: " + action });
 }
@@ -163,4 +164,16 @@ function deleteReservation_(p) {
   if (idx >= 0) sheet.deleteRow(idx + 2);
 
   return json_({ ok: true, action: "deleted" });
+}
+
+// ?action=fetchIcal&url=https%3A%2F%2F...
+function fetchIcal_(p) {
+  if (!p.url) return json_({ error: "url manquante" });
+  try {
+    const resp = UrlFetchApp.fetch(p.url, { muteHttpExceptions: true, followRedirects: true });
+    const text = resp.getContentText("UTF-8");
+    return ContentService.createTextOutput(text).setMimeType(ContentService.MimeType.TEXT);
+  } catch(err) {
+    return json_({ error: err.toString() });
+  }
 }
