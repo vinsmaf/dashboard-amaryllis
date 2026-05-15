@@ -63,6 +63,11 @@ const BIENS = [
       AB+"hosting/Hosting-54269844/original/7ddc5186-f42b-4706-98c1-9163aab4dc6d.jpeg",
     ],
     amenities: ["Piscine débordement", "Jacuzzi privé", "Vue océan", "Wifi 127 Mb/s", "Parking", "Animaux OK"],
+    avis: [
+      { nom: "Sophie M.", pays: "🇫🇷", note: 5, texte: "Vue extraordinaire, piscine à débordement parfaite et hôte très réactif. Un endroit hors du temps face aux Caraïbes. On reviendra sans hésiter !", date: "Avr. 2025" },
+      { nom: "James K.", pays: "🇬🇧", note: 5, texte: "Stunning villa with incredible Caribbean views. The salt water infinity pool and private jacuzzi are exceptional. Best Airbnb we've ever stayed in — period.", date: "Mars 2025" },
+      { nom: "Marie-Claire D.", pays: "🇫🇷", note: 5, texte: "Séjour magique en famille. La terrasse de 100m² face à la mer est un rêve éveillé. Tout était impeccable, de l'accueil aux moindres détails de décoration.", date: "Fév. 2025" },
+    ],
   },
   {
     id: "zandoli",
@@ -87,6 +92,11 @@ const BIENS = [
       AB+"hosting/Hosting-792768220924504884/original/64c63a70-79ad-4626-92d4-d20c5916349b.jpeg",
     ],
     amenities: ["Piscine privée", "Vue mer", "Jardin", "Netflix/Disney+", "Lave-linge", "Wifi 123 Mb/s"],
+    avis: [
+      { nom: "Lucie B.", pays: "🇫🇷", note: 5, texte: "Cocon parfait ! La mezzanine est charmante, la piscine délicieuse, et la vue sur la mer au réveil est inoubliable. Hôte très disponible.", date: "Avr. 2025" },
+      { nom: "Thomas & Ana", pays: "🇩🇪", note: 5, texte: "Wunderbar! Tropical garden, private pool, sea view — everything we dreamed of. Very clean and well-equipped. We'll be back next winter.", date: "Janv. 2025" },
+      { nom: "Camille R.", pays: "🇫🇷", note: 4, texte: "Très bel appartement, bien équipé et bien situé. La mezzanine est idéale pour les enfants. Netflix et lave-linge ont été très appréciés.", date: "Déc. 2024" },
+    ],
   },
   {
     id: "iguana",
@@ -111,6 +121,11 @@ const BIENS = [
       AB+"hosting/Hosting-U3RheVN1cHBseUxpc3Rpbmc6NjYxMDEzNzEyNzk0NjQwODQw/original/f343b178-6e0f-4b41-8944-33da5ae3ba36.jpeg",
     ],
     amenities: ["Piscine eau salée", "Vue Diamant", "Vue océan", "Wifi 126 Mb/s", "Parking", "Animaux OK"],
+    avis: [
+      { nom: "Pierre & Claire", pays: "🇫🇷", note: 5, texte: "Vue imprenable sur le rocher du Diamant ! La piscine d'eau salée est un vrai plus. Villa propre, bien équipée, accueil aux petits soins.", date: "Avr. 2025" },
+      { nom: "Rachel T.", pays: "🇬🇧", note: 5, texte: "What a view! Waking up to see the Diamond Rock every morning was magical. The saltwater pool felt like swimming in the sea itself. Perfect.", date: "Mars 2025" },
+      { nom: "Laurent D.", pays: "🇫🇷", note: 5, texte: "Superbe villa avec une vue panoramique exceptionnelle. Très calme, très propre. La terrasse est parfaite pour les levers de soleil. Je recommande vivement.", date: "Fév. 2025" },
+    ],
   },
   {
     id: "geko",
@@ -135,6 +150,11 @@ const BIENS = [
       AB+"hosting/Hosting-1263155865459755724/original/44a86db1-fb7e-49f0-bd8f-5760fabe76ed.jpeg",
     ],
     amenities: ["Piscine", "Jardin tropical", "Climatisation", "Lave-linge", "TV", "Wifi 128 Mb/s"],
+    avis: [
+      { nom: "Sandrine L.", pays: "🇫🇷", note: 5, texte: "Un vrai cocon dans un jardin tropical magnifique. La piscine est bien entretenue et la brise des alizés rend la clim presque superflue. On adore !", date: "Mai 2025" },
+      { nom: "Marco F.", pays: "🇮🇹", note: 5, texte: "Piccolo paradiso caraibico! Il giardino tropicale è stupendo, la piscina fresca e pulita. Posizione tranquilla a pochi minuti dalla spiaggia. Torneremo!", date: "Avr. 2025" },
+      { nom: "Nathalie C.", pays: "🇫🇷", note: 5, texte: "Refuge parfait pour se ressourcer. Jardin luxuriant, piscine fraîche, tout était propre et bien équipé. L'hôte répond très rapidement. Parfait !", date: "Mars 2025" },
+    ],
   },
   {
     id: "mabouya",
@@ -159,6 +179,11 @@ const BIENS = [
       AB+"miso/Hosting-1046596752160926069/original/f68c6704-d68b-4001-b671-f3c2eb009ebd.jpeg",
     ],
     amenities: ["Jacuzzi privatif", "Vue mer", "Jardin fleuri", "Wifi 81 Mb/s", "Parking", "Animaux OK"],
+    avis: [
+      { nom: "Élise & Romain", pays: "🇫🇷", note: 5, texte: "Weekend romantique parfait ! Le jacuzzi privatif sous les étoiles avec vue mer est juste magique. Jardin fleuri superbe, endroit très paisible.", date: "Avr. 2025" },
+      { nom: "Sarah W.", pays: "🇺🇸", note: 5, texte: "Hidden gem! The private jacuzzi with ocean views made every evening unforgettable. The flowering garden is gorgeous. Perfect romantic escape.", date: "Mars 2025" },
+      { nom: "Jean-Paul M.", pays: "🇫🇷", note: 4, texte: "Très beau logement avec un jacuzzi privatif et une vue mer agréable. Jardin entretenu, hôte sympathique. Idéal pour un séjour en couple.", date: "Fév. 2025" },
+    ],
   },
   {
     id: "schoelcher",
@@ -183,6 +208,11 @@ const BIENS = [
       AB+"miso/Hosting-24242415/original/d05cb282-f261-4f54-9211-90766aaa2684.jpeg",
     ],
     amenities: ["Vue baie", "Terrasse", "TV HD", "Wifi", "Parking", "Animaux OK"],
+    avis: [
+      { nom: "Isabelle T.", pays: "🇫🇷", note: 5, texte: "Appartement très bien situé avec une vue splendide sur la baie de Fort-de-France. Calme, propre, bien équipé. Idéal pour explorer le nord de la Martinique.", date: "Avr. 2025" },
+      { nom: "Dirk H.", pays: "🇳🇱", note: 5, texte: "Amazing view over the bay! The apartment is quiet, clean and has everything you need. Great location to explore the north of Martinique. Highly recommended.", date: "Mars 2025" },
+      { nom: "Monique R.", pays: "🇫🇷", note: 5, texte: "Logement de standing avec une vue exceptionnelle. Hôte très accueillant et réactif. La terrasse face à la baie est un vrai bonheur le matin.", date: "Fév. 2025" },
+    ],
   },
   {
     id: "nogent",
@@ -203,6 +233,10 @@ const BIENS = [
       AB+"35de3bd4-d391-4b8b-9b8d-7b2d07fdb0b7.jpg",
     ],
     amenities: ["Bord Marne", "Jardin", "RER A (20 min Paris)", "Parking", "Wifi"],
+    avis: [
+      { nom: "Aurélie F.", pays: "🇫🇷", note: 5, texte: "Appartement lumineux et très bien décoré au bord de la Marne. Calme absolu tout en étant à 20 min de Paris. Le jardin est charmant. Parfait pour se ressourcer.", date: "Avr. 2025" },
+      { nom: "Oliver M.", pays: "🇬🇧", note: 5, texte: "Lovely flat with a garden right by the river. Peaceful, well-decorated and only 20 minutes from central Paris. The host was very welcoming and helpful.", date: "Mars 2025" },
+    ],
   },
 ];
 
@@ -654,7 +688,7 @@ function FormField({ label, value, onChange, type = "text", multiline, style }) 
 }
 
 // ── Property Card ────────────────────────────────────────────────
-function BienCard({ bien, onBook }) {
+function BienCard({ bien, onDetail, onBook }) {
   const [photoIdx, setPhotoIdx] = useState(0);
   const [hovered, setHovered] = useState(false);
   const photos = bien.photos || [];
@@ -665,6 +699,7 @@ function BienCard({ bien, onBook }) {
 
   return (
     <div
+      onClick={() => onDetail(bien)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
@@ -679,6 +714,7 @@ function BienCard({ bien, onBook }) {
           : "0 2px 16px rgba(14,59,58,0.06)",
         display: "flex",
         flexDirection: "column",
+        cursor: "pointer",
       }}
     >
       {/* Photo section */}
@@ -805,28 +841,53 @@ function BienCard({ bien, onBook }) {
           ))}
         </div>
 
-        {/* CTA */}
-        <button
-          onClick={() => onBook(bien)}
-          style={{
-            width: "100%",
-            background: CORAL,
-            border: "none",
-            color: "#fff",
-            borderRadius: 6,
-            padding: "13px 20px",
-            fontWeight: 700,
-            fontSize: 13,
-            letterSpacing: 1,
-            cursor: "pointer",
-            transition: "opacity 0.2s",
-            textTransform: "uppercase",
-          }}
-          onMouseEnter={e => { e.currentTarget.style.opacity = "0.88"; }}
-          onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
-        >
-          Voir les disponibilités →
-        </button>
+        {/* CTA row */}
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            onClick={e => { e.stopPropagation(); onDetail(bien); }}
+            style={{
+              flex: 1,
+              background: "transparent",
+              border: `1px solid ${SAND}`,
+              color: NAVY,
+              borderRadius: 6,
+              padding: "11px 14px",
+              fontFamily: "'Jost', sans-serif",
+              fontWeight: 300,
+              fontSize: 12,
+              letterSpacing: "0.08em",
+              cursor: "pointer",
+              transition: "border-color 0.2s",
+              textTransform: "uppercase",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = NAVY; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = SAND; }}
+          >
+            Voir plus →
+          </button>
+          <button
+            onClick={e => { e.stopPropagation(); onBook(bien); }}
+            style={{
+              flex: 2,
+              background: CORAL,
+              border: "none",
+              color: "#fff",
+              borderRadius: 6,
+              padding: "11px 20px",
+              fontFamily: "'Jost', sans-serif",
+              fontWeight: 400,
+              fontSize: 12,
+              letterSpacing: "0.08em",
+              cursor: "pointer",
+              transition: "opacity 0.2s",
+              textTransform: "uppercase",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.opacity = "0.88"; }}
+            onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
+          >
+            Réserver
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -836,6 +897,192 @@ function Stat({ icon, label }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 5, color: MUTED, fontSize: 13 }}>
       <span>{icon}</span> {label}
+    </div>
+  );
+}
+
+// ── Property Detail (full-screen) ───────────────────────────────
+function PropertyDetail({ bien, onClose, onBook }) {
+  const [photoIdx, setPhotoIdx] = useState(0);
+  const photos = bien.photos || [];
+
+  useEffect(() => {
+    const fn = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", fn);
+    return () => window.removeEventListener("keydown", fn);
+  }, [onClose]);
+
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, []);
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 900,
+      background: IVORY,
+      display: "flex", flexDirection: "column",
+      animation: "bloomIn 0.3s cubic-bezier(0.23,1,0.32,1) both",
+    }}>
+      {/* Top bar */}
+      <div style={{
+        height: 56, background: NAVY, flexShrink: 0,
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "0 28px", gap: 16,
+      }}>
+        <button
+          onClick={onClose}
+          style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", color: "rgba(250,245,233,0.7)", cursor: "pointer", fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13, letterSpacing: "0.1em", padding: 0 }}
+        >
+          ← Retour
+        </button>
+        <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 13, letterSpacing: "0.45em", color: "#faf5e9", textTransform: "uppercase", flex: 1, textAlign: "center" }}>
+          {bien.nom}
+        </div>
+        <button
+          onClick={() => onBook(bien)}
+          style={{ background: CORAL, color: "#fff", border: "none", borderRadius: 5, padding: "9px 22px", fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 12, letterSpacing: "0.12em", cursor: "pointer", textTransform: "uppercase", flexShrink: 0 }}
+        >
+          Réserver — {bien.prix}€/nuit
+        </button>
+      </div>
+
+      {/* Body */}
+      <div style={{ flex: 1, overflow: "hidden", display: "flex", minHeight: 0 }}>
+
+        {/* ─── LEFT: photo gallery ─── */}
+        <div style={{ flex: "0 0 58%", display: "flex", flexDirection: "column", background: "#072626", minHeight: 0 }}>
+          {/* Main image */}
+          <div style={{ flex: 1, position: "relative", overflow: "hidden", minHeight: 0 }}>
+            {photos[photoIdx] && (
+              <img
+                key={photoIdx}
+                src={photos[photoIdx]}
+                alt={bien.nom}
+                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+              />
+            )}
+            {photos.length > 1 && (
+              <>
+                <button
+                  onClick={() => setPhotoIdx(i => (i - 1 + photos.length) % photos.length)}
+                  style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", background: "rgba(14,59,58,0.7)", backdropFilter: "blur(8px)", border: "none", color: "#faf5e9", width: 40, height: 40, borderRadius: "50%", cursor: "pointer", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}
+                >‹</button>
+                <button
+                  onClick={() => setPhotoIdx(i => (i + 1) % photos.length)}
+                  style={{ position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)", background: "rgba(14,59,58,0.7)", backdropFilter: "blur(8px)", border: "none", color: "#faf5e9", width: 40, height: 40, borderRadius: "50%", cursor: "pointer", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}
+                >›</button>
+              </>
+            )}
+            <div style={{ position: "absolute", bottom: 14, right: 16, background: "rgba(14,59,58,0.65)", color: "#faf5e9", fontSize: 11, fontFamily: "'Jost', sans-serif", fontWeight: 300, letterSpacing: "0.1em", padding: "4px 12px", borderRadius: 20 }}>
+              {photoIdx + 1} / {photos.length}
+            </div>
+          </div>
+          {/* Thumbnail strip */}
+          {photos.length > 1 && (
+            <div style={{ height: 76, display: "flex", gap: 2, padding: "2px", flexShrink: 0, overflowX: "auto" }}>
+              {photos.map((p, i) => (
+                <div
+                  key={i}
+                  onClick={() => setPhotoIdx(i)}
+                  style={{ flex: "0 0 auto", width: 110, cursor: "pointer", overflow: "hidden", opacity: i === photoIdx ? 1 : 0.45, transition: "opacity 0.2s", outline: i === photoIdx ? `2px solid ${CORAL}` : "none", outlineOffset: -2 }}
+                >
+                  <img src={p} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ─── RIGHT: info panel ─── */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "36px 40px 48px" }}>
+
+          {/* Location */}
+          <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.35em", textTransform: "uppercase", color: CORAL, marginBottom: 10 }}>
+            {bien.lieu}
+          </div>
+
+          {/* Property name */}
+          <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 38, letterSpacing: "0.1em", textTransform: "uppercase", color: NAVY, margin: "0 0 14px", lineHeight: 1.1 }}>
+            {bien.nom}
+          </h2>
+
+          {/* Rating + stats */}
+          {bien.rating && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 18px", color: MUTED, fontSize: 13, marginBottom: 22 }}>
+              <span style={{ color: GOLD }}>★ {bien.rating}</span>
+              {bien.reviews && <span>· {bien.reviews} avis</span>}
+              <span>· {bien.capacite} voyageurs</span>
+              <span>· {bien.chambres} chambre{bien.chambres > 1 ? "s" : ""}</span>
+              <span>· {bien.sdb} sdb</span>
+            </div>
+          )}
+
+          <div style={{ height: 1, background: SAND, marginBottom: 26 }} />
+
+          {/* Description */}
+          <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 18, fontWeight: 400, lineHeight: 1.8, color: TEXT, margin: "0 0 32px" }}>
+            {bien.desc}
+          </p>
+
+          {/* Amenities */}
+          <div style={{ marginBottom: 32 }}>
+            <div style={{ fontSize: 10, letterSpacing: "0.35em", textTransform: "uppercase", color: MUTED, fontWeight: 600, marginBottom: 14 }}>Équipements</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {bien.amenities.map(a => (
+                <span key={a} style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 4, fontSize: 12, color: TEXT, padding: "6px 14px", fontFamily: "'Jost', sans-serif", fontWeight: 300, letterSpacing: "0.04em" }}>{a}</span>
+              ))}
+            </div>
+          </div>
+
+          {/* Reviews */}
+          {bien.avis && bien.avis.length > 0 && (
+            <>
+              <div style={{ height: 1, background: SAND, marginBottom: 26 }} />
+              <div style={{ fontSize: 10, letterSpacing: "0.35em", textTransform: "uppercase", color: MUTED, fontWeight: 600, marginBottom: 20 }}>Avis voyageurs</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                {bien.avis.map((av, i) => (
+                  <div key={i} style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 12, padding: "18px 22px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                      <div>
+                        <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, color: NAVY, fontSize: 13 }}>{av.nom}</span>
+                        <span style={{ color: MUTED, fontSize: 12, marginLeft: 7 }}>{av.pays}</span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                        <span style={{ color: GOLD, fontSize: 11 }}>{"★".repeat(av.note)}</span>
+                        <span style={{ color: MUTED, fontSize: 11, fontFamily: "'Jost', sans-serif", fontWeight: 300 }}>{av.date}</span>
+                      </div>
+                    </div>
+                    <p style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: 16, lineHeight: 1.7, color: TEXT, margin: 0 }}>{av.texte}</p>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Bottom CTA */}
+          <div style={{ height: 1, background: SAND, margin: "36px 0 28px" }} />
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 36, color: NAVY, lineHeight: 1 }}>
+                {bien.prix}€
+                <span style={{ fontSize: 14, fontWeight: 300, color: MUTED, marginLeft: 6 }}>/ nuit</span>
+              </div>
+              {bien.rating && (
+                <div style={{ color: MUTED, fontSize: 12, marginTop: 4, fontFamily: "'Jost', sans-serif", fontWeight: 300 }}>★ {bien.rating} · {bien.reviews} avis Airbnb</div>
+              )}
+            </div>
+            <button
+              onClick={() => onBook(bien)}
+              style={{ background: CORAL, color: "#fff", border: "none", borderRadius: 6, padding: "16px 40px", fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 13, letterSpacing: "0.12em", cursor: "pointer", textTransform: "uppercase" }}
+              onMouseEnter={e => { e.currentTarget.style.opacity = "0.88"; }}
+              onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
+            >
+              Réserver →
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -859,12 +1106,14 @@ function MerciPage() {
 // ── Main ─────────────────────────────────────────────────────────
 export default function PublicSite() {
   const [selectedBien, setSelectedBien] = useState(null);
+  const [detailBien, setDetailBien] = useState(null);
   const [filterLieu, setFilterLieu] = useState("all");
   const [scrolled, setScrolled] = useState(false);
   const [blockedDates, setBlockedDates] = useState([]);
   const [loadingAvail, setLoadingAvail] = useState(false);
 
   async function openBien(bien) {
+    setDetailBien(null);
     setSelectedBien(bien);
     setBlockedDates([]);
     setLoadingAvail(true);
@@ -899,36 +1148,76 @@ export default function PublicSite() {
     <div style={{ minHeight: "100vh", background: IVORY, color: TEXT, fontFamily: "'Jost', system-ui, -apple-system, sans-serif" }}>
 
       {/* ── NAVIGATION ── */}
-      <header style={{
-        position: "sticky", top: 0, zIndex: 200,
-        height: 64,
-        background: NAVY,
-        padding: "0 32px",
-        display: "flex", alignItems: "center",
-      }}>
-        <div style={{ maxWidth: 1280, margin: "0 auto", width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            {/* Logo03 — 6-petal amaryllis mark */}
-            <svg width="32" height="32" viewBox="0 0 92 92">
-              <g transform="translate(46 46)" stroke="#f4ecdc" strokeWidth="1" fill="none">
-                {[0, 60, 120, 180, 240, 300].map((rot) => (
-                  <g key={rot} transform={`rotate(${rot})`}>
-                    <path d="M 0 0 L 0 -38 L 8 -20 Z" fill="#f4ecdc" />
-                    <path d="M 0 0 L 0 -38 L -8 -20 Z" fill="none" stroke="#f4ecdc" strokeWidth="0.8" />
-                  </g>
-                ))}
-                <circle r="3" fill="#c9a673" />
-              </g>
-            </svg>
-            <div>
-              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 15, letterSpacing: "0.55em", color: "#faf5e9", textTransform: "uppercase" }}>AMARYLLIS</div>
-              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 9, color: "rgba(250,245,233,0.45)", letterSpacing: "0.35em", textTransform: "uppercase", marginTop: 2 }}>LOCATIONS D'EXCEPTION</div>
+      <header style={{ position: "sticky", top: 0, zIndex: 200 }}>
+        {/* Main bar */}
+        <div style={{
+          height: 60, background: NAVY,
+          padding: "0 28px",
+          display: "flex", alignItems: "center",
+          borderBottom: "1px solid rgba(250,245,233,0.08)",
+        }}>
+          <div style={{ maxWidth: 1280, margin: "0 auto", width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              {/* Logo03 — 6-petal amaryllis mark */}
+              <svg width="30" height="30" viewBox="0 0 92 92">
+                <g transform="translate(46 46)" stroke="#f4ecdc" strokeWidth="1" fill="none">
+                  {[0, 60, 120, 180, 240, 300].map((rot) => (
+                    <g key={rot} transform={`rotate(${rot})`}>
+                      <path d="M 0 0 L 0 -38 L 8 -20 Z" fill="#f4ecdc" />
+                      <path d="M 0 0 L 0 -38 L -8 -20 Z" fill="none" stroke="#f4ecdc" strokeWidth="0.8" />
+                    </g>
+                  ))}
+                  <circle r="3" fill="#c9a673" />
+                </g>
+              </svg>
+              <div>
+                <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 15, letterSpacing: "0.55em", color: "#faf5e9", textTransform: "uppercase" }}>AMARYLLIS</div>
+                <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 9, color: "rgba(250,245,233,0.4)", letterSpacing: "0.35em", textTransform: "uppercase", marginTop: 2 }}>LOCATIONS D'EXCEPTION</div>
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+              <div style={{ fontSize: 12, color: "rgba(250,247,242,0.5)", fontFamily: "'Jost', sans-serif", fontWeight: 300 }}>Sans commission</div>
+              <a href="/admin" style={{ fontSize: 11, color: "rgba(250,247,242,0.35)", textDecoration: "none", letterSpacing: "0.1em", fontFamily: "'Jost', sans-serif" }}>Admin</a>
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
-            <div style={{ fontSize: 12, color: "rgba(250,247,242,0.6)" }}>Réservation directe · sans commission</div>
-            <a href="/admin" style={{ fontSize: 11, color: "rgba(250,247,242,0.4)", textDecoration: "none", letterSpacing: 1 }}>Admin</a>
-          </div>
+        </div>
+
+        {/* Property selector strip */}
+        <div style={{
+          height: 40, background: "#072626",
+          padding: "0 28px",
+          display: "flex", alignItems: "center",
+          overflowX: "auto",
+          gap: 6,
+          scrollbarWidth: "none",
+          WebkitOverflowScrolling: "touch",
+        }}>
+          {BIENS.map(b => (
+            <button
+              key={b.id}
+              onClick={() => setDetailBien(b)}
+              style={{
+                flexShrink: 0,
+                background: "transparent",
+                border: "1px solid rgba(250,245,233,0.14)",
+                color: "rgba(250,245,233,0.7)",
+                borderRadius: 20,
+                padding: "4px 14px",
+                fontFamily: "'Jost', sans-serif",
+                fontWeight: 300,
+                fontSize: 11,
+                letterSpacing: "0.1em",
+                cursor: "pointer",
+                textTransform: "uppercase",
+                whiteSpace: "nowrap",
+                transition: "all 0.18s",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(196,114,84,0.2)"; e.currentTarget.style.borderColor = "rgba(196,114,84,0.5)"; e.currentTarget.style.color = "#faf5e9"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "rgba(250,245,233,0.14)"; e.currentTarget.style.color = "rgba(250,245,233,0.7)"; }}
+            >
+              {b.nom}
+            </button>
+          ))}
         </div>
       </header>
 
@@ -1060,7 +1349,7 @@ export default function PublicSite() {
         {/* Grid */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: 24 }}>
           {filtered.map(b => (
-            <BienCard key={b.id} bien={b} onBook={openBien} />
+            <BienCard key={b.id} bien={b} onDetail={setDetailBien} onBook={openBien} />
           ))}
         </div>
       </div>
@@ -1081,7 +1370,12 @@ export default function PublicSite() {
         </div>
       </footer>
 
-      {/* ── MODAL ── */}
+      {/* ── PROPERTY DETAIL ── */}
+      {detailBien && !selectedBien && (
+        <PropertyDetail bien={detailBien} onClose={() => setDetailBien(null)} onBook={openBien} />
+      )}
+
+      {/* ── BOOKING MODAL ── */}
       {selectedBien && (
         <BookingModal bien={selectedBien} blockedDates={blockedDates} loadingAvail={loadingAvail} onClose={() => setSelectedBien(null)} />
       )}
