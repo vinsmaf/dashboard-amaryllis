@@ -1,17 +1,25 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
-// ── Color palette ────────────────────────────────────────────────
-const IVORY  = "#FAF7F2";  // main background
-const CREAM  = "#F0E8DC";  // card/modal background
-const NAVY   = "#1B2856";  // header bg, primary text
-const CORAL  = "#C8553D";  // accent - CTAs, active states, highlights
-const SAND   = "#E8DDD0";  // borders, dividers
-const TEXT   = "#1B2856";  // same as navy for body text
-const MUTED  = "#7A6B5A";  // warm brown for secondary text
-const GOLD   = "#C4922A";  // star ratings
+// ── Brand palette (from logos.jsx) ──────────────────────────────
+const IVORY  = "#faf5e9";  // paper — main background
+const CREAM  = "#f4ecdc";  // cream — card/modal background
+const NAVY   = "#0e3b3a";  // ink — deep antillean teal, primary text & header
+const CORAL  = "#c47254";  // muted coral — accent, CTAs
+const SAND   = "#e0d4bc";  // borders, dividers (derived from cream)
+const TEXT   = "#0e3b3a";  // same as ink for body text
+const MUTED  = "#7a6b5a";  // warm brown for secondary text
+const GOLD   = "#c9a673";  // sand/gold — star ratings, accents
 
 // ── CSS Animations ────────────────────────────────────────────────
 if (typeof document !== "undefined" && !document.getElementById("__site_styles")) {
+  // Google Fonts — Jost (display) + Cormorant Garamond (serif/italic)
+  if (!document.getElementById("__site_fonts")) {
+    const link = document.createElement("link");
+    link.id = "__site_fonts";
+    link.rel = "stylesheet";
+    link.href = "https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,200;0,300;0,400;0,700;1,300&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&display=swap";
+    document.head.appendChild(link);
+  }
   const s = document.createElement("style");
   s.id = "__site_styles";
   s.textContent = `
@@ -19,10 +27,10 @@ if (typeof document !== "undefined" && !document.getElementById("__site_styles")
     @keyframes fadeUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
     @keyframes floatLeaf { 0%,100% { transform:translateY(0) rotate(-3deg); } 50% { transform:translateY(-12px) rotate(3deg); } }
     @keyframes bloomIn { from { opacity:0; transform:scale(0.92); } to { opacity:1; transform:scale(1); } }
-    ::selection { background:rgba(200,85,61,0.2); color:#1B2856; }
+    ::selection { background:rgba(196,114,84,0.2); color:#0e3b3a; }
     ::-webkit-scrollbar { width:4px; }
-    ::-webkit-scrollbar-track { background:#FAF7F2; }
-    ::-webkit-scrollbar-thumb { background:rgba(200,85,61,0.3); border-radius:2px; }
+    ::-webkit-scrollbar-track { background:#faf5e9; }
+    ::-webkit-scrollbar-thumb { background:rgba(196,114,84,0.3); border-radius:2px; }
   `;
   document.head.appendChild(s);
 }
@@ -435,7 +443,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
       onClick={(e) => e.target === e.currentTarget && onClose()}
       style={{
         position: "fixed", inset: 0,
-        background: "rgba(27,40,86,0.7)",
+        background: "rgba(14,59,58,0.75)",
         backdropFilter: "blur(8px)",
         zIndex: 1000,
         display: "flex", alignItems: "center", justifyContent: "center",
@@ -450,7 +458,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
         maxWidth: 680, width: "100%",
         maxHeight: "92vh", overflowY: "auto",
         position: "relative",
-        boxShadow: `0 24px 64px rgba(27,40,86,0.15)`,
+        boxShadow: `0 24px 64px rgba(14,59,58,0.15)`,
       }}>
 
         {/* Header */}
@@ -667,8 +675,8 @@ function BienCard({ bien, onBook }) {
         transition: "all 0.4s cubic-bezier(0.23,1,0.32,1)",
         transform: hovered ? "translateY(-4px)" : "none",
         boxShadow: hovered
-          ? "0 20px 48px rgba(27,40,86,0.12)"
-          : "0 2px 16px rgba(27,40,86,0.06)",
+          ? "0 20px 48px rgba(14,59,58,0.12)"
+          : "0 2px 16px rgba(14,59,58,0.06)",
         display: "flex",
         flexDirection: "column",
       }}
@@ -697,13 +705,13 @@ function BienCard({ bien, onBook }) {
         )}
 
         {/* Dark overlay gradient bottom */}
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(27,40,86,0.7) 0%, transparent 60%)" }} />
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(14,59,58,0.7) 0%, transparent 60%)" }} />
 
         {/* Carousel nav — visible on hover */}
         {photos.length > 1 && hovered && (
           <>
-            <button onClick={prev} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.85)", backdropFilter: "blur(8px)", border: "none", color: NAVY, width: 32, height: 32, borderRadius: "50%", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 3 }}>‹</button>
-            <button onClick={next} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.85)", backdropFilter: "blur(8px)", border: "none", color: NAVY, width: 32, height: 32, borderRadius: "50%", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 3 }}>›</button>
+            <button onClick={prev} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.88)", backdropFilter: "blur(8px)", border: "none", color: NAVY, width: 32, height: 32, borderRadius: "50%", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 3 }}>‹</button>
+            <button onClick={next} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.88)", backdropFilter: "blur(8px)", border: "none", color: NAVY, width: 32, height: 32, borderRadius: "50%", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 3 }}>›</button>
           </>
         )}
 
@@ -743,7 +751,7 @@ function BienCard({ bien, onBook }) {
         {/* Price badge */}
         <div style={{
           position: "absolute", bottom: 14, right: 14, zIndex: 2,
-          background: "rgba(27,40,86,0.85)", backdropFilter: "blur(10px)",
+          background: "rgba(14,59,58,0.85)", backdropFilter: "blur(10px)",
           border: "1px solid rgba(255,255,255,0.1)",
           borderRadius: 10, padding: "8px 14px", textAlign: "right",
         }}>
@@ -888,7 +896,7 @@ export default function PublicSite() {
   const filtered = filterLieu === "all" ? BIENS : BIENS.filter(b => b.lieu.includes(filterLieu));
 
   return (
-    <div style={{ minHeight: "100vh", background: IVORY, color: TEXT, fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: IVORY, color: TEXT, fontFamily: "'Jost', system-ui, -apple-system, sans-serif" }}>
 
       {/* ── NAVIGATION ── */}
       <header style={{
@@ -899,19 +907,22 @@ export default function PublicSite() {
         display: "flex", alignItems: "center",
       }}>
         <div style={{ maxWidth: 1280, margin: "0 auto", width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {/* Hibiscus SVG logo mark */}
-            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-              <ellipse cx="14" cy="8" rx="4" ry="7" fill="none" stroke="#C8553D" strokeWidth="1.5" transform="rotate(0 14 14)"/>
-              <ellipse cx="14" cy="8" rx="4" ry="7" fill="none" stroke="#C8553D" strokeWidth="1.5" transform="rotate(72 14 14)"/>
-              <ellipse cx="14" cy="8" rx="4" ry="7" fill="none" stroke="#C8553D" strokeWidth="1.5" transform="rotate(144 14 14)"/>
-              <ellipse cx="14" cy="8" rx="4" ry="7" fill="none" stroke="#C8553D" strokeWidth="1.5" transform="rotate(216 14 14)"/>
-              <ellipse cx="14" cy="8" rx="4" ry="7" fill="none" stroke="#C8553D" strokeWidth="1.5" transform="rotate(288 14 14)"/>
-              <circle cx="14" cy="14" r="3" fill="#C8553D"/>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            {/* Logo03 — 6-petal amaryllis mark */}
+            <svg width="32" height="32" viewBox="0 0 92 92">
+              <g transform="translate(46 46)" stroke="#f4ecdc" strokeWidth="1" fill="none">
+                {[0, 60, 120, 180, 240, 300].map((rot) => (
+                  <g key={rot} transform={`rotate(${rot})`}>
+                    <path d="M 0 0 L 0 -38 L 8 -20 Z" fill="#f4ecdc" />
+                    <path d="M 0 0 L 0 -38 L -8 -20 Z" fill="none" stroke="#f4ecdc" strokeWidth="0.8" />
+                  </g>
+                ))}
+                <circle r="3" fill="#c9a673" />
+              </g>
             </svg>
             <div>
-              <div style={{ fontWeight: 800, fontSize: 14, letterSpacing: 3, color: "#FAF7F2", textTransform: "uppercase" }}>AMARYLLIS</div>
-              <div style={{ fontSize: 10, color: "rgba(250,247,242,0.5)", letterSpacing: 1 }}>Martinique · Paris</div>
+              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 15, letterSpacing: "0.55em", color: "#faf5e9", textTransform: "uppercase" }}>AMARYLLIS</div>
+              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 9, color: "rgba(250,245,233,0.45)", letterSpacing: "0.35em", textTransform: "uppercase", marginTop: 2 }}>LOCATIONS D'EXCEPTION</div>
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
@@ -931,44 +942,55 @@ export default function PublicSite() {
                        radial-gradient(ellipse 50% 60% at 80% 40%, rgba(196,146,42,0.05) 0%, transparent 65%)`,
         }} />
 
-        {/* Botanical — large hibiscus outline top-right */}
-        <svg style={{ position:"absolute", top: -40, right: -60, opacity: 0.08, pointerEvents:"none", animation:"floatLeaf 8s ease-in-out infinite" }}
-          width="480" height="480" viewBox="0 0 480 480" fill="none">
-          <ellipse cx="240" cy="100" rx="60" ry="130" fill="#C8553D" transform="rotate(0 240 240)"/>
-          <ellipse cx="240" cy="100" rx="60" ry="130" fill="#C8553D" transform="rotate(72 240 240)"/>
-          <ellipse cx="240" cy="100" rx="60" ry="130" fill="#C8553D" transform="rotate(144 240 240)"/>
-          <ellipse cx="240" cy="100" rx="60" ry="130" fill="#C8553D" transform="rotate(216 240 240)"/>
-          <ellipse cx="240" cy="100" rx="60" ry="130" fill="#C8553D" transform="rotate(288 240 240)"/>
-          <circle cx="240" cy="240" r="40" fill="#C8553D"/>
+        {/* Amaryllis mark — large ghost, top-right */}
+        <svg style={{ position:"absolute", top: -60, right: -80, opacity: 0.055, pointerEvents:"none", animation:"floatLeaf 10s ease-in-out infinite" }}
+          width="520" height="520" viewBox="0 0 92 92">
+          <g transform="translate(46 46)" stroke="#0e3b3a" strokeWidth="1" fill="none">
+            {[0, 60, 120, 180, 240, 300].map((rot, i) => (
+              <g key={i} transform={`rotate(${rot})`}>
+                <path d="M 0 0 L 0 -38 L 8 -20 Z" fill="#0e3b3a" />
+                <path d="M 0 0 L 0 -38 L -8 -20 Z" fill="none" stroke="#0e3b3a" strokeWidth="0.8" />
+              </g>
+            ))}
+            <circle r="3" fill="#c9a673" />
+          </g>
         </svg>
 
-        {/* Botanical — palm frond bottom-left */}
-        <svg style={{ position:"absolute", bottom: -20, left: -40, opacity: 0.07, pointerEvents:"none", animation:"floatLeaf 10s ease-in-out infinite reverse" }}
-          width="360" height="360" viewBox="0 0 360 360" fill="none">
-          <path d="M60 360 Q80 200 200 100 Q120 160 160 280 Q100 200 140 340 Q80 240 120 360" fill="#1B2856"/>
-          <path d="M60 360 Q200 280 300 160 Q200 220 220 300 Q180 240 200 340" fill="#1B2856"/>
+        {/* Amaryllis mark — smaller ghost, bottom-left */}
+        <svg style={{ position:"absolute", bottom: -40, left: -60, opacity: 0.04, pointerEvents:"none", animation:"floatLeaf 13s ease-in-out infinite reverse" }}
+          width="340" height="340" viewBox="0 0 92 92">
+          <g transform="translate(46 46)" stroke="#0e3b3a" strokeWidth="1" fill="none">
+            {[30, 90, 150, 210, 270, 330].map((rot, i) => (
+              <g key={i} transform={`rotate(${rot})`}>
+                <path d="M 0 0 L 0 -38 L 8 -20 Z" fill="#0e3b3a" />
+                <path d="M 0 0 L 0 -38 L -8 -20 Z" fill="none" stroke="#0e3b3a" strokeWidth="0.8" />
+              </g>
+            ))}
+            <circle r="3" fill="#c9a673" />
+          </g>
         </svg>
 
         {/* Hero content */}
         <div style={{ position:"relative", zIndex:2, maxWidth:760, margin:"0 auto", padding:"0 32px", textAlign:"center" }}>
 
-          <div style={{ animation:"fadeUp 0.5s ease forwards", opacity:0, animationDelay:"0.1s", marginBottom:20 }}>
-            <span style={{ fontSize:11, color:CORAL, letterSpacing:4, textTransform:"uppercase", fontWeight:600 }}>
-              Locations de vacances directes
+          <div style={{ animation:"fadeUp 0.5s ease forwards", opacity:0, animationDelay:"0.1s", marginBottom:24 }}>
+            <span style={{ fontFamily:"'Jost', sans-serif", fontSize:10, color:CORAL, letterSpacing:"0.6em", textTransform:"uppercase", fontWeight:300 }}>
+              LOCATIONS D'EXCEPTION
             </span>
           </div>
 
           <div style={{ animation:"fadeUp 0.6s ease forwards", opacity:0, animationDelay:"0.25s" }}>
             <h1 style={{
-              fontSize:"clamp(56px, 10vw, 110px)", fontWeight:900, lineHeight:1,
-              color: NAVY, margin:"0 0 16px",
-              letterSpacing: "-2px",
-              fontFamily: "Georgia, 'Times New Roman', serif",
+              fontFamily:"'Jost', sans-serif",
+              fontSize:"clamp(52px, 10vw, 108px)", fontWeight:200, lineHeight:1.05,
+              color: NAVY, margin:"0 0 20px",
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
             }}>Amaryllis</h1>
           </div>
 
           <div style={{ animation:"fadeUp 0.6s ease forwards", opacity:0, animationDelay:"0.4s", marginBottom:40 }}>
-            <p style={{ fontSize:18, fontWeight:300, color:MUTED, fontStyle:"italic", margin:0, lineHeight:1.6 }}>
+            <p style={{ fontFamily:"'Cormorant Garamond', serif", fontSize:20, fontWeight:400, color:MUTED, fontStyle:"italic", margin:0, lineHeight:1.5 }}>
               Martinique · Paris — Réservez sans intermédiaire
             </p>
           </div>
@@ -1006,7 +1028,7 @@ export default function PublicSite() {
 
         {/* Section header + filters */}
         <div style={{ marginBottom: 40 }}>
-          <h2 style={{ fontSize: 32, fontWeight: 800, color: NAVY, margin: "0 0 24px" }}>Nos propriétés</h2>
+          <h2 style={{ fontFamily: "'Jost', sans-serif", fontSize: 32, fontWeight: 200, letterSpacing: "0.15em", textTransform: "uppercase", color: NAVY, margin: "0 0 24px" }}>Nos propriétés</h2>
 
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 24 }}>
             {lieux.map(({ key, label }) => (
@@ -1047,7 +1069,7 @@ export default function PublicSite() {
       <footer style={{ background: NAVY, padding: "40px 32px" }}>
         <div style={{ maxWidth:1280, margin:"0 auto", display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:16 }}>
           <div>
-            <div style={{ fontWeight:800, fontSize:14, letterSpacing:3, color:"#FAF7F2", textTransform:"uppercase", marginBottom:6 }}>
+            <div style={{ fontFamily:"'Jost', sans-serif", fontWeight:200, fontSize:14, letterSpacing:"0.55em", color:"#faf5e9", textTransform:"uppercase", marginBottom:6 }}>
               AMARYLLIS
             </div>
             <div style={{ color:"rgba(250,247,242,0.5)", fontSize:12 }}>Locations de vacances directes — sans commission</div>
