@@ -10,10 +10,10 @@ const path = window.location.pathname;
 let Component;
 if (path.startsWith('/admin')) {
   Component = App;
-} else if (path.startsWith('/site')) {
-  Component = PublicSite;
-} else {
+} else if (path.startsWith('/landing')) {
   Component = Landing;
+} else {
+  Component = PublicSite;
 }
 
 createRoot(document.getElementById('root')).render(

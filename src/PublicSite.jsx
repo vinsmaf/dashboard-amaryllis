@@ -1351,7 +1351,7 @@ function HeroCarousel({ biens, onDetail, onBook }) {
 const WA_NUMBER = "33610880772";
 const EMAIL = "vinsmaf@hotmail.com";
 
-function ContactSection() {
+function FooterSection() {
   const [form, setForm] = useState({ nom: "", email: "", message: "" });
   const [sent, setSent] = useState(false);
 
@@ -1366,144 +1366,133 @@ function ContactSection() {
   const waMsg = encodeURIComponent("Bonjour, je souhaite obtenir des informations sur une location Amaryllis.");
 
   return (
-    <section id="contact" style={{ background: CREAM, borderTop: `1px solid ${SAND}` }}>
-      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "80px 32px", display: "flex", gap: 64, flexWrap: "wrap", alignItems: "flex-start" }}>
+    <footer id="contact" style={{ background: "#072626" }}>
+      {/* ── Contact ── */}
+      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "72px 32px 48px", display: "flex", gap: 64, flexWrap: "wrap", alignItems: "flex-start", borderBottom: "1px solid rgba(250,245,233,0.08)" }}>
 
-        {/* ─── Left: info ─── */}
-        <div style={{ flex: "1 1 300px" }}>
-          {/* Amaryllis mark */}
-          <svg width="40" height="40" viewBox="0 0 92 92" style={{ marginBottom: 24, opacity: 0.9 }}>
-            <g transform="translate(46 46)" stroke={NAVY} strokeWidth="1" fill="none">
+        {/* Left: info */}
+        <div style={{ flex: "1 1 280px" }}>
+          <svg width="36" height="36" viewBox="0 0 92 92" style={{ marginBottom: 20, opacity: 0.85 }}>
+            <g transform="translate(46 46)" fill="none">
               {[0, 60, 120, 180, 240, 300].map((rot, i) => (
                 <g key={i} transform={`rotate(${rot})`}>
-                  <path d="M 0 0 L 0 -38 L 8 -20 Z" fill={NAVY} />
-                  <path d="M 0 0 L 0 -38 L -8 -20 Z" fill="none" stroke={NAVY} strokeWidth="0.8" />
+                  <path d="M 0 0 L 0 -38 L 8 -20 Z" fill={CORAL} />
                 </g>
               ))}
               <circle r="3" fill={GOLD} />
             </g>
           </svg>
 
-          <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 10, letterSpacing: "0.5em", textTransform: "uppercase", color: CORAL, marginBottom: 12 }}>
-            Contact
-          </div>
-          <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 34, letterSpacing: "0.1em", textTransform: "uppercase", color: NAVY, margin: "0 0 16px", lineHeight: 1.1 }}>
+          <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 10, letterSpacing: "0.5em", textTransform: "uppercase", color: CORAL, marginBottom: 10 }}>Contact</div>
+          <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 30, letterSpacing: "0.1em", textTransform: "uppercase", color: "#faf5e9", margin: "0 0 14px", lineHeight: 1.1 }}>
             Parlons de<br />votre séjour
           </h2>
-          <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 17, fontStyle: "italic", color: MUTED, lineHeight: 1.7, margin: "0 0 36px", maxWidth: 320 }}>
+          <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 16, fontStyle: "italic", color: "rgba(250,245,233,0.5)", lineHeight: 1.7, margin: "0 0 32px", maxWidth: 300 }}>
             Réservation, disponibilités, questions — nous répondons dans les 24h.
           </p>
 
-          {/* WhatsApp */}
-          <a
-            href={`https://wa.me/${WA_NUMBER}?text=${waMsg}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: "inline-flex", alignItems: "center", gap: 10,
-              background: "#25D366", color: "#fff",
-              borderRadius: 6, padding: "13px 24px", marginBottom: 14,
-              textDecoration: "none",
-              fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 13, letterSpacing: "0.08em",
-              textTransform: "uppercase", transition: "opacity 0.2s",
-              width: "100%", maxWidth: 280, boxSizing: "border-box",
-            }}
-            onMouseEnter={e => { e.currentTarget.style.opacity = "0.88"; }}
+          <a href={`https://wa.me/${WA_NUMBER}?text=${waMsg}`} target="_blank" rel="noopener noreferrer"
+            style={{ display: "inline-flex", alignItems: "center", gap: 10, background: "#25D366", color: "#fff", borderRadius: 6, padding: "12px 22px", marginBottom: 12, textDecoration: "none", fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase", transition: "opacity 0.2s", width: "100%", maxWidth: 260, boxSizing: "border-box" }}
+            onMouseEnter={e => { e.currentTarget.style.opacity = "0.85"; }}
             onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-            </svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
             WhatsApp
           </a>
 
-          {/* Email — hover to reveal */}
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 10, padding: "12px 0", maxWidth: 280 }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth="1.5">
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", maxWidth: 260 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(250,245,233,0.35)" strokeWidth="1.5">
               <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
               <polyline points="22,6 12,13 2,6"/>
             </svg>
             <HoverContact light />
           </div>
+
+          {/* Nav links */}
+          <div style={{ marginTop: 36, display: "flex", gap: 32, flexWrap: "wrap" }}>
+            <div>
+              <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 9, letterSpacing: "0.3em", textTransform: "uppercase", color: "rgba(250,245,233,0.3)", marginBottom: 10 }}>Propriétés</div>
+              {BIENS.slice(0, 4).map(b => (
+                <div key={b.id} style={{ fontSize: 12, color: "rgba(250,245,233,0.5)", fontFamily: "'Jost', sans-serif", fontWeight: 300, marginBottom: 5 }}>{b.nom}</div>
+              ))}
+            </div>
+          </div>
         </div>
 
-        {/* ─── Right: form ─── */}
-        <div style={{ flex: "1 1 360px", maxWidth: 520 }}>
+        {/* Right: form */}
+        <div style={{ flex: "1 1 360px", maxWidth: 500 }}>
           {sent ? (
-            <div style={{ background: "#faf5e9", border: `1px solid ${SAND}`, borderRadius: 16, padding: "48px 36px", textAlign: "center" }}>
-              <svg width="44" height="44" viewBox="0 0 92 92" style={{ margin: "0 auto 20px", display: "block" }}>
-                <g transform="translate(46 46)" stroke={NAVY} strokeWidth="1" fill="none">
-                  {[0, 60, 120, 180, 240, 300].map((rot, i) => (
-                    <g key={i} transform={`rotate(${rot})`}>
-                      <path d="M 0 0 L 0 -38 L 8 -20 Z" fill={NAVY} />
-                      <path d="M 0 0 L 0 -38 L -8 -20 Z" fill="none" stroke={NAVY} strokeWidth="0.8" />
-                    </g>
-                  ))}
-                  <circle r="3" fill={GOLD} />
-                </g>
-              </svg>
-              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 22, letterSpacing: "0.15em", textTransform: "uppercase", color: NAVY, marginBottom: 10 }}>Message préparé</div>
-              <p style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: 16, color: MUTED, lineHeight: 1.6, margin: "0 0 24px" }}>
-                Votre client mail s'est ouvert avec le message. Envoyez-le pour nous contacter.
+            <div style={{ background: "rgba(250,245,233,0.04)", border: "1px solid rgba(250,245,233,0.1)", borderRadius: 16, padding: "48px 36px", textAlign: "center" }}>
+              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 20, letterSpacing: "0.15em", textTransform: "uppercase", color: "#faf5e9", marginBottom: 10 }}>Message préparé</div>
+              <p style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: 15, color: "rgba(250,245,233,0.5)", lineHeight: 1.6, margin: "0 0 24px" }}>
+                Votre client mail s'est ouvert avec le message.
               </p>
-              <button onClick={() => setSent(false)} style={{ background: "none", border: `1px solid ${SAND}`, color: MUTED, borderRadius: 6, padding: "10px 20px", fontFamily: "'Jost', sans-serif", fontSize: 12, letterSpacing: "0.1em", cursor: "pointer", textTransform: "uppercase" }}>
+              <button onClick={() => setSent(false)} style={{ background: "none", border: "1px solid rgba(250,245,233,0.2)", color: "rgba(250,245,233,0.5)", borderRadius: 6, padding: "10px 20px", fontFamily: "'Jost', sans-serif", fontSize: 11, letterSpacing: "0.1em", cursor: "pointer", textTransform: "uppercase" }}>
                 Nouveau message
               </button>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} style={{ background: "#faf5e9", border: `1px solid ${SAND}`, borderRadius: 16, padding: "36px" }}>
-              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 10, letterSpacing: "0.4em", textTransform: "uppercase", color: MUTED, marginBottom: 24 }}>
+            <form onSubmit={handleSubmit} style={{ background: "rgba(250,245,233,0.04)", border: "1px solid rgba(250,245,233,0.08)", borderRadius: 16, padding: "36px" }}>
+              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 9, letterSpacing: "0.4em", textTransform: "uppercase", color: "rgba(250,245,233,0.3)", marginBottom: 24 }}>
                 Formulaire de contact
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
-                <ContactField label="Votre nom" value={form.nom} onChange={v => setForm(f => ({ ...f, nom: v }))} required />
-                <ContactField label="Votre email" type="email" value={form.email} onChange={v => setForm(f => ({ ...f, email: v }))} required />
+                <ContactField label="Votre nom" value={form.nom} onChange={v => setForm(f => ({ ...f, nom: v }))} required dark />
+                <ContactField label="Votre email" type="email" value={form.email} onChange={v => setForm(f => ({ ...f, email: v }))} required dark />
               </div>
-              <ContactField label="Votre message" value={form.message} onChange={v => setForm(f => ({ ...f, message: v }))} multiline required style={{ marginBottom: 22 }} />
-              <button
-                type="submit"
-                style={{
-                  width: "100%", background: NAVY, color: "#faf5e9", border: "none",
-                  borderRadius: 6, padding: "14px 24px",
-                  fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 12, letterSpacing: "0.15em",
-                  cursor: "pointer", textTransform: "uppercase", transition: "opacity 0.2s",
-                }}
+              <ContactField label="Votre message" value={form.message} onChange={v => setForm(f => ({ ...f, message: v }))} multiline required style={{ marginBottom: 22 }} dark />
+              <button type="submit"
+                style={{ width: "100%", background: CORAL, color: "#fff", border: "none", borderRadius: 6, padding: "13px 24px", fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 12, letterSpacing: "0.15em", cursor: "pointer", textTransform: "uppercase", transition: "opacity 0.2s" }}
                 onMouseEnter={e => { e.currentTarget.style.opacity = "0.85"; }}
                 onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
-              >
-                Envoyer le message →
-              </button>
-              <div style={{ marginTop: 14, fontSize: 11, color: MUTED, fontFamily: "'Jost', sans-serif", fontWeight: 300, textAlign: "center", lineHeight: 1.5 }}>
-                Votre client mail s'ouvrira avec le message pré-rempli
-              </div>
+              >Envoyer le message →</button>
             </form>
           )}
         </div>
       </div>
-    </section>
+
+      {/* ── Bottom bar ── */}
+      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "20px 32px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <svg width="16" height="16" viewBox="0 0 92 92">
+            <g transform="translate(46 46)" fill="none">
+              {[0, 60, 120, 180, 240, 300].map((rot, i) => (
+                <g key={i} transform={`rotate(${rot})`}><path d="M 0 0 L 0 -38 L 8 -20 Z" fill="#f4ecdc" /></g>
+              ))}
+              <circle r="2.5" fill={GOLD} />
+            </g>
+          </svg>
+          <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11, color: "rgba(250,245,233,0.28)", letterSpacing: "0.05em" }}>
+            © Amaryllis 2026 — Tous droits réservés
+          </span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+          <span style={{ fontSize: 11, color: "rgba(250,245,233,0.22)", fontFamily: "'Jost', sans-serif", fontWeight: 300 }}>🔒 Paiement sécurisé Stripe</span>
+          <a href="/admin" style={{ fontSize: 10, color: "rgba(250,245,233,0.15)", textDecoration: "none", letterSpacing: "0.1em", fontFamily: "'Jost', sans-serif" }}>Admin</a>
+        </div>
+      </div>
+    </footer>
   );
 }
 
-function ContactField({ label, value, onChange, type = "text", multiline, required, style }) {
+function ContactField({ label, value, onChange, type = "text", multiline, required, style, dark }) {
   const [focused, setFocused] = useState(false);
-  const s = {
+  const s = dark ? {
+    background: "rgba(250,245,233,0.06)",
+    border: `1px solid ${focused ? "rgba(196,114,84,0.5)" : "rgba(250,245,233,0.12)"}`,
+    borderRadius: 8, color: "#faf5e9", padding: "11px 14px", width: "100%",
+    fontSize: 13, outline: "none", fontFamily: "'Jost', sans-serif", fontWeight: 300,
+    resize: "vertical", transition: "border-color 0.2s", boxSizing: "border-box",
+  } : {
     background: CREAM,
     border: `1px solid ${focused ? NAVY + "60" : SAND}`,
-    borderRadius: 8,
-    color: TEXT,
-    padding: "11px 14px",
-    width: "100%",
-    fontSize: 13,
-    outline: "none",
-    fontFamily: "'Jost', sans-serif",
-    fontWeight: 300,
-    resize: "vertical",
-    transition: "border-color 0.2s",
-    boxSizing: "border-box",
+    borderRadius: 8, color: TEXT, padding: "11px 14px", width: "100%",
+    fontSize: 13, outline: "none", fontFamily: "'Jost', sans-serif", fontWeight: 300,
+    resize: "vertical", transition: "border-color 0.2s", boxSizing: "border-box",
   };
   return (
     <div style={style}>
-      <label style={{ display: "block", fontSize: 10, color: MUTED, marginBottom: 6, fontFamily: "'Jost', sans-serif", fontWeight: 400, letterSpacing: "0.15em", textTransform: "uppercase" }}>{label}</label>
+      <label style={{ display: "block", fontSize: 10, color: dark ? "rgba(250,245,233,0.4)" : MUTED, marginBottom: 6, fontFamily: "'Jost', sans-serif", fontWeight: 400, letterSpacing: "0.15em", textTransform: "uppercase" }}>{label}</label>
       {multiline
         ? <textarea rows={4} style={s} value={value} onChange={e => onChange(e.target.value)} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} required={required} />
         : <input type={type} style={s} value={value} onChange={e => onChange(e.target.value)} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} required={required} />}
@@ -1878,61 +1867,8 @@ export default function PublicSite() {
         </div>
       </div>
 
-      {/* ── CONTACT ── */}
-      <ContactSection />
-
-      {/* ── FOOTER ── */}
-      <footer style={{ background: "#072626", padding: "36px 32px 28px" }}>
-        <div style={{ maxWidth: 1280, margin: "0 auto" }}>
-          {/* Top row */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 24, marginBottom: 28, paddingBottom: 28, borderBottom: "1px solid rgba(250,245,233,0.08)" }}>
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
-                <svg width="24" height="24" viewBox="0 0 92 92">
-                  <g transform="translate(46 46)" stroke="#f4ecdc" strokeWidth="1" fill="none">
-                    {[0, 60, 120, 180, 240, 300].map((rot, i) => (
-                      <g key={i} transform={`rotate(${rot})`}>
-                        <path d="M 0 0 L 0 -38 L 8 -20 Z" fill="#f4ecdc" />
-                        <path d="M 0 0 L 0 -38 L -8 -20 Z" fill="none" stroke="#f4ecdc" strokeWidth="0.8" />
-                      </g>
-                    ))}
-                    <circle r="3" fill="#c9a673" />
-                  </g>
-                </svg>
-                <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 14, letterSpacing: "0.55em", color: "#faf5e9", textTransform: "uppercase" }}>
-                  AMARYLLIS
-                </div>
-              </div>
-              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", color: "rgba(250,245,233,0.45)", fontSize: 13, maxWidth: 260, lineHeight: 1.6 }}>
-                Locations d'exception en Martinique & à Paris
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: 48, flexWrap: "wrap" }}>
-              <div>
-                <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 10, letterSpacing: "0.3em", textTransform: "uppercase", color: "rgba(250,245,233,0.35)", marginBottom: 10 }}>Contact</div>
-                <a href={`https://wa.me/${WA_NUMBER}`} target="_blank" rel="noopener noreferrer" style={{ display: "block", fontSize: 12, color: "rgba(250,245,233,0.6)", textDecoration: "none", fontFamily: "'Jost', sans-serif", fontWeight: 300, marginBottom: 8 }}>WhatsApp</a>
-                <HoverContact />
-              </div>
-              <div>
-                <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 10, letterSpacing: "0.3em", textTransform: "uppercase", color: "rgba(250,245,233,0.35)", marginBottom: 10 }}>Propriétés</div>
-                {BIENS.slice(0, 4).map(b => (
-                  <div key={b.id} style={{ fontSize: 12, color: "rgba(250,245,233,0.6)", fontFamily: "'Jost', sans-serif", fontWeight: 300, marginBottom: 4, cursor: "pointer" }}>{b.nom}</div>
-                ))}
-              </div>
-            </div>
-          </div>
-          {/* Bottom row */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-            <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11, color: "rgba(250,245,233,0.28)", letterSpacing: "0.05em" }}>
-              © Amaryllis 2026 — Tous droits réservés
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-              <div style={{ fontSize: 11, color: "rgba(250,245,233,0.28)", fontFamily: "'Jost', sans-serif", fontWeight: 300 }}>🔒 Paiement sécurisé Stripe</div>
-              <a href="/admin" style={{ fontSize: 10, color: "rgba(250,245,233,0.2)", textDecoration: "none", letterSpacing: "0.1em", fontFamily: "'Jost', sans-serif" }}>Admin</a>
-            </div>
-          </div>
-        </div>
-      </footer>
+      {/* ── FOOTER + CONTACT ── */}
+      <FooterSection />
 
       {/* ── PROPERTY DETAIL ── */}
       {detailBien && !selectedBien && (
