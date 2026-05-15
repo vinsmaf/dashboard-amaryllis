@@ -1266,7 +1266,7 @@ function BenefitsStrip() {
     }}>
       <div style={{
         maxWidth: 1280, margin: "0 auto",
-        display: "flex", alignItems: "center", justifyContent: "center",
+        display: "flex", alignItems: "center", justifyContent: "flex-start",
         gap: "clamp(16px, 4vw, 56px)", flexWrap: "wrap",
         padding: "18px 0",
       }}>
@@ -2054,6 +2054,8 @@ export default function PublicSite() {
       {/* ── HERO CAROUSEL ── */}
       <HeroCarousel biens={biensList} onDetail={setDetailBien} onBook={openBien} />
 
+      {/* ── BENEFITS STRIP ── */}
+      <BenefitsStrip />
 
       {/* ── QUICK BOOK ── */}
       <QuickBook biens={biensList} onBook={openBien} />
