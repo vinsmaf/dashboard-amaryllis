@@ -8,12 +8,17 @@ const BIENS = [
   {
     id: "amaryllis",
     nom: "Villa Amaryllis",
+    airbnbTitle: "Villa Amaryllis - Luxe & sérénité Vue Mer, Piscine",
     lieu: "Sainte-Luce, Martinique",
-    tag: "Coup de cœur",
-    desc: "Villa d'exception face à la mer des Caraïbes. Piscine à débordement, 4 chambres climatisées, vue panoramique sur l'océan et les îlets.",
+    tag: "⭐ Coup de cœur Airbnb",
+    desc: "Perchée sur les hauteurs de Sainte-Luce, bercée par les alizés, la Villa Amaryllis vous invite à un séjour d'exception. Piscine à débordement d'eau salée, jacuzzi privatif, terrasse 100m² face à la mer des Caraïbes et à l'île Sainte-Lucie. Les plages de sable blanc à 5 min.",
     prix: 280,
     capacite: 8,
-    chambres: 4,
+    chambres: 3,
+    lits: 3,
+    sdb: "3,5",
+    rating: "4,94",
+    reviews: 33,
     couleur: "#e91e8c",
     photos: [
       AB+"miso/Hosting-54269844/original/735d43eb-5738-440a-965a-795113b942b0.jpeg",
@@ -22,17 +27,22 @@ const BIENS = [
       AB+"miso/Hosting-54269844/original/9bbddd9d-0b65-4705-a51a-dda4c1c9e439.jpeg",
       AB+"hosting/Hosting-54269844/original/7ddc5186-f42b-4706-98c1-9163aab4dc6d.jpeg",
     ],
-    amenities: ["Piscine", "Vue mer", "Clim", "BBQ", "Wifi"],
+    amenities: ["Piscine débordement", "Jacuzzi privé", "Vue océan", "Wifi 127 Mb/s", "Parking", "Animaux OK"],
   },
   {
     id: "zandoli",
-    nom: "Villa Zandoli",
+    nom: "Zandoli",
+    airbnbTitle: "Zandoli : détente tropicale, piscine, jardin, vue mer",
     lieu: "Sainte-Luce, Martinique",
     tag: null,
-    desc: "Villa tropicale nichée dans un jardin luxuriant. Piscine privée, grande terrasse couverte, idéale pour les familles.",
+    desc: "Cocon tropical niché à Sainte-Luce avec 2 chambres dont une mezzanine au charme unique. Piscine privée, terrasse ensoleillée, vue mer. Netflix, Disney+, lave-linge inclus. Plages et distilleries à proximité.",
     prix: 220,
-    capacite: 6,
-    chambres: 3,
+    capacite: 5,
+    chambres: 2,
+    lits: 3,
+    sdb: "1",
+    rating: "4,5",
+    reviews: 16,
     couleur: "#06b6d4",
     photos: [
       AB+"hosting/Hosting-792768220924504884/original/87d71613-6f4b-4730-8101-c15f88d34221.jpeg",
@@ -41,17 +51,22 @@ const BIENS = [
       AB+"hosting/Hosting-792768220924504884/original/6c090336-0211-4c51-8f66-6e760a37fee9.jpeg",
       AB+"hosting/Hosting-792768220924504884/original/64c63a70-79ad-4626-92d4-d20c5916349b.jpeg",
     ],
-    amenities: ["Piscine", "Jardin", "Clim", "Terrasse", "Wifi"],
+    amenities: ["Piscine privée", "Vue mer", "Jardin", "Netflix/Disney+", "Lave-linge", "Wifi 123 Mb/s"],
   },
   {
     id: "iguana",
     nom: "Villa Iguana",
+    airbnbTitle: "Villa Iguana, vue mer et rocher du Diamant, piscine",
     lieu: "Sainte-Luce, Martinique",
     tag: null,
-    desc: "Villa moderne avec piscine à débordement et vue imprenable sur le rocher du Diamant. Architecture contemporaine, 3 chambres.",
+    desc: "Villa avec piscine d'eau salée et vue imprenable sur la baie et le rocher du Diamant. 2 chambres, terrasse panoramique. Wifi 126 Mb/s, parking inclus, animaux acceptés.",
     prix: 180,
     capacite: 6,
-    chambres: 3,
+    chambres: 2,
+    lits: 3,
+    sdb: "1",
+    rating: "4,75",
+    reviews: 4,
     couleur: "#22c55e",
     photos: [
       AB+"afdbde92-b993-4561-b150-114f36bfe545.jpg",
@@ -60,17 +75,22 @@ const BIENS = [
       AB+"hosting/Hosting-661013712794640840/original/47f479ea-6667-492b-929d-616ed86b0791.jpeg",
       AB+"hosting/Hosting-U3RheVN1cHBseUxpc3Rpbmc6NjYxMDEzNzEyNzk0NjQwODQw/original/f343b178-6e0f-4b41-8944-33da5ae3ba36.jpeg",
     ],
-    amenities: ["Piscine", "Vue Diamant", "Clim", "Terrasse", "Wifi"],
+    amenities: ["Piscine eau salée", "Vue Diamant", "Vue océan", "Wifi 126 Mb/s", "Parking", "Animaux OK"],
   },
   {
     id: "geko",
-    nom: "Villa Geko",
+    nom: "Géko",
+    airbnbTitle: "Géko, détente, zen, piscine & jardin tropical",
     lieu: "Sainte-Luce, Martinique",
     tag: null,
-    desc: "Charmante villa zen avec piscine, jardin tropical fleuri, terrasse barbecue. Ambiance détente garantie.",
+    desc: "Refuge paisible au sein de la résidence Amaryllis. Jardin tropical luxuriant, piscine rafraîchissante, brise des alizés. À 7 min des plages de sable blanc. Clim, TV, lave-linge inclus.",
     prix: 150,
     capacite: 4,
-    chambres: 2,
+    chambres: 1,
+    lits: 2,
+    sdb: "1",
+    rating: "4,83",
+    reviews: 23,
     couleur: "#f59e0b",
     photos: [
       AB+"hosting/Hosting-1263155865459755724/original/62cb1f91-7147-483b-b4c7-0cba1b717f28.jpeg",
@@ -79,17 +99,22 @@ const BIENS = [
       AB+"hosting/Hosting-1263155865459755724/original/b501ee9a-e617-495e-9ee9-6552c83160a2.jpeg",
       AB+"hosting/Hosting-1263155865459755724/original/44a86db1-fb7e-49f0-bd8f-5760fabe76ed.jpeg",
     ],
-    amenities: ["Piscine", "BBQ", "Clim", "Jardin", "Wifi"],
+    amenities: ["Piscine", "Jardin tropical", "Climatisation", "Lave-linge", "TV", "Wifi 128 Mb/s"],
   },
   {
     id: "mabouya",
-    nom: "Villa Mabouya",
+    nom: "Mabouya",
+    airbnbTitle: "Mabouya | Jacuzzi privatif, Jardin fleuri, vue mer",
     lieu: "Sainte-Luce, Martinique",
     tag: null,
-    desc: "Villa cosy avec jacuzzi privatif, jardin fleuri et vue mer. Atmosphère intimiste, calme absolu et nature tropicale.",
+    desc: "Havre de paix à flanc de colline avec jacuzzi privatif, jardin fleuri et vue mer enchanteresse. Idéal pour une escapade romantique ou ressourçante. Plages et distilleries à quelques minutes.",
     prix: 110,
-    capacite: 4,
-    chambres: 2,
+    capacite: 2,
+    chambres: 1,
+    lits: 1,
+    sdb: "1",
+    rating: "4,55",
+    reviews: 11,
     couleur: "#84cc16",
     photos: [
       AB+"miso/Hosting-1046596752160926069/original/61cd5a5f-0a20-4043-ba57-9b35d7dd276a.jpeg",
@@ -98,17 +123,22 @@ const BIENS = [
       AB+"miso/Hosting-1046596752160926069/original/5414f301-4647-49af-b4f3-2ad10985eb29.jpeg",
       AB+"miso/Hosting-1046596752160926069/original/f68c6704-d68b-4001-b671-f3c2eb009ebd.jpeg",
     ],
-    amenities: ["Jacuzzi", "Vue mer", "Clim", "Jardin", "Wifi"],
+    amenities: ["Jacuzzi privatif", "Vue mer", "Jardin fleuri", "Wifi 81 Mb/s", "Parking", "Animaux OK"],
   },
   {
     id: "schoelcher",
     nom: "T2 Schœlcher",
+    airbnbTitle: "Appartement de standing calme, splendide vue mer",
     lieu: "Schœlcher, Martinique",
     tag: null,
-    desc: "Appartement de standing calme, splendide vue mer, terrasse. À 5 min de la plage, proche de Fort-de-France.",
+    desc: "Appartement de standing calme avec splendide vue sur la baie, proche de Fort-de-France. Terrasse, parking, TV HD. Idéal pour découvrir le nord de la Martinique.",
     prix: 100,
-    capacite: 4,
+    capacite: 2,
     chambres: 1,
+    lits: 1,
+    sdb: "1",
+    rating: "4,8",
+    reviews: 30,
     couleur: "#8b5cf6",
     photos: [
       AB+"miso/Hosting-24242415/original/8fa46b75-28f0-4b0c-bfc7-24a4ccd323fd.jpeg",
@@ -117,22 +147,27 @@ const BIENS = [
       AB+"hosting/Hosting-24242415/original/c2d6324a-715f-4567-acf8-5722ea54e2e2.jpeg",
       AB+"miso/Hosting-24242415/original/d05cb282-f261-4f54-9211-90766aaa2684.jpeg",
     ],
-    amenities: ["Vue mer", "Plage 5mn", "Clim", "Terrasse", "Wifi"],
+    amenities: ["Vue baie", "Terrasse", "TV HD", "Wifi", "Parking", "Animaux OK"],
   },
   {
     id: "nogent",
     nom: "T2 Nogent-sur-Marne",
+    airbnbTitle: "Appartement de standing avec jardin, proche Paris",
     lieu: "Nogent-sur-Marne, Île-de-France",
     tag: null,
-    desc: "Bel appartement avec jardin au bord de la Marne, lumineux et décoré avec soin. Paris à 20 min (RER A).",
+    desc: "Bel appartement T2 lumineux avec jardin au bord de la Marne. Décoré avec soin, calme et verdure à 20 min de Paris par le RER A.",
     prix: 85,
     capacite: 3,
     chambres: 1,
+    lits: 1,
+    sdb: "1",
+    rating: null,
+    reviews: null,
     couleur: "#64748b",
     photos: [
       AB+"35de3bd4-d391-4b8b-9b8d-7b2d07fdb0b7.jpg",
     ],
-    amenities: ["Bord Marne", "Jardin", "RER A", "Parking", "Wifi"],
+    amenities: ["Bord Marne", "Jardin", "RER A (20 min Paris)", "Parking", "Wifi"],
   },
 ];
 
@@ -554,10 +589,21 @@ function BienCard({ bien, onBook }) {
 
         <p style={{ color: "#64748b", fontSize: 13, lineHeight: 1.65, margin: "10px 0 16px", flex: 1 }}>{bien.desc}</p>
 
+        {/* Rating badge */}
+        {bien.rating && (
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
+            <span style={{ background: "#1e293b", border: "1px solid #2d3f5e", borderRadius: 8, padding: "4px 10px", fontSize: 13, color: "#f1f5f9", fontWeight: 700, display: "flex", alignItems: "center", gap: 5 }}>
+              ⭐ {bien.rating}
+            </span>
+            {bien.reviews && <span style={{ color: "#475569", fontSize: 12 }}>{bien.reviews} avis</span>}
+          </div>
+        )}
+
         {/* Capacité */}
-        <div style={{ display: "flex", gap: 16, marginBottom: 18 }}>
+        <div style={{ display: "flex", gap: 14, marginBottom: 18, flexWrap: "wrap" }}>
           <Stat icon="👤" label={`${bien.capacite} pers.`} />
-          <Stat icon="🛏️" label={`${bien.chambres} chambre${bien.chambres > 1 ? "s" : ""}`} />
+          <Stat icon="🛏️" label={`${bien.lits} lit${bien.lits > 1 ? "s" : ""}`} />
+          <Stat icon="🚿" label={`${bien.sdb} sdb`} />
         </div>
 
         {/* Amenities */}
