@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
 // ── Color palette ────────────────────────────────────────────────
-const BG    = "#020818";
-const SURF  = "#060f1f";
-const CYAN  = "#00d4ff";
-const GOLD  = "#f59e0b";
-const CORAL = "#ff6b6b";
-const TEXT  = "#e2e8f0";
-const MUTED = "#475569";
+const IVORY  = "#FAF7F2";  // main background
+const CREAM  = "#F0E8DC";  // card/modal background
+const NAVY   = "#1B2856";  // header bg, primary text
+const CORAL  = "#C8553D";  // accent - CTAs, active states, highlights
+const SAND   = "#E8DDD0";  // borders, dividers
+const TEXT   = "#1B2856";  // same as navy for body text
+const MUTED  = "#7A6B5A";  // warm brown for secondary text
+const GOLD   = "#C4922A";  // star ratings
 
 // ── CSS Animations ────────────────────────────────────────────────
 if (typeof document !== "undefined" && !document.getElementById("__site_styles")) {
@@ -15,15 +16,13 @@ if (typeof document !== "undefined" && !document.getElementById("__site_styles")
   s.id = "__site_styles";
   s.textContent = `
     @keyframes spin { to { transform: rotate(360deg); } }
-    @keyframes fadeUp { from { opacity:0; transform:translateY(36px); } to { opacity:1; transform:translateY(0); } }
-    @keyframes scan { from { transform:translateY(-60px); } to { transform:translateY(110vh); } }
-    @keyframes drift { 0%,100% { transform:translateY(0) scale(1); } 50% { transform:translateY(-14px) scale(1.01); } }
-    @keyframes glowPulse { 0%,100% { opacity:0.35; } 50% { opacity:0.9; } }
-    @keyframes borderGlow { 0%,100% { box-shadow:0 0 20px 2px var(--c); } 50% { box-shadow:0 0 40px 8px var(--c); } }
-    ::selection { background:rgba(0,212,255,0.25); color:#fff; }
-    ::-webkit-scrollbar { width:3px; }
-    ::-webkit-scrollbar-track { background:#020818; }
-    ::-webkit-scrollbar-thumb { background:rgba(0,212,255,0.25); border-radius:2px; }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes floatLeaf { 0%,100% { transform:translateY(0) rotate(-3deg); } 50% { transform:translateY(-12px) rotate(3deg); } }
+    @keyframes bloomIn { from { opacity:0; transform:scale(0.92); } to { opacity:1; transform:scale(1); } }
+    ::selection { background:rgba(200,85,61,0.2); color:#1B2856; }
+    ::-webkit-scrollbar { width:4px; }
+    ::-webkit-scrollbar-track { background:#FAF7F2; }
+    ::-webkit-scrollbar-thumb { background:rgba(200,85,61,0.3); border-radius:2px; }
   `;
   document.head.appendChild(s);
 }
@@ -252,7 +251,7 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
 
   return (
     <div style={{ flex: "1 1 240px" }}>
-      <div style={{ textAlign: "center", fontWeight: 700, fontSize: 15, marginBottom: 12, color: TEXT }}>
+      <div style={{ textAlign: "center", fontWeight: 700, fontSize: 15, marginBottom: 12, color: NAVY }}>
         {MONTHS_FR[month]} {year}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 0 }}>
@@ -273,8 +272,8 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
           let borderRadius = "8px";
           let fontWeight = 400;
 
-          if (isCI || isCO) { bg = CYAN; color = "#000"; fontWeight = 700; }
-          else if (inRange) { bg = `rgba(0,212,255,0.12)`; color = "#cffafe"; borderRadius = "0"; }
+          if (isCI || isCO) { bg = CORAL; color = "#fff"; fontWeight = 700; }
+          else if (inRange) { bg = `rgba(200,85,61,0.10)`; color = "#7A3020"; borderRadius = "0"; }
           if (isCI) borderRadius = "8px 0 0 8px";
           if (isCO) borderRadius = "0 8px 8px 0";
 
@@ -291,7 +290,7 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
                 fontSize: 13,
                 cursor: disabled ? "default" : "pointer",
                 background: bg,
-                color: blocked ? "#1e293b" : past ? "#1e293b" : color,
+                color: blocked ? "#D4C8BC" : past ? "#D4C8BC" : color,
                 borderRadius,
                 fontWeight,
                 textDecoration: blocked ? "line-through" : "none",
@@ -369,16 +368,10 @@ function DateRangePicker({ checkin, checkout, blockedDates = [], onChange }) {
 
 const iconBtn = {
   background: "none",
-  border: `1px solid rgba(0,212,255,0.15)`,
+  border: `1px solid ${SAND}`,
   color: MUTED,
-  width: 32,
-  height: 32,
-  borderRadius: 8,
-  cursor: "pointer",
-  fontSize: 18,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
+  width: 32, height: 32, borderRadius: 8, cursor: "pointer",
+  fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center",
 };
 
 // ── Booking Modal ────────────────────────────────────────────────
@@ -411,14 +404,14 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
   async function goToPayment() {
     setPaying(true); setPayError("");
     try {
-      const res = await fetch("/.netlify/functions/create-payment-intent", {
+      const res = await fetch("/api/create-payment-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ amount: total * 100, currency: "eur", metadata: { bienId: bien.id, checkin, checkout, voyageur: `${form.prenom} ${form.nom}` } }),
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-      const el = stripe.elements({ clientSecret: data.clientSecret, appearance: { theme: "night", variables: { colorPrimary: bien.couleur, borderRadius: "8px", colorBackground: SURF, colorText: TEXT } } });
+      const el = stripe.elements({ clientSecret: data.clientSecret, appearance: { theme: "stripe", variables: { colorPrimary: CORAL, borderRadius: "8px", colorBackground: CREAM, colorText: NAVY } } });
       const pe = el.create("payment");
       setElements(el);
       setStep(3);
@@ -442,35 +435,35 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
       onClick={(e) => e.target === e.currentTarget && onClose()}
       style={{
         position: "fixed", inset: 0,
-        background: "rgba(2,8,24,0.9)",
-        backdropFilter: "blur(12px)",
+        background: "rgba(27,40,86,0.7)",
+        backdropFilter: "blur(8px)",
         zIndex: 1000,
         display: "flex", alignItems: "center", justifyContent: "center",
         padding: "16px",
       }}
     >
       <div style={{
-        background: SURF,
-        border: "1px solid rgba(0,212,255,0.12)",
+        background: CREAM,
+        border: `1px solid ${SAND}`,
         borderRadius: 20,
         padding: "32px",
         maxWidth: 680, width: "100%",
         maxHeight: "92vh", overflowY: "auto",
         position: "relative",
-        boxShadow: `0 40px 80px rgba(0,0,0,0.7), 0 0 60px rgba(0,212,255,0.04)`,
+        boxShadow: `0 24px 64px rgba(27,40,86,0.15)`,
       }}>
 
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28 }}>
           <div>
-            <div style={{ fontSize: 11, color: bien.couleur, fontWeight: 700, letterSpacing: 3, marginBottom: 6, textTransform: "uppercase" }}>RÉSERVATION DIRECTE</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: TEXT }}>{bien.nom}</div>
+            <div style={{ fontSize: 11, color: CORAL, fontWeight: 700, letterSpacing: 3, marginBottom: 6, textTransform: "uppercase" }}>RÉSERVATION DIRECTE</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: NAVY }}>{bien.nom}</div>
             <div style={{ color: MUTED, fontSize: 13, marginTop: 4 }}>📍 {bien.lieu}</div>
           </div>
           <button
             onClick={onClose}
             style={{
-              background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
+              background: SAND, border: `1px solid ${SAND}`,
               color: MUTED, width: 36, height: 36, borderRadius: 10,
               cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
             }}
@@ -484,19 +477,19 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
               <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                 <div style={{
                   width: 26, height: 26, borderRadius: "50%",
-                  background: step > i + 1 ? bien.couleur : step === i + 1 ? bien.couleur : "rgba(255,255,255,0.04)",
-                  border: `1px solid ${step >= i + 1 ? bien.couleur : "rgba(255,255,255,0.08)"}`,
+                  background: step > i + 1 ? CORAL : step === i + 1 ? CORAL : "rgba(27,40,86,0.06)",
+                  border: `1px solid ${step >= i + 1 ? CORAL : SAND}`,
                   display: "flex", alignItems: "center", justifyContent: "center",
                   fontSize: 11, fontWeight: 700,
-                  color: step > i + 1 ? "#000" : "#fff",
+                  color: step > i + 1 ? "#fff" : step === i + 1 ? "#fff" : MUTED,
                   transition: "background 0.3s",
                 }}>
                   {step > i + 1 ? "✓" : i + 1}
                 </div>
-                <span style={{ fontSize: 12, fontWeight: step === i + 1 ? 700 : 400, color: step === i + 1 ? TEXT : MUTED }}>{s}</span>
+                <span style={{ fontSize: 12, fontWeight: step === i + 1 ? 700 : 400, color: step === i + 1 ? NAVY : MUTED }}>{s}</span>
               </div>
               {i < steps.length - 1 && (
-                <div style={{ flex: 1, height: 1, background: step > i + 1 ? bien.couleur : "rgba(255,255,255,0.06)", transition: "background 0.3s" }} />
+                <div style={{ flex: 1, height: 1, background: step > i + 1 ? CORAL : SAND, transition: "background 0.3s" }} />
               )}
             </div>
           ))}
@@ -507,7 +500,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
           <>
             {loadingAvail && (
               <div style={{ textAlign: "center", padding: "8px 0 4px", color: MUTED, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                <span style={{ display: "inline-block", width: 12, height: 12, border: `2px solid ${CYAN}`, borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
+                <span style={{ display: "inline-block", width: 12, height: 12, border: `2px solid ${CORAL}`, borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
                 Chargement des disponibilités Airbnb…
               </div>
             )}
@@ -516,23 +509,23 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
             {nights > 0 ? (
               <div style={{
                 marginTop: 24,
-                background: "rgba(0,212,255,0.03)",
-                border: "1px solid rgba(0,212,255,0.1)",
+                background: "rgba(200,85,61,0.04)",
+                border: `1px solid ${SAND}`,
                 borderRadius: 16,
                 padding: "20px 24px",
                 display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16,
               }}>
                 <div>
                   <div style={{ color: MUTED, fontSize: 13 }}>{formatDateLong(checkin)} → {formatDateLong(checkout)}</div>
-                  <div style={{ fontSize: 14, color: "#94a3b8", marginTop: 4 }}>{nights} nuit{nights > 1 ? "s" : ""} × {bien.prix}€ / nuit</div>
-                  <div style={{ fontSize: 26, fontWeight: 800, color: TEXT, marginTop: 4 }}>{total}€</div>
+                  <div style={{ fontSize: 14, color: MUTED, marginTop: 4 }}>{nights} nuit{nights > 1 ? "s" : ""} × {bien.prix}€ / nuit</div>
+                  <div style={{ fontSize: 26, fontWeight: 800, color: NAVY, marginTop: 4 }}>{total}€</div>
                 </div>
                 <button
                   onClick={() => setStep(2)}
                   style={{
                     ...btnPrimary,
-                    background: `linear-gradient(135deg, ${bien.couleur}, ${bien.couleur}cc)`,
-                    color: bien.couleur === "#f59e0b" || bien.couleur === "#84cc16" ? "#000" : "#fff",
+                    background: CORAL,
+                    color: "#fff",
                   }}
                 >
                   Continuer →
@@ -550,14 +543,14 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
         {step === 2 && (
           <>
             <div style={{
-              background: "rgba(0,212,255,0.03)",
-              border: "1px solid rgba(0,212,255,0.08)",
+              background: "rgba(200,85,61,0.04)",
+              border: `1px solid ${SAND}`,
               borderRadius: 12, padding: "14px 18px", marginBottom: 24,
               fontSize: 14, color: MUTED,
               display: "flex", justifyContent: "space-between",
             }}>
               <span>{formatDateLong(checkin)} → {formatDateLong(checkout)}</span>
-              <span style={{ fontWeight: 700, color: TEXT }}>{nights} nuits · {total}€</span>
+              <span style={{ fontWeight: 700, color: NAVY }}>{nights} nuits · {total}€</span>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
@@ -575,8 +568,8 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
                 disabled={!formOk || paying || !stripe}
                 style={{
                   ...btnPrimary,
-                  background: formOk && !paying && stripe ? `linear-gradient(135deg, ${bien.couleur}, ${bien.couleur}cc)` : "rgba(255,255,255,0.04)",
-                  color: bien.couleur === "#f59e0b" || bien.couleur === "#84cc16" ? "#000" : "#fff",
+                  background: formOk && !paying && stripe ? CORAL : SAND,
+                  color: "#fff",
                   opacity: formOk && !paying && stripe ? 1 : 0.5,
                   cursor: formOk && !paying && stripe ? "pointer" : "not-allowed",
                 }}
@@ -592,14 +585,14 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
         {step === 3 && (
           <>
             <div style={{
-              background: "rgba(0,212,255,0.03)",
-              border: "1px solid rgba(0,212,255,0.08)",
+              background: "rgba(200,85,61,0.04)",
+              border: `1px solid ${SAND}`,
               borderRadius: 12, padding: "14px 18px", marginBottom: 24,
               fontSize: 14, color: MUTED,
               display: "flex", justifyContent: "space-between",
             }}>
               <span>{form.prenom} {form.nom} · {formatDateLong(checkin)} → {formatDateLong(checkout)}</span>
-              <span style={{ fontWeight: 700, color: TEXT }}>{total}€</span>
+              <span style={{ fontWeight: 700, color: NAVY }}>{total}€</span>
             </div>
             <div id="spe" style={{ marginBottom: 24 }} />
             <div style={{ display: "flex", gap: 12, justifyContent: "space-between" }}>
@@ -609,8 +602,8 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
                 disabled={paying}
                 style={{
                   ...btnPrimary,
-                  background: paying ? "rgba(255,255,255,0.04)" : `linear-gradient(135deg, ${CYAN}, #0099cc)`,
-                  color: "#000",
+                  background: paying ? SAND : CORAL,
+                  color: "#fff",
                   opacity: paying ? 0.6 : 1,
                 }}
               >
@@ -629,8 +622,8 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
 function FormField({ label, value, onChange, type = "text", multiline, style }) {
   const [focused, setFocused] = useState(false);
   const s = {
-    background: BG,
-    border: `1px solid ${focused ? CYAN + "55" : "rgba(255,255,255,0.06)"}`,
+    background: IVORY,
+    border: `1px solid ${focused ? CORAL + "88" : SAND}`,
     borderRadius: 10,
     color: TEXT,
     padding: "11px 14px",
@@ -667,23 +660,21 @@ function BienCard({ bien, onBook }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        background: SURF,
+        background: "#FFFFFF",
         borderRadius: 16,
         overflow: "hidden",
-        border: `1px solid ${hovered ? bien.couleur + "66" : "rgba(255,255,255,0.06)"}`,
+        border: `1px solid ${SAND}`,
         transition: "all 0.4s cubic-bezier(0.23,1,0.32,1)",
-        transform: hovered ? "translateY(-8px)" : "none",
+        transform: hovered ? "translateY(-4px)" : "none",
         boxShadow: hovered
-          ? `0 32px 64px rgba(0,0,0,0.6), 0 0 0 1px ${bien.couleur}22, 0 0 40px 2px ${bien.couleur}18`
-          : "0 4px 24px rgba(0,0,0,0.4)",
+          ? "0 20px 48px rgba(27,40,86,0.12)"
+          : "0 2px 16px rgba(27,40,86,0.06)",
         display: "flex",
         flexDirection: "column",
       }}
     >
       {/* Photo section */}
-      <div style={{ position: "relative", height: 260, overflow: "hidden", background: `linear-gradient(135deg, ${bien.couleur}18, ${bien.couleur}30)` }}>
-        {/* Color line top */}
-        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: bien.couleur, zIndex: 2 }} />
+      <div style={{ position: "relative", height: 260, overflow: "hidden", background: CREAM }}>
 
         {currentPhoto ? (
           <img
@@ -700,14 +691,19 @@ function BienCard({ bien, onBook }) {
           <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64 }}>🏡</div>
         )}
 
+        {/* 2px coral line on hover */}
+        {hovered && (
+          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: CORAL, zIndex: 2 }} />
+        )}
+
         {/* Dark overlay gradient bottom */}
-        <div style={{ position: "absolute", inset: 0, background: `linear-gradient(to top, ${BG} 0%, transparent 60%)` }} />
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(27,40,86,0.7) 0%, transparent 60%)" }} />
 
         {/* Carousel nav — visible on hover */}
         {photos.length > 1 && hovered && (
           <>
-            <button onClick={prev} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(2,8,24,0.7)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", width: 32, height: 32, borderRadius: "50%", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 3 }}>‹</button>
-            <button onClick={next} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(2,8,24,0.7)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", width: 32, height: 32, borderRadius: "50%", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 3 }}>›</button>
+            <button onClick={prev} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.85)", backdropFilter: "blur(8px)", border: "none", color: NAVY, width: 32, height: 32, borderRadius: "50%", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 3 }}>‹</button>
+            <button onClick={next} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.85)", backdropFilter: "blur(8px)", border: "none", color: NAVY, width: 32, height: 32, borderRadius: "50%", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 3 }}>›</button>
           </>
         )}
 
@@ -722,7 +718,7 @@ function BienCard({ bien, onBook }) {
                   width: i === photoIdx ? 16 : 6,
                   height: 6,
                   borderRadius: 3,
-                  background: i === photoIdx ? bien.couleur : "rgba(255,255,255,0.35)",
+                  background: i === photoIdx ? CORAL : "rgba(255,255,255,0.35)",
                   cursor: "pointer",
                   transition: "all 0.2s",
                 }}
@@ -735,9 +731,8 @@ function BienCard({ bien, onBook }) {
         {bien.tag && (
           <div style={{
             position: "absolute", top: 16, right: 14, zIndex: 3,
-            background: "rgba(2,8,24,0.75)", backdropFilter: "blur(8px)",
-            border: `1px solid ${bien.couleur}55`,
-            color: bien.couleur, fontSize: 10, fontWeight: 700,
+            background: "rgba(200,85,61,0.9)",
+            color: "#fff", fontSize: 10, fontWeight: 700,
             padding: "4px 10px", borderRadius: 20, letterSpacing: 0.5,
             textTransform: "uppercase",
           }}>
@@ -748,24 +743,24 @@ function BienCard({ bien, onBook }) {
         {/* Price badge */}
         <div style={{
           position: "absolute", bottom: 14, right: 14, zIndex: 2,
-          background: "rgba(2,8,24,0.85)", backdropFilter: "blur(10px)",
+          background: "rgba(27,40,86,0.85)", backdropFilter: "blur(10px)",
           border: "1px solid rgba(255,255,255,0.1)",
           borderRadius: 10, padding: "8px 14px", textAlign: "right",
         }}>
           <div style={{ fontSize: 22, fontWeight: 800, color: "#fff", lineHeight: 1 }}>{bien.prix}€</div>
-          <div style={{ fontSize: 11, color: MUTED }}>/ nuit</div>
+          <div style={{ fontSize: 11, color: "rgba(250,247,242,0.6)" }}>/ nuit</div>
         </div>
       </div>
 
       {/* Info section */}
       <div style={{ padding: "20px 22px 22px", flex: 1, display: "flex", flexDirection: "column" }}>
         {/* Location */}
-        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: bien.couleur, marginBottom: 8, display: "flex", alignItems: "center", gap: 4 }}>
-          <span>📍</span> {bien.lieu}
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: CORAL, marginBottom: 8, display: "flex", alignItems: "center", gap: 4 }}>
+          {bien.lieu}
         </div>
 
         {/* Name */}
-        <div style={{ fontWeight: 800, fontSize: 21, color: TEXT, marginBottom: 10 }}>{bien.nom}</div>
+        <div style={{ fontWeight: 800, fontSize: 21, color: NAVY, marginBottom: 10 }}>{bien.nom}</div>
 
         {/* Rating row */}
         {bien.rating && (
@@ -795,8 +790,8 @@ function BienCard({ bien, onBook }) {
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 18 }}>
           {bien.amenities.map(a => (
             <span key={a} style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.07)",
+              background: CREAM,
+              border: `1px solid ${SAND}`,
               borderRadius: 5, fontSize: 11, color: MUTED, padding: "3px 8px",
             }}>{a}</span>
           ))}
@@ -807,26 +802,20 @@ function BienCard({ bien, onBook }) {
           onClick={() => onBook(bien)}
           style={{
             width: "100%",
-            background: `linear-gradient(135deg, ${bien.couleur}18, ${bien.couleur}08)`,
-            border: `1px solid ${bien.couleur}45`,
-            color: bien.couleur,
-            borderRadius: 4,
+            background: CORAL,
+            border: "none",
+            color: "#fff",
+            borderRadius: 6,
             padding: "13px 20px",
             fontWeight: 700,
             fontSize: 13,
             letterSpacing: 1,
             cursor: "pointer",
-            transition: "background 0.2s, border-color 0.2s",
+            transition: "opacity 0.2s",
             textTransform: "uppercase",
           }}
-          onMouseEnter={e => {
-            e.currentTarget.style.background = `linear-gradient(135deg, ${bien.couleur}25, ${bien.couleur}15)`;
-            e.currentTarget.style.borderColor = `${bien.couleur}80`;
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.background = `linear-gradient(135deg, ${bien.couleur}18, ${bien.couleur}08)`;
-            e.currentTarget.style.borderColor = `${bien.couleur}45`;
-          }}
+          onMouseEnter={e => { e.currentTarget.style.opacity = "0.88"; }}
+          onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
         >
           Voir les disponibilités →
         </button>
@@ -846,14 +835,14 @@ function Stat({ icon, label }) {
 // ── Thank you page ───────────────────────────────────────────────
 function MerciPage() {
   return (
-    <div style={{ minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", textAlign: "center", padding: 32 }}>
+    <div style={{ minHeight: "100vh", background: IVORY, display: "flex", alignItems: "center", justifyContent: "center", color: NAVY, textAlign: "center", padding: 32 }}>
       <div>
-        <div style={{ width: 80, height: 80, borderRadius: "50%", background: `rgba(0,212,255,0.1)`, border: `2px solid ${CYAN}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36, margin: "0 auto 28px" }}>✓</div>
-        <h1 style={{ fontSize: 34, fontWeight: 900, marginBottom: 12, color: TEXT }}>Réservation confirmée !</h1>
+        <div style={{ width: 80, height: 80, borderRadius: "50%", background: `rgba(200,85,61,0.1)`, border: `2px solid ${CORAL}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36, margin: "0 auto 28px" }}>✓</div>
+        <h1 style={{ fontSize: 34, fontWeight: 900, marginBottom: 12, color: NAVY }}>Réservation confirmée !</h1>
         <p style={{ color: MUTED, fontSize: 16, maxWidth: 420, margin: "0 auto 32px", lineHeight: 1.6 }}>
           Merci pour votre réservation. Un email de confirmation vous sera envoyé dans quelques minutes.
         </p>
-        <a href="/" style={{ ...btnPrimary, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 8, background: `linear-gradient(135deg, ${CYAN}, #0099cc)`, color: "#000" }}>← Retour à l'accueil</a>
+        <a href="/" style={{ ...btnPrimary, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 8, background: CORAL, color: "#fff" }}>← Retour à l'accueil</a>
       </div>
     </div>
   );
@@ -899,179 +888,125 @@ export default function PublicSite() {
   const filtered = filterLieu === "all" ? BIENS : BIENS.filter(b => b.lieu.includes(filterLieu));
 
   return (
-    <div style={{ minHeight: "100vh", background: BG, color: TEXT, fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: IVORY, color: TEXT, fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}>
 
       {/* ── NAVIGATION ── */}
       <header style={{
         position: "sticky", top: 0, zIndex: 200,
-        height: 60,
-        background: "rgba(2,8,24,0.85)",
-        backdropFilter: "blur(20px)",
-        borderBottom: "1px solid rgba(0,212,255,0.08)",
+        height: 64,
+        background: NAVY,
         padding: "0 32px",
         display: "flex", alignItems: "center",
       }}>
         <div style={{ maxWidth: 1280, margin: "0 auto", width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 20 }}>🌺</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {/* Hibiscus SVG logo mark */}
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+              <ellipse cx="14" cy="8" rx="4" ry="7" fill="none" stroke="#C8553D" strokeWidth="1.5" transform="rotate(0 14 14)"/>
+              <ellipse cx="14" cy="8" rx="4" ry="7" fill="none" stroke="#C8553D" strokeWidth="1.5" transform="rotate(72 14 14)"/>
+              <ellipse cx="14" cy="8" rx="4" ry="7" fill="none" stroke="#C8553D" strokeWidth="1.5" transform="rotate(144 14 14)"/>
+              <ellipse cx="14" cy="8" rx="4" ry="7" fill="none" stroke="#C8553D" strokeWidth="1.5" transform="rotate(216 14 14)"/>
+              <ellipse cx="14" cy="8" rx="4" ry="7" fill="none" stroke="#C8553D" strokeWidth="1.5" transform="rotate(288 14 14)"/>
+              <circle cx="14" cy="14" r="3" fill="#C8553D"/>
+            </svg>
             <div>
-              <div style={{ fontWeight: 900, fontSize: 15, letterSpacing: 2, color: TEXT, textTransform: "uppercase" }}>AMARYLLIS</div>
-              <div style={{ fontSize: 10, color: MUTED, letterSpacing: 1 }}>Martinique · Paris</div>
+              <div style={{ fontWeight: 800, fontSize: 14, letterSpacing: 3, color: "#FAF7F2", textTransform: "uppercase" }}>AMARYLLIS</div>
+              <div style={{ fontSize: 10, color: "rgba(250,247,242,0.5)", letterSpacing: 1 }}>Martinique · Paris</div>
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-            <div style={{ fontSize: 12, color: MUTED }}>📞 Réservation directe</div>
-            <a href="/admin" style={{ fontSize: 11, color: MUTED, textDecoration: "none", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", padding: "5px 12px", borderRadius: 4, letterSpacing: 1, textTransform: "uppercase" }}>Admin</a>
+          <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+            <div style={{ fontSize: 12, color: "rgba(250,247,242,0.6)" }}>Réservation directe · sans commission</div>
+            <a href="/admin" style={{ fontSize: 11, color: "rgba(250,247,242,0.4)", textDecoration: "none", letterSpacing: 1 }}>Admin</a>
           </div>
         </div>
       </header>
 
       {/* ── HERO ── */}
-      <div style={{ position: "relative", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+      <div style={{ position: "relative", minHeight: "92vh", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", background: IVORY }}>
 
-        {/* Atmospheric background */}
+        {/* Warm radial glow */}
         <div style={{
-          position: "absolute", inset: 0,
-          background: `
-            radial-gradient(ellipse 70% 60% at 15% 20%, rgba(0,212,255,0.07) 0%, transparent 60%),
-            radial-gradient(ellipse 50% 50% at 85% 30%, rgba(255,107,107,0.06) 0%, transparent 60%),
-            radial-gradient(ellipse 60% 50% at 50% 90%, rgba(139,92,246,0.06) 0%, transparent 60%),
-            ${BG}
-          `,
-          pointerEvents: "none",
+          position: "absolute", inset: 0, pointerEvents: "none",
+          background: `radial-gradient(ellipse 70% 60% at 20% 50%, rgba(200,85,61,0.06) 0%, transparent 65%),
+                       radial-gradient(ellipse 50% 60% at 80% 40%, rgba(196,146,42,0.05) 0%, transparent 65%)`,
         }} />
 
-        {/* Grid lines overlay */}
-        <div style={{
-          position: "absolute", inset: 0,
-          backgroundImage: `
-            linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px)
-          `,
-          backgroundSize: "60px 60px",
-          pointerEvents: "none",
-        }} />
+        {/* Botanical — large hibiscus outline top-right */}
+        <svg style={{ position:"absolute", top: -40, right: -60, opacity: 0.08, pointerEvents:"none", animation:"floatLeaf 8s ease-in-out infinite" }}
+          width="480" height="480" viewBox="0 0 480 480" fill="none">
+          <ellipse cx="240" cy="100" rx="60" ry="130" fill="#C8553D" transform="rotate(0 240 240)"/>
+          <ellipse cx="240" cy="100" rx="60" ry="130" fill="#C8553D" transform="rotate(72 240 240)"/>
+          <ellipse cx="240" cy="100" rx="60" ry="130" fill="#C8553D" transform="rotate(144 240 240)"/>
+          <ellipse cx="240" cy="100" rx="60" ry="130" fill="#C8553D" transform="rotate(216 240 240)"/>
+          <ellipse cx="240" cy="100" rx="60" ry="130" fill="#C8553D" transform="rotate(288 240 240)"/>
+          <circle cx="240" cy="240" r="40" fill="#C8553D"/>
+        </svg>
 
-        {/* Animated scan line */}
-        <div style={{
-          position: "absolute", left: 0, right: 0, height: 1,
-          background: "linear-gradient(90deg, transparent, rgba(0,212,255,0.15), transparent)",
-          animation: "scan 8s linear infinite",
-          pointerEvents: "none",
-          zIndex: 1,
-        }} />
+        {/* Botanical — palm frond bottom-left */}
+        <svg style={{ position:"absolute", bottom: -20, left: -40, opacity: 0.07, pointerEvents:"none", animation:"floatLeaf 10s ease-in-out infinite reverse" }}
+          width="360" height="360" viewBox="0 0 360 360" fill="none">
+          <path d="M60 360 Q80 200 200 100 Q120 160 160 280 Q100 200 140 340 Q80 240 120 360" fill="#1B2856"/>
+          <path d="M60 360 Q200 280 300 160 Q200 220 220 300 Q180 240 200 340" fill="#1B2856"/>
+        </svg>
 
         {/* Hero content */}
-        <div style={{
-          position: "relative", zIndex: 2,
-          maxWidth: 800, margin: "0 auto",
-          padding: "0 32px",
-          textAlign: "center",
-        }}>
-          {/* Small label */}
-          <div style={{
-            animation: "fadeUp 0.6s ease forwards",
-            opacity: 0,
-            animationDelay: "0.1s",
-            marginBottom: 28,
-          }}>
-            <span style={{
-              fontSize: 11, color: CYAN, letterSpacing: 3,
-              textTransform: "uppercase", fontWeight: 600,
-            }}>✦ LOCATIONS DIRECTES AUX ANTILLES</span>
+        <div style={{ position:"relative", zIndex:2, maxWidth:760, margin:"0 auto", padding:"0 32px", textAlign:"center" }}>
+
+          <div style={{ animation:"fadeUp 0.5s ease forwards", opacity:0, animationDelay:"0.1s", marginBottom:20 }}>
+            <span style={{ fontSize:11, color:CORAL, letterSpacing:4, textTransform:"uppercase", fontWeight:600 }}>
+              Locations de vacances directes
+            </span>
           </div>
 
-          {/* Main title */}
-          <div style={{
-            animation: "fadeUp 0.7s ease forwards",
-            opacity: 0,
-            animationDelay: "0.25s",
-          }}>
+          <div style={{ animation:"fadeUp 0.6s ease forwards", opacity:0, animationDelay:"0.25s" }}>
             <h1 style={{
-              fontSize: 96, fontWeight: 900, lineHeight: 1,
-              color: "#ffffff", margin: "0 0 20px",
-              letterSpacing: 0,
-            }}>AMARYLLIS</h1>
+              fontSize:"clamp(56px, 10vw, 110px)", fontWeight:900, lineHeight:1,
+              color: NAVY, margin:"0 0 16px",
+              letterSpacing: "-2px",
+              fontFamily: "Georgia, 'Times New Roman', serif",
+            }}>Amaryllis</h1>
           </div>
 
-          {/* Subtitle */}
-          <div style={{
-            animation: "fadeUp 0.7s ease forwards",
-            opacity: 0,
-            animationDelay: "0.4s",
-            marginBottom: 48,
-          }}>
-            <p style={{ fontSize: 18, fontWeight: 300, color: MUTED, fontStyle: "italic", margin: 0 }}>
-              Martinique · Paris · Réservez sans commission
+          <div style={{ animation:"fadeUp 0.6s ease forwards", opacity:0, animationDelay:"0.4s", marginBottom:40 }}>
+            <p style={{ fontSize:18, fontWeight:300, color:MUTED, fontStyle:"italic", margin:0, lineHeight:1.6 }}>
+              Martinique · Paris — Réservez sans intermédiaire
             </p>
           </div>
 
-          {/* Stats */}
-          <div style={{
-            animation: "fadeUp 0.7s ease forwards",
-            opacity: 0,
-            animationDelay: "0.55s",
-            display: "flex", gap: 20, justifyContent: "center", flexWrap: "wrap", marginBottom: 48,
-          }}>
-            {[
-              { v: "7 propriétés", icon: "🏝" },
-              { v: "⭐ 4.8 moyen", icon: null },
-            ].map(({ v, icon }) => (
-              <div key={v} style={{
-                background: "rgba(255,255,255,0.03)",
-                border: "1px solid rgba(255,255,255,0.07)",
-                borderRadius: 8,
-                padding: "10px 20px",
-                fontSize: 13, color: TEXT, fontWeight: 600,
-              }}>
-                {icon && <span style={{ marginRight: 6 }}>{icon}</span>}{v}
+          <div style={{ animation:"fadeUp 0.6s ease forwards", opacity:0, animationDelay:"0.55s", display:"flex", gap:12, justifyContent:"center", flexWrap:"wrap", marginBottom:44 }}>
+            {[["7", "propriétés"], ["⭐ 4.8", "note moyenne"], ["0%", "commission"]].map(([v, l]) => (
+              <div key={l} style={{ background:"#fff", border:`1px solid ${SAND}`, borderRadius:8, padding:"10px 18px", textAlign:"center" }}>
+                <div style={{ fontWeight:800, fontSize:18, color:NAVY }}>{v}</div>
+                <div style={{ fontSize:11, color:MUTED, marginTop:2 }}>{l}</div>
               </div>
             ))}
           </div>
 
-          {/* CTA */}
-          <div style={{
-            animation: "fadeUp 0.7s ease forwards",
-            opacity: 0,
-            animationDelay: "0.7s",
-          }}>
-            <a
-              href="#properties"
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 8,
-                background: `linear-gradient(135deg, ${CYAN}22, ${CYAN}10)`,
-                border: `1px solid ${CYAN}55`,
-                color: CYAN,
-                padding: "14px 32px",
-                borderRadius: 4,
-                fontWeight: 700, fontSize: 14,
-                letterSpacing: 1, textTransform: "uppercase",
-                textDecoration: "none",
-                boxShadow: `0 0 24px rgba(0,212,255,0.12)`,
-                transition: "all 0.3s",
-              }}
-            >
-              Explorer les villas →
+          <div style={{ animation:"fadeUp 0.6s ease forwards", opacity:0, animationDelay:"0.7s" }}>
+            <a href="#properties" style={{
+              display:"inline-flex", alignItems:"center", gap:8,
+              background:CORAL, color:"#fff",
+              padding:"15px 36px", borderRadius:6,
+              fontWeight:700, fontSize:14,
+              letterSpacing:1, textTransform:"uppercase",
+              textDecoration:"none",
+              boxShadow:"0 8px 24px rgba(200,85,61,0.3)",
+              transition:"all 0.2s",
+            }}>
+              Découvrir les villas →
             </a>
           </div>
 
-          {/* Scroll indicator */}
-          <div style={{
-            animation: "fadeUp 0.7s ease forwards",
-            opacity: 0,
-            animationDelay: "1s",
-            marginTop: 64,
-            color: MUTED, fontSize: 11, letterSpacing: 2,
-          }}>↓ défiler</div>
+          <div style={{ animation:"fadeUp 0.6s ease forwards", opacity:0, animationDelay:"1s", marginTop:56, color:SAND, fontSize:12, letterSpacing:3 }}>↓</div>
         </div>
       </div>
 
       {/* ── PROPERTIES SECTION ── */}
-      <div id="properties" style={{ maxWidth: 1280, margin: "0 auto", padding: "80px 32px" }}>
+      <div id="properties" style={{ maxWidth: 1280, margin: "0 auto", padding: "80px 32px", background: IVORY }}>
 
         {/* Section header + filters */}
         <div style={{ marginBottom: 40 }}>
-          <h2 style={{ fontSize: 32, fontWeight: 800, color: TEXT, margin: "0 0 24px" }}>Nos propriétés</h2>
+          <h2 style={{ fontSize: 32, fontWeight: 800, color: NAVY, margin: "0 0 24px" }}>Nos propriétés</h2>
 
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 24 }}>
             {lieux.map(({ key, label }) => (
@@ -1081,9 +1016,9 @@ export default function PublicSite() {
                 style={{
                   padding: "8px 20px",
                   borderRadius: 20,
-                  border: `1px solid ${filterLieu === key ? CYAN + "88" : "rgba(255,255,255,0.1)"}`,
-                  background: filterLieu === key ? `rgba(0,212,255,0.12)` : "transparent",
-                  color: filterLieu === key ? CYAN : MUTED,
+                  border: `1px solid ${filterLieu === key ? CORAL + "88" : SAND}`,
+                  background: filterLieu === key ? `rgba(200,85,61,0.08)` : "transparent",
+                  color: filterLieu === key ? CORAL : MUTED,
                   cursor: "pointer",
                   fontSize: 13,
                   fontWeight: filterLieu === key ? 700 : 400,
@@ -1097,7 +1032,7 @@ export default function PublicSite() {
           </div>
 
           {/* Separator */}
-          <div style={{ height: 1, background: "linear-gradient(90deg, rgba(0,212,255,0.15), transparent)" }} />
+          <div style={{ height: 1, background: SAND }} />
         </div>
 
         {/* Grid */}
@@ -1109,19 +1044,17 @@ export default function PublicSite() {
       </div>
 
       {/* ── FOOTER ── */}
-      <footer style={{
-        background: SURF,
-        borderTop: `1px solid rgba(0,212,255,0.1)`,
-        padding: "40px 32px",
-      }}>
-        <div style={{ maxWidth: 1280, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
+      <footer style={{ background: NAVY, padding: "40px 32px" }}>
+        <div style={{ maxWidth:1280, margin:"0 auto", display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:16 }}>
           <div>
-            <div style={{ fontWeight: 900, fontSize: 15, letterSpacing: 2, color: TEXT, textTransform: "uppercase", marginBottom: 6 }}>🌺 AMARYLLIS</div>
-            <div style={{ color: MUTED, fontSize: 12 }}>Locations de vacances directes — sans commission</div>
+            <div style={{ fontWeight:800, fontSize:14, letterSpacing:3, color:"#FAF7F2", textTransform:"uppercase", marginBottom:6 }}>
+              AMARYLLIS
+            </div>
+            <div style={{ color:"rgba(250,247,242,0.5)", fontSize:12 }}>Locations de vacances directes — sans commission</div>
           </div>
-          <div style={{ textAlign: "right", display: "flex", flexDirection: "column", gap: 6 }}>
-            <div style={{ fontSize: 12, color: MUTED }}>🔒 Paiement sécurisé Stripe</div>
-            <a href="/admin" style={{ fontSize: 11, color: MUTED, textDecoration: "none", letterSpacing: 1 }}>Admin →</a>
+          <div style={{ textAlign:"right", display:"flex", flexDirection:"column", gap:6 }}>
+            <div style={{ fontSize:12, color:"rgba(250,247,242,0.5)" }}>🔒 Paiement sécurisé Stripe</div>
+            <a href="/admin" style={{ fontSize:11, color:"rgba(250,247,242,0.3)", textDecoration:"none", letterSpacing:1 }}>Admin →</a>
           </div>
         </div>
       </footer>
@@ -1136,35 +1069,24 @@ export default function PublicSite() {
 
 // ── Shared styles ────────────────────────────────────────────────
 const btnPrimary = {
-  border: "none",
-  borderRadius: 4,
+  border: "none", borderRadius: 6,
   padding: "13px 26px",
-  fontWeight: 700,
-  fontSize: 14,
+  fontWeight: 700, fontSize: 14,
   cursor: "pointer",
   transition: "opacity 0.2s, transform 0.1s",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  letterSpacing: 1,
-  textTransform: "uppercase",
+  display: "inline-flex", alignItems: "center", justifyContent: "center",
+  letterSpacing: 1, textTransform: "uppercase",
 };
 const btnBack = {
   background: "transparent",
-  border: "1px solid rgba(255,255,255,0.08)",
-  color: MUTED,
-  borderRadius: 4,
+  border: `1px solid ${SAND}`,
+  color: MUTED, borderRadius: 6,
   padding: "13px 20px",
-  fontWeight: 600,
-  fontSize: 14,
-  cursor: "pointer",
+  fontWeight: 600, fontSize: 14, cursor: "pointer",
 };
 const errStyle = {
-  color: CORAL,
-  marginTop: 14,
-  fontSize: 13,
-  background: "rgba(255,107,107,0.06)",
-  border: "1px solid rgba(255,107,107,0.2)",
-  borderRadius: 8,
-  padding: "10px 14px",
+  color: CORAL, marginTop: 14, fontSize: 13,
+  background: "rgba(200,85,61,0.06)",
+  border: `1px solid rgba(200,85,61,0.2)`,
+  borderRadius: 8, padding: "10px 14px",
 };
