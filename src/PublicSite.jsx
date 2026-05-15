@@ -1488,12 +1488,12 @@ function HeroCarousel({ biens, onDetail, onBook }) {
         </div>
       </div>
 
-      {/* Top-right: amenities pills — sur la photo */}
+      {/* Top-left: amenities + voir photos — sur la photo */}
       <div
-        key={`topright-${animKey}`}
+        key={`topleft-${animKey}`}
         style={{
-          position: "absolute", top: 20, right: 20, zIndex: 5,
-          display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8,
+          position: "absolute", top: 20, left: 20, zIndex: 5,
+          display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 8,
           animation: "fadeIn 0.9s ease both",
         }}
       >
@@ -1506,32 +1506,6 @@ function HeroCarousel({ biens, onDetail, onBook }) {
             fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase",
             color: "rgba(250,245,233,0.75)", whiteSpace: "nowrap",
           }}>{a}</div>
-        ))}
-      </div>
-
-      {/* Top-left: benefits + voir photos — sur la photo */}
-      <div
-        key={`topleft-${animKey}`}
-        style={{
-          position: "absolute", top: 20, left: 20, zIndex: 5,
-          display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 8,
-          animation: "fadeIn 0.9s ease both",
-        }}
-      >
-        {/* Benefits pills */}
-        {BENEFITS.map(({ icon, label }, i) => (
-          <div key={i} style={{
-            background: "rgba(7,38,38,0.58)", backdropFilter: "blur(14px)",
-            border: "1px solid rgba(250,245,233,0.12)",
-            borderRadius: 20, padding: "5px 14px",
-            display: "flex", alignItems: "center", gap: 7,
-            fontFamily: "'Jost', sans-serif", fontWeight: 300,
-            fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase",
-            color: "rgba(250,245,233,0.75)", whiteSpace: "nowrap",
-          }}>
-            <span style={{ fontSize: 14 }}>{icon}</span>
-            {label}
-          </div>
         ))}
 
         {/* Voir photos & détails */}
