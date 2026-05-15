@@ -1488,7 +1488,7 @@ function HeroCarousel({ biens, onDetail, onBook }) {
         </div>
       </div>
 
-      {/* Top-right: amenities + voir photos — sur la photo */}
+      {/* Top-right: amenities pills — sur la photo */}
       <div
         key={`topright-${animKey}`}
         style={{
@@ -1497,7 +1497,6 @@ function HeroCarousel({ biens, onDetail, onBook }) {
           animation: "fadeIn 0.9s ease both",
         }}
       >
-        {/* Amenities pills */}
         {(bien.amenities || []).slice(0, 5).map((a, i) => (
           <div key={i} style={{
             background: "rgba(7,38,38,0.58)", backdropFilter: "blur(14px)",
@@ -1508,8 +1507,34 @@ function HeroCarousel({ biens, onDetail, onBook }) {
             color: "rgba(250,245,233,0.75)", whiteSpace: "nowrap",
           }}>{a}</div>
         ))}
+      </div>
 
-        {/* Voir photos button */}
+      {/* Top-left: benefits + voir photos — sur la photo */}
+      <div
+        key={`topleft-${animKey}`}
+        style={{
+          position: "absolute", top: 20, left: 20, zIndex: 5,
+          display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 8,
+          animation: "fadeIn 0.9s ease both",
+        }}
+      >
+        {/* Benefits pills */}
+        {BENEFITS.map(({ icon, label }, i) => (
+          <div key={i} style={{
+            background: "rgba(7,38,38,0.58)", backdropFilter: "blur(14px)",
+            border: "1px solid rgba(250,245,233,0.12)",
+            borderRadius: 20, padding: "5px 14px",
+            display: "flex", alignItems: "center", gap: 7,
+            fontFamily: "'Jost', sans-serif", fontWeight: 300,
+            fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase",
+            color: "rgba(250,245,233,0.75)", whiteSpace: "nowrap",
+          }}>
+            <span style={{ fontSize: 14 }}>{icon}</span>
+            {label}
+          </div>
+        ))}
+
+        {/* Voir photos & détails */}
         <button
           onClick={() => onDetail(bien)}
           style={{
@@ -2053,9 +2078,6 @@ export default function PublicSite() {
 
       {/* ── HERO CAROUSEL ── */}
       <HeroCarousel biens={biensList} onDetail={setDetailBien} onBook={openBien} />
-
-      {/* ── BENEFITS STRIP ── */}
-      <BenefitsStrip />
 
       {/* ── QUICK BOOK ── */}
       <QuickBook biens={biensList} onBook={openBien} />
