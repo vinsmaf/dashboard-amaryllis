@@ -1202,7 +1202,7 @@ function HeroCarousel({ biens, onDetail, onBook }) {
   const photo = bien.photos && bien.photos[0];
 
   return (
-    <div style={{ position: "relative", height: "calc(100vh - 100px)", minHeight: 520, overflow: "hidden", background: "#072626" }}>
+    <div style={{ position: "relative", height: "calc(100vh - 62px)", minHeight: 520, overflow: "hidden", background: "#072626" }}>
       {/* Animated shader wallpaper */}
       <ShaderBg />
 
@@ -1805,30 +1805,31 @@ export default function PublicSite() {
 
       {/* ── NAVIGATION ── */}
       <header style={{ position: "sticky", top: 0, zIndex: 200 }}>
-        {/* Main bar */}
         <div style={{
-          height: 60, background: NAVY,
+          height: 62, background: NAVY,
           padding: "0 28px",
           display: "flex", alignItems: "center",
-          borderBottom: "1px solid rgba(250,245,233,0.08)",
+          borderBottom: "1px solid rgba(250,245,233,0.07)",
         }}>
-          <div style={{ maxWidth: 1280, margin: "0 auto", width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ maxWidth: 1280, margin: "0 auto", width: "100%", display: "flex", alignItems: "center", gap: 20 }}>
+            {/* Logo menu */}
             <LogoDropdown />
-            <a href="/admin" style={{ fontSize: 11, color: "rgba(250,247,242,0.3)", textDecoration: "none", letterSpacing: "0.1em", fontFamily: "'Jost', sans-serif" }}>Admin</a>
-          </div>
-        </div>
 
-        {/* Property dropdown strip */}
-        <div style={{
-          height: 40, background: "#072626",
-          padding: "0 28px",
-          display: "flex", alignItems: "center",
-          borderTop: "1px solid rgba(250,245,233,0.05)",
-          gap: 16,
-        }}>
-          <PropertyDropdown onSelect={setDetailBien} />
-          <div style={{ height: 16, width: 1, background: "rgba(250,245,233,0.1)" }} />
-          <HoverContact direction="down" />
+            {/* Separator */}
+            <div style={{ width: 1, height: 20, background: "rgba(250,245,233,0.12)", flexShrink: 0 }} />
+
+            {/* Property selector — fills center */}
+            <div style={{ flex: 1 }}>
+              <PropertyDropdown onSelect={setDetailBien} />
+            </div>
+
+            {/* Right: contact + admin */}
+            <div style={{ display: "flex", alignItems: "center", gap: 16, flexShrink: 0 }}>
+              <HoverContact direction="down" />
+              <div style={{ width: 1, height: 16, background: "rgba(250,245,233,0.1)" }} />
+              <a href="/admin" style={{ fontSize: 10, color: "rgba(250,247,242,0.25)", textDecoration: "none", letterSpacing: "0.12em", textTransform: "uppercase", fontFamily: "'Jost', sans-serif" }}>Admin</a>
+            </div>
+          </div>
         </div>
       </header>
 

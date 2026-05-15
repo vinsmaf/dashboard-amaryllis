@@ -697,6 +697,14 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
   const [viewYear] = useState(2026);
   const [icalStatus, setIcalStatus] = useState({});
   const [view, setView] = useState("todo");
+  const [ganttBienFilter, setGanttBienFilter] = useState(null); // null = all
+  const [dailyPrices, setDailyPrices] = useState(loadDailyPrices);
+
+  useEffect(() => {
+    const handler = () => setDailyPrices(loadDailyPrices());
+    window.addEventListener("amaryllis_prices_updated", handler);
+    return () => window.removeEventListener("amaryllis_prices_updated", handler);
+  }, []);
 
   const importIcal = useCallback(async (bienId, canal, url, currentResas) => {
     if (!url) return currentResas;
@@ -969,6 +977,14 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
 
       {view === "gantt" && (
         <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 13, padding: 14, overflowX: "auto" }}>
+          {/* Bien selector */}
+          <div style={{ display: "flex", gap: 4, marginBottom: 10, flexWrap: "wrap", alignItems: "center" }}>
+            <button onClick={() => setGanttBienFilter(null)} style={{ padding: "3px 10px", borderRadius: 14, border: "none", cursor: "pointer", fontSize: 10, fontWeight: ganttBienFilter === null ? 700 : 400, background: ganttBienFilter === null ? "#0ea5e9" : "rgba(255,255,255,0.06)", color: ganttBienFilter === null ? "#fff" : "#64748b" }}>Tous</button>
+            {biens.map(b => (
+              <button key={b.id} onClick={() => setGanttBienFilter(ganttBienFilter === b.id ? null : b.id)} style={{ padding: "3px 10px", borderRadius: 14, border: "none", cursor: "pointer", fontSize: 10, fontWeight: ganttBienFilter === b.id ? 700 : 400, background: ganttBienFilter === b.id ? "#0ea5e9" : "rgba(255,255,255,0.06)", color: ganttBienFilter === b.id ? "#fff" : "#64748b" }}>{b.emoji} {b.nom.replace("Villa ", "").replace("T2 ", "")}</button>
+            ))}
+          </div>
+
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             <span style={{ fontSize: 13, color: "#94a3b8", fontWeight: 600 }}>{MOIS_FULL[viewMonth]} {viewYear}</span>
             <div style={{ display: "flex", gap: 5 }}>
@@ -983,34 +999,54 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
                 <div key={d} style={{ fontSize: 9, color: isToday(d) ? "#0ea5e9" : "#475569", textAlign: "center", fontWeight: isToday(d) ? 700 : 400 }}>{d}</div>
               ))}
             </div>
-            {biens.map(b => (
-              <div key={b.id} style={{ display: "grid", gridTemplateColumns: `72px repeat(${daysInMonth},1fr)`, gap: 1, marginBottom: 2 }}>
-                <div style={{ fontSize: 9, color: "#94a3b8", display: "flex", alignItems: "center", gap: 2, paddingRight: 3 }}>
-                  <span>{b.emoji}</span>
-                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.nom.replace("Villa ", "").replace("T2 ", "")}</span>
+            {(ganttBienFilter ? biens.filter(b => b.id === ganttBienFilter) : biens).map(b => {
+              const baseP = DEFAULT_PRIX[b.id] || 0;
+              return (
+              <div key={b.id}>
+                <div style={{ display: "grid", gridTemplateColumns: `72px repeat(${daysInMonth},1fr)`, gap: 1, marginBottom: 1 }}>
+                  <div style={{ fontSize: 9, color: "#94a3b8", display: "flex", alignItems: "center", gap: 2, paddingRight: 3 }}>
+                    <span>{b.emoji}</span>
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.nom.replace("Villa ", "").replace("T2 ", "")}</span>
+                  </div>
+                  {days.map(d => {
+                    const ds = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+                    const menR = reservations.find(r => r.bienId === b.id && r.checkout === ds && !r.menage_done);
+                    const c = getCell(b.id, d);
+                    if (menR && !c) {
+                      return <div key={d} onClick={() => togRes(menR.id, "menage_done")} title="🧹 Ménage" style={{ height: 20, background: "rgba(168,85,247,0.2)", borderRadius: 1, cursor: "pointer", border: "1px dashed #a855f733" }} />;
+                    }
+                    if (!c) {
+                      return <div key={d} style={{ height: 20, background: isToday(d) ? "rgba(14,165,233,0.05)" : "rgba(255,255,255,0.02)", borderRadius: 1 }} />;
+                    }
+                    return (
+                      <div
+                        key={d}
+                        title={`${c.r.voyageur} · ${c.r.checkin}→${c.r.checkout}`}
+                        style={{ height: 20, background: c.bg, borderRadius: c.isCI ? 2 : 0, borderLeft: c.isCI ? `2px solid ${c.color}` : "none", borderTop: `1px solid ${c.color}33`, borderBottom: `1px solid ${c.color}33`, overflow: "hidden", position: "relative" }}
+                      >
+                        {c.isCI && <span style={{ position: "absolute", left: 2, top: 1, fontSize: 7, color: c.color, fontWeight: 700, whiteSpace: "nowrap" }}>{c.r.voyageur.split(" ")[0]}</span>}
+                      </div>
+                    );
+                  })}
                 </div>
-                {days.map(d => {
-                  const ds = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-                  const menR = reservations.find(r => r.bienId === b.id && r.checkout === ds && !r.menage_done);
-                  const c = getCell(b.id, d);
-                  if (menR && !c) {
-                    return <div key={d} onClick={() => togRes(menR.id, "menage_done")} title="🧹 Ménage" style={{ height: 20, background: "rgba(168,85,247,0.2)", borderRadius: 1, cursor: "pointer", border: "1px dashed #a855f733" }} />;
-                  }
-                  if (!c) {
-                    return <div key={d} style={{ height: 20, background: isToday(d) ? "rgba(14,165,233,0.05)" : "rgba(255,255,255,0.02)", borderRadius: 1 }} />;
-                  }
-                  return (
-                    <div
-                      key={d}
-                      title={`${c.r.voyageur} · ${c.r.checkin}→${c.r.checkout}`}
-                      style={{ height: 20, background: c.bg, borderRadius: c.isCI ? 2 : 0, borderLeft: c.isCI ? `2px solid ${c.color}` : "none", borderTop: `1px solid ${c.color}33`, borderBottom: `1px solid ${c.color}33`, overflow: "hidden", position: "relative" }}
-                    >
-                      {c.isCI && <span style={{ position: "absolute", left: 2, top: 1, fontSize: 7, color: c.color, fontWeight: 700, whiteSpace: "nowrap" }}>{c.r.voyageur.split(" ")[0]}</span>}
-                    </div>
-                  );
-                })}
+                {/* Price row */}
+                <div style={{ display: "grid", gridTemplateColumns: `72px repeat(${daysInMonth},1fr)`, gap: 1, marginBottom: 3 }}>
+                  <div style={{ fontSize: 7, color: "#1e3a4a", display: "flex", alignItems: "center", paddingLeft: 2 }}>€</div>
+                  {days.map(d => {
+                    const ds = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+                    const p = dailyPrices[b.id]?.[ds] ?? null;
+                    return (
+                      <div key={d} style={{ height: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <span style={{ fontSize: 6, color: p !== null ? (p > baseP * 1.1 ? "#f59e0b" : p < baseP * 0.9 ? "#10b981" : "#0ea5e9") : "#1e3a4a", fontWeight: p !== null ? 700 : 400 }}>
+                          {p !== null ? p : baseP}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            ))}
+              );
+            })}
           </div>
           <div style={{ display: "flex", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
             {Object.entries(CC).map(([k, c]) => (
@@ -3100,6 +3136,213 @@ function Comparatif({ biens, n, mob }) {
 // ============================================================================
 const DEFAULT_PRIX = { amaryllis: 280, zandoli: 220, iguana: 180, geko: 150, mabouya: 110, schoelcher: 100, nogent: 85 };
 const BIEN_LABELS  = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", iguana: "Villa Iguana", geko: "Géko", mabouya: "Mabouya", schoelcher: "T2 Schœlcher", nogent: "T2 Nogent-sur-Marne" };
+const BIEN_IDS = Object.keys(DEFAULT_PRIX);
+
+function loadDailyPrices() {
+  try { return JSON.parse(localStorage.getItem("amaryllis_daily_prices") || "{}"); } catch { return {}; }
+}
+function saveDailyPrices(data) {
+  localStorage.setItem("amaryllis_daily_prices", JSON.stringify(data));
+  window.dispatchEvent(new Event("amaryllis_prices_updated"));
+}
+
+const MOIS_CAL = ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Jul", "Aoû", "Sep", "Oct", "Nov", "Déc"];
+const CAL_YEAR = 2026;
+
+function CalendrierTarifs() {
+  const [bienId, setBienId] = useState("amaryllis");
+  const [daily, setDaily] = useState(loadDailyPrices);
+  const [editing, setEditing] = useState(null); // { date, val }
+  const [rangeStart, setRangeStart] = useState(null);
+  const [rangeSaved, setRangeSaved] = useState(false);
+  const [rangePrice, setRangePrice] = useState("");
+
+  const getPrice = (date) => daily[bienId]?.[date] ?? null;
+  const basePrice = DEFAULT_PRIX[bienId];
+
+  function setDayPrice(date, price) {
+    const next = { ...daily, [bienId]: { ...(daily[bienId] || {}), [date]: price } };
+    setDaily(next);
+    saveDailyPrices(next);
+  }
+  function clearDayPrice(date) {
+    const bienPrices = { ...(daily[bienId] || {}) };
+    delete bienPrices[date];
+    const next = { ...daily, [bienId]: bienPrices };
+    setDaily(next);
+    saveDailyPrices(next);
+  }
+  function applyRange() {
+    if (!rangeStart || !rangePrice) return;
+    const price = parseInt(rangePrice);
+    if (!price || price < 0) return;
+    const bienPrices = { ...(daily[bienId] || {}) };
+    // rangeStart is "YYYY-MM-DD", apply to all selected days (stored in rangeStart)
+    // For simplicity: range is from rangeStart to editing.date
+    const start = new Date(rangeStart + "T12:00:00Z");
+    const end = editing ? new Date(editing.date + "T12:00:00Z") : start;
+    const [a, b2] = start <= end ? [start, end] : [end, start];
+    const cur = new Date(a);
+    while (cur <= b2) {
+      bienPrices[cur.toISOString().slice(0, 10)] = price;
+      cur.setUTCDate(cur.getUTCDate() + 1);
+    }
+    const next = { ...daily, [bienId]: bienPrices };
+    setDaily(next);
+    saveDailyPrices(next);
+    setRangeStart(null);
+    setRangePrice("");
+    setEditing(null);
+    setRangeSaved(true);
+    setTimeout(() => setRangeSaved(false), 2000);
+  }
+
+  function priceColor(price) {
+    if (price === null) return "rgba(255,255,255,0.04)";
+    const ratio = price / basePrice;
+    if (ratio < 0.85) return "rgba(16,185,129,0.25)";
+    if (ratio > 1.25) return "rgba(239,68,68,0.25)";
+    if (ratio > 1.05) return "rgba(245,158,11,0.2)";
+    return "rgba(14,165,233,0.15)";
+  }
+  function priceTextColor(price) {
+    if (price === null) return "#334155";
+    const ratio = price / basePrice;
+    if (ratio < 0.85) return "#10b981";
+    if (ratio > 1.25) return "#ef4444";
+    if (ratio > 1.05) return "#f59e0b";
+    return "#0ea5e9";
+  }
+
+  return (
+    <div>
+      {/* Bien tabs */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
+        {BIEN_IDS.map(id => (
+          <button key={id} onClick={() => setBienId(id)} style={{
+            padding: "6px 14px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 12, fontWeight: bienId === id ? 700 : 400,
+            background: bienId === id ? "#0ea5e9" : "rgba(255,255,255,0.06)",
+            color: bienId === id ? "#fff" : "#64748b",
+          }}>{BIEN_LABELS[id]}</button>
+        ))}
+      </div>
+
+      {/* Range tool */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "10px 14px", flexWrap: "wrap" }}>
+        <span style={{ fontSize: 11, color: "#64748b" }}>
+          {rangeStart ? `Début : ${rangeStart} — Clic sur une autre date pour sélectionner la plage` : "Clic sur une date pour éditer · Shift+clic pour sélection plage"}
+        </span>
+        {rangeStart && (
+          <>
+            <input type="number" placeholder="Prix €" value={rangePrice} onChange={e => setRangePrice(e.target.value)}
+              style={{ width: 80, padding: "5px 8px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.1)", background: "#0f172a", color: "#e2e8f0", fontSize: 12, outline: "none" }} />
+            <button onClick={applyRange} style={{ padding: "5px 12px", borderRadius: 7, border: "none", background: "#0ea5e9", color: "#fff", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>Appliquer la plage</button>
+            <button onClick={() => setRangeStart(null)} style={{ padding: "5px 10px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "#64748b", fontSize: 11, cursor: "pointer" }}>Annuler</button>
+          </>
+        )}
+        {rangeSaved && <span style={{ fontSize: 11, color: "#10b981" }}>✓ Plage enregistrée</span>}
+      </div>
+
+      {/* 12 months grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 14 }}>
+        {Array.from({ length: 12 }, (_, m) => {
+          const daysInM = new Date(CAL_YEAR, m + 1, 0).getDate();
+          const firstDow = (new Date(CAL_YEAR, m, 1).getDay() + 6) % 7; // Mon=0
+          const cells = [];
+          for (let i = 0; i < firstDow; i++) cells.push(null);
+          for (let d = 1; d <= daysInM; d++) cells.push(d);
+          return (
+            <div key={m} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "12px 10px" }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#94a3b8", marginBottom: 8, textAlign: "center" }}>{MOIS_CAL[m]}</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
+                {["L","M","M","J","V","S","D"].map((d, i) => (
+                  <div key={i} style={{ fontSize: 8, color: "#334155", textAlign: "center", paddingBottom: 3 }}>{d}</div>
+                ))}
+                {cells.map((d, i) => {
+                  if (!d) return <div key={i} />;
+                  const date = `${CAL_YEAR}-${String(m + 1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+                  const price = getPrice(date);
+                  const isEditing = editing?.date === date;
+                  return (
+                    <div
+                      key={i}
+                      title={price !== null ? `${price}€` : `${basePrice}€ (défaut)`}
+                      onClick={(e) => {
+                        if (e.shiftKey || rangeStart) {
+                          if (!rangeStart) { setRangeStart(date); }
+                          else { setEditing({ date, val: String(price ?? basePrice) }); }
+                        } else {
+                          setEditing({ date, val: String(price ?? basePrice) });
+                          setRangeStart(null);
+                        }
+                      }}
+                      style={{
+                        position: "relative", borderRadius: 3, padding: "3px 1px",
+                        background: rangeStart === date ? "rgba(14,165,233,0.35)" : priceColor(price),
+                        cursor: "pointer", textAlign: "center", minHeight: 28,
+                        border: isEditing ? "1px solid #0ea5e9" : "1px solid transparent",
+                      }}
+                    >
+                      <div style={{ fontSize: 9, color: isEditing ? "#0ea5e9" : "#94a3b8", fontWeight: 500 }}>{d}</div>
+                      {price !== null
+                        ? <div style={{ fontSize: 8, color: priceTextColor(price), fontWeight: 600 }}>{price}</div>
+                        : <div style={{ fontSize: 7, color: "#1e293b" }}>{basePrice}</div>
+                      }
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Inline edit popover */}
+      {editing && !rangeStart && (
+        <div style={{ position: "fixed", bottom: 80, right: 24, background: "#1e293b", borderRadius: 12, padding: 16, border: "1px solid rgba(255,255,255,0.12)", boxShadow: "0 8px 24px rgba(0,0,0,0.5)", zIndex: 200, minWidth: 200 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "#94a3b8", marginBottom: 8 }}>{editing.date}</div>
+          <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 10 }}>
+            <input
+              type="number" autoFocus value={editing.val}
+              onChange={e => setEditing(ed => ({ ...ed, val: e.target.value }))}
+              onKeyDown={e => {
+                if (e.key === "Enter") { setDayPrice(editing.date, parseInt(editing.val) || basePrice); setEditing(null); }
+                if (e.key === "Escape") setEditing(null);
+              }}
+              style={{ width: 80, padding: "7px 10px", borderRadius: 7, border: "1px solid #0ea5e9", background: "#0f172a", color: "#e2e8f0", fontSize: 14, outline: "none" }}
+            />
+            <span style={{ color: "#475569", fontSize: 12 }}>€/nuit</span>
+          </div>
+          <div style={{ display: "flex", gap: 6 }}>
+            <button onClick={() => { setDayPrice(editing.date, parseInt(editing.val) || basePrice); setEditing(null); }}
+              style={{ flex: 1, padding: "7px", borderRadius: 7, border: "none", background: "#0ea5e9", color: "#fff", fontWeight: 600, fontSize: 12, cursor: "pointer" }}>OK</button>
+            <button onClick={() => { clearDayPrice(editing.date); setEditing(null); }}
+              style={{ padding: "7px 10px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "#ef4444", fontSize: 11, cursor: "pointer" }} title="Supprimer (retour défaut)">✕</button>
+            <button onClick={() => setEditing(null)}
+              style={{ padding: "7px 10px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "#64748b", fontSize: 11, cursor: "pointer" }}>Esc</button>
+          </div>
+          <div style={{ fontSize: 9, color: "#334155", marginTop: 8 }}>Défaut: {basePrice}€ · Entrée pour valider</div>
+        </div>
+      )}
+
+      {/* Legend */}
+      <div style={{ display: "flex", gap: 14, marginTop: 18, flexWrap: "wrap" }}>
+        {[
+          { color: "rgba(16,185,129,0.25)", label: "Promo (−15%+)" },
+          { color: "rgba(14,165,233,0.15)", label: "Standard" },
+          { color: "rgba(245,158,11,0.2)", label: "Haute saison (+5%+)" },
+          { color: "rgba(239,68,68,0.25)", label: "Pic (+25%+)" },
+          { color: "rgba(255,255,255,0.04)", label: "Défaut" },
+        ].map(({ color, label }) => (
+          <div key={label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <span style={{ display: "inline-block", width: 12, height: 12, borderRadius: 3, background: color, border: "1px solid rgba(255,255,255,0.08)" }} />
+            <span style={{ fontSize: 10, color: "#475569" }}>{label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function Tarifs() {
   const [prices, setPrices] = useState(() => {
@@ -3117,78 +3360,35 @@ function Tarifs() {
     setTimeout(() => setSaved(false), 2500);
   }
 
-  function reset() {
-    setPrices({ ...DEFAULT_PRIX });
-  }
-
   return (
-    <div style={{ maxWidth: 640, margin: "0 auto", padding: "32px 24px" }}>
-      <div style={{ marginBottom: 28 }}>
-        <div style={{ fontSize: 20, fontWeight: 700, color: "#e2e8f0", marginBottom: 6 }}>Tarifs publics</div>
-        <div style={{ fontSize: 13, color: "#64748b", lineHeight: 1.6 }}>
-          Ces prix s'affichent sur le site public comme <em>« À partir de X€ / nuit »</em>.<br />
-          Sauvegarde pour appliquer immédiatement (même navigateur, même domaine).
+    <div style={{ padding: "16px 0" }}>
+      {/* ── Prix de base (barre compacte) ── */}
+      <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 12, padding: "14px 18px", marginBottom: 28 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#e2e8f0" }}>Prix de base — site public</div>
+          <div style={{ fontSize: 11, color: "#475569" }}>« À partir de X€ / nuit »</div>
+          <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+            <button onClick={save} style={{ padding: "6px 14px", borderRadius: 7, border: "none", background: saved ? "#10b981" : "#0ea5e9", color: "#fff", fontWeight: 600, fontSize: 11, cursor: "pointer", transition: "background 0.25s" }}>{saved ? "✓ Sauvegardé" : "Sauvegarder"}</button>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {Object.keys(DEFAULT_PRIX).map(id => (
+            <div key={id} style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "7px 10px", border: `1px solid ${prices[id] !== DEFAULT_PRIX[id] ? "#f59e0b33" : "rgba(255,255,255,0.06)"}` }}>
+              <span style={{ fontSize: 11, color: "#94a3b8", whiteSpace: "nowrap" }}>{BIEN_LABELS[id].replace("Villa ", "").replace("T2 ", "")}</span>
+              <input
+                type="number" min="0" value={prices[id] ?? ""}
+                onChange={e => setPrices(p => ({ ...p, [id]: parseInt(e.target.value) || 0 }))}
+                style={{ width: 60, padding: "4px 6px", textAlign: "right", background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, color: "#e2e8f0", fontSize: 12, outline: "none" }}
+              />
+              <span style={{ fontSize: 10, color: "#475569" }}>€</span>
+            </div>
+          ))}
         </div>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
-        {Object.keys(DEFAULT_PRIX).map(id => (
-          <div key={id} style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(255,255,255,0.07)",
-            borderRadius: 12, padding: "14px 20px",
-          }}>
-            <div>
-              <div style={{ color: "#e2e8f0", fontWeight: 600, fontSize: 14 }}>{BIEN_LABELS[id]}</div>
-              <div style={{ color: "#475569", fontSize: 11, marginTop: 2 }}>Prix par défaut : {DEFAULT_PRIX[id]}€</div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <input
-                type="number"
-                min="0"
-                value={prices[id] ?? ""}
-                onChange={e => setPrices(p => ({ ...p, [id]: parseInt(e.target.value) || 0 }))}
-                style={{
-                  width: 88, padding: "9px 12px", textAlign: "right",
-                  background: "#0f172a",
-                  border: `1px solid ${prices[id] !== DEFAULT_PRIX[id] ? "#f59e0b44" : "rgba(255,255,255,0.1)"}`,
-                  borderRadius: 8, color: "#e2e8f0", fontSize: 15, outline: "none",
-                }}
-              />
-              <span style={{ color: "#475569", fontSize: 12, width: 32 }}>€/nuit</span>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div style={{ display: "flex", gap: 10 }}>
-        <button
-          onClick={save}
-          style={{
-            flex: 1, padding: "13px", borderRadius: 9, border: "none",
-            background: saved ? "#10b981" : "#0ea5e9",
-            color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer",
-            transition: "background 0.25s",
-          }}
-        >
-          {saved ? "✓ Sauvegardé — site public mis à jour" : "Sauvegarder les tarifs"}
-        </button>
-        <button
-          onClick={reset}
-          style={{
-            padding: "13px 18px", borderRadius: 9,
-            border: "1px solid rgba(255,255,255,0.1)",
-            background: "transparent", color: "#64748b", fontSize: 13, cursor: "pointer",
-          }}
-          title="Réinitialiser aux valeurs par défaut"
-        >
-          ↺
-        </button>
-      </div>
-      <div style={{ marginTop: 12, fontSize: 11, color: "#334155", textAlign: "center" }}>
-        Stocké en localStorage · visible immédiatement sur le site public ouvert dans ce navigateur
-      </div>
+      {/* ── Calendrier des prix (toujours visible) ── */}
+      <div style={{ fontSize: 14, fontWeight: 700, color: "#e2e8f0", marginBottom: 16 }}>Calendrier des prix 2026</div>
+      <CalendrierTarifs />
     </div>
   );
 }
@@ -3380,57 +3580,28 @@ export default function App() {
   return (
     <div style={{ minHeight: "100vh", background: "#0a0f1e", fontFamily: "system-ui,sans-serif", color: "#e2e8f0" }}>
 
-      <div style={{ background: "linear-gradient(135deg,#0f172a,#1e293b)", borderBottom: "1px solid rgba(255,255,255,0.06)", padding: mob ? "11px 12px" : "13px 22px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <div>
-            <div style={{ fontSize: mob ? 15 : 18, fontWeight: 800, letterSpacing: "-0.02em" }}>
-              Locatif <span style={{ color: "#0ea5e9" }}>Dashboard</span>
-            </div>
-            {!mob && <div style={{ fontSize: 10, color: "#64748b", marginTop: 1 }}>7 biens · Jan→{MOIS[n - 1]} 2026</div>}
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: mob ? 8 : 12, flexWrap: "wrap" }}>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
-              <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                <button onClick={doSync} disabled={sync.status === "loading"} style={{ padding: "5px 11px", borderRadius: 7, border: "1px solid #0ea5e9", background: "rgba(14,165,233,0.1)", color: "#0ea5e9", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
-                  {sync.status === "loading" ? "⟳…" : "⟳ Sync"}
-                </button>
-                <button onClick={() => setShowScriptSetup(true)} title="Configurer Apps Script" style={{ padding: "5px 7px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: scriptUrl ? "#10b981" : "#64748b", fontSize: 11, cursor: "pointer" }}>
-                  {scriptUrl ? "⚙✓" : "⚙"}
-                </button>
-                <button onClick={() => setShowPushSetup(true)} title="Notifications push" style={{ padding: "5px 7px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: ntfyTopic ? "#f59e0b" : "#64748b", fontSize: 11, cursor: "pointer" }}>
-                  {ntfyTopic ? "🔔" : "🔕"}
-                </button>
-                <button onClick={() => { localStorage.removeItem(PWD_KEY); setAuthed(false); }} title="Déconnexion" style={{ padding: "5px 7px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.08)", background: "transparent", color: "#475569", fontSize: 11, cursor: "pointer" }}>🔒</button>
-              </div>
-              {!mob && <span style={{ fontSize: 9, color: sync.status === "error" ? "#ef4444" : sync.status === "ok" ? "#10b981" : "#64748b" }}>{sync.msg}</span>}
-            </div>
-            {!mob && (
-              <>
-                <div style={{ width: 1, height: 26, background: "rgba(255,255,255,0.1)" }} />
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase" }}>YTD</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "#0ea5e9", fontFamily: "monospace" }}>{fmtK(ytd)}</div>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase" }}>Cashflow</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "#10b981", fontFamily: "monospace" }}>{fmtK(cf)}</div>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-
       <TodayBanner biens={biens} n={n} reservations={reservations} onTab={setTab} mob={mob} />
 
-      <div style={{ background: "#0f172a", borderBottom: "1px solid rgba(255,255,255,0.06)", padding: `0 ${mob ? 10 : 22}px`, display: "flex", gap: 1, overflowX: "auto" }}>
-        {TABS.map(t => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            style={{ padding: mob ? "10px 9px" : "10px 13px", background: "none", border: "none", cursor: "pointer", fontSize: mob ? 11 : 12, fontWeight: tab === t.id ? 600 : 400, color: tab === t.id ? "#0ea5e9" : "#64748b", borderBottom: tab === t.id ? "2px solid #0ea5e9" : "2px solid transparent", whiteSpace: "nowrap" }}
-          >{t.l}</button>
-        ))}
+      <div style={{ background: "#0f172a", borderBottom: "1px solid rgba(255,255,255,0.06)", padding: `0 ${mob ? 6 : 14}px`, display: "flex", alignItems: "stretch", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", gap: 1, overflowX: "auto" }}>
+          {TABS.map(t => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              style={{ padding: mob ? "10px 9px" : "10px 13px", background: "none", border: "none", cursor: "pointer", fontSize: mob ? 11 : 12, fontWeight: tab === t.id ? 600 : 400, color: tab === t.id ? "#0ea5e9" : "#64748b", borderBottom: tab === t.id ? "2px solid #0ea5e9" : "2px solid transparent", whiteSpace: "nowrap" }}
+            >{t.l}</button>
+          ))}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "0 6px", flexShrink: 0, borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
+          {!mob && <span style={{ fontSize: 9, color: sync.status === "error" ? "#ef4444" : sync.status === "ok" ? "#10b981" : "#64748b", marginRight: 2 }}>{sync.msg}</span>}
+          {!mob && <span style={{ fontSize: 11, fontWeight: 700, color: "#0ea5e9", fontFamily: "monospace", marginRight: 4 }}>{fmtK(ytd)}</span>}
+          <button onClick={doSync} disabled={sync.status === "loading"} style={{ padding: "4px 9px", borderRadius: 6, border: "1px solid #0ea5e9", background: "rgba(14,165,233,0.1)", color: "#0ea5e9", fontSize: 10, fontWeight: 600, cursor: "pointer" }}>
+            {sync.status === "loading" ? "⟳…" : "⟳"}
+          </button>
+          <button onClick={() => setShowScriptSetup(true)} title="Configurer Apps Script" style={{ padding: "4px 6px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: scriptUrl ? "#10b981" : "#64748b", fontSize: 10, cursor: "pointer" }}>{scriptUrl ? "⚙✓" : "⚙"}</button>
+          <button onClick={() => setShowPushSetup(true)} title="Notifications push" style={{ padding: "4px 6px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: ntfyTopic ? "#f59e0b" : "#64748b", fontSize: 10, cursor: "pointer" }}>{ntfyTopic ? "🔔" : "🔕"}</button>
+          <button onClick={() => { localStorage.removeItem(PWD_KEY); setAuthed(false); }} title="Déconnexion" style={{ padding: "4px 6px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "transparent", color: "#475569", fontSize: 10, cursor: "pointer" }}>🔒</button>
+        </div>
       </div>
 
       <div style={{ padding: mob ? "12px" : "18px 22px", maxWidth: 1200, paddingBottom: 76 }}>
