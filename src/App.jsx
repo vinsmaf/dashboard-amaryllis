@@ -373,6 +373,22 @@ function parseICS(text, bienId, canal = "airbnb") {
 }
 
 // ============================================================================
+// COMPUTE REVENUS FROM RESERVATIONS
+// ============================================================================
+function computeRevenusFromResas(reservations, year = 2026) {
+  const map = {};
+  reservations.forEach(r => {
+    if (!r.montant || r.montant <= 0) return;
+    if (!r.checkin || r.checkin.slice(0, 4) !== String(year)) return;
+    const month = parseInt(r.checkin.slice(5, 7)) - 1;
+    if (month < 0 || month > 11) return;
+    if (!map[r.bienId]) map[r.bienId] = new Array(12).fill(0);
+    map[r.bienId][month] += Math.round(r.montant);
+  });
+  return map;
+}
+
+// ============================================================================
 // TODAY BANNER
 // ============================================================================
 function TodayBanner({ biens, n, reservations, onTab, mob }) {
@@ -672,7 +688,7 @@ function Cockpit({ biens, n, mob, onUpdateRevenu }) {
 // ============================================================================
 const EMPTY_FORM = { bienId: "amaryllis", voyageur: "", canal: "booking", checkin: "", checkout: "", checkin_time: "", checkout_time: "", nb_guests: "", montant: "", notes: "", menage: "", reservation_code: "", phone: "" };
 
-function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalUrlsBooking, saveUrlsBooking, scriptUrl }) {
+function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalUrlsBooking, saveUrlsBooking, scriptUrl, onApplyRevenusFromResas }) {
   const [showUrls, setShowUrls] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [showForm, setShowForm] = useState(false);
@@ -724,6 +740,7 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
       for (const s of sources) {
         current = await importIcal(s.bienId, s.canal, s.url, current) || current;
       }
+      if (onApplyRevenusFromResas) onApplyRevenusFromResas(computeRevenusFromResas(current));
     })();
   }, []);
 
@@ -771,6 +788,7 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
       for (const s of sources) {
         current = await importIcal(s.bienId, s.canal, s.url, current) || current;
       }
+      if (onApplyRevenusFromResas) onApplyRevenusFromResas(computeRevenusFromResas(current));
     })();
   };
 
@@ -3223,6 +3241,16 @@ export default function App() {
     }
   }, [scriptUrl]);
 
+  const onApplyRevenusFromResas = useCallback((map) => {
+    if (!map || Object.keys(map).length === 0) return;
+    setBiens(prev => prev.map(b => {
+      const computed = map[b.id];
+      if (!computed) return b;
+      const revenus = b.revenus.map((existing, i) => computed[i] > 0 ? computed[i] : existing);
+      return { ...b, revenus };
+    }));
+  }, []);
+
   if (!authed) return <PasswordGate onAuth={() => setAuthed(true)} />;
 
   const ytd = biens.reduce((s, b) => s + sumN(b.revenus, n), 0);
@@ -3292,7 +3320,7 @@ export default function App() {
       </div>
 
       <div style={{ padding: mob ? "12px" : "18px 22px", maxWidth: 1200, paddingBottom: 76 }}>
-        {tab === "planning" && <Planning biens={biens} mob={mob} reservations={reservations} saveRes={saveRes} icalUrls={icalUrls} saveUrls={saveUrls} icalUrlsBooking={icalUrlsBooking} saveUrlsBooking={saveUrlsBooking} scriptUrl={scriptUrl} />}
+        {tab === "planning" && <Planning biens={biens} mob={mob} reservations={reservations} saveRes={saveRes} icalUrls={icalUrls} saveUrls={saveUrls} icalUrlsBooking={icalUrlsBooking} saveUrlsBooking={saveUrlsBooking} scriptUrl={scriptUrl} onApplyRevenusFromResas={onApplyRevenusFromResas} />}
         {tab === "cockpit" && <Cockpit biens={biens} n={n} mob={mob} onUpdateRevenu={onUpdateRevenu} />}
         {tab === "previsionnel" && <Previsionnel biens={biens} n={n} mob={mob} hist={hist} />}
         {tab === "charges" && <Charges biens={biens} n={n} mob={mob} />}
