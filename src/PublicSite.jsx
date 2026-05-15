@@ -1467,7 +1467,7 @@ function HeroCarousel({ biens, onDetail, onBook }) {
         }}>
           {bien.desc}
         </p>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-start" }}>
+        <div style={{ display: "flex", flexDirection: "row", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
           {/* Primary CTA */}
           <button
             onClick={() => onBook(bien)}
@@ -1484,6 +1484,21 @@ function HeroCarousel({ biens, onDetail, onBook }) {
             onMouseLeave={e => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.transform = "translateY(0)"; }}
           >
             Réserver — {bien.prix}€ / nuit
+          </button>
+          {/* Secondary CTA */}
+          <button
+            onClick={() => onDetail(bien)}
+            style={{
+              background: "transparent", border: "1px solid rgba(250,245,233,0.35)", color: "#faf5e9",
+              borderRadius: 8, padding: "14px 24px",
+              fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 12, letterSpacing: "0.12em",
+              cursor: "pointer", textTransform: "uppercase", whiteSpace: "nowrap",
+              transition: "border-color 0.2s, background 0.2s",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(250,245,233,0.08)"; e.currentTarget.style.borderColor = "rgba(250,245,233,0.6)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "rgba(250,245,233,0.35)"; }}
+          >
+            Voir photos &amp; détails →
           </button>
         </div>
       </div>
@@ -1508,24 +1523,6 @@ function HeroCarousel({ biens, onDetail, onBook }) {
           }}>{a}</div>
         ))}
 
-        {/* Voir photos & détails */}
-        <button
-          onClick={() => onDetail(bien)}
-          style={{
-            marginTop: 4,
-            background: "rgba(250,245,233,0.1)", backdropFilter: "blur(14px)",
-            border: "1px solid rgba(250,245,233,0.25)",
-            borderRadius: 20, padding: "7px 16px",
-            fontFamily: "'Jost', sans-serif", fontWeight: 400,
-            fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase",
-            color: "#faf5e9", whiteSpace: "nowrap", cursor: "pointer",
-            transition: "background 0.2s",
-          }}
-          onMouseEnter={e => { e.currentTarget.style.background = "rgba(250,245,233,0.2)"; }}
-          onMouseLeave={e => { e.currentTarget.style.background = "rgba(250,245,233,0.1)"; }}
-        >
-          Voir photos &amp; détails →
-        </button>
       </div>
 
       {/* Bottom nav: dots + arrows */}
