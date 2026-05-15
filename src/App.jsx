@@ -3256,6 +3256,13 @@ export default function App() {
     }));
   }, []);
 
+  const pushReservationsToScript = useCallback((resas) => {
+    if (!scriptUrl || !resas || !resas.length) return;
+    const min = resas.map(r => ({ id: r.id, bienId: r.bienId, voyageur: r.voyageur, canal: r.canal, checkin: r.checkin, checkout: r.checkout, checkin_time: r.checkin_time || "", nb_guests: r.nb_guests || 0, phone: r.phone || "" }));
+    const p = new URLSearchParams({ action: "syncReservations", data: JSON.stringify(min) });
+    fetch(`${scriptUrl}?${p}`, { redirect: "follow" }).catch(() => {});
+  }, [scriptUrl]);
+
   if (!authed) return <PasswordGate onAuth={() => setAuthed(true)} />;
 
   const ytd = biens.reduce((s, b) => s + sumN(b.revenus, n), 0);
