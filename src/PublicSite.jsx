@@ -1430,30 +1430,30 @@ function HeroCarousel({ biens, onDetail, onBook }) {
         pointerEvents: "none",
       }} />
 
-      {/* Content — left */}
+      {/* Content — left, remonté */}
       <div
         key={`text-${animKey}`}
         style={{
-          position: "absolute", left: "8vw", top: "50%",
+          position: "absolute", left: "8vw", top: "44%",
           transform: "translateY(-50%)",
-          maxWidth: "clamp(280px, 42vw, 520px)",
+          maxWidth: "clamp(280px, 42vw, 500px)",
           zIndex: 4,
           animation: "slideInLeft 0.65s cubic-bezier(0.23,1,0.32,1) both",
         }}
       >
-        <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 10, color: CORAL, letterSpacing: "0.55em", textTransform: "uppercase", marginBottom: 16 }}>
+        <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 10, color: CORAL, letterSpacing: "0.55em", textTransform: "uppercase", marginBottom: 12 }}>
           {bien.lieu}
         </div>
         <h1 style={{
           fontFamily: "'Jost', sans-serif", fontWeight: 200,
-          fontSize: "clamp(32px, 4.5vw, 68px)", letterSpacing: "0.08em",
+          fontSize: "clamp(28px, 4vw, 60px)", letterSpacing: "0.08em",
           textTransform: "uppercase", color: "#faf5e9",
-          margin: "0 0 14px", lineHeight: 1.05,
+          margin: "0 0 10px", lineHeight: 1.05,
         }}>
           {bien.nom}
         </h1>
         {bien.rating && (
-          <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 12, color: "rgba(250,245,233,0.55)", marginBottom: 22, letterSpacing: "0.05em" }}>
+          <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 12, color: "rgba(250,245,233,0.55)", marginBottom: 14, letterSpacing: "0.05em" }}>
             <span style={{ color: GOLD }}>★ {bien.rating}</span>
             {bien.reviews ? ` · ${bien.reviews} avis` : ""}
             {` · ${bien.capacite} voyageurs`}
@@ -1461,20 +1461,20 @@ function HeroCarousel({ biens, onDetail, onBook }) {
         )}
         <p style={{
           fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic",
-          fontSize: 17, color: "rgba(250,245,233,0.65)", lineHeight: 1.75,
-          margin: "0 0 32px",
-          display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden",
+          fontSize: 16, color: "rgba(250,245,233,0.65)", lineHeight: 1.65,
+          margin: "0 0 22px",
+          display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
         }}>
           {bien.desc}
         </p>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "flex-start" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-start" }}>
           {/* Primary CTA */}
           <button
             onClick={() => onBook(bien)}
             style={{
               background: CORAL, border: "none", color: "#fff",
-              borderRadius: 8, padding: "15px 36px",
-              fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 13, letterSpacing: "0.12em",
+              borderRadius: 8, padding: "14px 32px",
+              fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: "0.12em",
               cursor: "pointer", textTransform: "uppercase",
               animation: "ctaPulse 2.8s ease-in-out infinite",
               transition: "opacity 0.2s, transform 0.15s",
@@ -1483,23 +1483,56 @@ function HeroCarousel({ biens, onDetail, onBook }) {
             onMouseEnter={e => { e.currentTarget.style.opacity = "0.9"; e.currentTarget.style.transform = "translateY(-2px)"; }}
             onMouseLeave={e => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.transform = "translateY(0)"; }}
           >
-            Réserver — À partir de {bien.prix}€ / nuit
+            Réserver — {bien.prix}€ / nuit
           </button>
           {/* Secondary CTA */}
           <button
             onClick={() => onDetail(bien)}
             style={{
-              background: "none", border: "none", color: "rgba(250,245,233,0.6)",
-              fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 12, letterSpacing: "0.1em",
-              cursor: "pointer", textTransform: "uppercase", padding: "4px 0",
-              textDecoration: "underline", textDecorationColor: "rgba(250,245,233,0.25)",
+              background: "none", border: "none", color: "rgba(250,245,233,0.55)",
+              fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11, letterSpacing: "0.1em",
+              cursor: "pointer", textTransform: "uppercase", padding: "2px 0",
+              textDecoration: "underline", textDecorationColor: "rgba(250,245,233,0.2)",
               textUnderlineOffset: 4,
             }}
             onMouseEnter={e => { e.currentTarget.style.color = "rgba(250,245,233,0.9)"; }}
-            onMouseLeave={e => { e.currentTarget.style.color = "rgba(250,245,233,0.6)"; }}
+            onMouseLeave={e => { e.currentTarget.style.color = "rgba(250,245,233,0.55)"; }}
           >
             Voir les photos et détails →
           </button>
+        </div>
+      </div>
+
+      {/* Benefits strip — par bien, dans le hero, visible sans scroll */}
+      <div
+        key={`benefits-${animKey}`}
+        style={{
+          position: "absolute", left: 0, right: 0, bottom: 68, zIndex: 4,
+          display: "flex", justifyContent: "center",
+          animation: "fadeIn 0.9s ease both",
+          pointerEvents: "none",
+        }}
+      >
+        <div style={{
+          display: "flex", alignItems: "center", gap: 0,
+          background: "rgba(7,38,38,0.55)", backdropFilter: "blur(12px)",
+          borderRadius: 30, border: "1px solid rgba(250,245,233,0.1)",
+          padding: "10px 24px", flexWrap: "wrap", justifyContent: "center",
+          maxWidth: "90vw",
+        }}>
+          {(bien.amenities || []).slice(0, 5).map((a, i, arr) => (
+            <span key={i} style={{ display: "flex", alignItems: "center", gap: 0 }}>
+              <span style={{
+                fontFamily: "'Jost', sans-serif", fontWeight: 300,
+                fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase",
+                color: "rgba(250,245,233,0.7)", whiteSpace: "nowrap",
+                padding: "0 12px",
+              }}>{a}</span>
+              {i < arr.length - 1 && (
+                <span style={{ color: "rgba(250,245,233,0.18)", fontSize: 12 }}>·</span>
+              )}
+            </span>
+          ))}
         </div>
       </div>
 
@@ -2028,8 +2061,6 @@ export default function PublicSite() {
       {/* ── HERO CAROUSEL ── */}
       <HeroCarousel biens={biensList} onDetail={setDetailBien} onBook={openBien} />
 
-      {/* ── BENEFITS STRIP ── */}
-      <BenefitsStrip />
 
       {/* ── QUICK BOOK ── */}
       <QuickBook biens={biensList} onBook={openBien} />
