@@ -1485,55 +1485,48 @@ function HeroCarousel({ biens, onDetail, onBook }) {
           >
             Réserver — {bien.prix}€ / nuit
           </button>
-          {/* Secondary CTA */}
-          <button
-            onClick={() => onDetail(bien)}
-            style={{
-              background: "none", border: "none", color: "rgba(250,245,233,0.55)",
-              fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11, letterSpacing: "0.1em",
-              cursor: "pointer", textTransform: "uppercase", padding: "2px 0",
-              textDecoration: "underline", textDecorationColor: "rgba(250,245,233,0.2)",
-              textUnderlineOffset: 4,
-            }}
-            onMouseEnter={e => { e.currentTarget.style.color = "rgba(250,245,233,0.9)"; }}
-            onMouseLeave={e => { e.currentTarget.style.color = "rgba(250,245,233,0.55)"; }}
-          >
-            Voir les photos et détails →
-          </button>
         </div>
       </div>
 
-      {/* Benefits strip — par bien, dans le hero, visible sans scroll */}
+      {/* Top-right: amenities + voir photos — sur la photo */}
       <div
-        key={`benefits-${animKey}`}
+        key={`topright-${animKey}`}
         style={{
-          position: "absolute", left: 0, right: 0, bottom: 68, zIndex: 4,
-          display: "flex", justifyContent: "center",
+          position: "absolute", top: 20, right: 20, zIndex: 5,
+          display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8,
           animation: "fadeIn 0.9s ease both",
-          pointerEvents: "none",
         }}
       >
-        <div style={{
-          display: "flex", alignItems: "center", gap: 0,
-          background: "rgba(7,38,38,0.55)", backdropFilter: "blur(12px)",
-          borderRadius: 30, border: "1px solid rgba(250,245,233,0.1)",
-          padding: "10px 24px", flexWrap: "wrap", justifyContent: "center",
-          maxWidth: "90vw",
-        }}>
-          {(bien.amenities || []).slice(0, 5).map((a, i, arr) => (
-            <span key={i} style={{ display: "flex", alignItems: "center", gap: 0 }}>
-              <span style={{
-                fontFamily: "'Jost', sans-serif", fontWeight: 300,
-                fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase",
-                color: "rgba(250,245,233,0.7)", whiteSpace: "nowrap",
-                padding: "0 12px",
-              }}>{a}</span>
-              {i < arr.length - 1 && (
-                <span style={{ color: "rgba(250,245,233,0.18)", fontSize: 12 }}>·</span>
-              )}
-            </span>
-          ))}
-        </div>
+        {/* Amenities pills */}
+        {(bien.amenities || []).slice(0, 5).map((a, i) => (
+          <div key={i} style={{
+            background: "rgba(7,38,38,0.58)", backdropFilter: "blur(14px)",
+            border: "1px solid rgba(250,245,233,0.12)",
+            borderRadius: 20, padding: "5px 14px",
+            fontFamily: "'Jost', sans-serif", fontWeight: 300,
+            fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase",
+            color: "rgba(250,245,233,0.75)", whiteSpace: "nowrap",
+          }}>{a}</div>
+        ))}
+
+        {/* Voir photos button */}
+        <button
+          onClick={() => onDetail(bien)}
+          style={{
+            marginTop: 4,
+            background: "rgba(250,245,233,0.1)", backdropFilter: "blur(14px)",
+            border: "1px solid rgba(250,245,233,0.25)",
+            borderRadius: 20, padding: "7px 16px",
+            fontFamily: "'Jost', sans-serif", fontWeight: 400,
+            fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase",
+            color: "#faf5e9", whiteSpace: "nowrap", cursor: "pointer",
+            transition: "background 0.2s",
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = "rgba(250,245,233,0.2)"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "rgba(250,245,233,0.1)"; }}
+        >
+          Voir photos &amp; détails →
+        </button>
       </div>
 
       {/* Bottom nav: dots + arrows */}
