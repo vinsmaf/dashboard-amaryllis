@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 const STRIPE_PK = "pk_test_51N1fVbAM2ySp09YCENcn4NcGi4xM7BzNCra9HU3ildZKLAHPzCOsY6ItlpxrttT1owXCUSKQrfPrIXsZSWPLrQsd00SDmMsWvX";
 
@@ -7,371 +7,416 @@ const BIENS = [
     id: "amaryllis",
     nom: "Villa Amaryllis",
     lieu: "Le Vauclin, Martinique",
-    desc: "Villa d'exception face à la mer des Caraïbes, piscine privée, 4 chambres, vue panoramique sur l'océan.",
+    tag: "Coup de cœur",
+    desc: "Villa d'exception face à la mer des Caraïbes. Piscine à débordement, 4 chambres climatisées, vue panoramique sur l'océan et les îlets.",
     prix: 280,
     capacite: 8,
     chambres: 4,
-    emoji: "🌺",
     couleur: "#e91e8c",
-    photos: [],
+    photo: "https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?auto=format&fit=crop&w=800&q=80",
+    amenities: ["Piscine", "Vue mer", "Clim", "BBQ", "Wifi"],
   },
   {
     id: "zandoli",
     nom: "Villa Zandoli",
     lieu: "Le Vauclin, Martinique",
-    desc: "Villa tropicale avec jardin arboré, piscine et terrasse couverte. Idéale pour familles.",
+    tag: null,
+    desc: "Villa tropicale nichée dans un jardin luxuriant. Piscine privée, grande terrasse couverte, idéale pour les familles.",
     prix: 220,
     capacite: 6,
     chambres: 3,
-    emoji: "🦎",
-    couleur: "#00bcd4",
-    photos: [],
+    couleur: "#06b6d4",
+    photo: "https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=800&q=80",
+    amenities: ["Piscine", "Jardin", "Clim", "Terrasse", "Wifi"],
   },
   {
     id: "iguana",
     nom: "Villa Iguana",
     lieu: "Le Vauclin, Martinique",
-    desc: "Villa moderne avec piscine à débordement, 3 chambres climatisées, vue sur la baie.",
+    tag: null,
+    desc: "Villa moderne avec piscine à débordement et vue imprenable sur la baie du Vauclin. Architecture contemporaine.",
     prix: 180,
     capacite: 6,
     chambres: 3,
-    emoji: "🌴",
-    couleur: "#4caf50",
-    photos: [],
+    couleur: "#22c55e",
+    photo: "https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?auto=format&fit=crop&w=800&q=80",
+    amenities: ["Piscine", "Vue baie", "Clim", "Terrasse", "Wifi"],
   },
   {
     id: "geko",
     nom: "Villa Geko",
     lieu: "Le Vauclin, Martinique",
-    desc: "Charmante villa avec piscine, 2 chambres, terrasse avec barbecue et jardin tropical.",
+    tag: null,
+    desc: "Charmante villa avec piscine, 2 chambres, terrasse avec barbecue et jardin tropical pour des vacances authentiques.",
     prix: 150,
     capacite: 4,
     chambres: 2,
-    emoji: "🏡",
-    couleur: "#ff9800",
-    photos: [],
+    couleur: "#f59e0b",
+    photo: "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?auto=format&fit=crop&w=800&q=80",
+    amenities: ["Piscine", "BBQ", "Clim", "Jardin", "Wifi"],
   },
   {
     id: "mabouya",
     nom: "Villa Mabouya",
     lieu: "Le Vauclin, Martinique",
-    desc: "Villa cosy au cœur de la végétation tropicale, piscine, 2 chambres, ambiance authentique.",
+    tag: null,
+    desc: "Villa cosy au cœur de la végétation tropicale. Piscine, 2 chambres, atmosphère intimiste et calme absolu.",
     prix: 110,
     capacite: 4,
     chambres: 2,
-    emoji: "🌿",
-    couleur: "#8bc34a",
-    photos: [],
+    couleur: "#84cc16",
+    photo: "https://images.unsplash.com/photo-1510798831971-661eb04b3739?auto=format&fit=crop&w=800&q=80",
+    amenities: ["Piscine", "Nature", "Clim", "Terrasse", "Wifi"],
   },
   {
     id: "schoelcher",
     nom: "T2 Schœlcher",
     lieu: "Schœlcher, Martinique",
-    desc: "Appartement moderne près de Fort-de-France, terrasse, vue mer, accès plage à 5 min.",
+    tag: null,
+    desc: "Appartement moderne avec terrasse vue mer, à 5 minutes à pied de la plage, proche de Fort-de-France.",
     prix: 100,
     capacite: 4,
     chambres: 1,
-    emoji: "🏖️",
-    couleur: "#9c27b0",
-    photos: [],
+    couleur: "#8b5cf6",
+    photo: "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80",
+    amenities: ["Vue mer", "Plage 5mn", "Clim", "Terrasse", "Wifi"],
   },
   {
     id: "nogent",
     nom: "T2 Nogent-sur-Marne",
     lieu: "Nogent-sur-Marne, Île-de-France",
-    desc: "Bel appartement T2 au bord de la Marne, lumineux, décoré avec soin, proche Paris (RER A).",
+    tag: null,
+    desc: "Bel appartement T2 lumineux au bord de la Marne. Décoré avec soin, à 20 min de Paris par le RER A.",
     prix: 85,
     capacite: 3,
     chambres: 1,
-    emoji: "🗼",
-    couleur: "#607d8b",
-    photos: [],
+    couleur: "#64748b",
+    photo: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80",
+    amenities: ["Bord Marne", "RER A", "Parking", "Balcon", "Wifi"],
   },
 ];
 
-function dateDiff(a, b) {
-  return Math.round((new Date(b) - new Date(a)) / 86400000);
-}
-
-function toLocalDate(dateStr) {
-  if (!dateStr) return null;
-  const [y, m, d] = dateStr.split("-").map(Number);
-  return new Date(y, m - 1, d);
-}
-
-function formatDate(dateStr) {
-  if (!dateStr) return "";
-  const d = toLocalDate(dateStr);
-  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
-}
-
+// ── Utilities ────────────────────────────────────────────────────
 function today() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
+function addDays(ds, n) {
+  const d = new Date(ds + "T12:00:00");
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+function dateDiff(a, b) {
+  return Math.round((new Date(b + "T12:00:00") - new Date(a + "T12:00:00")) / 86400000);
+}
+function formatDateLong(ds) {
+  if (!ds) return "";
+  const [y, m, d] = ds.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("fr-FR", { day: "numeric", month: "long" });
+}
+function formatDateShort(ds) {
+  if (!ds) return "";
+  const [y, m, d] = ds.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+}
 
-// ── Mini calendar ────────────────────────────────────────────────
-function MiniCalendar({ bienId, blockedDates = [], checkin, checkout, onSelect }) {
-  const [viewYear, setViewYear] = useState(new Date().getFullYear());
-  const [viewMonth, setViewMonth] = useState(new Date().getMonth());
+// ── Calendar ─────────────────────────────────────────────────────
+const WEEKDAYS = ["Lu", "Ma", "Me", "Je", "Ve", "Sa", "Di"];
+const MONTHS_FR = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
 
+function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, onSelect, onHover }) {
   const todayStr = today();
+  const firstDay = new Date(year, month, 1);
+  const lastDate = new Date(year, month + 1, 0).getDate();
+  const startDow = (firstDay.getDay() + 6) % 7;
 
-  function isBlocked(dateStr) {
-    return blockedDates.includes(dateStr);
+  const cells = [];
+  for (let i = 0; i < startDow; i++) cells.push(null);
+  for (let d = 1; d <= lastDate; d++) {
+    cells.push(`${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`);
   }
 
-  function isInRange(dateStr) {
-    if (!checkin || !checkout) return false;
-    return dateStr > checkin && dateStr < checkout;
+  function getState(ds) {
+    if (!ds) return "empty";
+    if (ds < todayStr) return "past";
+    if (blockedDates.includes(ds)) return "blocked";
+    if (ds === checkin) return "checkin";
+    if (ds === checkout) return "checkout";
+    const end = checkout || hovered;
+    if (checkin && end && ds > checkin && ds < end) return "range";
+    return "free";
   }
-
-  function renderMonth(year, month) {
-    const first = new Date(year, month, 1);
-    const last = new Date(year, month + 1, 0);
-    const startDow = (first.getDay() + 6) % 7; // Mon=0
-    const days = [];
-
-    for (let i = 0; i < startDow; i++) days.push(null);
-    for (let d = 1; d <= last.getDate(); d++) {
-      const ds = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-      days.push(ds);
-    }
-
-    const monthName = first.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
-
-    return (
-      <div style={{ flex: 1, minWidth: 260 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-          <button onClick={() => {
-            if (month === 0) { setViewYear(y => y - 1); setViewMonth(11); }
-            else setViewMonth(m => m - 1);
-          }} style={calNavBtn}>‹</button>
-          <span style={{ fontWeight: 600, textTransform: "capitalize", fontSize: 14 }}>{monthName}</span>
-          <button onClick={() => {
-            if (month === 11) { setViewYear(y => y + 1); setViewMonth(0); }
-            else setViewMonth(m => m + 1);
-          }} style={calNavBtn}>›</button>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, textAlign: "center" }}>
-          {["L","M","M","J","V","S","D"].map((d, i) => (
-            <div key={i} style={{ fontSize: 11, color: "#888", padding: "4px 0" }}>{d}</div>
-          ))}
-          {days.map((ds, i) => {
-            if (!ds) return <div key={i} />;
-            const blocked = isBlocked(ds);
-            const past = ds < todayStr;
-            const isCI = ds === checkin;
-            const isCO = ds === checkout;
-            const inRange = isInRange(ds);
-            const disabled = blocked || past;
-
-            return (
-              <div key={ds} onClick={() => !disabled && onSelect(ds)}
-                style={{
-                  padding: "6px 2px",
-                  borderRadius: 6,
-                  fontSize: 13,
-                  cursor: disabled ? "not-allowed" : "pointer",
-                  background: isCI || isCO ? "#22c55e" : inRange ? "rgba(34,197,94,0.15)" : "transparent",
-                  color: disabled ? "#444" : isCI || isCO ? "#000" : "#eee",
-                  textDecoration: blocked ? "line-through" : "none",
-                  opacity: past ? 0.35 : 1,
-                  fontWeight: isCI || isCO ? 700 : 400,
-                  transition: "background 0.1s",
-                }}
-              >{parseInt(ds.split("-")[2])}</div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
-  const nextMonth = viewMonth === 11 ? 0 : viewMonth + 1;
-  const nextYear = viewMonth === 11 ? viewYear + 1 : viewYear;
 
   return (
-    <div style={{ display: "flex", gap: 24, flexWrap: "wrap", background: "#111", borderRadius: 12, padding: 20, marginTop: 12 }}>
-      {renderMonth(viewYear, viewMonth)}
-      {renderMonth(nextYear, nextMonth)}
+    <div style={{ flex: "1 1 240px" }}>
+      <div style={{ textAlign: "center", fontWeight: 700, fontSize: 15, marginBottom: 12, color: "#e2e8f0" }}>
+        {MONTHS_FR[month]} {year}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 0 }}>
+        {WEEKDAYS.map(w => (
+          <div key={w} style={{ textAlign: "center", fontSize: 11, color: "#475569", padding: "4px 0", fontWeight: 600 }}>{w}</div>
+        ))}
+        {cells.map((ds, i) => {
+          const state = getState(ds);
+          const isCI = state === "checkin";
+          const isCO = state === "checkout";
+          const inRange = state === "range";
+          const blocked = state === "blocked";
+          const past = state === "past";
+          const disabled = blocked || past || !ds;
+
+          let bg = "transparent";
+          let color = "#94a3b8";
+          let borderRadius = "8px";
+          let fontWeight = 400;
+
+          if (isCI || isCO) { bg = "#22c55e"; color = "#000"; fontWeight = 700; }
+          else if (inRange) { bg = "rgba(34,197,94,0.12)"; color = "#dcfce7"; borderRadius = "0"; }
+          if (isCI) borderRadius = "8px 0 0 8px";
+          if (isCO) borderRadius = "0 8px 8px 0";
+
+          return (
+            <div
+              key={i}
+              onMouseEnter={() => !disabled && checkin && !checkout && onHover(ds)}
+              onClick={() => !disabled && onSelect(ds)}
+              style={{
+                height: 36,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 13,
+                cursor: disabled ? "default" : "pointer",
+                background: bg,
+                color: blocked ? "#374151" : past ? "#374151" : color,
+                borderRadius,
+                fontWeight,
+                textDecoration: blocked ? "line-through" : "none",
+                opacity: past ? 0.4 : 1,
+                position: "relative",
+                transition: "background 0.1s",
+                userSelect: "none",
+              }}
+            >
+              {ds ? parseInt(ds.split("-")[2]) : ""}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
 
-const calNavBtn = {
-  background: "none", border: "none", color: "#eee", fontSize: 20, cursor: "pointer", padding: "0 8px", lineHeight: 1,
-};
+function DateRangePicker({ checkin, checkout, blockedDates = [], onChange }) {
+  const todayStr = today();
+  const initY = new Date().getFullYear();
+  const initM = new Date().getMonth();
+  const [offset, setOffset] = useState(0);
+  const [hovered, setHovered] = useState(null);
+
+  const m1 = (initM + offset) % 12;
+  const y1 = initY + Math.floor((initM + offset) / 12);
+  const m2 = (initM + offset + 1) % 12;
+  const y2 = initY + Math.floor((initM + offset + 1) / 12);
+
+  function handleSelect(ds) {
+    if (!checkin || (checkin && checkout)) {
+      onChange(ds, null);
+    } else if (ds <= checkin) {
+      onChange(ds, null);
+    } else {
+      // Check no blocked date strictly between checkin and ds
+      let cur = addDays(checkin, 1);
+      let hasBlocked = false;
+      while (cur < ds) {
+        if (blockedDates.includes(cur)) { hasBlocked = true; break; }
+        cur = addDays(cur, 1);
+      }
+      if (hasBlocked) onChange(ds, null);
+      else onChange(checkin, ds);
+    }
+    setHovered(null);
+  }
+
+  const canPrev = offset > 0;
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <button onClick={() => canPrev && setOffset(o => o - 1)} style={{ ...iconBtn, opacity: canPrev ? 1 : 0.2 }}>‹</button>
+        <div style={{ fontSize: 13, color: "#64748b" }}>
+          {!checkin ? "Choisir la date d'arrivée" : !checkout ? "Choisir la date de départ" : `${formatDateShort(checkin)} → ${formatDateShort(checkout)}`}
+        </div>
+        <button onClick={() => setOffset(o => o + 1)} style={iconBtn}>›</button>
+      </div>
+      <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+        <CalendarMonth year={y1} month={m1} checkin={checkin} checkout={checkout} hovered={hovered} blockedDates={blockedDates} onSelect={handleSelect} onHover={setHovered} />
+        <CalendarMonth year={y2} month={m2} checkin={checkin} checkout={checkout} hovered={hovered} blockedDates={blockedDates} onSelect={handleSelect} onHover={setHovered} />
+      </div>
+      {checkin && checkout && (
+        <div style={{ marginTop: 12, textAlign: "right" }}>
+          <button onClick={() => { onChange(null, null); setHovered(null); }} style={{ fontSize: 12, color: "#64748b", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
+            Effacer les dates
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const iconBtn = { background: "none", border: "1px solid #1e293b", color: "#94a3b8", width: 32, height: 32, borderRadius: 8, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center" };
 
 // ── Booking Modal ────────────────────────────────────────────────
 function BookingModal({ bien, blockedDates, onClose }) {
-  const [step, setStep] = useState(1); // 1=dates 2=form 3=payment 4=confirm
-  const [checkin, setCheckin] = useState("");
-  const [checkout, setCheckout] = useState("");
-  const [selectingWhat, setSelectingWhat] = useState("checkin");
+  const [step, setStep] = useState(1);
+  const [checkin, setCheckin] = useState(null);
+  const [checkout, setCheckout] = useState(null);
   const [form, setForm] = useState({ prenom: "", nom: "", email: "", tel: "", message: "" });
   const [stripe, setStripe] = useState(null);
   const [elements, setElements] = useState(null);
-  const [clientSecret, setClientSecret] = useState("");
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState("");
+  const elRef = useRef(null);
 
   const nights = checkin && checkout ? dateDiff(checkin, checkout) : 0;
   const total = nights * bien.prix;
+  const formOk = form.prenom && form.nom && form.email && form.email.includes("@");
 
-  // Load Stripe
   useEffect(() => {
-    if (!window.Stripe) return;
-    setStripe(window.Stripe(STRIPE_PK));
+    if (window.Stripe) setStripe(window.Stripe(STRIPE_PK));
   }, []);
 
-  function handleDateSelect(ds) {
-    if (selectingWhat === "checkin" || !checkin || ds <= checkin) {
-      setCheckin(ds);
-      setCheckout("");
-      setSelectingWhat("checkout");
-    } else {
-      // Check no blocked date in range
-      let hasBlocked = false;
-      let cur = checkin;
-      while (cur < ds) {
-        const d = new Date(cur);
-        d.setDate(d.getDate() + 1);
-        cur = d.toISOString().slice(0, 10);
-        if (blockedDates.includes(cur) && cur < ds) { hasBlocked = true; break; }
-      }
-      if (hasBlocked) {
-        setCheckin(ds);
-        setCheckout("");
-        setSelectingWhat("checkout");
-      } else {
-        setCheckout(ds);
-        setSelectingWhat("checkin");
-      }
-    }
-  }
+  // Close on Escape
+  useEffect(() => {
+    const fn = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", fn);
+    return () => window.removeEventListener("keydown", fn);
+  }, [onClose]);
 
   async function goToPayment() {
-    setPaying(true);
-    setPayError("");
+    setPaying(true); setPayError("");
     try {
       const res = await fetch("/.netlify/functions/create-payment-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: total * 100,
-          currency: "eur",
-          metadata: {
-            bienId: bien.id,
-            checkin,
-            checkout,
-            voyageur: `${form.prenom} ${form.nom}`,
-          },
-        }),
+        body: JSON.stringify({ amount: total * 100, currency: "eur", metadata: { bienId: bien.id, checkin, checkout, voyageur: `${form.prenom} ${form.nom}` } }),
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-      setClientSecret(data.clientSecret);
-
-      const el = stripe.elements({ clientSecret: data.clientSecret, appearance: { theme: "night" } });
+      const el = stripe.elements({ clientSecret: data.clientSecret, appearance: { theme: "night", variables: { colorPrimary: "#22c55e", borderRadius: "8px" } } });
       const pe = el.create("payment");
-      pe.mount("#stripe-payment-element");
       setElements(el);
       setStep(3);
-    } catch (e) {
-      setPayError(e.message);
-    }
+      setTimeout(() => pe.mount("#spe"), 100);
+    } catch (e) { setPayError(e.message); }
     setPaying(false);
   }
 
   async function handlePay() {
     if (!stripe || !elements) return;
-    setPaying(true);
-    setPayError("");
-    const { error } = await stripe.confirmPayment({
-      elements,
-      confirmParams: { return_url: window.location.origin + "/merci" },
-    });
+    setPaying(true); setPayError("");
+    const { error } = await stripe.confirmPayment({ elements, confirmParams: { return_url: window.location.origin + "/merci" } });
     if (error) setPayError(error.message);
     setPaying(false);
   }
 
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div style={{ background: "#0f1629", borderRadius: 20, padding: 32, maxWidth: 640, width: "100%", maxHeight: "90vh", overflowY: "auto", position: "relative" }}>
-        <button onClick={onClose} style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", color: "#888", fontSize: 24, cursor: "pointer" }}>✕</button>
+  const steps = ["Dates", "Coordonnées", "Paiement"];
 
-        <div style={{ marginBottom: 24 }}>
-          <div style={{ fontSize: 13, color: "#888", marginBottom: 4 }}>Réservation</div>
-          <div style={{ fontSize: 20, fontWeight: 700 }}>{bien.emoji} {bien.nom}</div>
-          <div style={{ color: "#888", fontSize: 14 }}>{bien.lieu}</div>
+  return (
+    <div onClick={(e) => e.target === e.currentTarget && onClose()} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", backdropFilter: "blur(8px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}>
+      <div style={{ background: "#0d1526", border: "1px solid #1e293b", borderRadius: 24, padding: "32px", maxWidth: 680, width: "100%", maxHeight: "92vh", overflowY: "auto", position: "relative", boxShadow: "0 40px 80px rgba(0,0,0,0.6)" }}>
+
+        {/* Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28 }}>
+          <div>
+            <div style={{ fontSize: 12, color: bien.couleur, fontWeight: 700, letterSpacing: 1, marginBottom: 4 }}>RÉSERVATION DIRECTE</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: "#f1f5f9" }}>{bien.nom}</div>
+            <div style={{ color: "#475569", fontSize: 13, marginTop: 2 }}>📍 {bien.lieu}</div>
+          </div>
+          <button onClick={onClose} style={{ background: "#1e293b", border: "none", color: "#94a3b8", width: 36, height: 36, borderRadius: 10, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>✕</button>
         </div>
 
-        {/* Steps indicator */}
-        <div style={{ display: "flex", gap: 8, marginBottom: 28 }}>
-          {["Dates", "Coordonnées", "Paiement"].map((s, i) => (
-            <div key={i} style={{ flex: 1, height: 3, borderRadius: 3, background: step > i ? "#22c55e" : "#1e293b" }} />
+        {/* Step indicator */}
+        <div style={{ display: "flex", gap: 6, marginBottom: 32, alignItems: "center" }}>
+          {steps.map((s, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, flex: i < steps.length - 1 ? 1 : 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                <div style={{ width: 26, height: 26, borderRadius: "50%", background: step > i + 1 ? "#22c55e" : step === i + 1 ? bien.couleur : "#1e293b", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: step > i + 1 ? "#000" : "#fff", transition: "background 0.3s" }}>
+                  {step > i + 1 ? "✓" : i + 1}
+                </div>
+                <span style={{ fontSize: 12, fontWeight: step === i + 1 ? 700 : 400, color: step === i + 1 ? "#f1f5f9" : "#475569" }}>{s}</span>
+              </div>
+              {i < steps.length - 1 && <div style={{ flex: 1, height: 1, background: step > i + 1 ? "#22c55e" : "#1e293b", transition: "background 0.3s" }} />}
+            </div>
           ))}
         </div>
 
+        {/* STEP 1 — Dates */}
         {step === 1 && (
           <>
-            <div style={{ display: "flex", gap: 16, marginBottom: 16, flexWrap: "wrap" }}>
-              <DateBox label="Arrivée" value={checkin} active={selectingWhat === "checkin"} onClick={() => setSelectingWhat("checkin")} />
-              <DateBox label="Départ" value={checkout} active={selectingWhat === "checkout"} onClick={() => setSelectingWhat("checkout")} />
-            </div>
-            <MiniCalendar bienId={bien.id} blockedDates={blockedDates} checkin={checkin} checkout={checkout} onSelect={handleDateSelect} />
-            {nights > 0 && (
-              <div style={{ marginTop: 20, padding: "16px 20px", background: "#1a2744", borderRadius: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <DateRangePicker checkin={checkin} checkout={checkout} blockedDates={blockedDates} onChange={(ci, co) => { setCheckin(ci); setCheckout(co); }} />
+
+            {nights > 0 ? (
+              <div style={{ marginTop: 24, background: "#111d35", border: "1px solid #1e3a5f", borderRadius: 16, padding: "20px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
                 <div>
-                  <div style={{ color: "#888", fontSize: 13 }}>{nights} nuit{nights > 1 ? "s" : ""} × {bien.prix}€</div>
-                  <div style={{ fontSize: 22, fontWeight: 700 }}>{total}€ <span style={{ fontSize: 14, color: "#888" }}>total</span></div>
+                  <div style={{ color: "#64748b", fontSize: 13 }}>{formatDateLong(checkin)} → {formatDateLong(checkout)}</div>
+                  <div style={{ fontSize: 14, color: "#94a3b8", marginTop: 4 }}>{nights} nuit{nights > 1 ? "s" : ""} × {bien.prix}€ / nuit</div>
+                  <div style={{ fontSize: 26, fontWeight: 800, color: "#f1f5f9", marginTop: 4 }}>{total}€</div>
                 </div>
-                <button onClick={() => setStep(2)} style={btnPrimary}>Continuer →</button>
+                <button onClick={() => setStep(2)} style={{ ...btnPrimary, background: bien.couleur, color: bien.couleur === "#f59e0b" || bien.couleur === "#84cc16" ? "#000" : "#fff" }}>
+                  Continuer →
+                </button>
+              </div>
+            ) : (
+              <div style={{ marginTop: 24, textAlign: "center", color: "#475569", fontSize: 14, padding: "20px 0" }}>
+                Sélectionnez vos dates d'arrivée et de départ
               </div>
             )}
           </>
         )}
 
+        {/* STEP 2 — Form */}
         {step === 2 && (
           <>
+            <div style={{ background: "#111d35", borderRadius: 12, padding: "14px 18px", marginBottom: 24, fontSize: 14, color: "#64748b", display: "flex", justifyContent: "space-between" }}>
+              <span>{formatDateLong(checkin)} → {formatDateLong(checkout)}</span>
+              <span style={{ fontWeight: 700, color: "#f1f5f9" }}>{nights} nuits · {total}€</span>
+            </div>
+
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-              <Field label="Prénom" value={form.prenom} onChange={v => setForm(f => ({ ...f, prenom: v }))} />
-              <Field label="Nom" value={form.nom} onChange={v => setForm(f => ({ ...f, nom: v }))} />
-              <Field label="Email" value={form.email} onChange={v => setForm(f => ({ ...f, email: v }))} type="email" style={{ gridColumn: "1/-1" }} />
-              <Field label="Téléphone" value={form.tel} onChange={v => setForm(f => ({ ...f, tel: v }))} type="tel" style={{ gridColumn: "1/-1" }} />
-              <Field label="Message (optionnel)" value={form.message} onChange={v => setForm(f => ({ ...f, message: v }))} multiline style={{ gridColumn: "1/-1" }} />
+              <FormField label="Prénom *" value={form.prenom} onChange={v => setForm(f => ({ ...f, prenom: v }))} />
+              <FormField label="Nom *" value={form.nom} onChange={v => setForm(f => ({ ...f, nom: v }))} />
+              <FormField label="Email *" value={form.email} onChange={v => setForm(f => ({ ...f, email: v }))} type="email" style={{ gridColumn: "1/-1" }} />
+              <FormField label="Téléphone" value={form.tel} onChange={v => setForm(f => ({ ...f, tel: v }))} type="tel" style={{ gridColumn: "1/-1" }} />
+              <FormField label="Message (optionnel)" value={form.message} onChange={v => setForm(f => ({ ...f, message: v }))} multiline style={{ gridColumn: "1/-1" }} />
             </div>
-            <div style={{ marginTop: 20, display: "flex", gap: 12, justifyContent: "space-between", alignItems: "center" }}>
-              <button onClick={() => setStep(1)} style={btnSecondary}>← Retour</button>
-              <div style={{ textAlign: "right" }}>
-                <div style={{ color: "#888", fontSize: 13, marginBottom: 4 }}>{formatDate(checkin)} → {formatDate(checkout)} · {nights} nuit{nights > 1 ? "s" : ""}</div>
-                <button
-                  onClick={goToPayment}
-                  disabled={!form.prenom || !form.nom || !form.email || paying || !stripe}
-                  style={{ ...btnPrimary, opacity: (!form.prenom || !form.nom || !form.email || paying || !stripe) ? 0.5 : 1 }}
-                >
-                  {paying ? "Chargement…" : `Payer ${total}€ →`}
-                </button>
-              </div>
+
+            <div style={{ marginTop: 24, display: "flex", gap: 12, justifyContent: "space-between" }}>
+              <button onClick={() => setStep(1)} style={btnBack}>← Retour</button>
+              <button onClick={goToPayment} disabled={!formOk || paying || !stripe} style={{ ...btnPrimary, background: formOk && !paying && stripe ? bien.couleur : "#1e293b", color: bien.couleur === "#f59e0b" || bien.couleur === "#84cc16" ? "#000" : "#fff", opacity: formOk && !paying && stripe ? 1 : 0.6, cursor: formOk && !paying && stripe ? "pointer" : "not-allowed" }}>
+                {paying ? "Chargement…" : `Payer ${total}€ →`}
+              </button>
             </div>
-            {payError && <div style={{ color: "#f87171", marginTop: 12, fontSize: 14 }}>⚠ {payError}</div>}
+            {payError && <div style={errStyle}>⚠ {payError}</div>}
           </>
         )}
 
+        {/* STEP 3 — Payment */}
         {step === 3 && (
           <>
-            <div style={{ marginBottom: 20, padding: "12px 16px", background: "#1a2744", borderRadius: 10, fontSize: 14, color: "#94a3b8" }}>
-              {formatDate(checkin)} → {formatDate(checkout)} · {nights} nuit{nights > 1 ? "s" : ""} · <strong style={{ color: "#fff" }}>{total}€</strong>
+            <div style={{ background: "#111d35", borderRadius: 12, padding: "14px 18px", marginBottom: 24, fontSize: 14, color: "#64748b", display: "flex", justifyContent: "space-between" }}>
+              <span>{form.prenom} {form.nom} · {formatDateLong(checkin)} → {formatDateLong(checkout)}</span>
+              <span style={{ fontWeight: 700, color: "#f1f5f9" }}>{total}€</span>
             </div>
-            <div id="stripe-payment-element" style={{ marginBottom: 20 }} />
+            <div id="spe" style={{ marginBottom: 24 }} />
             <div style={{ display: "flex", gap: 12, justifyContent: "space-between" }}>
-              <button onClick={() => setStep(2)} style={btnSecondary}>← Retour</button>
-              <button onClick={handlePay} disabled={paying} style={{ ...btnPrimary, opacity: paying ? 0.5 : 1 }}>
-                {paying ? "Traitement…" : `Confirmer et payer ${total}€`}
+              <button onClick={() => setStep(2)} style={btnBack}>← Retour</button>
+              <button onClick={handlePay} disabled={paying} style={{ ...btnPrimary, background: paying ? "#1e293b" : "#22c55e", color: "#000", opacity: paying ? 0.6 : 1 }}>
+                {paying ? "Traitement…" : `✓ Confirmer et payer ${total}€`}
               </button>
             </div>
-            {payError && <div style={{ color: "#f87171", marginTop: 12, fontSize: 14 }}>⚠ {payError}</div>}
+            {payError && <div style={errStyle}>⚠ {payError}</div>}
+            <div style={{ marginTop: 16, textAlign: "center", color: "#374151", fontSize: 12 }}>🔒 Paiement sécurisé par Stripe</div>
           </>
         )}
       </div>
@@ -379,83 +424,97 @@ function BookingModal({ bien, blockedDates, onClose }) {
   );
 }
 
-function DateBox({ label, value, active, onClick }) {
-  return (
-    <div onClick={onClick} style={{
-      flex: 1, minWidth: 140, padding: "12px 16px", borderRadius: 10,
-      border: `2px solid ${active ? "#22c55e" : "#1e293b"}`,
-      cursor: "pointer", background: active ? "rgba(34,197,94,0.05)" : "#111",
-    }}>
-      <div style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>{label}</div>
-      <div style={{ fontWeight: 600, color: value ? "#fff" : "#444" }}>{value ? formatDate(value) : "Choisir"}</div>
-    </div>
-  );
-}
-
-function Field({ label, value, onChange, type = "text", multiline, style }) {
-  const s = { background: "#0a0f1e", border: "1px solid #1e293b", borderRadius: 8, color: "#fff", padding: "10px 14px", width: "100%", fontSize: 14, outline: "none", fontFamily: "inherit", resize: "vertical" };
+function FormField({ label, value, onChange, type = "text", multiline, style }) {
+  const [focused, setFocused] = useState(false);
+  const s = {
+    background: "#0a0f1e", border: `1px solid ${focused ? "#22c55e" : "#1e293b"}`, borderRadius: 10,
+    color: "#f1f5f9", padding: "11px 14px", width: "100%", fontSize: 14, outline: "none",
+    fontFamily: "inherit", resize: "vertical", transition: "border-color 0.2s", boxSizing: "border-box",
+  };
   return (
     <div style={style}>
-      <label style={{ display: "block", fontSize: 12, color: "#888", marginBottom: 6 }}>{label}</label>
+      <label style={{ display: "block", fontSize: 12, color: "#64748b", marginBottom: 6, fontWeight: 500 }}>{label}</label>
       {multiline
-        ? <textarea rows={3} style={s} value={value} onChange={e => onChange(e.target.value)} />
-        : <input type={type} style={s} value={value} onChange={e => onChange(e.target.value)} />}
+        ? <textarea rows={3} style={s} value={value} onChange={e => onChange(e.target.value)} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} />
+        : <input type={type} style={s} value={value} onChange={e => onChange(e.target.value)} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} />}
     </div>
   );
 }
 
 // ── Property Card ────────────────────────────────────────────────
 function BienCard({ bien, onBook }) {
+  const [imgErr, setImgErr] = useState(false);
+  const [hovered, setHovered] = useState(false);
+
   return (
-    <div style={{
-      background: "#0f1629",
-      borderRadius: 20,
-      overflow: "hidden",
-      border: "1px solid #1e293b",
-      transition: "transform 0.2s, box-shadow 0.2s",
-      cursor: "default",
-    }}
-      onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = `0 20px 40px rgba(0,0,0,0.4)`; }}
-      onMouseLeave={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = ""; }}
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{ background: "#0d1526", borderRadius: 20, overflow: "hidden", border: `1px solid ${hovered ? bien.couleur + "44" : "#1e293b"}`, transition: "transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease", transform: hovered ? "translateY(-6px)" : "none", boxShadow: hovered ? `0 24px 48px rgba(0,0,0,0.5), 0 0 0 1px ${bien.couleur}22` : "0 4px 16px rgba(0,0,0,0.3)", display: "flex", flexDirection: "column" }}
     >
-      {/* Photo placeholder */}
-      <div style={{ height: 200, background: `linear-gradient(135deg, ${bien.couleur}22, ${bien.couleur}44)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <span style={{ fontSize: 64 }}>{bien.emoji}</span>
+      {/* Photo */}
+      <div style={{ position: "relative", height: 220, overflow: "hidden", background: `linear-gradient(135deg, ${bien.couleur}22, ${bien.couleur}44)` }}>
+        {!imgErr ? (
+          <img
+            src={bien.photo}
+            alt={bien.nom}
+            onError={() => setImgErr(true)}
+            style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.4s ease", transform: hovered ? "scale(1.06)" : "scale(1)" }}
+          />
+        ) : (
+          <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64 }}>🏡</div>
+        )}
+        {/* Overlay gradient */}
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(13,21,38,0.7) 0%, transparent 50%)" }} />
+
+        {/* Tag */}
+        {bien.tag && (
+          <div style={{ position: "absolute", top: 14, left: 14, background: bien.couleur, color: "#fff", fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 20, letterSpacing: 0.5 }}>
+            ✦ {bien.tag}
+          </div>
+        )}
+
+        {/* Price badge */}
+        <div style={{ position: "absolute", bottom: 14, right: 14, background: "rgba(10,15,30,0.9)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, padding: "8px 14px", textAlign: "right" }}>
+          <div style={{ fontSize: 20, fontWeight: 800, color: bien.couleur, lineHeight: 1 }}>{bien.prix}€</div>
+          <div style={{ fontSize: 11, color: "#64748b" }}>/ nuit</div>
+        </div>
       </div>
 
-      <div style={{ padding: "20px 24px 24px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-          <div>
-            <div style={{ fontWeight: 700, fontSize: 18 }}>{bien.nom}</div>
-            <div style={{ color: "#64748b", fontSize: 13, marginTop: 2 }}>📍 {bien.lieu}</div>
-          </div>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 22, fontWeight: 800, color: bien.couleur }}>{bien.prix}€</div>
-            <div style={{ fontSize: 12, color: "#64748b" }}>/ nuit</div>
+      <div style={{ padding: "20px 22px 24px", flex: 1, display: "flex", flexDirection: "column" }}>
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ fontWeight: 800, fontSize: 18, color: "#f1f5f9", marginBottom: 4 }}>{bien.nom}</div>
+          <div style={{ color: "#475569", fontSize: 13, display: "flex", alignItems: "center", gap: 4 }}>
+            <span>📍</span> {bien.lieu}
           </div>
         </div>
 
-        <p style={{ color: "#94a3b8", fontSize: 14, lineHeight: 1.6, margin: "12px 0 16px" }}>{bien.desc}</p>
+        <p style={{ color: "#64748b", fontSize: 13, lineHeight: 1.65, margin: "10px 0 16px", flex: 1 }}>{bien.desc}</p>
 
-        <div style={{ display: "flex", gap: 16, marginBottom: 20 }}>
-          <Pill icon="👤" label={`${bien.capacite} pers.`} />
-          <Pill icon="🛏️" label={`${bien.chambres} ch.`} />
+        {/* Capacité */}
+        <div style={{ display: "flex", gap: 16, marginBottom: 18 }}>
+          <Stat icon="👤" label={`${bien.capacite} pers.`} />
+          <Stat icon="🛏️" label={`${bien.chambres} chambre${bien.chambres > 1 ? "s" : ""}`} />
         </div>
 
-        <button
-          onClick={() => onBook(bien)}
-          style={{ ...btnPrimary, width: "100%", background: `linear-gradient(135deg, ${bien.couleur}, ${bien.couleur}cc)` }}
-        >
-          Réserver
+        {/* Amenities */}
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 20 }}>
+          {bien.amenities.map(a => (
+            <span key={a} style={{ background: "#111d35", border: "1px solid #1e293b", borderRadius: 6, fontSize: 11, color: "#64748b", padding: "3px 8px" }}>{a}</span>
+          ))}
+        </div>
+
+        <button onClick={() => onBook(bien)} style={{ ...btnPrimary, width: "100%", background: `linear-gradient(135deg, ${bien.couleur} 0%, ${bien.couleur}bb 100%)`, color: bien.couleur === "#f59e0b" || bien.couleur === "#84cc16" ? "#000" : "#fff", fontSize: 15 }}>
+          Voir les disponibilités
         </button>
       </div>
     </div>
   );
 }
 
-function Pill({ icon, label }) {
+function Stat({ icon, label }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#1e293b", borderRadius: 20, padding: "4px 12px", fontSize: 13, color: "#94a3b8" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 5, color: "#64748b", fontSize: 13 }}>
       <span>{icon}</span> {label}
     </div>
   );
@@ -466,12 +525,12 @@ function MerciPage() {
   return (
     <div style={{ minHeight: "100vh", background: "#0a0f1e", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", textAlign: "center", padding: 32 }}>
       <div>
-        <div style={{ fontSize: 72, marginBottom: 24 }}>✅</div>
-        <h1 style={{ fontSize: 32, fontWeight: 800, marginBottom: 12 }}>Réservation confirmée !</h1>
-        <p style={{ color: "#94a3b8", fontSize: 16, maxWidth: 400, margin: "0 auto 32px" }}>
-          Merci pour votre réservation. Vous recevrez une confirmation par email sous peu.
+        <div style={{ width: 80, height: 80, borderRadius: "50%", background: "rgba(34,197,94,0.15)", border: "2px solid #22c55e", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36, margin: "0 auto 28px" }}>✓</div>
+        <h1 style={{ fontSize: 34, fontWeight: 900, marginBottom: 12, color: "#f1f5f9" }}>Réservation confirmée !</h1>
+        <p style={{ color: "#64748b", fontSize: 16, maxWidth: 420, margin: "0 auto 32px", lineHeight: 1.6 }}>
+          Merci pour votre réservation. Un email de confirmation vous sera envoyé dans quelques minutes.
         </p>
-        <a href="/" style={{ ...btnPrimary, textDecoration: "none", display: "inline-block" }}>Retour à l'accueil</a>
+        <a href="/" style={{ ...btnPrimary, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 8, background: "#22c55e", color: "#000" }}>← Retour à l'accueil</a>
       </div>
     </div>
   );
@@ -480,66 +539,82 @@ function MerciPage() {
 // ── Main ─────────────────────────────────────────────────────────
 export default function PublicSite() {
   const [selectedBien, setSelectedBien] = useState(null);
-  const [blockedDates, setBlockedDates] = useState({});
   const [filterLieu, setFilterLieu] = useState("all");
+  const [scrolled, setScrolled] = useState(false);
 
   const path = window.location.pathname;
   if (path === "/merci") return <MerciPage />;
 
-  // Load availability from Apps Script (alertes_sync)
   useEffect(() => {
-    // Could fetch from Sheets to get booked dates per bien — optional
+    const fn = () => setScrolled(window.scrollY > 60);
+    window.addEventListener("scroll", fn, { passive: true });
+    return () => window.removeEventListener("scroll", fn);
   }, []);
 
-  const lieux = ["all", "Martinique", "Île-de-France"];
-  const filtered = filterLieu === "all"
-    ? BIENS
-    : BIENS.filter(b => b.lieu.includes(filterLieu));
+  const lieux = [
+    { key: "all", label: "Tous les biens (7)" },
+    { key: "Martinique", label: "🌴 Martinique (6)" },
+    { key: "Île-de-France", label: "🗼 Île-de-France (1)" },
+  ];
+
+  const filtered = filterLieu === "all" ? BIENS : BIENS.filter(b => b.lieu.includes(filterLieu));
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0a0f1e", color: "#fff", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#0a0f1e", color: "#fff", fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}>
+
       {/* Header */}
-      <header style={{ borderBottom: "1px solid #1e293b", padding: "0 24px", position: "sticky", top: 0, background: "rgba(10,15,30,0.95)", backdropFilter: "blur(12px)", zIndex: 100 }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ fontWeight: 800, fontSize: 20 }}>
-            🌺 <span style={{ color: "#22c55e" }}>Amaryllis</span> <span style={{ color: "#64748b", fontSize: 14, fontWeight: 400 }}>Locations</span>
+      <header style={{ position: "sticky", top: 0, zIndex: 200, borderBottom: scrolled ? "1px solid #1e293b" : "1px solid transparent", background: scrolled ? "rgba(10,15,30,0.96)" : "transparent", backdropFilter: scrolled ? "blur(16px)" : "none", transition: "all 0.3s ease", padding: "0 24px" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", height: 68, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg, #22c55e, #16a34a)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🌺</div>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 17, lineHeight: 1 }}>Amaryllis <span style={{ color: "#22c55e" }}>Locations</span></div>
+              <div style={{ fontSize: 11, color: "#475569", marginTop: 1 }}>France · Martinique</div>
+            </div>
           </div>
-          <a href="/admin" style={{ fontSize: 13, color: "#64748b", textDecoration: "none" }}>Admin →</a>
+          <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+            <div style={{ fontSize: 13, color: "#64748b" }}>📞 Réservation directe — sans frais</div>
+            <a href="/admin" style={{ fontSize: 12, color: "#374151", textDecoration: "none", background: "#1e293b", padding: "6px 14px", borderRadius: 8 }}>Admin</a>
+          </div>
         </div>
       </header>
 
       {/* Hero */}
-      <div style={{ background: "linear-gradient(160deg, #0f1629 0%, #0a0f1e 60%)", borderBottom: "1px solid #1e293b", padding: "64px 24px" }}>
-        <div style={{ maxWidth: 700, margin: "0 auto", textAlign: "center" }}>
-          <div style={{ fontSize: 13, color: "#22c55e", fontWeight: 600, letterSpacing: 2, marginBottom: 16 }}>LOCATION SAISONNIÈRE DIRECTE</div>
-          <h1 style={{ fontSize: "clamp(32px, 6vw, 56px)", fontWeight: 900, lineHeight: 1.1, marginBottom: 16 }}>
-            Villas & Appartements<br />
-            <span style={{ color: "#22c55e" }}>Martinique</span> · <span style={{ color: "#64748b" }}>Paris</span>
+      <div style={{ padding: "80px 24px 72px", textAlign: "center", position: "relative", overflow: "hidden" }}>
+        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 80% 50% at 50% 0%, rgba(34,197,94,0.08) 0%, transparent 70%)", pointerEvents: "none" }} />
+        <div style={{ maxWidth: 720, margin: "0 auto", position: "relative" }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.25)", borderRadius: 20, padding: "6px 16px", fontSize: 12, color: "#22c55e", fontWeight: 600, letterSpacing: 1, marginBottom: 24 }}>
+            ✦ LOCATION DIRECTE · SANS COMMISSION
+          </div>
+          <h1 style={{ fontSize: "clamp(36px, 7vw, 64px)", fontWeight: 900, lineHeight: 1.08, marginBottom: 20, background: "linear-gradient(160deg, #f1f5f9 0%, #94a3b8 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+            Villas & Appartements<br />d'Exception
           </h1>
-          <p style={{ color: "#94a3b8", fontSize: 18, lineHeight: 1.6 }}>
-            Réservez directement — sans frais de service.<br />7 propriétés d'exception pour vos vacances.
+          <p style={{ color: "#64748b", fontSize: 18, lineHeight: 1.65, maxWidth: 540, margin: "0 auto 36px" }}>
+            7 propriétés sélectionnées en <strong style={{ color: "#94a3b8" }}>Martinique</strong> et <strong style={{ color: "#94a3b8" }}>Île-de-France</strong>. Réservez directement auprès du propriétaire.
           </p>
+          {/* Stats */}
+          <div style={{ display: "flex", gap: 32, justifyContent: "center", flexWrap: "wrap" }}>
+            {[["7", "Propriétés"], ["0%", "Frais de service"], ["⭐ 4.9", "Note moyenne"]].map(([v, l]) => (
+              <div key={l} style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 24, fontWeight: 800, color: "#f1f5f9" }}>{v}</div>
+                <div style={{ fontSize: 12, color: "#475569" }}>{l}</div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Filters */}
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "32px 24px 0" }}>
-        <div style={{ display: "flex", gap: 8, marginBottom: 32 }}>
-          {lieux.map(l => (
-            <button key={l} onClick={() => setFilterLieu(l)} style={{
-              padding: "8px 18px", borderRadius: 20, border: "1px solid",
-              borderColor: filterLieu === l ? "#22c55e" : "#1e293b",
-              background: filterLieu === l ? "rgba(34,197,94,0.1)" : "transparent",
-              color: filterLieu === l ? "#22c55e" : "#64748b",
-              cursor: "pointer", fontSize: 14, fontWeight: filterLieu === l ? 600 : 400,
-            }}>
-              {l === "all" ? "Tous les biens" : l}
+      {/* Filters + Grid */}
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px 80px" }}>
+        <div style={{ display: "flex", gap: 8, marginBottom: 36, flexWrap: "wrap" }}>
+          {lieux.map(({ key, label }) => (
+            <button key={key} onClick={() => setFilterLieu(key)} style={{ padding: "9px 20px", borderRadius: 24, border: `1px solid ${filterLieu === key ? "#22c55e" : "#1e293b"}`, background: filterLieu === key ? "rgba(34,197,94,0.1)" : "transparent", color: filterLieu === key ? "#22c55e" : "#475569", cursor: "pointer", fontSize: 14, fontWeight: filterLieu === key ? 700 : 400, transition: "all 0.2s" }}>
+              {label}
             </button>
           ))}
         </div>
 
-        {/* Grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 24, paddingBottom: 80 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 28 }}>
           {filtered.map(b => (
             <BienCard key={b.id} bien={b} onBook={setSelectedBien} />
           ))}
@@ -547,47 +622,34 @@ export default function PublicSite() {
       </div>
 
       {/* Footer */}
-      <footer style={{ borderTop: "1px solid #1e293b", padding: "32px 24px", textAlign: "center", color: "#475569", fontSize: 13 }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div style={{ fontWeight: 700, fontSize: 16, color: "#64748b", marginBottom: 8 }}>🌺 Amaryllis Locations</div>
-          <div>7 propriétés · France & Martinique · Réservation directe sans frais</div>
-          <div style={{ marginTop: 16, display: "flex", gap: 24, justifyContent: "center", flexWrap: "wrap" }}>
-            <a href="/admin" style={{ color: "#475569", textDecoration: "none" }}>Espace propriétaire</a>
+      <footer style={{ borderTop: "1px solid #111d35", padding: "48px 24px" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 20 }}>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 6 }}>🌺 Amaryllis <span style={{ color: "#22c55e" }}>Locations</span></div>
+            <div style={{ color: "#374151", fontSize: 13 }}>7 propriétés · Réservation directe sans intermédiaire</div>
+          </div>
+          <div style={{ color: "#374151", fontSize: 13, textAlign: "right" }}>
+            <div>Paiement sécurisé par Stripe 🔒</div>
+            <a href="/admin" style={{ color: "#374151", textDecoration: "none", marginTop: 4, display: "block" }}>Espace propriétaire →</a>
           </div>
         </div>
       </footer>
 
-      {/* Booking modal */}
+      {/* Modal */}
       {selectedBien && (
-        <BookingModal
-          bien={selectedBien}
-          blockedDates={blockedDates[selectedBien.id] || []}
-          onClose={() => setSelectedBien(null)}
-        />
+        <BookingModal bien={selectedBien} blockedDates={[]} onClose={() => setSelectedBien(null)} />
       )}
     </div>
   );
 }
 
-// Styles
+// ── Shared styles ────────────────────────────────────────────────
 const btnPrimary = {
-  background: "#22c55e",
-  color: "#000",
-  border: "none",
-  borderRadius: 10,
-  padding: "12px 24px",
-  fontWeight: 700,
-  fontSize: 14,
-  cursor: "pointer",
+  border: "none", borderRadius: 12, padding: "13px 26px", fontWeight: 700, fontSize: 14,
+  cursor: "pointer", transition: "opacity 0.2s, transform 0.1s", display: "inline-flex", alignItems: "center", justifyContent: "center",
 };
-
-const btnSecondary = {
-  background: "transparent",
-  color: "#94a3b8",
-  border: "1px solid #1e293b",
-  borderRadius: 10,
-  padding: "12px 20px",
-  fontWeight: 600,
-  fontSize: 14,
-  cursor: "pointer",
+const btnBack = {
+  background: "transparent", border: "1px solid #1e293b", color: "#64748b", borderRadius: 12,
+  padding: "13px 20px", fontWeight: 600, fontSize: 14, cursor: "pointer",
 };
+const errStyle = { color: "#f87171", marginTop: 14, fontSize: 13, background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.2)", borderRadius: 8, padding: "10px 14px" };
