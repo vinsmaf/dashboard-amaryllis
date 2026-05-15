@@ -25,8 +25,18 @@ if (typeof document !== "undefined" && !document.getElementById("__site_styles")
   s.textContent = `
     @keyframes spin { to { transform: rotate(360deg); } }
     @keyframes fadeUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+    @keyframes slideInRight { from { opacity:0; transform:translateX(40px); } to { opacity:1; transform:translateX(0); } }
+    @keyframes slideInLeft  { from { opacity:0; transform:translateX(-40px); } to { opacity:1; transform:translateX(0); } }
     @keyframes floatLeaf { 0%,100% { transform:translateY(0) rotate(-3deg); } 50% { transform:translateY(-12px) rotate(3deg); } }
     @keyframes bloomIn { from { opacity:0; transform:scale(0.92); } to { opacity:1; transform:scale(1); } }
+    @keyframes organicMorph {
+      0%,100% { border-radius:60% 40% 30% 70%/60% 30% 70% 40%; transform:scale(1) rotate(0deg); }
+      25%      { border-radius:30% 60% 70% 40%/50% 60% 30% 60%; transform:scale(1.06) rotate(3deg); }
+      50%      { border-radius:50% 50% 20% 80%/25% 80% 20% 75%; transform:scale(0.96) rotate(-2deg); }
+      75%      { border-radius:70% 30% 60% 40%/70% 50% 60% 30%; transform:scale(1.03) rotate(2deg); }
+    }
+    @keyframes carouselProgress { from { transform:scaleX(0); } to { transform:scaleX(1); } }
     ::selection { background:rgba(196,114,84,0.2); color:#0e3b3a; }
     ::-webkit-scrollbar { width:4px; }
     ::-webkit-scrollbar-track { background:#faf5e9; }
@@ -416,6 +426,76 @@ const iconBtn = {
   fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center",
 };
 
+// ── Shader Background (canvas) ───────────────────────────────────
+function ShaderBg({ style = {} }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const c = ref.current;
+    if (!c) return;
+    const ctx = c.getContext("2d");
+    let rid, t = 0;
+
+    function resize() {
+      const r = Math.min(window.devicePixelRatio || 1, 2);
+      c.width = c.offsetWidth * r;
+      c.height = c.offsetHeight * r;
+      ctx.scale(r, r);
+    }
+    resize();
+    const ro = new ResizeObserver(resize);
+    ro.observe(c);
+
+    // Brand-colored blobs: ink base + coral / sand / cream
+    const BLOBS = [
+      { ox: 0.28, oy: 0.42, fx: 0.20, fy: 0.16, sp: 0.70, sq: 0.55, r: 0.60, rgb: "196,114,84",  a: 0.38 },
+      { ox: 0.72, oy: 0.32, fx: 0.16, fy: 0.22, sp: 1.10, sq: 0.65, r: 0.52, rgb: "201,166,115", a: 0.26 },
+      { ox: 0.50, oy: 0.78, fx: 0.24, fy: 0.18, sp: 0.55, sq: 1.00, r: 0.48, rgb: "7,38,38",     a: 0.70 },
+      { ox: 0.14, oy: 0.58, fx: 0.12, fy: 0.14, sp: 1.40, sq: 0.80, r: 0.32, rgb: "244,236,220", a: 0.07 },
+      { ox: 0.86, oy: 0.64, fx: 0.14, fy: 0.20, sp: 0.85, sq: 1.30, r: 0.40, rgb: "196,114,84",  a: 0.18 },
+    ];
+
+    function draw() {
+      t += 0.0028;
+      const w = c.offsetWidth, h = c.offsetHeight;
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = "#0e3b3a";
+      ctx.fillRect(0, 0, w, h);
+      for (const b of BLOBS) {
+        const bx = (b.ox + b.fx * Math.sin(t * b.sp + b.ox * 5)) * w;
+        const by = (b.oy + b.fy * Math.cos(t * b.sq + b.oy * 4)) * h;
+        const br = b.r * Math.max(w, h) * 0.72;
+        const g = ctx.createRadialGradient(bx, by, 0, bx, by, br);
+        g.addColorStop(0,   `rgba(${b.rgb},${b.a})`);
+        g.addColorStop(0.5, `rgba(${b.rgb},${b.a * 0.28})`);
+        g.addColorStop(1,   "rgba(0,0,0,0)");
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, w, h);
+      }
+      rid = requestAnimationFrame(draw);
+    }
+    draw();
+    return () => { cancelAnimationFrame(rid); ro.disconnect(); };
+  }, []);
+
+  return (
+    <canvas ref={ref} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", display: "block", ...style }} />
+  );
+}
+
+// ── Organic Loader ────────────────────────────────────────────────
+function OrganicLoader({ size = 32, color = CORAL }) {
+  return (
+    <div style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+      <div style={{
+        width: size, height: size,
+        background: color,
+        animation: "organicMorph 2.4s ease-in-out infinite",
+        flexShrink: 0,
+      }} />
+    </div>
+  );
+}
+
 // ── Booking Modal ────────────────────────────────────────────────
 function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
   const [step, setStep] = useState(1);
@@ -541,9 +621,9 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
         {step === 1 && (
           <>
             {loadingAvail && (
-              <div style={{ textAlign: "center", padding: "8px 0 4px", color: MUTED, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                <span style={{ display: "inline-block", width: 12, height: 12, border: `2px solid ${CORAL}`, borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
-                Chargement des disponibilités Airbnb…
+              <div style={{ textAlign: "center", padding: "8px 0 4px", color: MUTED, fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+                <OrganicLoader size={18} color={CORAL} />
+                Chargement des disponibilités…
               </div>
             )}
             <DateRangePicker checkin={checkin} checkout={checkout} blockedDates={blockedDates} onChange={(ci, co) => { setCheckin(ci); setCheckout(co); }} />
@@ -1087,6 +1167,188 @@ function PropertyDetail({ bien, onClose, onBook }) {
   );
 }
 
+// ── Hero Carousel ────────────────────────────────────────────────
+const CAROUSEL_DELAY = 6000;
+
+function HeroCarousel({ onDetail, onBook }) {
+  const [idx, setIdx] = useState(0);
+  const [animKey, setAnimKey] = useState(0);
+  const idxRef = useRef(0);
+  const timerRef = useRef(null);
+
+  function goTo(next) {
+    idxRef.current = next;
+    setIdx(next);
+    setAnimKey(k => k + 1);
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => goTo((idxRef.current + 1) % BIENS.length), CAROUSEL_DELAY);
+  }
+
+  useEffect(() => {
+    timerRef.current = setTimeout(() => goTo((idxRef.current + 1) % BIENS.length), CAROUSEL_DELAY);
+    return () => clearTimeout(timerRef.current);
+  }, []);
+
+  const bien = BIENS[idx];
+  const photo = bien.photos && bien.photos[0];
+
+  return (
+    <div style={{ position: "relative", height: "94vh", minHeight: 560, overflow: "hidden", background: "#072626" }}>
+      {/* Animated shader wallpaper */}
+      <ShaderBg />
+
+      {/* Property photo — sliding card on the right */}
+      {photo && (
+        <div
+          key={`photo-${animKey}`}
+          style={{
+            position: "absolute",
+            right: "6vw", top: "50%",
+            transform: "translateY(-50%)",
+            width: "clamp(260px, 38vw, 520px)",
+            aspectRatio: "3/4",
+            borderRadius: 16,
+            overflow: "hidden",
+            boxShadow: "0 40px 100px rgba(0,0,0,0.55)",
+            animation: "slideInRight 0.75s cubic-bezier(0.23,1,0.32,1) both",
+            zIndex: 2,
+          }}
+        >
+          <img src={photo} alt={bien.nom} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          {/* Price badge */}
+          <div style={{ position: "absolute", bottom: 16, left: 16, background: "rgba(14,59,58,0.88)", backdropFilter: "blur(10px)", borderRadius: 10, padding: "8px 14px" }}>
+            <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 22, color: "#faf5e9", lineHeight: 1 }}>{bien.prix}€</div>
+            <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 10, color: "rgba(250,245,233,0.55)", letterSpacing: "0.1em" }}>/ nuit</div>
+          </div>
+          {/* Photo count */}
+          {bien.photos.length > 1 && (
+            <div style={{ position: "absolute", top: 12, right: 12, background: "rgba(0,0,0,0.4)", backdropFilter: "blur(6px)", borderRadius: 20, padding: "3px 10px", fontSize: 10, fontFamily: "'Jost', sans-serif", color: "rgba(250,245,233,0.8)", letterSpacing: "0.05em" }}>
+              {bien.photos.length} photos
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Content — left */}
+      <div
+        key={`text-${animKey}`}
+        style={{
+          position: "absolute", left: "8vw", top: "50%",
+          transform: "translateY(-50%)",
+          maxWidth: "clamp(280px, 44vw, 540px)",
+          zIndex: 3,
+          animation: "slideInLeft 0.65s cubic-bezier(0.23,1,0.32,1) both",
+        }}
+      >
+        <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 10, color: CORAL, letterSpacing: "0.55em", textTransform: "uppercase", marginBottom: 16 }}>
+          {bien.lieu}
+        </div>
+        <h1 style={{
+          fontFamily: "'Jost', sans-serif", fontWeight: 200,
+          fontSize: "clamp(32px, 4.5vw, 68px)", letterSpacing: "0.08em",
+          textTransform: "uppercase", color: "#faf5e9",
+          margin: "0 0 14px", lineHeight: 1.05,
+        }}>
+          {bien.nom}
+        </h1>
+        {bien.rating && (
+          <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 12, color: "rgba(250,245,233,0.55)", marginBottom: 22, letterSpacing: "0.05em" }}>
+            <span style={{ color: GOLD }}>★ {bien.rating}</span>
+            {bien.reviews ? ` · ${bien.reviews} avis` : ""}
+            {` · ${bien.capacite} voyageurs`}
+          </div>
+        )}
+        <p style={{
+          fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic",
+          fontSize: 17, color: "rgba(250,245,233,0.65)", lineHeight: 1.75,
+          margin: "0 0 32px",
+          display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden",
+        }}>
+          {bien.desc}
+        </p>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button
+            onClick={() => onDetail(bien)}
+            style={{
+              background: "rgba(250,245,233,0.08)", border: "1px solid rgba(250,245,233,0.22)",
+              color: "#faf5e9", borderRadius: 6, padding: "13px 24px",
+              fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 12, letterSpacing: "0.1em",
+              cursor: "pointer", textTransform: "uppercase", backdropFilter: "blur(10px)",
+              transition: "background 0.2s",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(250,245,233,0.14)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "rgba(250,245,233,0.08)"; }}
+          >
+            Découvrir →
+          </button>
+          <button
+            onClick={() => onBook(bien)}
+            style={{
+              background: CORAL, border: "none", color: "#fff", borderRadius: 6,
+              padding: "13px 28px",
+              fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 12, letterSpacing: "0.1em",
+              cursor: "pointer", textTransform: "uppercase", transition: "opacity 0.2s",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.opacity = "0.88"; }}
+            onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
+          >
+            Réserver
+          </button>
+        </div>
+      </div>
+
+      {/* Bottom nav: dots + arrows */}
+      <div style={{ position: "absolute", bottom: 28, left: "8vw", right: "8vw", zIndex: 4, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        {/* Dots */}
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          {BIENS.map((b, i) => (
+            <button
+              key={b.id}
+              onClick={() => goTo(i)}
+              title={b.nom}
+              style={{
+                width: i === idx ? 28 : 7, height: 7, borderRadius: 4,
+                background: i === idx ? CORAL : "rgba(250,245,233,0.28)",
+                border: "none", cursor: "pointer", padding: 0,
+                transition: "all 0.3s cubic-bezier(0.23,1,0.32,1)",
+              }}
+            />
+          ))}
+        </div>
+        {/* Arrows + counter */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11, color: "rgba(250,245,233,0.35)", letterSpacing: "0.1em" }}>
+            {String(idx + 1).padStart(2, "0")} / {String(BIENS.length).padStart(2, "0")}
+          </span>
+          <button
+            onClick={() => goTo((idx - 1 + BIENS.length) % BIENS.length)}
+            style={{ background: "rgba(250,245,233,0.08)", border: "1px solid rgba(250,245,233,0.18)", color: "#faf5e9", width: 38, height: 38, borderRadius: "50%", cursor: "pointer", fontSize: 17, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)", transition: "background 0.2s" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(250,245,233,0.16)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "rgba(250,245,233,0.08)"; }}
+          >‹</button>
+          <button
+            onClick={() => goTo((idx + 1) % BIENS.length)}
+            style={{ background: "rgba(250,245,233,0.08)", border: "1px solid rgba(250,245,233,0.18)", color: "#faf5e9", width: 38, height: 38, borderRadius: "50%", cursor: "pointer", fontSize: 17, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)", transition: "background 0.2s" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(250,245,233,0.16)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "rgba(250,245,233,0.08)"; }}
+          >›</button>
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 2, background: "rgba(250,245,233,0.08)", zIndex: 5 }}>
+        <div
+          key={`bar-${animKey}`}
+          style={{
+            height: "100%", background: CORAL, transformOrigin: "left",
+            animation: `carouselProgress ${CAROUSEL_DELAY}ms linear both`,
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
 // ── Contact Section ──────────────────────────────────────────────
 const WA_NUMBER = "33610880772";
 const EMAIL = "vinsmaf@hotmail.com";
@@ -1157,28 +1419,14 @@ function ContactSection() {
             WhatsApp
           </a>
 
-          {/* Email direct */}
-          <a
-            href={`mailto:${EMAIL}`}
-            style={{
-              display: "inline-flex", alignItems: "center", gap: 10,
-              background: "transparent", color: NAVY,
-              border: `1px solid ${SAND}`,
-              borderRadius: 6, padding: "12px 24px",
-              textDecoration: "none",
-              fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13, letterSpacing: "0.08em",
-              textTransform: "uppercase", transition: "border-color 0.2s",
-              width: "100%", maxWidth: 280, boxSizing: "border-box",
-            }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = NAVY; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = SAND; }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          {/* Email — hover to reveal */}
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 10, padding: "12px 0", maxWidth: 280 }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth="1.5">
               <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
               <polyline points="22,6 12,13 2,6"/>
             </svg>
-            {EMAIL}
-          </a>
+            <HoverContact light />
+          </div>
         </div>
 
         {/* ─── Right: form ─── */}
@@ -1281,6 +1529,141 @@ function MerciPage() {
   );
 }
 
+// ── Property Dropdown (header) ────────────────────────────────────
+function PropertyDropdown({ onSelect }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const fn = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", fn);
+    return () => document.removeEventListener("mousedown", fn);
+  }, []);
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          display: "flex", alignItems: "center", gap: 6,
+          background: "transparent",
+          border: "1px solid rgba(250,245,233,0.18)",
+          color: "rgba(250,245,233,0.75)",
+          borderRadius: 20, padding: "5px 16px",
+          fontFamily: "'Jost', sans-serif", fontWeight: 300,
+          fontSize: 11, letterSpacing: "0.12em",
+          cursor: "pointer", textTransform: "uppercase",
+          transition: "all 0.18s",
+        }}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(196,114,84,0.5)"; e.currentTarget.style.color = "#faf5e9"; }}
+        onMouseLeave={e => { if (!open) { e.currentTarget.style.borderColor = "rgba(250,245,233,0.18)"; e.currentTarget.style.color = "rgba(250,245,233,0.75)"; } }}
+      >
+        Nos propriétés
+        <span style={{ fontSize: 9, transition: "transform 0.2s", display: "inline-block", transform: open ? "rotate(180deg)" : "rotate(0)" }}>▾</span>
+      </button>
+
+      {open && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 10px)", left: 0,
+          background: "#0e3b3a",
+          border: "1px solid rgba(250,245,233,0.1)",
+          borderRadius: 14, padding: "8px",
+          zIndex: 500, minWidth: 280,
+          boxShadow: "0 16px 48px rgba(0,0,0,0.4)",
+          animation: "fadeUp 0.18s ease both",
+        }}>
+          {BIENS.map(b => (
+            <button
+              key={b.id}
+              onClick={() => { onSelect(b); setOpen(false); }}
+              style={{
+                width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+                background: "transparent", border: "none",
+                color: "rgba(250,245,233,0.8)", borderRadius: 8,
+                padding: "10px 14px", cursor: "pointer",
+                textAlign: "left", transition: "background 0.15s",
+                gap: 12,
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(196,114,84,0.12)"; e.currentTarget.style.color = "#faf5e9"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "rgba(250,245,233,0.8)"; }}
+            >
+              <div>
+                <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13, letterSpacing: "0.05em" }}>{b.nom}</div>
+                <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 10, color: "rgba(250,245,233,0.4)", letterSpacing: "0.05em", marginTop: 2 }}>{b.lieu}</div>
+              </div>
+              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 13, color: CORAL, flexShrink: 0 }}>{b.prix}€</div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Hover Contact Preview ─────────────────────────────────────────
+function HoverContact({ light = false }) {
+  const [show, setShow] = useState(false);
+  const waMsg = encodeURIComponent("Bonjour, je souhaite obtenir des informations sur une location Amaryllis.");
+  const baseColor = light ? "rgba(14,59,58,0.75)" : "rgba(250,245,233,0.6)";
+  const dotColor  = light ? "rgba(14,59,58,0.35)" : "rgba(250,245,233,0.25)";
+
+  return (
+    <div
+      style={{ position: "relative", display: "inline-block" }}
+      onMouseEnter={() => setShow(true)}
+      onMouseLeave={() => setShow(false)}
+    >
+      <span style={{
+        fontSize: 12, fontFamily: "'Jost', sans-serif", fontWeight: 300,
+        color: baseColor, cursor: "default",
+        borderBottom: `1px dotted ${dotColor}`,
+        letterSpacing: "0.05em",
+        paddingBottom: 1,
+      }}>
+        Contact
+      </span>
+
+      {show && (
+        <div style={{
+          position: "absolute", bottom: "calc(100% + 10px)", left: "50%",
+          transform: "translateX(-50%)",
+          background: "#0e3b3a",
+          border: "1px solid rgba(250,245,233,0.1)",
+          borderRadius: 12, padding: "14px 16px",
+          minWidth: 210, zIndex: 600,
+          boxShadow: "0 12px 36px rgba(0,0,0,0.35)",
+          animation: "fadeUp 0.15s ease both",
+          pointerEvents: "all",
+        }}>
+          {/* Arrow */}
+          <div style={{ position: "absolute", bottom: -5, left: "50%", transform: "translateX(-50%) rotate(45deg)", width: 10, height: 10, background: "#0e3b3a", border: "0 solid transparent", borderRight: "1px solid rgba(250,245,233,0.1)", borderBottom: "1px solid rgba(250,245,233,0.1)" }} />
+
+          <a
+            href={`https://wa.me/${WA_NUMBER}?text=${waMsg}`}
+            target="_blank" rel="noopener noreferrer"
+            style={{ display: "flex", alignItems: "center", gap: 9, color: "#faf5e9", textDecoration: "none", padding: "7px 0", borderBottom: "1px solid rgba(250,245,233,0.08)", fontFamily: "'Jost', sans-serif", fontSize: 12, fontWeight: 300, letterSpacing: "0.05em" }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#25D366">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+            </svg>
+            WhatsApp
+          </a>
+          <a
+            href={`mailto:${EMAIL}`}
+            style={{ display: "flex", alignItems: "center", gap: 9, color: "#faf5e9", textDecoration: "none", padding: "7px 0 0", fontFamily: "'Jost', sans-serif", fontSize: 12, fontWeight: 300, letterSpacing: "0.05em" }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(250,245,233,0.7)" strokeWidth="1.5">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+              <polyline points="22,6 12,13 2,6"/>
+            </svg>
+            Email
+          </a>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main ─────────────────────────────────────────────────────────
 export default function PublicSite() {
   const [selectedBien, setSelectedBien] = useState(null);
@@ -1360,135 +1743,22 @@ export default function PublicSite() {
           </div>
         </div>
 
-        {/* Property selector strip */}
+        {/* Property dropdown strip */}
         <div style={{
           height: 40, background: "#072626",
           padding: "0 28px",
           display: "flex", alignItems: "center",
-          overflowX: "auto",
-          gap: 6,
-          scrollbarWidth: "none",
-          WebkitOverflowScrolling: "touch",
+          borderTop: "1px solid rgba(250,245,233,0.05)",
+          gap: 16,
         }}>
-          {BIENS.map(b => (
-            <button
-              key={b.id}
-              onClick={() => setDetailBien(b)}
-              style={{
-                flexShrink: 0,
-                background: "transparent",
-                border: "1px solid rgba(250,245,233,0.14)",
-                color: "rgba(250,245,233,0.7)",
-                borderRadius: 20,
-                padding: "4px 14px",
-                fontFamily: "'Jost', sans-serif",
-                fontWeight: 300,
-                fontSize: 11,
-                letterSpacing: "0.1em",
-                cursor: "pointer",
-                textTransform: "uppercase",
-                whiteSpace: "nowrap",
-                transition: "all 0.18s",
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = "rgba(196,114,84,0.2)"; e.currentTarget.style.borderColor = "rgba(196,114,84,0.5)"; e.currentTarget.style.color = "#faf5e9"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "rgba(250,245,233,0.14)"; e.currentTarget.style.color = "rgba(250,245,233,0.7)"; }}
-            >
-              {b.nom}
-            </button>
-          ))}
+          <PropertyDropdown onSelect={setDetailBien} />
+          <div style={{ height: 16, width: 1, background: "rgba(250,245,233,0.1)" }} />
+          <HoverContact />
         </div>
       </header>
 
-      {/* ── HERO ── */}
-      <div style={{ position: "relative", minHeight: "92vh", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", background: IVORY }}>
-
-        {/* Warm radial glow */}
-        <div style={{
-          position: "absolute", inset: 0, pointerEvents: "none",
-          background: `radial-gradient(ellipse 70% 60% at 20% 50%, rgba(200,85,61,0.06) 0%, transparent 65%),
-                       radial-gradient(ellipse 50% 60% at 80% 40%, rgba(196,146,42,0.05) 0%, transparent 65%)`,
-        }} />
-
-        {/* Amaryllis mark — large ghost, top-right */}
-        <svg style={{ position:"absolute", top: -60, right: -80, opacity: 0.055, pointerEvents:"none", animation:"floatLeaf 10s ease-in-out infinite" }}
-          width="520" height="520" viewBox="0 0 92 92">
-          <g transform="translate(46 46)" stroke="#0e3b3a" strokeWidth="1" fill="none">
-            {[0, 60, 120, 180, 240, 300].map((rot, i) => (
-              <g key={i} transform={`rotate(${rot})`}>
-                <path d="M 0 0 L 0 -38 L 8 -20 Z" fill="#0e3b3a" />
-                <path d="M 0 0 L 0 -38 L -8 -20 Z" fill="none" stroke="#0e3b3a" strokeWidth="0.8" />
-              </g>
-            ))}
-            <circle r="3" fill="#c9a673" />
-          </g>
-        </svg>
-
-        {/* Amaryllis mark — smaller ghost, bottom-left */}
-        <svg style={{ position:"absolute", bottom: -40, left: -60, opacity: 0.04, pointerEvents:"none", animation:"floatLeaf 13s ease-in-out infinite reverse" }}
-          width="340" height="340" viewBox="0 0 92 92">
-          <g transform="translate(46 46)" stroke="#0e3b3a" strokeWidth="1" fill="none">
-            {[30, 90, 150, 210, 270, 330].map((rot, i) => (
-              <g key={i} transform={`rotate(${rot})`}>
-                <path d="M 0 0 L 0 -38 L 8 -20 Z" fill="#0e3b3a" />
-                <path d="M 0 0 L 0 -38 L -8 -20 Z" fill="none" stroke="#0e3b3a" strokeWidth="0.8" />
-              </g>
-            ))}
-            <circle r="3" fill="#c9a673" />
-          </g>
-        </svg>
-
-        {/* Hero content */}
-        <div style={{ position:"relative", zIndex:2, maxWidth:760, margin:"0 auto", padding:"0 32px", textAlign:"center" }}>
-
-          <div style={{ animation:"fadeUp 0.5s ease forwards", opacity:0, animationDelay:"0.1s", marginBottom:24 }}>
-            <span style={{ fontFamily:"'Jost', sans-serif", fontSize:10, color:CORAL, letterSpacing:"0.6em", textTransform:"uppercase", fontWeight:300 }}>
-              LOCATIONS D'EXCEPTION
-            </span>
-          </div>
-
-          <div style={{ animation:"fadeUp 0.6s ease forwards", opacity:0, animationDelay:"0.25s" }}>
-            <h1 style={{
-              fontFamily:"'Jost', sans-serif",
-              fontSize:"clamp(52px, 10vw, 108px)", fontWeight:200, lineHeight:1.05,
-              color: NAVY, margin:"0 0 20px",
-              letterSpacing: "0.12em",
-              textTransform: "uppercase",
-            }}>Amaryllis</h1>
-          </div>
-
-          <div style={{ animation:"fadeUp 0.6s ease forwards", opacity:0, animationDelay:"0.4s", marginBottom:40 }}>
-            <p style={{ fontFamily:"'Cormorant Garamond', serif", fontSize:20, fontWeight:400, color:MUTED, fontStyle:"italic", margin:0, lineHeight:1.5 }}>
-              Martinique · Paris — Réservez sans intermédiaire
-            </p>
-          </div>
-
-          <div style={{ animation:"fadeUp 0.6s ease forwards", opacity:0, animationDelay:"0.55s", display:"flex", gap:12, justifyContent:"center", flexWrap:"wrap", marginBottom:44 }}>
-            {[["7", "propriétés"], ["⭐ 4.8", "note moyenne"], ["0%", "commission"]].map(([v, l]) => (
-              <div key={l} style={{ background:"#fff", border:`1px solid ${SAND}`, borderRadius:8, padding:"10px 18px", textAlign:"center" }}>
-                <div style={{ fontWeight:800, fontSize:18, color:NAVY }}>{v}</div>
-                <div style={{ fontSize:11, color:MUTED, marginTop:2 }}>{l}</div>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ animation:"fadeUp 0.6s ease forwards", opacity:0, animationDelay:"0.7s" }}>
-            <a href="#properties" style={{
-              display:"inline-flex", alignItems:"center", gap:8,
-              background:CORAL, color:"#fff",
-              padding:"15px 36px", borderRadius:6,
-              fontWeight:700, fontSize:14,
-              letterSpacing:1, textTransform:"uppercase",
-              textDecoration:"none",
-              boxShadow:"0 8px 24px rgba(200,85,61,0.3)",
-              transition:"all 0.2s",
-            }}>
-              Découvrir les villas →
-            </a>
-          </div>
-
-          <div style={{ animation:"fadeUp 0.6s ease forwards", opacity:0, animationDelay:"1s", marginTop:56, color:SAND, fontSize:12, letterSpacing:3 }}>↓</div>
-        </div>
-      </div>
+      {/* ── HERO CAROUSEL ── */}
+      <HeroCarousel onDetail={setDetailBien} onBook={openBien} />
 
       {/* ── PROPERTIES SECTION ── */}
       <div id="properties" style={{ maxWidth: 1280, margin: "0 auto", padding: "80px 32px", background: IVORY }}>
@@ -1564,8 +1834,8 @@ export default function PublicSite() {
             <div style={{ display: "flex", gap: 48, flexWrap: "wrap" }}>
               <div>
                 <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 10, letterSpacing: "0.3em", textTransform: "uppercase", color: "rgba(250,245,233,0.35)", marginBottom: 10 }}>Contact</div>
-                <a href={`https://wa.me/${WA_NUMBER}`} target="_blank" rel="noopener noreferrer" style={{ display: "block", fontSize: 12, color: "rgba(250,245,233,0.6)", textDecoration: "none", fontFamily: "'Jost', sans-serif", fontWeight: 300, marginBottom: 6 }}>WhatsApp</a>
-                <a href={`mailto:${EMAIL}`} style={{ display: "block", fontSize: 12, color: "rgba(250,245,233,0.6)", textDecoration: "none", fontFamily: "'Jost', sans-serif", fontWeight: 300 }}>{EMAIL}</a>
+                <a href={`https://wa.me/${WA_NUMBER}`} target="_blank" rel="noopener noreferrer" style={{ display: "block", fontSize: 12, color: "rgba(250,245,233,0.6)", textDecoration: "none", fontFamily: "'Jost', sans-serif", fontWeight: 300, marginBottom: 8 }}>WhatsApp</a>
+                <HoverContact />
               </div>
               <div>
                 <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 10, letterSpacing: "0.3em", textTransform: "uppercase", color: "rgba(250,245,233,0.35)", marginBottom: 10 }}>Propriétés</div>
