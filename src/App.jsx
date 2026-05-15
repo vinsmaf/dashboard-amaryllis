@@ -292,7 +292,7 @@ async function syncFromSheets(biens, scriptUrl) {
 // ============================================================================
 // PARSER ICAL
 // ============================================================================
-function parseICS(text, bienId) {
+function parseICS(text, bienId, canal = "airbnb") {
   return text.split("BEGIN:VEVENT").slice(1).map(block => {
     const get = (key) => {
       const m = block.match(new RegExp(key + "[^:]*:([^\\r\\n]+)"));
@@ -356,11 +356,12 @@ function parseICS(text, bienId) {
     const montantRaw = descGet(["Montant total","Montant","Prix total","Total payé","Total","Amount","Payout"]);
     const montant = montantRaw ? parseFloat(montantRaw.replace(/[^0-9.,]/g, "").replace(",", ".")) || 0 : 0;
 
-    const voyageur = sum.replace(/^(Réservé|Reserved|Booking|CLOSED)\s*[-–]?\s*/i, "").replace(/\(.*\)/g, "").trim() || "Voyageur Airbnb";
+    const defaultName = canal === "booking" ? "Voyageur Booking" : "Voyageur Airbnb";
+    const voyageur = sum.replace(/^(Réservé|Reserved|Booking|CLOSED)\s*[-–]?\s*/i, "").replace(/\(.*\)/g, "").trim() || defaultName;
 
     return {
-      id: get("UID") || `${bienId}-${ci}`,
-      bienId, voyageur, canal: "airbnb",
+      id: get("UID") || `${bienId}-${ci}-${canal}`,
+      bienId, voyageur, canal,
       checkin: ci, checkout: co,
       checkin_time, checkout_time, nb_guests,
       reservation_code, phone,
@@ -671,7 +672,7 @@ function Cockpit({ biens, n, mob, onUpdateRevenu }) {
 // ============================================================================
 const EMPTY_FORM = { bienId: "amaryllis", voyageur: "", canal: "booking", checkin: "", checkout: "", checkin_time: "", checkout_time: "", nb_guests: "", montant: "", notes: "", menage: "", reservation_code: "", phone: "" };
 
-function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, scriptUrl }) {
+function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalUrlsBooking, saveUrlsBooking, scriptUrl }) {
   const [showUrls, setShowUrls] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [showForm, setShowForm] = useState(false);
@@ -681,10 +682,10 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, scrip
   const [icalStatus, setIcalStatus] = useState({});
   const [view, setView] = useState("todo");
 
-  const importIcal = useCallback(async (bienId, currentResas) => {
-    const url = icalUrls[bienId];
-    if (!url) return;
-    setIcalStatus(s => ({ ...s, [bienId]: "loading" }));
+  const importIcal = useCallback(async (bienId, canal, url, currentResas) => {
+    if (!url) return currentResas;
+    const statusKey = `${bienId}_${canal}`;
+    setIcalStatus(s => ({ ...s, [statusKey]: "loading" }));
     try {
       let text = "";
       try {
@@ -696,24 +697,26 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, scrip
         text = await r2.text();
       }
       if (!text.includes("VCALENDAR")) throw new Error("Format invalide");
-      const newEvents = parseICS(text, bienId);
-      const merged = [...currentResas.filter(r => !(r.bienId === bienId && r.fromIcal)), ...newEvents];
+      const newEvents = parseICS(text, bienId, canal);
+      const merged = [...currentResas.filter(r => !(r.bienId === bienId && r.fromIcal && r.canal === canal)), ...newEvents];
       saveRes(merged);
-      setIcalStatus(s => ({ ...s, [bienId]: `✓ ${newEvents.length}` }));
+      setIcalStatus(s => ({ ...s, [statusKey]: `✓ ${newEvents.length}` }));
       return merged;
     } catch (e) {
-      setIcalStatus(s => ({ ...s, [bienId]: `⚠ ${e.message}` }));
+      setIcalStatus(s => ({ ...s, [statusKey]: `⚠ ${e.message}` }));
       return currentResas;
     }
-  }, [icalUrls, saveRes]);
+  }, [saveRes]);
 
   useEffect(() => {
-    const keys = Object.keys(icalUrls).filter(k => icalUrls[k] && icalUrls[k].length > 10);
-    if (keys.length === 0) return;
+    const sources = [];
+    Object.keys(icalUrls).forEach(k => { if (icalUrls[k]?.length > 10) sources.push({ bienId: k, canal: "airbnb", url: icalUrls[k] }); });
+    Object.keys(icalUrlsBooking).forEach(k => { if (icalUrlsBooking[k]?.length > 10) sources.push({ bienId: k, canal: "booking", url: icalUrlsBooking[k] }); });
+    if (sources.length === 0) return;
     let current = reservations;
     (async () => {
-      for (const k of keys) {
-        current = await importIcal(k, current) || current;
+      for (const s of sources) {
+        current = await importIcal(s.bienId, s.canal, s.url, current) || current;
       }
     })();
   }, []);
@@ -754,11 +757,13 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, scrip
   };
   const togRes = (id, field) => saveRes(reservations.map(r => r.id === id ? { ...r, [field]: !r[field] } : r));
   const syncAll = () => {
-    const keys = Object.keys(icalUrls).filter(k => icalUrls[k]);
+    const sources = [];
+    Object.keys(icalUrls).forEach(k => { if (icalUrls[k]) sources.push({ bienId: k, canal: "airbnb", url: icalUrls[k] }); });
+    Object.keys(icalUrlsBooking).forEach(k => { if (icalUrlsBooking[k]) sources.push({ bienId: k, canal: "booking", url: icalUrlsBooking[k] }); });
     let current = reservations;
     (async () => {
-      for (const k of keys) {
-        current = await importIcal(k, current) || current;
+      for (const s of sources) {
+        current = await importIcal(s.bienId, s.canal, s.url, current) || current;
       }
     })();
   };
@@ -822,7 +827,7 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, scrip
           <div style={{ background: "rgba(255,90,95,0.07)", border: "1px solid rgba(255,90,95,0.2)", borderRadius: 11, padding: "11px 14px", marginBottom: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontSize: 13, fontWeight: 600, color: "#e2e8f0" }}>
-                Airbnb iCal
+                iCal sync
                 {Object.values(icalStatus).some(v => v === "loading") && <span style={{ fontSize: 10, color: "#0ea5e9", marginLeft: 6 }}>⟳ Synchro…</span>}
                 {!Object.values(icalStatus).some(v => v === "loading") && Object.keys(icalStatus).length > 0 && <span style={{ fontSize: 10, color: "#10b981", marginLeft: 6 }}>✓ Synchronisé</span>}
               </span>
@@ -836,21 +841,43 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, scrip
               </div>
             </div>
             {showUrls && (
-              <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 7 }}>
-                {biens.filter(b => b.type !== "long").map(b => (
-                  <div key={b.id} style={{ display: "grid", gridTemplateColumns: "80px 1fr auto", gap: 5, alignItems: "center" }}>
-                    <div style={{ fontSize: 10, color: "#94a3b8" }}>{b.emoji} {b.nom.replace("Villa ", "").replace("T2 ", "")}</div>
-                    <input
-                      value={icalUrls[b.id] || ""}
-                      onChange={(e) => saveUrls({ ...icalUrls, [b.id]: e.target.value })}
-                      placeholder="URL iCal…"
-                      style={{ padding: "5px 7px", background: "#0f172a", border: "1px solid #334155", borderRadius: 6, color: "#e2e8f0", fontSize: 10, width: "100%", boxSizing: "border-box" }}
-                    />
-                    <div style={{ fontSize: 10, color: icalStatus[b.id]?.startsWith("✓") ? "#10b981" : "#f59e0b", whiteSpace: "nowrap" }}>
-                      {icalStatus[b.id] || ""}
+              <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={{ fontSize: 10, color: "#FF5A5F", fontWeight: 600, letterSpacing: 1, textTransform: "uppercase" }}>Airbnb</div>
+                {biens.filter(b => b.type !== "long").map(b => {
+                  const sk = `${b.id}_airbnb`;
+                  return (
+                    <div key={b.id} style={{ display: "grid", gridTemplateColumns: "80px 1fr auto", gap: 5, alignItems: "center" }}>
+                      <div style={{ fontSize: 10, color: "#94a3b8" }}>{b.emoji} {b.nom.replace("Villa ", "").replace("T2 ", "")}</div>
+                      <input
+                        value={icalUrls[b.id] || ""}
+                        onChange={(e) => saveUrls({ ...icalUrls, [b.id]: e.target.value })}
+                        placeholder="URL iCal Airbnb…"
+                        style={{ padding: "5px 7px", background: "#0f172a", border: "1px solid #334155", borderRadius: 6, color: "#e2e8f0", fontSize: 10, width: "100%", boxSizing: "border-box" }}
+                      />
+                      <div style={{ fontSize: 10, color: icalStatus[sk]?.startsWith("✓") ? "#10b981" : "#f59e0b", whiteSpace: "nowrap" }}>
+                        {icalStatus[sk] || ""}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
+                <div style={{ fontSize: 10, color: "#003580", fontWeight: 600, letterSpacing: 1, textTransform: "uppercase", marginTop: 4, color: "#60a5fa" }}>Booking.com</div>
+                {biens.filter(b => b.type !== "long").map(b => {
+                  const sk = `${b.id}_booking`;
+                  return (
+                    <div key={b.id} style={{ display: "grid", gridTemplateColumns: "80px 1fr auto", gap: 5, alignItems: "center" }}>
+                      <div style={{ fontSize: 10, color: "#94a3b8" }}>{b.emoji} {b.nom.replace("Villa ", "").replace("T2 ", "")}</div>
+                      <input
+                        value={icalUrlsBooking[b.id] || ""}
+                        onChange={(e) => saveUrlsBooking({ ...icalUrlsBooking, [b.id]: e.target.value })}
+                        placeholder="URL iCal Booking.com…"
+                        style={{ padding: "5px 7px", background: "#0f172a", border: "1px solid #1e3a5f", borderRadius: 6, color: "#e2e8f0", fontSize: 10, width: "100%", boxSizing: "border-box" }}
+                      />
+                      <div style={{ fontSize: 10, color: icalStatus[sk]?.startsWith("✓") ? "#10b981" : "#f59e0b", whiteSpace: "nowrap" }}>
+                        {icalStatus[sk] || ""}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -3139,6 +3166,9 @@ export default function App() {
   const [icalUrls, setIcalUrls] = useState(() => {
     try { const u = localStorage.getItem("ical_urls"); return u ? { ...ICAL_DEFAULTS, ...JSON.parse(u) } : { ...ICAL_DEFAULTS }; } catch { return { ...ICAL_DEFAULTS }; }
   });
+  const [icalUrlsBooking, setIcalUrlsBooking] = useState(() => {
+    try { const u = localStorage.getItem("ical_urls_booking"); return u ? JSON.parse(u) : {}; } catch { return {}; }
+  });
   const [mob, setMob] = useState(typeof window !== "undefined" && window.innerWidth < 640);
 
   useEffect(() => {
@@ -3155,6 +3185,10 @@ export default function App() {
   const saveUrls = useCallback((urls) => {
     setIcalUrls(urls);
     try { localStorage.setItem("ical_urls", JSON.stringify(urls)); } catch (e) {}
+  }, []);
+  const saveUrlsBooking = useCallback((urls) => {
+    setIcalUrlsBooking(urls);
+    try { localStorage.setItem("ical_urls_booking", JSON.stringify(urls)); } catch (e) {}
   }, []);
 
   const doSync = useCallback(async () => {
@@ -3252,7 +3286,7 @@ export default function App() {
       </div>
 
       <div style={{ padding: mob ? "12px" : "18px 22px", maxWidth: 1200, paddingBottom: 76 }}>
-        {tab === "planning" && <Planning biens={biens} mob={mob} reservations={reservations} saveRes={saveRes} icalUrls={icalUrls} saveUrls={saveUrls} scriptUrl={scriptUrl} />}
+        {tab === "planning" && <Planning biens={biens} mob={mob} reservations={reservations} saveRes={saveRes} icalUrls={icalUrls} saveUrls={saveUrls} icalUrlsBooking={icalUrlsBooking} saveUrlsBooking={saveUrlsBooking} scriptUrl={scriptUrl} />}
         {tab === "cockpit" && <Cockpit biens={biens} n={n} mob={mob} onUpdateRevenu={onUpdateRevenu} />}
         {tab === "previsionnel" && <Previsionnel biens={biens} n={n} mob={mob} hist={hist} />}
         {tab === "charges" && <Charges biens={biens} n={n} mob={mob} />}
