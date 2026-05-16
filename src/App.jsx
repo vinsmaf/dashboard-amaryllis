@@ -315,8 +315,9 @@ function parseICS(text, bienId, canal = "airbnb") {
     const co = cleanDate(rawDtEnd);
     const sum = get("SUMMARY");
     if (!ci || !co) return null;
-    // Filter out placeholder/block events (Airbnb "not available/blocked", Booking.com "CLOSED")
-    if (/not available|blocked|^closed$/i.test(sum)) return null;
+    // Filter out Airbnb auto-block events only ("not available", "Blocked")
+    // NOTE: Booking.com uses SUMMARY:CLOSED for real reservations — do NOT filter it
+    if (/not available|blocked/i.test(sum) && canal !== "booking") return null;
 
     // Parse DESCRIPTION — Airbnb uses \n literal in iCal
     const desc = get("DESCRIPTION").replace(/\\n/g, "\n");
@@ -351,17 +352,26 @@ function parseICS(text, bienId, canal = "airbnb") {
     const children  = parseInt(childStr) || 0;
     const nb_guests = adults + children || parseInt(descGet(["Guests?","Voyageurs?","Personnes?"])) || 0;
 
-    const reservation_code = descGet(["Code de la réservation","Code de reservation","Reservation Code","Confirmation Code"]);
     const phone = descGet(["Téléphone","Telephone","Phone"]);
 
     const montantRaw = descGet(["Montant total","Montant","Prix total","Total payé","Total","Amount","Payout"]);
     const montant = montantRaw ? parseFloat(montantRaw.replace(/[^0-9.,]/g, "").replace(",", ".")) || 0 : 0;
 
+    const uid = get("UID");
     const defaultName = canal === "booking" ? "Voyageur Booking" : "Voyageur Airbnb";
-    const voyageur = sum.replace(/^(Réservé|Reserved|Booking|CLOSED)\s*[-–]?\s*/i, "").replace(/\(.*\)/g, "").trim() || defaultName;
+    // Booking.com uses SUMMARY:CLOSED — extract booking ID from UID (e.g. "BDC123456@booking.com")
+    let voyageur = sum.replace(/^(Réservé|Reserved|Booking|CLOSED)\s*[-–]?\s*/i, "").replace(/\(.*\)/g, "").trim();
+    if (!voyageur && canal === "booking" && uid) {
+      voyageur = uid.split("@")[0].replace(/^booking[_-]?/i, "").trim();
+    }
+    voyageur = voyageur || defaultName;
+
+    // Extract booking code from description or UID for Booking.com
+    const reservation_code = descGet(["Code de la réservation","Code de reservation","Reservation Code","Confirmation Code","Booking Number","Numéro de réservation"])
+      || (canal === "booking" && uid ? uid.split("@")[0] : "");
 
     return {
-      id: get("UID") || `${bienId}-${ci}-${canal}`,
+      id: uid || `${bienId}-${ci}-${canal}`,
       bienId, voyageur, canal,
       checkin: ci, checkout: co,
       checkin_time, checkout_time, nb_guests,
@@ -720,8 +730,13 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
     try {
       let text = "";
       const proxies = [
+        // 1. Notre propre proxy Netlify (server-side, pas de CORS)
+        () => tryFetch(`/api/fetch-ical?url=${encodeURIComponent(url)}`),
+        // 2. Fetch direct (marche pour Airbnb, pas Booking.com en prod)
         () => tryFetch(url),
+        // 3. Google Apps Script proxy (si configuré)
         scriptUrl ? () => tryFetch(`${scriptUrl}?action=fetchIcal&url=${encodeURIComponent(url)}`) : null,
+        // 4. Proxies publics en dernier recours
         () => tryFetch(`https://corsproxy.io/?${encodeURIComponent(url)}`),
         () => tryFetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`),
       ].filter(Boolean);

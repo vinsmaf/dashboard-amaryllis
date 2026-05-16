@@ -46,11 +46,7 @@ function parseIcal(text) {
     const startM = ev.match(/DTSTART(?:;[^:]+)?:(\d{8})/);
     const endM   = ev.match(/DTEND(?:;[^:]+)?:(\d{8})/);
     if (!startM || !endM) continue;
-
-    // Skip Airbnb "not available / blocked" and Booking.com "CLOSED" placeholder events
-    const summaryM = ev.match(/SUMMARY[^:]*:([^\r\n]+)/);
-    const summary  = summaryM ? summaryM[1].trim() : "";
-    if (/not available|blocked|^closed$/i.test(summary)) continue;
+    // All events block dates (Airbnb blocks, Booking.com CLOSED reservations, etc.)
 
     const fmt = (s) => `${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}`;
     let cur = new Date(fmt(startM[1]) + "T12:00:00Z");
