@@ -29,8 +29,6 @@ export async function onRequestGet(context) {
   // status : "0"=nouveau, "1"=confirmé, "2"=annulé, "4"=paiement en attente, "99"=tous
   const statusFilter = params.get("status"); // "" = pas de filtre
 
-  const auth = { apiKey, propKey };
-
   // ── Pagination : boucle jusqu'à récupérer toutes les réservations ──
   let allBookings = [];
   let offset      = 0;
@@ -39,11 +37,13 @@ export async function onRequestGet(context) {
 
   try {
     while (pageCount < MAX_PAGES) {
+      // Beds24 v1 : apiKey + propKey à la RACINE du body (pas sous "authentication")
       const body = {
-        authentication: auth,
-        propId:  PROP_ID,
-        firstId: String(offset),
-        numId:   String(PAGE_SIZE),
+        apiKey,
+        propKey,
+        propId:  Number(PROP_ID),
+        firstId: offset,
+        numId:   PAGE_SIZE,
         ...filters,
       };
 
@@ -139,10 +139,11 @@ export async function onRequest(context) {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({
-          authentication: { apiKey, propKey },
-          propId:  PROP_ID,
-          firstId: "0",
-          numId:   "5",
+          apiKey,
+          propKey,
+          propId:  Number(PROP_ID),
+          firstId: 0,
+          numId:   5,
         }),
       });
       const data = await res.json();
