@@ -1254,21 +1254,26 @@ function PropertyDetail({ bien, onClose, onBook }) {
           animation: "fadeIn 0.2s ease both",
         }}
       >
-        {/* Image centrée, non zoomée */}
-        <img
-          src={photos[photoIdx]}
-          alt={bien.nom}
+        {/* Conteneur fixe → image entière visible, non zoomée */}
+        <div
           onClick={e => e.stopPropagation()}
-          style={{
-            maxWidth: "90vw",
-            maxHeight: "90vh",
-            width: "auto",
-            height: "auto",
-            display: "block",
-            borderRadius: 4,
-            boxShadow: "0 24px 80px rgba(0,0,0,0.8)",
-          }}
-        />
+          style={{ width: "90vw", height: "90vh", display: "flex", alignItems: "center", justifyContent: "center" }}
+        >
+          <img
+            src={photos[photoIdx]}
+            alt={bien.nom}
+            style={{
+              maxWidth: "100%",
+              maxHeight: "100%",
+              width: "auto",
+              height: "auto",
+              objectFit: "contain",
+              display: "block",
+              borderRadius: 4,
+              boxShadow: "0 24px 80px rgba(0,0,0,0.8)",
+            }}
+          />
+        </div>
         {/* Bouton fermer */}
         <button
           onClick={() => setLightbox(false)}
