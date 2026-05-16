@@ -1015,7 +1015,7 @@ function BienCard({ bien, onDetail, onBook }) {
       }}
     >
       {/* Photo section */}
-      <div style={{ position: "relative", height: 260, overflow: "hidden", background: CREAM }}>
+      <div style={{ position: "relative", height: 260, overflow: "hidden", background: "#0e2020" }}>
 
         {currentPhoto ? (
           <img
@@ -1023,10 +1023,9 @@ function BienCard({ bien, onDetail, onBook }) {
             src={currentPhoto}
             alt={bien.nom}
             style={{
-              width: "100%", height: "100%", objectFit: "cover",
-              transition: "transform 0.6s cubic-bezier(0.23,1,0.32,1), opacity 0.3s",
-              transform: hovered ? "scale(1.06)" : "scale(1)",
-              filter: "saturate(1.15) contrast(1.05) brightness(1.02)",
+              width: "100%", height: "100%", objectFit: "contain",
+              transition: "opacity 0.3s",
+              display: "block",
             }}
           />
         ) : (
@@ -1039,13 +1038,13 @@ function BienCard({ bien, onDetail, onBook }) {
         )}
 
         {/* Dark overlay gradient bottom */}
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(14,59,58,0.7) 0%, transparent 60%)" }} />
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(14,59,58,0.6) 0%, transparent 50%)" }} />
 
-        {/* Carousel nav — visible on hover */}
-        {photos.length > 1 && hovered && (
+        {/* Carousel nav — toujours visibles */}
+        {photos.length > 1 && (
           <>
-            <button onClick={prev} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.88)", backdropFilter: "blur(8px)", border: "none", color: NAVY, width: 32, height: 32, borderRadius: "50%", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 3 }}>‹</button>
-            <button onClick={next} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.88)", backdropFilter: "blur(8px)", border: "none", color: NAVY, width: 32, height: 32, borderRadius: "50%", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 3 }}>›</button>
+            <button onClick={prev} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.85)", backdropFilter: "blur(8px)", border: "none", color: NAVY, width: 32, height: 32, borderRadius: "50%", cursor: "pointer", fontSize: 18, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 4, lineHeight: 1 }}>←</button>
+            <button onClick={next} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.85)", backdropFilter: "blur(8px)", border: "none", color: NAVY, width: 32, height: 32, borderRadius: "50%", cursor: "pointer", fontSize: 18, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 4, lineHeight: 1 }}>→</button>
           </>
         )}
 
@@ -1255,25 +1254,25 @@ function PropertyDetail({ bien, onClose, onBook }) {
         {/* ─── LEFT: photo gallery ─── */}
         <div style={{ flex: "0 0 58%", display: "flex", flexDirection: "column", background: "#072626", minHeight: 0 }}>
           {/* Main image */}
-          <div style={{ flex: 1, position: "relative", overflow: "hidden", minHeight: 0 }}>
+          <div style={{ flex: 1, position: "relative", overflow: "hidden", minHeight: 0, background: "#061818" }}>
             {photos[photoIdx] && (
               <img
                 key={photoIdx}
                 src={photos[photoIdx]}
                 alt={bien.nom}
-                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
               />
             )}
             {photos.length > 1 && (
               <>
                 <button
                   onClick={() => setPhotoIdx(i => (i - 1 + photos.length) % photos.length)}
-                  style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", background: "rgba(14,59,58,0.7)", backdropFilter: "blur(8px)", border: "none", color: "#faf5e9", width: 40, height: 40, borderRadius: "50%", cursor: "pointer", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}
-                >‹</button>
+                  style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", background: "rgba(250,245,233,0.15)", backdropFilter: "blur(8px)", border: "1px solid rgba(250,245,233,0.3)", color: "#faf5e9", width: 44, height: 44, borderRadius: "50%", cursor: "pointer", fontSize: 20, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 3, lineHeight: 1 }}
+                >←</button>
                 <button
                   onClick={() => setPhotoIdx(i => (i + 1) % photos.length)}
-                  style={{ position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)", background: "rgba(14,59,58,0.7)", backdropFilter: "blur(8px)", border: "none", color: "#faf5e9", width: 40, height: 40, borderRadius: "50%", cursor: "pointer", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}
-                >›</button>
+                  style={{ position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)", background: "rgba(250,245,233,0.15)", backdropFilter: "blur(8px)", border: "1px solid rgba(250,245,233,0.3)", color: "#faf5e9", width: 44, height: 44, borderRadius: "50%", cursor: "pointer", fontSize: 20, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 3, lineHeight: 1 }}
+                >→</button>
               </>
             )}
             <div style={{ position: "absolute", bottom: 14, right: 16, background: "rgba(14,59,58,0.65)", color: "#faf5e9", fontSize: 11, fontFamily: "'Jost', sans-serif", fontWeight: 300, letterSpacing: "0.1em", padding: "4px 12px", borderRadius: 20 }}>
