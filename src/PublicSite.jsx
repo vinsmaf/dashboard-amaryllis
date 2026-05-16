@@ -1271,18 +1271,18 @@ function PropertyDetail({ bien, onClose, onBook }) {
       </div>
 
       {/* Body */}
-      <div style={{ flex: 1, overflow: "hidden", display: "flex", minHeight: 0 }}>
+      <div style={{ flex: 1, overflow: "hidden", display: "flex", minHeight: 0, width: "100%" }}>
 
         {/* ─── LEFT: photo gallery ─── */}
-        <div style={{ flex: "0 0 58%", display: "flex", flexDirection: "column", background: "#061616", minHeight: 0, position: "relative" }}>
+        <div style={{ flex: "0 0 58%", maxWidth: "58%", display: "flex", flexDirection: "column", background: "#061616", minHeight: 0, position: "relative" }}>
           {/* Main image — contain centré, s'adapte à la fenêtre */}
-          <div style={{ flex: 1, minHeight: 0, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative" }}>
+          <div style={{ flex: 1, minHeight: 0, overflow: "hidden", position: "relative" }}>
             {photos[photoIdx] && (
               <img
                 key={photoIdx}
                 src={photos[photoIdx]}
                 alt={bien.nom}
-                style={{ maxWidth: "100%", maxHeight: "100%", width: "auto", height: "auto", display: "block", transition: "opacity 0.3s", objectFit: "contain" }}
+                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain", display: "block", transition: "opacity 0.3s" }}
               />
             )}
             {/* Compteur */}
