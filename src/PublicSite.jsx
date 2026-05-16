@@ -354,6 +354,7 @@ const BIENS = [
       "/photos/nogent/19.webp",
       "/photos/nogent/20.webp",
     ],
+    beds24Url: "https://beds24.com/booking2.php?propid=158192&referer=iframe",
     amenities: ["Bord Marne", "Jardin", "RER A (20 min Paris)", "Parking", "Wifi"],
     avis: [
       { nom: "Aurélie F.", pays: "🇫🇷", note: 5, texte: "Appartement lumineux et très bien décoré au bord de la Marne. Calme absolu tout en étant à 20 min de Paris. Le jardin est charmant. Parfait pour se ressourcer.", date: "Avr. 2025" },
@@ -685,6 +686,68 @@ function OrganicLoader({ size = 32, color = CORAL }) {
         animation: "organicMorph 2.4s ease-in-out infinite",
         flexShrink: 0,
       }} />
+    </div>
+  );
+}
+
+// ── Beds24 Modal (Nogent channel-manager) ────────────────────────
+function Beds24Modal({ bien, onClose }) {
+  // Close on Escape
+  useEffect(() => {
+    const fn = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", fn);
+    return () => window.removeEventListener("keydown", fn);
+  }, [onClose]);
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, zIndex: 1200,
+        background: "rgba(6,22,22,0.72)", backdropFilter: "blur(6px)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: "24px 16px",
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: "#faf5e9", borderRadius: 12, overflow: "hidden",
+          width: "100%", maxWidth: 860,
+          maxHeight: "92vh", display: "flex", flexDirection: "column",
+          boxShadow: "0 32px 80px rgba(0,0,0,0.45)",
+        }}
+      >
+        {/* Header */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "18px 24px", borderBottom: "1px solid rgba(0,0,0,0.08)",
+          flexShrink: 0,
+        }}>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.3em", textTransform: "uppercase", color: CORAL, marginBottom: 4 }}>
+              Réservation
+            </div>
+            <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 22, letterSpacing: "0.1em", textTransform: "uppercase", color: NAVY }}>
+              {bien.nom}
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{ background: "none", border: "none", cursor: "pointer", fontSize: 22, color: NAVY, opacity: 0.5, lineHeight: 1, padding: 4 }}
+          >✕</button>
+        </div>
+        {/* Beds24 iframe */}
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+          <iframe
+            src={bien.beds24Url}
+            width="100%"
+            height="2000"
+            style={{ border: "none", display: "block" }}
+            title="Réservation Beds24"
+          />
+        </div>
+      </div>
     </div>
   );
 }
@@ -2159,6 +2222,7 @@ function HoverContact({ light = false, direction = "up" }) {
 // ── Main ─────────────────────────────────────────────────────────
 export default function PublicSite() {
   const [selectedBien, setSelectedBien] = useState(null);
+  const [beds24Bien, setBeds24Bien] = useState(null);
   const [detailBien, setDetailBien] = useState(null);
   const [filterLieu, setFilterLieu] = useState("all");
   const [scrolled, setScrolled] = useState(false);
@@ -2181,6 +2245,12 @@ export default function PublicSite() {
 
   async function openBien(bien) {
     if (BOOKING_DISABLED.has(bien.id)) return; // longue durée — réservation désactivée
+    // Nogent → Beds24 channel-manager iframe
+    if (bien.beds24Url) {
+      setDetailBien(null);
+      setBeds24Bien(bien);
+      return;
+    }
     setDetailBien(null);
     setSelectedBien(bien);
     setBlockedDates([]);
@@ -2309,6 +2379,11 @@ export default function PublicSite() {
       {/* ── PROPERTY DETAIL ── */}
       {detailBien && !selectedBien && (
         <PropertyDetail bien={detailBien} onClose={() => setDetailBien(null)} onBook={openBien} />
+      )}
+
+      {/* ── BEDS24 MODAL (Nogent) ── */}
+      {beds24Bien && (
+        <Beds24Modal bien={beds24Bien} onClose={() => setBeds24Bien(null)} />
       )}
 
       {/* ── BOOKING MODAL ── */}
