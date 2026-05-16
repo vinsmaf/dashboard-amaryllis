@@ -1275,14 +1275,14 @@ function PropertyDetail({ bien, onClose, onBook }) {
 
         {/* ─── LEFT: photo gallery ─── */}
         <div style={{ flex: "0 0 58%", display: "flex", flexDirection: "column", background: "#061616", minHeight: 0 }}>
-          {/* Main image — contain : photo entière visible dès l'ouverture */}
-          <div style={{ flex: 1, position: "relative", minHeight: 0, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+          {/* Main image — contain centré, s'adapte à la fenêtre */}
+          <div style={{ flex: 1, position: "relative", minHeight: 0, overflow: "hidden" }}>
             {photos[photoIdx] && (
               <img
                 key={photoIdx}
                 src={photos[photoIdx]}
                 alt={bien.nom}
-                style={{ maxWidth: "100%", maxHeight: "100%", width: "auto", height: "auto", objectFit: "contain", display: "block", transition: "opacity 0.3s" }}
+                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain", display: "block", transition: "opacity 0.3s" }}
               />
             )}
             {photos.length > 1 && (
