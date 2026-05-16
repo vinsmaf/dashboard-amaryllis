@@ -315,7 +315,8 @@ function parseICS(text, bienId, canal = "airbnb") {
     const co = cleanDate(rawDtEnd);
     const sum = get("SUMMARY");
     if (!ci || !co) return null;
-    if (/not available|blocked/i.test(sum)) return null;
+    // Filter out placeholder/block events (Airbnb "not available/blocked", Booking.com "CLOSED")
+    if (/not available|blocked|^closed$/i.test(sum)) return null;
 
     // Parse DESCRIPTION — Airbnb uses \n literal in iCal
     const desc = get("DESCRIPTION").replace(/\\n/g, "\n");
