@@ -1276,13 +1276,13 @@ function PropertyDetail({ bien, onClose, onBook }) {
         {/* ─── LEFT: photo gallery ─── */}
         <div style={{ flex: "0 0 58%", display: "flex", flexDirection: "column", background: "#061616", minHeight: 0, position: "relative" }}>
           {/* Main image — contain centré, s'adapte à la fenêtre */}
-          <div style={{ flex: 1, position: "relative", minHeight: 0, overflow: "hidden" }}>
+          <div style={{ flex: 1, minHeight: 0, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative" }}>
             {photos[photoIdx] && (
               <img
                 key={photoIdx}
                 src={photos[photoIdx]}
                 alt={bien.nom}
-                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain", display: "block", transition: "opacity 0.3s" }}
+                style={{ maxWidth: "100%", maxHeight: "100%", width: "auto", height: "auto", display: "block", transition: "opacity 0.3s", objectFit: "contain" }}
               />
             )}
             {/* Compteur */}
@@ -1290,18 +1290,26 @@ function PropertyDetail({ bien, onClose, onBook }) {
               {photoIdx + 1} / {photos.length}
             </div>
           </div>
-          {/* Flèches — au niveau du panneau, hors du overflow:hidden */}
+          {/* Flèches — conteneur pleine largeur, un bouton à chaque bout */}
           {photos.length > 1 && (
-            <>
-              <button
-                onClick={goPrev}
-                style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", background: "rgba(250,245,233,0.15)", backdropFilter: "blur(8px)", border: "1px solid rgba(250,245,233,0.3)", color: "#faf5e9", width: 44, height: 44, borderRadius: "50%", cursor: "pointer", fontSize: 20, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10, lineHeight: 1 }}
-              >←</button>
-              <button
-                onClick={goNext}
-                style={{ position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)", background: "rgba(250,245,233,0.15)", backdropFilter: "blur(8px)", border: "1px solid rgba(250,245,233,0.3)", color: "#faf5e9", width: 44, height: 44, borderRadius: "50%", cursor: "pointer", fontSize: 20, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10, lineHeight: 1 }}
-              >→</button>
-            </>
+            <div style={{
+              position: "absolute", left: 0, right: 0,
+              top: "50%", transform: "translateY(-50%)",
+              display: "flex", justifyContent: "space-between",
+              padding: "0 16px", zIndex: 10, pointerEvents: "none",
+            }}>
+              {[["←", goPrev], ["→", goNext]].map(([label, fn]) => (
+                <button key={label} onClick={fn} style={{
+                  pointerEvents: "auto",
+                  background: "rgba(250,245,233,0.18)", backdropFilter: "blur(8px)",
+                  border: "1px solid rgba(250,245,233,0.35)", color: "#faf5e9",
+                  width: 44, height: 44, borderRadius: "50%", cursor: "pointer",
+                  fontSize: 20, fontWeight: 700,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  lineHeight: 1, flexShrink: 0,
+                }}>{label}</button>
+              ))}
+            </div>
           )}
           {/* Thumbnail strip */}
           {photos.length > 1 && (
