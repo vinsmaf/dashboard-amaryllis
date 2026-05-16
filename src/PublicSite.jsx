@@ -620,15 +620,18 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
 
   const nights = checkin && checkout ? dateDiff(checkin, checkout) : 0;
 
+  const dailyPricesMap = (() => {
+    try { return JSON.parse(localStorage.getItem("amaryllis_daily_prices") || "{}")[bien.id] || {}; } catch { return {}; }
+  })();
+
   // Total basé sur les prix journaliers réels, avec remise semaine -5%
   const rawTotal = (() => {
     if (!checkin || !checkout || nights === 0) return 0;
     let sum = 0;
-    const d = new Date(checkin);
+    let cur = checkin;
     for (let i = 0; i < nights; i++) {
-      const ds = d.toISOString().slice(0, 10);
-      sum += dailyPricesMap[ds] ?? bien.prix;
-      d.setDate(d.getDate() + 1);
+      sum += dailyPricesMap[cur] ?? bien.prix;
+      cur = addDays(cur, 1);
     }
     return sum;
   })();
@@ -678,10 +681,6 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
     if (error) setPayError(error.message);
     setPaying(false);
   }
-
-  const dailyPricesMap = (() => {
-    try { return JSON.parse(localStorage.getItem("amaryllis_daily_prices") || "{}")[bien.id] || {}; } catch { return {}; }
-  })();
 
   const steps = ["Dates", "Coordonnées", "Paiement"];
 
