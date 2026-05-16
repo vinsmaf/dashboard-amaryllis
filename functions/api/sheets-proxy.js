@@ -21,14 +21,21 @@ export async function onRequestPost(context) {
       redirect: "follow",
     });
     const text = await res.text();
-    // Retourner la réponse Apps Script telle quelle
-    return new Response(text, {
-      status: res.ok ? 200 : 502,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
-    });
+    // Si la réponse est du JSON valide → la retourner telle quelle
+    try {
+      JSON.parse(text);
+      return new Response(text, {
+        status: 200,
+        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+      });
+    } catch (_) {
+      // Apps Script a retourné du HTML (erreur) → encapsuler pour debug
+      return json({
+        error: "Apps Script returned non-JSON",
+        status: res.status,
+        preview: text.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 400),
+      }, 502);
+    }
   } catch (err) {
     return json({ error: err.message }, 502);
   }
