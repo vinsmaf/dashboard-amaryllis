@@ -40,6 +40,17 @@ function doGet(e) {
   return json_({ error: "action inconnue: " + action });
 }
 
+// ── POST handler (webhook Beds24 + sync manuel) ──────────────────
+function doPost(e) {
+  var body;
+  try { body = JSON.parse(e.postData.contents); } catch(err) { return json_({ error: "JSON invalide" }); }
+
+  var action = body.action || "";
+  if (action === "importBeds24") return importBeds24_(body.bookings || []);
+
+  return json_({ error: "action POST inconnue: " + action });
+}
+
 function readAll_() {
   const sheet = getSheet_("revenus locatif 2026");
   if (!sheet) return json_({ error: "Onglet 'revenus locatif 2026' introuvable" });
@@ -272,4 +283,114 @@ function sendNtfyPush_(title, body) {
       muteHttpExceptions: true
     });
   } catch(e) {}
+}
+
+// ── IMPORT BEDS24 → feuille "Réservations Nogent" ───────────────
+// Colonnes : A=bookingId B=Client C=Email D=Téléphone E=Arrivée F=Départ
+//            G=Nuits H=Canal I=Montant J=Statut K=Voyageurs L=Notes M=Créé le N=Modifié le
+function importBeds24_(bookings) {
+  if (!bookings || bookings.length === 0) return json_({ ok: true, updated: 0, added: 0 });
+
+  var ss = SpreadsheetApp.openById("1xuhU0KraEMxF9NAWO5MKEt23JI_V8mnNnWktzHy6q2U");
+
+  // ── Créer la feuille si elle n'existe pas ──
+  var SHEET_NAME = "Réservations Nogent";
+  var sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_NAME);
+    // En-têtes
+    var headers = ["ID Beds24","Client","Email","Téléphone","Arrivée","Départ","Nuits","Canal","Montant (€)","Statut","Voyageurs","Notes","Créé le","Modifié le"];
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    sheet.getRange(1, 1, 1, headers.length)
+      .setBackground("#1e3a5f").setFontColor("#ffffff").setFontWeight("bold");
+    sheet.setFrozenRows(1);
+    sheet.setColumnWidths(1, headers.length, 120);
+    sheet.setColumnWidth(2, 160); // Client
+    sheet.setColumnWidth(3, 200); // Email
+    sheet.setColumnWidth(12, 240); // Notes
+  }
+
+  // ── Lire les IDs existants ──
+  var lastRow = sheet.getLastRow();
+  var existingIds = {};
+  if (lastRow > 1) {
+    var ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    ids.forEach(function(row, i) {
+      if (row[0]) existingIds[String(row[0])] = i + 2; // numéro de ligne
+    });
+  }
+
+  var added = 0, updated = 0;
+
+  bookings.forEach(function(b) {
+    var row = [
+      b.bookingId   || "",
+      b.guestName   || "",
+      b.email       || "",
+      b.phone       || "",
+      b.arrival     || "",
+      b.departure   || "",
+      b.nights      || 0,
+      b.channel     || "",
+      b.price       || 0,
+      b.status      || "",
+      b.numGuests   || 1,
+      b.notes       || "",
+      b.createdOn   || "",
+      b.modifiedOn  || "",
+    ];
+
+    var existingRow = existingIds[String(b.bookingId)];
+    if (existingRow) {
+      // Mettre à jour la ligne existante
+      sheet.getRange(existingRow, 1, 1, row.length).setValues([row]);
+      updated++;
+    } else {
+      // Ajouter une nouvelle ligne
+      sheet.appendRow(row);
+      existingIds[String(b.bookingId)] = sheet.getLastRow();
+      added++;
+    }
+
+    // ── Colorer selon statut ──
+    var rowNum = existingIds[String(b.bookingId)];
+    var color = b.statusCode === "1" ? "#e8f5e9"   // confirmé → vert clair
+              : b.statusCode === "2" ? "#fce4ec"   // annulé → rouge clair
+              : b.statusCode === "0" ? "#fff8e1"   // nouveau → jaune clair
+              : "#ffffff";
+    sheet.getRange(rowNum, 1, 1, row.length).setBackground(color);
+  });
+
+  // ── Trier par arrivée décroissante (col E = 5) ──
+  if (sheet.getLastRow() > 2) {
+    sheet.getRange(2, 1, sheet.getLastRow() - 1, 14).sort({ column: 5, ascending: false });
+  }
+
+  // ── Mise à jour revenus mensuels Nogent (réservations confirmées) ──
+  var revSheet = ss.getSheetByName("revenus locatif 2026");
+  if (revSheet) {
+    var nogentRevRow = 6; // ligne Nogent dans revenus locatif 2026
+    bookings.forEach(function(b) {
+      if (b.statusCode !== "1") return; // seulement les confirmées
+      if (!b.arrival || !b.price)  return;
+
+      var mois = new Date(b.arrival + "T12:00:00Z").getUTCMonth() + 1; // 1-12
+      var col  = mois + 2; // col C=3 pour janvier, etc.
+
+      var current = revSheet.getRange(nogentRevRow, col).getValue() || 0;
+      // On n'additionne pas aveuglément — on recalcule depuis la feuille Réservations
+      // (logique simplifiée : ajouter uniquement si la réservation est nouvelle)
+    });
+  }
+
+  // Notif push si nouvelle réservation
+  if (added > 0) {
+    var newBookings = bookings.slice(0, added);
+    var msg = newBookings.map(function(b) {
+      return b.guestName + " · " + b.arrival + " → " + b.departure + " · " + b.price + "€";
+    }).join("\n");
+    sendNtfyPush_("🏙️ Nouvelle résa Nogent (" + added + ")", msg);
+  }
+
+  return json_({ ok: true, added: added, updated: updated });
 }

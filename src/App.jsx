@@ -3584,11 +3584,13 @@ const CHANNEL_COLORS = {
   "Beds24 Direct":"#0ea5e9",
 };
 
-function Beds24Admin() {
+function Beds24Admin({ scriptUrl }) {
   const [bookings,    setBookings]    = useState([]);
   const [loading,     setLoading]     = useState(false);
   const [error,       setError]       = useState("");
   const [testStatus,  setTestStatus]  = useState(null); // null | "ok" | "error"
+  const [syncStatus,  setSyncStatus]  = useState(null); // null | "syncing" | "ok" | "error"
+  const [syncMsg,     setSyncMsg]     = useState("");
   const [filters,     setFilters]     = useState({
     arrivalFrom:   "",
     arrivalTo:     "",
@@ -3630,6 +3632,32 @@ function Beds24Admin() {
     } catch { setTestStatus("error"); }
   }
 
+  // ── Sync vers Google Sheets ──────────────────────────────────────
+  async function syncToSheets() {
+    if (!scriptUrl) { setSyncMsg("⚠ Configure d'abord l'URL Apps Script (bouton ⚙)"); setSyncStatus("error"); return; }
+    if (bookings.length === 0) { setSyncMsg("Charge d'abord les réservations"); setSyncStatus("error"); return; }
+    setSyncStatus("syncing"); setSyncMsg("");
+    try {
+      const res  = await fetch(scriptUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "importBeds24", bookings }),
+        redirect: "follow",
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setSyncStatus("ok");
+        setSyncMsg(`✓ ${data.added || 0} ajoutée(s), ${data.updated || 0} mise(s) à jour`);
+      } else {
+        setSyncStatus("error");
+        setSyncMsg(data.error || "Erreur Apps Script");
+      }
+    } catch (e) {
+      setSyncStatus("error");
+      setSyncMsg(e.message);
+    }
+  }
+
   // Chargement initial
   useEffect(() => { fetchBookings(); }, []);
 
@@ -3664,8 +3692,23 @@ function Beds24Admin() {
           >
             {loading ? "⟳ Chargement…" : "⟳ Actualiser"}
           </button>
+          <button
+            onClick={syncToSheets}
+            disabled={syncStatus === "syncing" || bookings.length === 0}
+            title="Exporter toutes les réservations visibles vers Google Sheets"
+            style={{ padding: "6px 14px", borderRadius: 6, border: "1px solid #10b981", background: "rgba(16,185,129,0.1)", color: "#10b981", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+          >
+            {syncStatus === "syncing" ? "⟳ Export…" : "📊 → Sheets"}
+          </button>
         </div>
       </div>
+
+      {/* ── Statut sync Sheets ── */}
+      {syncMsg && (
+        <div style={{ background: syncStatus === "ok" ? "rgba(16,185,129,0.08)" : "rgba(239,68,68,0.08)", border: `1px solid ${syncStatus === "ok" ? "rgba(16,185,129,0.25)" : "rgba(239,68,68,0.25)"}`, borderRadius: 8, padding: "8px 14px", marginBottom: 12, fontSize: 12, color: syncStatus === "ok" ? "#6ee7b7" : "#fca5a5" }}>
+          {syncMsg}
+        </div>
+      )}
 
       {/* ── Filtres ── */}
       <div style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 10, padding: "14px 18px", marginBottom: 18, display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-end" }}>
@@ -3980,7 +4023,7 @@ export default function App() {
         {tab === "pilotage" && <Pilotage biens={biens} n={n} mob={mob} />}
         {tab === "historique" && <Historique biens={biens} n={n} mob={mob} hist={hist} />}
         {tab === "tarifs" && <Tarifs />}
-        {tab === "beds24" && <Beds24Admin />}
+        {tab === "beds24" && <Beds24Admin scriptUrl={scriptUrl} />}
       </div>
 
       <FAB onTab={setTab} />
