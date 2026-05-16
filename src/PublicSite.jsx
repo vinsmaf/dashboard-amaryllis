@@ -1212,22 +1212,21 @@ function Stat({ icon, label }) {
 // ── Property Detail (full-screen) ───────────────────────────────
 function PropertyDetail({ bien, onClose, onBook }) {
   const [photoIdx, setPhotoIdx] = useState(0);
-  const [lightbox, setLightbox] = useState(false);
   const photos = bien.photos || [];
 
   const goPrev = () => setPhotoIdx(i => (i - 1 + photos.length) % photos.length);
   const goNext = () => setPhotoIdx(i => (i + 1) % photos.length);
 
-  // Clavier : Échap ferme lightbox ou fiche, ← → naviguent
+  // Clavier : Échap ferme la fiche, ← → naviguent
   useEffect(() => {
     const fn = (e) => {
-      if (e.key === "Escape") { if (lightbox) setLightbox(false); else onClose(); }
+      if (e.key === "Escape") onClose();
       if (e.key === "ArrowLeft")  goPrev();
       if (e.key === "ArrowRight") goNext();
     };
     window.addEventListener("keydown", fn);
     return () => window.removeEventListener("keydown", fn);
-  }, [onClose, photos.length, lightbox]);
+  }, [onClose, photos.length]);
 
   // Auto-avance 5 s — reset à chaque changement de photo
   useEffect(() => {
@@ -1242,63 +1241,6 @@ function PropertyDetail({ bien, onClose, onBook }) {
   }, []);
 
   return (
-    <>
-    {/* ── Lightbox ── */}
-    {lightbox && (
-      <div
-        onClick={() => setLightbox(false)}
-        style={{
-          position: "fixed", inset: 0, zIndex: 1100,
-          background: "rgba(0,0,0,0.96)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          animation: "fadeIn 0.2s ease both",
-        }}
-      >
-        {/* Conteneur fixe → image entière visible, non zoomée */}
-        <div
-          onClick={e => e.stopPropagation()}
-          style={{ width: "90vw", height: "90vh", display: "flex", alignItems: "center", justifyContent: "center" }}
-        >
-          <img
-            src={photos[photoIdx]}
-            alt={bien.nom}
-            style={{
-              maxWidth: "100%",
-              maxHeight: "100%",
-              width: "auto",
-              height: "auto",
-              objectFit: "contain",
-              display: "block",
-              borderRadius: 4,
-              boxShadow: "0 24px 80px rgba(0,0,0,0.8)",
-            }}
-          />
-        </div>
-        {/* Bouton fermer */}
-        <button
-          onClick={() => setLightbox(false)}
-          style={{ position: "absolute", top: 20, right: 24, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", width: 44, height: 44, borderRadius: "50%", cursor: "pointer", fontSize: 22, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}
-        >✕</button>
-        {/* Flèches */}
-        {photos.length > 1 && (
-          <>
-            <button
-              onClick={e => { e.stopPropagation(); goPrev(); }}
-              style={{ position: "absolute", left: 20, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.25)", color: "#fff", width: 52, height: 52, borderRadius: "50%", cursor: "pointer", fontSize: 24, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2, lineHeight: 1 }}
-            >←</button>
-            <button
-              onClick={e => { e.stopPropagation(); goNext(); }}
-              style={{ position: "absolute", right: 20, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.25)", color: "#fff", width: 52, height: 52, borderRadius: "50%", cursor: "pointer", fontSize: 24, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2, lineHeight: 1 }}
-            >→</button>
-          </>
-        )}
-        {/* Compteur */}
-        <div style={{ position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)", color: "rgba(255,255,255,0.6)", fontSize: 13, fontFamily: "'Jost', sans-serif", fontWeight: 300, letterSpacing: "0.15em" }}>
-          {photoIdx + 1} / {photos.length}
-        </div>
-      </div>
-    )}
-
     <div style={{
       position: "fixed", inset: 0, zIndex: 900,
       background: IVORY,
@@ -1332,16 +1274,15 @@ function PropertyDetail({ bien, onClose, onBook }) {
       <div style={{ flex: 1, overflow: "hidden", display: "flex", minHeight: 0 }}>
 
         {/* ─── LEFT: photo gallery ─── */}
-        <div style={{ flex: "0 0 58%", display: "flex", flexDirection: "column", background: "#072626", minHeight: 0 }}>
-          {/* Main image */}
-          <div style={{ flex: 1, position: "relative", overflow: "hidden", minHeight: 0 }}>
+        <div style={{ flex: "0 0 58%", display: "flex", flexDirection: "column", background: "#061616", minHeight: 0 }}>
+          {/* Main image — contain : photo entière visible dès l'ouverture */}
+          <div style={{ flex: 1, position: "relative", minHeight: 0, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
             {photos[photoIdx] && (
               <img
                 key={photoIdx}
                 src={photos[photoIdx]}
                 alt={bien.nom}
-                onClick={() => setLightbox(true)}
-                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "opacity 0.3s", cursor: "zoom-in" }}
+                style={{ maxWidth: "100%", maxHeight: "100%", width: "auto", height: "auto", objectFit: "contain", display: "block", transition: "opacity 0.3s" }}
               />
             )}
             {photos.length > 1 && (
@@ -1468,7 +1409,6 @@ function PropertyDetail({ bien, onClose, onBook }) {
         </div>
       </div>
     </div>
-    </>
   );
 }
 
