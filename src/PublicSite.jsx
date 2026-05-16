@@ -1212,23 +1212,27 @@ function Stat({ icon, label }) {
 // ── Property Detail (full-screen) ───────────────────────────────
 function PropertyDetail({ bien, onClose, onBook }) {
   const [photoIdx, setPhotoIdx] = useState(0);
+  const [lightbox, setLightbox] = useState(false);
   const photos = bien.photos || [];
 
-  // Clavier : Échap ferme, ← → naviguent
+  const goPrev = () => setPhotoIdx(i => (i - 1 + photos.length) % photos.length);
+  const goNext = () => setPhotoIdx(i => (i + 1) % photos.length);
+
+  // Clavier : Échap ferme lightbox ou fiche, ← → naviguent
   useEffect(() => {
     const fn = (e) => {
-      if (e.key === "Escape") onClose();
-      if (e.key === "ArrowLeft")  setPhotoIdx(i => (i - 1 + photos.length) % photos.length);
-      if (e.key === "ArrowRight") setPhotoIdx(i => (i + 1) % photos.length);
+      if (e.key === "Escape") { if (lightbox) setLightbox(false); else onClose(); }
+      if (e.key === "ArrowLeft")  goPrev();
+      if (e.key === "ArrowRight") goNext();
     };
     window.addEventListener("keydown", fn);
     return () => window.removeEventListener("keydown", fn);
-  }, [onClose, photos.length]);
+  }, [onClose, photos.length, lightbox]);
 
-  // Auto-avance 5 s — reset à chaque changement de photo (manuel ou auto)
+  // Auto-avance 5 s — reset à chaque changement de photo
   useEffect(() => {
     if (photos.length <= 1) return;
-    const t = setInterval(() => setPhotoIdx(i => (i + 1) % photos.length), 5000);
+    const t = setInterval(goNext, 5000);
     return () => clearInterval(t);
   }, [photoIdx, photos.length]);
 
@@ -1238,6 +1242,56 @@ function PropertyDetail({ bien, onClose, onBook }) {
   }, []);
 
   return (
+    <>
+    {/* ── Lightbox ── */}
+    {lightbox && (
+      <div
+        onClick={() => setLightbox(false)}
+        style={{
+          position: "fixed", inset: 0, zIndex: 1100,
+          background: "rgba(0,0,0,0.96)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          animation: "fadeIn 0.2s ease both",
+        }}
+      >
+        {/* Image centrée, non zoomée */}
+        <img
+          src={photos[photoIdx]}
+          alt={bien.nom}
+          onClick={e => e.stopPropagation()}
+          style={{
+            maxWidth: "90vw", maxHeight: "90vh",
+            objectFit: "contain",
+            display: "block",
+            borderRadius: 4,
+            boxShadow: "0 24px 80px rgba(0,0,0,0.8)",
+          }}
+        />
+        {/* Bouton fermer */}
+        <button
+          onClick={() => setLightbox(false)}
+          style={{ position: "absolute", top: 20, right: 24, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", width: 44, height: 44, borderRadius: "50%", cursor: "pointer", fontSize: 22, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2 }}
+        >✕</button>
+        {/* Flèches */}
+        {photos.length > 1 && (
+          <>
+            <button
+              onClick={e => { e.stopPropagation(); goPrev(); }}
+              style={{ position: "absolute", left: 20, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.25)", color: "#fff", width: 52, height: 52, borderRadius: "50%", cursor: "pointer", fontSize: 24, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2, lineHeight: 1 }}
+            >←</button>
+            <button
+              onClick={e => { e.stopPropagation(); goNext(); }}
+              style={{ position: "absolute", right: 20, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.25)", color: "#fff", width: 52, height: 52, borderRadius: "50%", cursor: "pointer", fontSize: 24, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2, lineHeight: 1 }}
+            >→</button>
+          </>
+        )}
+        {/* Compteur */}
+        <div style={{ position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)", color: "rgba(255,255,255,0.6)", fontSize: 13, fontFamily: "'Jost', sans-serif", fontWeight: 300, letterSpacing: "0.15em" }}>
+          {photoIdx + 1} / {photos.length}
+        </div>
+      </div>
+    )}
+
     <div style={{
       position: "fixed", inset: 0, zIndex: 900,
       background: IVORY,
@@ -1279,17 +1333,18 @@ function PropertyDetail({ bien, onClose, onBook }) {
                 key={photoIdx}
                 src={photos[photoIdx]}
                 alt={bien.nom}
-                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "opacity 0.3s" }}
+                onClick={() => setLightbox(true)}
+                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "opacity 0.3s", cursor: "zoom-in" }}
               />
             )}
             {photos.length > 1 && (
               <>
                 <button
-                  onClick={() => setPhotoIdx(i => (i - 1 + photos.length) % photos.length)}
+                  onClick={goPrev}
                   style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", background: "rgba(250,245,233,0.15)", backdropFilter: "blur(8px)", border: "1px solid rgba(250,245,233,0.3)", color: "#faf5e9", width: 44, height: 44, borderRadius: "50%", cursor: "pointer", fontSize: 20, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 3, lineHeight: 1 }}
                 >←</button>
                 <button
-                  onClick={() => setPhotoIdx(i => (i + 1) % photos.length)}
+                  onClick={goNext}
                   style={{ position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)", background: "rgba(250,245,233,0.15)", backdropFilter: "blur(8px)", border: "1px solid rgba(250,245,233,0.3)", color: "#faf5e9", width: 44, height: 44, borderRadius: "50%", cursor: "pointer", fontSize: 20, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 3, lineHeight: 1 }}
                 >→</button>
               </>
@@ -1406,6 +1461,7 @@ function PropertyDetail({ bien, onClose, onBook }) {
         </div>
       </div>
     </div>
+    </>
   );
 }
 
