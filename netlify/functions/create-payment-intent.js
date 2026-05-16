@@ -1,6 +1,6 @@
-const https = require("https");
+import https from "https";
 
-exports.handler = async (event) => {
+export const handler = async (event) => {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
@@ -18,8 +18,8 @@ exports.handler = async (event) => {
     amount: String(Math.round(amount)),
     currency,
     "automatic_payment_methods[enabled]": "true",
-    "metadata[bienId]": metadata.bienId || "",
-    "metadata[checkin]": metadata.checkin || "",
+    "metadata[bienId]":   metadata.bienId   || "",
+    "metadata[checkin]":  metadata.checkin  || "",
     "metadata[checkout]": metadata.checkout || "",
     "metadata[voyageur]": metadata.voyageur || "",
   }).toString();

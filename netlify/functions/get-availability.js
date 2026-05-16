@@ -1,5 +1,5 @@
-const https = require("https");
-const http  = require("http");
+import https from "https";
+import http  from "http";
 
 // Airbnb iCal URLs (env vars)
 const ICAL_AIRBNB = {
@@ -12,7 +12,7 @@ const ICAL_AIRBNB = {
   nogent:     process.env.ICAL_NOGENT,
 };
 
-// Booking.com iCal URLs (env vars)
+// Booking.com iCal URLs (env vars — fallback, can also be passed as query param)
 const ICAL_BOOKING = {
   amaryllis:  process.env.ICAL_BOOKING_AMARYLLIS,
   schoelcher: process.env.ICAL_BOOKING_SCHOELCHER,
@@ -41,17 +41,14 @@ function fetchUrl(url, redirects = 0) {
 
 function parseIcal(text) {
   const blocked = new Set();
-  const events = text.split("BEGIN:VEVENT");
-  for (const ev of events.slice(1)) {
+  for (const ev of text.split("BEGIN:VEVENT").slice(1)) {
     const startM = ev.match(/DTSTART(?:;[^:]+)?:(\d{8})/);
     const endM   = ev.match(/DTEND(?:;[^:]+)?:(\d{8})/);
     if (!startM || !endM) continue;
-    // All events block dates (Airbnb blocks, Booking.com CLOSED reservations, etc.)
-
+    // All events block dates (Airbnb blocks, Booking.com CLOSED reservations, manual blocks…)
     const fmt = (s) => `${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}`;
     let cur = new Date(fmt(startM[1]) + "T12:00:00Z");
     const end = new Date(fmt(endM[1]) + "T12:00:00Z");
-
     while (cur < end) {
       blocked.add(cur.toISOString().slice(0, 10));
       cur.setUTCDate(cur.getUTCDate() + 1);
@@ -66,16 +63,16 @@ async function fetchAndParse(url) {
     const text = await fetchUrl(url);
     if (!text.includes("VCALENDAR")) return new Set();
     return parseIcal(text);
-  } catch (_) {
+  } catch {
     return new Set();
   }
 }
 
-exports.handler = async (event) => {
+export const handler = async (event) => {
   const headers = {
     "Content-Type": "application/json",
     "Access-Control-Allow-Origin": "*",
-    "Cache-Control": "public, max-age=900", // 15 min cache
+    "Cache-Control": "public, max-age=900",
   };
 
   const bienId = event.queryStringParameters?.bienId;
@@ -92,16 +89,12 @@ exports.handler = async (event) => {
   }
 
   try {
-    // Fetch Airbnb and Booking.com in parallel
     const [airbnbBlocked, bookingBlocked] = await Promise.all([
       fetchAndParse(airbnbUrl),
       fetchAndParse(bookingUrl),
     ]);
-
-    // Merge both sets of blocked dates
     const merged = new Set([...airbnbBlocked, ...bookingBlocked]);
     const blockedDates = Array.from(merged).sort();
-
     return {
       statusCode: 200,
       headers,

@@ -1,9 +1,5 @@
-/**
- * Server-side iCal proxy — bypasses CORS restrictions.
- * Usage: GET /api/fetch-ical?url=<encoded-ical-url>
- */
-const https = require("https");
-const http  = require("http");
+import https from "https";
+import http  from "http";
 
 function fetchUrl(url, redirects = 0) {
   if (redirects > 5) return Promise.reject(new Error("Too many redirects"));
@@ -21,7 +17,7 @@ function fetchUrl(url, redirects = 0) {
   });
 }
 
-exports.handler = async (event) => {
+export const handler = async (event) => {
   const headers = {
     "Content-Type": "text/calendar; charset=utf-8",
     "Access-Control-Allow-Origin": "*",
@@ -33,7 +29,6 @@ exports.handler = async (event) => {
     return { statusCode: 400, headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify({ error: "url manquant" }) };
   }
 
-  // Basic security: only allow http/https iCal URLs
   if (!/^https?:\/\//i.test(url)) {
     return { statusCode: 400, headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify({ error: "URL invalide" }) };
   }
