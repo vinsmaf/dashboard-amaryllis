@@ -3515,9 +3515,11 @@ function FAB({ onTab }) {
       )}
       <button
         onClick={() => setOpen(!open)}
-        style={{ width: 50, height: 50, borderRadius: "50%", border: "none", background: open ? "#334155" : "linear-gradient(135deg,#0ea5e9,#6366f1)", color: "#fff", cursor: "pointer", fontSize: open ? 18 : 20, boxShadow: "0 4px 14px rgba(14,165,233,0.35)", display: "flex", alignItems: "center", justifyContent: "center" }}
+        style={{ width: 50, height: 50, borderRadius: "50%", border: "none", background: open ? "#334155" : "transparent", cursor: "pointer", boxShadow: open ? "none" : "0 4px 14px rgba(10,46,84,0.25)", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, overflow: "hidden" }}
       >
-        {open ? "✕" : "⚡"}
+        {open
+          ? <span style={{ color: "#94a3b8", fontSize: 18, fontWeight: 600 }}>✕</span>
+          : <img src="/favicon.svg" alt="Amaryllis" style={{ width: 50, height: 50, display: "block" }} />}
       </button>
     </div>
   );
