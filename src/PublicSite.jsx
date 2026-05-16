@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
 // ── Brand palette (from logos.jsx) ──────────────────────────────
+const WEEKLY_DISCOUNT = 0.05; // -5% à partir de 7 nuits
+
 const IVORY  = "#faf5e9";  // paper — main background
 const CREAM  = "#f4ecdc";  // cream — card/modal background
 const NAVY   = "#0e3b3a";  // ink — deep antillean teal, primary text & header
@@ -583,7 +585,23 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
   const elRef = useRef(null);
 
   const nights = checkin && checkout ? dateDiff(checkin, checkout) : 0;
-  const total = nights * bien.prix;
+
+  // Total basé sur les prix journaliers réels, avec remise semaine -5%
+  const rawTotal = (() => {
+    if (!checkin || !checkout || nights === 0) return 0;
+    let sum = 0;
+    const d = new Date(checkin);
+    for (let i = 0; i < nights; i++) {
+      const ds = d.toISOString().slice(0, 10);
+      sum += dailyPricesMap[ds] ?? bien.prix;
+      d.setDate(d.getDate() + 1);
+    }
+    return sum;
+  })();
+  const hasWeeklyDiscount = nights >= 7;
+  const discountAmount = hasWeeklyDiscount ? Math.round(rawTotal * WEEKLY_DISCOUNT) : 0;
+  const total = rawTotal - discountAmount;
+
   const formOk = form.prenom && form.nom && form.email && form.email.includes("@");
 
   useEffect(() => {
@@ -717,7 +735,12 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
               }}>
                 <div>
                   <div style={{ color: MUTED, fontSize: 13 }}>{formatDateLong(checkin)} → {formatDateLong(checkout)}</div>
-                  <div style={{ fontSize: 14, color: MUTED, marginTop: 4 }}>{nights} nuit{nights > 1 ? "s" : ""} × {bien.prix}€ / nuit</div>
+                  <div style={{ fontSize: 14, color: MUTED, marginTop: 4 }}>{nights} nuit{nights > 1 ? "s" : ""} — sous-total {rawTotal}€</div>
+                  {hasWeeklyDiscount && (
+                    <div style={{ fontSize: 13, color: CORAL, marginTop: 2, fontWeight: 600 }}>
+                      🎁 Réduction semaine −{discountAmount}€ ({Math.round(WEEKLY_DISCOUNT * 100)}%)
+                    </div>
+                  )}
                   <div style={{ fontSize: 26, fontWeight: 800, color: NAVY, marginTop: 4 }}>{total}€</div>
                 </div>
                 <button
@@ -750,7 +773,10 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
               display: "flex", justifyContent: "space-between",
             }}>
               <span>{formatDateLong(checkin)} → {formatDateLong(checkout)}</span>
-              <span style={{ fontWeight: 700, color: NAVY }}>{nights} nuits · {total}€</span>
+              <span style={{ fontWeight: 700, color: NAVY }}>
+                {nights} nuits · {total}€
+                {hasWeeklyDiscount && <span style={{ fontSize: 11, color: CORAL, marginLeft: 6 }}>−{Math.round(WEEKLY_DISCOUNT * 100)}% semaine</span>}
+              </span>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
