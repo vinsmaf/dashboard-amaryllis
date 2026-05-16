@@ -3,6 +3,16 @@ import { useState, useEffect, useRef, useCallback } from "react";
 // ── Brand palette (from logos.jsx) ──────────────────────────────
 const WEEKLY_DISCOUNT = 0.05; // -5% à partir de 7 nuits
 
+const MIN_NIGHTS = {
+  amaryllis:  4,
+  geko:       3,
+  zandoli:    3,
+  schoelcher: 3,
+  mabouya:    2,
+  nogent:     1,
+  iguana:     0,
+};
+
 const FRAIS_MENAGE = {
   nogent:     45,
   amaryllis:  180,
@@ -345,7 +355,7 @@ function formatDateShort(ds) {
 const WEEKDAYS = ["Lu", "Ma", "Me", "Je", "Ve", "Sa", "Di"];
 const MONTHS_FR = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
 
-function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, onSelect, onHover, dailyPricesMap = {}, basePrice = 0 }) {
+function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, onSelect, onHover, dailyPricesMap = {}, basePrice = 0, minNights = 1 }) {
   const todayStr = today();
   const [hoveredCell, setHoveredCell] = useState(null);
   const firstDay = new Date(year, month, 1);
@@ -358,10 +368,17 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
     cells.push(`${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`);
   }
 
+  function isBelowMin(ds) {
+    if (!checkin || checkout || !ds || ds <= checkin) return false;
+    const n = Math.round((new Date(ds) - new Date(checkin)) / 86400000);
+    return n < minNights;
+  }
+
   function getState(ds) {
     if (!ds) return "empty";
     if (ds < todayStr) return "past";
     if (blockedDates.includes(ds)) return "blocked";
+    if (isBelowMin(ds)) return "belowmin";
     if (ds === checkin) return "checkin";
     if (ds === checkout) return "checkout";
     const end = checkout || hovered;
@@ -385,7 +402,8 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
           const inRange = state === "range";
           const blocked = state === "blocked";
           const past = state === "past";
-          const disabled = blocked || past || !ds;
+          const belowMin = state === "belowmin";
+          const disabled = blocked || past || belowMin || !ds;
 
           let bg = "transparent";
           let color = "#94a3b8";
@@ -412,13 +430,13 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
                 alignItems: "center",
                 justifyContent: "center",
                 fontSize: 13,
-                cursor: disabled ? "default" : "pointer",
+                cursor: disabled ? "not-allowed" : "pointer",
                 background: bg,
-                color: blocked ? "#D4C8BC" : past ? "#D4C8BC" : color,
+                color: blocked ? "#D4C8BC" : past ? "#D4C8BC" : belowMin ? "#D4C8BC" : color,
                 borderRadius,
                 fontWeight,
                 textDecoration: blocked ? "line-through" : "none",
-                opacity: past ? 0.4 : 1,
+                opacity: past ? 0.4 : belowMin ? 0.35 : 1,
                 position: "relative",
                 transition: "background 0.1s",
                 userSelect: "none",
@@ -450,7 +468,7 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
   );
 }
 
-function DateRangePicker({ checkin, checkout, blockedDates = [], onChange, dailyPricesMap = {}, basePrice = 0 }) {
+function DateRangePicker({ checkin, checkout, blockedDates = [], onChange, dailyPricesMap = {}, basePrice = 0, minNights = 1 }) {
   const todayStr = today();
   const initY = new Date().getFullYear();
   const initM = new Date().getMonth();
@@ -468,6 +486,9 @@ function DateRangePicker({ checkin, checkout, blockedDates = [], onChange, daily
     } else if (ds <= checkin) {
       onChange(ds, null);
     } else {
+      // Bloquer si le séjour est inférieur au minimum
+      const n = Math.round((new Date(ds) - new Date(checkin)) / 86400000);
+      if (n < minNights) return;
       // Check no blocked date strictly between checkin and ds
       let cur = addDays(checkin, 1);
       let hasBlocked = false;
@@ -493,8 +514,8 @@ function DateRangePicker({ checkin, checkout, blockedDates = [], onChange, daily
         <button onClick={() => setOffset(o => o + 1)} style={iconBtn}>›</button>
       </div>
       <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
-        <CalendarMonth year={y1} month={m1} checkin={checkin} checkout={checkout} hovered={hovered} blockedDates={blockedDates} onSelect={handleSelect} onHover={setHovered} dailyPricesMap={dailyPricesMap} basePrice={basePrice} />
-        <CalendarMonth year={y2} month={m2} checkin={checkin} checkout={checkout} hovered={hovered} blockedDates={blockedDates} onSelect={handleSelect} onHover={setHovered} dailyPricesMap={dailyPricesMap} basePrice={basePrice} />
+        <CalendarMonth year={y1} month={m1} checkin={checkin} checkout={checkout} hovered={hovered} blockedDates={blockedDates} onSelect={handleSelect} onHover={setHovered} dailyPricesMap={dailyPricesMap} basePrice={basePrice} minNights={minNights} />
+        <CalendarMonth year={y2} month={m2} checkin={checkin} checkout={checkout} hovered={hovered} blockedDates={blockedDates} onSelect={handleSelect} onHover={setHovered} dailyPricesMap={dailyPricesMap} basePrice={basePrice} minNights={minNights} />
       </div>
       {checkin && checkout && (
         <div style={{ marginTop: 12, textAlign: "right" }}>
@@ -615,6 +636,8 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
   const discountAmount = hasWeeklyDiscount ? Math.round(rawTotal * WEEKLY_DISCOUNT) : 0;
   const fraisMenage = FRAIS_MENAGE[bien.id] ?? 0;
   const total = rawTotal - discountAmount + fraisMenage;
+  const minNights = MIN_NIGHTS[bien.id] ?? 1;
+  const belowMin = nights > 0 && nights < minNights;
 
   const formOk = form.prenom && form.nom && form.email && form.email.includes("@");
 
@@ -736,36 +759,46 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
                 Chargement des disponibilités…
               </div>
             )}
-            <DateRangePicker checkin={checkin} checkout={checkout} blockedDates={blockedDates} onChange={(ci, co) => { setCheckin(ci); setCheckout(co); }} dailyPricesMap={dailyPricesMap} basePrice={bien.prix} />
+            <DateRangePicker checkin={checkin} checkout={checkout} blockedDates={blockedDates} onChange={(ci, co) => { setCheckin(ci); setCheckout(co); }} dailyPricesMap={dailyPricesMap} basePrice={bien.prix} minNights={minNights} />
 
             {nights > 0 ? (
               <div style={{
                 marginTop: 24,
-                background: "rgba(200,85,61,0.04)",
-                border: `1px solid ${SAND}`,
+                background: belowMin ? "rgba(239,68,68,0.04)" : "rgba(200,85,61,0.04)",
+                border: `1px solid ${belowMin ? "rgba(239,68,68,0.25)" : SAND}`,
                 borderRadius: 16,
                 padding: "20px 24px",
                 display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16,
               }}>
                 <div>
                   <div style={{ color: MUTED, fontSize: 13 }}>{formatDateLong(checkin)} → {formatDateLong(checkout)}</div>
-                  <div style={{ fontSize: 14, color: MUTED, marginTop: 4 }}>{nights} nuit{nights > 1 ? "s" : ""} — sous-total {rawTotal}€</div>
-                  {fraisMenage > 0 && (
-                    <div style={{ fontSize: 13, color: MUTED, marginTop: 2 }}>🧹 Frais de ménage {fraisMenage}€</div>
-                  )}
-                  {hasWeeklyDiscount && (
-                    <div style={{ fontSize: 13, color: CORAL, marginTop: 2, fontWeight: 600 }}>
-                      🎁 Réduction semaine −{discountAmount}€ ({Math.round(WEEKLY_DISCOUNT * 100)}%)
+                  {belowMin ? (
+                    <div style={{ fontSize: 13, color: "#ef4444", fontWeight: 600, marginTop: 6 }}>
+                      ⚠ Séjour minimum : {minNights} nuits pour ce bien
                     </div>
+                  ) : (
+                    <>
+                      <div style={{ fontSize: 14, color: MUTED, marginTop: 4 }}>{nights} nuit{nights > 1 ? "s" : ""} — sous-total {rawTotal}€</div>
+                      {fraisMenage > 0 && (
+                        <div style={{ fontSize: 13, color: MUTED, marginTop: 2 }}>🧹 Frais de ménage {fraisMenage}€</div>
+                      )}
+                      {hasWeeklyDiscount && (
+                        <div style={{ fontSize: 13, color: CORAL, marginTop: 2, fontWeight: 600 }}>
+                          🎁 Réduction semaine −{discountAmount}€ ({Math.round(WEEKLY_DISCOUNT * 100)}%)
+                        </div>
+                      )}
+                      <div style={{ fontSize: 26, fontWeight: 800, color: NAVY, marginTop: 6 }}>{total}€</div>
+                    </>
                   )}
-                  <div style={{ fontSize: 26, fontWeight: 800, color: NAVY, marginTop: 6 }}>{total}€</div>
                 </div>
                 <button
-                  onClick={() => setStep(2)}
+                  onClick={() => !belowMin && setStep(2)}
                   style={{
                     ...btnPrimary,
-                    background: CORAL,
-                    color: "#fff",
+                    background: belowMin ? SAND : CORAL,
+                    color: belowMin ? MUTED : "#fff",
+                    cursor: belowMin ? "not-allowed" : "pointer",
+                    opacity: belowMin ? 0.6 : 1,
                   }}
                 >
                   Continuer →
