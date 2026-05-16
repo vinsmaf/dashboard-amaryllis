@@ -46,7 +46,8 @@ function doPost(e) {
   try { body = JSON.parse(e.postData.contents); } catch(err) { return json_({ error: "JSON invalide" }); }
 
   var action = body.action || "";
-  if (action === "importBeds24") return importBeds24_(body.bookings || []);
+  if (action === "importBeds24")       return importBeds24_(body.bookings || []);
+  if (action === "importAllReservations") return importAllReservations_(body.reservations || []);
 
   return json_({ error: "action POST inconnue: " + action });
 }
@@ -393,4 +394,121 @@ function importBeds24_(bookings) {
   }
 
   return json_({ ok: true, added: added, updated: updated });
+}
+
+// ── IMPORT TOUTES LES RÉSERVATIONS → feuille "Toutes les Réservations" ─
+// Format unifié : iCal (Airbnb/Booking/Direct) + Beds24 (toutes propriétés)
+// Colonnes : A=ID  B=Propriété  C=Voyageur  D=Canal  E=Arrivée  F=Départ
+//            G=Nuits  H=Montant(€)  I=Statut  J=Voyageurs  K=Notes  L=Source  M=Modifié le
+function importAllReservations_(reservations) {
+  if (!reservations || reservations.length === 0) return json_({ ok: true, added: 0, updated: 0 });
+
+  var ss = SpreadsheetApp.openById("1xuhU0KraEMxF9NAWO5MKEt23JI_V8mnNnWktzHy6q2U");
+
+  var SHEET_NAME = "Toutes les Réservations";
+  var sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_NAME);
+    var headers = ["ID","Propriété","Voyageur","Canal","Arrivée","Départ","Nuits","Montant (€)","Statut","Voyageurs","Notes","Source","Modifié le"];
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers])
+      .setBackground("#1e3a5f").setFontColor("#ffffff").setFontWeight("bold");
+    sheet.setFrozenRows(1);
+    sheet.setColumnWidth(1, 200);  // ID
+    sheet.setColumnWidth(2, 130);  // Propriété
+    sheet.setColumnWidth(3, 160);  // Voyageur
+    sheet.setColumnWidth(4, 110);  // Canal
+    sheet.setColumnWidth(5, 100);  // Arrivée
+    sheet.setColumnWidth(6, 100);  // Départ
+    sheet.setColumnWidth(11, 220); // Notes
+  }
+
+  var NCOLS = 13;
+
+  // Index des IDs existants
+  var lastRow = sheet.getLastRow();
+  var existingIds = {};
+  if (lastRow > 1) {
+    var ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    ids.forEach(function(row, i) { if (row[0]) existingIds[String(row[0])] = i + 2; });
+  }
+
+  var BIEN_LABELS = {
+    nogent: "T2 Nogent", amaryllis: "Villa Amaryllis", iguana: "Villa Iguana",
+    geko: "Geko", zandoli: "Zandoli", mabouya: "Mabouya", schoelcher: "T2 Schoelcher"
+  };
+  var CANAL_LABELS = {
+    airbnb: "Airbnb", booking: "Booking.com", direct: "Direct", beds24: "Beds24",
+    "Airbnb": "Airbnb", "Booking.com": "Booking.com", "Direct": "Direct"
+  };
+
+  var added = 0, updated = 0;
+  var newResaLines = [];
+
+  reservations.forEach(function(r) {
+    var id = String(r.id || r.bookingId || "");
+    if (!id) return;
+
+    // Calcul nuits
+    var nights = r.nights || 0;
+    if (!nights && r.checkin && r.checkout) {
+      var a = new Date(r.checkin + "T12:00:00Z");
+      var b = new Date(r.checkout + "T12:00:00Z");
+      nights = Math.round((b - a) / 86400000);
+    }
+
+    var bienLabel = BIEN_LABELS[r.bienId] || r.bienId || r.property || "";
+    var canalLabel = CANAL_LABELS[r.canal] || r.canal || r.channel || "Direct";
+    var statut = r.status || r.statusLabel || (r.statusCode === "2" ? "Annulé" : "Confirmé");
+
+    var row = [
+      id,
+      bienLabel,
+      r.voyageur || r.guestName || "—",
+      canalLabel,
+      r.checkin  || r.arrival   || "",
+      r.checkout || r.departure || "",
+      nights,
+      r.montant  || r.price     || 0,
+      statut,
+      r.nb_guests || r.numGuests || 1,
+      r.notes    || r.note      || "",
+      r.source   || canalLabel,
+      r.modifiedOn || r.checkin || "",
+    ];
+
+    var existingRow = existingIds[id];
+    if (existingRow) {
+      sheet.getRange(existingRow, 1, 1, NCOLS).setValues([row]);
+      updated++;
+    } else {
+      sheet.appendRow(row);
+      existingIds[id] = sheet.getLastRow();
+      added++;
+      if (r.montant > 0 || r.price > 0) newResaLines.push(bienLabel + " · " + (r.voyageur || r.guestName || "?") + " · " + (r.checkin || r.arrival) + " · " + (r.montant || r.price || "?") + "€");
+    }
+
+    // Couleur par canal
+    var rowNum = existingIds[id];
+    var bg = canalLabel === "Airbnb"       ? "#fff3e0"
+           : canalLabel === "Booking.com"  ? "#e3f2fd"
+           : canalLabel === "Direct"       ? "#e8f5e9"
+           : "#f3f4f6";
+    if (statut === "Annulé") bg = "#fce4ec";
+    sheet.getRange(rowNum, 1, 1, NCOLS).setBackground(bg);
+  });
+
+  // Tri par arrivée décroissante (col E = 5)
+  if (sheet.getLastRow() > 2) {
+    sheet.getRange(2, 1, sheet.getLastRow() - 1, NCOLS).sort({ column: 5, ascending: false });
+  }
+
+  // Notif push si nouvelles réservations
+  if (newResaLines.length > 0) {
+    sendNtfyPush_(
+      "🏠 " + newResaLines.length + " nouvelle(s) réservation(s)",
+      newResaLines.join("\n")
+    );
+  }
+
+  return json_({ ok: true, added: added, updated: updated, total: reservations.length });
 }

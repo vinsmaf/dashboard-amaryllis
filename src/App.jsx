@@ -3883,6 +3883,7 @@ export default function App() {
   const [showPushSetup, setShowPushSetup] = useState(false);
   const [ntfyTopic, setNtfyTopic] = useState(() => localStorage.getItem("ntfy_topic") || "");
   const [hist, setHist] = useState(HIST_SEED);
+  const [globalSyncStatus, setGlobalSyncStatus] = useState("idle"); // idle | syncing | ok | error
   const [reservations, setReservations] = useState(() => {
     try { const r = localStorage.getItem("reservations_v2"); return r ? JSON.parse(r) : []; } catch { return []; }
   });
@@ -3928,6 +3929,75 @@ export default function App() {
       setSync({ status: "error", msg: `⚠ ${e.message}` });
     }
   }, [biens, scriptUrl]);
+
+  // ── Sync global : iCal + Beds24 → Google Sheets ──────────────────
+  const syncAllToSheets = useCallback(async () => {
+    if (!scriptUrl) { alert("Configure d'abord l'URL Apps Script (bouton ⚙)"); return; }
+    setGlobalSyncStatus("syncing");
+    try {
+      // 1. Réservations iCal existantes (toutes propriétés, tous canaux)
+      const icalResas = reservations.map(r => ({
+        id:        r.id,
+        bienId:    r.bienId,
+        voyageur:  r.voyageur || "—",
+        canal:     r.canal,
+        checkin:   r.checkin,
+        checkout:  r.checkout,
+        nights:    (() => { if (!r.checkin || !r.checkout) return 0; const a = new Date(r.checkin+"T12:00:00Z"), b = new Date(r.checkout+"T12:00:00Z"); return Math.round((b-a)/86400000); })(),
+        montant:   r.montant || 0,
+        nb_guests: r.nb_guests || 1,
+        notes:     r.notes || "",
+        source:    r.canal,
+        status:    "Confirmé",
+      }));
+
+      // 2. Beds24 Nogent (fetch frais depuis l'API)
+      let beds24Resas = [];
+      try {
+        const b24 = await fetch("/api/beds24-bookings");
+        if (b24.ok) {
+          const b24data = await b24.json();
+          beds24Resas = (b24data.bookings || []).map(b => ({
+            id:        "beds24-" + b.bookingId,
+            bienId:    "nogent",
+            voyageur:  b.guestName,
+            canal:     b.channelLabel || b.channel || "Beds24",
+            checkin:   b.arrival,
+            checkout:  b.departure,
+            nights:    b.nights,
+            montant:   b.price,
+            nb_guests: b.numGuests,
+            notes:     b.notes || "",
+            source:    "Beds24",
+            status:    b.statusLabel,
+          }));
+        }
+      } catch (_) {}
+
+      // 3. Fusionner (Beds24 remplace iCal pour Nogent)
+      const nogentIcalIds = new Set(icalResas.filter(r => r.bienId === "nogent").map(r => r.id));
+      const allResas = [
+        ...icalResas.filter(r => r.bienId !== "nogent"), // autres propriétés via iCal
+        ...beds24Resas,                                   // Nogent via Beds24
+      ];
+
+      // 4. Envoyer à Apps Script
+      const res = await fetch(scriptUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "importAllReservations", reservations: allResas }),
+        redirect: "follow",
+      });
+      const data = await res.json();
+      setGlobalSyncStatus(data.ok ? "ok" : "error");
+      // Reset après 5s
+      setTimeout(() => setGlobalSyncStatus("idle"), 5000);
+    } catch (e) {
+      console.error("syncAllToSheets:", e);
+      setGlobalSyncStatus("error");
+      setTimeout(() => setGlobalSyncStatus("idle"), 5000);
+    }
+  }, [scriptUrl, reservations]);
 
   const onUpdateRevenu = useCallback(async (bienId, month, value) => {
     setBiens(prev => prev.map(b => b.id === bienId
@@ -4010,6 +4080,12 @@ export default function App() {
             {sync.status === "loading" ? "⟳…" : "⟳"}
           </button>
           <button onClick={() => setShowScriptSetup(true)} title="Configurer Apps Script" style={{ padding: "4px 6px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: scriptUrl ? "#10b981" : "#64748b", fontSize: 10, cursor: "pointer" }}>{scriptUrl ? "⚙✓" : "⚙"}</button>
+          <button
+            onClick={syncAllToSheets}
+            disabled={globalSyncStatus === "syncing"}
+            title="Exporter toutes les réservations (iCal + Beds24) vers Google Sheets"
+            style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(16,185,129,0.4)", background: globalSyncStatus === "ok" ? "rgba(16,185,129,0.2)" : globalSyncStatus === "error" ? "rgba(239,68,68,0.15)" : "transparent", color: globalSyncStatus === "ok" ? "#10b981" : globalSyncStatus === "error" ? "#f87171" : "#64748b", fontSize: 10, cursor: "pointer", fontWeight: 600 }}
+          >{globalSyncStatus === "syncing" ? "⟳…" : globalSyncStatus === "ok" ? "📊✓" : globalSyncStatus === "error" ? "📊✗" : "📊"}</button>
           <button onClick={() => setShowPushSetup(true)} title="Notifications push" style={{ padding: "4px 6px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: ntfyTopic ? "#f59e0b" : "#64748b", fontSize: 10, cursor: "pointer" }}>{ntfyTopic ? "🔔" : "🔕"}</button>
           <button onClick={() => { localStorage.removeItem(PWD_KEY); setAuthed(false); }} title="Déconnexion" style={{ padding: "4px 6px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "transparent", color: "#475569", fontSize: 10, cursor: "pointer" }}>🔒</button>
         </div>
