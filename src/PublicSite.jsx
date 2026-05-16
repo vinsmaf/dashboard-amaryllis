@@ -110,6 +110,13 @@ const BIENS = [
       "/photos/amaryllis/13.webp",
       "/photos/amaryllis/14.webp",
       "/photos/amaryllis/15.webp",
+      "/photos/amaryllis/16.webp",
+      "/photos/amaryllis/17.webp",
+      "/photos/amaryllis/18.webp",
+      "/photos/amaryllis/19.webp",
+      "/photos/amaryllis/20.webp",
+      "/photos/amaryllis/21.webp",
+      "/photos/amaryllis/22.webp",
     ],
     amenities: ["Piscine débordement", "Jacuzzi privé", "Vue océan", "Wifi 127 Mb/s", "Parking", "Animaux OK"],
     avis: [
