@@ -3382,6 +3382,7 @@ function Tarifs() {
     } catch { return { ...DEFAULT_PRIX }; }
   });
   const [saved, setSaved] = useState(false);
+  const [synced, setSynced] = useState(false);
 
   function save() {
     localStorage.setItem("amaryllis_prices", JSON.stringify(prices));
@@ -3390,15 +3391,45 @@ function Tarifs() {
     setTimeout(() => setSaved(false), 2500);
   }
 
+  function syncToSite() {
+    // Merge SEED + overrides manuels → écriture complète dans localStorage
+    const merged = loadDailyPrices(); // déjà seed + overrides
+    saveDailyPrices(merged);
+    // Aussi sync les prix de base
+    localStorage.setItem("amaryllis_prices", JSON.stringify(prices));
+    window.dispatchEvent(new Event("amaryllis_prices_updated"));
+    setSynced(true);
+    setTimeout(() => setSynced(false), 3000);
+  }
+
   return (
     <div style={{ padding: "16px 0" }}>
+
+      {/* ── Bouton sync site ── */}
+      <div style={{ background: synced ? "rgba(16,185,129,0.08)" : "rgba(14,165,233,0.06)", border: `1px solid ${synced ? "rgba(16,185,129,0.3)" : "rgba(14,165,233,0.2)"}`, borderRadius: 12, padding: "14px 18px", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#e2e8f0", marginBottom: 2 }}>
+            {synced ? "✓ Site synchronisé" : "Synchroniser les prix sur le site public"}
+          </div>
+          <div style={{ fontSize: 11, color: "#475569" }}>
+            {synced ? "Tous les prix (base + calendrier) sont maintenant visibles sur le site." : "Publie tous les prix du calendrier + les prix de base sur le site visiteur."}
+          </div>
+        </div>
+        <button
+          onClick={syncToSite}
+          style={{ padding: "9px 20px", borderRadius: 8, border: "none", background: synced ? "#10b981" : "#0ea5e9", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", whiteSpace: "nowrap", transition: "background 0.25s", letterSpacing: "0.04em" }}
+        >
+          {synced ? "✓ Synchronisé" : "⟳ Sync → Site"}
+        </button>
+      </div>
+
       {/* ── Prix de base (barre compacte) ── */}
       <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 12, padding: "14px 18px", marginBottom: 28 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: "#e2e8f0" }}>Prix de base — site public</div>
           <div style={{ fontSize: 11, color: "#475569" }}>« À partir de X€ / nuit »</div>
           <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
-            <button onClick={save} style={{ padding: "6px 14px", borderRadius: 7, border: "none", background: saved ? "#10b981" : "#0ea5e9", color: "#fff", fontWeight: 600, fontSize: 11, cursor: "pointer", transition: "background 0.25s" }}>{saved ? "✓ Sauvegardé" : "Sauvegarder"}</button>
+            <button onClick={save} style={{ padding: "6px 14px", borderRadius: 7, border: "none", background: saved ? "#10b981" : "rgba(255,255,255,0.08)", color: saved ? "#fff" : "#94a3b8", fontWeight: 600, fontSize: 11, cursor: "pointer", transition: "background 0.25s" }}>{saved ? "✓ Sauvegardé" : "Sauvegarder"}</button>
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
