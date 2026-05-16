@@ -34,6 +34,7 @@ function doGet(e) {
   if (action === "deleteReservation") return deleteReservation_(e.parameter);
   if (action === "fetchIcal") return fetchIcal_(e.parameter);
   if (action === "syncReservations") return syncReservations_(e.parameter);
+  if (action === "importAllReservations") return importAllReservations_(e.parameter);
   if (action === "sendCheckinAlerts") { sendCheckinAlerts_(); return json_({ ok: true }); }
   if (action === "setNtfyTopic") return setNtfyTopic_(e.parameter);
 
@@ -400,8 +401,19 @@ function importBeds24_(bookings) {
 // Format unifié : iCal (Airbnb/Booking/Direct) + Beds24 (toutes propriétés)
 // Colonnes : A=ID  B=Propriété  C=Voyageur  D=Canal  E=Arrivée  F=Départ
 //            G=Nuits  H=Montant(€)  I=Statut  J=Voyageurs  K=Notes  L=Source  M=Modifié le
-function importAllReservations_(reservations) {
-  if (!reservations || reservations.length === 0) return json_({ ok: true, added: 0, updated: 0 });
+function importAllReservations_(input) {
+  // Accepte :
+  //   – un tableau direct (appel interne)
+  //   – un objet params GET { data: "[{...}]" } (via doGet → chunks Cloudflare)
+  var reservations;
+  if (Array.isArray(input)) {
+    reservations = input;
+  } else {
+    if (!input || !input.data) return json_({ ok: true, added: 0, updated: 0 });
+    try { reservations = JSON.parse(input.data); }
+    catch(e) { return json_({ error: "JSON invalide: " + e.message }); }
+  }
+  if (!Array.isArray(reservations) || reservations.length === 0) return json_({ ok: true, added: 0, updated: 0 });
 
   var ss = SpreadsheetApp.openById("1xuhU0KraEMxF9NAWO5MKEt23JI_V8mnNnWktzHy6q2U");
 
