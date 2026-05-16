@@ -994,6 +994,13 @@ function BienCard({ bien, onDetail, onBook }) {
   function prev(e) { e.stopPropagation(); setPhotoIdx(i => (i - 1 + photos.length) % photos.length); }
   function next(e) { e.stopPropagation(); setPhotoIdx(i => (i + 1) % photos.length); }
 
+  // Auto-avance toutes les 5 s — se réinitialise à chaque navigation manuelle
+  useEffect(() => {
+    if (photos.length <= 1) return;
+    const t = setInterval(() => setPhotoIdx(i => (i + 1) % photos.length), 5000);
+    return () => clearInterval(t);
+  }, [photoIdx, photos.length]);
+
   return (
     <div
       onClick={() => onDetail(bien)}
@@ -1023,9 +1030,9 @@ function BienCard({ bien, onDetail, onBook }) {
             src={currentPhoto}
             alt={bien.nom}
             style={{
-              width: "100%", height: "100%", objectFit: "contain",
-              transition: "opacity 0.3s",
+              width: "100%", height: "100%", objectFit: "cover",
               display: "block",
+              transition: "opacity 0.3s",
             }}
           />
         ) : (
@@ -1207,11 +1214,23 @@ function PropertyDetail({ bien, onClose, onBook }) {
   const [photoIdx, setPhotoIdx] = useState(0);
   const photos = bien.photos || [];
 
+  // Clavier : Échap ferme, ← → naviguent
   useEffect(() => {
-    const fn = (e) => { if (e.key === "Escape") onClose(); };
+    const fn = (e) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowLeft")  setPhotoIdx(i => (i - 1 + photos.length) % photos.length);
+      if (e.key === "ArrowRight") setPhotoIdx(i => (i + 1) % photos.length);
+    };
     window.addEventListener("keydown", fn);
     return () => window.removeEventListener("keydown", fn);
-  }, [onClose]);
+  }, [onClose, photos.length]);
+
+  // Auto-avance 5 s — reset à chaque changement de photo (manuel ou auto)
+  useEffect(() => {
+    if (photos.length <= 1) return;
+    const t = setInterval(() => setPhotoIdx(i => (i + 1) % photos.length), 5000);
+    return () => clearInterval(t);
+  }, [photoIdx, photos.length]);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -1254,13 +1273,13 @@ function PropertyDetail({ bien, onClose, onBook }) {
         {/* ─── LEFT: photo gallery ─── */}
         <div style={{ flex: "0 0 58%", display: "flex", flexDirection: "column", background: "#072626", minHeight: 0 }}>
           {/* Main image */}
-          <div style={{ flex: 1, position: "relative", overflow: "hidden", minHeight: 0, background: "#061818" }}>
+          <div style={{ flex: 1, position: "relative", overflow: "hidden", minHeight: 0 }}>
             {photos[photoIdx] && (
               <img
                 key={photoIdx}
                 src={photos[photoIdx]}
                 alt={bien.nom}
-                style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "opacity 0.3s" }}
               />
             )}
             {photos.length > 1 && (
