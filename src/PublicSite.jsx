@@ -3,6 +3,19 @@ import { useState, useEffect, useRef, useCallback } from "react";
 // ── Brand palette (from logos.jsx) ──────────────────────────────
 const WEEKLY_DISCOUNT = 0.05; // -5% à partir de 7 nuits
 
+const FRAIS_MENAGE = {
+  nogent:     45,
+  amaryllis:  180,
+  geko:       70,
+  schoelcher: 70,
+  zandoli:    70,
+  mabouya:    50,
+  iguana:     0,
+};
+
+// Biens désactivés à la réservation (ex: longue durée)
+const BOOKING_DISABLED = new Set(["iguana"]);
+
 const IVORY  = "#faf5e9";  // paper — main background
 const CREAM  = "#f4ecdc";  // cream — card/modal background
 const NAVY   = "#0e3b3a";  // ink — deep antillean teal, primary text & header
@@ -600,7 +613,8 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
   })();
   const hasWeeklyDiscount = nights >= 7;
   const discountAmount = hasWeeklyDiscount ? Math.round(rawTotal * WEEKLY_DISCOUNT) : 0;
-  const total = rawTotal - discountAmount;
+  const fraisMenage = FRAIS_MENAGE[bien.id] ?? 0;
+  const total = rawTotal - discountAmount + fraisMenage;
 
   const formOk = form.prenom && form.nom && form.email && form.email.includes("@");
 
@@ -736,12 +750,15 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
                 <div>
                   <div style={{ color: MUTED, fontSize: 13 }}>{formatDateLong(checkin)} → {formatDateLong(checkout)}</div>
                   <div style={{ fontSize: 14, color: MUTED, marginTop: 4 }}>{nights} nuit{nights > 1 ? "s" : ""} — sous-total {rawTotal}€</div>
+                  {fraisMenage > 0 && (
+                    <div style={{ fontSize: 13, color: MUTED, marginTop: 2 }}>🧹 Frais de ménage {fraisMenage}€</div>
+                  )}
                   {hasWeeklyDiscount && (
                     <div style={{ fontSize: 13, color: CORAL, marginTop: 2, fontWeight: 600 }}>
                       🎁 Réduction semaine −{discountAmount}€ ({Math.round(WEEKLY_DISCOUNT * 100)}%)
                     </div>
                   )}
-                  <div style={{ fontSize: 26, fontWeight: 800, color: NAVY, marginTop: 4 }}>{total}€</div>
+                  <div style={{ fontSize: 26, fontWeight: 800, color: NAVY, marginTop: 6 }}>{total}€</div>
                 </div>
                 <button
                   onClick={() => setStep(2)}
@@ -1051,28 +1068,31 @@ function BienCard({ bien, onDetail, onBook }) {
           >
             Voir plus →
           </button>
-          <button
-            onClick={e => { e.stopPropagation(); onBook(bien); }}
-            style={{
-              flex: 2,
-              background: CORAL,
-              border: "none",
-              color: "#fff",
-              borderRadius: 6,
-              padding: "11px 20px",
-              fontFamily: "'Jost', sans-serif",
-              fontWeight: 400,
-              fontSize: 12,
-              letterSpacing: "0.08em",
-              cursor: "pointer",
-              transition: "opacity 0.2s",
-              textTransform: "uppercase",
-            }}
-            onMouseEnter={e => { e.currentTarget.style.opacity = "0.88"; }}
-            onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
-          >
-            Réserver
-          </button>
+          {BOOKING_DISABLED.has(bien.id) ? (
+            <div style={{
+              flex: 2, background: "rgba(14,59,58,0.06)", border: `1px solid ${SAND}`,
+              color: MUTED, borderRadius: 6, padding: "11px 20px",
+              fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11,
+              letterSpacing: "0.06em", textAlign: "center", textTransform: "uppercase",
+            }}>
+              Location longue durée
+            </div>
+          ) : (
+            <button
+              onClick={e => { e.stopPropagation(); onBook(bien); }}
+              style={{
+                flex: 2, background: CORAL, border: "none", color: "#fff",
+                borderRadius: 6, padding: "11px 20px",
+                fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 12,
+                letterSpacing: "0.08em", cursor: "pointer", transition: "opacity 0.2s",
+                textTransform: "uppercase",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.opacity = "0.88"; }}
+              onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
+            >
+              Réserver
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -1495,22 +1515,28 @@ function HeroCarousel({ biens, onDetail, onBook }) {
         </p>
         <div style={{ display: "flex", flexDirection: "row", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
           {/* Primary CTA */}
-          <button
-            onClick={() => onBook(bien)}
-            style={{
-              background: CORAL, border: "none", color: "#fff",
-              borderRadius: 8, padding: "14px 32px",
-              fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: "0.12em",
-              cursor: "pointer", textTransform: "uppercase",
-              animation: "ctaPulse 2.8s ease-in-out infinite",
-              transition: "opacity 0.2s, transform 0.15s",
-              whiteSpace: "nowrap",
-            }}
-            onMouseEnter={e => { e.currentTarget.style.opacity = "0.9"; e.currentTarget.style.transform = "translateY(-2px)"; }}
-            onMouseLeave={e => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.transform = "translateY(0)"; }}
-          >
-            Réserver — {bien.prix}€ / nuit
-          </button>
+          {!BOOKING_DISABLED.has(bien.id) ? (
+            <button
+              onClick={() => onBook(bien)}
+              style={{
+                background: CORAL, border: "none", color: "#fff",
+                borderRadius: 8, padding: "14px 32px",
+                fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: "0.12em",
+                cursor: "pointer", textTransform: "uppercase",
+                animation: "ctaPulse 2.8s ease-in-out infinite",
+                transition: "opacity 0.2s, transform 0.15s",
+                whiteSpace: "nowrap",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.opacity = "0.9"; e.currentTarget.style.transform = "translateY(-2px)"; }}
+              onMouseLeave={e => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.transform = "translateY(0)"; }}
+            >
+              Réserver — {bien.prix}€ / nuit
+            </button>
+          ) : (
+            <div style={{ background: "rgba(250,245,233,0.08)", border: "1px solid rgba(250,245,233,0.2)", borderRadius: 8, padding: "14px 24px", fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11, letterSpacing: "0.12em", color: "rgba(250,245,233,0.5)", textTransform: "uppercase", whiteSpace: "nowrap" }}>
+              Location longue durée
+            </div>
+          )}
           {/* Secondary CTA */}
           <button
             onClick={() => onDetail(bien)}
@@ -2008,6 +2034,7 @@ export default function PublicSite() {
   const biensList = BIENS.map(b => ({ ...b, prix: priceOverrides[b.id] ?? b.prix }));
 
   async function openBien(bien) {
+    if (BOOKING_DISABLED.has(bien.id)) return; // longue durée — réservation désactivée
     setDetailBien(null);
     setSelectedBien(bien);
     setBlockedDates([]);
