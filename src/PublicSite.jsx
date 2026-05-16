@@ -1274,7 +1274,7 @@ function PropertyDetail({ bien, onClose, onBook }) {
       <div style={{ flex: 1, overflow: "hidden", display: "flex", minHeight: 0 }}>
 
         {/* ─── LEFT: photo gallery ─── */}
-        <div style={{ flex: "0 0 58%", display: "flex", flexDirection: "column", background: "#061616", minHeight: 0 }}>
+        <div style={{ flex: "0 0 58%", display: "flex", flexDirection: "column", background: "#061616", minHeight: 0, position: "relative" }}>
           {/* Main image — contain centré, s'adapte à la fenêtre */}
           <div style={{ flex: 1, position: "relative", minHeight: 0, overflow: "hidden" }}>
             {photos[photoIdx] && (
@@ -1285,22 +1285,24 @@ function PropertyDetail({ bien, onClose, onBook }) {
                 style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain", display: "block", transition: "opacity 0.3s" }}
               />
             )}
-            {photos.length > 1 && (
-              <>
-                <button
-                  onClick={goPrev}
-                  style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", background: "rgba(250,245,233,0.15)", backdropFilter: "blur(8px)", border: "1px solid rgba(250,245,233,0.3)", color: "#faf5e9", width: 44, height: 44, borderRadius: "50%", cursor: "pointer", fontSize: 20, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 3, lineHeight: 1 }}
-                >←</button>
-                <button
-                  onClick={goNext}
-                  style={{ position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)", background: "rgba(250,245,233,0.15)", backdropFilter: "blur(8px)", border: "1px solid rgba(250,245,233,0.3)", color: "#faf5e9", width: 44, height: 44, borderRadius: "50%", cursor: "pointer", fontSize: 20, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 3, lineHeight: 1 }}
-                >→</button>
-              </>
-            )}
-            <div style={{ position: "absolute", bottom: 14, right: 16, background: "rgba(14,59,58,0.65)", color: "#faf5e9", fontSize: 11, fontFamily: "'Jost', sans-serif", fontWeight: 300, letterSpacing: "0.1em", padding: "4px 12px", borderRadius: 20 }}>
+            {/* Compteur */}
+            <div style={{ position: "absolute", bottom: 14, right: 16, background: "rgba(14,59,58,0.65)", color: "#faf5e9", fontSize: 11, fontFamily: "'Jost', sans-serif", fontWeight: 300, letterSpacing: "0.1em", padding: "4px 12px", borderRadius: 20, zIndex: 2 }}>
               {photoIdx + 1} / {photos.length}
             </div>
           </div>
+          {/* Flèches — au niveau du panneau, hors du overflow:hidden */}
+          {photos.length > 1 && (
+            <>
+              <button
+                onClick={goPrev}
+                style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", background: "rgba(250,245,233,0.15)", backdropFilter: "blur(8px)", border: "1px solid rgba(250,245,233,0.3)", color: "#faf5e9", width: 44, height: 44, borderRadius: "50%", cursor: "pointer", fontSize: 20, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10, lineHeight: 1 }}
+              >←</button>
+              <button
+                onClick={goNext}
+                style={{ position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)", background: "rgba(250,245,233,0.15)", backdropFilter: "blur(8px)", border: "1px solid rgba(250,245,233,0.3)", color: "#faf5e9", width: 44, height: 44, borderRadius: "50%", cursor: "pointer", fontSize: 20, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10, lineHeight: 1 }}
+              >→</button>
+            </>
+          )}
           {/* Thumbnail strip */}
           {photos.length > 1 && (
             <div style={{ height: 76, display: "flex", gap: 2, padding: "2px", flexShrink: 0, overflowX: "auto" }}>
