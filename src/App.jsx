@@ -686,7 +686,7 @@ function Cockpit({ biens, n, mob, onUpdateRevenu }) {
 // ============================================================================
 // PLANNING
 // ============================================================================
-const EMPTY_FORM = { bienId: "amaryllis", voyageur: "", canal: "booking", checkin: "", checkout: "", checkin_time: "", checkout_time: "", nb_guests: "", montant: "", notes: "", menage: "", reservation_code: "", phone: "" };
+const EMPTY_FORM = { bienId: "amaryllis", voyageur: "", canal: "booking", checkin: "", checkout: "", checkin_time: "", checkout_time: "", nb_guests: "", montant: "", notes: "", menage: "", reservation_code: "", phone: "", assigne: "" };
 
 function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalUrlsBooking, saveUrlsBooking, scriptUrl, onApplyRevenusFromResas, pushReservationsToScript }) {
   const [showUrls, setShowUrls] = useState(false);
@@ -696,6 +696,7 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
   const [viewMonth, setViewMonth] = useState(new Date().getMonth());
   const [viewYear] = useState(2026);
   const [icalStatus, setIcalStatus] = useState({});
+  const [lastIcalSync, setLastIcalSync] = useState(null);
   const [view, setView] = useState("todo");
   const [ganttBienFilter, setGanttBienFilter] = useState(null); // null = all
   const [dailyPrices, setDailyPrices] = useState(loadDailyPrices);
@@ -731,6 +732,7 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
       const merged = [...currentResas.filter(r => !(r.bienId === bienId && r.fromIcal && r.canal === canal)), ...newEvents];
       saveRes(merged);
       setIcalStatus(s => ({ ...s, [statusKey]: `✓ ${newEvents.length}` }));
+      setLastIcalSync(new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }));
       return merged;
     } catch (e) {
       setIcalStatus(s => ({ ...s, [statusKey]: `⚠ ${e.message}` }));
@@ -744,6 +746,7 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
     Object.keys(icalUrlsBooking).forEach(k => { if (icalUrlsBooking[k]?.length > 10) sources.push({ bienId: k, canal: "booking", url: icalUrlsBooking[k] }); });
     if (sources.length === 0) return;
     let current = reservations;
+    const timer = setTimeout(() => {}, 0);
     (async () => {
       for (const s of sources) {
         current = await importIcal(s.bienId, s.canal, s.url, current) || current;
@@ -751,10 +754,19 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
       if (onApplyRevenusFromResas) onApplyRevenusFromResas(computeRevenusFromResas(current));
       pushReservationsToScript(current);
     })();
+    const interval = setInterval(() => {
+      let current = reservations;
+      (async () => {
+        for (const s of sources) {
+          current = await importIcal(s.bienId, s.canal, s.url, current) || current;
+        }
+      })();
+    }, 60 * 60 * 1000); // 1 heure
+    return () => { clearTimeout(timer); clearInterval(interval); };
   }, []);
 
   const openEdit = (r) => {
-    setForm({ bienId: r.bienId, voyageur: r.voyageur, canal: r.canal, checkin: r.checkin, checkout: r.checkout, checkin_time: r.checkin_time || "", checkout_time: r.checkout_time || "", nb_guests: r.nb_guests || "", montant: r.montant || "", notes: r.notes || "", menage: r.menage || "", reservation_code: r.reservation_code || "", phone: r.phone || "" });
+    setForm({ bienId: r.bienId, voyageur: r.voyageur, canal: r.canal, checkin: r.checkin, checkout: r.checkout, checkin_time: r.checkin_time || "", checkout_time: r.checkout_time || "", nb_guests: r.nb_guests || "", montant: r.montant || "", notes: r.notes || "", menage: r.menage || "", reservation_code: r.reservation_code || "", phone: r.phone || "", assigne: r.assigne || "" });
     setEditId(r.id);
     setShowForm(true);
   };
@@ -832,7 +844,7 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
     if (!r.menage_done && (menageWindow || preCheckin)) {
       const daysBeforeCI = diffDays(td, r.checkin);
       const menUrgent = daysBeforeCI <= 1;
-      todos.push({ id: `mn-${r.id}`, icon: "🧹", label: `Ménage — ${b.nom}`, sub: r.menage || "Prestataire à contacter", c: "#a855f7", done: r.menage_done, onT: () => togRes(r.id, "menage_done"), urgent: menUrgent });
+      todos.push({ id: `mn-${r.id}`, icon: "🧹", label: `Ménage — ${b.nom}`, sub: r.assigne ? `👤 ${r.assigne}` : (r.menage || "Prestataire à contacter"), c: "#a855f7", done: r.menage_done, onT: () => togRes(r.id, "menage_done"), urgent: menUrgent });
     }
     if (r.checkin === tm) todos.push({ id: `ci2-${r.id}`, icon: "⏰", label: `Arrivée demain — ${b.nom}`, sub: [r.voyageur, r.checkin_time ? `🕐 ${r.checkin_time}` : "", r.nb_guests ? `👥 ${r.nb_guests}` : ""].filter(Boolean).join(" · "), c: "#f59e0b", done: false, urgent: false });
   });
@@ -865,6 +877,7 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
                 iCal sync
                 {Object.values(icalStatus).some(v => v === "loading") && <span style={{ fontSize: 10, color: "#0ea5e9", marginLeft: 6 }}>⟳ Synchro…</span>}
                 {!Object.values(icalStatus).some(v => v === "loading") && Object.keys(icalStatus).length > 0 && <span style={{ fontSize: 10, color: "#10b981", marginLeft: 6 }}>✓ Synchronisé</span>}
+                {lastIcalSync && <span style={{ fontSize: 9, color: "#475569", marginLeft: 4 }}>sync {lastIcalSync}</span>}
               </span>
               <div style={{ display: "flex", gap: 5 }}>
                 <button onClick={() => setShowUrls(!showUrls)} style={{ padding: "5px 9px", borderRadius: 6, border: "1px solid #334155", background: "none", color: "#64748b", cursor: "pointer", fontSize: 10 }}>
@@ -1236,6 +1249,7 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
               { l: "Heure départ", k: "checkout_time", t: "time" },
               { l: "Montant €", k: "montant", t: "number", ph: "0" },
               { l: "Ménage — prestataire", k: "menage", t: "text", ph: "Nom / contact" },
+              { l: "Assigné à", k: "assigne", t: "text", ph: "Assigné à (ménage/conciergerie)…" },
               { l: "Code réservation", k: "reservation_code", t: "text", ph: "HM…" },
               { l: "Téléphone", k: "phone", t: "text", ph: "+596…" },
               { l: "Notes", k: "notes", t: "text", ph: "" },
@@ -1633,7 +1647,7 @@ function Historique({ biens, n, mob, hist = HIST_SEED }) {
       </div>
 
       <div style={{ display: "flex", gap: 7, marginBottom: 14, flexWrap: "wrap" }}>
-        {[{ id: "annuel", l: "Annuel" }, { id: "mensuel", l: "Mensuel" }, { id: "cumul", l: "Cumul 25/26" }, { id: "heatmap", l: "🌡 Saisonnalité" }, { id: "semaine", l: "📅 Jour de semaine" }].map(v => (
+        {[{ id: "annuel", l: "Annuel" }, { id: "mensuel", l: "Mensuel" }, { id: "cumul", l: "Cumul 25/26" }, { id: "heatmap", l: "🌡 Saisonnalité" }, { id: "semaine", l: "📅 Jour de semaine" }, { id: "vs2025", l: "📊 vs 2025" }].map(v => (
           <button key={v.id} onClick={() => setSelView(v.id)} style={{ padding: "6px 13px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 11, fontWeight: 600, background: selView === v.id ? "#0ea5e9" : "rgba(255,255,255,0.06)", color: selView === v.id ? "#fff" : "#94a3b8" }}>{v.l}</button>
         ))}
         {selView === "mensuel" && (
@@ -1865,6 +1879,8 @@ function Historique({ biens, n, mob, hist = HIST_SEED }) {
           </div>
         );
       })()}
+
+      {selView === "vs2025" && <ComparatifContent biens={biens} n={n} mob={mob} />}
     </div>
   );
 }
@@ -3004,7 +3020,7 @@ function Charges({ biens, n, mob }) {
 // ============================================================================
 // COMPARATIF
 // ============================================================================
-function Comparatif({ biens, n, mob }) {
+function ComparatifContent({ biens, n, mob }) {
   const rows = biens.map(b => {
     const ytd = sumN(b.revenus, n);
     const pp = Math.round(b.rev2025 / 12 * n);
@@ -3128,6 +3144,10 @@ function Comparatif({ biens, n, mob }) {
       </div>
     </div>
   );
+}
+
+function Comparatif({ biens, n, mob }) {
+  return <ComparatifContent biens={biens} n={n} mob={mob} />;
 }
 
 // ============================================================================
@@ -3566,15 +3586,29 @@ export default function App() {
   const ytd = biens.reduce((s, b) => s + sumN(b.revenus, n), 0);
   const cf = biens.reduce((s, b) => s + sumN(b.cashflow, n), 0);
 
+  // Alertes pour badges sur onglets
+  const today = todayStr();
+  const planningAlerts = reservations.filter(r => {
+    const b = biens.find(x => x.id === r.bienId);
+    if (!b) return false;
+    return r.checkin === today || r.checkout === today ||
+      (r.checkout <= today && r.checkout >= addDays(today, -7) && !r.menage_done);
+  }).length;
+
+  const biensByCf = biens.filter(b => {
+    const cf = sumN(b.cashflow, n);
+    return cf < 0;
+  });
+  const cockpitAlerts = biensByCf.length;
+
   const TABS = [
-    { id: "planning", l: mob ? "📅" : "📅 Planning" },
-    { id: "cockpit", l: mob ? "🎯" : "🎯 Cockpit" },
+    { id: "planning", l: mob ? "📅" : `📅 Planning${planningAlerts > 0 ? ` (${planningAlerts})` : ""}`, alert: planningAlerts > 0, alertColor: "#f59e0b" },
+    { id: "cockpit", l: mob ? "🎯" : `🎯 Cockpit${cockpitAlerts > 0 ? ` ⚠` : ""}`, alert: cockpitAlerts > 0, alertColor: "#ef4444" },
+    { id: "tarifs", l: mob ? "🏷️" : "🏷️ Tarifs" },
     { id: "previsionnel", l: mob ? "🔮" : "🔮 Prévisionnel" },
     { id: "charges", l: mob ? "💰" : "💰 Charges" },
     { id: "pilotage", l: mob ? "💼" : "💼 Pilotage" },
     { id: "historique", l: mob ? "📈" : "📈 Historique" },
-    { id: "vs2025", l: mob ? "📊" : "📊 vs 2025" },
-    { id: "tarifs", l: mob ? "🏷️" : "🏷️ Tarifs" },
   ];
 
   return (
@@ -3588,7 +3622,7 @@ export default function App() {
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              style={{ padding: mob ? "10px 9px" : "10px 13px", background: "none", border: "none", cursor: "pointer", fontSize: mob ? 11 : 12, fontWeight: tab === t.id ? 600 : 400, color: tab === t.id ? "#0ea5e9" : "#64748b", borderBottom: tab === t.id ? "2px solid #0ea5e9" : "2px solid transparent", whiteSpace: "nowrap" }}
+              style={{ padding: mob ? "10px 9px" : "10px 13px", background: "none", border: "none", cursor: "pointer", fontSize: mob ? 11 : 12, fontWeight: tab === t.id ? 600 : 400, color: tab === t.id ? "#0ea5e9" : (t.alert ? t.alertColor : "#64748b"), borderBottom: tab === t.id ? "2px solid #0ea5e9" : "2px solid transparent", whiteSpace: "nowrap" }}
             >{t.l}</button>
           ))}
         </div>
@@ -3611,7 +3645,6 @@ export default function App() {
         {tab === "charges" && <Charges biens={biens} n={n} mob={mob} />}
         {tab === "pilotage" && <Pilotage biens={biens} n={n} mob={mob} />}
         {tab === "historique" && <Historique biens={biens} n={n} mob={mob} hist={hist} />}
-        {tab === "vs2025" && <Comparatif biens={biens} n={n} mob={mob} />}
         {tab === "tarifs" && <Tarifs />}
       </div>
 
