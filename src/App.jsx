@@ -3638,11 +3638,10 @@ function Beds24Admin({ scriptUrl }) {
     if (bookings.length === 0) { setSyncMsg("Charge d'abord les réservations"); setSyncStatus("error"); return; }
     setSyncStatus("syncing"); setSyncMsg("");
     try {
-      const res  = await fetch(scriptUrl, {
+      const res  = await fetch("/api/sheets-proxy", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-Script-Url": scriptUrl },
         body: JSON.stringify({ action: "importBeds24", bookings }),
-        redirect: "follow",
       });
       const data = await res.json();
       if (data.ok) {
@@ -3981,12 +3980,11 @@ export default function App() {
         ...beds24Resas,                                   // Nogent via Beds24
       ];
 
-      // 4. Envoyer à Apps Script
-      const res = await fetch(scriptUrl, {
+      // 4. Envoyer via proxy CF (évite CORS browser → Apps Script)
+      const res = await fetch("/api/sheets-proxy", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-Script-Url": scriptUrl },
         body: JSON.stringify({ action: "importAllReservations", reservations: allResas }),
-        redirect: "follow",
       });
       const data = await res.json();
       setGlobalSyncStatus(data.ok ? "ok" : "error");
