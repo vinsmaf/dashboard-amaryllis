@@ -1,4 +1,4 @@
-import https from "https";
+// No imports needed — uses native fetch (Node 18+, available on Netlify)
 
 export const handler = async (event) => {
   if (event.httpMethod !== "POST") {
@@ -6,13 +6,18 @@ export const handler = async (event) => {
   }
 
   const sk = process.env.STRIPE_SECRET_KEY;
-  if (!sk) return { statusCode: 500, body: JSON.stringify({ error: "STRIPE_SECRET_KEY manquante" }) };
+  if (!sk) {
+    return { statusCode: 500, body: JSON.stringify({ error: "STRIPE_SECRET_KEY manquante" }) };
+  }
 
   let body;
-  try { body = JSON.parse(event.body); } catch { return { statusCode: 400, body: JSON.stringify({ error: "JSON invalide" }) }; }
+  try { body = JSON.parse(event.body); }
+  catch { return { statusCode: 400, body: JSON.stringify({ error: "JSON invalide" }) }; }
 
   const { amount, currency = "eur", metadata = {} } = body;
-  if (!amount || amount < 50) return { statusCode: 400, body: JSON.stringify({ error: "Montant invalide" }) };
+  if (!amount || amount < 50) {
+    return { statusCode: 400, body: JSON.stringify({ error: "Montant invalide" }) };
+  }
 
   const payload = new URLSearchParams({
     amount: String(Math.round(amount)),
@@ -22,39 +27,27 @@ export const handler = async (event) => {
     "metadata[checkin]":  metadata.checkin  || "",
     "metadata[checkout]": metadata.checkout || "",
     "metadata[voyageur]": metadata.voyageur || "",
-  }).toString();
-
-  return new Promise((resolve) => {
-    const req = https.request(
-      {
-        hostname: "api.stripe.com",
-        path: "/v1/payment_intents",
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${sk}`,
-          "Content-Type": "application/x-www-form-urlencoded",
-          "Content-Length": Buffer.byteLength(payload),
-        },
-      },
-      (res) => {
-        let data = "";
-        res.on("data", (c) => (data += c));
-        res.on("end", () => {
-          const parsed = JSON.parse(data);
-          if (parsed.error) {
-            resolve({ statusCode: 400, body: JSON.stringify({ error: parsed.error.message }) });
-          } else {
-            resolve({
-              statusCode: 200,
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ clientSecret: parsed.client_secret }),
-            });
-          }
-        });
-      }
-    );
-    req.on("error", (e) => resolve({ statusCode: 500, body: JSON.stringify({ error: e.message }) }));
-    req.write(payload);
-    req.end();
   });
+
+  try {
+    const res = await fetch("https://api.stripe.com/v1/payment_intents", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${sk}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: payload.toString(),
+    });
+    const parsed = await res.json();
+    if (parsed.error) {
+      return { statusCode: 400, body: JSON.stringify({ error: parsed.error.message }) };
+    }
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clientSecret: parsed.client_secret }),
+    };
+  } catch (err) {
+    return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
+  }
 };
