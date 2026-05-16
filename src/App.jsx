@@ -317,13 +317,12 @@ function parseICS(text, bienId, canal = "airbnb") {
     if (!ci || !co) return null;
     // Filter Airbnb auto-block events ("not available", "Blocked")
     if (/not available|blocked/i.test(sum) && canal !== "booking") return null;
-    // Filter Booking.com manual calendar closures:
-    // Real reservations have a numeric UID (e.g. "123456789@booking.com" or "BDC123@booking.com")
-    // Manual blocks have a UUID-style UID (e.g. "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx@booking.com")
-    if (canal === "booking" && /^closed\s*$/i.test(sum)) {
-      const uid = get("UID");
-      const isRealReservation = /^\d{6,}@/i.test(uid) || /^BDC\d+/i.test(uid);
-      if (!isRealReservation) return null;
+    // Filter Booking.com calendar closures by duration:
+    // Booking.com uses identical format (CLOSED - Not available) for real reservations AND manual blocks.
+    // Real vacation reservations are ≤ 30 nights. Longer = calendar closure, not a guest.
+    if (canal === "booking") {
+      const nights = Math.round((new Date(co + "T12:00:00Z") - new Date(ci + "T12:00:00Z")) / 86400000);
+      if (nights > 30) return null;
     }
 
     // Parse DESCRIPTION — Airbnb uses \n literal in iCal
