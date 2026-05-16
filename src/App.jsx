@@ -315,9 +315,16 @@ function parseICS(text, bienId, canal = "airbnb") {
     const co = cleanDate(rawDtEnd);
     const sum = get("SUMMARY");
     if (!ci || !co) return null;
-    // Filter out Airbnb auto-block events only ("not available", "Blocked")
-    // NOTE: Booking.com uses SUMMARY:CLOSED for real reservations — do NOT filter it
+    // Filter Airbnb auto-block events ("not available", "Blocked")
     if (/not available|blocked/i.test(sum) && canal !== "booking") return null;
+    // Filter Booking.com manual calendar closures:
+    // Real reservations have a numeric UID (e.g. "123456789@booking.com" or "BDC123@booking.com")
+    // Manual blocks have a UUID-style UID (e.g. "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx@booking.com")
+    if (canal === "booking" && /^closed\s*$/i.test(sum)) {
+      const uid = get("UID");
+      const isRealReservation = /^\d{6,}@/i.test(uid) || /^BDC\d+/i.test(uid);
+      if (!isRealReservation) return null;
+    }
 
     // Parse DESCRIPTION — Airbnb uses \n literal in iCal
     const desc = get("DESCRIPTION").replace(/\\n/g, "\n");

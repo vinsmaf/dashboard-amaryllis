@@ -2072,7 +2072,16 @@ export default function PublicSite() {
     setBlockedDates([]);
     setLoadingAvail(true);
     try {
-      const r = await fetch(`/api/get-availability?bienId=${bien.id}`);
+      // Pass Booking.com iCal URL from admin localStorage so the server can fetch it
+      // (admin and public site share the same domain → same localStorage)
+      let apiUrl = `/api/get-availability?bienId=${bien.id}`;
+      try {
+        const bookingUrls = JSON.parse(localStorage.getItem("ical_urls_booking") || "{}");
+        if (bookingUrls[bien.id]) {
+          apiUrl += `&bookingUrl=${encodeURIComponent(bookingUrls[bien.id])}`;
+        }
+      } catch {}
+      const r = await fetch(apiUrl);
       if (r.ok) {
         const d = await r.json();
         setBlockedDates(d.blockedDates || []);

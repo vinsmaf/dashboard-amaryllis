@@ -81,8 +81,11 @@ exports.handler = async (event) => {
   const bienId = event.queryStringParameters?.bienId;
   if (!bienId) return { statusCode: 400, headers, body: JSON.stringify({ error: "bienId requis" }) };
 
-  const airbnbUrl  = ICAL_AIRBNB[bienId];
-  const bookingUrl = ICAL_BOOKING[bienId];
+  const airbnbUrl = ICAL_AIRBNB[bienId];
+  // Booking URL: env var first, then param passed from PublicSite localStorage (same-domain admin)
+  const bookingUrlParam = event.queryStringParameters?.bookingUrl;
+  const bookingUrl = ICAL_BOOKING[bienId]
+    || (bookingUrlParam && /^https?:\/\//i.test(bookingUrlParam) ? bookingUrlParam : null);
 
   if (!airbnbUrl && !bookingUrl) {
     return { statusCode: 404, headers, body: JSON.stringify({ error: "bienId inconnu ou aucune URL iCal configurée" }) };
