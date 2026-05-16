@@ -3565,6 +3565,267 @@ function PasswordGate({ onAuth }) {
 }
 
 // ============================================================================
+// BEDS24 ADMIN — Réservations Nogent via channel manager
+// ============================================================================
+const STATUS_OPTIONS = [
+  { v: "",   l: "Tous statuts" },
+  { v: "1",  l: "✅ Confirmé" },
+  { v: "0",  l: "🆕 Nouveau" },
+  { v: "3",  l: "📩 Demande" },
+  { v: "4",  l: "⏳ Paiement en attente" },
+  { v: "2",  l: "❌ Annulé" },
+];
+
+const CHANNEL_COLORS = {
+  "Airbnb":       "#ff5a5f",
+  "Booking.com":  "#003580",
+  "Expedia":      "#ffc72c",
+  "Direct":       "#10b981",
+  "Beds24 Direct":"#0ea5e9",
+};
+
+function Beds24Admin() {
+  const [bookings,    setBookings]    = useState([]);
+  const [loading,     setLoading]     = useState(false);
+  const [error,       setError]       = useState("");
+  const [testStatus,  setTestStatus]  = useState(null); // null | "ok" | "error"
+  const [filters,     setFilters]     = useState({
+    arrivalFrom:   "",
+    arrivalTo:     "",
+    departureFrom: "",
+    departureTo:   "",
+    modifiedFrom:  "",
+    status:        "",
+  });
+  const [fetchInfo, setFetchInfo]  = useState(null); // { total, fetchedAt, pages }
+  const [expanded,  setExpanded]   = useState(null); // bookingId en cours
+
+  // ── Fetch bookings ──────────────────────────────────────────────
+  async function fetchBookings() {
+    setLoading(true);
+    setError("");
+    try {
+      const params = new URLSearchParams();
+      Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v); });
+      const res = await fetch(`/api/beds24-bookings?${params}`);
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+      setBookings(data.bookings || []);
+      setFetchInfo({ total: data.total, fetchedAt: data.fetchedAt, pages: data.pages });
+    } catch (e) {
+      setError(e.message);
+      setBookings([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ── Test connexion ──────────────────────────────────────────────
+  async function testConnection() {
+    setTestStatus(null);
+    try {
+      const res  = await fetch("/api/beds24-bookings?test=1");
+      const data = await res.json();
+      setTestStatus(data.ok ? "ok" : "error");
+    } catch { setTestStatus("error"); }
+  }
+
+  // Chargement initial
+  useEffect(() => { fetchBookings(); }, []);
+
+  const fmtDate = (d) => d ? new Date(d + "T12:00:00Z").toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+  const fmtMoney = (n) => n ? `${Number(n).toLocaleString("fr-FR")} €` : "—";
+
+  return (
+    <div style={{ maxWidth: 1200 }}>
+
+      {/* ── En-tête ── */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
+        <div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: "#e2e8f0" }}>
+            🏙️ Beds24 — T2 Nogent-sur-Marne
+          </div>
+          <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>
+            Propriété 158192 · {fetchInfo ? `${fetchInfo.total} réservation(s) · ${new Date(fetchInfo.fetchedAt).toLocaleString("fr-FR")}` : ""}
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {/* Test connexion */}
+          <button
+            onClick={testConnection}
+            style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid #334155", background: "transparent", color: testStatus === "ok" ? "#10b981" : testStatus === "error" ? "#ef4444" : "#94a3b8", fontSize: 11, cursor: "pointer" }}
+          >
+            {testStatus === "ok" ? "✓ Connecté" : testStatus === "error" ? "✗ Échec" : "🔌 Tester"}
+          </button>
+          <button
+            onClick={fetchBookings}
+            disabled={loading}
+            style={{ padding: "6px 14px", borderRadius: 6, border: "1px solid #0ea5e9", background: "rgba(14,165,233,0.12)", color: "#0ea5e9", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+          >
+            {loading ? "⟳ Chargement…" : "⟳ Actualiser"}
+          </button>
+        </div>
+      </div>
+
+      {/* ── Filtres ── */}
+      <div style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 10, padding: "14px 18px", marginBottom: 18, display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-end" }}>
+        {[
+          { key: "arrivalFrom",   label: "Arrivée from" },
+          { key: "arrivalTo",     label: "Arrivée to" },
+          { key: "departureFrom", label: "Départ from" },
+          { key: "departureTo",   label: "Départ to" },
+          { key: "modifiedFrom",  label: "Modifié from" },
+        ].map(({ key, label }) => (
+          <label key={key} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <span style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.1em" }}>{label}</span>
+            <input
+              type="date"
+              value={filters[key]}
+              onChange={e => setFilters(f => ({ ...f, [key]: e.target.value }))}
+              style={{ background: "#1e293b", border: "1px solid #334155", borderRadius: 6, color: "#e2e8f0", padding: "5px 9px", fontSize: 12 }}
+            />
+          </label>
+        ))}
+        <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <span style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.1em" }}>Statut</span>
+          <select
+            value={filters.status}
+            onChange={e => setFilters(f => ({ ...f, status: e.target.value }))}
+            style={{ background: "#1e293b", border: "1px solid #334155", borderRadius: 6, color: "#e2e8f0", padding: "5px 9px", fontSize: 12, minWidth: 160 }}
+          >
+            {STATUS_OPTIONS.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+          </select>
+        </label>
+        <button
+          onClick={fetchBookings}
+          style={{ padding: "6px 16px", borderRadius: 6, border: "none", background: "#0ea5e9", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer", alignSelf: "flex-end" }}
+        >Filtrer</button>
+        <button
+          onClick={() => {
+            setFilters({ arrivalFrom: "", arrivalTo: "", departureFrom: "", departureTo: "", modifiedFrom: "", status: "" });
+            setTimeout(fetchBookings, 0);
+          }}
+          style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid #334155", background: "transparent", color: "#64748b", fontSize: 11, cursor: "pointer", alignSelf: "flex-end" }}
+        >Réinitialiser</button>
+      </div>
+
+      {/* ── Erreur ── */}
+      {error && (
+        <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 8, padding: "10px 16px", marginBottom: 14, color: "#fca5a5", fontSize: 12 }}>
+          ⚠ {error}
+        </div>
+      )}
+
+      {/* ── Tableau des réservations ── */}
+      <div style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 10, overflow: "hidden" }}>
+        {loading ? (
+          <div style={{ padding: 40, textAlign: "center", color: "#475569", fontSize: 13 }}>Chargement des réservations Beds24…</div>
+        ) : bookings.length === 0 ? (
+          <div style={{ padding: 40, textAlign: "center", color: "#475569", fontSize: 13 }}>Aucune réservation trouvée</div>
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 780 }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid #1e293b" }}>
+                  {["ID", "Client", "Arrivée", "Départ", "Nuits", "Canal", "Statut", "Montant", ""].map(h => (
+                    <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontSize: 10, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {bookings.map((b, idx) => (
+                  <>
+                    <tr
+                      key={b.bookingId}
+                      style={{ borderBottom: "1px solid rgba(255,255,255,0.04)", cursor: "pointer", background: expanded === b.bookingId ? "rgba(14,165,233,0.05)" : idx % 2 === 0 ? "transparent" : "rgba(255,255,255,0.01)" }}
+                      onClick={() => setExpanded(expanded === b.bookingId ? null : b.bookingId)}
+                    >
+                      <td style={{ padding: "10px 14px", fontSize: 11, color: "#64748b", fontFamily: "monospace" }}>#{b.bookingId}</td>
+                      <td style={{ padding: "10px 14px", fontSize: 12, color: "#e2e8f0", fontWeight: 500 }}>{b.guestName}</td>
+                      <td style={{ padding: "10px 14px", fontSize: 12, color: "#cbd5e1", whiteSpace: "nowrap" }}>{fmtDate(b.arrival)}</td>
+                      <td style={{ padding: "10px 14px", fontSize: 12, color: "#cbd5e1", whiteSpace: "nowrap" }}>{fmtDate(b.departure)}</td>
+                      <td style={{ padding: "10px 14px", fontSize: 12, color: "#94a3b8", textAlign: "center" }}>{b.nights}</td>
+                      <td style={{ padding: "10px 14px" }}>
+                        <span style={{
+                          fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 20,
+                          background: `${CHANNEL_COLORS[b.channelLabel] || "#475569"}22`,
+                          color: CHANNEL_COLORS[b.channelLabel] || "#94a3b8",
+                          border: `1px solid ${CHANNEL_COLORS[b.channelLabel] || "#475569"}44`,
+                          whiteSpace: "nowrap",
+                        }}>{b.channelLabel || b.channel || "—"}</span>
+                      </td>
+                      <td style={{ padding: "10px 14px" }}>
+                        <span style={{
+                          fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 20,
+                          background: b.status === "1" || b.status === 1 ? "rgba(16,185,129,0.15)" : b.status === "2" || b.status === 2 ? "rgba(239,68,68,0.12)" : "rgba(148,163,184,0.1)",
+                          color:      b.status === "1" || b.status === 1 ? "#10b981" : b.status === "2" || b.status === 2 ? "#f87171" : "#94a3b8",
+                          border:     `1px solid ${b.status === "1" || b.status === 1 ? "rgba(16,185,129,0.3)" : b.status === "2" || b.status === 2 ? "rgba(239,68,68,0.25)" : "rgba(148,163,184,0.15)"}`,
+                          whiteSpace: "nowrap",
+                        }}>{b.statusLabel}</span>
+                      </td>
+                      <td style={{ padding: "10px 14px", fontSize: 12, color: "#a3e635", fontWeight: 600, whiteSpace: "nowrap" }}>{fmtMoney(b.price)}</td>
+                      <td style={{ padding: "10px 14px", fontSize: 12, color: "#475569" }}>{expanded === b.bookingId ? "▲" : "▼"}</td>
+                    </tr>
+                    {/* Ligne détail dépliable */}
+                    {expanded === b.bookingId && (
+                      <tr key={`${b.bookingId}-detail`} style={{ background: "rgba(14,165,233,0.04)", borderBottom: "1px solid rgba(14,165,233,0.1)" }}>
+                        <td colSpan={9} style={{ padding: "14px 20px" }}>
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
+                            {[
+                              { l: "Email",         v: b.email     || "—" },
+                              { l: "Téléphone",     v: b.phone     || "—" },
+                              { l: "Voyageurs",     v: b.numGuests },
+                              { l: "Chambre",       v: b.roomId    || "—" },
+                              { l: "Unité",         v: b.unitId    || "—" },
+                              { l: "Créé le",       v: fmtDate(b.createdOn) },
+                              { l: "Modifié le",    v: fmtDate(b.modifiedOn) },
+                              { l: "Canal brut",    v: b.channel   || "—" },
+                            ].map(({ l, v }) => (
+                              <div key={l}>
+                                <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 2 }}>{l}</div>
+                                <div style={{ fontSize: 12, color: "#cbd5e1" }}>{v}</div>
+                              </div>
+                            ))}
+                            {b.notes && (
+                              <div style={{ gridColumn: "1 / -1" }}>
+                                <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 2 }}>Notes voyageur</div>
+                                <div style={{ fontSize: 12, color: "#94a3b8", fontStyle: "italic" }}>{b.notes}</div>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* ── Résumé bas ── */}
+      {bookings.length > 0 && (
+        <div style={{ display: "flex", gap: 16, marginTop: 14, flexWrap: "wrap" }}>
+          {[
+            { l: "Total réservations", v: bookings.length },
+            { l: "CA total",           v: fmtMoney(bookings.reduce((s, b) => s + (b.price || 0), 0)) },
+            { l: "Confirmées",         v: bookings.filter(b => String(b.status) === "1").length },
+            { l: "Annulées",           v: bookings.filter(b => String(b.status) === "2").length },
+            { l: "Nuits totales",      v: bookings.filter(b => String(b.status) !== "2").reduce((s, b) => s + (b.nights || 0), 0) },
+          ].map(({ l, v }) => (
+            <div key={l} style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 8, padding: "10px 18px", minWidth: 130 }}>
+              <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>{l}</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: "#e2e8f0" }}>{v}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
 // APP
 // ============================================================================
 export default function App() {
@@ -3681,6 +3942,7 @@ export default function App() {
     { id: "charges", l: mob ? "💰" : "💰 Charges" },
     { id: "pilotage", l: mob ? "💼" : "💼 Pilotage" },
     { id: "historique", l: mob ? "📈" : "📈 Historique" },
+    { id: "beds24", l: mob ? "🏙️" : "🏙️ Beds24 Nogent" },
   ];
 
   return (
@@ -3718,6 +3980,7 @@ export default function App() {
         {tab === "pilotage" && <Pilotage biens={biens} n={n} mob={mob} />}
         {tab === "historique" && <Historique biens={biens} n={n} mob={mob} hist={hist} />}
         {tab === "tarifs" && <Tarifs />}
+        {tab === "beds24" && <Beds24Admin />}
       </div>
 
       <FAB onTab={setTab} />
