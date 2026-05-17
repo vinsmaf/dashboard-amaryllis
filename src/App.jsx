@@ -787,6 +787,53 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
     return () => { clearTimeout(timer); clearInterval(interval); };
   }, []);
 
+  // ── Auto-sync Beds24 (Nogent) dans le Planning ─────────────────────
+  const [beds24SyncStatus, setBeds24SyncStatus] = useState("idle"); // idle | loading | ok | error
+
+  const syncBeds24InPlanning = useCallback(async (currentResas) => {
+    setBeds24SyncStatus("loading");
+    try {
+      const res = await fetch("/api/beds24-bookings");
+      if (!res.ok) { setBeds24SyncStatus("error"); return currentResas; }
+      const data = await res.json();
+      if (data.error || !data.bookings) { setBeds24SyncStatus("error"); return currentResas; }
+      const beds24 = data.bookings
+        .filter(b => b.statusLabel !== "Annulé")
+        .map(b => ({
+          id:               "beds24-" + b.bookingId,
+          bienId:           "nogent",
+          voyageur:         b.guestName || "—",
+          canal:            b.channelLabel || b.channel || "Beds24",
+          checkin:          b.arrival,
+          checkout:         b.departure,
+          checkin_time:     "",
+          checkout_time:    "",
+          nb_guests:        b.numGuests || 1,
+          montant:          b.price || 0,
+          notes:            b.notes || "",
+          phone:            b.phone || "",
+          reservation_code: String(b.bookingId),
+          fromBeds24:       true,
+          fromIcal:         false,
+          menage_done:      false,
+          assigne:          "",
+        }));
+      const merged = [...(currentResas || reservations).filter(r => !String(r.id).startsWith("beds24-")), ...beds24];
+      saveRes(merged);
+      setBeds24SyncStatus("ok");
+      return merged;
+    } catch (_) {
+      setBeds24SyncStatus("error");
+      return currentResas || reservations;
+    }
+  }, [saveRes, reservations]);
+
+  useEffect(() => {
+    syncBeds24InPlanning(reservations);
+    const interval = setInterval(() => syncBeds24InPlanning(reservations), 60 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   const openEdit = (r) => {
     setForm({ bienId: r.bienId, voyageur: r.voyageur, canal: r.canal, checkin: r.checkin, checkout: r.checkout, checkin_time: r.checkin_time || "", checkout_time: r.checkout_time || "", nb_guests: r.nb_guests || "", montant: r.montant || "", notes: r.notes || "", menage: r.menage || "", reservation_code: r.reservation_code || "", phone: r.phone || "", assigne: r.assigne || "" });
     setEditId(r.id);
@@ -901,7 +948,13 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
                 {!Object.values(icalStatus).some(v => v === "loading") && Object.keys(icalStatus).length > 0 && <span style={{ fontSize: 10, color: "#10b981", marginLeft: 6 }}>✓ Synchronisé</span>}
                 {lastIcalSync && <span style={{ fontSize: 9, color: "#475569", marginLeft: 4 }}>sync {lastIcalSync}</span>}
               </span>
-              <div style={{ display: "flex", gap: 5 }}>
+              <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
+                <span style={{ fontSize: 10, color: beds24SyncStatus === "loading" ? "#0ea5e9" : beds24SyncStatus === "ok" ? "#10b981" : beds24SyncStatus === "error" ? "#ef4444" : "#64748b" }}>
+                  {beds24SyncStatus === "loading" ? "⟳ Beds24…" : beds24SyncStatus === "ok" ? "🏙️ Nogent ✓" : beds24SyncStatus === "error" ? "⚠ Beds24" : "🏙️ Nogent"}
+                </span>
+                <button onClick={() => syncBeds24InPlanning(reservations)} style={{ padding: "5px 9px", borderRadius: 6, border: "1px solid #334155", background: "none", color: "#a78bfa", cursor: "pointer", fontSize: 10 }}>
+                  ⟳
+                </button>
                 <button onClick={() => setShowUrls(!showUrls)} style={{ padding: "5px 9px", borderRadius: 6, border: "1px solid #334155", background: "none", color: "#64748b", cursor: "pointer", fontSize: 10 }}>
                   {showUrls ? "▲" : "▼"} URLs
                 </button>
