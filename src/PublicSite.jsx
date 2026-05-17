@@ -1867,12 +1867,18 @@ function HeroCarousel({ biens, onDetail, onBook }) {
         <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 10, color: CORAL, letterSpacing: "0.55em", textTransform: "uppercase", marginBottom: 12 }}>
           {bien.lieu}
         </div>
-        <h1 style={{
-          fontFamily: "'Jost', sans-serif", fontWeight: 200,
-          fontSize: "clamp(28px, 4vw, 60px)", letterSpacing: "0.08em",
-          textTransform: "uppercase", color: "#faf5e9",
-          margin: "0 0 10px", lineHeight: 1.05,
-        }}>
+        <h1
+          onClick={() => onDetail(bien)}
+          style={{
+            fontFamily: "'Jost', sans-serif", fontWeight: 200,
+            fontSize: "clamp(28px, 4vw, 60px)", letterSpacing: "0.08em",
+            textTransform: "uppercase", color: "#faf5e9",
+            margin: "0 0 10px", lineHeight: 1.05,
+            cursor: "pointer", transition: "opacity 0.2s",
+          }}
+          onMouseEnter={e => { e.currentTarget.style.opacity = "0.7"; }}
+          onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
+        >
           {bien.nom}
         </h1>
         {bien.rating && (
