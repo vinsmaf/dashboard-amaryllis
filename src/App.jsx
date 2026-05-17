@@ -3586,7 +3586,7 @@ const CHANNEL_COLORS = {
   "Beds24 Direct":"#0ea5e9",
 };
 
-function Beds24Admin({ scriptUrl }) {
+function Beds24Admin({ scriptUrl, reservations = [], saveRes }) {
   const [bookings,    setBookings]    = useState([]);
   const [loading,     setLoading]     = useState(false);
   const [error,       setError]       = useState("");
@@ -3663,6 +3663,39 @@ function Beds24Admin({ scriptUrl }) {
     }
   }
 
+  // ── Sync vers Planning (calendrier principal) ────────────────────
+  const [planningStatus, setPlanningStatus] = useState(null); // null | "ok" | "error"
+
+  function syncToPlanning() {
+    if (!bookings.length) return;
+    const beds24Converted = bookings
+      .filter(b => b.status !== 2 && b.statusLabel !== "Annulé") // exclure annulés
+      .map(b => ({
+        id:               "beds24-" + b.bookingId,
+        bienId:           "nogent",
+        voyageur:         b.guestName || "—",
+        canal:            b.channelLabel || b.channel || "Beds24",
+        checkin:          b.arrival,
+        checkout:         b.departure,
+        checkin_time:     "",
+        checkout_time:    "",
+        nb_guests:        b.numGuests || 1,
+        montant:          b.price || 0,
+        notes:            b.notes || "",
+        phone:            b.phone || "",
+        reservation_code: String(b.bookingId),
+        fromBeds24:       true,
+        fromIcal:         false,
+        menage_done:      false,
+        assigne:          "",
+      }));
+    // Remplacer toutes les réservations beds24 existantes, garder les autres
+    const autres = reservations.filter(r => !String(r.id).startsWith("beds24-"));
+    saveRes([...autres, ...beds24Converted]);
+    setPlanningStatus("ok");
+    setTimeout(() => setPlanningStatus(null), 3000);
+  }
+
   // Chargement initial
   useEffect(() => { fetchBookings(); }, []);
 
@@ -3696,6 +3729,14 @@ function Beds24Admin({ scriptUrl }) {
             style={{ padding: "6px 14px", borderRadius: 6, border: "1px solid #0ea5e9", background: "rgba(14,165,233,0.12)", color: "#0ea5e9", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
           >
             {loading ? "⟳ Chargement…" : "⟳ Actualiser"}
+          </button>
+          <button
+            onClick={syncToPlanning}
+            disabled={bookings.length === 0}
+            title="Injecter les réservations Beds24 dans le calendrier principal"
+            style={{ padding: "6px 14px", borderRadius: 6, border: "1px solid #a78bfa", background: "rgba(167,139,250,0.1)", color: planningStatus === "ok" ? "#10b981" : "#a78bfa", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+          >
+            {planningStatus === "ok" ? "✓ Ajouté au planning" : "📅 → Planning"}
           </button>
           <button
             onClick={syncToSheets}
@@ -4103,7 +4144,7 @@ export default function App() {
         {tab === "pilotage" && <Pilotage biens={biens} n={n} mob={mob} />}
         {tab === "historique" && <Historique biens={biens} n={n} mob={mob} hist={hist} />}
         {tab === "tarifs" && <Tarifs />}
-        {tab === "beds24" && <Beds24Admin scriptUrl={scriptUrl} />}
+        {tab === "beds24" && <Beds24Admin scriptUrl={scriptUrl} reservations={reservations} saveRes={saveRes} />}
       </div>
 
       <FAB onTab={setTab} />
