@@ -1253,14 +1253,21 @@ function BienCard({ bien, onDetail, onBook }) {
             Voir plus →
           </button>
           {BOOKING_DISABLED.has(bien.id) ? (
-            <div style={{
-              flex: 2, background: "rgba(14,59,58,0.06)", border: `1px solid ${SAND}`,
-              color: MUTED, borderRadius: 6, padding: "11px 20px",
-              fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11,
-              letterSpacing: "0.06em", textAlign: "center", textTransform: "uppercase",
-            }}>
-              Location longue durée
-            </div>
+            <a
+              href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent("Bonjour, je suis intéressé(e) par Villa Iguana pour une location longue durée à Sainte-Luce, Martinique. Pouvez-vous m'indiquer vos conditions et disponibilités ? Merci.")}`}
+              target="_blank" rel="noopener noreferrer"
+              onClick={e => e.stopPropagation()}
+              style={{
+                flex: 2, background: NAVY, border: "none", color: "#faf5e9",
+                borderRadius: 6, padding: "11px 20px",
+                fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 12,
+                letterSpacing: "0.08em", cursor: "pointer",
+                textTransform: "uppercase", textAlign: "center", textDecoration: "none",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}
+            >
+              Contact →
+            </a>
           ) : (
             <button
               onClick={e => { e.stopPropagation(); onBook(bien); }}
@@ -1278,6 +1285,16 @@ function BienCard({ bien, onDetail, onBook }) {
             </button>
           )}
         </div>
+        {!BOOKING_DISABLED.has(bien.id) && (
+          <div style={{ marginTop: 8, fontSize: 11, color: MUTED, textAlign: "center", fontFamily: "'Jost', sans-serif", fontWeight: 300, letterSpacing: "0.02em" }}>
+            ✓ Réservation directe, sans frais de service.
+          </div>
+        )}
+        {BOOKING_DISABLED.has(bien.id) && (
+          <div style={{ marginTop: 8, fontSize: 11, color: MUTED, textAlign: "center", fontFamily: "'Jost', sans-serif", fontWeight: 300, letterSpacing: "0.02em" }}>
+            Location longue durée uniquement
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1725,26 +1742,35 @@ function HeroCarousel({ biens, onDetail, onBook }) {
         <div style={{ display: "flex", flexDirection: "row", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
           {/* Primary CTA */}
           {!BOOKING_DISABLED.has(bien.id) ? (
-            <button
-              onClick={() => onBook(bien)}
-              style={{
-                background: CORAL, border: "none", color: "#fff",
-                borderRadius: 8, padding: "14px 32px",
-                fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: "0.12em",
-                cursor: "pointer", textTransform: "uppercase",
-                animation: "ctaPulse 2.8s ease-in-out infinite",
-                transition: "opacity 0.2s, transform 0.15s",
-                whiteSpace: "nowrap",
-              }}
-              onMouseEnter={e => { e.currentTarget.style.opacity = "0.9"; e.currentTarget.style.transform = "translateY(-2px)"; }}
-              onMouseLeave={e => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.transform = "translateY(0)"; }}
-            >
-              Réserver — {bien.prix}€ / nuit
-            </button>
-          ) : (
-            <div style={{ background: "rgba(250,245,233,0.08)", border: "1px solid rgba(250,245,233,0.2)", borderRadius: 8, padding: "14px 24px", fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11, letterSpacing: "0.12em", color: "rgba(250,245,233,0.5)", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-              Location longue durée
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <button
+                onClick={() => onBook(bien)}
+                style={{
+                  background: CORAL, border: "none", color: "#fff",
+                  borderRadius: 8, padding: "14px 32px",
+                  fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: "0.12em",
+                  cursor: "pointer", textTransform: "uppercase",
+                  animation: "ctaPulse 2.8s ease-in-out infinite",
+                  transition: "opacity 0.2s, transform 0.15s",
+                  whiteSpace: "nowrap",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.opacity = "0.9"; e.currentTarget.style.transform = "translateY(-2px)"; }}
+                onMouseLeave={e => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.transform = "translateY(0)"; }}
+              >
+                Voir les disponibilités
+              </button>
+              <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 10, color: "rgba(250,245,233,0.45)", letterSpacing: "0.06em", textAlign: "center" }}>
+                Réservation directe propriétaire · Paiement sécurisé Stripe
+              </span>
             </div>
+          ) : (
+            <a
+              href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent("Bonjour, je suis intéressé(e) par Villa Iguana pour une location longue durée à Sainte-Luce, Martinique. Pouvez-vous m'indiquer vos conditions et disponibilités ? Merci.")}`}
+              target="_blank" rel="noopener noreferrer"
+              style={{ display: "inline-block", background: "rgba(250,245,233,0.08)", border: "1px solid rgba(250,245,233,0.3)", borderRadius: 8, padding: "14px 24px", fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11, letterSpacing: "0.12em", color: "#faf5e9", textTransform: "uppercase", whiteSpace: "nowrap", textDecoration: "none", transition: "background 0.2s" }}
+            >
+              Contact long séjour →
+            </a>
           )}
           {/* Secondary CTA */}
           <button
@@ -1949,7 +1975,7 @@ function FooterSection() {
           </span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-          <span style={{ fontSize: 11, color: "rgba(250,245,233,0.22)", fontFamily: "'Jost', sans-serif", fontWeight: 300 }}>🔒 Paiement sécurisé Stripe</span>
+          <span style={{ fontSize: 11, color: "rgba(250,245,233,0.35)", fontFamily: "'Jost', sans-serif", fontWeight: 300 }}>🔒 Réservation directe propriétaire · Paiement sécurisé Stripe</span>
           <a href="/admin" style={{ fontSize: 10, color: "rgba(250,245,233,0.15)", textDecoration: "none", letterSpacing: "0.1em", fontFamily: "'Jost', sans-serif" }}>Admin</a>
         </div>
       </div>
@@ -2328,6 +2354,19 @@ export default function PublicSite() {
       {/* ── HERO CAROUSEL ── */}
       <HeroCarousel biens={biensList} onDetail={setDetailBien} onBook={openBien} />
 
+      {/* ── DIRECT BOOKING BANNER ── */}
+      <div style={{ background: "#072626", borderBottom: "1px solid rgba(250,245,233,0.07)", padding: "13px 28px" }}>
+        <div style={{ maxWidth: 1280, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "center", gap: 28, flexWrap: "wrap" }}>
+          {[
+            "✓ Réservation directe chez le propriétaire",
+            "✓ Sans frais de service Airbnb",
+            "✓ Paiement sécurisé Stripe",
+          ].map(t => (
+            <span key={t} style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 12, color: "rgba(250,245,233,0.55)", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{t}</span>
+          ))}
+        </div>
+      </div>
+
       {/* ── QUICK BOOK ── */}
       <QuickBook biens={biensList} onBook={openBien} />
 
@@ -2336,7 +2375,12 @@ export default function PublicSite() {
 
         {/* Section header + filters */}
         <div style={{ marginBottom: 40 }}>
-          <h2 style={{ fontFamily: "'Jost', sans-serif", fontSize: 32, fontWeight: 200, letterSpacing: "0.15em", textTransform: "uppercase", color: NAVY, margin: "0 0 24px" }}>Nos propriétés</h2>
+          <h2 style={{ fontFamily: "'Jost', sans-serif", fontSize: 32, fontWeight: 200, letterSpacing: "0.15em", textTransform: "uppercase", color: NAVY, margin: "0 0 12px" }}>
+            Villas &amp; locations en Martinique
+          </h2>
+          <p style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: 15, color: MUTED, lineHeight: 1.7, margin: "0 0 32px", maxWidth: 720 }}>
+            Toutes nos villas avec piscine à Sainte-Luce se réservent en direct, sans frais de service. Location vacances Martinique vue mer, jacuzzi privatif, piscine à débordement — réservez en direct et économisez jusqu'à 20% par rapport aux plateformes.
+          </p>
 
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 24 }}>
             {lieux.map(({ key, label }) => (
@@ -2363,6 +2407,51 @@ export default function PublicSite() {
 
           {/* Separator */}
           <div style={{ height: 1, background: SAND }} />
+        </div>
+
+        {/* ── Reassurance blocks ── */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 20, marginBottom: 52 }}>
+          {/* Block 1 — Pourquoi en direct */}
+          <div style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 14, padding: "28px 28px 24px" }}>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.3em", textTransform: "uppercase", color: CORAL, marginBottom: 14 }}>Pourquoi réserver en direct chez Amaryllis ?</div>
+            {[
+              ["💰", "Tarifs propriétaires", "Jusqu'à −20% par rapport à Airbnb ou Booking.com — aucune commission plateforme."],
+              ["⚡", "Réponse en moins de 2h", "Contact direct WhatsApp ou email — flexibilité sur les dates et services."],
+              ["🎯", "Séjour sur mesure", "Ménage, transfert aéroport, panier d'accueil — on s'adapte à vos besoins."],
+              ["🔒", "Paiement 100% sécurisé", "Stripe : données protégées, remboursement garanti en cas d'annulation."],
+            ].map(([icon, title, text]) => (
+              <div key={title} style={{ display: "flex", gap: 12, marginBottom: 14 }}>
+                <span style={{ fontSize: 18, flexShrink: 0, marginTop: 1 }}>{icon}</span>
+                <div>
+                  <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 13, color: NAVY, marginBottom: 2 }}>{title}</div>
+                  <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 12, color: MUTED, lineHeight: 1.5 }}>{text}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Block 2 — Avis voyageurs */}
+          <div style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 14, padding: "28px 28px 24px" }}>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.3em", textTransform: "uppercase", color: CORAL, marginBottom: 14 }}>Des séjours plébiscités par nos voyageurs</div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 16 }}>
+              <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 800, fontSize: 48, color: NAVY, lineHeight: 1 }}>4,8</span>
+              <div>
+                <div style={{ color: GOLD, fontSize: 16, letterSpacing: 2 }}>★★★★★</div>
+                <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11, color: MUTED, marginTop: 2 }}>Note moyenne · 117 avis vérifiés</div>
+              </div>
+            </div>
+            <p style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: 14, color: MUTED, lineHeight: 1.65, margin: "0 0 20px" }}>
+              "Vue extraordinaire, piscine à débordement parfaite. Un endroit hors du temps face aux Caraïbes. On reviendra sans hésiter !"
+            </p>
+            <div style={{ fontSize: 11, color: MUTED, fontFamily: "'Jost', sans-serif", fontWeight: 300 }}>
+              — Sophie M. 🇫🇷, Villa Amaryllis · Avr. 2025
+            </div>
+            <div style={{ marginTop: 16, display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {["Amaryllis 4,94 ★", "Géko 4,83 ★", "Schoelcher 4,8 ★", "Iguana 4,75 ★", "Mabouya 4,55 ★"].map(r => (
+                <span key={r} style={{ background: IVORY, border: `1px solid ${SAND}`, borderRadius: 20, padding: "3px 10px", fontSize: 10, color: MUTED, fontFamily: "'Jost', sans-serif" }}>{r}</span>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Grid */}
