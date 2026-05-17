@@ -321,6 +321,7 @@ const BIENS = [
       "/photos/schoelcher/15.webp",
     ],
     coords: { lat: 14.6121, lng: -61.0887 },
+    mapsEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2905.414139928121!2d-61.10181910968834!3d14.634222460364626!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8c6aa753fde6522f%3A0x414570ed7905d25c!2sR%C3%A9sidence%20Belle%20Vue!5e0!3m2!1sfr!2sfr!4v1779047169810!5m2!1sfr!2sfr",
     amenities: ["Vue baie", "Terrasse", "TV HD", "Wifi", "Parking", "Animaux OK"],
     avis: [
       { nom: "Isabelle T.", pays: "🇫🇷", note: 5, texte: "Appartement très bien situé avec une vue splendide sur la baie de Fort-de-France. Calme, propre, bien équipé. Idéal pour explorer le nord de la Martinique.", date: "Avr. 2025" },
@@ -367,6 +368,7 @@ const BIENS = [
     ],
     beds24Url: "https://beds24.com/booking2.php?propid=158192&referer=iframe",
     coords: { lat: 48.8374, lng: 2.4836 },
+    mapsEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d463.17188664330297!2d2.4757244130102185!3d48.83615034492648!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x47e60d41b4fd90d1%3A0x4f6c2445f955ea44!2s21%20Gd%20Rue%20Charles%20de%20Gaulle%2C%2094130%20Nogent-sur-Marne!5e0!3m2!1sfr!2sfr!4v1779047281540!5m2!1sfr!2sfr",
     amenities: ["Bord Marne", "Jardin", "RER A (20 min Paris)", "Parking", "Wifi"],
     avis: [
       { nom: "Aurélie F.", pays: "🇫🇷", note: 5, texte: "Appartement lumineux et très bien décoré au bord de la Marne. Calme absolu tout en étant à 20 min de Paris. Le jardin est charmant. Parfait pour se ressourcer.", date: "Avr. 2025" },
