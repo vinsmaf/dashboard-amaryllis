@@ -1,430 +1,272 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
-// ── PKCE utilities ────────────────────────────────────────────────
-function b64url(buf) {
-  return btoa(String.fromCharCode(...new Uint8Array(buf)))
-    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
-}
-function makeVerifier() {
-  const a = new Uint8Array(32); crypto.getRandomValues(a); return b64url(a);
-}
-async function makeChallenge(v) {
-  return b64url(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(v)));
-}
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
-// ── Token storage ─────────────────────────────────────────────────
-const K = { AT: "ms_at", RT: "ms_rt", EXP: "ms_exp", CID: "ms_cid", VER: "ms_ver" };
-
-function saveTok({ access_token, refresh_token, expires_in }) {
-  localStorage.setItem(K.AT, access_token);
-  if (refresh_token) localStorage.setItem(K.RT, refresh_token);
-  localStorage.setItem(K.EXP, String(Date.now() + (Number(expires_in) - 60) * 1000));
-}
-
-async function tokenReq(body) {
-  const r = await fetch("https://login.microsoftonline.com/common/oauth2/v2.0/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams(body),
-  });
-  return r.json();
-}
-
-async function getAT() {
-  const exp = Number(localStorage.getItem(K.EXP) || 0);
-  if (Date.now() < exp) return localStorage.getItem(K.AT);
-  const rt = localStorage.getItem(K.RT);
-  if (!rt) return null;
-  const d = await tokenReq({ client_id: localStorage.getItem(K.CID), grant_type: "refresh_token", refresh_token: rt, scope: "Mail.Read offline_access User.Read" });
-  if (d.access_token) { saveTok(d); return d.access_token; }
+function findAmount(body, subject) {
+  const text = (body + " " + subject).replace(/ /g, " ");
+  const patterns = [
+    /vous recevrez\D{0,20}([\d\s]+[.,]\d{2})\s*€/i,
+    /paiement\D{0,20}([\d\s]+[.,]\d{2})\s*€/i,
+    /montant\D{0,20}([\d\s]+[.,]\d{2})\s*€/i,
+    /total\D{0,20}([\d\s]+[.,]\d{2})\s*€/i,
+    /net\D{0,20}([\d\s]+[.,]\d{2})\s*€/i,
+    /gain\D{0,20}([\d\s]+[.,]\d{2})\s*€/i,
+    /revenus?\D{0,20}([\d\s]+[.,]\d{2})\s*€/i,
+    /([\d\s]+[.,]\d{2})\s*€/,
+  ];
+  for (const p of patterns) {
+    const m = text.match(p);
+    if (m) {
+      const v = parseFloat(m[1].replace(/\s/g, "").replace(",", "."));
+      if (v >= 10 && v <= 30000) return v;
+    }
+  }
   return null;
 }
 
-// ── Microsoft Graph ───────────────────────────────────────────────
-async function graph(at, path) {
-  const r = await fetch(`https://graph.microsoft.com/v1.0${path}`, { headers: { Authorization: `Bearer ${at}` } });
-  if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error?.message || `HTTP ${r.status}`); }
-  return r.json();
+function detectPlatform(sender, subject) {
+  const s = (sender + " " + subject).toLowerCase();
+  if (s.includes("airbnb")) return "Airbnb";
+  if (s.includes("booking")) return "Booking.com";
+  if (s.includes("abritel") || s.includes("vrbo") || s.includes("homeaway")) return "Abritel";
+  return "Autre";
 }
 
-async function fetchMails(at, search, top = 80) {
-  try {
-    const q = encodeURIComponent(`"${search}"`);
-    const d = await graph(at, `/me/messages?$search=${q}&$select=subject,receivedDateTime,bodyPreview,body,from&$top=${top}`);
-    return d.value || [];
-  } catch { return []; }
+function fmtDate(raw) {
+  if (!raw) return "—";
+  const d = new Date(raw);
+  if (isNaN(d)) return raw;
+  return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
-// ── Parsers ───────────────────────────────────────────────────────
-const PROPS = ["Amaryllis", "Zandoli", "Iguana", "Géko", "Geko", "Mabouya", "Bellevue", "Nogent", "Marne", "Schœlcher", "Schoelcher", "Portes de Paris"];
-
-function findProp(text) {
-  return PROPS.find(p => text.includes(p)) || null;
-}
-
-function findAmount(text) {
-  // Strip HTML
-  const clean = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-    .replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&euro;/g, "€");
-
-  // Find amounts between 50€ and 20 000€, avoid prices per night (followed by /nuit)
-  const pat = /(\d[\d\s]{0,6}[,\.]?\d{0,2})\s*€(?!\s*\/\s*(?:nuit|noche|night|j|jour))/g;
-  const found = [];
-  let m;
-  while ((m = pat.exec(clean)) !== null) {
-    const raw = m[1].trim().replace(/\s/g, "").replace(",", ".");
-    const v = parseFloat(raw);
-    if (v >= 50 && v <= 20000) found.push(v);
-  }
-  if (!found.length) return null;
-  // Prefer the largest amount (likely the total payout)
-  return Math.max(...found);
-}
-
-function findDates(text) {
-  const clean = text.replace(/<[^>]+>/g, " ");
-  const dates = [];
-  // ISO dates
-  const iso = /\b(\d{4}-\d{2}-\d{2})\b/g;
-  let m;
-  while ((m = iso.exec(clean)) !== null) dates.push(m[1]);
-  // European dates dd/mm/yyyy
-  const eu = /\b(\d{2})\/(\d{2})\/(\d{4})\b/g;
-  while ((m = eu.exec(clean)) !== null) dates.push(`${m[3]}-${m[2]}-${m[1]}`);
-  // Dedupe and sort
-  const uniq = [...new Set(dates)].sort();
-  // Return first two future or recent dates
-  const today = new Date().toISOString().slice(0, 10);
-  const relevant = uniq.filter(d => d >= new Date(Date.now() - 365 * 86400000).toISOString().slice(0, 10));
-  return relevant.slice(0, 2);
-}
-
-function findGuest(text) {
-  const clean = text.replace(/<[^>]+>/g, " ");
-  const m = clean.match(/(?:voyageur|guest|hôte|réservé par|client|nom du client|billet au nom de)\s*[:\-]?\s*([A-ZÀ-Ü][a-zà-ü\-]+(?:\s+[A-ZÀ-Ü][a-zà-ü\-]+){0,2})/i);
-  return m?.[1]?.trim() || null;
-}
-
-function parseEmail(email) {
-  const from = email.from?.emailAddress?.address?.toLowerCase() || "";
-  const subject = email.subject || "";
-  const body = email.body?.content || email.bodyPreview || "";
-  const fullText = subject + " " + body;
-
-  const isAirbnb = from.includes("airbnb");
-  const isBooking = from.includes("booking");
-  if (!isAirbnb && !isBooking) return null;
-
-  // Filter: only reservation / payout emails
-  const keywords = /réservation|reservation|booking|confirmé|confirmed|paiement|virement|versement|revenus|gains|new booking|nouvelle/i;
-  if (!keywords.test(subject)) return null;
-
-  const amount = findAmount(body);
-  const dates = findDates(body);
-  const guest = findGuest(body);
-  const property = findProp(fullText);
-  const platform = isAirbnb ? "Airbnb" : "Booking.com";
-
-  return {
-    id: email.id,
-    platform,
-    subject: subject.slice(0, 90),
-    date: email.receivedDateTime,
-    amount,
-    checkin: dates[0] || null,
-    checkout: dates[1] || null,
-    guest,
-    property,
-  };
-}
-
-// ── Styles ────────────────────────────────────────────────────────
-const card = { background: "#0f172a", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: "20px 22px", marginBottom: 14 };
-const label = { fontSize: 10, color: "#64748b", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 };
-const badge = (color) => ({ display: "inline-flex", alignItems: "center", padding: "2px 9px", borderRadius: 20, fontSize: 10, fontWeight: 600, background: color + "22", color, border: `1px solid ${color}44` });
-
-function fmtDate(iso) {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" });
-}
-function fmtAmt(v) {
-  if (!v) return null;
+function fmtEur(v) {
+  if (!v && v !== 0) return "—";
   return v.toLocaleString("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
 }
 
-// ── Setup instructions card ───────────────────────────────────────
-function SetupGuide() {
-  const [open, setOpen] = useState(false);
-  return (
-    <div style={{ ...card, borderColor: "rgba(14,165,233,0.2)", background: "rgba(14,165,233,0.05)", marginBottom: 20 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }} onClick={() => setOpen(o => !o)}>
-        <div>
-          <div style={{ fontSize: 12, fontWeight: 600, color: "#0ea5e9", marginBottom: 2 }}>Configuration requise — Azure App (5 min)</div>
-          <div style={{ fontSize: 11, color: "#64748b" }}>Créer une app Azure pour autoriser la lecture des emails</div>
-        </div>
-        <span style={{ color: "#0ea5e9", fontSize: 16 }}>{open ? "▲" : "▼"}</span>
-      </div>
-      {open && (
-        <ol style={{ margin: "16px 0 0", padding: "0 0 0 18px", fontSize: 11, color: "#94a3b8", lineHeight: 2, display: "flex", flexDirection: "column", gap: 2 }}>
-          <li>Va sur <strong style={{ color: "#e2e8f0" }}>portal.azure.com</strong> → "Microsoft Entra ID" → "App registrations" → <strong style={{ color: "#e2e8f0" }}>New registration</strong></li>
-          <li>Nom : <strong style={{ color: "#e2e8f0" }}>Amaryllis Dashboard</strong> — Type de compte : <strong style={{ color: "#e2e8f0" }}>Personal Microsoft accounts only</strong></li>
-          <li>Redirect URI : type <strong style={{ color: "#e2e8f0" }}>Single-page application (SPA)</strong> → <strong style={{ color: "#e2e8f0" }}>https://dashboard-amaryllis.pages.dev/admin</strong></li>
-          <li>Copie l'<strong style={{ color: "#e2e8f0" }}>Application (client) ID</strong> et colle-le ci-dessous</li>
-          <li>Va dans "API permissions" → Add → Microsoft Graph → Delegated → ajoute <strong style={{ color: "#e2e8f0" }}>Mail.Read</strong> et <strong style={{ color: "#e2e8f0" }}>User.Read</strong></li>
-        </ol>
-      )}
-    </div>
-  );
-}
+const PLATFORM_COLOR = {
+  "Airbnb": "#FF5A5F",
+  "Booking.com": "#003580",
+  "Abritel": "#3B7DD8",
+  "Autre": "#64748b",
+};
 
-// ── Main Component ────────────────────────────────────────────────
+const APPS_SCRIPT_CODE = `// Ajoute CE BLOC au début de ta fonction doGet(e) existante :
+// (Remplace "function doGet() {" par "function doGet(e) {" si besoin)
+
+  const action = e && e.parameter && e.parameter.action;
+  if (action === 'readEmails') {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName('Emails');
+    if (!sheet) return ContentService
+      .createTextOutput(JSON.stringify({ok:false,error:'Onglet Emails introuvable'}))
+      .setMimeType(ContentService.MimeType.JSON);
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0].map(h => String(h).trim());
+    const rows = data.slice(1)
+      .map(row => Object.fromEntries(headers.map((h,i) => [h, String(row[i]||'')])))
+      .filter(r => r.Sender || r.Subject);
+    return ContentService
+      .createTextOutput(JSON.stringify({ok:true,rows}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+// ↓ Garde le reste de ta fonction doGet existante tel quel ↓`;
+
+// ─── Component principal ─────────────────────────────────────────────────────
+
 export default function EmailSync({ mob }) {
-  const [clientId, setClientId] = useState(localStorage.getItem(K.CID) || "");
-  const [editCid, setEditCid] = useState(!localStorage.getItem(K.CID));
-  const [connected, setConnected] = useState(false);
-  const [userEmail, setUserEmail] = useState(null);
+  const [scriptUrl] = useState(() => localStorage.getItem("sheets_script_url") || "");
+  const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("ms_email_results") || "[]"); } catch { return []; }
-  });
-  const [err, setErr] = useState(null);
-  const [filter, setFilter] = useState("all");
-  const [lastSync, setLastSync] = useState(localStorage.getItem("ms_last_sync") || null);
+  const [error, setError] = useState(null);
+  const [lastSync, setLastSync] = useState(() => localStorage.getItem("emails_last_sync") || null);
+  const [showScript, setShowScript] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [filterPlatform, setFilterPlatform] = useState("all");
 
-  // On mount: handle OAuth callback or check stored tokens
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get("code");
-    const cid = localStorage.getItem(K.CID);
-
-    if (code && cid) {
-      window.history.replaceState({}, "", window.location.pathname);
-      setLoading(true);
-      tokenReq({
-        client_id: cid,
-        grant_type: "authorization_code",
-        code,
-        redirect_uri: window.location.origin + window.location.pathname,
-        code_verifier: localStorage.getItem(K.VER) || "",
-        scope: "Mail.Read offline_access User.Read",
-      }).then(d => {
-        if (d.access_token) {
-          saveTok(d);
-          setConnected(true);
-          loadUserInfo(d.access_token);
-        } else {
-          setErr("Échec auth : " + (d.error_description || d.error || "erreur inconnue"));
-        }
-        setLoading(false);
-      });
-      return;
-    }
-
-    if (cid && localStorage.getItem(K.RT)) {
-      setConnected(true);
-      getAT().then(at => { if (at) loadUserInfo(at); });
-    }
+    const cached = localStorage.getItem("emails_rows");
+    if (cached) { try { setRows(JSON.parse(cached)); } catch {} }
   }, []);
 
-  async function loadUserInfo(at) {
-    try {
-      const d = await graph(at, "/me?$select=mail,userPrincipalName");
-      setUserEmail(d.mail || d.userPrincipalName);
-    } catch {}
-  }
-
-  async function connect() {
-    if (!clientId.trim()) return;
-    localStorage.setItem(K.CID, clientId.trim());
-    const verifier = makeVerifier();
-    const challenge = await makeChallenge(verifier);
-    localStorage.setItem(K.VER, verifier);
-    const params = new URLSearchParams({
-      client_id: clientId.trim(),
-      response_type: "code",
-      redirect_uri: window.location.origin + window.location.pathname,
-      scope: "Mail.Read offline_access User.Read",
-      code_challenge: challenge,
-      code_challenge_method: "S256",
-      response_mode: "query",
-      prompt: "select_account",
-    });
-    window.location.href = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?${params}`;
-  }
-
-  function disconnect() {
-    [K.AT, K.RT, K.EXP, K.VER, "ms_email_results", "ms_last_sync"].forEach(k => localStorage.removeItem(k));
-    setConnected(false);
-    setUserEmail(null);
-    setResults([]);
-    setLastSync(null);
-  }
-
-  async function sync() {
-    const cid = localStorage.getItem(K.CID);
-    if (!cid) return;
+  const fetchEmails = useCallback(async () => {
+    if (!scriptUrl) { setError("URL Apps Script non configurée — configure-la dans ⚙ Paramètres du dashboard."); return; }
     setLoading(true);
-    setErr(null);
+    setError(null);
     try {
-      const at = await getAT();
-      if (!at) { setErr("Session expirée — reconnecte-toi."); setConnected(false); setLoading(false); return; }
-
-      const [airbnbMails, bookingMails] = await Promise.all([
-        fetchMails(at, "from:airbnb.com"),
-        fetchMails(at, "from:booking.com"),
-      ]);
-
-      const parsed = [...airbnbMails, ...bookingMails]
-        .map(parseEmail)
-        .filter(Boolean)
-        .sort((a, b) => new Date(b.date) - new Date(a.date));
-
-      setResults(parsed);
-      localStorage.setItem("ms_email_results", JSON.stringify(parsed));
+      const res = await fetch(`${scriptUrl}?action=readEmails`, { redirect: "follow" });
+      const text = await res.text();
+      if (text.trimStart().startsWith("<")) throw new Error("Réponse HTML — vérifiez que le déploiement Apps Script a 'Accès : Tout le monde'.");
+      const data = JSON.parse(text);
+      if (!data.ok) throw new Error(data.error || "Erreur Apps Script");
+      const parsed = (data.rows || []).map((r, i) => ({
+        id: i,
+        date: r.Date || "",
+        sender: r.Sender || "",
+        subject: r.Subject || "",
+        body: r.Body || "",
+        platform: detectPlatform(r.Sender || "", r.Subject || ""),
+        amount: findAmount(r.Body || "", r.Subject || ""),
+      }));
+      setRows(parsed);
       const now = new Date().toLocaleString("fr-FR");
       setLastSync(now);
-      localStorage.setItem("ms_last_sync", now);
-
-      if (!parsed.length) setErr("Aucun email de réservation détecté. Vérifie que ton compte Hotmail reçoit bien les confirmations Airbnb/Booking.com.");
+      localStorage.setItem("emails_rows", JSON.stringify(parsed));
+      localStorage.setItem("emails_last_sync", now);
     } catch (e) {
-      setErr("Erreur : " + e.message);
+      setError(e.message);
     }
     setLoading(false);
-  }
+  }, [scriptUrl]);
 
-  const filtered = filter === "all" ? results : results.filter(r => r.platform.toLowerCase().startsWith(filter));
-  const totalParsed = results.filter(r => r.amount).reduce((s, r) => s + r.amount, 0);
+  const filtered = filterPlatform === "all" ? rows : rows.filter(r => r.platform === filterPlatform);
+  const withAmount = filtered.filter(r => r.amount !== null);
+  const totalAll = withAmount.reduce((s, r) => s + r.amount, 0);
+  const byPlatform = {};
+  rows.forEach(r => { if (r.amount !== null) byPlatform[r.platform] = (byPlatform[r.platform] || 0) + r.amount; });
+  const platforms = [...new Set(rows.map(r => r.platform))];
 
-  // ── Render ──────────────────────────────────────────────────────
+  const copyScript = () => {
+    navigator.clipboard.writeText(APPS_SCRIPT_CODE);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const card = { background: "#1e293b", borderRadius: 12, padding: "16px 20px", border: "1px solid rgba(255,255,255,0.06)" };
+
   return (
-    <div style={{ maxWidth: 900 }}>
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 16, fontWeight: 700, color: "#e2e8f0", marginBottom: 4 }}>Revenus par emails</div>
-        <div style={{ fontSize: 12, color: "#64748b" }}>Lecture automatique des confirmations Airbnb & Booking.com dans ton Hotmail</div>
+    <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: 18, color: "#f1f5f9" }}>📧 Revenus Airbnb & Booking</h2>
+          <p style={{ margin: "4px 0 0", fontSize: 12, color: "#64748b" }}>
+            Importés automatiquement depuis Hotmail via Zapier → Google Sheets
+            {lastSync && <> · Synchro : {lastSync}</>}
+          </p>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => setShowScript(s => !s)}
+            style={{ padding: "7px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", background: "#0f172a", color: "#94a3b8", cursor: "pointer", fontSize: 12 }}>
+            ⚙ Setup Apps Script
+          </button>
+          <button onClick={fetchEmails} disabled={loading}
+            style={{ padding: "7px 16px", borderRadius: 8, border: "none", background: loading ? "#334155" : "#0ea5e9", color: "#fff", cursor: loading ? "default" : "pointer", fontSize: 13, fontWeight: 600 }}>
+            {loading ? "⏳ Chargement…" : "🔄 Rafraîchir"}
+          </button>
+        </div>
       </div>
 
-      <SetupGuide />
-
-      {/* Connection card */}
-      <div style={card}>
-        <div style={label}>Connexion Microsoft</div>
-        {!connected ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {editCid ? (
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <input
-                  value={clientId}
-                  onChange={e => setClientId(e.target.value)}
-                  placeholder="Azure Application (client) ID — ex: a1b2c3d4-..."
-                  style={{ flex: 1, minWidth: 260, background: "#1e293b", border: "1px solid #334155", borderRadius: 6, padding: "8px 12px", color: "#e2e8f0", fontSize: 12, fontFamily: "monospace" }}
-                />
-                <button
-                  onClick={connect}
-                  disabled={!clientId.trim()}
-                  style={{ padding: "8px 18px", background: "#0ea5e9", border: "none", borderRadius: 6, color: "#fff", fontSize: 12, fontWeight: 600, cursor: clientId.trim() ? "pointer" : "default", opacity: clientId.trim() ? 1 : 0.5 }}
-                >
-                  Connecter Hotmail →
-                </button>
-              </div>
-            ) : (
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <button onClick={connect} style={{ padding: "8px 18px", background: "#0ea5e9", border: "none", borderRadius: 6, color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                  Connecter Hotmail →
-                </button>
-                <button onClick={() => setEditCid(true)} style={{ padding: "6px 10px", background: "none", border: "1px solid #334155", borderRadius: 6, color: "#64748b", fontSize: 11, cursor: "pointer" }}>Changer client ID</button>
-              </div>
-            )}
-            {loading && <div style={{ fontSize: 11, color: "#64748b" }}>Authentification en cours…</div>}
-            {err && <div style={{ fontSize: 11, color: "#f87171", background: "rgba(248,113,113,0.1)", padding: "8px 12px", borderRadius: 6 }}>{err}</div>}
+      {showScript && (
+        <div style={{ ...card, marginBottom: 20, borderColor: "#0ea5e9" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <strong style={{ color: "#0ea5e9" }}>⚙ Mise à jour Apps Script requise (une seule fois)</strong>
+            <button onClick={() => setShowScript(false)} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 18 }}>×</button>
           </div>
-        ) : (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ ...badge("#10b981") }}>● Connecté</span>
-                {userEmail && <span style={{ fontSize: 12, color: "#94a3b8" }}>{userEmail}</span>}
-              </div>
-              {lastSync && <div style={{ fontSize: 10, color: "#475569", marginTop: 4 }}>Dernière sync : {lastSync}</div>}
-            </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button
-                onClick={sync}
-                disabled={loading}
-                style={{ padding: "8px 18px", background: loading ? "#1e293b" : "#0ea5e9", border: "none", borderRadius: 6, color: "#fff", fontSize: 12, fontWeight: 600, cursor: loading ? "default" : "pointer" }}
-              >
-                {loading ? "⟳ Lecture emails…" : "⟳ Synchroniser"}
-              </button>
-              <button onClick={disconnect} style={{ padding: "6px 10px", background: "none", border: "1px solid #334155", borderRadius: 6, color: "#64748b", fontSize: 11, cursor: "pointer" }}>Déconnecter</button>
-            </div>
+          <p style={{ color: "#94a3b8", fontSize: 13, margin: "0 0 12px" }}>
+            Dans la feuille <strong style={{ color: "#f1f5f9" }}>finances</strong> → <strong style={{ color: "#f1f5f9" }}>Extensions &gt; Apps Script</strong> → colle ce code au début de <code style={{ color: "#7dd3fc" }}>doGet(e)</code> :
+          </p>
+          <pre style={{ background: "#0f172a", borderRadius: 8, padding: 14, fontSize: 11, color: "#7dd3fc", overflowX: "auto", margin: "0 0 12px", whiteSpace: "pre-wrap" }}>
+            {APPS_SCRIPT_CODE}
+          </pre>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            <button onClick={copyScript}
+              style={{ padding: "6px 14px", borderRadius: 7, border: "none", background: copied ? "#10b981" : "#0ea5e9", color: "#fff", cursor: "pointer", fontSize: 12 }}>
+              {copied ? "✓ Copié !" : "📋 Copier le code"}
+            </button>
+            <span style={{ color: "#64748b", fontSize: 11 }}>
+              Puis : Déployer &gt; Gérer les déploiements &gt; ✏ &gt; Nouvelle version &gt; Déployer
+            </span>
           </div>
-        )}
-      </div>
-
-      {/* Error */}
-      {err && connected && (
-        <div style={{ ...card, borderColor: "rgba(248,113,113,0.3)", background: "rgba(248,113,113,0.05)", fontSize: 12, color: "#f87171" }}>
-          {err}
         </div>
       )}
 
-      {/* Results */}
-      {results.length > 0 && (
-        <>
-          {/* Summary */}
-          <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
-            {[
-              { label: "Emails parsés", val: results.length, color: "#0ea5e9" },
-              { label: "Avec montant", val: results.filter(r => r.amount).length, color: "#10b981" },
-              { label: "Total détecté", val: fmtAmt(totalParsed), color: "#f59e0b" },
-            ].map(s => (
-              <div key={s.label} style={{ ...card, flex: "1 1 140px", margin: 0, textAlign: "center" }}>
-                <div style={{ fontSize: 18, fontWeight: 700, color: s.color }}>{s.val}</div>
-                <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>{s.label}</div>
-              </div>
-            ))}
-          </div>
+      {error && (
+        <div style={{ background: "#1e1215", border: "1px solid #ef4444", borderRadius: 10, padding: "12px 16px", marginBottom: 16, color: "#fca5a5", fontSize: 13 }}>
+          ⚠ {error}
+        </div>
+      )}
 
-          {/* Filter */}
-          <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
-            {[["all", "Tous"], ["airbnb", "Airbnb"], ["booking", "Booking.com"]].map(([k, l]) => (
-              <button key={k} onClick={() => setFilter(k)} style={{ padding: "5px 12px", borderRadius: 6, border: "1px solid " + (filter === k ? "#0ea5e9" : "#334155"), background: filter === k ? "rgba(14,165,233,0.15)" : "none", color: filter === k ? "#0ea5e9" : "#64748b", fontSize: 11, cursor: "pointer" }}>{l}</button>
-            ))}
+      {rows.length > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(Object.keys(byPlatform).length + 1, 4)}, 1fr)`, gap: 12, marginBottom: 20 }}>
+          <div style={{ ...card, textAlign: "center" }}>
+            <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>Total détecté</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: "#10b981" }}>{fmtEur(Object.values(byPlatform).reduce((s, v) => s + v, 0))}</div>
+            <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{rows.filter(r => r.amount !== null).length} emails avec montant</div>
           </div>
+          {Object.entries(byPlatform).map(([p, v]) => (
+            <div key={p} style={{ ...card, textAlign: "center", borderColor: PLATFORM_COLOR[p] + "44" }}>
+              <div style={{ fontSize: 11, color: PLATFORM_COLOR[p], marginBottom: 4 }}>{p}</div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: "#f1f5f9" }}>{fmtEur(v)}</div>
+              <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{rows.filter(r => r.platform === p && r.amount !== null).length} réservations</div>
+            </div>
+          ))}
+        </div>
+      )}
 
-          {/* Table */}
-          <div style={{ ...card, padding: 0, overflow: "hidden" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+      {platforms.length > 1 && (
+        <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+          {["all", ...platforms].map(p => (
+            <button key={p} onClick={() => setFilterPlatform(p)}
+              style={{ padding: "5px 12px", borderRadius: 20, border: "none", fontSize: 12, cursor: "pointer",
+                background: filterPlatform === p ? (p === "all" ? "#0ea5e9" : PLATFORM_COLOR[p]) : "#1e293b",
+                color: filterPlatform === p ? "#fff" : "#94a3b8" }}>
+              {p === "all" ? "Tous" : p}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {filtered.length === 0 ? (
+        <div style={{ ...card, textAlign: "center", padding: 40 }}>
+          <div style={{ fontSize: 32, marginBottom: 12 }}>📭</div>
+          <div style={{ color: "#94a3b8", fontSize: 14, marginBottom: 8 }}>
+            {rows.length === 0 ? "Aucun email importé" : "Aucun email pour ce filtre"}
+          </div>
+          <div style={{ color: "#64748b", fontSize: 12 }}>
+            {rows.length === 0
+              ? "Zapier copiera automatiquement les prochains emails Airbnb/Booking ici · Clique ⚙ Setup Apps Script pour activer la lecture"
+              : "Change de filtre pour voir d'autres emails"}
+          </div>
+        </div>
+      ) : (
+        <div style={{ ...card, padding: 0, overflow: "hidden" }}>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
               <thead>
-                <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-                  {["Date", "Plateforme", "Sujet", "Bien", "Voyageur", "Arrivée", "Départ", "Montant"].map(h => (
-                    <th key={h} style={{ padding: "10px 12px", textAlign: "left", color: "#475569", fontWeight: 600, fontSize: 10, letterSpacing: "0.06em", whiteSpace: "nowrap" }}>{h}</th>
+                <tr style={{ background: "#0f172a" }}>
+                  {["Date", "Plateforme", "Sujet", "Montant"].map(h => (
+                    <th key={h} style={{ padding: "10px 14px", textAlign: h === "Montant" ? "right" : "left", color: "#64748b", fontWeight: 600, fontSize: 11, whiteSpace: "nowrap" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((r, i) => (
-                  <tr key={r.id || i} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)", background: i % 2 ? "rgba(255,255,255,0.01)" : "transparent" }}>
-                    <td style={{ padding: "9px 12px", color: "#64748b", whiteSpace: "nowrap" }}>{fmtDate(r.date)}</td>
-                    <td style={{ padding: "9px 12px" }}>
-                      <span style={badge(r.platform === "Airbnb" ? "#f97316" : "#0ea5e9")}>{r.platform}</span>
+                  <tr key={r.id} style={{ borderTop: "1px solid rgba(255,255,255,0.04)", background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.01)" }}>
+                    <td style={{ padding: "9px 14px", color: "#94a3b8", whiteSpace: "nowrap" }}>{fmtDate(r.date)}</td>
+                    <td style={{ padding: "9px 14px" }}>
+                      <span style={{ padding: "2px 8px", borderRadius: 12, fontSize: 11, fontWeight: 600,
+                        background: (PLATFORM_COLOR[r.platform] || "#64748b") + "22", color: PLATFORM_COLOR[r.platform] || "#64748b" }}>
+                        {r.platform}
+                      </span>
                     </td>
-                    <td style={{ padding: "9px 12px", color: "#94a3b8", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={r.subject}>{r.subject}</td>
-                    <td style={{ padding: "9px 12px", color: r.property ? "#e2e8f0" : "#334155" }}>{r.property || "—"}</td>
-                    <td style={{ padding: "9px 12px", color: r.guest ? "#e2e8f0" : "#334155" }}>{r.guest || "—"}</td>
-                    <td style={{ padding: "9px 12px", color: "#94a3b8", whiteSpace: "nowrap" }}>{r.checkin ? r.checkin.slice(0, 10) : "—"}</td>
-                    <td style={{ padding: "9px 12px", color: "#94a3b8", whiteSpace: "nowrap" }}>{r.checkout ? r.checkout.slice(0, 10) : "—"}</td>
-                    <td style={{ padding: "9px 12px", fontWeight: 700, color: r.amount ? "#10b981" : "#334155", whiteSpace: "nowrap" }}>
-                      {r.amount ? fmtAmt(r.amount) : "Non détecté"}
+                    <td style={{ padding: "9px 14px", color: "#cbd5e1", maxWidth: 300 }}>
+                      <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.subject || "—"}</div>
+                    </td>
+                    <td style={{ padding: "9px 14px", textAlign: "right", fontWeight: 700,
+                      color: r.amount !== null ? "#10b981" : "#475569" }}>
+                      {r.amount !== null ? fmtEur(r.amount) : <span style={{ fontSize: 10, fontWeight: 400 }}>non détecté</span>}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <div style={{ fontSize: 10, color: "#334155", marginTop: 8 }}>
-            ⚠ Les montants sont extraits automatiquement depuis le texte des emails. Vérifie les chiffres avant de les reporter dans le Cockpit.
+          <div style={{ padding: "10px 16px", borderTop: "1px solid rgba(255,255,255,0.04)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ color: "#64748b", fontSize: 11 }}>{filtered.length} email{filtered.length > 1 ? "s" : ""}</span>
+            {withAmount.length > 0 && <span style={{ color: "#10b981", fontWeight: 700, fontSize: 13 }}>{fmtEur(totalAll)}</span>}
           </div>
-        </>
+        </div>
       )}
     </div>
   );
