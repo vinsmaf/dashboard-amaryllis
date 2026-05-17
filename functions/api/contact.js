@@ -11,7 +11,8 @@ export async function onRequestPost(context) {
       return Response.json({ ok: false, error: "Service email non configuré" }, { status: 503 });
     }
 
-    const fromEmail = context.env.CONTACT_FROM_EMAIL || "Amaryllis <noreply@amaryllis-locations.com>";
+    // "from" must be a Resend-verified domain — use shared onboarding@resend.dev
+    // The guest's email is set as reply_to so replies go directly to them
     const toEmail = context.env.CONTACT_TO_EMAIL || "vinsmaf@hotmail.com";
 
     const res = await fetch("https://api.resend.com/emails", {
@@ -21,7 +22,7 @@ export async function onRequestPost(context) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: fromEmail,
+        from: "Amaryllis <onboarding@resend.dev>",
         to: toEmail,
         reply_to: email,
         subject: `[Amaryllis] Message de ${nom}`,
