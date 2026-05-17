@@ -331,7 +331,7 @@ const BIENS = [
   },
   {
     id: "nogent",
-    nom: "T2 Nogent-sur-Marne",
+    nom: "Bord de Marne",
     airbnbTitle: "Appartement de standing avec jardin, proche Paris",
     lieu: "Nogent-sur-Marne, Île-de-France",
     tag: null,
