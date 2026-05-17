@@ -290,7 +290,7 @@ const BIENS = [
   },
   {
     id: "schoelcher",
-    nom: "T2 Schœlcher",
+    nom: "Bellevue",
     airbnbTitle: "Appartement de standing calme, splendide vue mer",
     lieu: "Schœlcher, Martinique",
     tag: null,
