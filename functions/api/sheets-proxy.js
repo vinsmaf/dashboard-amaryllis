@@ -19,10 +19,12 @@ export async function onRequestPost(context) {
   let parsed;
   try { parsed = JSON.parse(body); } catch { parsed = null; }
 
-  // ── importAllReservations : POST n'arrive jamais côté Apps Script (redirect bug)
-  //    → découper en chunks et envoyer via GET
+  // ── Actions qui écrivent des tableaux → chunked GET (Apps Script redirect bug)
   if (parsed && parsed.action === "importAllReservations" && Array.isArray(parsed.reservations)) {
     return forwardChunked(scriptUrl, "importAllReservations", parsed.reservations);
+  }
+  if (parsed && parsed.action === "importBeds24" && Array.isArray(parsed.bookings)) {
+    return forwardChunked(scriptUrl, "importBeds24", parsed.bookings);
   }
 
   // ── Toutes les autres actions → forwarding POST classique ──

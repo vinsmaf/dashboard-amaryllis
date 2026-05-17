@@ -3612,7 +3612,9 @@ function Beds24Admin({ scriptUrl }) {
       const params = new URLSearchParams();
       Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v); });
       const res = await fetch(`/api/beds24-bookings?${params}`);
-      const data = await res.json();
+      let data;
+      try { data = await res.json(); }
+      catch { throw new Error(res.ok ? "Réponse non-JSON du serveur" : `Fonction /api/beds24-bookings introuvable (HTTP ${res.status}) — utilise npm run dev:cf`); }
       if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
       setBookings(data.bookings || []);
       setFetchInfo({ total: data.total, fetchedAt: data.fetchedAt, pages: data.pages });
@@ -3628,9 +3630,11 @@ function Beds24Admin({ scriptUrl }) {
   async function testConnection() {
     setTestStatus(null);
     try {
-      const res  = await fetch("/api/beds24-bookings?test=1");
-      const data = await res.json();
+      const res = await fetch("/api/beds24-bookings?test=1");
+      let data;
+      try { data = await res.json(); } catch { setTestStatus("error"); return; }
       setTestStatus(data.ok ? "ok" : "error");
+      if (!data.ok && data.error) setError(data.error);
     } catch { setTestStatus("error"); }
   }
 

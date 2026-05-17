@@ -1,0 +1,29 @@
+# Copier ce fichier en .dev.vars et remplir les valeurs
+# Utilisé par wrangler pages dev (npm run dev:cf)
+# NE PAS committer .dev.vars (déjà dans .gitignore via *.local)
+
+BEDS24_API_KEY=votre_api_key_beds24
+BEDS24_PROP_KEY=votre_prop_key_beds24
+BEDS24_WEBHOOK_SECRET=optionnel
+
+APPS_SCRIPT_URL=https://script.google.com/macros/s/VOTRE_ID/exec
+
+STRIPE_SECRET_KEY=sk_test_...
+
+# iCal Airbnb
+ICAL_AMARYLLIS=
+ICAL_SCHOELCHER=
+ICAL_GEKO=
+ICAL_MABOUYA=
+ICAL_IGUANA=
+ICAL_ZANDOLI=
+ICAL_NOGENT=
+
+# iCal Booking.com
+ICAL_BOOKING_AMARYLLIS=
+ICAL_BOOKING_SCHOELCHER=
+ICAL_BOOKING_GEKO=
+ICAL_BOOKING_MABOUYA=
+ICAL_BOOKING_IGUANA=
+ICAL_BOOKING_ZANDOLI=
+ICAL_BOOKING_NOGENT=

@@ -17,6 +17,35 @@ export async function onRequestGet(context) {
   const url    = new URL(request.url);
   const params = url.searchParams;
 
+  // ── Test de connexion : GET /api/beds24-bookings?test=1 ──────────────
+  // Retourne les 5 dernières réservations pour vérifier que la clé fonctionne
+  if (params.get("test") === "1") {
+    try {
+      const res = await fetch(BEDS24_URL, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({
+          apiKey,
+          propKey,
+          propId:  Number(PROP_ID),
+          firstId: 0,
+          numId:   5,
+        }),
+      });
+      let data;
+      try { data = await res.json(); } catch (_) {
+        return json({ ok: false, error: "Réponse non-JSON — vérifie BEDS24_API_KEY et BEDS24_PROP_KEY" }, 502);
+      }
+      if (Array.isArray(data)) {
+        return json({ ok: true, sample: data.length, propId: PROP_ID });
+      }
+      const errMsg = (data?.errors || []).join(", ") || "Authentification échouée";
+      return json({ ok: false, error: errMsg, raw: data }, 400);
+    } catch (err) {
+      return json({ ok: false, error: err.message }, 502);
+    }
+  }
+
   // Filtres optionnels transmis par l'admin
   const filters = {};
   const pick = (key) => { const v = params.get(key); if (v) filters[key] = v; };
@@ -56,15 +85,28 @@ export async function onRequestGet(context) {
       if (!res.ok) {
         const txt = await res.text();
         console.error(`[beds24] HTTP ${res.status}: ${txt}`);
-        return json({ error: `Beds24 HTTP ${res.status}`, detail: txt }, 502);
+        return json({ error: `Beds24 HTTP ${res.status}`, detail: txt.slice(0, 500) }, 502);
       }
 
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch (_) {
+        const txt = await res.text().catch(() => "");
+        console.error("[beds24] réponse non-JSON:", txt.slice(0, 200));
+        return json({ error: "Beds24 a renvoyé une réponse non-JSON (clé invalide ou endpoint incorrect)", detail: txt.slice(0, 200) }, 502);
+      }
 
       // Beds24 retourne un tableau de réservations ou un objet d'erreur
       if (!Array.isArray(data)) {
-        console.error("[beds24] réponse inattendue:", JSON.stringify(data));
-        return json({ error: "Réponse Beds24 invalide", detail: data }, 502);
+        // errorCode 1000 = Unauthorized → clé API invalide ou expirée
+        const errMsg = (data?.errors || []).join(", ") || data?.error || JSON.stringify(data).slice(0, 200);
+        const isUnauth = data?.errorCode === "1000" || errMsg === "Unauthorized";
+        const msg = isUnauth
+          ? "Clé API Beds24 invalide ou expirée (errorCode 1000) — mettre à jour BEDS24_API_KEY et BEDS24_PROP_KEY dans Cloudflare Pages"
+          : `Beds24 : ${errMsg}`;
+        console.error("[beds24] réponse inattendue:", msg);
+        return json({ error: msg, detail: data }, 502);
       }
 
       allBookings = allBookings.concat(data);
