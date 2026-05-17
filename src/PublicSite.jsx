@@ -2463,9 +2463,7 @@ export default function PublicSite() {
       </div>
 
       {/* ── FOOTER + CONTACT ── */}
-      <div style={isMobile ? { paddingBottom: 80 } : undefined}>
-        <FooterSection />
-      </div>
+      <FooterSection />
 
       {/* ── PROPERTY DETAIL ── */}
       {detailBien && !selectedBien && (
@@ -2482,33 +2480,6 @@ export default function PublicSite() {
         <BookingModal bien={selectedBien} blockedDates={blockedDates} loadingAvail={loadingAvail} onClose={() => setSelectedBien(null)} />
       )}
 
-      {/* Sticky mobile CTA */}
-      {isMobile && !selectedBien && !detailBien && !beds24Bien && (
-        <div style={{
-          position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 150,
-          background: NAVY, borderTop: "1px solid rgba(250,245,233,0.1)",
-          padding: "12px 20px",
-          paddingBottom: "calc(12px + env(safe-area-inset-bottom))",
-          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
-        }}>
-          <div>
-            <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 10, color: "rgba(250,245,233,0.45)", letterSpacing: "0.2em", textTransform: "uppercase" }}>Villa Amaryllis</div>
-            <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 14, color: "#faf5e9" }}>
-              À partir de {biensList.find(b => b.id === "amaryllis")?.prix ?? 280}€<span style={{ fontWeight: 300, fontSize: 11, color: "rgba(250,245,233,0.5)" }}> / nuit</span>
-            </div>
-          </div>
-          <button
-            onClick={() => openBien(biensList.find(b => b.id === "amaryllis") || biensList[0])}
-            style={{
-              background: CORAL, border: "none", color: "#fff",
-              borderRadius: 8, padding: "12px 24px",
-              fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12,
-              letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer",
-              whiteSpace: "nowrap",
-            }}
-          >Réserver →</button>
-        </div>
-      )}
     </div>
   );
 }
