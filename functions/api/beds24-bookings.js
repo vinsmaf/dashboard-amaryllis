@@ -1,160 +1,124 @@
 // Cloudflare Pages Function — GET /api/beds24-bookings
-// Proxy sécurisé vers l'API Beds24 v1 — clés jamais exposées au navigateur
+// Proxy sécurisé vers l'API Beds24 V2 — token jamais exposé au navigateur
 
-const BEDS24_URL = "https://api.beds24.com/json/getBookings";
-const PROP_ID    = "158192";
-const PAGE_SIZE  = 1000; // max Beds24
+const BEDS24_V2_URL = "https://beds24.com/api/v2/bookings";
+const PROP_ID = "158192";
+const PAGE_SIZE = 100; // max raisonnable pour V2
 
 export async function onRequestGet(context) {
   const { request, env } = context;
 
-  const apiKey  = env.BEDS24_API_KEY;
-  const propKey = env.BEDS24_PROP_KEY;
-  if (!apiKey || !propKey) {
-    return json({ error: "BEDS24_API_KEY ou BEDS24_PROP_KEY manquante" }, 500);
+  const token = env.BEDS24_TOKEN;
+  if (!token) {
+    return json({ error: "BEDS24_TOKEN manquant dans les variables Cloudflare" }, 500);
   }
 
-  const url    = new URL(request.url);
+  const url = new URL(request.url);
   const params = url.searchParams;
 
-  // ── Test de connexion : GET /api/beds24-bookings?test=1 ──────────────
-  // Retourne les 5 dernières réservations pour vérifier que la clé fonctionne
+  // ── Test de connexion ─────────────────────────────────────────────────
   if (params.get("test") === "1") {
     try {
-      const res = await fetch(BEDS24_URL, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({
-          apiKey,
-          propKey,
-          propId:  Number(PROP_ID),
-          firstId: 0,
-          numId:   5,
-        }),
+      const res = await fetch("https://beds24.com/api/v2/authentication/details", {
+        headers: { token },
       });
-      let data;
-      try { data = await res.json(); } catch (_) {
-        return json({ ok: false, error: "Réponse non-JSON — vérifie BEDS24_API_KEY et BEDS24_PROP_KEY" }, 502);
+      const data = await res.json();
+      if (data.validToken) {
+        return json({ ok: true, propId: PROP_ID, expiresIn: data.token?.expiresIn });
       }
-      if (Array.isArray(data)) {
-        return json({ ok: true, sample: data.length, propId: PROP_ID });
-      }
-      const errMsg = (data?.errors || []).join(", ") || "Authentification échouée";
-      return json({ ok: false, error: errMsg, raw: data }, 400);
+      return json({ ok: false, error: "Token invalide", raw: data }, 400);
     } catch (err) {
       return json({ ok: false, error: err.message }, 502);
     }
   }
 
-  // Filtres optionnels transmis par l'admin
-  const filters = {};
-  const pick = (key) => { const v = params.get(key); if (v) filters[key] = v; };
+  // ── Filtres optionnels ────────────────────────────────────────────────
+  const qp = new URLSearchParams({ propId: PROP_ID });
+  const pick = (v2key, paramKey) => {
+    const v = params.get(paramKey || v2key);
+    if (v) qp.set(v2key, v);
+  };
   pick("arrivalFrom");
   pick("arrivalTo");
   pick("departureFrom");
   pick("departureTo");
   pick("modifiedFrom");
   pick("modifiedTo");
-  // status : "0"=nouveau, "1"=confirmé, "2"=annulé, "4"=paiement en attente, "99"=tous
-  const statusFilter = params.get("status"); // "" = pas de filtre
 
-  // ── Pagination : boucle jusqu'à récupérer toutes les réservations ──
+  const statusFilter = params.get("status");
+
+  // ── Pagination ────────────────────────────────────────────────────────
   let allBookings = [];
-  let offset      = 0;
-  let pageCount   = 0;
-  const MAX_PAGES = 20; // protection : 20 × 1000 = 20 000 réservations max
+  let pageNum = 0;
+  const MAX_PAGES = 50;
 
   try {
-    while (pageCount < MAX_PAGES) {
-      // Beds24 v1 : apiKey + propKey à la RACINE du body (pas sous "authentication")
-      const body = {
-        apiKey,
-        propKey,
-        propId:  Number(PROP_ID),
-        firstId: offset,
-        numId:   PAGE_SIZE,
-        ...filters,
-      };
+    while (pageNum < MAX_PAGES) {
+      qp.set("pageNum", pageNum);
+      qp.set("numId", PAGE_SIZE);
 
-      const res = await fetch(BEDS24_URL, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(body),
+      const res = await fetch(`${BEDS24_V2_URL}?${qp}`, {
+        headers: { token },
       });
 
       if (!res.ok) {
         const txt = await res.text();
-        console.error(`[beds24] HTTP ${res.status}: ${txt}`);
         return json({ error: `Beds24 HTTP ${res.status}`, detail: txt.slice(0, 500) }, 502);
       }
 
       let data;
-      try {
-        data = await res.json();
-      } catch (_) {
-        const txt = await res.text().catch(() => "");
-        console.error("[beds24] réponse non-JSON:", txt.slice(0, 200));
-        return json({ error: "Beds24 a renvoyé une réponse non-JSON (clé invalide ou endpoint incorrect)", detail: txt.slice(0, 200) }, 502);
+      try { data = await res.json(); }
+      catch (_) {
+        return json({ error: "Réponse non-JSON de Beds24 V2" }, 502);
       }
 
-      // Beds24 retourne un tableau de réservations ou un objet d'erreur
-      if (!Array.isArray(data)) {
-        // errorCode 1000 = Unauthorized → clé API invalide ou expirée
-        const errMsg = (data?.errors || []).join(", ") || data?.error || JSON.stringify(data).slice(0, 200);
-        const isUnauth = data?.errorCode === "1000" || errMsg === "Unauthorized";
-        const msg = isUnauth
-          ? "Clé API Beds24 invalide ou expirée (errorCode 1000) — mettre à jour BEDS24_API_KEY et BEDS24_PROP_KEY dans Cloudflare Pages"
-          : `Beds24 : ${errMsg}`;
-        console.error("[beds24] réponse inattendue:", msg);
-        return json({ error: msg, detail: data }, 502);
+      if (!data.success) {
+        return json({ error: data.error || "Erreur Beds24 V2", raw: data }, 502);
       }
 
-      allBookings = allBookings.concat(data);
-      pageCount++;
+      allBookings = allBookings.concat(data.data || []);
+      pageNum++;
 
-      // Fin de pagination : moins de PAGE_SIZE résultats → on a tout
-      if (data.length < PAGE_SIZE) break;
-      offset += PAGE_SIZE;
+      if (!data.pages?.nextPageExists) break;
     }
   } catch (err) {
-    console.error("[beds24] fetch error:", err.message);
     return json({ error: err.message }, 502);
   }
 
-  // ── Normalisation & filtre statut ──
+  // ── Normalisation ─────────────────────────────────────────────────────
   const normalize = (b) => ({
-    bookingId:  b.bookId,
-    firstName:  b.firstName  || "",
-    lastName:   b.lastName   || "",
-    guestName:  `${b.firstName || ""} ${b.lastName || ""}`.trim() || "—",
-    email:      b.guestEmail  || "",
-    phone:      b.guestPhone  || "",
-    arrival:    b.firstNight  || "",          // YYYY-MM-DD (1ère nuit)
-    departure:  departureDateFrom(b.lastNight), // lastNight + 1 jour = départ réel
-    lastNight:  b.lastNight   || "",
-    nights:     nightsCount(b.firstNight, b.lastNight),
-    status:     b.status,
-    statusLabel: statusLabel(b.status),
-    roomId:     b.roomId      || "",
-    unitId:     b.unitId      || "",
-    channel:    b.referer     || b.icalInfoUrl || "",
-    channelLabel: channelLabel(b.referer),
-    price:      parseFloat(b.price)      || 0,
-    currency:   b.currency               || "EUR",
-    notes:      b.guestNote              || "",
-    createdOn:  b.createdOn              || "",
-    modifiedOn: b.modifiedOn             || "",
-    numGuests:  parseInt(b.numGuests)    || 1,
+    bookingId:    b.id,
+    firstName:    b.firstName   || "",
+    lastName:     b.lastName    || "",
+    guestName:    `${b.firstName || ""} ${b.lastName || ""}`.trim() || "—",
+    email:        b.email       || "",
+    phone:        b.phone || b.mobile || "",
+    arrival:      b.arrival     || "",
+    departure:    b.departure   || "",
+    lastNight:    lastNightFrom(b.departure),
+    nights:       nightsCount(b.arrival, b.departure),
+    status:       statusCodeFrom(b.status),
+    statusLabel:  statusLabel(b.status),
+    roomId:       b.roomId      || "",
+    unitId:       b.unitId      || "",
+    channel:      b.referer     || b.channel || "",
+    channelLabel: channelLabel(b.referer || b.channel),
+    price:        parseFloat(b.price)   || 0,
+    currency:     "EUR",
+    notes:        b.comments    || b.notes || "",
+    createdOn:    b.bookingTime  || "",
+    modifiedOn:   b.modifiedTime || "",
+    numGuests:    (b.numAdult || 1) + (b.numChild || 0),
   });
 
   let bookings = allBookings.map(normalize);
 
-  // Filtre statut côté serveur si demandé
+  // Filtre statut
   if (statusFilter && statusFilter !== "99") {
     bookings = bookings.filter(b => String(b.status) === statusFilter);
   }
 
-  // Tri : arrivée décroissante par défaut
+  // Tri : arrivée décroissante
   bookings.sort((a, b) => (b.arrival > a.arrival ? 1 : -1));
 
   return json({
@@ -162,46 +126,15 @@ export async function onRequestGet(context) {
     total:     bookings.length,
     propId:    PROP_ID,
     fetchedAt: new Date().toISOString(),
-    pages:     pageCount,
+    pages:     pageNum,
   });
 }
 
-// ── Test de connexion : GET /api/beds24-bookings?test=1 ──────────────
-// Retourne les 5 dernières réservations pour vérifier que la clé fonctionne
 export async function onRequest(context) {
-  if (new URL(context.request.url).searchParams.get("test") === "1") {
-    // même logique mais numId=5
-    const { env } = context;
-    const apiKey  = env.BEDS24_API_KEY;
-    const propKey = env.BEDS24_PROP_KEY;
-    if (!apiKey || !propKey) return json({ ok: false, error: "Clés manquantes" }, 500);
-
-    try {
-      const res = await fetch(BEDS24_URL, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({
-          apiKey,
-          propKey,
-          propId:  Number(PROP_ID),
-          firstId: 0,
-          numId:   5,
-        }),
-      });
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        return json({ ok: true, sample: data.length, propId: PROP_ID });
-      }
-      return json({ ok: false, error: data }, 400);
-    } catch (err) {
-      return json({ ok: false, error: err.message }, 502);
-    }
-  }
-  // Sinon déléguer au GET handler
   return onRequestGet(context);
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -212,32 +145,45 @@ function json(data, status = 200) {
   });
 }
 
-function departureDateFrom(lastNight) {
-  if (!lastNight) return "";
-  const d = new Date(lastNight + "T12:00:00Z");
-  d.setDate(d.getDate() + 1);
+function lastNightFrom(departure) {
+  if (!departure) return "";
+  const d = new Date(departure + "T12:00:00Z");
+  d.setDate(d.getDate() - 1);
   return d.toISOString().slice(0, 10);
 }
 
-function nightsCount(firstNight, lastNight) {
-  if (!firstNight || !lastNight) return 0;
-  const a = new Date(firstNight + "T12:00:00Z");
-  const b = new Date(lastNight  + "T12:00:00Z");
-  return Math.round((b - a) / 86400000) + 1;
+function nightsCount(arrival, departure) {
+  if (!arrival || !departure) return 0;
+  const a = new Date(arrival + "T12:00:00Z");
+  const b = new Date(departure + "T12:00:00Z");
+  return Math.round((b - a) / 86400000);
 }
 
-function statusLabel(code) {
-  const labels = {
-    "0":  "Nouveau",
-    "1":  "Confirmé",
-    "2":  "Annulé",
-    "3":  "Demande",
-    "4":  "Paiement en attente",
-    "5":  "Fermé",
-    "90": "Bloqué",
-    "99": "Archivé",
+// V2 status (string) → code numérique compatible avec l'UI existante
+function statusCodeFrom(status) {
+  const map = {
+    "new":       0,
+    "confirmed": 1,
+    "cancelled": 2,
+    "request":   3,
+    "black":     90,
+    "closed":    5,
+    "archived":  99,
   };
-  return labels[String(code)] || `Statut ${code}`;
+  return map[status] ?? 0;
+}
+
+function statusLabel(status) {
+  const labels = {
+    "new":       "Nouveau",
+    "confirmed": "Confirmé",
+    "cancelled": "Annulé",
+    "request":   "Demande",
+    "black":     "Bloqué",
+    "closed":    "Fermé",
+    "archived":  "Archivé",
+  };
+  return labels[status] || status || "Inconnu";
 }
 
 function channelLabel(referer) {
