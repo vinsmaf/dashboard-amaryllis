@@ -15,7 +15,8 @@
   --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
 
-  font: 18px/145% var(--sans);
+  /* Fluid typography: scales between min and max based on viewport width */
+  font: clamp(14px, 2.5vw, 18px)/145% var(--sans);
   letter-spacing: 0.18px;
   color-scheme: light dark;
   color: var(--text);
@@ -25,8 +26,26 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  @media (max-width: 1024px) {
-    font-size: 16px;
+  /* Mobile-first: start at small screens */
+  --spacing-xs: 8px;
+  --spacing-sm: 12px;
+  --spacing-md: 16px;
+  --spacing-lg: 20px;
+  --spacing-xl: 24px;
+  --spacing-2xl: 32px;
+
+  @media (min-width: 768px) {
+    --spacing-xs: 8px;
+    --spacing-sm: 12px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
+    --spacing-2xl: 40px;
+  }
+
+  @media (min-width: 1024px) {
+    --spacing-lg: 25px;
+    --spacing-2xl: 32px;
   }
 }
 
@@ -55,11 +74,12 @@ body {
 }
 
 #root {
-  width: 1126px;
+  width: 100%;
   max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
+  margin: 0;
+  padding: 0;
+  text-align: left;
+  border-inline: none;
   min-height: 100svh;
   display: flex;
   flex-direction: column;
@@ -74,21 +94,34 @@ h2 {
 }
 
 h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
+  /* Fluid h1: scales from 28px on mobile to 56px on desktop */
+  font-size: clamp(28px, 7vw, 56px);
+  letter-spacing: -0.84px;
+  margin: var(--spacing-lg) 0;
+
+  @media (min-width: 480px) {
+    margin: var(--spacing-xl) 0;
+  }
+
+  @media (min-width: 768px) {
+    letter-spacing: -1.12px;
+    margin: var(--spacing-2xl) 0;
+  }
+
+  @media (min-width: 1024px) {
+    letter-spacing: -1.68px;
   }
 }
+
 h2 {
-  font-size: 24px;
+  /* Fluid h2: scales from 18px on mobile to 24px on desktop */
+  font-size: clamp(18px, 4vw, 24px);
   line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
+  letter-spacing: -0.12px;
+  margin: 0 0 var(--spacing-sm);
+
+  @media (min-width: 768px) {
+    letter-spacing: -0.24px;
   }
 }
 p {

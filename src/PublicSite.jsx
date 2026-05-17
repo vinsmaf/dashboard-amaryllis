@@ -714,7 +714,7 @@ function Beds24Modal({ bien, onClose }) {
         style={{
           background: "#faf5e9", borderRadius: 12, overflow: "hidden",
           width: "100%", maxWidth: 860,
-          maxHeight: "92vh", display: "flex", flexDirection: "column",
+          maxHeight: "calc(92vh - env(safe-area-inset-bottom))", display: "flex", flexDirection: "column",
           boxShadow: "0 32px 80px rgba(0,0,0,0.45)",
         }}
       >
@@ -848,7 +848,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
         borderRadius: 20,
         padding: "32px",
         maxWidth: 680, width: "100%",
-        maxHeight: "92vh", overflowY: "auto",
+        maxHeight: "calc(92vh - env(safe-area-inset-bottom))", overflowY: "auto",
         position: "relative",
         boxShadow: `0 24px 64px rgba(14,59,58,0.15)`,
       }}>
@@ -1049,7 +1049,7 @@ function FormField({ label, value, onChange, type = "text", multiline, style }) 
     color: TEXT,
     padding: "11px 14px",
     width: "100%",
-    fontSize: 14,
+    fontSize: 16,
     outline: "none",
     fontFamily: "inherit",
     resize: "vertical",
@@ -1652,7 +1652,7 @@ function HeroCarousel({ biens, onDetail, onBook }) {
   const photo = bien.photos && bien.photos[0];
 
   return (
-    <div style={{ position: "relative", height: "calc(100vh - 62px)", minHeight: 520, overflow: "hidden", background: "#072626" }}>
+    <div style={{ position: "relative", height: "calc(100svh - 62px)", minHeight: 520, overflow: "hidden", background: "#072626" }}>
       {/* Animated shader wallpaper */}
       <ShaderBg />
 
@@ -1963,13 +1963,13 @@ function ContactField({ label, value, onChange, type = "text", multiline, requir
     background: "rgba(250,245,233,0.06)",
     border: `1px solid ${focused ? "rgba(196,114,84,0.5)" : "rgba(250,245,233,0.12)"}`,
     borderRadius: 8, color: "#faf5e9", padding: "11px 14px", width: "100%",
-    fontSize: 13, outline: "none", fontFamily: "'Jost', sans-serif", fontWeight: 300,
+    fontSize: 16, outline: "none", fontFamily: "'Jost', sans-serif", fontWeight: 300,
     resize: "vertical", transition: "border-color 0.2s", boxSizing: "border-box",
   } : {
     background: CREAM,
     border: `1px solid ${focused ? NAVY + "60" : SAND}`,
     borderRadius: 8, color: TEXT, padding: "11px 14px", width: "100%",
-    fontSize: 13, outline: "none", fontFamily: "'Jost', sans-serif", fontWeight: 300,
+    fontSize: 16, outline: "none", fontFamily: "'Jost', sans-serif", fontWeight: 300,
     resize: "vertical", transition: "border-color 0.2s", boxSizing: "border-box",
   };
   return (
