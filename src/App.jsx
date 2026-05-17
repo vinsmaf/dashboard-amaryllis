@@ -921,7 +921,7 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
   return (
     <div>
       <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
-        {[{ id: "todo", l: "✅ To-do" }, { id: "gantt", l: "📅 Calendrier" }, { id: "trous", l: "🕳 Trous" }, { id: "list", l: "📋 Réservations" }].map(v => (
+        {[{ id: "todo", l: "✅ To-do" }, { id: "gantt", l: "📅 Calendrier" }, { id: "trous", l: "🕳 Trous" }, { id: "list", l: "📋 Réservations" }, { id: "beds24", l: "🏙️ Beds24 Nogent" }].map(v => (
           <button
             key={v.id}
             onClick={() => setView(v.id)}
@@ -1346,6 +1346,10 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
             </div>
           </div>
         </div>
+      )}
+
+      {view === "beds24" && (
+        <Beds24Admin scriptUrl={scriptUrl} reservations={reservations} saveRes={saveRes} />
       )}
     </div>
   );
@@ -4153,7 +4157,6 @@ export default function App() {
     { id: "charges", l: mob ? "💰" : "💰 Charges" },
     { id: "pilotage", l: mob ? "💼" : "💼 Pilotage" },
     { id: "historique", l: mob ? "📈" : "📈 Historique" },
-    { id: "beds24", l: mob ? "🏙️" : "🏙️ Beds24 Nogent" },
   ];
 
   return (
@@ -4197,7 +4200,6 @@ export default function App() {
         {tab === "pilotage" && <Pilotage biens={biens} n={n} mob={mob} />}
         {tab === "historique" && <Historique biens={biens} n={n} mob={mob} hist={hist} />}
         {tab === "tarifs" && <Tarifs />}
-        {tab === "beds24" && <Beds24Admin scriptUrl={scriptUrl} reservations={reservations} saveRes={saveRes} />}
       </div>
 
       <FAB onTab={setTab} />
