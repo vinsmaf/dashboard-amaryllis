@@ -453,7 +453,7 @@ function formatDateShort(ds) {
 const WEEKDAYS = ["Lu", "Ma", "Me", "Je", "Ve", "Sa", "Di"];
 const MONTHS_FR = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
 
-function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, onSelect, onHover, dailyPricesMap = {}, basePrice = 0, minNights = 1 }) {
+function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, onSelect, onHover, dailyPricesMap = {}, basePrice = 0, minNights = 1, readOnly = false }) {
   const todayStr = today();
   const [hoveredCell, setHoveredCell] = useState(null);
   const firstDay = new Date(year, month, 1);
@@ -517,18 +517,19 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
             <div
               key={i}
               onMouseEnter={() => {
+                if (readOnly) return;
                 if (!disabled && checkin && !checkout) onHover(ds);
                 if (!disabled && ds) setHoveredCell(ds);
               }}
-              onMouseLeave={() => setHoveredCell(null)}
-              onClick={() => !disabled && onSelect(ds)}
+              onMouseLeave={() => { if (!readOnly) setHoveredCell(null); }}
+              onClick={() => { if (!readOnly && !disabled) onSelect(ds); }}
               style={{
                 height: 36,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 fontSize: 13,
-                cursor: disabled ? "not-allowed" : "pointer",
+                cursor: readOnly ? "default" : disabled ? "not-allowed" : "pointer",
                 background: bg,
                 color: blocked ? "#D4C8BC" : past ? "#D4C8BC" : belowMin ? "#D4C8BC" : color,
                 borderRadius,
@@ -1328,7 +1329,7 @@ function Stat({ icon, label }) {
 }
 
 // ── Property Detail (full-screen) ───────────────────────────────
-function PropertyDetail({ bien, onClose, onBook }) {
+function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail = false }) {
   const [photoIdx, setPhotoIdx] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -1575,6 +1576,50 @@ function PropertyDetail({ bien, onClose, onBook }) {
             </div>
           </div>
 
+          {/* Disponibilités */}
+          {!BOOKING_DISABLED.has(bien.id) && !bien.beds24Url && (
+            <>
+              <div style={{ height: 1, background: SAND, marginBottom: 26 }} />
+              <div style={{ marginBottom: 32 }}>
+                <div style={{ fontSize: 10, letterSpacing: "0.35em", textTransform: "uppercase", color: MUTED, fontWeight: 600, marginBottom: 14 }}>Disponibilités</div>
+                {loadingAvail ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, color: MUTED, fontSize: 13, fontFamily: "'Jost', sans-serif", fontWeight: 300 }}>
+                    <OrganicLoader size={18} color={MUTED} /> Chargement du calendrier…
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ display: "flex", gap: isMobile ? 0 : 24, flexDirection: isMobile ? "column" : "row", flexWrap: "wrap" }}>
+                      {(() => {
+                        const now = new Date();
+                        const m1 = { year: now.getFullYear(), month: now.getMonth() };
+                        const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+                        const m2 = { year: next.getFullYear(), month: next.getMonth() };
+                        return [m1, m2].map(({ year, month }) => (
+                          <CalendarMonth
+                            key={`${year}-${month}`}
+                            year={year} month={month}
+                            checkin={null} checkout={null} hovered={null}
+                            blockedDates={blockedDates}
+                            onSelect={() => {}} onHover={() => {}}
+                            readOnly
+                          />
+                        ));
+                      })()}
+                    </div>
+                    <div style={{ marginTop: 12, display: "flex", gap: 16, flexWrap: "wrap" }}>
+                      <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: MUTED, fontFamily: "'Jost', sans-serif" }}>
+                        <span style={{ width: 12, height: 12, background: CREAM, border: `1px solid ${SAND}`, borderRadius: 3, display: "inline-block" }} /> Disponible
+                      </span>
+                      <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: MUTED, fontFamily: "'Jost', sans-serif" }}>
+                        <span style={{ width: 12, height: 12, background: "#D4C8BC", borderRadius: 3, display: "inline-block" }} /> Indisponible
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
+            </>
+          )}
+
           {/* Localisation */}
           {bien.coords && (
             <>
@@ -1795,7 +1840,7 @@ function QuickBook({ biens, onBook }) {
 }
 
 // ── Hero Carousel ────────────────────────────────────────────────
-const CAROUSEL_DELAY = 6000;
+const CAROUSEL_DELAY = 8000;
 
 function HeroCarousel({ biens, onDetail, onBook }) {
   const [idx, setIdx] = useState(0);
@@ -2029,13 +2074,30 @@ const EMAIL = "vinsmaf@hotmail.com";
 function FooterSection() {
   const [form, setForm] = useState({ nom: "", email: "", message: "" });
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sentError, setSentError] = useState(false);
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    const subject = encodeURIComponent(`Contact Amaryllis — ${form.nom}`);
-    const body = encodeURIComponent(`Bonjour,\n\n${form.message}\n\n—\n${form.nom}\n${form.email}`);
-    window.location.href = `mailto:${EMAIL}?subject=${subject}&body=${body}`;
-    setSent(true);
+    setSending(true);
+    setSentError(false);
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nom: form.nom, email: form.email, message: form.message }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setSent(true);
+        setForm({ nom: "", email: "", message: "" });
+      } else {
+        setSentError(true);
+      }
+    } catch {
+      setSentError(true);
+    }
+    setSending(false);
   }
 
   const waMsg = encodeURIComponent("Bonjour, je souhaite obtenir des informations sur une location Amaryllis.");
@@ -2089,9 +2151,10 @@ function FooterSection() {
         <div style={{ flex: "1 1 360px", maxWidth: 500 }}>
           {sent ? (
             <div style={{ background: "rgba(250,245,233,0.04)", border: "1px solid rgba(250,245,233,0.1)", borderRadius: 16, padding: "48px 36px", textAlign: "center" }}>
-              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 20, letterSpacing: "0.15em", textTransform: "uppercase", color: "#faf5e9", marginBottom: 10 }}>Message préparé</div>
+              <div style={{ fontSize: 32, marginBottom: 16 }}>✓</div>
+              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 20, letterSpacing: "0.15em", textTransform: "uppercase", color: "#faf5e9", marginBottom: 10 }}>Message envoyé</div>
               <p style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: 15, color: "rgba(250,245,233,0.5)", lineHeight: 1.6, margin: "0 0 24px" }}>
-                Votre client mail s'est ouvert avec le message.
+                Nous vous répondrons dans les 24h.
               </p>
               <button onClick={() => setSent(false)} style={{ background: "none", border: "1px solid rgba(250,245,233,0.2)", color: "rgba(250,245,233,0.5)", borderRadius: 6, padding: "10px 20px", fontFamily: "'Jost', sans-serif", fontSize: 11, letterSpacing: "0.1em", cursor: "pointer", textTransform: "uppercase" }}>
                 Nouveau message
@@ -2107,11 +2170,16 @@ function FooterSection() {
                 <ContactField label="Votre email" type="email" value={form.email} onChange={v => setForm(f => ({ ...f, email: v }))} required dark />
               </div>
               <ContactField label="Votre message" value={form.message} onChange={v => setForm(f => ({ ...f, message: v }))} multiline required style={{ marginBottom: 22 }} dark />
-              <button type="submit"
-                style={{ width: "100%", background: CORAL, color: "#fff", border: "none", borderRadius: 6, padding: "13px 24px", fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 12, letterSpacing: "0.15em", cursor: "pointer", textTransform: "uppercase", transition: "opacity 0.2s" }}
-                onMouseEnter={e => { e.currentTarget.style.opacity = "0.85"; }}
-                onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
-              >Envoyer le message →</button>
+              {sentError && (
+                <div style={{ marginBottom: 12, padding: "10px 14px", background: "rgba(196,114,84,0.15)", border: "1px solid rgba(196,114,84,0.3)", borderRadius: 6, fontFamily: "'Jost', sans-serif", fontSize: 12, color: CORAL }}>
+                  Erreur d'envoi — contactez-nous sur WhatsApp.
+                </div>
+              )}
+              <button type="submit" disabled={sending}
+                style={{ width: "100%", background: CORAL, color: "#fff", border: "none", borderRadius: 6, padding: "13px 24px", fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 12, letterSpacing: "0.15em", cursor: sending ? "default" : "pointer", textTransform: "uppercase", transition: "opacity 0.2s", opacity: sending ? 0.6 : 1 }}
+                onMouseEnter={e => { if (!sending) e.currentTarget.style.opacity = "0.85"; }}
+                onMouseLeave={e => { if (!sending) e.currentTarget.style.opacity = "1"; }}
+              >{sending ? "Envoi en cours…" : "Envoyer le message →"}</button>
             </form>
           )}
         </div>
@@ -2427,27 +2495,15 @@ export default function PublicSite() {
   // Biens with live price overrides from admin
   const biensList = BIENS.map(b => ({ ...b, prix: priceOverrides[b.id] ?? b.prix }));
 
-  async function openBien(bien) {
-    if (BOOKING_DISABLED.has(bien.id)) return; // longue durée — réservation désactivée
-    // Nogent → Beds24 channel-manager iframe
-    if (bien.beds24Url) {
-      setDetailBien(null);
-      setBeds24Bien(bien);
-      return;
-    }
-    setDetailBien(null);
-    setSelectedBien(bien);
+  // Fetch availability for a bien (used by detail view + booking modal)
+  async function fetchAvailability(bienId) {
     setBlockedDates([]);
     setLoadingAvail(true);
     try {
-      // Pass Booking.com iCal URL from admin localStorage so the server can fetch it
-      // (admin and public site share the same domain → same localStorage)
-      let apiUrl = `/api/get-availability?bienId=${bien.id}`;
+      let apiUrl = `/api/get-availability?bienId=${bienId}`;
       try {
         const bookingUrls = JSON.parse(localStorage.getItem("ical_urls_booking") || "{}");
-        if (bookingUrls[bien.id]) {
-          apiUrl += `&bookingUrl=${encodeURIComponent(bookingUrls[bien.id])}`;
-        }
+        if (bookingUrls[bienId]) apiUrl += `&bookingUrl=${encodeURIComponent(bookingUrls[bienId])}`;
       } catch {}
       const r = await fetch(apiUrl);
       if (r.ok) {
@@ -2458,6 +2514,36 @@ export default function PublicSite() {
     setLoadingAvail(false);
   }
 
+  // Open property detail — updates URL + meta + fetches availability
+  function openDetail(bien) {
+    setDetailBien(bien);
+    if (bien) {
+      window.history.pushState({}, "", "/" + bien.id);
+      document.title = `${bien.nom} — Amaryllis Locations`;
+      const meta = document.querySelector('meta[name="description"]');
+      if (meta) meta.setAttribute("content", bien.desc.slice(0, 160));
+      if (!BOOKING_DISABLED.has(bien.id) && !bien.beds24Url) fetchAvailability(bien.id);
+    } else {
+      window.history.pushState({}, "", "/");
+      document.title = "Amaryllis — Locations d'exception en Martinique & Île-de-France";
+      const meta = document.querySelector('meta[name="description"]');
+      if (meta) meta.setAttribute("content", "Villas & locations de prestige en Martinique et Île-de-France. Réservation directe sans frais de service. Piscine, vue mer, jacuzzi.");
+      setBlockedDates([]);
+    }
+  }
+
+  async function openBien(bien) {
+    if (BOOKING_DISABLED.has(bien.id)) return;
+    if (bien.beds24Url) {
+      openDetail(null);
+      setBeds24Bien(bien);
+      return;
+    }
+    openDetail(null);
+    setSelectedBien(bien);
+    await fetchAvailability(bien.id);
+  }
+
   const path = window.location.pathname;
   if (path === "/merci") return <MerciPage />;
 
@@ -2465,6 +2551,19 @@ export default function PublicSite() {
     const fn = () => setScrolled(window.scrollY > 60);
     window.addEventListener("scroll", fn, { passive: true });
     return () => window.removeEventListener("scroll", fn);
+  }, []);
+
+  // Auto-open property detail if URL matches a bien ID (e.g. /amaryllis)
+  useEffect(() => {
+    const pathId = window.location.pathname.slice(1);
+    if (pathId && pathId !== "merci") {
+      const match = BIENS.find(b => b.id === pathId);
+      if (match) {
+        const withPrice = { ...match, prix: loadPriceOverrides()[match.id] ?? match.prix };
+        setDetailBien(withPrice);
+        if (!BOOKING_DISABLED.has(match.id) && !match.beds24Url) fetchAvailability(match.id);
+      }
+    }
   }, []);
 
   const lieux = [
@@ -2496,7 +2595,7 @@ export default function PublicSite() {
 
             {/* Property selector — fills center */}
             <div style={{ flex: 1 }}>
-              <PropertyDropdown onSelect={setDetailBien} />
+              <PropertyDropdown onSelect={openDetail} />
             </div>
 
             {/* Right: contact + admin */}
@@ -2510,7 +2609,7 @@ export default function PublicSite() {
       </header>
 
       {/* ── HERO CAROUSEL ── */}
-      <HeroCarousel biens={biensList} onDetail={setDetailBien} onBook={openBien} />
+      <HeroCarousel biens={biensList} onDetail={openDetail} onBook={openBien} />
 
       {/* ── DIRECT BOOKING BANNER ── */}
       <div style={{ background: "#072626", borderBottom: "1px solid rgba(250,245,233,0.07)", padding: "13px 28px" }}>
@@ -2615,7 +2714,7 @@ export default function PublicSite() {
         {/* Grid */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: 24 }}>
           {filtered.map(b => (
-            <BienCard key={b.id} bien={b} onDetail={setDetailBien} onBook={openBien} />
+            <BienCard key={b.id} bien={b} onDetail={openDetail} onBook={openBien} />
           ))}
         </div>
       </div>
@@ -2625,7 +2724,7 @@ export default function PublicSite() {
 
       {/* ── PROPERTY DETAIL ── */}
       {detailBien && !selectedBien && (
-        <PropertyDetail bien={detailBien} onClose={() => setDetailBien(null)} onBook={openBien} />
+        <PropertyDetail bien={detailBien} onClose={() => openDetail(null)} onBook={openBien} blockedDates={blockedDates} loadingAvail={loadingAvail} />
       )}
 
       {/* ── BEDS24 MODAL (Nogent) ── */}

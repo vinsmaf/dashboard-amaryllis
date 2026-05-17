@@ -8,11 +8,13 @@ import Landing from './Landing.jsx'
 const path = window.location.pathname;
 
 // Routes valides connues — tout le reste redirige vers /
+const BIEN_IDS = ["amaryllis", "zandoli", "iguana", "geko", "mabouya", "schoelcher", "nogent"];
 const KNOWN = ["/", "/merci"];
 const isKnown = KNOWN.includes(path)
   || path.startsWith("/admin")
   || path.startsWith("/landing")
-  || path.startsWith("/api/");
+  || path.startsWith("/api/")
+  || BIEN_IDS.some(id => path === `/${id}`);
 
 if (!isKnown) {
   window.location.replace("/");
