@@ -7,10 +7,21 @@ import Landing from './Landing.jsx'
 
 const path = window.location.pathname;
 
+// Routes valides connues — tout le reste redirige vers /
+const KNOWN = ["/", "/merci"];
+const isKnown = KNOWN.includes(path)
+  || path.startsWith("/admin")
+  || path.startsWith("/landing")
+  || path.startsWith("/api/");
+
+if (!isKnown) {
+  window.location.replace("/");
+}
+
 let Component;
-if (path.startsWith('/admin')) {
+if (path.startsWith("/admin")) {
   Component = App;
-} else if (path.startsWith('/landing')) {
+} else if (path.startsWith("/landing")) {
   Component = Landing;
 } else {
   Component = PublicSite;
