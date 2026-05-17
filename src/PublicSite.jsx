@@ -1191,7 +1191,12 @@ function BienCard({ bien, onDetail, onBook }) {
         </div>
 
         {/* Name */}
-        <div style={{ fontWeight: 800, fontSize: 21, color: NAVY, marginBottom: 10 }}>{bien.nom}</div>
+        <div
+          onClick={e => { e.stopPropagation(); onDetail(bien); }}
+          style={{ fontWeight: 800, fontSize: 21, color: NAVY, marginBottom: 10, cursor: "pointer", transition: "color 0.15s" }}
+          onMouseEnter={e => { e.currentTarget.style.color = CORAL; }}
+          onMouseLeave={e => { e.currentTarget.style.color = NAVY; }}
+        >{bien.nom}</div>
 
         {/* Rating row */}
         {bien.rating && (
@@ -1739,10 +1744,10 @@ function HeroCarousel({ biens, onDetail, onBook }) {
         }}>
           {bien.desc}
         </p>
-        <div style={{ display: "flex", flexDirection: "row", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-          {/* Primary CTA */}
-          {!BOOKING_DISABLED.has(bien.id) ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <div style={{ display: "flex", flexDirection: "row", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+            {/* Primary CTA */}
+            {!BOOKING_DISABLED.has(bien.id) ? (
               <button
                 onClick={() => onBook(bien)}
                 style={{
@@ -1759,18 +1764,35 @@ function HeroCarousel({ biens, onDetail, onBook }) {
               >
                 Voir les disponibilités
               </button>
-              <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 10, color: "rgba(250,245,233,0.45)", letterSpacing: "0.06em", textAlign: "center" }}>
-                Réservation directe propriétaire · Paiement sécurisé Stripe
-              </span>
-            </div>
-          ) : (
-            <a
-              href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent("Bonjour, je suis intéressé(e) par Villa Iguana pour une location longue durée à Sainte-Luce, Martinique. Pouvez-vous m'indiquer vos conditions et disponibilités ? Merci.")}`}
-              target="_blank" rel="noopener noreferrer"
-              style={{ display: "inline-block", background: "rgba(250,245,233,0.08)", border: "1px solid rgba(250,245,233,0.3)", borderRadius: 8, padding: "14px 24px", fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11, letterSpacing: "0.12em", color: "#faf5e9", textTransform: "uppercase", whiteSpace: "nowrap", textDecoration: "none", transition: "background 0.2s" }}
+            ) : (
+              <a
+                href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent("Bonjour, je suis intéressé(e) par Villa Iguana pour une location longue durée à Sainte-Luce, Martinique. Pouvez-vous m'indiquer vos conditions et disponibilités ? Merci.")}`}
+                target="_blank" rel="noopener noreferrer"
+                style={{ display: "inline-block", background: "rgba(250,245,233,0.08)", border: "1px solid rgba(250,245,233,0.3)", borderRadius: 8, padding: "14px 24px", fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11, letterSpacing: "0.12em", color: "#faf5e9", textTransform: "uppercase", whiteSpace: "nowrap", textDecoration: "none", transition: "background 0.2s" }}
+              >
+                Contact long séjour →
+              </a>
+            )}
+            {/* Secondary CTA */}
+            <button
+              onClick={() => onDetail(bien)}
+              style={{
+                background: "transparent", border: "1px solid rgba(250,245,233,0.35)", color: "#faf5e9",
+                borderRadius: 8, padding: "14px 24px",
+                fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 12, letterSpacing: "0.12em",
+                cursor: "pointer", textTransform: "uppercase", whiteSpace: "nowrap",
+                transition: "border-color 0.2s, background 0.2s",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(250,245,233,0.08)"; e.currentTarget.style.borderColor = "rgba(250,245,233,0.6)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "rgba(250,245,233,0.35)"; }}
             >
-              Contact long séjour →
-            </a>
+              Voir photos &amp; détails →
+            </button>
+          </div>
+          {!BOOKING_DISABLED.has(bien.id) && (
+            <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 10, color: "rgba(250,245,233,0.45)", letterSpacing: "0.06em" }}>
+              Réservation directe propriétaire · Paiement sécurisé Stripe
+            </span>
           )}
         </div>
       </div>
@@ -1794,22 +1816,6 @@ function HeroCarousel({ biens, onDetail, onBook }) {
             color: "rgba(250,245,233,0.75)", whiteSpace: "nowrap",
           }}>{a}</div>
         ))}
-        <button
-          onClick={() => onDetail(bien)}
-          style={{
-            background: "rgba(196,114,84,0.18)", backdropFilter: "blur(14px)",
-            border: "1px solid rgba(196,114,84,0.45)", color: "#faf5e9",
-            borderRadius: 20, padding: "5px 14px",
-            fontFamily: "'Jost', sans-serif", fontWeight: 400,
-            fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase",
-            cursor: "pointer", whiteSpace: "nowrap",
-            transition: "background 0.2s, border-color 0.2s",
-          }}
-          onMouseEnter={e => { e.currentTarget.style.background = "rgba(196,114,84,0.32)"; }}
-          onMouseLeave={e => { e.currentTarget.style.background = "rgba(196,114,84,0.18)"; }}
-        >
-          Voir photos &amp; détails →
-        </button>
       </div>
 
       {/* Bottom nav: dots + arrows */}
