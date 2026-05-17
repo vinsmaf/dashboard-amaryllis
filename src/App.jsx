@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import EmailSync from "./EmailSync.jsx";
 import {
   BarChart, Bar, LineChart, Line, ComposedChart,
   PieChart, Pie,
@@ -4157,6 +4158,7 @@ export default function App() {
     { id: "charges", l: mob ? "💰" : "💰 Charges" },
     { id: "pilotage", l: mob ? "💼" : "💼 Pilotage" },
     { id: "historique", l: mob ? "📈" : "📈 Historique" },
+    { id: "emails", l: mob ? "📧" : "📧 Emails" },
   ];
 
   return (
@@ -4201,6 +4203,7 @@ export default function App() {
         {tab === "pilotage" && <Pilotage biens={biens} n={n} mob={mob} />}
         {tab === "historique" && <Historique biens={biens} n={n} mob={mob} hist={hist} />}
         {tab === "tarifs" && <Tarifs />}
+        {tab === "emails" && <EmailSync mob={mob} />}
       </div>
 
       <FAB onTab={setTab} />
