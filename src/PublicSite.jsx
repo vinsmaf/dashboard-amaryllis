@@ -119,6 +119,7 @@ const BIENS = [
       "/photos/amaryllis/22.webp",
     ],
     coords: { lat: 14.4732, lng: -60.9196 },
+    mapsEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3863.107902087125!2d-60.943493625540455!3d14.478492985993562!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8c4021b8748ab759%3A0x99f47752da739a0a!2svilla%20Amaryllis!5e0!3m2!1sfr!2sfr!4v1779046798123!5m2!1sfr!2sfr",
     amenities: ["Piscine débordement", "Jacuzzi privé", "Vue océan", "Wifi 127 Mb/s", "Parking", "Animaux OK"],
     avis: [
       { nom: "Sophie M.", pays: "🇫🇷", note: 5, texte: "Vue extraordinaire, piscine à débordement parfaite et hôte très réactif. Un endroit hors du temps face aux Caraïbes. On reviendra sans hésiter !", date: "Avr. 2025" },
@@ -159,6 +160,7 @@ const BIENS = [
       "/photos/zandoli/15.webp",
     ],
     coords: { lat: 14.4725, lng: -60.9201 },
+    mapsEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3862.822862640186!2d-60.92853662554015!3d14.49485608597908!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8c4021b73b656873%3A0xdb94b0a0ad33a741!2sresidence%20Amaryllis!5e0!3m2!1sfr!2sfr!4v1779046858310!5m2!1sfr!2sfr",
     amenities: ["Piscine privée", "Vue mer", "Jardin", "Netflix/Disney+", "Lave-linge", "Wifi 123 Mb/s"],
     avis: [
       { nom: "Lucie B.", pays: "🇫🇷", note: 5, texte: "Cocon parfait ! La mezzanine est charmante, la piscine délicieuse, et la vue sur la mer au réveil est inoubliable. Hôte très disponible.", date: "Avr. 2025" },
@@ -199,6 +201,7 @@ const BIENS = [
       "/photos/iguana/15.webp",
     ],
     coords: { lat: 14.4718, lng: -60.9188 },
+    mapsEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3862.822862640186!2d-60.92853662554015!3d14.49485608597908!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8c4021b73b656873%3A0xdb94b0a0ad33a741!2sresidence%20Amaryllis!5e0!3m2!1sfr!2sfr!4v1779046858310!5m2!1sfr!2sfr",
     amenities: ["Piscine eau salée", "Vue Diamant", "Vue océan", "Wifi 126 Mb/s", "Parking", "Animaux OK"],
     avis: [
       { nom: "Pierre & Claire", pays: "🇫🇷", note: 5, texte: "Vue imprenable sur le rocher du Diamant ! La piscine d'eau salée est un vrai plus. Villa propre, bien équipée, accueil aux petits soins.", date: "Avr. 2025" },
@@ -239,6 +242,7 @@ const BIENS = [
       "/photos/geko/15.webp",
     ],
     coords: { lat: 14.4729, lng: -60.9194 },
+    mapsEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3862.822862640186!2d-60.92853662554015!3d14.49485608597908!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8c4021b73b656873%3A0xdb94b0a0ad33a741!2sresidence%20Amaryllis!5e0!3m2!1sfr!2sfr!4v1779046858310!5m2!1sfr!2sfr",
     amenities: ["Piscine", "Jardin tropical", "Climatisation", "Lave-linge", "TV", "Wifi 128 Mb/s"],
     avis: [
       { nom: "Sandrine L.", pays: "🇫🇷", note: 5, texte: "Un vrai cocon dans un jardin tropical magnifique. La piscine est bien entretenue et la brise des alizés rend la clim presque superflue. On adore !", date: "Mai 2025" },
@@ -276,6 +280,7 @@ const BIENS = [
       "/photos/mabouya/12.webp",
     ],
     coords: { lat: 14.4741, lng: -60.9209 },
+    mapsEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3862.822862640186!2d-60.92853662554015!3d14.49485608597908!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8c4021b73b656873%3A0xdb94b0a0ad33a741!2sresidence%20Amaryllis!5e0!3m2!1sfr!2sfr!4v1779046858310!5m2!1sfr!2sfr",
     amenities: ["Jacuzzi privatif", "Vue mer", "Jardin fleuri", "Wifi 81 Mb/s", "Parking", "Animaux OK"],
     avis: [
       { nom: "Élise & Romain", pays: "🇫🇷", note: 5, texte: "Weekend romantique parfait ! Le jacuzzi privatif sous les étoiles avec vue mer est juste magique. Jardin fleuri superbe, endroit très paisible.", date: "Avr. 2025" },
@@ -1581,7 +1586,7 @@ function PropertyDetail({ bien, onClose, onBook }) {
                 <div style={{ borderRadius: 10, overflow: "hidden", border: `1px solid ${SAND}`, lineHeight: 0 }}>
                   <iframe
                     title={`Carte ${bien.nom}`}
-                    src={`https://maps.google.com/maps?q=${bien.coords.lat},${bien.coords.lng}&z=14&output=embed`}
+                    src={bien.mapsEmbed || `https://maps.google.com/maps?q=${bien.coords.lat},${bien.coords.lng}&z=14&output=embed`}
                     width="100%"
                     height={isMobile ? "220" : "280"}
                     style={{ border: 0, display: "block" }}
