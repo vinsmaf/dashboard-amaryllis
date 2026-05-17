@@ -1772,21 +1772,6 @@ function HeroCarousel({ biens, onDetail, onBook }) {
               Contact long séjour →
             </a>
           )}
-          {/* Secondary CTA */}
-          <button
-            onClick={() => onDetail(bien)}
-            style={{
-              background: "transparent", border: "1px solid rgba(250,245,233,0.35)", color: "#faf5e9",
-              borderRadius: 8, padding: "14px 24px",
-              fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 12, letterSpacing: "0.12em",
-              cursor: "pointer", textTransform: "uppercase", whiteSpace: "nowrap",
-              transition: "border-color 0.2s, background 0.2s",
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = "rgba(250,245,233,0.08)"; e.currentTarget.style.borderColor = "rgba(250,245,233,0.6)"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "rgba(250,245,233,0.35)"; }}
-          >
-            Voir photos &amp; détails →
-          </button>
         </div>
       </div>
 
@@ -1809,7 +1794,22 @@ function HeroCarousel({ biens, onDetail, onBook }) {
             color: "rgba(250,245,233,0.75)", whiteSpace: "nowrap",
           }}>{a}</div>
         ))}
-
+        <button
+          onClick={() => onDetail(bien)}
+          style={{
+            background: "rgba(196,114,84,0.18)", backdropFilter: "blur(14px)",
+            border: "1px solid rgba(196,114,84,0.45)", color: "#faf5e9",
+            borderRadius: 20, padding: "5px 14px",
+            fontFamily: "'Jost', sans-serif", fontWeight: 400,
+            fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase",
+            cursor: "pointer", whiteSpace: "nowrap",
+            transition: "background 0.2s, border-color 0.2s",
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = "rgba(196,114,84,0.32)"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "rgba(196,114,84,0.18)"; }}
+        >
+          Voir photos &amp; détails →
+        </button>
       </div>
 
       {/* Bottom nav: dots + arrows */}
