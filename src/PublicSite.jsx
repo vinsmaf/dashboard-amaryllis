@@ -2374,7 +2374,9 @@ export default function PublicSite() {
       </div>
 
       {/* ── FOOTER + CONTACT ── */}
-      <FooterSection />
+      <div style={isMobile ? { paddingBottom: 80 } : undefined}>
+        <FooterSection />
+      </div>
 
       {/* ── PROPERTY DETAIL ── */}
       {detailBien && !selectedBien && (
@@ -2392,11 +2394,12 @@ export default function PublicSite() {
       )}
 
       {/* Sticky mobile CTA */}
-      {isMobile && !selectedBien && !detailBien && (
+      {isMobile && !selectedBien && !detailBien && !beds24Bien && (
         <div style={{
           position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 150,
           background: NAVY, borderTop: "1px solid rgba(250,245,233,0.1)",
           padding: "12px 20px",
+          paddingBottom: "calc(12px + env(safe-area-inset-bottom))",
           display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
         }}>
           <div>
