@@ -14,6 +14,7 @@ const lieux = [
     nom: "Anse Corps de Garde",
     tag: "Plage la plus proche",
     reco: 18,
+    img: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/Anse_Corps_de_Garde_-_Le_D%C3%A9sert.jpg/960px-Anse_Corps_de_Garde_-_Le_D%C3%A9sert.jpg",
     texte: "L'Anse Corps de Garde est installée sur le littoral de Sainte-Luce, à environ 2 kilomètres du bourg et 7 minutes de la résidence. Il s'agit d'une plage de sable blond piquée de cocotiers offrant d'appréciables zones ombragées. Très fréquentée toute l'année par les riverains et les touristes, elle propose transats, snacks, location de kayak et une eau turquoise calme idéale pour les familles.",
   },
   {
@@ -21,6 +22,7 @@ const lieux = [
     nom: "Anse Mabouya",
     tag: "Plage & sports nautiques",
     reco: null,
+    img: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Salines_beach.jpg/960px-Salines_beach.jpg",
     texte: "L'Anse Mabouya est une plage préservée de Sainte-Luce, célèbre pour ses eaux cristallines et sa belle vue sur la mer. Entourée de palmiers et de végétation luxuriante, elle offre un cadre tropical idéal pour se détendre loin de l'agitation. La plage de sable blanc est également appréciée des amateurs de sports nautiques — planche à voile, plongée en apnée, snorkeling au milieu des poissons tropicaux.",
   },
   {
@@ -28,6 +30,7 @@ const lieux = [
     nom: "Forêt Domaniale de Montravail",
     tag: "Randonnée & nature",
     reco: null,
+    img: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9c/Presqu%27%C3%AEle_de_la_Caravelle_%28Martinique%29_-_mangrove_5.jpg/960px-Presqu%27%C3%AEle_de_la_Caravelle_%28Martinique%29_-_mangrove_5.jpg",
     texte: "La forêt de Montravail est un lieu idyllique situé dans la commune de Sainte-Luce, à quelques minutes de la résidence. C'est un endroit incontournable pour les amateurs de randonnée et de nature : sentiers balisés, cascades rafraîchissantes, et une faune et flore locales remarquables. Idéale pour une matinée fraîche avant la plage — prévoyez bonnes chaussures et eau.",
   },
   {
@@ -35,6 +38,7 @@ const lieux = [
     nom: "Plantation Trois-Rivières",
     tag: "Culture & dégustation",
     reco: 60,
+    img: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Trois-Rivi%C3%A8res_-_Martinique.jpg/960px-Trois-Rivi%C3%A8res_-_Martinique.jpg",
     texte: "La plantation Trois-Rivières est une ancienne habitation sucrière devenue musée et distillerie de rhum agricole AOC. Visite gratuite des installations historiques : anciennes distilleries, champs de canne à sucre, moulins et bâtiments coloniaux. Dégustation commentée de rhums agricoles vieux et blancs, boutique avec des éditions introuvables en métropole. À 8 minutes de la résidence. Ouvert lundi–samedi 9h–17h.",
   },
   {
@@ -42,6 +46,7 @@ const lieux = [
     nom: "Centre commercial — Corps de Garde",
     tag: "Commodités",
     reco: 55,
+    img: null,
     texte: "Le centre commercial de Corps de Garde est le plus proche de la résidence, à 7 minutes. Supermarché bien achalandé, boulangerie, pharmacie, banque et divers commerces. Idéal pour vos courses quotidiennes — produits locaux (rhum, épices, fruits tropicaux), produits frais et tout le nécessaire pour profiter de votre séjour. Parking gratuit, ouvert 7j/7.",
   },
   {
@@ -49,6 +54,7 @@ const lieux = [
     nom: "Nager avec les tortues de mer",
     tag: "À ne pas manquer",
     reco: null,
+    img: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/35/Tortue_verte_%28Chelonia_mydas%29_regagnant_la_mer_%28Ifremer_00570-68187%29.jpg/960px-Tortue_verte_%28Chelonia_mydas%29_regagnant_la_mer_%28Ifremer_00570-68187%29.jpg",
     texte: "La Martinique offre la possibilité unique de nager avec les tortues vertes et les tortues de mer, dans des lieux tels que Les Salines, Anse Dufour et Anse Noire. Il est important de respecter les règles de conduite et d'utiliser des prestataires locaux certifiés. Vérifiez les horaires et modalités d'inscription à l'avance. Une expérience inoubliable — la rencontre avec ces animaux dans leur environnement naturel.",
   },
 ];
@@ -82,14 +88,23 @@ export default function GuideProximite() {
           </div>
         </header>
 
-        <div style={{ background: NAVY, padding: "64px 24px 48px", textAlign: "center" }}>
-          <p style={{ color: CORAL, fontSize: 12, letterSpacing: "0.3em", textTransform: "uppercase", marginBottom: 16 }}>Guide des hôtes · Résidence Amaryllis</p>
-          <h1 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: "clamp(24px, 5vw, 50px)", letterSpacing: "0.05em", color: IVORY, textTransform: "uppercase", margin: "0 0 20px", lineHeight: 1.15 }}>
-            À proximité<br />de la résidence
-          </h1>
-          <p style={{ color: "rgba(250,245,233,0.7)", fontSize: 17, maxWidth: 620, margin: "0 auto", lineHeight: 1.7, fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
-            Plages, forêt tropicale, distillerie et commodités — tout ce qu'il faut savoir dans un rayon de 15 minutes autour de la Villa Amaryllis à Sainte-Luce.
-          </p>
+        {/* Hero avec photo */}
+        <div style={{ position: "relative", height: 300, overflow: "hidden" }}>
+          <img
+            src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/Sainte-Luce.jpg/960px-Sainte-Luce.jpg"
+            alt="Sainte-Luce, Martinique"
+            style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }}
+          />
+          <div style={{ position: "absolute", inset: 0, background: "rgba(14,59,58,0.65)" }} />
+          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 24px", textAlign: "center" }}>
+            <p style={{ color: CORAL, fontSize: 12, letterSpacing: "0.3em", textTransform: "uppercase", marginBottom: 14 }}>Guide des hôtes · Résidence Amaryllis</p>
+            <h1 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: "clamp(24px, 5vw, 50px)", letterSpacing: "0.05em", color: IVORY, textTransform: "uppercase", margin: "0 0 14px", lineHeight: 1.15 }}>
+              À proximité<br />de la résidence
+            </h1>
+            <p style={{ color: "rgba(250,245,233,0.8)", fontSize: 15, maxWidth: 520, margin: 0, lineHeight: 1.65, fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
+              Plages, forêt tropicale, distillerie — tout en moins de 15 minutes autour de la Villa Amaryllis.
+            </p>
+          </div>
         </div>
 
         <div style={{ maxWidth: 860, margin: "0 auto", padding: "48px 24px 80px" }}>
@@ -108,19 +123,25 @@ export default function GuideProximite() {
           {/* Lieux */}
           <div style={{ display: "flex", flexDirection: "column", gap: 20, marginBottom: 64 }}>
             {lieux.map((lieu, i) => (
-              <div key={i} style={{ background: "#fff", border: `1px solid ${SAND}`, borderRadius: 12, padding: "28px" }}>
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
-                  <div style={{ fontSize: 32, flexShrink: 0, marginTop: 2 }}>{lieu.emoji}</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
-                      <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 17, color: NAVY, margin: 0 }}>{lieu.nom}</h2>
-                      <span style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 20, padding: "2px 10px", fontSize: 11, color: NAVY, letterSpacing: "0.06em", whiteSpace: "nowrap" }}>{lieu.tag}</span>
-                      {lieu.reco && (
-                        <span style={{ fontSize: 12, color: CORAL, fontFamily: "'Jost', sans-serif" }}>👍 {lieu.reco} recommandé par les habitants</span>
-                      )}
-                    </div>
-                    <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 17, lineHeight: 1.75, color: TEXT, margin: 0 }}>{lieu.texte}</p>
+              <div key={i} style={{ background: "#fff", border: `1px solid ${SAND}`, borderRadius: 12, overflow: "hidden" }}>
+                {lieu.img && (
+                  <img
+                    src={lieu.img}
+                    alt={lieu.nom}
+                    style={{ width: "100%", height: 220, objectFit: "cover", display: "block" }}
+                    loading="lazy"
+                  />
+                )}
+                <div style={{ padding: "24px 28px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
+                    <span style={{ fontSize: 24 }}>{lieu.emoji}</span>
+                    <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 17, color: NAVY, margin: 0 }}>{lieu.nom}</h2>
+                    <span style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 20, padding: "2px 10px", fontSize: 11, color: NAVY, letterSpacing: "0.06em", whiteSpace: "nowrap" }}>{lieu.tag}</span>
+                    {lieu.reco && (
+                      <span style={{ fontSize: 12, color: CORAL, fontFamily: "'Jost', sans-serif" }}>👍 {lieu.reco} recommandé par les habitants</span>
+                    )}
                   </div>
+                  <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 17, lineHeight: 1.75, color: TEXT, margin: 0 }}>{lieu.texte}</p>
                 </div>
               </div>
             ))}
@@ -146,6 +167,8 @@ export default function GuideProximite() {
         <div style={{ background: NAVY, padding: "24px", textAlign: "center" }}>
           <p style={{ color: "rgba(250,245,233,0.4)", fontSize: 13, margin: 0 }}>
             © {new Date().getFullYear()} Amaryllis Locations · <a href="/" style={{ color: "rgba(250,245,233,0.4)", textDecoration: "none" }}>villamaryllis.com</a>
+            {" · "}
+            <span style={{ fontSize: 11, opacity: 0.7 }}>Photos © Wikimedia Commons (CC BY-SA)</span>
           </p>
         </div>
       </div>

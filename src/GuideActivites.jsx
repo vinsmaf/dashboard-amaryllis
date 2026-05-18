@@ -14,6 +14,7 @@ const activites = [
     emoji: "🏖️",
     tag: "Se déplacer dans les environs",
     nom: "Se promener sur la plage de Sainte-Luce",
+    img: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/Anse_Corps_de_Garde_-_Le_D%C3%A9sert.jpg/960px-Anse_Corps_de_Garde_-_Le_D%C3%A9sert.jpg",
     texte: "La plage de Sainte-Luce (Anse Corps de Garde) est un croissant de sable blond bordé de cocotiers, avec une eau cristalline et des vues magnifiques sur la mer des Caraïbes. Idéale pour une matinée de baignade, du snorkeling léger ou simplement se poser au soleil. Des snacks locaux, des transats et des locations de kayak sont disponibles sur place. À 7 minutes de la résidence.",
   },
   {
@@ -21,6 +22,7 @@ const activites = [
     emoji: "🌿",
     tag: "À ne pas manquer",
     nom: "Visiter le parc national de la Mangrove",
+    img: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9c/Presqu%27%C3%AEle_de_la_Caravelle_%28Martinique%29_-_mangrove_5.jpg/960px-Presqu%27%C3%AEle_de_la_Caravelle_%28Martinique%29_-_mangrove_5.jpg",
     texte: "La mangrove de Sainte-Luce est un écosystème préservé fascinant à explorer en kayak ou à pied sur les sentiers aménagés. Hérons, crabes, poissons et oiseaux tropicaux nichent dans ce milieu unique entre terre et mer. Un dépaysement total à quelques minutes du bourg — idéal en fin d'après-midi quand la lumière est dorée.",
   },
   {
@@ -28,6 +30,7 @@ const activites = [
     emoji: "⛵",
     tag: "Réservez avant de partir",
     nom: "Excursion en bateau aux îles environnantes",
+    img: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2d/Grande_Anse_d%27_Arlet_%2847001622912%29.jpg/960px-Grande_Anse_d%27_Arlet_%2847001622912%29.jpg",
     texte: "Participez à une excursion en catamaran pour explorer les îlets du Sud : Cabrit, Hardy, Burgaux. Vous pourrez admirer raies manta, dauphins et tortues de mer dans des eaux turquoise préservées. Déjeuner barbecue à bord inclus dans la plupart des formules. Départ depuis la marina du Marin (15 min). Comptez 80–100€/personne — réservez à l'avance en haute saison.",
   },
   {
@@ -35,6 +38,7 @@ const activites = [
     emoji: "🎣",
     tag: "Se déplacer dans les environs",
     nom: "Le village de pêcheurs et ses spécialités",
+    img: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/Sainte-Luce.jpg/960px-Sainte-Luce.jpg",
     texte: "Sainte-Luce est un vrai village créole avec un port de pêche actif. Rendez-vous au marché du bourg le samedi matin pour découvrir les spécialités locales : poisson grillé au feu de bois, langouste, lambi (conque), accras de morue. Les restaurants du front de mer servent le poisson du jour pêché quelques heures plus tôt — une fraîcheur incomparable.",
   },
   {
@@ -42,6 +46,7 @@ const activites = [
     emoji: "🥾",
     tag: "Se déplacer dans les environs",
     nom: "Randonnée panoramique dans les montagnes",
+    img: null,
     texte: "Les hauteurs de Sainte-Luce et de Rivière-Pilote offrent des sentiers de randonnée avec des vues à 360° sur la mer des Caraïbes et les alentours. Le sentier des crêtes entre Sainte-Luce et Rivière-Pilote est accessible à tous les niveaux. Partez tôt le matin pour éviter la chaleur et profiter de la lumière sur la mer. Chaussures de marche recommandées.",
   },
   {
@@ -49,6 +54,7 @@ const activites = [
     emoji: "🗿",
     tag: "Se déplacer dans les environs",
     nom: "Vestiges historiques de l'esclavage à l'Anse-Cafard",
+    img: null,
     texte: "Le Mémorial de l'Anse-Cafard, à 15 minutes en voiture, est un site solennel et poignant : 20 statues de pierre blanche commémorent le naufrage d'un bateau négrier en 1830. Perchées sur la falaise face au Rocher du Diamant, ces silhouettes enchaînées et penchées vers l'Afrique constituent l'un des mémoriaux les plus émouvants des Antilles. Entrée libre.",
   },
   {
@@ -56,6 +62,7 @@ const activites = [
     emoji: "🤿",
     tag: "Réservez avant de partir",
     nom: "Plongée, planche à voile, kayak et paddle",
+    img: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/Diamond_Rock.jpg/960px-Diamond_Rock.jpg",
     texte: "Le sud de la Martinique est un terrain de jeu nautique exceptionnel. Plongée au Rocher du Diamant (tombants à 40 m, grottes, tortues), planche à voile aux Salines grâce aux alizés constants, kayak et paddle depuis Corps de Garde. Plusieurs clubs de plongée opèrent depuis Sainte-Luce. Baptême de plongée : 60–80€. Paddle/kayak en autonomie : 15–20€/h.",
   },
   {
@@ -63,6 +70,7 @@ const activites = [
     emoji: "🎭",
     tag: "À ne pas manquer",
     nom: "Musée de la Canne à sucre — Maison de la Canne",
+    img: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/Trois_Rivi%C3%A8res_001.jpg/960px-Trois_Rivi%C3%A8res_001.jpg",
     texte: "La Maison de la Canne à Rivière-Pilote (10 min) retrace l'histoire de la production sucrière et du rhum en Martinique depuis la colonisation. Collections d'outils authentiques, maquettes d'habitations, documents et récits historiques. Une visite essentielle pour comprendre l'économie et la culture de l'île. Couplée avec la visite de la distillerie Trois-Rivières toute proche.",
   },
   {
@@ -70,6 +78,7 @@ const activites = [
     emoji: "🏛️",
     tag: "Coutumes et culture",
     nom: "Excursion à Fort-de-France",
+    img: null,
     texte: "À 35 minutes de Sainte-Luce, Fort-de-France vaut une demi-journée : la Bibliothèque Schoelcher (chef-d'œuvre d'architecture Art Nouveau), le marché couvert (épices, fruits exotiques, textiles créoles), le Parc Floral et le front de mer. La statue de Joséphine de Beauharnais, décapitée par les habitants, est un symbole fort de la mémoire collective martiniquaise.",
   },
   {
@@ -77,6 +86,7 @@ const activites = [
     emoji: "🎶",
     tag: "Se déplacer dans les environs",
     nom: "Vie nocturne et musique live",
+    img: null,
     texte: "Sainte-Luce s'anime le soir, surtout le week-end. Plusieurs bars de bord de mer proposent de la musique live créole, du zouk et du reggae. La Pointe du Bout (30 min) offre des boîtes de nuit plus animées. Les soirées martiniquaises sont chaleureuses et festives — une excellente façon de rencontrer les habitants et de finir la journée en beauté.",
   },
 ];
@@ -125,33 +135,52 @@ export default function GuideActivites() {
           </div>
         </header>
 
-        <div style={{ background: NAVY, padding: "64px 24px 48px", textAlign: "center" }}>
-          <p style={{ color: CORAL, fontSize: 12, letterSpacing: "0.3em", textTransform: "uppercase", marginBottom: 16 }}>Guide de voyage · Sélection de vos hôtes</p>
-          <h1 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: "clamp(24px, 5vw, 50px)", letterSpacing: "0.05em", color: IVORY, textTransform: "uppercase", margin: "0 0 20px", lineHeight: 1.15 }}>
-            10 activités à ne pas manquer<br />à Sainte-Luce
-          </h1>
-          <p style={{ color: "rgba(250,245,233,0.7)", fontSize: 17, maxWidth: 620, margin: "0 auto", lineHeight: 1.7, fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
-            Notre sélection personnelle après des années à accueillir des voyageurs dans la résidence Amaryllis — des plages aux distilleries, en passant par la mangrove et les fonds sous-marins.
-          </p>
+        {/* Hero avec photo */}
+        <div style={{ position: "relative", height: 320, overflow: "hidden" }}>
+          <img
+            src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/Anse_Corps_de_Garde_-_Le_D%C3%A9sert.jpg/960px-Anse_Corps_de_Garde_-_Le_D%C3%A9sert.jpg"
+            alt="Anse Corps de Garde, Sainte-Luce, Martinique"
+            style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }}
+          />
+          <div style={{ position: "absolute", inset: 0, background: "rgba(14,59,58,0.65)" }} />
+          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 24px", textAlign: "center" }}>
+            <p style={{ color: CORAL, fontSize: 12, letterSpacing: "0.3em", textTransform: "uppercase", marginBottom: 14 }}>Guide de voyage · Sélection de vos hôtes</p>
+            <h1 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: "clamp(24px, 5vw, 50px)", letterSpacing: "0.05em", color: IVORY, textTransform: "uppercase", margin: "0 0 14px", lineHeight: 1.15 }}>
+              10 activités à ne pas manquer<br />à Sainte-Luce
+            </h1>
+            <p style={{ color: "rgba(250,245,233,0.8)", fontSize: 15, maxWidth: 560, margin: 0, lineHeight: 1.65, fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
+              Notre sélection personnelle après des années à accueillir des voyageurs dans la résidence Amaryllis.
+            </p>
+          </div>
         </div>
 
         <div style={{ maxWidth: 860, margin: "0 auto", padding: "48px 24px 80px" }}>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 20, marginBottom: 64 }}>
             {activites.map((a) => (
-              <div key={a.num} style={{ background: "#fff", border: `1px solid ${SAND}`, borderRadius: 12, padding: "28px", display: "flex", gap: 20, alignItems: "flex-start" }}>
-                <div style={{ flexShrink: 0, width: 48, height: 48, background: NAVY, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: IVORY, fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 18 }}>
-                  {a.num}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 6 }}>
-                    <span style={{ fontSize: 20 }}>{a.emoji}</span>
-                    <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 16, color: NAVY, margin: 0 }}>{a.nom}</h2>
+              <div key={a.num} style={{ background: "#fff", border: `1px solid ${SAND}`, borderRadius: 12, overflow: "hidden" }}>
+                {a.img && (
+                  <img
+                    src={a.img}
+                    alt={a.nom}
+                    style={{ width: "100%", height: 220, objectFit: "cover", display: "block" }}
+                    loading="lazy"
+                  />
+                )}
+                <div style={{ padding: "24px 28px", display: "flex", gap: 18, alignItems: "flex-start" }}>
+                  <div style={{ flexShrink: 0, width: 44, height: 44, background: NAVY, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: IVORY, fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 17 }}>
+                    {a.num}
                   </div>
-                  <div style={{ marginBottom: 10 }}>
-                    <span style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 20, padding: "2px 10px", fontSize: 11, color: NAVY, letterSpacing: "0.06em" }}>{a.tag}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 6 }}>
+                      <span style={{ fontSize: 18 }}>{a.emoji}</span>
+                      <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 16, color: NAVY, margin: 0 }}>{a.nom}</h2>
+                    </div>
+                    <div style={{ marginBottom: 10 }}>
+                      <span style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 20, padding: "2px 10px", fontSize: 11, color: NAVY, letterSpacing: "0.06em" }}>{a.tag}</span>
+                    </div>
+                    <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 17, lineHeight: 1.75, color: TEXT, margin: 0 }}>{a.texte}</p>
                   </div>
-                  <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 17, lineHeight: 1.75, color: TEXT, margin: 0 }}>{a.texte}</p>
                 </div>
               </div>
             ))}
@@ -189,6 +218,8 @@ export default function GuideActivites() {
         <div style={{ background: NAVY, padding: "24px", textAlign: "center" }}>
           <p style={{ color: "rgba(250,245,233,0.4)", fontSize: 13, margin: 0 }}>
             © {new Date().getFullYear()} Amaryllis Locations · <a href="/" style={{ color: "rgba(250,245,233,0.4)", textDecoration: "none" }}>villamaryllis.com</a>
+            {" · "}
+            <span style={{ fontSize: 11, opacity: 0.7 }}>Photos © Wikimedia Commons (CC BY-SA)</span>
           </p>
         </div>
       </div>

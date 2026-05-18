@@ -15,12 +15,12 @@ const sections = [
     contenu: [
       {
         nom: "Grande Anse des Salines",
-        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Salines_beach.jpg/800px-Salines_beach.jpg",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Salines_beach.jpg/960px-Salines_beach.jpg",
         texte: "La plage la plus belle de Martinique, et l'une des plus belles des Caraïbes. Sable blanc poudreux, cocotiers inclinés sur l'eau, mer turquoise et calme. À l'extrême sud de l'île, accessible depuis Sainte-Luce en 25 minutes. Arrivez tôt en haute saison — c'est la plage la plus fréquentée de l'île.",
       },
       {
         nom: "Plage de Sainte-Anne (bourg)",
-        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Grande_Anse_des_Salines_%28Sainte-Anne%2C_Martinique%29_-_01.jpg/800px-Grande_Anse_des_Salines_%28Sainte-Anne%2C_Martinique%29_-_01.jpg",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Grande_Anse_des_Salines_%28Sainte-Anne%2C_Martinique%29_-_01.jpg/960px-Grande_Anse_des_Salines_%28Sainte-Anne%2C_Martinique%29_-_01.jpg",
         texte: "En plein cœur du village, cette plage familiale et animée offre transats, restaurants, artisans locaux et une eau calme protégée. Idéale pour un après-midi détendu avec enfants, à deux pas des boutiques et restaurants.",
       },
       {
@@ -41,7 +41,7 @@ const sections = [
     contenu: [
       {
         nom: "Catamaran aux îlets du Sud",
-        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2d/Grande_Anse_d%27_Arlet_%2847001622912%29.jpg/800px-Grande_Anse_d%27_Arlet_%2847001622912%29.jpg",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2d/Grande_Anse_d%27_Arlet_%2847001622912%29.jpg/960px-Grande_Anse_d%27_Arlet_%2847001622912%29.jpg",
         texte: "L'excursion incontournable de la Martinique. Départ du Marin ou de Sainte-Anne, journée complète aux îlets avec snorkeling, déjeuner barbecue à bord et baignade dans des eaux turquoise préservées. Comptez 80-100€/personne.",
       },
       {
@@ -120,7 +120,7 @@ export default function GuideSainteAnne() {
         {/* Hero avec photo */}
         <div style={{ position: "relative", height: 300, overflow: "hidden" }}>
           <img
-            src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Salines_beach.jpg/1200px-Salines_beach.jpg"
+            src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Salines_beach.jpg/960px-Salines_beach.jpg"
             alt="Grande Anse des Salines, Sainte-Anne, Martinique"
             style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }}
           />

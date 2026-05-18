@@ -15,7 +15,7 @@ const sections = [
     contenu: [
       {
         nom: "Histoire et légende",
-        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/Diamond_Rock.jpg/800px-Diamond_Rock.jpg",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/Diamond_Rock.jpg/960px-Diamond_Rock.jpg",
         texte: "Ce rocher volcanique de 175 mètres surgit de la mer à 1 km des côtes, face au village du Diamant. Les Anglais l'occupèrent en 1804, le baptisant HMS Diamond Rock — seul rocher jamais enrôlé comme navire de guerre dans la Royal Navy. Battu par les Français en 1805, il reste l'un des sites historiques les plus fascinants des Antilles.",
       },
       {
@@ -25,7 +25,7 @@ const sections = [
       },
       {
         nom: "Vue depuis la terre",
-        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/Rocher_du_Diamant_%28Le_Diamant%2C_Martinique%29_-_01.jpg/800px-Rocher_du_Diamant_%28Le_Diamant%2C_Martinique%29_-_01.jpg",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Rocher_du_Diamant_%28Le_Diamant%2C_Martinique%29_-_01.jpg/960px-Rocher_du_Diamant_%28Le_Diamant%2C_Martinique%29_-_01.jpg",
         texte: "La plage du Diamant offre l'un des panoramas les plus emblématiques de Martinique — 3 km de sable doré face au rocher. Magnifique au coucher du soleil, quand le ciel vire à l'orange et que la silhouette du rocher se découpe sur la mer.",
       },
     ],
@@ -36,7 +36,7 @@ const sections = [
     contenu: [
       {
         nom: "Grande Plage du Diamant",
-        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Rocher_du_Diamant_%28Le_Diamant%2C_Martinique%29_-_03.jpg/800px-Rocher_du_Diamant_%28Le_Diamant%2C_Martinique%29_-_03.jpg",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Rocher_du_Diamant_%28Le_Diamant%2C_Martinique%29_-_03.jpg/960px-Rocher_du_Diamant_%28Le_Diamant%2C_Martinique%29_-_03.jpg",
         texte: "La plus longue plage de Martinique (3 km). Sable fin, eau turquoise, vue directe sur le rocher. Attention aux courants — baignade déconseillée par fort vent, la plage est exposée à la houle. Idéale pour les promenades au lever du soleil.",
       },
       {
@@ -115,7 +115,7 @@ export default function GuideDiamant() {
         {/* Hero avec photo */}
         <div style={{ position: "relative", height: 300, overflow: "hidden" }}>
           <img
-            src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/Diamond_Rock.jpg/1200px-Diamond_Rock.jpg"
+            src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/Diamond_Rock.jpg/960px-Diamond_Rock.jpg"
             alt="Rocher du Diamant, Martinique"
             style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }}
           />
