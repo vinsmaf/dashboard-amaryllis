@@ -19,6 +19,7 @@ async function getToken(email, password) {
     headers: {
       "Content-Type": "application/json",
       "User-Agent": "Airbnb/19.50.1 iPhone/17.0",
+      "X-Airbnb-API-Key": AIRBNB_APP_ID,
     },
     body: JSON.stringify({
       email,
@@ -26,9 +27,11 @@ async function getToken(email, password) {
       application_id: AIRBNB_APP_ID,
     }),
   });
-  const data = await res.json();
+  const raw = await res.text();
+  let data;
+  try { data = JSON.parse(raw); } catch { data = {}; }
   if (!res.ok || !data.access_token) {
-    throw new Error(data.error_details?.description || data.error || "Auth failed");
+    throw new Error(`HTTP ${res.status} — ${JSON.stringify(data)}`);
   }
   return data.access_token;
 }
