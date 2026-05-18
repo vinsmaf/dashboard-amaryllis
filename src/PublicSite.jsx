@@ -3143,6 +3143,54 @@ function DevisPage() {
 }
 
 // ── Main ─────────────────────────────────────────────────────────
+// ── Cookie Consent Banner ─────────────────────────────────────────
+function CookieBanner() {
+  const key = "amaryllis_consent";
+  const [visible, setVisible] = useState(() => !localStorage.getItem(key));
+
+  function accept() {
+    localStorage.setItem(key, "granted");
+    if (window.gtag) window.gtag("consent", "update", { analytics_storage: "granted" });
+    setVisible(false);
+  }
+
+  function refuse() {
+    localStorage.setItem(key, "denied");
+    setVisible(false);
+  }
+
+  if (!visible) return null;
+
+  return (
+    <div style={{
+      position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 2000,
+      background: NAVY, borderTop: `2px solid ${CORAL}`,
+      padding: "16px 24px",
+      display: "flex", alignItems: "center", justifyContent: "space-between",
+      gap: 16, flexWrap: "wrap",
+    }}>
+      <p style={{ color: "rgba(250,245,233,0.8)", fontSize: 13, margin: 0, maxWidth: 680, lineHeight: 1.6, fontFamily: "'Jost', sans-serif", fontWeight: 300 }}>
+        Nous utilisons Google Analytics pour mesurer la fréquentation du site et améliorer votre expérience. Aucune donnée n'est revendue à des tiers.{" "}
+        <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" style={{ color: CORAL, textDecoration: "none" }}>En savoir plus</a>
+      </p>
+      <div style={{ display: "flex", gap: 10, flexShrink: 0 }}>
+        <button onClick={refuse} style={{
+          background: "transparent", border: `1px solid rgba(250,245,233,0.3)`,
+          color: "rgba(250,245,233,0.6)", borderRadius: 6, padding: "8px 18px",
+          fontSize: 12, fontFamily: "'Jost', sans-serif", letterSpacing: "0.08em",
+          textTransform: "uppercase", cursor: "pointer",
+        }}>Refuser</button>
+        <button onClick={accept} style={{
+          background: CORAL, border: "none", color: "#fff",
+          borderRadius: 6, padding: "8px 18px",
+          fontSize: 12, fontFamily: "'Jost', sans-serif", fontWeight: 600,
+          letterSpacing: "0.08em", textTransform: "uppercase", cursor: "pointer",
+        }}>Accepter</button>
+      </div>
+    </div>
+  );
+}
+
 export default function PublicSite() {
   const [selectedBien, setSelectedBien] = useState(null);
   const [bookingInitialDates, setBookingInitialDates] = useState({ checkin: null, checkout: null });
@@ -3312,6 +3360,7 @@ export default function PublicSite() {
   return (
     <div id="top" style={{ minHeight: "100vh", background: IVORY, color: TEXT, fontFamily: "'Jost', system-ui, -apple-system, sans-serif" }}>
       {!curtainDone && <Curtain onDone={() => setCurtainDone(true)} />}
+      <CookieBanner />
 
       {/* ── NAVIGATION ── */}
       <header style={{ position: "sticky", top: 0, zIndex: 200 }}>
