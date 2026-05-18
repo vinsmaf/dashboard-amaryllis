@@ -77,6 +77,27 @@ const GUIDE = {
   url: `${BASE}/guide`,
 };
 
+const GUIDE_DIAMANT = {
+  title: "Guide Le Diamant Martinique : rocher, plages et plongée",
+  desc: "Tout sur Le Diamant en Martinique : le Rocher du Diamant (plongée, histoire), les plus belles plages et les meilleures adresses. À 15 min de Sainte-Luce.",
+  image: `${BASE}/photos/iguana/01.webp`,
+  url: `${BASE}/guide-le-diamant`,
+};
+
+const GUIDE_SAINTE_ANNE = {
+  title: "Guide Sainte-Anne Martinique : plages, activités et restaurants",
+  desc: "Tout sur Sainte-Anne en Martinique : Grande Anse des Salines (plus belle plage des Caraïbes), kitesurf, catamaran aux îlets et restaurants créoles. À 20 min de Sainte-Luce.",
+  image: `${BASE}/photos/amaryllis/05.webp`,
+  url: `${BASE}/guide-sainte-anne`,
+};
+
+const GUIDE_EN = {
+  title: "Villa Rental Martinique — Book Direct, No Airbnb Fees",
+  desc: "Rent a luxury villa in Martinique with private pool and ocean view. Direct booking, no service fees. Sainte-Luce, Schœlcher. From €85/night.",
+  image: `${BASE}/photos/amaryllis/02.webp`,
+  url: `${BASE}/villa-rental-martinique`,
+};
+
 function escHtml(s) {
   return String(s)
     .replace(/&/g, "&amp;")
@@ -180,6 +201,73 @@ export async function onRequest(context) {
     const modified = injectMeta(html, meta, ldJson);
 
     return new Response(modified, {
+      status: 200,
+      headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=3600" },
+    });
+  }
+
+  // Handle /guide-le-diamant
+  if (slug === "guide-le-diamant") {
+    const g = GUIDE_DIAMANT;
+    const ldJson = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": g.title,
+      "description": g.desc,
+      "url": g.url,
+      "image": g.image,
+      "author": { "@id": `${BASE}/#organization` },
+      "publisher": { "@id": `${BASE}/#organization` },
+    });
+    const meta = buildMeta(g.title, g.desc, g.url, g.image);
+    const resp = await context.next();
+    const html = await resp.text();
+    return new Response(injectMeta(html, meta, ldJson), {
+      status: 200,
+      headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=3600" },
+    });
+  }
+
+  // Handle /guide-sainte-anne
+  if (slug === "guide-sainte-anne") {
+    const g = GUIDE_SAINTE_ANNE;
+    const ldJson = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": g.title,
+      "description": g.desc,
+      "url": g.url,
+      "image": g.image,
+      "author": { "@id": `${BASE}/#organization` },
+      "publisher": { "@id": `${BASE}/#organization` },
+    });
+    const meta = buildMeta(g.title, g.desc, g.url, g.image);
+    const resp = await context.next();
+    const html = await resp.text();
+    return new Response(injectMeta(html, meta, ldJson), {
+      status: 200,
+      headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=3600" },
+    });
+  }
+
+  // Handle /villa-rental-martinique
+  if (slug === "villa-rental-martinique") {
+    const g = GUIDE_EN;
+    const ldJson = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": g.title,
+      "description": g.desc,
+      "url": g.url,
+      "image": g.image,
+      "inLanguage": "en",
+      "author": { "@id": `${BASE}/#organization` },
+      "publisher": { "@id": `${BASE}/#organization` },
+    });
+    const meta = buildMeta(g.title, g.desc, g.url, g.image);
+    const resp = await context.next();
+    const html = await resp.text();
+    return new Response(injectMeta(html, meta, ldJson), {
       status: 200,
       headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=3600" },
     });

@@ -248,6 +248,20 @@ export default function Guide() {
             </a>
           </div>
 
+          {/* Guides voisins */}
+          <div style={{ display: "flex", gap: 16, flexWrap: "wrap", justifyContent: "center", marginBottom: 64 }}>
+            <a href="/guide-le-diamant" style={{ flex: 1, minWidth: 220, background: CREAM, border: `1px solid ${SAND}`, borderRadius: 12, padding: "24px 28px", textDecoration: "none", textAlign: "center" }}>
+              <div style={{ fontSize: 28, marginBottom: 8 }}>🗿</div>
+              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 14, color: NAVY, marginBottom: 6 }}>Guide Le Diamant</div>
+              <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 15, color: TEXT, opacity: 0.8 }}>Rocher mythique, plongée, plages · 15 min →</div>
+            </a>
+            <a href="/guide-sainte-anne" style={{ flex: 1, minWidth: 220, background: CREAM, border: `1px solid ${SAND}`, borderRadius: 12, padding: "24px 28px", textDecoration: "none", textAlign: "center" }}>
+              <div style={{ fontSize: 28, marginBottom: 8 }}>🏖️</div>
+              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 14, color: NAVY, marginBottom: 6 }}>Guide Sainte-Anne</div>
+              <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 15, color: TEXT, opacity: 0.8 }}>Les Salines, kitesurf, catamaran · 20 min →</div>
+            </a>
+          </div>
+
           {/* FAQ */}
           <div>
             <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 24, letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY, marginBottom: 28 }}>
