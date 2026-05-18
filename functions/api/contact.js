@@ -6,6 +6,8 @@ export async function onRequestPost(context) {
       return Response.json({ ok: false, error: "Champs requis manquants" }, { status: 400 });
     }
 
+    const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+
     const apiKey = context.env.RESEND_API_KEY;
     if (!apiKey) {
       return Response.json({ ok: false, error: "Service email non configuré" }, { status: 503 });
@@ -29,10 +31,10 @@ export async function onRequestPost(context) {
         html: `
           <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
             <h2 style="color:#0e3b3a">Nouveau message — Amaryllis</h2>
-            <p><strong>Nom :</strong> ${nom}</p>
-            <p><strong>Email :</strong> <a href="mailto:${email}">${email}</a></p>
+            <p><strong>Nom :</strong> ${esc(nom)}</p>
+            <p><strong>Email :</strong> <a href="mailto:${esc(email)}">${esc(email)}</a></p>
             <hr style="border:none;border-top:1px solid #eee;margin:20px 0"/>
-            <p style="white-space:pre-wrap">${message}</p>
+            <p style="white-space:pre-wrap">${esc(message)}</p>
           </div>
         `,
       }),

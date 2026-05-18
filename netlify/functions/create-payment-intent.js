@@ -27,6 +27,7 @@ export const handler = async (event) => {
     "metadata[checkin]":  metadata.checkin  || "",
     "metadata[checkout]": metadata.checkout || "",
     "metadata[voyageur]": metadata.voyageur || "",
+    "metadata[email]":    metadata.email    || "",
   });
 
   try {

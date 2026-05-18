@@ -11,8 +11,14 @@ export const handler = async (event) => {
   if (!url) {
     return { statusCode: 400, headers: jsonHeaders, body: JSON.stringify({ error: "url manquant" }) };
   }
-  if (!/^https?:\/\//i.test(url)) {
+
+  const ICAL_HOSTS = ["ics.booking.com", "airbnb.com", "www.airbnb.com", "calendar.google.com"];
+  let parsedUrl;
+  try { parsedUrl = new URL(url); } catch {
     return { statusCode: 400, headers: jsonHeaders, body: JSON.stringify({ error: "URL invalide" }) };
+  }
+  if (!["http:", "https:"].includes(parsedUrl.protocol) || !ICAL_HOSTS.includes(parsedUrl.hostname)) {
+    return { statusCode: 400, headers: jsonHeaders, body: JSON.stringify({ error: "URL non autorisée" }) };
   }
 
   try {

@@ -9,7 +9,14 @@ export async function onRequestPost(context) {
   const { request, env } = context;
 
   // URL Apps Script : env Cloudflare en priorité, sinon header envoyé par l'admin
-  const scriptUrl = env.APPS_SCRIPT_URL || request.headers.get("X-Script-Url");
+  const headerUrl = request.headers.get("X-Script-Url");
+  let scriptUrl = env.APPS_SCRIPT_URL;
+  if (!scriptUrl && headerUrl) {
+    try {
+      const p = new URL(headerUrl);
+      if (p.hostname === "script.google.com" && p.protocol === "https:") scriptUrl = headerUrl;
+    } catch {}
+  }
   if (!scriptUrl) return json({ error: "APPS_SCRIPT_URL manquante" }, 500);
 
   let body;

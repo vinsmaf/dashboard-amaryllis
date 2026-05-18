@@ -12,7 +12,13 @@ export async function onRequest(context) {
   });
 
   if (!icalUrl) return jsonErr("url manquant");
-  if (!/^https?:\/\//i.test(icalUrl)) return jsonErr("URL invalide");
+
+  const ICAL_HOSTS = ["ics.booking.com", "airbnb.com", "www.airbnb.com", "calendar.google.com"];
+  let parsedIcalUrl;
+  try { parsedIcalUrl = new URL(icalUrl); } catch { return jsonErr("URL invalide"); }
+  if (!["http:", "https:"].includes(parsedIcalUrl.protocol) || !ICAL_HOSTS.includes(parsedIcalUrl.hostname)) {
+    return jsonErr("URL non autorisée");
+  }
 
   try {
     const res = await fetch(icalUrl, {

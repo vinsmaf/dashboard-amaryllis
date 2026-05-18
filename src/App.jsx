@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import EmailSync from "./EmailSync.jsx";
 import {
   BarChart, Bar, LineChart, Line, ComposedChart,
@@ -712,7 +712,7 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
   const [viewMonth, setViewMonth] = useState(new Date().getMonth());
-  const [viewYear] = useState(2026);
+  const [viewYear] = useState(new Date().getFullYear());
   const [icalStatus, setIcalStatus] = useState({});
   const [lastIcalSync, setLastIcalSync] = useState(null);
   const [view, setView] = useState("todo");
@@ -778,7 +778,7 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
       pushReservationsToScript(current);
     })();
     const interval = setInterval(() => {
-      let current = reservations;
+      let current = reservationsRef.current;
       (async () => {
         for (const s of sources) {
           current = await importIcal(s.bienId, s.canal, s.url, current) || current;
@@ -830,8 +830,8 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
   }, [saveRes, reservations]);
 
   useEffect(() => {
-    syncBeds24InPlanning(reservations);
-    const interval = setInterval(() => syncBeds24InPlanning(reservations), 60 * 60 * 1000);
+    syncBeds24InPlanning(reservationsRef.current);
+    const interval = setInterval(() => syncBeds24InPlanning(reservationsRef.current), 60 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -3991,6 +3991,7 @@ export default function App() {
   const [reservations, setReservations] = useState(() => {
     try { const r = localStorage.getItem("reservations_v2"); return r ? JSON.parse(r) : []; } catch { return []; }
   });
+  const reservationsRef = useRef(reservations);
   const [icalUrls, setIcalUrls] = useState(() => {
     try { const u = localStorage.getItem("ical_urls"); return u ? { ...ICAL_DEFAULTS, ...JSON.parse(u) } : { ...ICAL_DEFAULTS }; } catch { return { ...ICAL_DEFAULTS }; }
   });
@@ -4006,6 +4007,7 @@ export default function App() {
   }, []);
 
   const saveRes = useCallback((list) => {
+    reservationsRef.current = list;
     setReservations(list);
     try { localStorage.setItem("reservations_v2", JSON.stringify(list)); } catch (e) {}
   }, []);
@@ -4159,6 +4161,8 @@ export default function App() {
     { id: "pilotage", l: mob ? "💼" : "💼 Pilotage" },
     { id: "historique", l: mob ? "📈" : "📈 Historique" },
     { id: "emails", l: mob ? "📧" : "📧 Emails" },
+    { id: "cautions", l: mob ? "🔒" : "🔒 Cautions" },
+    { id: "devis", l: mob ? "📋" : "📋 Devis" },
   ];
 
   return (
@@ -4204,6 +4208,8 @@ export default function App() {
         {tab === "historique" && <Historique biens={biens} n={n} mob={mob} hist={hist} />}
         {tab === "tarifs" && <Tarifs />}
         {tab === "emails" && <EmailSync mob={mob} />}
+        {tab === "cautions" && <Cautions />}
+        {tab === "devis" && <DevisEditor />}
       </div>
 
       <FAB onTab={setTab} />
@@ -4303,6 +4309,302 @@ export default function App() {
                 style={{ padding: "7px 14px", borderRadius: 7, border: "none", background: "#0ea5e9", color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600 }}
               >Enregistrer</button>
             </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Cautions (dépôts de garantie pré-autorisés) ────────────────────────────
+
+function Cautions() {
+  const [deposits, setDeposits] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [actionLoading, setActionLoading] = useState({});
+  const [actionMsg, setActionMsg] = useState({});
+  const [captureAmounts, setCaptureAmounts] = useState({});
+
+  const load = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/manage-deposit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "list" }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "Erreur API");
+      setDeposits(data.data || []);
+    } catch (e) {
+      setError(e.message);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const doAction = async (id, action, amount) => {
+    setActionLoading(prev => ({ ...prev, [id]: action }));
+    setActionMsg(prev => ({ ...prev, [id]: null }));
+    try {
+      const body = { action, paymentIntentId: id };
+      if (action === "capture" && amount) body.amount = parseFloat(amount);
+      const res = await fetch("/api/manage-deposit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+      setActionMsg(prev => ({ ...prev, [id]: action === "capture" ? "✓ Débité" : "✓ Libéré" }));
+      setTimeout(() => load(), 1500);
+    } catch (e) {
+      setActionMsg(prev => ({ ...prev, [id]: "Erreur : " + e.message }));
+    }
+    setActionLoading(prev => ({ ...prev, [id]: null }));
+  };
+
+  const fmtEur = v => (v / 100).toLocaleString("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
+  const fmtDate = ts => new Date(ts * 1000).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
+
+  const card = { background: "#1e293b", borderRadius: 12, padding: "16px 20px", border: "1px solid rgba(255,255,255,0.06)" };
+
+  return (
+    <div style={{ maxWidth: 900, margin: "0 auto" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: 18, color: "#f1f5f9" }}>🔒 Dépôts de garantie</h2>
+          <p style={{ margin: "4px 0 0", fontSize: 12, color: "#64748b" }}>Pré-autorisations Stripe en attente · Débiter = prélever · Libérer = annuler le blocage</p>
+        </div>
+        <button onClick={load} disabled={loading}
+          style={{ padding: "7px 16px", borderRadius: 8, border: "none", background: loading ? "#334155" : "#0ea5e9", color: "#fff", cursor: loading ? "default" : "pointer", fontSize: 13, fontWeight: 600 }}>
+          {loading ? "⏳…" : "🔄 Rafraîchir"}
+        </button>
+      </div>
+
+      {error && (
+        <div style={{ background: "#1e1215", border: "1px solid #ef4444", borderRadius: 10, padding: "12px 16px", marginBottom: 16, color: "#fca5a5", fontSize: 13 }}>
+          ⚠ {error}
+        </div>
+      )}
+
+      {!loading && deposits.length === 0 && !error && (
+        <div style={{ ...card, textAlign: "center", padding: 40 }}>
+          <div style={{ fontSize: 32, marginBottom: 12 }}>🔓</div>
+          <div style={{ color: "#94a3b8", fontSize: 14 }}>Aucun dépôt en attente</div>
+          <div style={{ color: "#64748b", fontSize: 12, marginTop: 6 }}>Les dépôts prélevés ou libérés n'apparaissent plus ici</div>
+        </div>
+      )}
+
+      {deposits.map(d => {
+        const m = d.metadata || {};
+        const amt = d.amount;
+        const busy = actionLoading[d.id];
+        const msg = actionMsg[d.id];
+        const captureVal = captureAmounts[d.id] ?? "";
+        return (
+          <div key={d.id} style={{ ...card, marginBottom: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10 }}>
+              <div>
+                <div style={{ fontWeight: 700, color: "#f1f5f9", fontSize: 15, marginBottom: 4 }}>
+                  {m.voyageur || "—"} · <span style={{ color: "#f59e0b" }}>{fmtEur(amt)}</span>
+                </div>
+                <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 2 }}>
+                  {m.bienId || "—"} · {m.checkin ? `${m.checkin} → ${m.checkout}` : ""}
+                </div>
+                <div style={{ fontSize: 11, color: "#64748b" }}>
+                  {m.email || ""} · Créé le {fmtDate(d.created)} · <code style={{ color: "#475569", fontSize: 10 }}>{d.id}</code>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                {msg && (
+                  <span style={{ fontSize: 12, color: msg.startsWith("✓") ? "#10b981" : "#ef4444", fontWeight: 600 }}>{msg}</span>
+                )}
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <input
+                    type="number"
+                    placeholder={`Montant max ${(amt / 100).toFixed(0)} €`}
+                    value={captureVal}
+                    onChange={e => setCaptureAmounts(prev => ({ ...prev, [d.id]: e.target.value }))}
+                    style={{ width: 130, padding: "6px 10px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.12)", background: "#0f172a", color: "#e2e8f0", fontSize: 12 }}
+                  />
+                  <button
+                    onClick={() => doAction(d.id, "capture", captureVal || (amt / 100))}
+                    disabled={!!busy}
+                    style={{ padding: "7px 14px", borderRadius: 8, border: "none", background: busy === "capture" ? "#334155" : "#ef4444", color: "#fff", cursor: busy ? "default" : "pointer", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>
+                    {busy === "capture" ? "⏳…" : "💳 Débiter"}
+                  </button>
+                  <button
+                    onClick={() => doAction(d.id, "cancel")}
+                    disabled={!!busy}
+                    style={{ padding: "7px 14px", borderRadius: 8, border: "1px solid rgba(16,185,129,0.4)", background: "transparent", color: "#10b981", cursor: busy ? "default" : "pointer", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>
+                    {busy === "cancel" ? "⏳…" : "🔓 Libérer"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Devis Editor ────────────────────────────────────────────────────────────
+
+const BIENS_DEVIS = [
+  { id: "amaryllis", nom: "Villa Amaryllis", depot: 1500 },
+  { id: "zandoli",   nom: "Zandoli",         depot: 700  },
+  { id: "iguana",    nom: "Villa Iguana",    depot: 500  },
+  { id: "geko",      nom: "Géko",            depot: 500  },
+  { id: "mabouya",   nom: "Mabouya",         depot: 500  },
+  { id: "schoelcher",nom: "T2 Schoelcher",   depot: 1000 },
+  { id: "nogent",    nom: "T2 Nogent",       depot: 500  },
+];
+
+function DevisEditor() {
+  const [form, setForm] = useState({
+    bienId: "amaryllis",
+    checkin: "",
+    checkout: "",
+    voyageur: "",
+    email: "",
+    montantSejour: "",
+    fraisMenage: "",
+    avecDepot: true,
+    depotCustom: "",
+  });
+  const [link, setLink] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  const bien = BIENS_DEVIS.find(b => b.id === form.bienId);
+  const montant = parseFloat(form.montantSejour) || 0;
+  const menage  = parseFloat(form.fraisMenage)   || 0;
+  const total   = montant + menage;
+  const depot   = form.avecDepot
+    ? (parseFloat(form.depotCustom) || bien?.depot || 0)
+    : 0;
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const generate = () => {
+    if (!total) return;
+    const data = {
+      bienId: form.bienId,
+      bienNom: bien?.nom || form.bienId,
+      checkin: form.checkin,
+      checkout: form.checkout,
+      voyageur: form.voyageur,
+      email: form.email,
+      montantSejour: montant,
+      fraisMenage: menage,
+      total,
+      depot,
+    };
+    const encoded = btoa(JSON.stringify(data));
+    setLink(`${window.location.origin}/devis?d=${encoded}`);
+  };
+
+  const copy = () => {
+    navigator.clipboard.writeText(link);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const card = { background: "#1e293b", borderRadius: 12, padding: "20px 24px", border: "1px solid rgba(255,255,255,0.06)" };
+  const inp = { width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#0f172a", color: "#e2e8f0", fontSize: 13, boxSizing: "border-box" };
+  const label = { fontSize: 11, color: "#64748b", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 5, display: "block" };
+
+  return (
+    <div style={{ maxWidth: 680, margin: "0 auto" }}>
+      <div style={{ marginBottom: 20 }}>
+        <h2 style={{ margin: 0, fontSize: 18, color: "#f1f5f9" }}>📋 Créer un devis personnalisé</h2>
+        <p style={{ margin: "4px 0 0", fontSize: 12, color: "#64748b" }}>Génère un lien de paiement sur mesure à envoyer à ton voyageur</p>
+      </div>
+
+      <div style={{ ...card, marginBottom: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+          <div style={{ gridColumn: "1/-1" }}>
+            <label style={label}>Villa / Appartement</label>
+            <select value={form.bienId} onChange={e => set("bienId", e.target.value)} style={inp}>
+              {BIENS_DEVIS.map(b => <option key={b.id} value={b.id}>{b.nom}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={label}>Check-in</label>
+            <input type="date" value={form.checkin} onChange={e => set("checkin", e.target.value)} style={inp} />
+          </div>
+          <div>
+            <label style={label}>Check-out</label>
+            <input type="date" value={form.checkout} onChange={e => set("checkout", e.target.value)} style={inp} />
+          </div>
+          <div>
+            <label style={label}>Nom du voyageur</label>
+            <input type="text" placeholder="Jean Dupont" value={form.voyageur} onChange={e => set("voyageur", e.target.value)} style={inp} />
+          </div>
+          <div>
+            <label style={label}>Email</label>
+            <input type="email" placeholder="jean@email.com" value={form.email} onChange={e => set("email", e.target.value)} style={inp} />
+          </div>
+          <div>
+            <label style={label}>Montant séjour (€)</label>
+            <input type="number" placeholder="ex: 800" value={form.montantSejour} onChange={e => set("montantSejour", e.target.value)} style={inp} />
+          </div>
+          <div>
+            <label style={label}>Frais de ménage (€)</label>
+            <input type="number" placeholder="ex: 80" value={form.fraisMenage} onChange={e => set("fraisMenage", e.target.value)} style={inp} />
+          </div>
+        </div>
+
+        <div style={{ marginTop: 16, padding: "14px 16px", background: "rgba(245,158,11,0.06)", borderRadius: 10, border: "1px solid rgba(245,158,11,0.2)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: form.avecDepot ? 10 : 0 }}>
+            <input type="checkbox" id="avecDepot" checked={form.avecDepot} onChange={e => set("avecDepot", e.target.checked)} style={{ width: 16, height: 16, cursor: "pointer" }} />
+            <label htmlFor="avecDepot" style={{ fontSize: 13, color: "#f59e0b", fontWeight: 600, cursor: "pointer" }}>
+              🔒 Inclure un dépôt de garantie (pré-autorisation)
+            </label>
+          </div>
+          {form.avecDepot && (
+            <div>
+              <label style={{ ...label, color: "#92400e" }}>Montant du dépôt (€) — défaut : {bien?.depot} €</label>
+              <input type="number" placeholder={`${bien?.depot}`} value={form.depotCustom} onChange={e => set("depotCustom", e.target.value)} style={{ ...inp, width: 160 }} />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {total > 0 && (
+        <div style={{ ...card, marginBottom: 16, borderColor: "rgba(14,165,233,0.3)" }}>
+          <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>Récapitulatif du devis</div>
+          <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+            {montant > 0 && <div><span style={{ fontSize: 11, color: "#64748b" }}>Séjour</span><br /><span style={{ fontSize: 16, fontWeight: 700, color: "#f1f5f9" }}>{montant.toLocaleString("fr-FR")} €</span></div>}
+            {menage > 0 && <div><span style={{ fontSize: 11, color: "#64748b" }}>Ménage</span><br /><span style={{ fontSize: 16, fontWeight: 700, color: "#f1f5f9" }}>{menage.toLocaleString("fr-FR")} €</span></div>}
+            <div><span style={{ fontSize: 11, color: "#0ea5e9" }}>Total à payer</span><br /><span style={{ fontSize: 20, fontWeight: 700, color: "#0ea5e9" }}>{total.toLocaleString("fr-FR")} €</span></div>
+            {depot > 0 && <div><span style={{ fontSize: 11, color: "#f59e0b" }}>Dépôt (bloqué)</span><br /><span style={{ fontSize: 16, fontWeight: 700, color: "#f59e0b" }}>{depot.toLocaleString("fr-FR")} €</span></div>}
+          </div>
+        </div>
+      )}
+
+      <button onClick={generate} disabled={!total}
+        style={{ padding: "12px 24px", borderRadius: 10, border: "none", background: total ? "#0ea5e9" : "#334155", color: "#fff", fontSize: 14, fontWeight: 700, cursor: total ? "pointer" : "default", marginBottom: 16 }}>
+        🔗 Générer le lien de paiement
+      </button>
+
+      {link && (
+        <div style={{ ...card, borderColor: "#10b981" }}>
+          <div style={{ fontSize: 12, color: "#10b981", fontWeight: 600, marginBottom: 10 }}>✓ Lien prêt</div>
+          <div style={{ background: "#0f172a", borderRadius: 8, padding: "10px 14px", fontSize: 11, color: "#7dd3fc", wordBreak: "break-all", marginBottom: 12 }}>{link}</div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={copy} style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: copied ? "#10b981" : "#0ea5e9", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+              {copied ? "✓ Copié !" : "📋 Copier"}
+            </button>
+            <a href={link} target="_blank" rel="noopener noreferrer"
+              style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.15)", color: "#94a3b8", fontSize: 12, fontWeight: 600, textDecoration: "none" }}>
+              🔗 Ouvrir
+            </a>
           </div>
         </div>
       )}

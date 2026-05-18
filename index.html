@@ -10,13 +10,106 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Amaryllis" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
-    <title>Amaryllis — Locations d'exception en Martinique & Île-de-France</title>
-    <meta name="description" content="Villas & locations de prestige en Martinique et Île-de-France. Réservation directe sans frais de service. Piscine à débordement, vue mer, jacuzzi privatif." />
-    <meta property="og:title" content="Amaryllis — Locations d'exception" />
-    <meta property="og:description" content="Villas & locations de prestige en Martinique et Île-de-France. Réservation directe sans frais de service. Piscine, vue mer, jacuzzi." />
+    <title>Amaryllis — Location villa Martinique avec piscine | Réservation directe</title>
+    <meta name="description" content="Louez directement nos villas et appartements en Martinique (Sainte-Luce, Schœlcher) et en Île-de-France. Piscine à débordement, vue mer, jacuzzi privatif. Sans frais de service Airbnb." />
+
+    <!-- Canonical -->
+    <link id="canonical" rel="canonical" href="https://villamaryllis.com/" />
+
+    <!-- Open Graph -->
+    <meta property="og:site_name" content="Amaryllis Locations" />
+    <meta id="og-title" property="og:title" content="Amaryllis — Location villa Martinique avec piscine" />
+    <meta id="og-description" property="og:description" content="Louez directement nos villas de prestige en Martinique. Piscine à débordement, vue mer, jacuzzi privatif. Réservation sans frais de service." />
+    <meta id="og-url" property="og:url" content="https://villamaryllis.com/" />
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="fr_FR" />
+    <meta id="og-image" property="og:image" content="https://villamaryllis.com/photos/amaryllis/01.webp" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="800" />
+    <meta property="og:image:alt" content="Villa Amaryllis — vue mer et piscine à débordement, Sainte-Luce Martinique" />
+
+    <!-- Twitter / X Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta id="tw-title" name="twitter:title" content="Amaryllis — Location villa Martinique avec piscine" />
+    <meta id="tw-description" name="twitter:description" content="Villas de prestige en Martinique. Piscine, vue mer, jacuzzi. Réservation directe sans frais." />
+    <meta id="tw-image" name="twitter:image" content="https://villamaryllis.com/photos/amaryllis/01.webp" />
+
     <meta name="robots" content="index, follow" />
+    <meta name="keywords" content="location villa Martinique, villa Sainte-Luce Martinique, villa piscine débordement, location luxe Martinique, réservation directe villa Martinique, villa vue mer Martinique, jacuzzi privatif Martinique, appartement Nogent-sur-Marne, location Île-de-France, villa prestige Antilles" />
+
+    <!-- JSON-LD : Organisation + site -->
+    <script type="application/ld+json" id="ld-main">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://villamaryllis.com/#organization",
+          "name": "Amaryllis Locations",
+          "url": "https://villamaryllis.com",
+          "logo": "https://villamaryllis.com/favicon.svg",
+          "description": "Location de villas et appartements de prestige en Martinique et Île-de-France. Réservation directe, sans frais de service.",
+          "areaServed": ["Martinique", "Île-de-France"],
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "contactType": "reservations",
+            "availableLanguage": ["French", "English"]
+          }
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://villamaryllis.com/#website",
+          "url": "https://villamaryllis.com",
+          "name": "Amaryllis Locations",
+          "publisher": { "@id": "https://villamaryllis.com/#organization" }
+        },
+        {
+          "@type": "ItemList",
+          "name": "Nos locations en Martinique et Île-de-France",
+          "url": "https://villamaryllis.com/",
+          "numberOfItems": 7,
+          "itemListElement": [
+            {
+              "@type": "ListItem", "position": 1,
+              "url": "https://villamaryllis.com/amaryllis",
+              "name": "Villa Amaryllis — Sainte-Luce, Martinique"
+            },
+            {
+              "@type": "ListItem", "position": 2,
+              "url": "https://villamaryllis.com/zandoli",
+              "name": "Zandoli — Sainte-Luce, Martinique"
+            },
+            {
+              "@type": "ListItem", "position": 3,
+              "url": "https://villamaryllis.com/iguana",
+              "name": "Villa Iguana — Sainte-Luce, Martinique"
+            },
+            {
+              "@type": "ListItem", "position": 4,
+              "url": "https://villamaryllis.com/geko",
+              "name": "Géko — Sainte-Luce, Martinique"
+            },
+            {
+              "@type": "ListItem", "position": 5,
+              "url": "https://villamaryllis.com/mabouya",
+              "name": "Mabouya — Sainte-Luce, Martinique"
+            },
+            {
+              "@type": "ListItem", "position": 6,
+              "url": "https://villamaryllis.com/schoelcher",
+              "name": "Bellevue — Schœlcher, Martinique"
+            },
+            {
+              "@type": "ListItem", "position": 7,
+              "url": "https://villamaryllis.com/nogent",
+              "name": "Appartement aux Portes de Paris — Nogent-sur-Marne"
+            }
+          ]
+        }
+      ]
+    }
+    </script>
+
     <script src="https://js.stripe.com/v3/"></script>
   </head>
   <body>

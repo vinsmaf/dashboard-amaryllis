@@ -1,8 +1,8 @@
-// Cloudflare Pages Function — POST /api/create-payment-intent
+// Cloudflare Pages Function — POST /api/create-deposit-intent
+// Creates a PaymentIntent with capture_method: "manual" (pre-authorization)
 
 export async function onRequestPost(context) {
   const { request, env } = context;
-
   const sk = env.STRIPE_SECRET_KEY;
   if (!sk) return json({ error: "STRIPE_SECRET_KEY manquante" }, 500);
 
@@ -16,7 +16,9 @@ export async function onRequestPost(context) {
   const payload = new URLSearchParams({
     amount: String(Math.round(amount)),
     currency,
+    capture_method: "manual",
     "automatic_payment_methods[enabled]": "true",
+    "metadata[type]":     "deposit",
     "metadata[bienId]":   metadata.bienId   || "",
     "metadata[checkin]":  metadata.checkin  || "",
     "metadata[checkout]": metadata.checkout || "",
@@ -27,15 +29,12 @@ export async function onRequestPost(context) {
   try {
     const res = await fetch("https://api.stripe.com/v1/payment_intents", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${sk}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
+      headers: { Authorization: `Bearer ${sk}`, "Content-Type": "application/x-www-form-urlencoded" },
       body: payload.toString(),
     });
     const parsed = await res.json();
     if (parsed.error) return json({ error: parsed.error.message }, 400);
-    return json({ clientSecret: parsed.client_secret });
+    return json({ clientSecret: parsed.client_secret, id: parsed.id });
   } catch (err) {
     return json({ error: err.message }, 500);
   }

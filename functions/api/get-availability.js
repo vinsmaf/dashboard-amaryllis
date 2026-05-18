@@ -78,9 +78,19 @@ export async function onRequest(context) {
   const airbnbUrl = maps.airbnb[bienId];
 
   // Booking URL: env var first, then param passed from admin localStorage (same domain)
+  // Restrict to known iCal hostnames to prevent SSRF
+  const ICAL_HOSTS = ["ics.booking.com", "airbnb.com", "www.airbnb.com", "calendar.google.com"];
   const bookingUrlParam = url.searchParams.get("bookingUrl");
-  const bookingUrl = maps.booking[bienId]
-    || (bookingUrlParam && /^https?:\/\//i.test(bookingUrlParam) ? bookingUrlParam : null);
+  let bookingUrlSafe = null;
+  if (bookingUrlParam) {
+    try {
+      const parsed = new URL(bookingUrlParam);
+      if ((parsed.protocol === "https:" || parsed.protocol === "http:") && ICAL_HOSTS.includes(parsed.hostname)) {
+        bookingUrlSafe = bookingUrlParam;
+      }
+    } catch {}
+  }
+  const bookingUrl = maps.booking[bienId] || bookingUrlSafe;
 
   if (!airbnbUrl && !bookingUrl) {
     return json({ error: "Aucune URL iCal configurée pour ce bien" }, 404);

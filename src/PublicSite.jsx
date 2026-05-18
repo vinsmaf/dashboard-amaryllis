@@ -74,7 +74,17 @@ if (typeof document !== "undefined" && !document.getElementById("__site_styles")
   document.head.appendChild(s);
 }
 
-const STRIPE_PK = "pk_test_51N1fVbAM2ySp09YCENcn4NcGi4xM7BzNCra9HU3ildZKLAHPzCOsY6ItlpxrttT1owXCUSKQrfPrIXsZSWPLrQsd00SDmMsWvX";
+const STRIPE_PK = "pk_live_51QAsyQDstT3IRAj26eVHpBuMZI8UllaKGCCJUNAW5O9BfC3NqzVJwhrgfF0VndNMWPph0vijKomm24OwrTXCG58N00Co6GOWh1";
+
+const DEPOSIT_AMOUNTS = {
+  amaryllis: 1500,
+  zandoli:   700,
+  iguana:    500,
+  geko:      500,
+  mabouya:   500,
+  schoelcher: 1000,
+  nogent:    500,
+};
 
 const AB = "https://a0.muscache.com/im/pictures/";
 
@@ -85,7 +95,24 @@ const BIENS = [
     airbnbTitle: "Villa Amaryllis - Luxe & sérénité Vue Mer, Piscine",
     lieu: "Sainte-Luce, Martinique",
     tag: "⭐ Coup de cœur Airbnb",
-    desc: "Perchée sur les hauteurs de Sainte-Luce, bercée par les alizés, la Villa Amaryllis vous invite à un séjour d'exception. Piscine à débordement d'eau salée, jacuzzi privatif, terrasse 100m² face à la mer des Caraïbes et à l'île Sainte-Lucie. Les plages de sable blanc à 5 min.",
+    desc: "Perchée sur les hauteurs de Sainte-Luce, bercée par les alizés et le parfum des fleurs tropicales, la Villa Amaryllis vous invite à un séjour d'exception. Dès l'arrivée, vous êtes accueillis dans un univers élégant et chaleureux, pensé dans les moindres détails pour que vos vacances soient reposantes et inoubliables. Notre équipe sur place, attentionnée et discrète, veille à ce que chaque instant soit parfait.",
+    descFull: [
+      { titre: "Les chambres", texte: "La villa dispose de trois chambres spacieuses. Chaque chambre est dotée d'un lit king-size pour un sommeil réparateur, d'une salle de bain privative avec douche à l'italienne, vasque en pierre naturelle et WC suspendu, d'un accès direct à la grande terrasse avec vue sur la mer, et de la climatisation pour un confort optimal en toutes saisons." },
+      { titre: "Les espaces de vie", texte: "Les pièces à vivre allient convivialité et sérénité : salon lumineux avec canapé confortable et vue mer, salle à manger pour 8 convives baignée de lumière, cuisine américaine entièrement équipée — réfrigérateur, plaques à induction, four combiné, micro-ondes, lave-vaisselle, cafetière, toaster. Tout est prêt pour cuisiner comme à la maison, ou pour accueillir un chef à domicile." },
+      { titre: "Les extérieurs", texte: "L'atout majeur de la villa, ce sont ses espaces extérieurs dignes d'une carte postale. Terrasse en bois Cumaru de 100 m², parfaite pour les petits-déjeuners face à la mer ou les apéros au coucher du soleil. Piscine lagon naturel (4×7 m, profondeur 1,35 m) à débordement avec plage immergée, chauffée par le soleil. Jardin tropical fleuri invitant à la détente. Carbet traditionnel en feuille de latanier, équipé d'un hamac, d'un salon d'extérieur et d'une table pour 8 — le lieu idéal pour vos soirées ou vos pauses lecture à l'ombre. Barbecue à gaz avec tout le nécessaire pour préparer poissons frais, langoustes et grillades." },
+      { titre: "Équipements & services", texte: "Wifi Starlink haut débit dans toute la propriété. TV connectée. Linge de maison fourni (draps, serviettes, torchons). Espace buanderie. Transats au bord de la piscine." },
+      { titre: "Accès", texte: "Vous disposez d'un accès privatif et sécurisé à l'ensemble de la propriété, pour une intimité totale. Parking privé sur place. Chemin bien entretenu menant directement à la villa. Accès libre à la piscine lagon naturel à débordement, à la terrasse en bois Cumaru, au carbet traditionnel en feuille de latanier et au jardin tropical fleuri. La villa est entièrement climatisée et ventilée naturellement. Wifi Starlink disponible dans toute la propriété. Système d'alarme et éclairage extérieur automatique pour votre sécurité." },
+      { titre: "Votre hôte", texte: "Nous mettons un point d'honneur à ce que votre séjour à la Villa Amaryllis soit parfait. Avant et pendant votre voyage, nous restons entièrement disponibles par message ou téléphone pour répondre à toutes vos questions. Accueil personnalisé sur place par notre hôte référent, avec remise des clés et visite complète de la villa. Lors de votre arrivée, nous vous remettons un guide d'accueil avec nos meilleures adresses, bons plans restaurants et idées d'activités locales. Présents si vous avez besoin, mais toujours discrets afin que vous profitiez pleinement de votre intimité." },
+      { titre: "Informations pratiques", items: [
+        { label: "Check-in / Check-out", texte: "Check-in à partir de 17h, check-out avant 12h. Early check-in et late check-out possibles selon disponibilité (supplément 80 €)." },
+        { label: "Règlement", texte: "Villa non-fumeur. Événements, fiestas et réceptions interdits. Seuls les voyageurs inscrits sur la réservation sont autorisés." },
+        { label: "Animaux", texte: "Bienvenus, jusqu'à 2 maximum — supplément 50 € par séjour." },
+        { label: "Dépôt de garantie", texte: "1 500 € en cas de dommages constatés après le départ." },
+        { label: "Transport", texte: "Une voiture automatique est recommandée pour profiter pleinement de la région." },
+        { label: "Ménage", texte: "La villa est nettoyée et désinfectée en profondeur entre chaque séjour." },
+        { label: "Support", texte: "Notre équipe est joignable 24h/24 en cas d'urgence ou de besoin particulier." },
+      ]},
+    ],
     prix: 280,
     capacite: 8,
     chambres: 3,
@@ -120,7 +147,7 @@ const BIENS = [
     ],
     coords: { lat: 14.4732, lng: -60.9196 },
     mapsEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3863.107902087125!2d-60.943493625540455!3d14.478492985993562!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8c4021b8748ab759%3A0x99f47752da739a0a!2svilla%20Amaryllis!5e0!3m2!1sfr!2sfr!4v1779046798123!5m2!1sfr!2sfr",
-    amenities: ["Piscine à débordement", "Jacuzzi privé", "Vue océan", "Wifi 127 Mb/s", "Parking", "Animaux OK"],
+    amenities: ["Piscine à débordement", "Jacuzzi privé", "Vue océan", "Wifi Starlink", "Parking", "Animaux OK"],
     avis: [
       { nom: "Sophie M.", pays: "🇫🇷", note: 5, texte: "Vue extraordinaire, piscine à débordement parfaite et hôte très réactif. Un endroit hors du temps face aux Caraïbes. On reviendra sans hésiter !", date: "Avr. 2025" },
       { nom: "James K.", pays: "🇬🇧", note: 5, texte: "Stunning villa with incredible Caribbean views. The salt water infinity pool and private jacuzzi are exceptional. Best Airbnb we've ever stayed in — period.", date: "Mars 2025" },
@@ -133,7 +160,24 @@ const BIENS = [
     airbnbTitle: "Zandoli : détente tropicale, piscine, jardin, vue mer",
     lieu: "Sainte-Luce, Martinique",
     tag: null,
-    desc: "Cocon tropical niché à Sainte-Luce avec 2 chambres dont une mezzanine au charme unique. Piscine privée, terrasse ensoleillée, vue mer. Netflix, Disney+, lave-linge inclus. Plages et distilleries à proximité.",
+    desc: "Bienvenue à Zandoli, cocon tropical niché au cœur d'un jardin luxuriant sur les hauteurs paisibles de Sainte-Luce. Réveillez-vous face à la mer des Caraïbes dans cet appartement lumineux et décoré avec soin. Plages de sable blanc, distilleries et randonnées à proximité vous invitent à vivre l'expérience martiniquaise authentique. Après vos escapades, admirez le coucher de soleil et laissez la brise chaude et le chant des oiseaux vous bercer.",
+    descFull: [
+      { titre: "L'hébergement", texte: "Zandoli dispose de 2 chambres dont une en mezzanine au charme unique, idéal pour familles, couples ou amis souhaitant goûter à la douceur de vivre caribéenne." },
+      { titre: "Espace de vie", texte: "Un salon convivial s'ouvre sur une terrasse ensoleillée où vous pourrez savourer vos repas ou un café face au jardin tropical et à la douce brise. La cuisine équipée vous offre tout le nécessaire pour préparer vos plats préférés. Le linge de maison est fourni — draps, serviettes, torchons — pour faciliter votre séjour." },
+      { titre: "Piscine & extérieurs", texte: "La pièce maîtresse de votre séjour : une piscine privée avec cascade apaisante, parfaite pour la baignade et la détente sous le soleil martiniquais. La terrasse attenante avec sa grande table vous accueille pour des moments conviviaux, bercés par le chant des oiseaux tropicaux. Le barbecue à gaz 2 feux avec accessoires inclus promet des soirées gourmandes sous les étoiles." },
+      { titre: "Équipements & services", texte: "Wifi Starlink haut débit dans toute la propriété. Netflix et Disney+ inclus. Lave-linge. Jardin tropical luxuriant. Parking intérieur sécurisé. Linge de maison fourni." },
+      { titre: "Votre hôte", texte: "L'équipe Amaryllis est toujours là pour vous — avant votre arrivée, pendant votre séjour, et même après. Nous répondons rapidement à vos questions, vous conseillons sur les meilleures découvertes autour de Sainte-Luce et vous aidons pour tout ce dont vous aurez besoin. Un contact simple et chaleureux, pour que vous vous sentiez accompagnés sans perdre votre liberté." },
+      { titre: "Informations pratiques", items: [
+        { label: "Animaux", texte: "Bienvenus — supplément 40 € par séjour." },
+        { label: "Check-in / Check-out", texte: "Check-in à partir de 17h, check-out avant 12h. Early/late possible selon disponibilité (supplément 50 €)." },
+        { label: "Fumeurs", texte: "Non-fumeur à l'intérieur. Autorisé sur la terrasse et dans le jardin." },
+        { label: "Stationnement", texte: "Une place de parking intérieur sécurisé réservée." },
+        { label: "Dépôt de garantie", texte: "700 € en cas de dommages constatés après le départ." },
+        { label: "Capacité", texte: "5 voyageurs max — 2 chambres (dont mezzanine) + canapé convertible." },
+        { label: "Connexion", texte: "Wifi Starlink dans toute la propriété. Espace de travail dédié inclus." },
+        { label: "Accès", texte: "Le logement comporte des marches ou escaliers. Accueil en personne par l'équipe Amaryllis." },
+      ]},
+    ],
     prix: 220,
     capacite: 5,
     chambres: 2,
@@ -161,7 +205,7 @@ const BIENS = [
     ],
     coords: { lat: 14.4725, lng: -60.9201 },
     mapsEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3862.822862640186!2d-60.92853662554015!3d14.49485608597908!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8c4021b73b656873%3A0xdb94b0a0ad33a741!2sresidence%20Amaryllis!5e0!3m2!1sfr!2sfr!4v1779046858310!5m2!1sfr!2sfr",
-    amenities: ["Piscine privée", "Vue mer", "Wifi 123 Mb/s", "Netflix/Disney+", "Lave-linge", "Jardin"],
+    amenities: ["Piscine privée", "Vue mer", "Wifi Starlink", "Netflix/Disney+", "Lave-linge", "Jardin"],
     avis: [
       { nom: "Lucie B.", pays: "🇫🇷", note: 5, texte: "Cocon parfait ! La mezzanine est charmante, la piscine délicieuse, et la vue sur la mer au réveil est inoubliable. Hôte très disponible.", date: "Avr. 2025" },
       { nom: "Thomas & Ana", pays: "🇩🇪", note: 5, texte: "Wunderbar! Tropical garden, private pool, sea view — everything we dreamed of. Very clean and well-equipped. We'll be back next winter.", date: "Janv. 2025" },
@@ -174,7 +218,25 @@ const BIENS = [
     airbnbTitle: "Villa Iguana, vue mer et rocher du Diamant, piscine",
     lieu: "Sainte-Luce, Martinique",
     tag: null,
-    desc: "Villa avec piscine d'eau salée et vue imprenable sur la baie et le rocher du Diamant. 2 chambres, terrasse panoramique. Wifi 126 Mb/s, parking inclus, animaux acceptés.",
+    desc: "Bienvenue en Martinique, au sein de la résidence Amaryllis. Bercée par la douceur de vivre, la Villa Iguana se situe sur les hauteurs de Sainte-Luce, dans une résidence calme et fleurie. La villa aménagée avec goût s'étend sur deux niveaux et offre un cadre idéal pour un séjour ressourçant entre nature, vue mer et confort moderne.",
+    descFull: [
+      { titre: "À l'étage", texte: "Une terrasse panoramique donnant sur la mer des Caraïbes, le Rocher du Diamant et l'île de Sainte-Lucie, en communication directe avec la cuisine et le salon — table, 6 chaises et hamac pour vos moments de détente. Un espace de vie avec canapé convertible, table basse et TV. Une cuisine toute équipée — réfrigérateur, plaques de cuisson, four combiné, micro-ondes, cafetière, toaster." },
+      { titre: "Au rez-de-chaussée", texte: "Deux chambres climatisées avec lit Queen Size 160×200, tables de chevet et grands dressings avec penderie. Une salle de bain fonctionnelle avec douche et WC." },
+      { titre: "Les extérieurs", texte: "Un grand jardin fleuri avec table et chaises pour savourer un café ou un petit-déjeuner en plein air. Une piscine hors-sol de 3,66 m de diamètre. Un espace barbecue à gaz 2 feux avec tous les accessoires fournis. Deux places de parking extérieures privatives." },
+      { titre: "Équipements & services", texte: "Wifi Starlink dans toute la propriété. Linge de maison fourni — draps, serviettes, torchons de cuisine. Animaux bienvenus." },
+      { titre: "Votre hôte", texte: "L'équipe Amaryllis est à votre écoute avant, pendant et après votre séjour. Nous répondons rapidement à vos questions, vous conseillons sur les meilleures découvertes autour de Sainte-Luce et vous aidons pour tout ce dont vous aurez besoin. Une communication chaleureuse et humaine, pour que vous vous sentiez accompagnés sans perdre votre liberté." },
+      { titre: "Informations pratiques", items: [
+        { label: "Animaux", texte: "Bienvenus — supplément 40 € par séjour." },
+        { label: "Check-in / Check-out", texte: "Check-in à partir de 17h, check-out avant 12h. Early/late possible selon disponibilité (supplément 50 €)." },
+        { label: "Fumeurs", texte: "Non-fumeur à l'intérieur. Autorisé dans les espaces extérieurs." },
+        { label: "Stationnement", texte: "2 places de parking extérieures privatives." },
+        { label: "Dépôt de garantie", texte: "500 € en cas de dommages constatés après le départ." },
+        { label: "Capacité", texte: "6 voyageurs max — 2 chambres Queen Size + canapé convertible." },
+        { label: "Niveaux", texte: "Étage : salon, cuisine, terrasse. Rez-de-chaussée : chambres et salle de bain." },
+        { label: "Tranquillité", texte: "Fêtes et événements interdits. Visiteurs extérieurs non autorisés. Silence entre 22h et 7h." },
+        { label: "Connexion", texte: "Wifi Starlink dans toute la propriété." },
+      ]},
+    ],
     prix: 180,
     capacite: 6,
     chambres: 2,
@@ -202,7 +264,7 @@ const BIENS = [
     ],
     coords: { lat: 14.4718, lng: -60.9188 },
     mapsEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3862.822862640186!2d-60.92853662554015!3d14.49485608597908!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8c4021b73b656873%3A0xdb94b0a0ad33a741!2sresidence%20Amaryllis!5e0!3m2!1sfr!2sfr!4v1779046858310!5m2!1sfr!2sfr",
-    amenities: ["Piscine eau salée", "Vue Diamant", "Vue océan", "Wifi 126 Mb/s", "Parking", "Animaux OK"],
+    amenities: ["Piscine eau salée", "Vue Diamant", "Vue océan", "Wifi Starlink", "Parking", "Animaux OK"],
     avis: [
       { nom: "Pierre & Claire", pays: "🇫🇷", note: 5, texte: "Vue imprenable sur le rocher du Diamant ! La piscine d'eau salée est un vrai plus. Villa propre, bien équipée, accueil aux petits soins.", date: "Avr. 2025" },
       { nom: "Rachel T.", pays: "🇬🇧", note: 5, texte: "What a view! Waking up to see the Diamond Rock every morning was magical. The saltwater pool felt like swimming in the sea itself. Perfect.", date: "Mars 2025" },
@@ -215,7 +277,23 @@ const BIENS = [
     airbnbTitle: "Géko, détente, zen, piscine & jardin tropical",
     lieu: "Sainte-Luce, Martinique",
     tag: null,
-    desc: "Refuge paisible au sein de la résidence Amaryllis. Jardin tropical luxuriant, piscine rafraîchissante, brise des alizés. À 7 min des plages de sable blanc. Clim, TV, lave-linge inclus.",
+    desc: "Bienvenue à Géko, votre refuge paisible au sein de la résidence fleurie Amaryllis sur les hauteurs de Sainte-Luce. Laissez-vous séduire par le jardin tropical luxuriant, la piscine rafraîchissante et la douce brise des alizés. À seulement 7 minutes des plages de sable blanc et du bourg animé de Sainte-Luce, Géko offre un séjour alliant confort moderne, nature apaisante et découverte authentique de la Martinique. Un cocon tropical où chaque détail est pensé pour votre confort et votre bien-être.",
+    descFull: [
+      { titre: "Les espaces", texte: "Le séjour cosy dispose d'un canapé convertible, d'une table basse et d'une TV, parfait pour vos soirées détente. La chambre climatisée, équipée d'un lit queen-size 160×200 et de rangements, vous promet des nuits reposantes. La salle de bain moderne avec douche à l'italienne et WC est idéale pour un moment de fraîcheur après une journée au soleil." },
+      { titre: "Les extérieurs", texte: "Savourez vos repas sur la terrasse couverte communiquant avec la cuisine extérieure — réfrigérateur, plaques, four, micro-ondes, cafetière, grille-pain. Flânez dans le grand jardin tropical, détendez-vous dans la piscine privée et profitez du salon extérieur pour une lecture ou un apéritif au coucher du soleil. Des soirées barbecue à gaz viendront parfaire vos moments conviviaux." },
+      { titre: "Équipements & services", texte: "Linge de maison fourni. Wifi haut débit Starlink dans toute la propriété. Place de parking privée sur place. Accès autonome." },
+      { titre: "Pourquoi Géko", texte: "Parce que Géko est plus qu'un logement : c'est une expérience. Un écrin de verdure alliant confort moderne et charme tropical, un point de départ idéal entre plages de sable blanc, distilleries emblématiques et marchés créoles colorés. Dès votre arrivée, franchissez le portillon privé qui ouvre les portes de votre havre de paix. Un parking privé vous est réservé juste en face, votre entrée indépendante préserve votre intimité." },
+      { titre: "Votre hôte", texte: "Votre confort et votre sérénité sont notre priorité du premier contact au départ. Avant votre arrivée, nous répondons à toutes vos questions et partageons nos coups de cœur locaux. Lors de l'accueil, nous vous accompagnons pour une prise en main simple et autonome. Pendant votre séjour, nous restons disponibles — souvent en moins de 30 minutes. Nous cultivons une communication chaleureuse et humaine, pour que vous viviez un séjour en toute confiance." },
+      { titre: "Informations pratiques", items: [
+        { label: "Animaux", texte: "Bienvenus — supplément 40 € par séjour." },
+        { label: "Check-in / Check-out", texte: "Check-in à partir de 17h, check-out avant 12h. Early/late possible selon disponibilité (supplément 50 €)." },
+        { label: "Fumeurs", texte: "Non-fumeur à l'intérieur. Fumer autorisé sur la terrasse et dans le jardin." },
+        { label: "Stationnement", texte: "Une place de parking intérieur réservée." },
+        { label: "Dépôt de garantie", texte: "500 € en cas de dommages constatés après le départ." },
+        { label: "Tranquillité", texte: "Visiteurs extérieurs non autorisés. Silence requis entre 22h et 7h." },
+        { label: "Connexion", texte: "Wifi haut débit Starlink dans toute la propriété." },
+      ]},
+    ],
     prix: 150,
     capacite: 4,
     chambres: 1,
@@ -243,7 +321,7 @@ const BIENS = [
     ],
     coords: { lat: 14.4729, lng: -60.9194 },
     mapsEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3862.822862640186!2d-60.92853662554015!3d14.49485608597908!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8c4021b73b656873%3A0xdb94b0a0ad33a741!2sresidence%20Amaryllis!5e0!3m2!1sfr!2sfr!4v1779046858310!5m2!1sfr!2sfr",
-    amenities: ["Piscine", "Jardin tropical", "Climatisation", "Lave-linge", "TV", "Wifi 128 Mb/s"],
+    amenities: ["Piscine privée", "Jardin tropical", "Climatisation", "Lave-linge", "TV", "Wifi Starlink"],
     avis: [
       { nom: "Sandrine L.", pays: "🇫🇷", note: 5, texte: "Un vrai cocon dans un jardin tropical magnifique. La piscine est bien entretenue et la brise des alizés rend la clim presque superflue. On adore !", date: "Mai 2025" },
       { nom: "Marco F.", pays: "🇮🇹", note: 5, texte: "Piccolo paradiso caraibico! Il giardino tropicale è stupendo, la piscina fresca e pulita. Posizione tranquilla a pochi minuti dalla spiaggia. Torneremo!", date: "Avr. 2025" },
@@ -256,7 +334,24 @@ const BIENS = [
     airbnbTitle: "Mabouya | Jacuzzi privatif, Jardin fleuri, vue mer",
     lieu: "Sainte-Luce, Martinique",
     tag: null,
-    desc: "Havre de paix à flanc de colline avec jacuzzi privatif, jardin fleuri et vue mer enchanteresse. Idéal pour une escapade romantique ou ressourçante. Plages et distilleries à quelques minutes.",
+    desc: "Bienvenue au studio Mabouya, votre havre de paix à flanc de colline avec jacuzzi privatif, jardin fleuri et vue mer enchanteresse. Idéal pour une escapade romantique ou ressourçante, Mabouya est une expérience caribéenne tout simplement. Relaxez-vous dans votre jacuzzi privé, savourez votre café au cœur d'un jardin tropical et laissez-vous bercer par le calme et les parfums des fleurs exotiques. Chaque détail a été pensé pour votre bien-être.",
+    descFull: [
+      { titre: "L'hébergement", texte: "L'appartement a été aménagé avec goût et raffinement, conçu pour offrir confort et sérénité. Une terrasse privée avec vue imprenable sur la mer des Caraïbes, parfaite pour des moments de détente inoubliables. L'espace de vie climatisé comprend un grand lit queen-size 160×200, une TV moderne et une commode élégante pour votre rangement." },
+      { titre: "Extérieurs & espaces de vie", texte: "Le jardin fleuri luxuriant est un véritable havre de paix. La cuisine extérieure entièrement équipée vous permet de préparer vos repas en profitant de l'air frais, avec un barbecue au charbon et tous les accessoires nécessaires pour des soirées conviviales. Votre jacuzzi privé vous offre des instants de pur bien-être, en harmonie avec la nature environnante." },
+      { titre: "Équipements & services", texte: "Salle de bain moderne avec grande douche à l'italienne. Linge de maison complet fourni. Place de parking privée et sécurisée au sein de la résidence Amaryllis. Wifi Starlink. Animaux bienvenus." },
+      { titre: "Pourquoi Mabouya", texte: "Parce qu'ici, chaque détail est pensé pour que votre séjour soit une véritable expérience d'évasion : vue mer, jardin tropical, jacuzzi privé, calme absolu et proximité des plus belles plages et distilleries de Martinique. Le studio vous est entièrement privatisé. Situated sur les hauteurs de Sainte-Luce, les plages — Anse Mabouya, Anse Gros Raisin — sont accessibles en quelques minutes à pied ou en voiture." },
+      { titre: "Votre hôte", texte: "L'équipe Amaryllis est à votre écoute avant, pendant et après votre séjour — conseils sur les plages paradisiaques, restaurants locaux ou activités uniques. Nous privilégions une communication fluide, chaleureuse et réactive pour vous garantir une expérience sans stress et mémorable. Notre mission : faire de votre séjour un moment d'évasion inoubliable." },
+      { titre: "Informations pratiques", items: [
+        { label: "Check-in / Check-out", texte: "Early check-in et late check-out possibles selon disponibilité — supplément 30 €." },
+        { label: "Animaux", texte: "Bienvenus — supplément 40 € par séjour." },
+        { label: "Capacité", texte: "2 personnes maximum." },
+        { label: "Fumeurs", texte: "Logement non-fumeur." },
+        { label: "Dépôt de garantie", texte: "500 € en cas de dommages constatés après le départ." },
+        { label: "Tranquillité", texte: "Fêtes et événements non autorisés. Silence entre 22h et 8h." },
+        { label: "Stationnement", texte: "Parking privé et sécurisé inclus." },
+        { label: "Équipements inclus", texte: "Linge de maison, produits d'accueil et wifi Starlink fournis." },
+      ]},
+    ],
     prix: 110,
     capacite: 2,
     chambres: 1,
@@ -281,7 +376,7 @@ const BIENS = [
     ],
     coords: { lat: 14.4741, lng: -60.9209 },
     mapsEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3862.822862640186!2d-60.92853662554015!3d14.49485608597908!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8c4021b73b656873%3A0xdb94b0a0ad33a741!2sresidence%20Amaryllis!5e0!3m2!1sfr!2sfr!4v1779046858310!5m2!1sfr!2sfr",
-    amenities: ["Jacuzzi privatif", "Vue mer", "Jardin fleuri", "Wifi 81 Mb/s", "Parking", "Animaux OK"],
+    amenities: ["Jacuzzi privatif", "Vue mer", "Jardin fleuri", "Wifi Starlink", "Parking", "Animaux OK"],
     avis: [
       { nom: "Élise & Romain", pays: "🇫🇷", note: 5, texte: "Weekend romantique parfait ! Le jacuzzi privatif sous les étoiles avec vue mer est juste magique. Jardin fleuri superbe, endroit très paisible.", date: "Avr. 2025" },
       { nom: "Sarah W.", pays: "🇺🇸", note: 5, texte: "Hidden gem! The private jacuzzi with ocean views made every evening unforgettable. The flowering garden is gorgeous. Perfect romantic escape.", date: "Mars 2025" },
@@ -294,7 +389,24 @@ const BIENS = [
     airbnbTitle: "Appartement de standing calme, splendide vue mer",
     lieu: "Schœlcher, Martinique",
     tag: null,
-    desc: "Appartement de standing calme avec splendide vue sur la baie, proche de Fort-de-France. Terrasse, parking, TV HD. Idéal pour découvrir le nord de la Martinique.",
+    desc: "Imaginez… Au réveil, depuis la terrasse, une vue imprenable sur la mer des Caraïbes, la baie de Fort-de-France et les Trois-Îlets. Situé dans un quartier calme de Schœlcher, cet appartement de standing vous offre un cadre idéal pour découvrir le nord de la Martinique. À 1 minute à pied d'un petit centre commercial, et à 5 minutes en voiture des plages, Bellevue combine tranquillité et proximité de tout. Dernier étage d'une résidence sécurisée : brise marine, calme absolu et couchers de soleil inoubliables.",
+    descFull: [
+      { titre: "L'hébergement", texte: "L'appartement dispose d'une chambre avec lit double, d'une salle de bain moderne avec douche, et d'un salon-séjour lumineux avec accès direct à la grande terrasse orientée plein ouest — le lieu idéal pour vos soirées face au spectacle du soleil sur la baie." },
+      { titre: "Équipements", texte: "TV HD, wifi haut débit, cuisine équipée, lave-linge, climatisation, parking privé. Le linge de maison (draps, serviettes, torchons) est inclus : vous n'avez rien à apporter." },
+      { titre: "Accès & proximité", texte: "L'appartement est au 4ème et dernier étage d'une résidence sécurisée avec ascenseur. Une place de parking privative vous est réservée, accès libre 24h/24. À 1 minute à pied : centre commercial, boulangerie, médecin, kiné, pharmacie. À 5 minutes en voiture : plages de sable blanc, restaurants et activités nautiques. Fort-de-France en 15 minutes." },
+      { titre: "Votre hôte", texte: "L'équipe Amaryllis met un point d'honneur à ce que votre séjour soit parfait. Avant votre arrivée, nous vous transmettons toutes les informations utiles : accès, stationnement, équipements et nos meilleures adresses locales. Pendant votre séjour, nous restons disponibles par messagerie et WhatsApp — toujours dans le respect de votre intimité." },
+      { titre: "Informations pratiques", items: [
+        { label: "Animaux", texte: "Bienvenus — supplément 40 € par séjour." },
+        { label: "Check-in / Check-out", texte: "Check-in à partir de 17h, check-out avant 12h. Early/late possible selon disponibilité (supplément 50 €)." },
+        { label: "Fumeurs", texte: "Non-fumeur à l'intérieur. Autorisé sur la terrasse." },
+        { label: "Stationnement", texte: "Une place de parking privative en résidence réservée." },
+        { label: "Dépôt de garantie", texte: "1 000 € en cas de dommages constatés après le départ." },
+        { label: "Capacité", texte: "2 voyageurs maximum — 1 chambre avec lit double." },
+        { label: "Tranquillité", texte: "Fêtes et réceptions non autorisées. Silence entre 22h et 7h." },
+        { label: "Étagement", texte: "4ème et dernier étage avec ascenseur." },
+        { label: "Connexion", texte: "Wifi haut débit dans tout l'appartement." },
+      ]},
+    ],
     prix: 100,
     capacite: 2,
     chambres: 1,
@@ -335,7 +447,25 @@ const BIENS = [
     airbnbTitle: "Appartement de standing avec jardin, proche Paris",
     lieu: "Nogent-sur-Marne, Île-de-France",
     tag: null,
-    desc: "Bel appartement T2 lumineux avec jardin au bord de la Marne. Décoré avec soin, calme et verdure à 20 min de Paris par le RER A.",
+    desc: "Laissez-vous séduire par un appartement élégant, niché au sein d'une résidence luxueuse aux portes de Paris. Havre de paix alliant calme, confort et style — parfait pour des voyageurs en quête d'évasion urbaine sans sacrifier la quiétude. Ce T2 de 39 m² baigné de lumière naturelle à Nogent-sur-Marne, à seulement quelques minutes de Paris, a été pensé dans les moindres détails pour rendre votre séjour absolument magique.",
+    descFull: [
+      { titre: "L'hébergement", texte: "Votre cocon chic dispose d'une grande chambre avec lit King Size, d'un dressing spacieux et d'une TV. Le confort est digne d'un hôtel haut de gamme, dans un cadre élégant et apaisant." },
+      { titre: "Espace de vie", texte: "La cuisine ultra-équipée invite à créer de délicieux repas, tandis que le salon lumineux s'ouvre sur l'extérieur. La connexion entre intérieur et extérieur est fluide, idéale pour savourer chaque moment en toute convivialité." },
+      { titre: "Jardin & terrasse", texte: "Un jardin et une terrasse 100% privés — votre coin de paradis vert au cœur de la ville. Matins tranquilles au soleil, dîners sous les étoiles ou détente sur un transat. Le barbecue est à votre disposition pour des instants gourmands." },
+      { titre: "Accès & proximité", texte: "Arrivée ultra simple via boîte à clé sécurisée — récupérez vos clés en toute autonomie, à l'heure qui vous arrange, même tard le soir. À deux pas : supérette ouverte tard et toutes les commodités du quartier. La gare RER A vous emmène au cœur de Paris en 20 minutes. Le bord de Marne est à quelques minutes à pied." },
+      { titre: "Votre hôte", texte: "L'équipe Amaryllis est à votre disposition 24h/24 et 7j/7. Dès votre réservation, vous recevrez un message d'accueil chaleureux avec toutes les informations clés. La Fine Conciergerie locale vous offre un service premium : assistance personnalisée, réservations sur mesure, conseils exclusifs et interventions rapides. Envie de découvrir les secrets de Nogent et Paris ? Nous vous proposons des recommandations exclusives et un accès aux meilleures adresses locales." },
+      { titre: "Informations pratiques", items: [
+        { label: "Check-in / Check-out", texte: "Check-in à partir de 17h, check-out avant 12h. Accès autonome 24h/24 via boîte à clé. Instructions transmises avant l'arrivée." },
+        { label: "Fumeurs", texte: "Non-fumeur à l'intérieur. Autorisé dans le jardin et sur la terrasse." },
+        { label: "Animaux", texte: "Animaux non admis." },
+        { label: "Stationnement", texte: "Parking public sécurisé à proximité, accessible à pied." },
+        { label: "Dépôt de garantie", texte: "500 € en cas de dommages constatés après le départ." },
+        { label: "Capacité", texte: "2 voyageurs maximum — 1 chambre avec lit King Size. Superficie : 39 m²." },
+        { label: "Tranquillité", texte: "Résidence calme et sécurisée. Silence entre 22h et 8h. Fêtes et réceptions non autorisées." },
+        { label: "Équipements inclus", texte: "Wifi, home cinéma, éclairage intelligent, lave-linge, cuisine équipée, barbecue, climatisation. Linge de maison fourni." },
+        { label: "Connexion", texte: "Wifi ultra-rapide dans tout l'appartement." },
+      ]},
+    ],
     prix: 85,
     capacite: 3,
     chambres: 1,
@@ -385,10 +515,11 @@ function loadPriceOverrides() {
 
 function Curtain({ onDone }) {
   const [lifting, setLifting] = useState(false);
+  const onDoneRef = useRef(onDone);
 
   useEffect(() => {
     const t1 = setTimeout(() => setLifting(true), 1800);
-    const t2 = setTimeout(() => onDone(), 2700);
+    const t2 = setTimeout(() => onDoneRef.current(), 2700);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []);
 
@@ -777,7 +908,11 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
   const [elements, setElements] = useState(null);
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState("");
+  const [depositElements, setDepositElements] = useState(null);
+  const [depositPaying, setDepositPaying] = useState(false);
+  const [depositError, setDepositError] = useState("");
   const elRef = useRef(null);
+  const depositAmt = DEPOSIT_AMOUNTS[bien.id] ?? 0;
 
   const nights = checkin && checkout ? dateDiff(checkin, checkout) : 0;
 
@@ -816,34 +951,102 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
     return () => window.removeEventListener("keydown", fn);
   }, [onClose]);
 
+  const stripeAppearance = { theme: "stripe", variables: { colorPrimary: CORAL, borderRadius: "8px", colorBackground: CREAM, colorText: NAVY } };
+
   async function goToPayment() {
     setPaying(true); setPayError("");
     try {
+      // Payment intent
       const res = await fetch("/api/create-payment-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: total * 100, currency: "eur", metadata: { bienId: bien.id, checkin, checkout, voyageur: `${form.prenom} ${form.nom}` } }),
+        body: JSON.stringify({ amount: total * 100, currency: "eur", metadata: { bienId: bien.id, checkin, checkout, voyageur: `${form.prenom} ${form.nom}`, email: form.email } }),
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-      const el = stripe.elements({ clientSecret: data.clientSecret, appearance: { theme: "stripe", variables: { colorPrimary: CORAL, borderRadius: "8px", colorBackground: CREAM, colorText: NAVY } } });
-      const pe = el.create("payment");
+
+      // Deposit intent (pre-auth) — store clientSecret for use in step 4 / merci page
+      if (depositAmt) {
+        const dr = await fetch("/api/create-deposit-intent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ amount: depositAmt * 100, currency: "eur", metadata: { bienId: bien.id, checkin, checkout, voyageur: `${form.prenom} ${form.nom}`, email: form.email } }),
+        });
+        const dd = await dr.json();
+        if (!dd.error && dd.clientSecret) {
+          sessionStorage.setItem("deposit_cs", dd.clientSecret);
+          sessionStorage.setItem("deposit_amt", String(depositAmt));
+          sessionStorage.setItem("deposit_bien", bien.nom);
+          sessionStorage.setItem("deposit_checkin", checkin || "");
+          sessionStorage.setItem("deposit_checkout", checkout || "");
+        }
+      }
+
+      const el = stripe.elements({ clientSecret: data.clientSecret, appearance: stripeAppearance });
+      el.create("payment"); // mount happens in useEffect after step renders
       setElements(el);
       setStep(3);
-      setTimeout(() => pe.mount("#spe"), 100);
     } catch (e) { setPayError(e.message); }
     setPaying(false);
   }
 
+  async function goToDeposit() {
+    const cs = sessionStorage.getItem("deposit_cs");
+    if (!cs) { window.location.href = "/merci"; return; }
+    const el2 = stripe.elements({ clientSecret: cs, appearance: stripeAppearance });
+    el2.create("payment"); // mount happens in useEffect after step renders
+    setDepositElements(el2);
+    setStep(4);
+  }
+
+  // Mount Stripe elements after React renders the target divs
+  useEffect(() => {
+    if (step === 3 && elements) {
+      const pe = elements.getElement("payment");
+      if (pe) pe.mount("#spe");
+    }
+  }, [step, elements]);
+
+  useEffect(() => {
+    if (step === 4 && depositElements) {
+      const pe = depositElements.getElement("payment");
+      if (pe) pe.mount("#spe-deposit");
+    }
+  }, [step, depositElements]);
+
   async function handlePay() {
     if (!stripe || !elements) return;
     setPaying(true); setPayError("");
-    const { error } = await stripe.confirmPayment({ elements, confirmParams: { return_url: window.location.origin + "/merci" } });
-    if (error) setPayError(error.message);
+    const { error, paymentIntent } = await stripe.confirmPayment({
+      elements,
+      confirmParams: { return_url: window.location.origin + "/merci" },
+      redirect: "if_required",
+    });
+    if (error) { setPayError(error.message); setPaying(false); return; }
+    // No redirect needed (non-3DS card) → proceed to deposit step or finish
+    if (paymentIntent?.status === "succeeded") {
+      if (depositAmt && sessionStorage.getItem("deposit_cs")) {
+        await goToDeposit();
+      } else {
+        window.location.href = "/merci";
+      }
+    }
     setPaying(false);
   }
 
-  const steps = ["Dates", "Coordonnées", "Paiement"];
+  async function handleDeposit() {
+    if (!stripe || !depositElements) return;
+    setDepositPaying(true); setDepositError("");
+    const { error } = await stripe.confirmPayment({
+      elements: depositElements,
+      confirmParams: { return_url: window.location.origin + "/merci?deposit=1" },
+      redirect: "if_required",
+    });
+    if (error) setDepositError(error.message);
+    setDepositPaying(false);
+  }
+
+  const steps = depositAmt ? ["Dates", "Coordonnées", "Paiement", "Caution"] : ["Dates", "Coordonnées", "Paiement"];
 
   return (
     <div
@@ -1048,6 +1251,30 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
             </div>
             {payError && <div style={errStyle}>⚠ {payError}</div>}
             <div style={{ marginTop: 16, textAlign: "center", color: MUTED, fontSize: 12 }}>🔒 Paiement sécurisé par Stripe</div>
+          </>
+        )}
+
+        {/* STEP 4 — Deposit pre-auth */}
+        {step === 4 && (
+          <>
+            <div style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.3)", borderRadius: 12, padding: "16px 20px", marginBottom: 24 }}>
+              <div style={{ fontWeight: 700, color: "#92400e", fontSize: 14, marginBottom: 6 }}>🔒 Dépôt de garantie — {depositAmt.toLocaleString("fr-FR")} €</div>
+              <div style={{ color: "#78350f", fontSize: 13, lineHeight: 1.6 }}>
+                Ce montant sera <strong>bloqué</strong> sur votre carte mais <strong>non débité</strong>. Il sera libéré automatiquement après votre départ, sans démarche de votre part, si aucun dommage n'est constaté.
+              </div>
+            </div>
+            <div id="spe-deposit" style={{ marginBottom: 24 }} />
+            <button
+              onClick={handleDeposit}
+              disabled={depositPaying}
+              style={{ ...btnPrimary, width: "100%", background: depositPaying ? SAND : "#d97706", color: "#fff", opacity: depositPaying ? 0.6 : 1 }}
+            >
+              {depositPaying ? "Traitement…" : `🔒 Valider le blocage de la caution — ${depositAmt.toLocaleString("fr-FR")} €`}
+            </button>
+            {depositError && <div style={errStyle}>⚠ {depositError}</div>}
+            <div style={{ marginTop: 16, textAlign: "center", color: MUTED, fontSize: 12 }}>
+              🔒 Pré-autorisation sécurisée · Aucun débit si aucun dommage · Libération automatique après votre séjour
+            </div>
           </>
         )}
       </div>
@@ -1333,7 +1560,14 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
   const [photoIdx, setPhotoIdx] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [showFull, setShowFull] = useState(false);
   const photos = bien.photos || [];
+
+  useEffect(() => {
+    const fn = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", fn, { passive: true });
+    return () => window.removeEventListener("resize", fn);
+  }, []);
 
   const goPrev = useCallback(() => setPhotoIdx(i => (i - 1 + photos.length) % photos.length), [photos.length]);
   const goNext = useCallback(() => setPhotoIdx(i => (i + 1) % photos.length), [photos.length]);
@@ -1562,9 +1796,67 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
           <div style={{ height: 1, background: SAND, marginBottom: 26 }} />
 
           {/* Description */}
-          <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 16 : 18, fontWeight: 400, lineHeight: 1.8, color: TEXT, margin: "0 0 32px" }}>
-            {bien.desc}
-          </p>
+          <div style={{ marginBottom: 32 }}>
+            <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 17 : 19, fontWeight: 400, lineHeight: 1.85, color: TEXT, margin: 0 }}>
+              {bien.desc}
+            </p>
+
+            {bien.descFull && showFull && (
+              <div style={{ marginTop: 32 }}>
+                {/* Decorative separator */}
+                <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 32 }}>
+                  <div style={{ flex: 1, height: 1, background: SAND }} />
+                  <div style={{ width: 5, height: 5, borderRadius: "50%", background: bien.couleur || MUTED, opacity: 0.6 }} />
+                  <div style={{ width: 3, height: 3, borderRadius: "50%", background: SAND }} />
+                  <div style={{ width: 5, height: 5, borderRadius: "50%", background: bien.couleur || MUTED, opacity: 0.6 }} />
+                  <div style={{ flex: 1, height: 1, background: SAND }} />
+                </div>
+
+                {/* Narrative sections */}
+                {bien.descFull.filter(s => !s.items).map((s, i) => (
+                  <div key={i} style={{ marginBottom: 26, paddingLeft: 18, borderLeft: s.titre ? `2px solid ${(bien.couleur || "#8a7a6a")}28` : "2px solid transparent" }}>
+                    {s.titre && (
+                      <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 9, letterSpacing: "0.42em", textTransform: "uppercase", color: bien.couleur || MUTED, fontWeight: 600, marginBottom: 9 }}>{s.titre}</div>
+                    )}
+                    <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 15 : 17, fontWeight: 400, lineHeight: 1.8, color: TEXT, margin: 0 }}>{s.texte}</p>
+                  </div>
+                ))}
+
+                {/* Informations pratiques */}
+                {bien.descFull.find(s => s.items) && (
+                  <div style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 8, padding: isMobile ? "20px 18px" : "24px 28px", marginTop: 12 }}>
+                    <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 9, letterSpacing: "0.42em", textTransform: "uppercase", color: MUTED, fontWeight: 600, marginBottom: 20 }}>
+                      {bien.descFull.find(s => s.items).titre || "Informations pratiques"}
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? "14px 0" : "16px 40px" }}>
+                      {bien.descFull.find(s => s.items).items.map((it, j) => (
+                        <div key={j}>
+                          <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: MUTED, marginBottom: 5 }}>{it.label}</div>
+                          <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13, color: TEXT, lineHeight: 1.65 }}>{it.texte}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Toggle */}
+            {bien.descFull && (
+              <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 24 }}>
+                <div style={{ flex: 1, height: 1, background: SAND }} />
+                <button
+                  onClick={() => setShowFull(v => !v)}
+                  style={{ background: "none", border: `1px solid ${SAND}`, borderRadius: 4, padding: "7px 20px", cursor: "pointer", fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11, color: MUTED, letterSpacing: "0.12em", textTransform: "uppercase", flexShrink: 0 }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = NAVY; e.currentTarget.style.color = NAVY; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = SAND; e.currentTarget.style.color = MUTED; }}
+                >
+                  {showFull ? "Réduire" : "Lire la suite"}
+                </button>
+                <div style={{ flex: 1, height: 1, background: SAND }} />
+              </div>
+            )}
+          </div>
 
           {/* Amenities */}
           <div style={{ marginBottom: 32 }}>
@@ -2039,13 +2331,13 @@ function HeroCarousel({ biens, onDetail, onBook }) {
             {String(idx + 1).padStart(2, "0")} / {String(biens.length).padStart(2, "0")}
           </span>
           <button
-            onClick={() => goTo((idx - 1 + BIENS.length) % BIENS.length)}
+            onClick={() => goTo((idx - 1 + biens.length) % biens.length)}
             style={{ background: "rgba(250,245,233,0.08)", border: "1px solid rgba(250,245,233,0.18)", color: "#faf5e9", width: 38, height: 38, borderRadius: "50%", cursor: "pointer", fontSize: 17, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)", transition: "background 0.2s" }}
             onMouseEnter={e => { e.currentTarget.style.background = "rgba(250,245,233,0.16)"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "rgba(250,245,233,0.08)"; }}
           >‹</button>
           <button
-            onClick={() => goTo((idx + 1) % BIENS.length)}
+            onClick={() => goTo((idx + 1) % biens.length)}
             style={{ background: "rgba(250,245,233,0.08)", border: "1px solid rgba(250,245,233,0.18)", color: "#faf5e9", width: 38, height: 38, borderRadius: "50%", cursor: "pointer", fontSize: 17, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)", transition: "background 0.2s" }}
             onMouseEnter={e => { e.currentTarget.style.background = "rgba(250,245,233,0.16)"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "rgba(250,245,233,0.08)"; }}
@@ -2064,6 +2356,88 @@ function HeroCarousel({ biens, onDetail, onBook }) {
         />
       </div>
     </div>
+  );
+}
+
+// ── FAQ Section ──────────────────────────────────────────────────
+const FAQ_ITEMS = [
+  {
+    q: "Comment réserver sans passer par Airbnb ?",
+    a: "Directement sur ce site : sélectionnez votre villa, choisissez vos dates et payez par carte (Stripe sécurisé). Vous économisez les frais de service Airbnb — jusqu'à 14% du prix — et vous avez un contact direct avec l'hôte.",
+  },
+  {
+    q: "Quel est le prix d'une villa avec piscine à Sainte-Luce Martinique ?",
+    a: "Nos villas avec piscine sont à partir de 150€/nuit (Géko) jusqu'à 280€/nuit pour la Villa Amaryllis avec piscine à débordement vue mer. Des réductions semaine sont disponibles (-5% à partir de 7 nuits).",
+  },
+  {
+    q: "Peut-on louer une villa avec jacuzzi privatif en Martinique ?",
+    a: "Oui ! La Villa Amaryllis dispose d'un jacuzzi privatif en plus de la piscine à débordement. Le studio Mabouya est entièrement dédié au romantisme avec jacuzzi privé et vue mer à partir de 110€/nuit.",
+  },
+  {
+    q: "Y a-t-il des logements disponibles en Île-de-France ?",
+    a: "Oui, notre Appartement aux Portes de Paris à Nogent-sur-Marne (94) offre un cadre calme à 15 min du centre de Paris, idéal pour les séjours professionnels ou le tourisme parisien à partir de 85€/nuit.",
+  },
+  {
+    q: "Est-ce que le WiFi est inclus dans toutes les locations ?",
+    a: "Oui, toutes nos propriétés disposent du WiFi Starlink haut débit (ou fibre), inclus sans supplément. Connexion stable même dans les hauteurs de Sainte-Luce.",
+  },
+];
+
+function FaqSection() {
+  const [open, setOpen] = useState(null);
+
+  return (
+    <section style={{ background: CREAM, padding: "72px 24px" }}>
+      {/* JSON-LD FAQ Schema */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": FAQ_ITEMS.map(f => ({
+          "@type": "Question",
+          "name": f.q,
+          "acceptedAnswer": { "@type": "Answer", "text": f.a },
+        })),
+      })}} />
+
+      <div style={{ maxWidth: 820, margin: "0 auto" }}>
+        <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 10, letterSpacing: "0.45em", textTransform: "uppercase", color: CORAL, textAlign: "center", marginBottom: 12 }}>Questions fréquentes</p>
+        <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: "clamp(22px, 3vw, 32px)", letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY, textAlign: "center", margin: "0 0 12px" }}>
+          Location villa Martinique
+        </h2>
+        <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 17, color: TEXT, textAlign: "center", marginBottom: 40, opacity: 0.75 }}>
+          Tout ce que vous devez savoir avant de réserver.
+        </p>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {FAQ_ITEMS.map((faq, i) => (
+            <div
+              key={i}
+              style={{ background: "#fff", border: `1px solid ${SAND}`, borderRadius: 10, overflow: "hidden" }}
+            >
+              <button
+                onClick={() => setOpen(open === i ? null : i)}
+                style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px", background: "none", border: "none", cursor: "pointer", textAlign: "left", gap: 12 }}
+              >
+                <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 15, color: NAVY, letterSpacing: "0.02em", lineHeight: 1.4 }}>{faq.q}</span>
+                <span style={{ color: CORAL, fontSize: 20, flexShrink: 0, transform: open === i ? "rotate(45deg)" : "none", transition: "transform 0.2s" }}>+</span>
+              </button>
+              {open === i && (
+                <p style={{ margin: 0, padding: "0 24px 20px", fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 17, lineHeight: 1.8, color: TEXT }}>
+                  {faq.a}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Lien vers le guide */}
+        <div style={{ textAlign: "center", marginTop: 40 }}>
+          <a href="/guide" style={{ fontFamily: "'Jost', sans-serif", fontSize: 13, letterSpacing: "0.12em", textTransform: "uppercase", color: NAVY, textDecoration: "none", borderBottom: `1px solid ${CORAL}`, paddingBottom: 2 }}>
+            Lire notre guide complet Sainte-Luce →
+          </a>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -2236,6 +2610,86 @@ function ContactField({ label, value, onChange, type = "text", multiline, requir
 
 // ── Thank you page ───────────────────────────────────────────────
 function MerciPage() {
+  const params = new URLSearchParams(window.location.search);
+  const depositDone = params.get("deposit") === "1";
+  const paymentRedirected = !!params.get("payment_intent");
+  const depositCs = sessionStorage.getItem("deposit_cs");
+  const depositAmt = Number(sessionStorage.getItem("deposit_amt") || 0);
+  const depositBien = sessionStorage.getItem("deposit_bien") || "";
+
+  const [stripe, setStripe] = useState(null);
+  const [elements, setElements] = useState(null);
+  const [paying, setPaying] = useState(false);
+  const [error, setError] = useState("");
+
+  // Payment redirected via 3DS + deposit pending → mount deposit form
+  const showDepositForm = paymentRedirected && depositCs && !depositDone;
+
+  useEffect(() => {
+    if (window.Stripe) setStripe(window.Stripe(STRIPE_PK));
+  }, []);
+
+  useEffect(() => {
+    if (!showDepositForm || !stripe || !depositCs) return;
+    const appearance = { theme: "stripe", variables: { colorPrimary: CORAL, borderRadius: "8px", colorBackground: CREAM, colorText: NAVY } };
+    const el = stripe.elements({ clientSecret: depositCs, appearance });
+    el.create("payment").mount("#spe-merci-deposit");
+    setElements(el);
+  }, [showDepositForm, stripe, depositCs]);
+
+  async function handleDepositMerci() {
+    if (!stripe || !elements) return;
+    setPaying(true); setError("");
+    const { error: err } = await stripe.confirmPayment({
+      elements,
+      confirmParams: { return_url: window.location.origin + "/merci?deposit=1" },
+      redirect: "if_required",
+    });
+    if (err) setError(err.message);
+    setPaying(false);
+  }
+
+  // Deposit completed → clear sessionStorage
+  useEffect(() => {
+    if (depositDone) {
+      sessionStorage.removeItem("deposit_cs");
+      sessionStorage.removeItem("deposit_amt");
+      sessionStorage.removeItem("deposit_bien");
+      sessionStorage.removeItem("deposit_checkin");
+      sessionStorage.removeItem("deposit_checkout");
+    }
+  }, [depositDone]);
+
+  if (showDepositForm) {
+    return (
+      <div style={{ minHeight: "100vh", background: IVORY, display: "flex", alignItems: "center", justifyContent: "center", padding: 32 }}>
+        <div style={{ maxWidth: 480, width: "100%" }}>
+          <div style={{ textAlign: "center", marginBottom: 32 }}>
+            <div style={{ width: 70, height: 70, borderRadius: "50%", background: "rgba(200,85,61,0.1)", border: `2px solid ${CORAL}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, margin: "0 auto 20px" }}>✓</div>
+            <h1 style={{ fontSize: 26, fontWeight: 900, color: NAVY, marginBottom: 8 }}>Paiement confirmé !</h1>
+            <p style={{ color: MUTED, fontSize: 14, lineHeight: 1.6 }}>Une dernière étape : le dépôt de garantie pour <strong>{depositBien}</strong>.</p>
+          </div>
+          <div style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.3)", borderRadius: 12, padding: "16px 20px", marginBottom: 24 }}>
+            <div style={{ fontWeight: 700, color: "#92400e", fontSize: 14, marginBottom: 6 }}>🔒 Dépôt de garantie — {depositAmt.toLocaleString("fr-FR")} €</div>
+            <div style={{ color: "#78350f", fontSize: 13, lineHeight: 1.6 }}>
+              Montant <strong>bloqué</strong> mais <strong>non débité</strong>. Libéré automatiquement après votre départ sans dommages.
+            </div>
+          </div>
+          <div id="spe-merci-deposit" style={{ marginBottom: 24 }} />
+          <button
+            onClick={handleDepositMerci}
+            disabled={paying}
+            style={{ ...btnPrimary, width: "100%", background: paying ? SAND : "#d97706", color: "#fff", opacity: paying ? 0.6 : 1 }}
+          >
+            {paying ? "Traitement…" : `🔒 Valider le blocage — ${depositAmt.toLocaleString("fr-FR")} €`}
+          </button>
+          {error && <div style={{ ...errStyle, marginTop: 12 }}>⚠ {error}</div>}
+          <div style={{ marginTop: 16, textAlign: "center", color: MUTED, fontSize: 12 }}>🔒 Pré-autorisation sécurisée · Aucun débit sans dommage constaté</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ minHeight: "100vh", background: IVORY, display: "flex", alignItems: "center", justifyContent: "center", color: NAVY, textAlign: "center", padding: 32 }}>
       <div>
@@ -2244,6 +2698,11 @@ function MerciPage() {
         <p style={{ color: MUTED, fontSize: 16, maxWidth: 420, margin: "0 auto 32px", lineHeight: 1.6 }}>
           Merci pour votre réservation. Un email de confirmation vous sera envoyé dans quelques minutes.
         </p>
+        {depositDone && (
+          <p style={{ color: "#92400e", fontSize: 14, maxWidth: 380, margin: "-20px auto 28px", background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 10, padding: "12px 16px" }}>
+            🔒 Dépôt de garantie bloqué · Libéré automatiquement après votre séjour
+          </p>
+        )}
         <a href="/" style={{ ...btnPrimary, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 8, background: CORAL, color: "#fff" }}>← Retour à l'accueil</a>
       </div>
     </div>
@@ -2471,6 +2930,166 @@ function HoverContact({ light = false, direction = "up" }) {
   );
 }
 
+// ── Devis Page ───────────────────────────────────────────────────
+function DevisPage() {
+  const params = new URLSearchParams(window.location.search);
+  let data = null;
+  try { data = JSON.parse(atob(params.get("d") || "")); } catch {}
+
+  const [stripe, setStripe] = useState(null);
+  const [elements, setElements] = useState(null);
+  const [depElements, setDepElements] = useState(null);
+  const [step, setStep] = useState(1); // 1=paiement 2=caution 3=done
+  const [paying, setPaying] = useState(false);
+  const [error, setError] = useState("");
+
+  const appearance = { theme: "stripe", variables: { colorPrimary: CORAL, borderRadius: "8px", colorBackground: CREAM, colorText: NAVY } };
+
+  useEffect(() => {
+    if (window.Stripe) setStripe(window.Stripe(STRIPE_PK));
+  }, []);
+
+  useEffect(() => {
+    if (!stripe || !data) return;
+    const totalCents = Math.round((data.total || 0) * 100);
+    if (totalCents < 50) return;
+    (async () => {
+      try {
+        const res = await fetch("/api/create-payment-intent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ amount: totalCents, currency: "eur", metadata: { bienId: data.bienId, checkin: data.checkin, checkout: data.checkout, voyageur: data.voyageur, email: data.email, type: "devis" } }),
+        });
+        const json = await res.json();
+        if (json.error) { setError(json.error); return; }
+        if (data.depot) {
+          const dr = await fetch("/api/create-deposit-intent", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ amount: Math.round(data.depot * 100), currency: "eur", metadata: { bienId: data.bienId, checkin: data.checkin, checkout: data.checkout, voyageur: data.voyageur, email: data.email } }),
+          });
+          const dj = await dr.json();
+          if (!dj.error && dj.clientSecret) {
+            sessionStorage.setItem("deposit_cs", dj.clientSecret);
+            sessionStorage.setItem("deposit_amt", String(data.depot));
+            sessionStorage.setItem("deposit_bien", data.bienNom || data.bienId);
+          }
+        }
+        const el = stripe.elements({ clientSecret: json.clientSecret, appearance });
+        el.create("payment");
+        setElements(el);
+      } catch (e) {
+        setError(e.message);
+      }
+    })();
+  }, [stripe]); // data is decoded from URL at render and never changes
+
+  useEffect(() => {
+    if (step === 1 && elements) { const pe = elements.getElement("payment"); if (pe) pe.mount("#dp-pay"); }
+    if (step === 2 && depElements) { const pe = depElements.getElement("payment"); if (pe) pe.mount("#dp-dep"); }
+  }, [step, elements, depElements]);
+
+  async function handlePay() {
+    if (!stripe || !elements) return;
+    setPaying(true); setError("");
+    const { error: err, paymentIntent } = await stripe.confirmPayment({
+      elements,
+      confirmParams: { return_url: window.location.origin + "/merci" },
+      redirect: "if_required",
+    });
+    if (err) { setError(err.message); setPaying(false); return; }
+    if (paymentIntent?.status === "succeeded") {
+      const cs = sessionStorage.getItem("deposit_cs");
+      if (data?.depot && cs) {
+        const el2 = stripe.elements({ clientSecret: cs, appearance });
+        el2.create("payment");
+        setDepElements(el2);
+        setStep(2);
+      } else {
+        window.location.href = "/merci";
+      }
+    }
+    setPaying(false);
+  }
+
+  async function handleDeposit() {
+    if (!stripe || !depElements) return;
+    setPaying(true); setError("");
+    const { error: err } = await stripe.confirmPayment({
+      elements: depElements,
+      confirmParams: { return_url: window.location.origin + "/merci?deposit=1" },
+      redirect: "if_required",
+    });
+    if (err) { setError(err.message); }
+    setPaying(false);
+  }
+
+  const fmtEur = v => v?.toLocaleString("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
+
+  if (!data) return (
+    <div style={{ minHeight: "100vh", background: CREAM, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Georgia,serif" }}>
+      <div style={{ textAlign: "center", color: NAVY }}>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
+        <div style={{ fontSize: 18 }}>Lien de devis invalide ou expiré.</div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ minHeight: "100vh", background: CREAM, fontFamily: "Georgia,serif", padding: "40px 16px" }}>
+      <div style={{ maxWidth: 520, margin: "0 auto" }}>
+        <div style={{ textAlign: "center", marginBottom: 32 }}>
+          <div style={{ fontSize: 13, color: CORAL, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>Devis personnalisé</div>
+          <h1 style={{ fontSize: 26, color: NAVY, margin: 0 }}>{data.bienNom || data.bienId}</h1>
+          {data.checkin && <div style={{ fontSize: 13, color: "#78716c", marginTop: 6 }}>{data.checkin} → {data.checkout}</div>}
+          {data.voyageur && <div style={{ fontSize: 13, color: "#78716c" }}>Pour {data.voyageur}</div>}
+        </div>
+
+        <div style={{ background: "#fff", borderRadius: 14, padding: "20px 24px", marginBottom: 24, border: "1px solid rgba(0,0,0,0.08)" }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>Récapitulatif</div>
+          {data.montantSejour > 0 && <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, color: "#44403c", marginBottom: 6 }}><span>Séjour</span><span>{fmtEur(data.montantSejour)}</span></div>}
+          {data.fraisMenage > 0 && <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, color: "#44403c", marginBottom: 6 }}><span>Frais de ménage</span><span>{fmtEur(data.fraisMenage)}</span></div>}
+          <div style={{ borderTop: "1px solid rgba(0,0,0,0.08)", marginTop: 10, paddingTop: 10, display: "flex", justifyContent: "space-between", fontSize: 16, fontWeight: 700, color: NAVY }}><span>Total</span><span>{fmtEur(data.total)}</span></div>
+          {data.depot > 0 && <div style={{ marginTop: 10, padding: "8px 12px", background: "rgba(245,158,11,0.08)", borderRadius: 8, fontSize: 12, color: "#92400e" }}>🔒 Dépôt de garantie {fmtEur(data.depot)} — bloqué mais non débité</div>}
+        </div>
+
+        {step === 1 && (
+          <>
+            <div style={{ background: "#fff", borderRadius: 14, padding: "20px 24px", marginBottom: 20, border: "1px solid rgba(0,0,0,0.08)" }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 14, textTransform: "uppercase", letterSpacing: 1 }}>Paiement du séjour</div>
+              <div id="dp-pay" />
+            </div>
+            {error && <div style={{ color: "#dc2626", fontSize: 13, marginBottom: 12 }}>⚠ {error}</div>}
+            <button onClick={handlePay} disabled={paying || !elements} style={{ width: "100%", padding: "14px", borderRadius: 10, border: "none", background: paying ? "#94a3b8" : CORAL, color: "#fff", fontSize: 15, fontWeight: 700, cursor: paying ? "default" : "pointer" }}>
+              {paying ? "⏳ Traitement…" : `Payer ${fmtEur(data.total)}`}
+            </button>
+          </>
+        )}
+
+        {step === 2 && (
+          <>
+            <div style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.3)", borderRadius: 12, padding: "16px 20px", marginBottom: 20 }}>
+              <div style={{ fontWeight: 700, color: "#92400e", fontSize: 14, marginBottom: 6 }}>🔒 Dépôt de garantie — {fmtEur(data.depot)}</div>
+              <div style={{ color: "#78350f", fontSize: 13, lineHeight: 1.6 }}>Ce montant sera <strong>bloqué</strong> sur votre carte mais <strong>non débité</strong>. Il sera libéré automatiquement à la fin de votre séjour si aucun dommage n'est constaté.</div>
+            </div>
+            <div style={{ background: "#fff", borderRadius: 14, padding: "20px 24px", marginBottom: 20, border: "1px solid rgba(0,0,0,0.08)" }}>
+              <div id="dp-dep" />
+            </div>
+            {error && <div style={{ color: "#dc2626", fontSize: 13, marginBottom: 12 }}>⚠ {error}</div>}
+            <button onClick={handleDeposit} disabled={paying || !depElements} style={{ width: "100%", padding: "14px", borderRadius: 10, border: "none", background: paying ? "#94a3b8" : "#f59e0b", color: "#fff", fontSize: 15, fontWeight: 700, cursor: paying ? "default" : "pointer" }}>
+              {paying ? "⏳ Traitement…" : `🔒 Valider le dépôt — ${fmtEur(data.depot)}`}
+            </button>
+          </>
+        )}
+
+        <div style={{ textAlign: "center", marginTop: 20, fontSize: 11, color: "#a8a29e" }}>
+          Paiement sécurisé · Stripe · SSL
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main ─────────────────────────────────────────────────────────
 export default function PublicSite() {
   const [selectedBien, setSelectedBien] = useState(null);
@@ -2489,8 +3108,6 @@ export default function PublicSite() {
     window.addEventListener("amaryllis_prices_updated", fn);
     return () => window.removeEventListener("amaryllis_prices_updated", fn);
   }, []);
-
-  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
 
   // Biens with live price overrides from admin
   const biensList = BIENS.map(b => ({ ...b, prix: priceOverrides[b.id] ?? b.prix }));
@@ -2514,20 +3131,83 @@ export default function PublicSite() {
     setLoadingAvail(false);
   }
 
-  // Open property detail — updates URL + meta + fetches availability
+  // Open property detail — updates URL + all SEO meta + fetches availability
   function openDetail(bien) {
     setDetailBien(bien);
     if (bien) {
+      const url = `https://villamaryllis.com/${bien.id}`;
+      const img = `https://villamaryllis.com/photos/${bien.id}/01.webp`;
+      const title = `${bien.nom} — Location ${bien.lieu} | Amaryllis`;
+      const desc = bien.desc.slice(0, 155) + (bien.desc.length > 155 ? "…" : "");
+
       window.history.pushState({}, "", "/" + bien.id);
-      document.title = `${bien.nom} — Amaryllis Locations`;
-      const meta = document.querySelector('meta[name="description"]');
-      if (meta) meta.setAttribute("content", bien.desc.slice(0, 160));
+      document.title = title;
+
+      const setMeta = (sel, attr, val) => { const el = document.querySelector(sel); if (el) el.setAttribute(attr, val); };
+      setMeta('meta[name="description"]', "content", desc);
+      setMeta('#canonical', "href", url);
+      setMeta('#og-title', "content", title);
+      setMeta('#og-description', "content", desc);
+      setMeta('#og-url', "content", url);
+      setMeta('#og-image', "content", img);
+      setMeta('#tw-title', "content", title);
+      setMeta('#tw-description', "content", desc);
+      setMeta('#tw-image', "content", img);
+
+      // JSON-LD VacationRental pour la propriété
+      const ld = document.getElementById("ld-main");
+      if (ld) {
+        ld.textContent = JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "LodgingBusiness",
+          "@id": url,
+          "name": bien.nom,
+          "url": url,
+          "description": bien.desc.slice(0, 300),
+          "image": img,
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": bien.lieu.split(",")[0]?.trim(),
+            "addressRegion": bien.lieu.includes("Martinique") ? "Martinique" : "Île-de-France",
+            "addressCountry": "FR"
+          },
+          "priceRange": `À partir de ${bien.prix}€/nuit`,
+          "amenityFeature": (bien.amenities || []).map(e => ({ "@type": "LocationFeatureSpecification", "name": e })),
+          "provider": { "@id": "https://villamaryllis.com/#organization" }
+        });
+      }
+
       if (!BOOKING_DISABLED.has(bien.id) && !bien.beds24Url) fetchAvailability(bien.id);
     } else {
+      const homeTitle = "Amaryllis — Location villa Martinique avec piscine | Réservation directe";
+      const homeDesc = "Louez directement nos villas et appartements en Martinique (Sainte-Luce, Schœlcher) et en Île-de-France. Piscine à débordement, vue mer, jacuzzi privatif. Sans frais de service Airbnb.";
+
       window.history.pushState({}, "", "/");
-      document.title = "Amaryllis — Locations d'exception en Martinique & Île-de-France";
-      const meta = document.querySelector('meta[name="description"]');
-      if (meta) meta.setAttribute("content", "Villas & locations de prestige en Martinique et Île-de-France. Réservation directe sans frais de service. Piscine, vue mer, jacuzzi.");
+      document.title = homeTitle;
+
+      const setMeta = (sel, attr, val) => { const el = document.querySelector(sel); if (el) el.setAttribute(attr, val); };
+      setMeta('meta[name="description"]', "content", homeDesc);
+      setMeta('#canonical', "href", "https://villamaryllis.com/");
+      setMeta('#og-title', "content", homeTitle);
+      setMeta('#og-description', "content", homeDesc);
+      setMeta('#og-url', "content", "https://villamaryllis.com/");
+      setMeta('#og-image', "content", "https://villamaryllis.com/photos/amaryllis/01.webp");
+      setMeta('#tw-title', "content", homeTitle);
+      setMeta('#tw-description', "content", homeDesc);
+      setMeta('#tw-image', "content", "https://villamaryllis.com/photos/amaryllis/01.webp");
+
+      // Restaurer le JSON-LD global
+      const ld = document.getElementById("ld-main");
+      if (ld) {
+        ld.textContent = JSON.stringify({
+          "@context": "https://schema.org",
+          "@graph": [
+            { "@type": "Organization", "@id": "https://villamaryllis.com/#organization", "name": "Amaryllis Locations", "url": "https://villamaryllis.com" },
+            { "@type": "WebSite", "@id": "https://villamaryllis.com/#website", "url": "https://villamaryllis.com", "name": "Amaryllis Locations" }
+          ]
+        });
+      }
+
       setBlockedDates([]);
     }
   }
@@ -2544,9 +3224,6 @@ export default function PublicSite() {
     await fetchAvailability(bien.id);
   }
 
-  const path = window.location.pathname;
-  if (path === "/merci") return <MerciPage />;
-
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 60);
     window.addEventListener("scroll", fn, { passive: true });
@@ -2556,7 +3233,7 @@ export default function PublicSite() {
   // Auto-open property detail if URL matches a bien ID (e.g. /amaryllis)
   useEffect(() => {
     const pathId = window.location.pathname.slice(1);
-    if (pathId && pathId !== "merci") {
+    if (pathId && pathId !== "merci" && pathId !== "devis") {
       const match = BIENS.find(b => b.id === pathId);
       if (match) {
         const withPrice = { ...match, prix: loadPriceOverrides()[match.id] ?? match.prix };
@@ -2565,6 +3242,10 @@ export default function PublicSite() {
       }
     }
   }, []);
+
+  const path = window.location.pathname;
+  if (path === "/merci") return <MerciPage />;
+  if (path === "/devis") return <DevisPage />;
 
   const lieux = [
     { key: "all", label: "Tous" },
@@ -2718,6 +3399,9 @@ export default function PublicSite() {
           ))}
         </div>
       </div>
+
+      {/* ── FAQ + GUIDE ── */}
+      <FaqSection />
 
       {/* ── FOOTER + CONTACT ── */}
       <FooterSection />
