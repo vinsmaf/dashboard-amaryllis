@@ -3255,7 +3255,17 @@ function loadDailyPrices() {
   } catch { return SEED_DAILY_PRICES; }
 }
 function saveDailyPrices(data) {
-  localStorage.setItem("amaryllis_daily_prices_v2", JSON.stringify(data));
+  // Ne sauvegarder que les prix qui diffèrent du SEED — évite d'écraser le SEED lors d'une mise à jour
+  const overrides = {};
+  for (const bid of Object.keys(SEED_DAILY_PRICES)) {
+    overrides[bid] = {};
+    for (const [date, price] of Object.entries(data[bid] || {})) {
+      if (SEED_DAILY_PRICES[bid]?.[date] !== price) {
+        overrides[bid][date] = price;
+      }
+    }
+  }
+  localStorage.setItem("amaryllis_daily_prices_v2", JSON.stringify(overrides));
   window.dispatchEvent(new Event("amaryllis_prices_updated"));
 }
 
