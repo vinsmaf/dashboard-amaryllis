@@ -3544,8 +3544,8 @@ function Tarifs() {
       <div style={{ background: "rgba(196,114,84,0.06)", border: "1px solid rgba(196,114,84,0.2)", borderRadius: 12, padding: "12px 18px", marginBottom: 20, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
         <span style={{ fontSize: 18 }}>🎁</span>
         <div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "#e2e8f0" }}>Remise automatique — séjour 7 nuits et plus</div>
-          <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>−5% appliqué automatiquement sur le site public lors du paiement.</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#e2e8f0" }}>Remises automatiques sur le site direct</div>
+          <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>7+ nuits : −5% · 14+ nuits : −10% · 28+ nuits : −15%</div>
         </div>
       </div>
 

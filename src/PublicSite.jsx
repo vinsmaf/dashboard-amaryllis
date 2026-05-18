@@ -1,7 +1,18 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
 // ── Brand palette (from logos.jsx) ──────────────────────────────
-const WEEKLY_DISCOUNT = 0.05; // -5% à partir de 7 nuits
+// Remises par durée de séjour (appliquées sur le sous-total)
+function getDiscount(nights) {
+  if (nights >= 28) return 0.15; // -15% pour 28+ nuits
+  if (nights >= 14) return 0.10; // -10% pour 14+ nuits
+  if (nights >= 7)  return 0.05; // -5%  pour 7+  nuits
+  return 0;
+}
+function discountLabel(nights) {
+  if (nights >= 28) return "mensuel";
+  if (nights >= 14) return "2 semaines";
+  return "semaine";
+}
 
 const MIN_NIGHTS = {
   amaryllis:  4,
@@ -917,10 +928,10 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
   const nights = checkin && checkout ? dateDiff(checkin, checkout) : 0;
 
   const dailyPricesMap = (() => {
-    try { return JSON.parse(localStorage.getItem("amaryllis_daily_prices") || "{}")[bien.id] || {}; } catch { return {}; }
+    try { return JSON.parse(localStorage.getItem("amaryllis_daily_prices_v2") || "{}")[bien.id] || {}; } catch { return {}; }
   })();
 
-  // Total basé sur les prix journaliers réels, avec remise semaine -5%
+  // Total basé sur les prix journaliers réels
   const rawTotal = (() => {
     if (!checkin || !checkout || nights === 0) return 0;
     let sum = 0;
@@ -931,8 +942,9 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
     }
     return sum;
   })();
-  const hasWeeklyDiscount = nights >= 7;
-  const discountAmount = hasWeeklyDiscount ? Math.round(rawTotal * WEEKLY_DISCOUNT) : 0;
+  const discountRate   = getDiscount(nights);
+  const hasDiscount    = discountRate > 0;
+  const discountAmount = hasDiscount ? Math.round(rawTotal * discountRate) : 0;
   const fraisMenage = FRAIS_MENAGE[bien.id] ?? 0;
   const total = rawTotal - discountAmount + fraisMenage;
   const minNights = MIN_NIGHTS[bien.id] ?? 1;
@@ -1151,9 +1163,9 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
                       {fraisMenage > 0 && (
                         <div style={{ fontSize: 13, color: MUTED, marginTop: 2 }}>🧹 Frais de ménage {fraisMenage}€</div>
                       )}
-                      {hasWeeklyDiscount && (
+                      {hasDiscount && (
                         <div style={{ fontSize: 13, color: CORAL, marginTop: 2, fontWeight: 600 }}>
-                          🎁 Réduction semaine −{discountAmount}€ ({Math.round(WEEKLY_DISCOUNT * 100)}%)
+                          🎁 Réduction {discountLabel(nights)} −{discountAmount}€ (−{Math.round(discountRate * 100)}%)
                         </div>
                       )}
                       <div style={{ fontSize: 26, fontWeight: 800, color: NAVY, marginTop: 6 }}>{total}€</div>
@@ -1201,7 +1213,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
               <span>{formatDateLong(checkin)} → {formatDateLong(checkout)}</span>
               <span style={{ fontWeight: 700, color: NAVY }}>
                 {nights} nuits · {total}€
-                {hasWeeklyDiscount && <span style={{ fontSize: 11, color: CORAL, marginLeft: 6 }}>−{Math.round(WEEKLY_DISCOUNT * 100)}% semaine</span>}
+                {hasDiscount && <span style={{ fontSize: 11, color: CORAL, marginLeft: 6 }}>−{Math.round(discountRate * 100)}% {discountLabel(nights)}</span>}
               </span>
             </div>
 
