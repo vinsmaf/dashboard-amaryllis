@@ -98,6 +98,20 @@ const GUIDE_EN = {
   url: `${BASE}/villa-rental-martinique`,
 };
 
+const GUIDE_ACTIVITES = {
+  title: "10 activités incontournables à Sainte-Luce, Martinique",
+  desc: "Notre sélection des 10 meilleures activités à ne pas manquer à Sainte-Luce : plage, mangrove, excursion en bateau, plongée au Rocher du Diamant, musée de la Canne, Fort-de-France. Guide rédigé par vos hôtes.",
+  image: `${BASE}/photos/amaryllis/01.webp`,
+  url: `${BASE}/activites-sainte-luce`,
+};
+
+const GUIDE_PROXIMITE = {
+  title: "Activités à proximité de la Villa Amaryllis — Sainte-Luce, Martinique",
+  desc: "Les meilleures adresses à moins de 15 minutes de la résidence Amaryllis : Anse Corps de Garde, Forêt de Montravail, distillerie Trois-Rivières, nager avec les tortues. Guide rédigé par vos hôtes.",
+  image: `${BASE}/photos/amaryllis/01.webp`,
+  url: `${BASE}/guide-proximite`,
+};
+
 function escHtml(s) {
   return String(s)
     .replace(/&/g, "&amp;")
@@ -261,6 +275,50 @@ export async function onRequest(context) {
       "url": g.url,
       "image": g.image,
       "inLanguage": "en",
+      "author": { "@id": `${BASE}/#organization` },
+      "publisher": { "@id": `${BASE}/#organization` },
+    });
+    const meta = buildMeta(g.title, g.desc, g.url, g.image);
+    const resp = await context.next();
+    const html = await resp.text();
+    return new Response(injectMeta(html, meta, ldJson), {
+      status: 200,
+      headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=3600" },
+    });
+  }
+
+  // Handle /activites-sainte-luce
+  if (slug === "activites-sainte-luce") {
+    const g = GUIDE_ACTIVITES;
+    const ldJson = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": g.title,
+      "description": g.desc,
+      "url": g.url,
+      "image": g.image,
+      "author": { "@id": `${BASE}/#organization` },
+      "publisher": { "@id": `${BASE}/#organization` },
+    });
+    const meta = buildMeta(g.title, g.desc, g.url, g.image);
+    const resp = await context.next();
+    const html = await resp.text();
+    return new Response(injectMeta(html, meta, ldJson), {
+      status: 200,
+      headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=3600" },
+    });
+  }
+
+  // Handle /guide-proximite
+  if (slug === "guide-proximite") {
+    const g = GUIDE_PROXIMITE;
+    const ldJson = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": g.title,
+      "description": g.desc,
+      "url": g.url,
+      "image": g.image,
       "author": { "@id": `${BASE}/#organization` },
       "publisher": { "@id": `${BASE}/#organization` },
     });

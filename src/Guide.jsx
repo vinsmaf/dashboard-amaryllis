@@ -249,16 +249,26 @@ export default function Guide() {
           </div>
 
           {/* Guides voisins */}
-          <div style={{ display: "flex", gap: 16, flexWrap: "wrap", justifyContent: "center", marginBottom: 64 }}>
-            <a href="/guide-le-diamant" style={{ flex: 1, minWidth: 220, background: CREAM, border: `1px solid ${SAND}`, borderRadius: 12, padding: "24px 28px", textDecoration: "none", textAlign: "center" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 64 }}>
+            <a href="/guide-le-diamant" style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 12, padding: "24px 28px", textDecoration: "none", textAlign: "center" }}>
               <div style={{ fontSize: 28, marginBottom: 8 }}>🗿</div>
               <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 14, color: NAVY, marginBottom: 6 }}>Guide Le Diamant</div>
-              <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 15, color: TEXT, opacity: 0.8 }}>Rocher mythique, plongée, plages · 15 min →</div>
+              <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 15, color: TEXT, opacity: 0.8 }}>Rocher mythique, plongée, plages · 15 min</div>
             </a>
-            <a href="/guide-sainte-anne" style={{ flex: 1, minWidth: 220, background: CREAM, border: `1px solid ${SAND}`, borderRadius: 12, padding: "24px 28px", textDecoration: "none", textAlign: "center" }}>
+            <a href="/guide-sainte-anne" style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 12, padding: "24px 28px", textDecoration: "none", textAlign: "center" }}>
               <div style={{ fontSize: 28, marginBottom: 8 }}>🏖️</div>
               <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 14, color: NAVY, marginBottom: 6 }}>Guide Sainte-Anne</div>
-              <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 15, color: TEXT, opacity: 0.8 }}>Les Salines, kitesurf, catamaran · 20 min →</div>
+              <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 15, color: TEXT, opacity: 0.8 }}>Les Salines, kitesurf, catamaran · 20 min</div>
+            </a>
+            <a href="/activites-sainte-luce" style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 12, padding: "24px 28px", textDecoration: "none", textAlign: "center" }}>
+              <div style={{ fontSize: 28, marginBottom: 8 }}>🌟</div>
+              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 14, color: NAVY, marginBottom: 6 }}>10 activités incontournables</div>
+              <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 15, color: TEXT, opacity: 0.8 }}>Sélection de vos hôtes</div>
+            </a>
+            <a href="/guide-proximite" style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 12, padding: "24px 28px", textDecoration: "none", textAlign: "center" }}>
+              <div style={{ fontSize: 28, marginBottom: 8 }}>📍</div>
+              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 14, color: NAVY, marginBottom: 6 }}>À proximité de la villa</div>
+              <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 15, color: TEXT, opacity: 0.8 }}>Plages, forêt, distillerie · &lt; 15 min</div>
             </a>
           </div>
 

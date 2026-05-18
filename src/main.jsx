@@ -9,12 +9,14 @@ const Landing    = lazy(() => import('./Landing.jsx'))
 const Guide      = lazy(() => import('./Guide.jsx'))
 const GuideDiamant   = lazy(() => import('./GuideDiamant.jsx'))
 const GuideSainteAnne = lazy(() => import('./GuideSainteAnne.jsx'))
-const GuideEn    = lazy(() => import('./GuideEn.jsx'))
+const GuideEn        = lazy(() => import('./GuideEn.jsx'))
+const GuideActivites = lazy(() => import('./GuideActivites.jsx'))
+const GuideProximite = lazy(() => import('./GuideProximite.jsx'))
 
 const path = window.location.pathname;
 
 const BIEN_IDS = ["amaryllis", "zandoli", "iguana", "geko", "mabouya", "schoelcher", "nogent"];
-const KNOWN = ["/", "/merci", "/devis", "/guide", "/guide-le-diamant", "/guide-sainte-anne", "/villa-rental-martinique"];
+const KNOWN = ["/", "/merci", "/devis", "/guide", "/guide-le-diamant", "/guide-sainte-anne", "/villa-rental-martinique", "/activites-sainte-luce", "/guide-proximite"];
 const isKnown = KNOWN.includes(path)
   || path.startsWith("/admin")
   || path.startsWith("/landing")
@@ -38,6 +40,10 @@ if (path.startsWith("/admin")) {
   Component = GuideSainteAnne;
 } else if (path === "/villa-rental-martinique") {
   Component = GuideEn;
+} else if (path === "/activites-sainte-luce") {
+  Component = GuideActivites;
+} else if (path === "/guide-proximite") {
+  Component = GuideProximite;
 } else {
   Component = PublicSite;
 }
