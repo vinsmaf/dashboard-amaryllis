@@ -928,9 +928,20 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
 
   const nights = checkin && checkout ? dateDiff(checkin, checkout) : 0;
 
-  const dailyPricesMap = (() => {
+  const [dailyPricesMap, setDailyPricesMap] = useState(() => {
     try { return loadDailyPrices()[bien.id] || {}; } catch { return {}; }
-  })();
+  });
+  useEffect(() => {
+    const refresh = () => {
+      try { setDailyPricesMap(loadDailyPrices()[bien.id] || {}); } catch {}
+    };
+    window.addEventListener("amaryllis_prices_updated", refresh); // même onglet
+    window.addEventListener("storage", refresh);                   // autres onglets
+    return () => {
+      window.removeEventListener("amaryllis_prices_updated", refresh);
+      window.removeEventListener("storage", refresh);
+    };
+  }, [bien.id]);
 
   // Total basé sur les prix journaliers réels
   const rawTotal = (() => {
@@ -1593,10 +1604,21 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
   const [calOffset, setCalOffset] = useState(0);
   const photos = bien.photos || [];
 
-  // Prix journaliers depuis localStorage (même source que la modale)
-  const dailyPricesMap = (() => {
+  // Prix journaliers — réactifs (se mettent à jour si l'admin sync les prix)
+  const [dailyPricesMap, setDailyPricesMap] = useState(() => {
     try { return loadDailyPrices()[bien.id] || {}; } catch { return {}; }
-  })();
+  });
+  useEffect(() => {
+    const refresh = () => {
+      try { setDailyPricesMap(loadDailyPrices()[bien.id] || {}); } catch {}
+    };
+    window.addEventListener("amaryllis_prices_updated", refresh); // même onglet
+    window.addEventListener("storage", refresh);                   // autres onglets
+    return () => {
+      window.removeEventListener("amaryllis_prices_updated", refresh);
+      window.removeEventListener("storage", refresh);
+    };
+  }, [bien.id]);
 
   useEffect(() => {
     const fn = () => setIsMobile(window.innerWidth < 768);

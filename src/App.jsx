@@ -3471,11 +3471,13 @@ function Tarifs() {
   }
 
   function syncToSite() {
-    // Merge SEED + overrides manuels → écriture complète dans localStorage
-    const merged = loadDailyPrices(); // déjà seed + overrides
-    saveDailyPrices(merged);
+    // saveDailyPrices est déjà appelé à chaque modification — pas besoin de re-sauvegarder.
+    // On écrit un timestamp dans localStorage pour déclencher l'event "storage"
+    // dans les autres onglets (cross-tab communication).
+    localStorage.setItem("amaryllis_sync_ts", Date.now().toString());
     // Aussi sync les prix de base
     localStorage.setItem("amaryllis_prices", JSON.stringify(prices));
+    // Même onglet (l'event "storage" ne se déclenche pas dans l'onglet émetteur)
     window.dispatchEvent(new Event("amaryllis_prices_updated"));
     setSynced(true);
     setTimeout(() => setSynced(false), 3000);
