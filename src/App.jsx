@@ -707,6 +707,9 @@ function Cockpit({ biens, n, mob, onUpdateRevenu }) {
 const EMPTY_FORM = { bienId: "amaryllis", voyageur: "", canal: "booking", checkin: "", checkout: "", checkin_time: "", checkout_time: "", nb_guests: "", montant: "", notes: "", menage: "", reservation_code: "", phone: "", assigne: "" };
 
 function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalUrlsBooking, saveUrlsBooking, scriptUrl, onApplyRevenusFromResas, pushReservationsToScript }) {
+  const reservationsRef = useRef(reservations);
+  useEffect(() => { reservationsRef.current = reservations; }, [reservations]);
+
   const [showUrls, setShowUrls] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [showForm, setShowForm] = useState(false);
@@ -3991,7 +3994,6 @@ export default function App() {
   const [reservations, setReservations] = useState(() => {
     try { const r = localStorage.getItem("reservations_v2"); return r ? JSON.parse(r) : []; } catch { return []; }
   });
-  const reservationsRef = useRef(reservations);
   const [icalUrls, setIcalUrls] = useState(() => {
     try { const u = localStorage.getItem("ical_urls"); return u ? { ...ICAL_DEFAULTS, ...JSON.parse(u) } : { ...ICAL_DEFAULTS }; } catch { return { ...ICAL_DEFAULTS }; }
   });
@@ -4007,7 +4009,6 @@ export default function App() {
   }, []);
 
   const saveRes = useCallback((list) => {
-    reservationsRef.current = list;
     setReservations(list);
     try { localStorage.setItem("reservations_v2", JSON.stringify(list)); } catch (e) {}
   }, []);
