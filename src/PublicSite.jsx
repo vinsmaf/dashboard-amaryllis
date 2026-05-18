@@ -1592,6 +1592,11 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
   const [calOffset, setCalOffset] = useState(0);
   const photos = bien.photos || [];
 
+  // Prix journaliers depuis localStorage (même source que la modale)
+  const dailyPricesMap = (() => {
+    try { return JSON.parse(localStorage.getItem("amaryllis_daily_prices_v2") || "{}")[bien.id] || {}; } catch { return {}; }
+  })();
+
   useEffect(() => {
     const fn = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener("resize", fn, { passive: true });
@@ -1907,97 +1912,141 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                   <div style={{ display: "flex", alignItems: "center", gap: 10, color: MUTED, fontSize: 13, fontFamily: "'Jost', sans-serif", fontWeight: 300 }}>
                     <OrganicLoader size={18} color={MUTED} /> Chargement du calendrier…
                   </div>
-                ) : (
-                  <>
-                    {(() => {
-                      const minNights = MIN_NIGHTS[bien.id] ?? 1;
-                      const calNights = calCheckin && calCheckout ? dateDiff(calCheckin, calCheckout) : 0;
-                      const calBelowMin = calNights > 0 && calNights < minNights;
-                      return (
-                        <>
-                          <div style={{ fontSize: 12, color: MUTED, fontFamily: "'Jost', sans-serif", marginBottom: 12 }}>
-                            {!calCheckin ? `Cliquez sur une date d'arrivée${minNights > 1 ? ` (séjour min. ${minNights} nuits)` : ""}` : !calCheckout ? "Cliquez sur une date de départ" : `${formatDateShort(calCheckin)} → ${formatDateShort(calCheckout)}`}
-                          </div>
-                          {/* Navigation mois */}
-                          {(() => {
-                            const now = new Date();
-                            const baseY = now.getFullYear(), baseM = now.getMonth();
-                            const y1 = baseY + Math.floor((baseM + calOffset) / 12);
-                            const m1 = (baseM + calOffset) % 12;
-                            const y2 = baseY + Math.floor((baseM + calOffset + 1) / 12);
-                            const m2 = (baseM + calOffset + 1) % 12;
-                            const handleSelect = (ds) => {
-                              if (!calCheckin || (calCheckin && calCheckout)) {
-                                setCalCheckin(ds); setCalCheckout(null);
-                              } else if (ds <= calCheckin) {
-                                setCalCheckin(ds); setCalCheckout(null);
-                              } else {
-                                const n = Math.round((new Date(ds) - new Date(calCheckin)) / 86400000);
-                                if (n < minNights) return;
-                                let cur = addDays(calCheckin, 1);
-                                let blocked = false;
-                                while (cur < ds) { if (blockedDates.includes(cur)) { blocked = true; break; } cur = addDays(cur, 1); }
-                                setCalCheckout(blocked ? null : ds);
-                                if (blocked) setCalCheckin(ds);
-                              }
-                              setCalHovered(null);
-                            };
-                            return (
-                              <>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                                  <button onClick={() => setCalOffset(o => Math.max(0, o - 1))} style={{ ...iconBtn, opacity: calOffset > 0 ? 1 : 0.2 }}>‹</button>
-                                  <button onClick={() => setCalOffset(o => o + 1)} style={iconBtn}>›</button>
-                                </div>
-                                <div style={{ display: "flex", gap: isMobile ? 0 : 24, flexDirection: isMobile ? "column" : "row", flexWrap: "wrap" }}>
-                                  {[{ year: y1, month: m1 }, { year: y2, month: m2 }].map(({ year, month }) => (
-                                    <CalendarMonth
-                                      key={`${year}-${month}`}
-                                      year={year} month={month}
-                                      checkin={calCheckin} checkout={calCheckout} hovered={calHovered}
-                                      blockedDates={blockedDates}
-                                      minNights={minNights}
-                                      onSelect={handleSelect}
-                                      onHover={setCalHovered}
-                                    />
-                                  ))}
-                                </div>
-                              </>
-                            );
-                          })()}
-                          <div style={{ marginTop: 12, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-                            <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-                              <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: MUTED, fontFamily: "'Jost', sans-serif" }}>
-                                <span style={{ width: 12, height: 12, background: CREAM, border: `1px solid ${SAND}`, borderRadius: 3, display: "inline-block" }} /> Disponible
-                              </span>
-                              <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: MUTED, fontFamily: "'Jost', sans-serif" }}>
-                                <span style={{ width: 12, height: 12, background: "#D4C8BC", borderRadius: 3, display: "inline-block" }} /> Indisponible
-                              </span>
+                ) : (() => {
+                    const minNights = MIN_NIGHTS[bien.id] ?? 1;
+                    const calNights = calCheckin && calCheckout ? dateDiff(calCheckin, calCheckout) : 0;
+                    const calBelowMin = calNights > 0 && calNights < minNights;
+
+                    // Calcul du prix (identique à la modale)
+                    const calRawTotal = (() => {
+                      if (calNights === 0) return 0;
+                      let sum = 0, cur = calCheckin;
+                      for (let i = 0; i < calNights; i++) {
+                        sum += dailyPricesMap[cur] ?? bien.prix;
+                        cur = addDays(cur, 1);
+                      }
+                      return sum;
+                    })();
+                    const calDiscountRate   = getDiscount(calNights);
+                    const calDiscountAmount = calDiscountRate > 0 ? Math.round(calRawTotal * calDiscountRate) : 0;
+                    const calFrais  = FRAIS_MENAGE[bien.id] ?? 0;
+                    const calTotal  = calRawTotal - calDiscountAmount + calFrais;
+
+                    // Navigation mois
+                    const now = new Date();
+                    const baseY = now.getFullYear(), baseM = now.getMonth();
+                    const y1 = baseY + Math.floor((baseM + calOffset) / 12);
+                    const m1 = (baseM + calOffset) % 12;
+                    const y2 = baseY + Math.floor((baseM + calOffset + 1) / 12);
+                    const m2 = (baseM + calOffset + 1) % 12;
+
+                    const handleSelect = (ds) => {
+                      if (!calCheckin || (calCheckin && calCheckout)) {
+                        setCalCheckin(ds); setCalCheckout(null);
+                      } else if (ds <= calCheckin) {
+                        setCalCheckin(ds); setCalCheckout(null);
+                      } else {
+                        const n = Math.round((new Date(ds) - new Date(calCheckin)) / 86400000);
+                        if (n < minNights) return;
+                        let cur = addDays(calCheckin, 1);
+                        let blocked = false;
+                        while (cur < ds) { if (blockedDates.includes(cur)) { blocked = true; break; } cur = addDays(cur, 1); }
+                        setCalCheckout(blocked ? null : ds);
+                        if (blocked) setCalCheckin(ds);
+                      }
+                      setCalHovered(null);
+                    };
+
+                    return (
+                      <>
+                        {/* Instruction / résumé dates */}
+                        <div style={{ fontSize: 12, color: MUTED, fontFamily: "'Jost', sans-serif", marginBottom: 12 }}>
+                          {!calCheckin
+                            ? `Cliquez sur une date d'arrivée${minNights > 1 ? ` (séjour min. ${minNights} nuits)` : ""}`
+                            : !calCheckout
+                              ? "Cliquez sur une date de départ"
+                              : `${formatDateShort(calCheckin)} → ${formatDateShort(calCheckout)}`}
+                        </div>
+
+                        {/* Navigation ‹ › */}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                          <button onClick={() => setCalOffset(o => Math.max(0, o - 1))} style={{ ...iconBtn, opacity: calOffset > 0 ? 1 : 0.2 }}>‹</button>
+                          <button onClick={() => setCalOffset(o => o + 1)} style={iconBtn}>›</button>
+                        </div>
+
+                        {/* Calendriers */}
+                        <div style={{ display: "flex", gap: isMobile ? 0 : 24, flexDirection: isMobile ? "column" : "row", flexWrap: "wrap" }}>
+                          {[{ year: y1, month: m1 }, { year: y2, month: m2 }].map(({ year, month }) => (
+                            <CalendarMonth
+                              key={`${year}-${month}`}
+                              year={year} month={month}
+                              checkin={calCheckin} checkout={calCheckout} hovered={calHovered}
+                              blockedDates={blockedDates}
+                              minNights={minNights}
+                              dailyPricesMap={dailyPricesMap}
+                              basePrice={bien.prix}
+                              onSelect={handleSelect}
+                              onHover={setCalHovered}
+                            />
+                          ))}
+                        </div>
+
+                        {/* Légende */}
+                        <div style={{ marginTop: 12, display: "flex", gap: 16, flexWrap: "wrap" }}>
+                          <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: MUTED, fontFamily: "'Jost', sans-serif" }}>
+                            <span style={{ width: 12, height: 12, background: CREAM, border: `1px solid ${SAND}`, borderRadius: 3, display: "inline-block" }} /> Disponible
+                          </span>
+                          <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: MUTED, fontFamily: "'Jost', sans-serif" }}>
+                            <span style={{ width: 12, height: 12, background: "#D4C8BC", borderRadius: 3, display: "inline-block" }} /> Indisponible
+                          </span>
+                        </div>
+
+                        {/* Résumé prix (affiché quand les deux dates sont sélectionnées) */}
+                        {calCheckin && calCheckout && !calBelowMin && (
+                          <div style={{ marginTop: 18, background: CREAM, border: `1px solid ${SAND}`, borderRadius: 12, padding: "16px 20px" }}>
+                            <div style={{ fontSize: 13, color: MUTED, marginBottom: 6 }}>
+                              {calNights} nuit{calNights > 1 ? "s" : ""} — sous-total {calRawTotal}€
                             </div>
-                            {calCheckin && calCheckout && (
-                              <button
-                                onClick={() => onBook(bien, calCheckin, calCheckout)}
-                                style={{
-                                  background: CORAL, border: "none", color: "#fff",
-                                  borderRadius: 8, padding: "10px 22px",
-                                  fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12,
-                                  letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer",
-                                  boxShadow: "0 4px 14px rgba(196,114,84,0.3)",
-                                }}
-                              >
-                                Réserver ces dates →
-                              </button>
+                            {calFrais > 0 && (
+                              <div style={{ fontSize: 13, color: MUTED, marginBottom: 4 }}>🧹 Frais de ménage {calFrais}€</div>
                             )}
-                            {calBelowMin && (
-                              <div style={{ fontSize: 12, color: "#ef4444", fontWeight: 600 }}>
-                                ⚠ Séjour minimum : {minNights} nuits pour ce logement
+                            {calDiscountRate > 0 && (
+                              <div style={{ fontSize: 13, color: CORAL, fontWeight: 600, marginBottom: 4 }}>
+                                🎁 Réduction {discountLabel(calNights)} −{calDiscountAmount}€ (−{Math.round(calDiscountRate * 100)}%)
                               </div>
                             )}
+                            <div style={{ fontSize: 22, fontWeight: 800, color: NAVY, marginTop: 8, marginBottom: 14 }}>
+                              Total : {calTotal}€
+                            </div>
+                            <button
+                              onClick={() => onBook(bien, calCheckin, calCheckout)}
+                              style={{
+                                width: "100%", background: CORAL, border: "none", color: "#fff",
+                                borderRadius: 8, padding: "12px 0",
+                                fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 13,
+                                letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer",
+                                boxShadow: "0 4px 14px rgba(196,114,84,0.3)",
+                              }}
+                            >
+                              Réserver ces dates →
+                            </button>
+                            <button
+                              onClick={() => { setCalCheckin(null); setCalCheckout(null); }}
+                              style={{ display: "block", margin: "10px auto 0", fontSize: 11, color: MUTED, background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
+                            >
+                              Effacer les dates
+                            </button>
                           </div>
-                        </>
-                      );
-                    })()}
-                  </>
-                )}
+                        )}
+
+                        {calBelowMin && (
+                          <div style={{ marginTop: 12, fontSize: 12, color: "#ef4444", fontWeight: 600 }}>
+                            ⚠ Séjour minimum : {minNights} nuits pour ce logement
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
               </div>
             </>
           )}
