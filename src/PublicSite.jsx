@@ -1025,6 +1025,12 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
     if (error) { setPayError(error.message); setPaying(false); return; }
     // No redirect needed (non-3DS card) → proceed to deposit step or finish
     if (paymentIntent?.status === "succeeded") {
+      if (window.gtag) window.gtag("event", "purchase", {
+        transaction_id: paymentIntent.id,
+        currency: "EUR",
+        value: total,
+        items: [{ item_id: bien.id, item_name: bien.nom, price: bien.prix, quantity: nights }],
+      });
       if (depositAmt && sessionStorage.getItem("deposit_cs")) {
         await goToDeposit();
       } else {
@@ -1155,7 +1161,14 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
                   )}
                 </div>
                 <button
-                  onClick={() => !belowMin && setStep(2)}
+                  onClick={() => {
+                    if (belowMin) return;
+                    if (window.gtag) window.gtag("event", "begin_checkout", {
+                      currency: "EUR", value: total,
+                      items: [{ item_id: bien.id, item_name: bien.nom, price: bien.prix, quantity: nights }],
+                    });
+                    setStep(2);
+                  }}
                   style={{
                     ...btnPrimary,
                     background: belowMin ? SAND : CORAL,
@@ -2555,6 +2568,7 @@ function FooterSection() {
           </p>
 
           <a href={`https://wa.me/${WA_NUMBER}?text=${waMsg}`} target="_blank" rel="noopener noreferrer"
+            onClick={() => { if (window.gtag) window.gtag("event", "generate_lead", { method: "whatsapp" }); }}
             style={{ display: "inline-flex", alignItems: "center", gap: 10, background: "#25D366", color: "#fff", borderRadius: 6, padding: "12px 22px", marginBottom: 12, textDecoration: "none", fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase", transition: "opacity 0.2s", width: "100%", maxWidth: 260, boxSizing: "border-box" }}
             onMouseEnter={e => { e.currentTarget.style.opacity = "0.85"; }}
             onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
@@ -2711,6 +2725,18 @@ function MerciPage() {
       sessionStorage.removeItem("deposit_checkout");
     }
   }, [depositDone]);
+
+  // Purchase event pour les paiements 3DS redirigés vers /merci
+  useEffect(() => {
+    if (paymentRedirected && !depositDone && window.gtag) {
+      const pi = params.get("payment_intent");
+      window.gtag("event", "purchase", {
+        transaction_id: pi,
+        currency: "EUR",
+        value: 0, // montant inconnu après redirect, GA4 compte quand même la conversion
+      });
+    }
+  }, []);
 
   if (showDepositForm) {
     return (
