@@ -15,14 +15,17 @@ const sections = [
     contenu: [
       {
         nom: "Histoire et légende",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/Diamond_Rock.jpg/800px-Diamond_Rock.jpg",
         texte: "Ce rocher volcanique de 175 mètres surgit de la mer à 1 km des côtes, face au village du Diamant. Les Anglais l'occupèrent en 1804, le baptisant HMS Diamond Rock — seul rocher jamais enrôlé comme navire de guerre dans la Royal Navy. Battu par les Français en 1805, il reste l'un des sites historiques les plus fascinants des Antilles.",
       },
       {
         nom: "Plongée et snorkeling",
+        img: null,
         texte: "Le Rocher du Diamant est classé parmi les meilleurs spots de plongée des Caraïbes. Tombants à 40 m, grottes sous-marines, tortues, barracudas, raies pastenagues et coraux en parfait état. Plusieurs clubs de plongée organisent des sorties depuis les plages du Diamant.",
       },
       {
         nom: "Vue depuis la terre",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/Rocher_du_Diamant_%28Le_Diamant%2C_Martinique%29_-_01.jpg/800px-Rocher_du_Diamant_%28Le_Diamant%2C_Martinique%29_-_01.jpg",
         texte: "La plage du Diamant offre l'un des panoramas les plus emblématiques de Martinique — 3 km de sable doré face au rocher. Magnifique au coucher du soleil, quand le ciel vire à l'orange et que la silhouette du rocher se découpe sur la mer.",
       },
     ],
@@ -33,14 +36,17 @@ const sections = [
     contenu: [
       {
         nom: "Grande Plage du Diamant",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Rocher_du_Diamant_%28Le_Diamant%2C_Martinique%29_-_03.jpg/800px-Rocher_du_Diamant_%28Le_Diamant%2C_Martinique%29_-_03.jpg",
         texte: "La plus longue plage de Martinique (3 km). Sable fin, eau turquoise, vue directe sur le rocher. Attention aux courants — baignade déconseillée par fort vent, la plage est exposée à la houle. Idéale pour les promenades au lever du soleil.",
       },
       {
         nom: "Anse Cafard",
+        img: null,
         texte: "Au nord du bourg, cette anse calme abrite le Mémorial de l'Anse Cafard — 20 statues de pierre blanche commémorant le naufrage d'un navire négrier en 1830. Site solennel et poignant, vue panoramique sur le rocher et les îlets.",
       },
       {
         nom: "Petite Anse",
+        img: null,
         texte: "Plage plus protégée, idéale pour la baignade et le snorkeling. Accès par un sentier depuis le bourg. Moins fréquentée, eau claire, fond rocheux avec poissons tropicaux.",
       },
     ],
@@ -51,14 +57,17 @@ const sections = [
     contenu: [
       {
         nom: "Le Belem",
+        img: null,
         texte: "Restaurant les pieds dans le sable face au rocher. Poissons et fruits de mer frais du jour, ti-punch artisanal, ambiance créole décontractée. Coucher de soleil exceptionnel depuis la terrasse.",
       },
       {
         nom: "La Plage du Diamant",
+        img: null,
         texte: "Snack-restaurant sur la grande plage, idéal pour un déjeuner créole entre deux baignades. Accras, boudin, colombo, poisson grillé — cuisine simple et généreuse.",
       },
       {
         nom: "Marché local",
+        img: null,
         texte: "Tous les samedis matin, le marché du bourg propose légumes créoles, épices, rhums artisanaux et pâtisseries locales. Une immersion dans la vie martiniquaise authentique.",
       },
     ],
@@ -69,10 +78,12 @@ const sections = [
     contenu: [
       {
         nom: "Distance et itinéraire",
+        img: null,
         texte: "Le Diamant est à 15 minutes en voiture depuis Sainte-Luce via la N6. Traversée de Rivière-Pilote, puis descente vers la côte caraïbe. Route pittoresque à travers les champs de canne à sucre.",
       },
       {
         nom: "Combiner avec d'autres sites",
+        img: null,
         texte: "En une journée depuis Sainte-Luce : matin plongée au Rocher du Diamant, déjeuner sur la plage, après-midi Sainte-Anne ou Grande Anse d'Arlet. Circuit idéal pour explorer le sud de l'île.",
       },
     ],
@@ -101,14 +112,23 @@ export default function GuideDiamant() {
           </div>
         </header>
 
-        <div style={{ background: NAVY, padding: "64px 24px 48px", textAlign: "center" }}>
-          <p style={{ color: CORAL, fontSize: 12, letterSpacing: "0.3em", textTransform: "uppercase", marginBottom: 16 }}>Guide de voyage</p>
-          <h1 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: "clamp(28px, 5vw, 52px)", letterSpacing: "0.05em", color: IVORY, textTransform: "uppercase", margin: "0 0 20px" }}>
-            Le Diamant, Martinique
-          </h1>
-          <p style={{ color: "rgba(250,245,233,0.7)", fontSize: 17, maxWidth: 600, margin: "0 auto", lineHeight: 1.7, fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
-            Rocher mythique, plongée exceptionnelle et plages sauvages — à 15 minutes de nos villas à Sainte-Luce.
-          </p>
+        {/* Hero avec photo */}
+        <div style={{ position: "relative", height: 300, overflow: "hidden" }}>
+          <img
+            src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/Diamond_Rock.jpg/1200px-Diamond_Rock.jpg"
+            alt="Rocher du Diamant, Martinique"
+            style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }}
+          />
+          <div style={{ position: "absolute", inset: 0, background: "rgba(14,59,58,0.65)" }} />
+          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 24px", textAlign: "center" }}>
+            <p style={{ color: CORAL, fontSize: 12, letterSpacing: "0.3em", textTransform: "uppercase", marginBottom: 14 }}>Guide de voyage · Résidence Amaryllis</p>
+            <h1 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: "clamp(24px, 5vw, 50px)", letterSpacing: "0.05em", color: IVORY, textTransform: "uppercase", margin: "0 0 14px", lineHeight: 1.15 }}>
+              Le Diamant,<br />Martinique
+            </h1>
+            <p style={{ color: "rgba(250,245,233,0.8)", fontSize: 15, maxWidth: 520, margin: 0, lineHeight: 1.65, fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
+              Rocher mythique, plongée exceptionnelle et plages sauvages — à 15 minutes de nos villas à Sainte-Luce.
+            </p>
+          </div>
         </div>
 
         <div style={{ maxWidth: 860, margin: "0 auto", padding: "48px 24px 80px" }}>
@@ -119,9 +139,19 @@ export default function GuideDiamant() {
               </h2>
               <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
                 {section.contenu.map((item, ii) => (
-                  <div key={ii} style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 10, padding: "24px 28px" }}>
-                    <h3 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 15, color: NAVY, margin: "0 0 10px", letterSpacing: "0.04em" }}>{item.nom}</h3>
-                    <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 17, lineHeight: 1.75, color: TEXT, margin: 0 }}>{item.texte}</p>
+                  <div key={ii} style={{ background: "#fff", border: `1px solid ${SAND}`, borderRadius: 12, overflow: "hidden" }}>
+                    {item.img && (
+                      <img
+                        src={item.img}
+                        alt={item.nom}
+                        style={{ width: "100%", height: 220, objectFit: "cover", display: "block" }}
+                        loading="lazy"
+                      />
+                    )}
+                    <div style={{ padding: "24px 28px" }}>
+                      <h3 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 15, color: NAVY, margin: "0 0 10px", letterSpacing: "0.04em" }}>{item.nom}</h3>
+                      <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 17, lineHeight: 1.75, color: TEXT, margin: 0 }}>{item.texte}</p>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -144,7 +174,11 @@ export default function GuideDiamant() {
         </div>
 
         <div style={{ background: NAVY, padding: "24px", textAlign: "center" }}>
-          <p style={{ color: "rgba(250,245,233,0.4)", fontSize: 13, margin: 0 }}>© {new Date().getFullYear()} Amaryllis Locations · <a href="/" style={{ color: "rgba(250,245,233,0.4)", textDecoration: "none" }}>villamaryllis.com</a></p>
+          <p style={{ color: "rgba(250,245,233,0.4)", fontSize: 13, margin: 0 }}>
+            © {new Date().getFullYear()} Amaryllis Locations · <a href="/" style={{ color: "rgba(250,245,233,0.4)", textDecoration: "none" }}>villamaryllis.com</a>
+            {" · "}
+            <span style={{ fontSize: 11, opacity: 0.7 }}>Photos © Wikimedia Commons (CC BY-SA)</span>
+          </p>
         </div>
       </div>
     </>
