@@ -3243,10 +3243,12 @@ const BIEN_LABELS  = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", iguana:
 const BIEN_IDS = Object.keys(DEFAULT_PRIX);
 
 const MOIS_CAL = ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Jul", "Aoû", "Sep", "Oct", "Nov", "Déc"];
-const CAL_YEAR = 2026;
+// Logements actifs sur le site direct (hors Iguana et Nogent)
+const CAL_BIEN_IDS = ["amaryllis", "zandoli", "geko", "mabouya", "schoelcher"];
 
 function CalendrierTarifs() {
   const [bienId, setBienId] = useState("amaryllis");
+  const [calYear, setCalYear] = useState(2026);
   const [daily, setDaily] = useState(loadDailyPrices);
   const [editing, setEditing] = useState(null); // { date, val }
   const [rangeStart, setRangeStart] = useState(null);
@@ -3312,15 +3314,26 @@ function CalendrierTarifs() {
 
   return (
     <div>
-      {/* Bien tabs */}
-      <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
-        {BIEN_IDS.map(id => (
-          <button key={id} onClick={() => setBienId(id)} style={{
-            padding: "6px 14px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 12, fontWeight: bienId === id ? 700 : 400,
-            background: bienId === id ? "#0ea5e9" : "rgba(255,255,255,0.06)",
-            color: bienId === id ? "#fff" : "#64748b",
-          }}>{BIEN_LABELS[id]}</button>
-        ))}
+      {/* Bien tabs + navigation année */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {CAL_BIEN_IDS.map(id => (
+            <button key={id} onClick={() => setBienId(id)} style={{
+              padding: "6px 14px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 12, fontWeight: bienId === id ? 700 : 400,
+              background: bienId === id ? "#0ea5e9" : "rgba(255,255,255,0.06)",
+              color: bienId === id ? "#fff" : "#64748b",
+            }}>{BIEN_LABELS[id]}</button>
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: 6 }}>
+          {[2026, 2027].map(y => (
+            <button key={y} onClick={() => setCalYear(y)} style={{
+              padding: "6px 16px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 12, fontWeight: calYear === y ? 700 : 400,
+              background: calYear === y ? "#6366f1" : "rgba(255,255,255,0.06)",
+              color: calYear === y ? "#fff" : "#64748b",
+            }}>{y}</button>
+          ))}
+        </div>
       </div>
 
       {/* Range tool */}
@@ -3339,24 +3352,24 @@ function CalendrierTarifs() {
         {rangeSaved && <span style={{ fontSize: 11, color: "#10b981" }}>✓ Plage enregistrée</span>}
       </div>
 
-      {/* 12 months grid */}
+      {/* Grille des mois : 12 pour 2026, Jan→Jul pour 2027 */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 14 }}>
-        {Array.from({ length: 12 }, (_, m) => {
-          const daysInM = new Date(CAL_YEAR, m + 1, 0).getDate();
-          const firstDow = (new Date(CAL_YEAR, m, 1).getDay() + 6) % 7; // Mon=0
+        {Array.from({ length: calYear === 2026 ? 12 : 7 }, (_, m) => {
+          const daysInM = new Date(calYear, m + 1, 0).getDate();
+          const firstDow = (new Date(calYear, m, 1).getDay() + 6) % 7; // Mon=0
           const cells = [];
           for (let i = 0; i < firstDow; i++) cells.push(null);
           for (let d = 1; d <= daysInM; d++) cells.push(d);
           return (
             <div key={m} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "12px 10px" }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "#94a3b8", marginBottom: 8, textAlign: "center" }}>{MOIS_CAL[m]}</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#94a3b8", marginBottom: 8, textAlign: "center" }}>{MOIS_CAL[m]} {calYear}</div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
                 {["L","M","M","J","V","S","D"].map((d, i) => (
                   <div key={i} style={{ fontSize: 8, color: "#334155", textAlign: "center", paddingBottom: 3 }}>{d}</div>
                 ))}
                 {cells.map((d, i) => {
                   if (!d) return <div key={i} />;
-                  const date = `${CAL_YEAR}-${String(m + 1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+                  const date = `${calYear}-${String(m + 1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
                   const price = getPrice(date);
                   const isEditing = editing?.date === date;
                   return (
@@ -3523,7 +3536,7 @@ function Tarifs() {
       </div>
 
       {/* ── Calendrier des prix (toujours visible) ── */}
-      <div style={{ fontSize: 14, fontWeight: 700, color: "#e2e8f0", marginBottom: 16 }}>Calendrier des prix 2026</div>
+      <div style={{ fontSize: 14, fontWeight: 700, color: "#e2e8f0", marginBottom: 16 }}>Calendrier des prix</div>
       <CalendrierTarifs />
     </div>
   );
