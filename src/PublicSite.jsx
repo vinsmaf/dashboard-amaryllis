@@ -899,10 +899,10 @@ function Beds24Modal({ bien, onClose }) {
 }
 
 // ── Booking Modal ────────────────────────────────────────────────
-function BookingModal({ bien, blockedDates, loadingAvail, onClose }) {
+function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialCheckin = null, initialCheckout = null }) {
   const [step, setStep] = useState(1);
-  const [checkin, setCheckin] = useState(null);
-  const [checkout, setCheckout] = useState(null);
+  const [checkin, setCheckin] = useState(initialCheckin);
+  const [checkout, setCheckout] = useState(initialCheckout);
   const [form, setForm] = useState({ prenom: "", nom: "", email: "", tel: "", message: "" });
   const [stripe, setStripe] = useState(null);
   const [elements, setElements] = useState(null);
@@ -1561,6 +1561,9 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [showFull, setShowFull] = useState(false);
+  const [calCheckin, setCalCheckin] = useState(null);
+  const [calCheckout, setCalCheckout] = useState(null);
+  const [calHovered, setCalHovered] = useState(null);
   const photos = bien.photos || [];
 
   useEffect(() => {
@@ -1880,6 +1883,9 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                   </div>
                 ) : (
                   <>
+                    <div style={{ fontSize: 12, color: MUTED, fontFamily: "'Jost', sans-serif", marginBottom: 12 }}>
+                      {!calCheckin ? "Cliquez sur une date d'arrivée" : !calCheckout ? "Cliquez sur une date de départ" : `${formatDateShort(calCheckin)} → ${formatDateShort(calCheckout)}`}
+                    </div>
                     <div style={{ display: "flex", gap: isMobile ? 0 : 24, flexDirection: isMobile ? "column" : "row", flexWrap: "wrap" }}>
                       {(() => {
                         const now = new Date();
@@ -1890,21 +1896,50 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                           <CalendarMonth
                             key={`${year}-${month}`}
                             year={year} month={month}
-                            checkin={null} checkout={null} hovered={null}
+                            checkin={calCheckin} checkout={calCheckout} hovered={calHovered}
                             blockedDates={blockedDates}
-                            onSelect={() => {}} onHover={() => {}}
-                            readOnly
+                            onSelect={(ds) => {
+                              if (!calCheckin || (calCheckin && calCheckout)) {
+                                setCalCheckin(ds); setCalCheckout(null);
+                              } else if (ds <= calCheckin) {
+                                setCalCheckin(ds); setCalCheckout(null);
+                              } else {
+                                let cur = addDays(calCheckin, 1);
+                                let blocked = false;
+                                while (cur < ds) { if (blockedDates.includes(cur)) { blocked = true; break; } cur = addDays(cur, 1); }
+                                setCalCheckout(blocked ? null : ds);
+                                if (blocked) setCalCheckin(ds);
+                              }
+                              setCalHovered(null);
+                            }}
+                            onHover={setCalHovered}
                           />
                         ));
                       })()}
                     </div>
-                    <div style={{ marginTop: 12, display: "flex", gap: 16, flexWrap: "wrap" }}>
-                      <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: MUTED, fontFamily: "'Jost', sans-serif" }}>
-                        <span style={{ width: 12, height: 12, background: CREAM, border: `1px solid ${SAND}`, borderRadius: 3, display: "inline-block" }} /> Disponible
-                      </span>
-                      <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: MUTED, fontFamily: "'Jost', sans-serif" }}>
-                        <span style={{ width: 12, height: 12, background: "#D4C8BC", borderRadius: 3, display: "inline-block" }} /> Indisponible
-                      </span>
+                    <div style={{ marginTop: 12, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+                      <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                        <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: MUTED, fontFamily: "'Jost', sans-serif" }}>
+                          <span style={{ width: 12, height: 12, background: CREAM, border: `1px solid ${SAND}`, borderRadius: 3, display: "inline-block" }} /> Disponible
+                        </span>
+                        <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: MUTED, fontFamily: "'Jost', sans-serif" }}>
+                          <span style={{ width: 12, height: 12, background: "#D4C8BC", borderRadius: 3, display: "inline-block" }} /> Indisponible
+                        </span>
+                      </div>
+                      {calCheckin && calCheckout && (
+                        <button
+                          onClick={() => onBook(bien, calCheckin, calCheckout)}
+                          style={{
+                            background: CORAL, border: "none", color: "#fff",
+                            borderRadius: 8, padding: "10px 22px",
+                            fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12,
+                            letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer",
+                            boxShadow: "0 4px 14px rgba(196,114,84,0.3)",
+                          }}
+                        >
+                          Réserver ces dates →
+                        </button>
+                      )}
                     </div>
                   </>
                 )}
@@ -3093,6 +3128,7 @@ function DevisPage() {
 // ── Main ─────────────────────────────────────────────────────────
 export default function PublicSite() {
   const [selectedBien, setSelectedBien] = useState(null);
+  const [bookingInitialDates, setBookingInitialDates] = useState({ checkin: null, checkout: null });
   const [beds24Bien, setBeds24Bien] = useState(null);
   const [detailBien, setDetailBien] = useState(null);
   const [filterLieu, setFilterLieu] = useState("all");
@@ -3212,7 +3248,7 @@ export default function PublicSite() {
     }
   }
 
-  async function openBien(bien) {
+  async function openBien(bien, initialCheckin = null, initialCheckout = null) {
     if (BOOKING_DISABLED.has(bien.id)) return;
     if (bien.beds24Url) {
       openDetail(null);
@@ -3220,6 +3256,7 @@ export default function PublicSite() {
       return;
     }
     openDetail(null);
+    setBookingInitialDates({ checkin: initialCheckin, checkout: initialCheckout });
     setSelectedBien(bien);
     await fetchAvailability(bien.id);
   }
@@ -3418,7 +3455,7 @@ export default function PublicSite() {
 
       {/* ── BOOKING MODAL ── */}
       {selectedBien && (
-        <BookingModal bien={selectedBien} blockedDates={blockedDates} loadingAvail={loadingAvail} onClose={() => setSelectedBien(null)} />
+        <BookingModal bien={selectedBien} blockedDates={blockedDates} loadingAvail={loadingAvail} onClose={() => { setSelectedBien(null); setBookingInitialDates({ checkin: null, checkout: null }); }} initialCheckin={bookingInitialDates.checkin} initialCheckout={bookingInitialDates.checkout} />
       )}
 
     </div>
