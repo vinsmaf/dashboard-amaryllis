@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { loadDailyPrices } from "./seedPrices.js";
 
 // ── Brand palette (from logos.jsx) ──────────────────────────────
 // Remises par durée de séjour (appliquées sur le sous-total)
@@ -928,7 +929,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
   const nights = checkin && checkout ? dateDiff(checkin, checkout) : 0;
 
   const dailyPricesMap = (() => {
-    try { return JSON.parse(localStorage.getItem("amaryllis_daily_prices_v2") || "{}")[bien.id] || {}; } catch { return {}; }
+    try { return loadDailyPrices()[bien.id] || {}; } catch { return {}; }
   })();
 
   // Total basé sur les prix journaliers réels
@@ -1594,7 +1595,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
 
   // Prix journaliers depuis localStorage (même source que la modale)
   const dailyPricesMap = (() => {
-    try { return JSON.parse(localStorage.getItem("amaryllis_daily_prices_v2") || "{}")[bien.id] || {}; } catch { return {}; }
+    try { return loadDailyPrices()[bien.id] || {}; } catch { return {}; }
   })();
 
   useEffect(() => {
