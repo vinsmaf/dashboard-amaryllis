@@ -3251,6 +3251,13 @@ function CalendrierTarifs() {
   const [calYear, setCalYear] = useState(2026);
   const [daily, setDaily] = useState(loadDailyPrices);
   const [editing, setEditing] = useState(null); // { date, val }
+
+  // Rafraîchir si un autre onglet admin modifie les prix
+  useEffect(() => {
+    const refresh = () => setDaily(loadDailyPrices());
+    window.addEventListener("storage", refresh);
+    return () => window.removeEventListener("storage", refresh);
+  }, []);
   const [rangeStart, setRangeStart] = useState(null);
   const [rangeSaved, setRangeSaved] = useState(false);
   const [rangePrice, setRangePrice] = useState("");
@@ -3345,7 +3352,7 @@ function CalendrierTarifs() {
           <>
             <input type="number" placeholder="Prix €" value={rangePrice} onChange={e => setRangePrice(e.target.value)}
               style={{ width: 80, padding: "5px 8px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.1)", background: "#0f172a", color: "#e2e8f0", fontSize: 12, outline: "none" }} />
-            <button onClick={applyRange} style={{ padding: "5px 12px", borderRadius: 7, border: "none", background: "#0ea5e9", color: "#fff", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>Appliquer la plage</button>
+            <button onClick={applyRange} disabled={!editing} style={{ padding: "5px 12px", borderRadius: 7, border: "none", background: editing ? "#0ea5e9" : "#334155", color: editing ? "#fff" : "#64748b", fontSize: 11, fontWeight: 600, cursor: editing ? "pointer" : "not-allowed" }} title={!editing ? "Cliquez d'abord une date de fin" : ""}>Appliquer la plage</button>
             <button onClick={() => setRangeStart(null)} style={{ padding: "5px 10px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "#64748b", fontSize: 11, cursor: "pointer" }}>Annuler</button>
           </>
         )}

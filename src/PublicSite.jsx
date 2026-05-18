@@ -753,7 +753,7 @@ function DateRangePicker({ checkin, checkout, blockedDates = [], onChange, daily
         <div style={{ fontSize: 13, color: MUTED }}>
           {!checkin ? "Choisir la date d'arrivée" : !checkout ? "Choisir la date de départ" : `${formatDateShort(checkin)} → ${formatDateShort(checkout)}`}
         </div>
-        <button onClick={() => setOffset(o => o + 1)} style={iconBtn}>›</button>
+        <button onClick={() => setOffset(o => Math.min(o + 1, 20))} style={iconBtn}>›</button>
       </div>
       <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
         <CalendarMonth year={y1} month={m1} checkin={checkin} checkout={checkout} hovered={hovered} blockedDates={blockedDates} onSelect={handleSelect} onHover={setHovered} dailyPricesMap={dailyPricesMap} basePrice={basePrice} minNights={minNights} />
@@ -900,8 +900,8 @@ function Beds24Modal({ bien, onClose }) {
           <iframe
             src={bien.beds24Url}
             width="100%"
-            height="2000"
-            style={{ border: "none", display: "block" }}
+            height="100%"
+            style={{ border: "none", display: "block", minHeight: "600px" }}
             title="Réservation Beds24"
           />
         </div>
@@ -1994,7 +1994,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                         {/* Navigation ‹ › */}
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                           <button onClick={() => setCalOffset(o => Math.max(0, o - 1))} style={{ ...iconBtn, opacity: calOffset > 0 ? 1 : 0.2 }}>‹</button>
-                          <button onClick={() => setCalOffset(o => o + 1)} style={iconBtn}>›</button>
+                          <button onClick={() => setCalOffset(o => Math.min(o + 1, 20))} style={iconBtn}>›</button>
                         </div>
 
                         {/* Calendriers */}
@@ -3326,11 +3326,15 @@ export default function PublicSite() {
   const [priceOverrides, setPriceOverrides] = useState(loadPriceOverrides);
   const [curtainDone, setCurtainDone] = useState(false);
 
-  // Listen for admin price updates in same tab
+  // Listen for admin price updates — même onglet ET autres onglets (cross-tab)
   useEffect(() => {
     const fn = () => setPriceOverrides(loadPriceOverrides());
-    window.addEventListener("amaryllis_prices_updated", fn);
-    return () => window.removeEventListener("amaryllis_prices_updated", fn);
+    window.addEventListener("amaryllis_prices_updated", fn); // même onglet
+    window.addEventListener("storage", fn);                   // autres onglets
+    return () => {
+      window.removeEventListener("amaryllis_prices_updated", fn);
+      window.removeEventListener("storage", fn);
+    };
   }, []);
 
   // Biens with live price overrides from admin
@@ -3466,6 +3470,18 @@ export default function PublicSite() {
         if (!BOOKING_DISABLED.has(match.id) && !match.beds24Url) fetchAvailability(match.id);
       }
     }
+  }, []);
+
+  // Back button — fermer la fiche / modale quand l'utilisateur appuie sur Retour
+  useEffect(() => {
+    const onPop = () => {
+      setDetailBien(null);
+      setSelectedBien(null);
+      setBookingInitialDates({ checkin: null, checkout: null });
+      setBlockedDates([]);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
   }, []);
 
   const path = window.location.pathname;
