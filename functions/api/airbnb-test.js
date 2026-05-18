@@ -14,26 +14,23 @@ const AIRBNB_APP_ID = "d306zoyjsyarp7ifhu67rjxn52tv0t3v";
 const AIRBNB_API    = "https://api.airbnb.com";
 
 async function getToken(email, password) {
-  const res = await fetch(`${AIRBNB_API}/v1/authorize`, {
+  const res = await fetch(`${AIRBNB_API}/v2/logins`, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
+      "Content-Type": "application/json; charset=UTF-8",
       "User-Agent": "Airbnb/19.50.1 iPhone/17.0",
       "X-Airbnb-API-Key": AIRBNB_APP_ID,
+      "Accept": "application/json",
     },
-    body: JSON.stringify({
-      email,
-      password,
-      application_id: AIRBNB_APP_ID,
-    }),
+    body: JSON.stringify({ email, password }),
   });
   const raw = await res.text();
   let data;
   try { data = JSON.parse(raw); } catch { data = {}; }
-  if (!res.ok || !data.access_token) {
+  if (!res.ok || !data.login?.id) {
     throw new Error(`HTTP ${res.status} — ${JSON.stringify(data)}`);
   }
-  return data.access_token;
+  return data.login.id; // access token
 }
 
 async function getListingPrices(token, listingId) {
