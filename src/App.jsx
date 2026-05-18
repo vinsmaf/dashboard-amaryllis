@@ -3245,7 +3245,7 @@ const SEED_DAILY_PRICES = {"amaryllis":{"2026-01-01":510,"2026-01-02":450,"2026-
 
 function loadDailyPrices() {
   try {
-    const manual = JSON.parse(localStorage.getItem("amaryllis_daily_prices") || "{}");
+    const manual = JSON.parse(localStorage.getItem("amaryllis_daily_prices_v2") || "{}");
     // Merger: seed de base + overrides manuels par-dessus
     const merged = {};
     for (const bid of Object.keys(SEED_DAILY_PRICES)) {
@@ -3255,7 +3255,7 @@ function loadDailyPrices() {
   } catch { return SEED_DAILY_PRICES; }
 }
 function saveDailyPrices(data) {
-  localStorage.setItem("amaryllis_daily_prices", JSON.stringify(data));
+  localStorage.setItem("amaryllis_daily_prices_v2", JSON.stringify(data));
   window.dispatchEvent(new Event("amaryllis_prices_updated"));
 }
 
