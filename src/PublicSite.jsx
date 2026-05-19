@@ -4329,9 +4329,17 @@ function MapSection({ biens, onDetail }) {
       });
       instanceRef.current = map;
 
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      // Satellite ESRI
+      L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+        attribution: "Tiles © Esri",
         maxZoom: 19,
+      }).addTo(map);
+      // Labels CartoDB par-dessus
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png", {
+        attribution: '© <a href="https://carto.com/">CARTO</a>',
+        subdomains: "abcd",
+        maxZoom: 19,
+        pane: "shadowPane",
       }).addTo(map);
 
       activeBiens.forEach(b => {
