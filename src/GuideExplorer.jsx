@@ -368,7 +368,7 @@ const DESTINATIONS = [
     tags: ["Snorkeling", "Famille", "Plages"],
     must: "Le spot ultime pour nager avec les tortues",
     href: "/guide-arlet",
-    photo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2d/Grande_Anse_d%27_Arlet_%2847001622912%29.jpg/960px-Grande_Anse_d%27_Arlet_%2847001622912%29.jpg",
+    photo: "/photos/arlet-tortue.webp",
     isMust: true,
   },
   {
