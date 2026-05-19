@@ -4479,6 +4479,9 @@ export default function PublicSite() {
     catch { return new Set(); }
   });
   const [scrolled, setScrolled] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    try { return localStorage.getItem("amaryllis_dark") === "1"; } catch { return false; }
+  });
   const [blockedDates, setBlockedDates] = useState([]);
   const [loadingAvail, setLoadingAvail] = useState(false);
   const [priceOverrides, setPriceOverrides] = useState(loadPriceOverrides);
@@ -4668,6 +4671,11 @@ export default function PublicSite() {
     return () => window.removeEventListener("scroll", fn);
   }, []);
 
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", darkMode);
+    try { localStorage.setItem("amaryllis_dark", darkMode ? "1" : "0"); } catch {}
+  }, [darkMode]);
+
   // Exit intent — desktop : souris sort par le haut après 10s sur la page
   useEffect(() => {
     let ready = false;
@@ -4774,6 +4782,21 @@ export default function PublicSite() {
               <a href="/explorer" style={{ fontSize: 12, fontFamily: "'Jost', sans-serif", fontWeight: 300, color: "rgba(250,245,233,0.6)", textDecoration: "none", letterSpacing: "0.08em", whiteSpace: "nowrap", display: window.innerWidth < 768 ? "none" : "block" }}>
                 🗺️ Carte
               </a>
+              {/* Toggle mode sombre */}
+              <button
+                onClick={() => setDarkMode(d => !d)}
+                title={darkMode ? "Mode clair" : "Mode sombre"}
+                style={{
+                  background: "none", border: "none", cursor: "pointer",
+                  fontSize: 18, lineHeight: 1, padding: "4px 2px",
+                  opacity: 0.7, transition: "opacity 0.2s",
+                  color: "inherit",
+                }}
+                onMouseEnter={e => e.currentTarget.style.opacity = "1"}
+                onMouseLeave={e => e.currentTarget.style.opacity = "0.7"}
+              >
+                {darkMode ? "☀️" : "🌙"}
+              </button>
               <HoverContact direction="down" />
             </div>
           </div>
