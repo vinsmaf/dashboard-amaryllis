@@ -1698,7 +1698,7 @@ function FormField({ label, value, onChange, type = "text", multiline, style }) 
 }
 
 // ── Property Card ────────────────────────────────────────────────
-function BienCard({ bien, onDetail, onBook, isFavorite = false, onToggleFavorite, isCompared = false, onToggleCompare }) {
+function BienCard({ bien, onDetail, onBook, isFavorite = false, onToggleFavorite, isCompared = false, onToggleCompare, compareDisabled = false }) {
   const [photoIdx, setPhotoIdx] = useState(0);
   const [hovered, setHovered] = useState(false);
   const photos = bien.photos || [];
@@ -1939,18 +1939,21 @@ function BienCard({ bien, onDetail, onBook, isFavorite = false, onToggleFavorite
         <div style={{ display: "flex", gap: 8 }}>
           {onToggleCompare && (
             <button
-              onClick={e => onToggleCompare(e, bien.id)}
-              title={isCompared ? "Retirer de la comparaison" : "Comparer"}
+              onClick={e => { if (!compareDisabled) onToggleCompare(e, bien.id); else e.stopPropagation(); }}
+              title={isCompared ? "Retirer de la comparaison" : compareDisabled ? "Maximum 3 logements atteint" : "Ajouter à la comparaison"}
+              disabled={compareDisabled && !isCompared}
               style={{
                 flexShrink: 0, width: 36, height: 36,
                 background: isCompared ? NAVY : "transparent",
-                border: `1px solid ${isCompared ? NAVY : SAND}`,
-                borderRadius: 6, cursor: "pointer",
+                border: `1px solid ${isCompared ? NAVY : compareDisabled ? "#e0d4bc55" : SAND}`,
+                borderRadius: 6, cursor: compareDisabled && !isCompared ? "not-allowed" : "pointer",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 15, transition: "all 0.15s", color: isCompared ? "#fff" : MUTED,
+                fontSize: 15, transition: "all 0.15s",
+                color: isCompared ? "#fff" : compareDisabled ? "#c4b89a66" : MUTED,
+                opacity: compareDisabled && !isCompared ? 0.45 : 1,
               }}
-              onMouseEnter={e => { if (!isCompared) e.currentTarget.style.borderColor = NAVY; }}
-              onMouseLeave={e => { if (!isCompared) e.currentTarget.style.borderColor = SAND; }}
+              onMouseEnter={e => { if (!isCompared && !compareDisabled) e.currentTarget.style.borderColor = NAVY; }}
+              onMouseLeave={e => { if (!isCompared && !compareDisabled) e.currentTarget.style.borderColor = SAND; }}
             >
               {isCompared ? "✓" : "⊕"}
             </button>
@@ -4966,7 +4969,7 @@ export default function PublicSite() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: 24 }}>
           {filtered.map((b, i) => (
             <Reveal key={b.id} delay={Math.min(i * 0.08, 0.4)}>
-              <BienCard bien={b} onDetail={openDetail} onBook={openBien} isFavorite={favorites.has(b.id)} onToggleFavorite={toggleFavorite} isCompared={compareIds.has(b.id)} onToggleCompare={toggleCompare} />
+              <BienCard bien={b} onDetail={openDetail} onBook={openBien} isFavorite={favorites.has(b.id)} onToggleFavorite={toggleFavorite} isCompared={compareIds.has(b.id)} onToggleCompare={toggleCompare} compareDisabled={compareIds.size >= 3 && !compareIds.has(b.id)} />
             </Reveal>
           ))}
         </div>
@@ -5028,8 +5031,14 @@ export default function PublicSite() {
             })}
           </div>
           <div style={{ display:"flex", gap:10, alignItems:"center" }}>
-            {compareIds.size < 3 && (
-              <span style={{ fontSize:12, color:"rgba(255,255,255,0.5)" }}>Ajoutez jusqu'à 3 logements</span>
+            {compareIds.size < 3 ? (
+              <span style={{ fontSize:12, color:"rgba(255,255,255,0.5)" }}>
+                Ajoutez jusqu'à {3 - compareIds.size} logement{3 - compareIds.size > 1 ? "s" : ""} de plus
+              </span>
+            ) : (
+              <span style={{ fontSize:12, color: CORAL, fontWeight: 600 }}>
+                ✓ Maximum atteint — 3/3
+              </span>
             )}
             <button
               onClick={() => setShowComparator(true)}
