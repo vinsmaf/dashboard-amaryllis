@@ -45,6 +45,8 @@ const MAX_PETS       = 2;
 
 // Biens désactivés à la réservation (ex: longue durée)
 const BOOKING_DISABLED = new Set(["iguana"]);
+// Biens sans affichage de prix (location longue durée)
+const PRICE_HIDDEN = new Set(["iguana"]);
 
 const IVORY  = "#faf5e9";  // paper — main background
 const CREAM  = "#f4ecdc";  // cream — card/modal background
@@ -1849,7 +1851,16 @@ function BienCard({ bien, onDetail, onBook, isFavorite = false, onToggleFavorite
         )}
 
         {/* Price badge */}
-        {(() => {
+        {PRICE_HIDDEN.has(bien.id) ? (
+          <div style={{
+            position: "absolute", bottom: 14, right: 14, zIndex: 2,
+            background: "rgba(14,59,58,0.85)", backdropFilter: "blur(10px)",
+            border: "1px solid rgba(255,255,255,0.1)",
+            borderRadius: 10, padding: "8px 14px", textAlign: "right",
+          }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#fff", letterSpacing: "0.04em", fontFamily: "'Jost', sans-serif" }}>Location longue durée</div>
+          </div>
+        ) : (() => {
           const airbnbNuit = Math.round(minPrix * 1.15);
           const economieSemaine = Math.round(minPrix * 7 * 0.15 / 5) * 5; // arrondi à 5€
           return (
@@ -2602,10 +2613,16 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
           <div style={{ height: 1, background: SAND, margin: "36px 0 28px" }} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
             <div>
-              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 10, color: MUTED, letterSpacing: "0.2em", textTransform: "uppercase", marginBottom: 4 }}>À partir de</div>
-              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 36, color: NAVY, lineHeight: 1 }}>
-                {bien.prix}€<span style={{ fontSize: 14, fontWeight: 300, color: MUTED, marginLeft: 6 }}>/ nuit</span>
-              </div>
+              {PRICE_HIDDEN.has(bien.id) ? (
+                <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 16, color: NAVY }}>Location longue durée</div>
+              ) : (
+                <>
+                  <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 10, color: MUTED, letterSpacing: "0.2em", textTransform: "uppercase", marginBottom: 4 }}>À partir de</div>
+                  <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 36, color: NAVY, lineHeight: 1 }}>
+                    {bien.prix}€<span style={{ fontSize: 14, fontWeight: 300, color: MUTED, marginLeft: 6 }}>/ nuit</span>
+                  </div>
+                </>
+              )}
               {bien.rating && (
                 <div style={{ color: MUTED, fontSize: 12, marginTop: 4, fontFamily: "'Jost', sans-serif", fontWeight: 300 }}>★ {bien.rating} · {bien.reviews} avis Airbnb</div>
               )}
@@ -2779,7 +2796,7 @@ function ComparatorModal({ biens, onClose }) {
     { label: "Logement",    render: b => <span style={{ fontWeight:600, color:NAVY, fontSize:13 }}>{b.nom}</span> },
     { label: "Lieu",        render: b => <span style={{ fontSize:12, color:MUTED }}>{b.lieu}</span> },
     { label: "Note",        render: b => <span style={{ fontSize:13, color:GOLD, fontWeight:600 }}>★ {b.rating} <span style={{ color:MUTED, fontWeight:400, fontSize:11 }}>({b.reviews} avis)</span></span> },
-    { label: "Prix / nuit", render: b => <span style={{ fontSize:15, fontWeight:700, color:CORAL }}>{b.prix}€</span> },
+    { label: "Prix / nuit", render: b => PRICE_HIDDEN.has(b.id) ? <span style={{ fontSize:12, color:MUTED, fontStyle:"italic" }}>Longue durée</span> : <span style={{ fontSize:15, fontWeight:700, color:CORAL }}>{b.prix}€</span> },
     { label: "Capacité",    render: b => <span style={{ fontSize:13, color:TEXT }}>👥 {b.capacite} pers.</span> },
     { label: "Chambres",    render: b => <span style={{ fontSize:13, color:TEXT }}>🛏 {b.chambres} ch. · {b.sdb} SDB</span> },
     { label: "Frais ménage",render: b => <span style={{ fontSize:13, color:TEXT }}>{FRAIS_MENAGE[b.id] ? `${FRAIS_MENAGE[b.id]}€` : "Inclus"}</span> },
@@ -3188,9 +3205,13 @@ function QuickBook({ biens, onBook }) {
 
         {/* Price + rating */}
         <div style={{ display: "flex", gap: 16, alignItems: "center", flexShrink: 0 }}>
-          <span style={{ fontFamily: "'Jost', sans-serif", fontSize: 13, color: NAVY, fontWeight: 600 }}>
-            À partir de {selected?.prix}€<span style={{ fontWeight: 300, color: MUTED, fontSize: 11 }}> / nuit</span>
-          </span>
+          {selected && PRICE_HIDDEN.has(selected.id) ? (
+            <span style={{ fontFamily: "'Jost', sans-serif", fontSize: 13, color: MUTED, fontStyle: "italic" }}>Location longue durée</span>
+          ) : (
+            <span style={{ fontFamily: "'Jost', sans-serif", fontSize: 13, color: NAVY, fontWeight: 600 }}>
+              À partir de {selected?.prix}€<span style={{ fontWeight: 300, color: MUTED, fontSize: 11 }}> / nuit</span>
+            </span>
+          )}
           {selected?.rating && (
             <span style={{ fontFamily: "'Jost', sans-serif", fontSize: 12, color: MUTED }}>
               <span style={{ color: GOLD }}>★</span> {selected.rating} · {selected.reviews} avis
@@ -4330,7 +4351,7 @@ function MapSection({ biens, onDetail }) {
             <img src="${b.photos[0]}" style="width:100%;height:100px;object-fit:cover;border-radius:8px;display:block;margin-bottom:8px;" />
             <div style="font-weight:700;font-size:14px;color:#0e3b3a;margin-bottom:2px;">${b.nom}</div>
             <div style="font-size:11px;color:#7a6b5a;margin-bottom:6px;">${b.lieu}</div>
-            <div style="font-size:13px;color:#c47254;font-weight:700;margin-bottom:8px;">À partir de ${b.prix}€ / nuit</div>
+            <div style="font-size:13px;color:#c47254;font-weight:700;margin-bottom:8px;">${PRICE_HIDDEN.has(b.id) ? "Location longue durée" : `À partir de ${b.prix}€ / nuit`}</div>
             <button onclick="window.__mapOpenDetail('${b.id}')" style="
               width:100%;padding:8px;border:none;border-radius:7px;
               background:#0e3b3a;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">
@@ -4424,7 +4445,7 @@ function MapSection({ biens, onDetail }) {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: 13, color: NAVY, fontFamily: "'Jost', sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{b.nom}</div>
                   <div style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>{b.lieu}</div>
-                  <div style={{ fontSize: 12, color: CORAL, fontWeight: 700, marginTop: 2 }}>À partir de {b.prix}€ / nuit</div>
+                  <div style={{ fontSize: 12, color: CORAL, fontWeight: 700, marginTop: 2 }}>{PRICE_HIDDEN.has(b.id) ? "Location longue durée" : `À partir de ${b.prix}€ / nuit`}</div>
                 </div>
                 <span style={{ color: MUTED, fontSize: 16, flexShrink: 0 }}>›</span>
               </button>
