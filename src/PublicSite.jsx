@@ -3952,6 +3952,200 @@ function CookieBanner() {
   );
 }
 
+// ── Leaflet loader (CDN, pas de npm install) ──────────────────────────────────
+let leafletLoaded = false;
+let leafletLoadCallbacks = [];
+function loadLeaflet(cb) {
+  if (window.L) { cb(); return; }
+  if (leafletLoaded) { leafletLoadCallbacks.push(cb); return; }
+  leafletLoaded = true;
+  // CSS
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+  document.head.appendChild(link);
+  // JS
+  const script = document.createElement("script");
+  script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+  script.onload = () => {
+    leafletLoadCallbacks.forEach(fn => fn());
+    leafletLoadCallbacks = [];
+    cb();
+  };
+  document.head.appendChild(script);
+}
+
+function MapSection({ biens, onDetail }) {
+  const [zone, setZone] = useState("martinique");
+  const mapRef = useRef(null);
+  const instanceRef = useRef(null);
+  const markersRef = useRef([]);
+
+  const martiniqueBiens = biens.filter(b => b.lieu?.includes("Martinique"));
+  const idfBiens = biens.filter(b => !b.lieu?.includes("Martinique"));
+  const activeBiens = zone === "martinique" ? martiniqueBiens : idfBiens;
+
+  useEffect(() => {
+    if (!mapRef.current) return;
+    loadLeaflet(() => {
+      const L = window.L;
+      // Détruire la carte existante si zone change
+      if (instanceRef.current) {
+        instanceRef.current.remove();
+        instanceRef.current = null;
+        markersRef.current = [];
+      }
+      if (!mapRef.current) return;
+
+      const center = zone === "martinique"
+        ? [14.4730, -60.9195]
+        : [48.8374, 2.4836];
+      const zoom = zone === "martinique" ? 15 : 15;
+
+      const map = L.map(mapRef.current, {
+        center, zoom,
+        zoomControl: true,
+        scrollWheelZoom: false,
+      });
+      instanceRef.current = map;
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        maxZoom: 19,
+      }).addTo(map);
+
+      activeBiens.forEach(b => {
+        if (!b.coords) return;
+        const icon = L.divIcon({
+          className: "",
+          html: `<div style="
+            background:${b.couleur || CORAL};
+            color:#fff;
+            border:2.5px solid #fff;
+            border-radius:50% 50% 50% 0;
+            transform:rotate(-45deg);
+            width:34px;height:34px;
+            box-shadow:0 2px 8px rgba(0,0,0,0.3);
+            display:flex;align-items:center;justify-content:center;
+          ">
+            <span style="transform:rotate(45deg);font-size:14px;line-height:1">🏠</span>
+          </div>`,
+          iconSize: [34, 34],
+          iconAnchor: [17, 34],
+          popupAnchor: [0, -36],
+        });
+
+        const popup = L.popup({ maxWidth: 220, className: "amaryllis-popup" }).setContent(`
+          <div style="font-family:'Jost',system-ui,sans-serif;padding:4px 0;">
+            <img src="${b.photos[0]}" style="width:100%;height:100px;object-fit:cover;border-radius:8px;display:block;margin-bottom:8px;" />
+            <div style="font-weight:700;font-size:14px;color:#0e3b3a;margin-bottom:2px;">${b.nom}</div>
+            <div style="font-size:11px;color:#7a6b5a;margin-bottom:6px;">${b.lieu}</div>
+            <div style="font-size:13px;color:#c47254;font-weight:700;margin-bottom:8px;">À partir de ${b.prix}€ / nuit</div>
+            <button onclick="window.__mapOpenDetail('${b.id}')" style="
+              width:100%;padding:8px;border:none;border-radius:7px;
+              background:#0e3b3a;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">
+              Voir le logement →
+            </button>
+          </div>
+        `);
+
+        const marker = L.marker([b.coords.lat, b.coords.lng], { icon })
+          .bindPopup(popup)
+          .addTo(map);
+        markersRef.current.push(marker);
+      });
+
+      // Bridge pour les boutons dans les popups Leaflet
+      window.__mapOpenDetail = (id) => {
+        const b = biens.find(x => x.id === id);
+        if (b) onDetail(b);
+      };
+    });
+
+    return () => {
+      if (instanceRef.current) {
+        instanceRef.current.remove();
+        instanceRef.current = null;
+      }
+      delete window.__mapOpenDetail;
+    };
+  }, [zone, activeBiens.map(b => b.id).join(",")]);
+
+  // Ajoute le style popup Leaflet custom une seule fois
+  useEffect(() => {
+    if (document.getElementById("__leaflet_popup_style")) return;
+    const s = document.createElement("style");
+    s.id = "__leaflet_popup_style";
+    s.textContent = `.amaryllis-popup .leaflet-popup-content-wrapper { border-radius:12px; padding:0; overflow:hidden; box-shadow:0 8px 30px rgba(0,0,0,0.18); } .amaryllis-popup .leaflet-popup-content { margin:12px; width:196px !important; } .amaryllis-popup .leaflet-popup-tip { background:#fff; }`;
+    document.head.appendChild(s);
+  }, []);
+
+  return (
+    <section style={{ padding: "60px 0", background: IVORY }}>
+      <div style={{ maxWidth: 1160, margin: "0 auto", padding: "0 24px" }}>
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 28, flexWrap: "wrap", gap: 16 }}>
+          <div>
+            <div style={{ fontSize: 11, letterSpacing: "2px", textTransform: "uppercase", color: CORAL, fontFamily: "'Jost', sans-serif", fontWeight: 600, marginBottom: 6 }}>Nos adresses</div>
+            <h2 style={{ margin: 0, fontSize: "clamp(22px,4vw,32px)", color: NAVY, fontFamily: "'Jost', sans-serif", fontWeight: 600, letterSpacing: "-0.5px" }}>Où nous trouver</h2>
+          </div>
+          {/* Zone toggle */}
+          <div style={{ display: "flex", background: CREAM, border: `1px solid ${SAND}`, borderRadius: 10, overflow: "hidden" }}>
+            {[
+              { key: "martinique", label: "🌴 Martinique", count: martiniqueBiens.length },
+              { key: "idf", label: "🗼 Île-de-France", count: idfBiens.length },
+            ].map(({ key, label, count }) => (
+              <button key={key} onClick={() => setZone(key)}
+                style={{
+                  padding: "9px 18px", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600,
+                  fontFamily: "'Jost', sans-serif",
+                  background: zone === key ? NAVY : "transparent",
+                  color: zone === key ? "#fff" : MUTED,
+                  transition: "all 0.18s",
+                }}>
+                {label} <span style={{ fontSize: 11, opacity: 0.7 }}>({count})</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Layout : carte + liste logements */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 20, alignItems: "start" }}>
+          {/* Carte */}
+          <div style={{ borderRadius: 16, overflow: "hidden", border: `1px solid ${SAND}`, height: 480, boxShadow: "0 4px 20px rgba(0,0,0,0.07)" }}>
+            <div ref={mapRef} style={{ width: "100%", height: "100%" }} />
+          </div>
+
+          {/* Liste des logements de la zone */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ fontSize: 11, color: MUTED, fontWeight: 600, textTransform: "uppercase", letterSpacing: "1px", marginBottom: 4 }}>
+              {activeBiens.length} logement{activeBiens.length > 1 ? "s" : ""} dans cette zone
+            </div>
+            {activeBiens.map(b => (
+              <button key={b.id} onClick={() => onDetail(b)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 10, background: "#fff",
+                  border: `1px solid ${SAND}`, borderRadius: 10, padding: "10px 12px",
+                  cursor: "pointer", textAlign: "left", transition: "all 0.15s",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = NAVY; e.currentTarget.style.boxShadow = "0 2px 12px rgba(14,59,58,0.1)"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = SAND; e.currentTarget.style.boxShadow = "none"; }}>
+                <img src={b.photos[0]} alt={b.nom} style={{ width: 52, height: 52, borderRadius: 7, objectFit: "cover", flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 13, color: NAVY, fontFamily: "'Jost', sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{b.nom}</div>
+                  <div style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>{b.lieu}</div>
+                  <div style={{ fontSize: 12, color: CORAL, fontWeight: 700, marginTop: 2 }}>À partir de {b.prix}€ / nuit</div>
+                </div>
+                <span style={{ color: MUTED, fontSize: 16, flexShrink: 0 }}>›</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function PublicSite() {
   const [selectedBien, setSelectedBien] = useState(null);
   const [bookingInitialDates, setBookingInitialDates] = useState({ checkin: null, checkout: null });
@@ -4365,6 +4559,9 @@ export default function PublicSite() {
           ))}
         </div>
       </div>
+
+      {/* ── CARTE ── */}
+      <MapSection biens={biensList} onDetail={openDetail} />
 
       {/* ── FAQ + GUIDE ── */}
       <FaqSection />
