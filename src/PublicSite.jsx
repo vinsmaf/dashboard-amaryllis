@@ -42,6 +42,8 @@ const EXTRA_GUEST_RATE = { amaryllis: 50, zandoli: 30 }; // €/personne supplé
 // Animaux — forfait par séjour, max 2
 const PET_SUPPLEMENT = 40; // € / séjour (1 ou 2 animaux = même forfait)
 const MAX_PETS       = 2;
+// Biens où les animaux sont interdits (pas de sélecteur)
+const PETS_FORBIDDEN = new Set(["nogent"]);
 
 // Biens désactivés à la réservation (ex: longue durée)
 const BOOKING_DISABLED = new Set(["iguana"]);
@@ -241,7 +243,7 @@ const BIENS = [
     ],
     coords: { lat: 14.4725, lng: -60.9201 },
     mapsEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3862.822862640186!2d-60.92853662554015!3d14.49485608597908!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8c4021b73b656873%3A0xdb94b0a0ad33a741!2sresidence%20Amaryllis!5e0!3m2!1sfr!2sfr!4v1779046858310!5m2!1sfr!2sfr",
-    amenities: ["Piscine privée", "Vue mer", "Wifi Starlink", "Netflix/Disney+", "Lave-linge", "Jardin"],
+    amenities: ["Piscine privée", "Vue mer", "Wifi Starlink", "Netflix/Disney+", "Lave-linge", "Jardin", "Animaux OK"],
     avis: [
       { nom: "Lucie B.", pays: "🇫🇷", note: 5, texte: "Cocon parfait ! La mezzanine est charmante, la piscine délicieuse, et la vue sur la mer au réveil est inoubliable. Hôte très disponible.", date: "Avr. 2025" },
       { nom: "Thomas & Ana", pays: "🇩🇪", note: 5, texte: "Wunderbar! Tropical garden, private pool, sea view — everything we dreamed of. Very clean and well-equipped. We'll be back next winter.", date: "Janv. 2025" },
@@ -357,7 +359,7 @@ const BIENS = [
     ],
     coords: { lat: 14.4729, lng: -60.9194 },
     mapsEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3862.822862640186!2d-60.92853662554015!3d14.49485608597908!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8c4021b73b656873%3A0xdb94b0a0ad33a741!2sresidence%20Amaryllis!5e0!3m2!1sfr!2sfr!4v1779046858310!5m2!1sfr!2sfr",
-    amenities: ["Piscine privée", "Jardin tropical", "Climatisation", "Lave-linge", "TV", "Wifi Starlink"],
+    amenities: ["Piscine privée", "Jardin tropical", "Climatisation", "Wifi Starlink", "Lave-linge", "Animaux OK"],
     avis: [
       { nom: "Sandrine L.", pays: "🇫🇷", note: 5, texte: "Un vrai cocon dans un jardin tropical magnifique. La piscine est bien entretenue et la brise des alizés rend la clim presque superflue. On adore !", date: "Mai 2025" },
       { nom: "Marco F.", pays: "🇮🇹", note: 5, texte: "Piccolo paradiso caraibico! Il giardino tropicale è stupendo, la piscina fresca e pulita. Posizione tranquilla a pochi minuti dalla spiaggia. Torneremo!", date: "Avr. 2025" },
@@ -503,7 +505,7 @@ const BIENS = [
       ]},
     ],
     prix: 85,
-    capacite: 3,
+    capacite: 2,
     chambres: 1,
     lits: 1,
     sdb: "1",
@@ -1457,19 +1459,21 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
               </div>
             )}
 
-            {/* Sélecteur animaux */}
-            <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 12, background: CREAM, border: `1px solid ${SAND}`, borderRadius: 12, padding: "14px 18px" }}>
-              <span style={{ fontSize: 18 }}>🐾</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: NAVY, fontFamily: "'Jost', sans-serif" }}>Animaux</div>
-                <div style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>Max {MAX_PETS} · {PET_SUPPLEMENT}€ forfait/séjour si 1 ou 2 animaux</div>
+            {/* Sélecteur animaux — masqué si animaux interdits */}
+            {!PETS_FORBIDDEN.has(bien.id) && (
+              <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 12, background: CREAM, border: `1px solid ${SAND}`, borderRadius: 12, padding: "14px 18px" }}>
+                <span style={{ fontSize: 18 }}>🐾</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: NAVY, fontFamily: "'Jost', sans-serif" }}>Animaux</div>
+                  <div style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>Max {MAX_PETS} · {PET_SUPPLEMENT}€ forfait/séjour si 1 ou 2 animaux</div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <button onClick={() => setNbPets(p => Math.max(0, p - 1))} style={{ width: 32, height: 32, borderRadius: "50%", border: `1px solid ${SAND}`, background: "#fff", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: NAVY, lineHeight: 1 }}>−</button>
+                  <span style={{ fontSize: 16, fontWeight: 700, color: NAVY, minWidth: 20, textAlign: "center" }}>{nbPets}</span>
+                  <button onClick={() => setNbPets(p => Math.min(MAX_PETS, p + 1))} style={{ width: 32, height: 32, borderRadius: "50%", border: `1px solid ${SAND}`, background: "#fff", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: NAVY, lineHeight: 1 }}>+</button>
+                </div>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <button onClick={() => setNbPets(p => Math.max(0, p - 1))} style={{ width: 32, height: 32, borderRadius: "50%", border: `1px solid ${SAND}`, background: "#fff", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: NAVY, lineHeight: 1 }}>−</button>
-                <span style={{ fontSize: 16, fontWeight: 700, color: NAVY, minWidth: 20, textAlign: "center" }}>{nbPets}</span>
-                <button onClick={() => setNbPets(p => Math.min(MAX_PETS, p + 1))} style={{ width: 32, height: 32, borderRadius: "50%", border: `1px solid ${SAND}`, background: "#fff", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: NAVY, lineHeight: 1 }}>+</button>
-              </div>
-            </div>
+            )}
 
             {nights > 0 ? (
               <div style={{
@@ -4519,9 +4523,10 @@ export default function PublicSite() {
       const img = `https://villamaryllis.com/photos/${bien.id}/01.webp`;
       const isMartinique = bien.lieu?.includes("Martinique");
       const keyFeatures = (bien.amenities || []).slice(0, 3).join(", ");
+      const priceStr = PRICE_HIDDEN.has(bien.id) ? "Location longue durée" : `À partir de ${bien.prix}€/nuit`;
       const title = isMartinique
-        ? `${bien.nom} — Location villa ${keyFeatures ? `(${keyFeatures}) ` : ""}à ${bien.lieu.split(",")[0]} | À partir de ${bien.prix}€/nuit`
-        : `${bien.nom} — ${bien.lieu} | Amaryllis — À partir de ${bien.prix}€/nuit`;
+        ? `${bien.nom} — Location villa ${keyFeatures ? `(${keyFeatures}) ` : ""}à ${bien.lieu.split(",")[0]} | ${priceStr}`
+        : `${bien.nom} — ${bien.lieu} | Amaryllis — ${priceStr}`;
       const desc = bien.desc.slice(0, 155) + (bien.desc.length > 155 ? "…" : "");
 
       window.history.pushState({}, "", "/" + bien.id);

@@ -163,7 +163,7 @@ export default function GuideDiamant() {
             <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 11, letterSpacing: "0.25em", textTransform: "uppercase", color: CORAL, margin: "0 0 16px" }}>Villas idéalement situées</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {[
-                { id: "iguana", name: "Villa Iguana", desc: "Vue directe sur le Rocher du Diamant · Piscine eau salée · À partir de 180€/nuit" },
+                { id: "iguana", name: "Villa Iguana", desc: "Vue directe sur le Rocher du Diamant · Piscine eau salée · Location longue durée" },
                 { id: "mabouya", name: "Mabouya", desc: "Vue mer panoramique · Jacuzzi privatif · À partir de 110€/nuit" },
                 { id: "amaryllis", name: "Villa Amaryllis", desc: "Piscine à débordement · Vue océan · Jacuzzi · À partir de 280€/nuit" },
               ].map(v => (

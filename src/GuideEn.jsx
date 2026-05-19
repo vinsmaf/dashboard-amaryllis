@@ -11,7 +11,7 @@ const BASE  = "https://villamaryllis.com";
 const propertiesMartinique = [
   { id: "amaryllis", name: "Villa Amaryllis", location: "Sainte-Luce", price: 280, guests: 8, highlight: "Infinity pool · Ocean view · Private jacuzzi" },
   { id: "zandoli",   name: "Zandoli",         location: "Sainte-Luce", price: 220, guests: 4, highlight: "Private pool · Sea view · Tropical garden" },
-  { id: "iguana",    name: "Villa Iguana",    location: "Sainte-Luce", price: 180, guests: 4, highlight: "Salt water pool · Diamond Rock view" },
+  { id: "iguana",    name: "Villa Iguana",    location: "Sainte-Luce", price: null, guests: 4, highlight: "Salt water pool · Diamond Rock view · Long-term rental" },
   { id: "geko",      name: "Géko",            location: "Sainte-Luce", price: 150, guests: 2, highlight: "Private pool · Tropical garden · BBQ" },
   { id: "mabouya",   name: "Mabouya",         location: "Sainte-Luce", price: 110, guests: 2, highlight: "Private jacuzzi · Sea view · Romantic" },
   { id: "schoelcher",name: "Bellevue",        location: "Schœlcher",   price: 100, guests: 4, highlight: "Panoramic sea view · Fort-de-France Bay" },
@@ -129,7 +129,10 @@ export default function GuideEn() {
                   <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 15, color: TEXT, opacity: 0.8 }}>{p.location}, Martinique · {p.highlight}</div>
                 </div>
                 <div style={{ textAlign: "right", flexShrink: 0 }}>
-                  <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 18, color: CORAL }}>€{p.price}<span style={{ fontSize: 13, fontWeight: 300 }}>/night</span></div>
+                  {p.price != null
+                    ? <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 18, color: CORAL }}>€{p.price}<span style={{ fontSize: 13, fontWeight: 300 }}>/night</span></div>
+                    : <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 13, color: CORAL, letterSpacing: "0.04em" }}>Long-term rental</div>
+                  }
                   <div style={{ fontSize: 12, color: TEXT, opacity: 0.6 }}>up to {p.guests} guests</div>
                 </div>
               </a>

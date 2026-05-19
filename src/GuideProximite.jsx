@@ -154,8 +154,8 @@ export default function GuideProximite() {
               {[
                 { id: "amaryllis", name: "Villa Amaryllis", desc: "Piscine à débordement · Vue mer · Jacuzzi · 8 personnes · À partir de 280€/nuit" },
                 { id: "zandoli",   name: "Zandoli",         desc: "Piscine privée · Vue mer · Jardin tropical · 5 personnes · À partir de 220€/nuit" },
-                { id: "iguana",    name: "Villa Iguana",    desc: "Piscine eau salée · Vue Diamant · 4 personnes · À partir de 180€/nuit" },
-                { id: "geko",      name: "Géko",            desc: "Piscine privée · Jardin tropical · 2 personnes · À partir de 150€/nuit" },
+                { id: "iguana",    name: "Villa Iguana",    desc: "Piscine eau salée · Vue Diamant · Location longue durée" },
+                { id: "geko",      name: "Géko",            desc: "Piscine privée · Jardin tropical · 4 personnes · À partir de 150€/nuit" },
                 { id: "mabouya",   name: "Mabouya",         desc: "Jacuzzi privatif · Vue mer · Romantique · 2 personnes · À partir de 110€/nuit" },
                 { id: "schoelcher",name: "Bellevue",        desc: "Vue panoramique baie de Fort-de-France · 4 personnes · À partir de 100€/nuit" },
               ].map(v => (

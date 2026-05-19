@@ -51,12 +51,10 @@ const PLATFORM_COLOR = {
   "Autre": "#64748b",
 };
 
-const APPS_SCRIPT_CODE = `// Ajoute CE BLOC au début de ta fonction doGet(e) existante :
-// (Remplace "function doGet() {" par "function doGet(e) {" si besoin)
+const APPS_SCRIPT_CODE = `// Ajoute CE BLOC dans ta fonction doGet(e), après la ligne "const action = ..."
 
-  const action = e && e.parameter && e.parameter.action;
   if (action === 'readEmails') {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const ss = SpreadsheetApp.openById('1xuhU0KraEMxF9NAWO5MKEt23JI_V8mnNnWktzHy6q2U');
     const sheet = ss.getSheetByName('Emails');
     if (!sheet) return ContentService
       .createTextOutput(JSON.stringify({ok:false,error:'Onglet Emails introuvable'}))
