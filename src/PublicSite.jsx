@@ -1719,6 +1719,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
   const [calCheckout, setCalCheckout] = useState(null);
   const [calHovered, setCalHovered] = useState(null);
   const [calOffset, setCalOffset] = useState(0);
+  const [showAlerte, setShowAlerte] = useState(false);
   const photos = bien.photos || [];
   const touchStartXDetail = useRef(null);
 
@@ -2169,19 +2170,11 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                         </div>
 
                         {/* Alerte disponibilité */}
-                        {(() => {
-                          const [showAlerte, setShowAlerte] = React.useState(false);
-                          return (
-                            <>
-                              <div style={{ marginTop: 14 }}>
-                                <button onClick={() => setShowAlerte(true)} style={{ background: "none", border: "none", color: MUTED, fontSize: 11, fontFamily: "'Jost', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, padding: 0, textDecoration: "underline", textDecorationColor: SAND }}>
-                                  🔔 Être alerté des disponibilités
-                                </button>
-                              </div>
-                              {showAlerte && <AlerteDispoModal bien={bien} checkin={calCheckin} checkout={calCheckout} onClose={() => setShowAlerte(false)} />}
-                            </>
-                          );
-                        })()}
+                        <div style={{ marginTop: 14 }}>
+                          <button onClick={() => setShowAlerte(true)} style={{ background: "none", border: "none", color: MUTED, fontSize: 11, fontFamily: "'Jost', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, padding: 0, textDecoration: "underline", textDecorationColor: SAND }}>
+                            🔔 Être alerté des disponibilités
+                          </button>
+                        </div>
 
                         {/* Résumé prix (affiché quand les deux dates sont sélectionnées) */}
                         {calCheckin && calCheckout && !calBelowMin && (
@@ -2329,6 +2322,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
           </div>
         </div>
       </div>
+      {showAlerte && <AlerteDispoModal bien={bien} checkin={calCheckin} checkout={calCheckout} onClose={() => setShowAlerte(false)} />}
     </div>
   );
 }
