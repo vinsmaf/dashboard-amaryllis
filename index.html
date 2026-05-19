@@ -116,21 +116,36 @@
       @keyframes fadeLeft { from { opacity:0; transform:translateX(-22px); } to { opacity:1; transform:translateX(0); } }
       @keyframes fadeRight{ from { opacity:0; transform:translateX(22px);  } to { opacity:1; transform:translateX(0); } }
 
-      /* ── Mode sombre — inversion CSS ── */
-      html.dark {
-        filter: invert(1) hue-rotate(180deg);
-        background: #fff;
+      /* ── Palette — mode clair ── */
+      :root {
+        --c-ivory:  #faf5e9;
+        --c-cream:  #f4ecdc;
+        --c-navy:   #0e3b3a;
+        --c-coral:  #c47254;
+        --c-sand:   #e0d4bc;
+        --c-text:   #0e3b3a;
+        --c-muted:  #7a6b5a;
+        --c-gold:   #c9a673;
       }
-      /* Re-inverser les images/vidéos pour garder leurs vraies couleurs */
-      html.dark img,
-      html.dark video,
-      html.dark canvas,
-      html.dark .leaflet-tile,
-      html.dark .leaflet-container {
-        filter: invert(1) hue-rotate(180deg);
+      /* ── Palette — mode sombre ── */
+      [data-theme="dark"] {
+        --c-ivory:  #111c1b;
+        --c-cream:  #1a2927;
+        --c-navy:   #e4f0ed;
+        --c-coral:  #d4835f;
+        --c-sand:   #2e4340;
+        --c-text:   #e4f0ed;
+        --c-muted:  #7aaba2;
+        --c-gold:   #c9a673;
       }
-      /* Transition douce */
-      html { transition: filter 0.3s ease; }
+      /* Transition douce sur les couleurs */
+      *, *::before, *::after {
+        transition-property: background-color, border-color, color, box-shadow;
+        transition-duration: 0.25s;
+        transition-timing-function: ease;
+      }
+      /* Mais pas sur les animations/transforms (ça casse les anim CSS) */
+      [style*="animation"], [style*="transform"] { transition: none !important; }
     </style>
 
     <script src="https://js.stripe.com/v3/"></script>

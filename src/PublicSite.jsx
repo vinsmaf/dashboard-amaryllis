@@ -52,14 +52,14 @@ const BOOKING_DISABLED = new Set(["iguana"]);
 // Biens sans affichage de prix (location longue durée)
 const PRICE_HIDDEN = new Set(["iguana"]);
 
-const IVORY  = "#faf5e9";  // paper — main background
-const CREAM  = "#f4ecdc";  // cream — card/modal background
-const NAVY   = "#0e3b3a";  // ink — deep antillean teal, primary text & header
-const CORAL  = "#c47254";  // muted coral — accent, CTAs
-const SAND   = "#e0d4bc";  // borders, dividers (derived from cream)
-const TEXT   = "#0e3b3a";  // same as ink for body text
-const MUTED  = "#7a6b5a";  // warm brown for secondary text
-const GOLD   = "#c9a673";  // sand/gold — star ratings, accents
+const IVORY  = "var(--c-ivory)";  // paper — main background
+const CREAM  = "var(--c-cream)";  // cream — card/modal background
+const NAVY   = "var(--c-navy)";   // ink — deep antillean teal, primary text & header
+const CORAL  = "var(--c-coral)";  // muted coral — accent, CTAs
+const SAND   = "var(--c-sand)";   // borders, dividers
+const TEXT   = "var(--c-text)";   // body text
+const MUTED  = "var(--c-muted)";  // secondary text
+const GOLD   = "var(--c-gold)";   // star ratings, accents
 
 // ── CSS Animations ────────────────────────────────────────────────
 if (typeof document !== "undefined" && !document.getElementById("__site_styles")) {
@@ -1675,7 +1675,7 @@ function FormField({ label, value, onChange, type = "text", multiline, style }) 
   const [focused, setFocused] = useState(false);
   const s = {
     background: IVORY,
-    border: `1px solid ${focused ? CORAL + "88" : SAND}`,
+    border: `1px solid ${focused ? "rgba(196,114,84,0.53)" : SAND}`,
     borderRadius: 10,
     color: TEXT,
     padding: "11px 14px",
@@ -3714,7 +3714,7 @@ function ContactField({ label, value, onChange, type = "text", multiline, requir
     resize: "vertical", transition: "border-color 0.2s", boxSizing: "border-box",
   } : {
     background: CREAM,
-    border: `1px solid ${focused ? NAVY + "60" : SAND}`,
+    border: `1px solid ${focused ? "rgba(14,59,58,0.38)" : SAND}`,
     borderRadius: 8, color: TEXT, padding: "11px 14px", width: "100%",
     fontSize: 16, outline: "none", fontFamily: "'Jost', sans-serif", fontWeight: 300,
     resize: "vertical", transition: "border-color 0.2s", boxSizing: "border-box",
@@ -4672,7 +4672,7 @@ export default function PublicSite() {
   }, []);
 
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", darkMode);
+    document.documentElement.dataset.theme = darkMode ? "dark" : "";
     try { localStorage.setItem("amaryllis_dark", darkMode ? "1" : "0"); } catch {}
   }, [darkMode]);
 
@@ -4845,7 +4845,7 @@ export default function PublicSite() {
                 style={{
                   padding: "8px 20px",
                   borderRadius: 20,
-                  border: `1px solid ${filterLieu === key && !showFavorites ? CORAL + "88" : SAND}`,
+                  border: `1px solid ${filterLieu === key && !showFavorites ? "rgba(196,114,84,0.53)" : SAND}`,
                   background: filterLieu === key && !showFavorites ? `rgba(200,85,61,0.08)` : "transparent",
                   color: filterLieu === key && !showFavorites ? CORAL : MUTED,
                   cursor: "pointer",
@@ -4921,7 +4921,7 @@ export default function PublicSite() {
                   style={{
                     padding: "6px 16px",
                     borderRadius: 20,
-                    border: `1px solid ${active ? NAVY + "99" : SAND}`,
+                    border: `1px solid ${active ? "rgba(14,59,58,0.6)" : SAND}`,
                     background: active ? NAVY : "transparent",
                     color: active ? IVORY : MUTED,
                     cursor: "pointer",
