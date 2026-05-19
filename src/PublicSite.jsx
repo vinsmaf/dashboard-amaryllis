@@ -2594,28 +2594,11 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
             </>
           )}
 
-          {/* Reviews */}
-          {bien.avis && bien.avis.length > 0 && (
+          {/* Reviews — Google uniquement pour Villa Amaryllis */}
+          {bien.id === "amaryllis" && (
             <>
               <div style={{ height: 1, background: SAND, marginBottom: 26 }} />
-              <div style={{ fontSize: 10, letterSpacing: "0.35em", textTransform: "uppercase", color: MUTED, fontWeight: 600, marginBottom: 20 }}>Avis voyageurs</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                {bien.avis.map((av, i) => (
-                  <div key={i} style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 12, padding: "18px 22px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-                      <div>
-                        <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, color: NAVY, fontSize: 13 }}>{av.nom}</span>
-                        <span style={{ color: MUTED, fontSize: 12, marginLeft: 7 }}>{av.pays}</span>
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                        <span style={{ color: GOLD, fontSize: 11 }}>{"★".repeat(av.note)}</span>
-                        <span style={{ color: MUTED, fontSize: 11, fontFamily: "'Jost', sans-serif", fontWeight: 300 }}>{av.date}</span>
-                      </div>
-                    </div>
-                    <p style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: 16, lineHeight: 1.7, color: TEXT, margin: 0 }}>{av.texte}</p>
-                  </div>
-                ))}
-              </div>
+              <GoogleReviews compact />
             </>
           )}
 
@@ -3566,14 +3549,14 @@ function StarRating({ rating, size = 14 }) {
   );
 }
 
-function GoogleReviews() {
+function GoogleReviews({ compact = false }) {
   const [data, setData]   = useState(null);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     fetch("/api/google-reviews")
       .then(r => r.json())
-      .then(d => { if (d.ok && d.reviews?.length) setData(d); })
+      .then(d => { if (d.ok) setData(d); })
       .catch(() => {})
       .finally(() => setLoaded(true));
   }, []);
@@ -3583,43 +3566,42 @@ function GoogleReviews() {
   const total   = data?.userRatingsTotal ?? 117;
   const isLive  = !!data?.reviews?.length;
 
-  return (
-    <section style={{ background: IVORY, padding: "72px 24px 80px", borderTop: `1px solid ${SAND}` }}>
-      <div style={{ maxWidth: 1280, margin: "0 auto" }}>
-
-        {/* En-tête */}
-        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 16, marginBottom: 40 }}>
-          <div>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.3em", textTransform: "uppercase", color: CORAL, marginBottom: 10 }}>
-              {isLive ? "Avis Google · Temps réel" : "Avis voyageurs"}
-            </div>
+  const inner = (
+    <>
+      {/* En-tête */}
+      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 16, marginBottom: compact ? 20 : 40 }}>
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.3em", textTransform: "uppercase", color: CORAL, marginBottom: 10 }}>
+            Avis Google · Villa Amaryllis{isLive && <span style={{ marginLeft: 8, background: "#e8f5e9", color: "#2e7d32", fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 20 }}>● Live</span>}
+          </div>
+          {!compact && (
             <h2 style={{ fontFamily: "'Jost',sans-serif", fontWeight: 200, fontSize: 28, letterSpacing: "0.12em", textTransform: "uppercase", color: NAVY, margin: "0 0 10px" }}>
               Ce que disent nos hôtes
             </h2>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <span style={{ fontFamily: "'Jost',sans-serif", fontWeight: 800, fontSize: 42, color: NAVY, lineHeight: 1 }}>{rating}</span>
-              <div>
-                <StarRating rating={Math.round(rating)} size={16} />
-                <div style={{ fontFamily: "'Jost',sans-serif", fontWeight: 300, fontSize: 12, color: MUTED, marginTop: 3 }}>
-                  {total.toLocaleString("fr-FR")} avis vérifiés
-                  {isLive && <span style={{ marginLeft: 8, background: "#e8f5e9", color: "#2e7d32", fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 20 }}>● Live</span>}
-                </div>
+          )}
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <span style={{ fontFamily: "'Jost',sans-serif", fontWeight: 800, fontSize: compact ? 32 : 42, color: NAVY, lineHeight: 1 }}>{rating}</span>
+            <div>
+              <StarRating rating={Math.round(rating)} size={compact ? 13 : 16} />
+              <div style={{ fontFamily: "'Jost',sans-serif", fontWeight: 300, fontSize: 12, color: MUTED, marginTop: 3 }}>
+                {total.toLocaleString("fr-FR")} avis vérifiés
               </div>
             </div>
           </div>
-          <a href="https://www.google.com/maps/place/?q=place_id:ChIJWbeKdLghQIwRCppz2lJ39Jk" target="_blank" rel="noopener noreferrer"
-            style={{ fontSize: 12, color: MUTED, fontFamily: "'Jost',sans-serif", textDecoration: "none", display: "flex", alignItems: "center", gap: 6, border: `1px solid ${SAND}`, borderRadius: 8, padding: "8px 14px", transition: "border-color 0.2s" }}
-            onMouseEnter={e => e.currentTarget.style.borderColor = NAVY}
-            onMouseLeave={e => e.currentTarget.style.borderColor = SAND}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            Voir sur Google Maps
-          </a>
         </div>
+        <a href="https://www.google.com/maps/place/?q=place_id:ChIJWbeKdLghQIwRCppz2lJ39Jk" target="_blank" rel="noopener noreferrer"
+          style={{ fontSize: 12, color: MUTED, fontFamily: "'Jost',sans-serif", textDecoration: "none", display: "flex", alignItems: "center", gap: 6, border: `1px solid ${SAND}`, borderRadius: 8, padding: "8px 14px", transition: "border-color 0.2s" }}
+          onMouseEnter={e => e.currentTarget.style.borderColor = NAVY}
+          onMouseLeave={e => e.currentTarget.style.borderColor = SAND}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Voir sur Google Maps
+        </a>
+      </div>
 
-        {/* Grille avis */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 18 }}>
-          {reviews.slice(0, 5).map((r, i) => (
+      {/* Grille avis */}
+      <div style={{ display: "grid", gridTemplateColumns: compact ? "1fr" : "repeat(auto-fill, minmax(300px, 1fr))", gap: 18 }}>
+        {reviews.slice(0, compact ? 3 : 5).map((r, i) => (
             <Reveal key={i} delay={i * 0.07} style={{
               background: CREAM, border: `1px solid ${SAND}`, borderRadius: 14,
               padding: "22px 22px 20px", display: "flex", flexDirection: "column", gap: 12,
@@ -3655,7 +3637,15 @@ function GoogleReviews() {
             </Reveal>
           ))}
         </div>
+    </>
+  );
 
+  if (compact) return <div>{inner}</div>;
+
+  return (
+    <section style={{ background: IVORY, padding: "72px 24px 80px", borderTop: `1px solid ${SAND}` }}>
+      <div style={{ maxWidth: 1280, margin: "0 auto" }}>
+        {inner}
       </div>
     </section>
   );
@@ -5143,9 +5133,6 @@ export default function PublicSite() {
       <Reveal anim="fadeIn" threshold={0.05}>
         <MapSection biens={biensList} onDetail={openDetail} />
       </Reveal>
-
-      {/* ── AVIS GOOGLE ── */}
-      <GoogleReviews />
 
       {/* ── FAQ + GUIDE ── */}
       <Reveal anim="fadeUp" threshold={0.08}>
