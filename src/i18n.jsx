@@ -60,6 +60,10 @@ export const TR = {
     reviewQuote:    "\"Vue extraordinaire, piscine à débordement parfaite. Un endroit hors du temps face aux Caraïbes. On reviendra sans hésiter !\"",
     reviewAuthor:   "— Sophie M. 🇫🇷, Villa Amaryllis · Avr. 2025",
 
+    // Avis
+    reviewsLabel:   "avis",
+    reviewsAirbnb:  "avis Airbnb",
+
     // Bannière booking direct
     banner1:        "✓ Réservation directe chez le propriétaire",
     banner2:        "✓ Sans frais de service Airbnb",
@@ -145,6 +149,10 @@ export const TR = {
     reviewNote:     "Average rating · 117 verified reviews",
     reviewQuote:    "\"Extraordinary view, perfect infinity pool. A timeless place facing the Caribbean. We'll be back without hesitation!\"",
     reviewAuthor:   "— Sophie M. 🇫🇷, Villa Amaryllis · Apr. 2025",
+
+    // Avis
+    reviewsLabel:   "reviews",
+    reviewsAirbnb:  "Airbnb reviews",
 
     // Bannière
     banner1:        "✓ Book directly with the owner",

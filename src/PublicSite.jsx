@@ -135,7 +135,9 @@ const BIENS = [
     airbnbTitle: "Villa Amaryllis - Luxe & sérénité Vue Mer, Piscine",
     lieu: "Sainte-Luce, Martinique",
     tag: "⭐ Coup de cœur Airbnb",
+    tagEn: "⭐ Airbnb Guest Favourite",
     desc: "Perchée sur les hauteurs de Sainte-Luce, bercée par les alizés et le parfum des fleurs tropicales, la Villa Amaryllis vous invite à un séjour d'exception. Dès l'arrivée, vous êtes accueillis dans un univers élégant et chaleureux, pensé dans les moindres détails pour que vos vacances soient reposantes et inoubliables. Notre équipe sur place, attentionnée et discrète, veille à ce que chaque instant soit parfait.",
+    descEn: "Perched on the heights of Sainte-Luce, caressed by trade winds and tropical flowers, Villa Amaryllis invites you to an exceptional stay. From the moment you arrive, you are welcomed into an elegant, warm setting crafted to the last detail so your holiday is restful and unforgettable. Our discreet, attentive on-site team ensures every moment is perfect.",
     descFull: [
       { titre: "Les chambres", texte: "La villa dispose de trois chambres spacieuses. Chaque chambre est dotée d'un lit king-size pour un sommeil réparateur, d'une salle de bain privative avec douche à l'italienne, vasque en pierre naturelle et WC suspendu, d'un accès direct à la grande terrasse avec vue sur la mer, et de la climatisation pour un confort optimal en toutes saisons." },
       { titre: "Les espaces de vie", texte: "Les pièces à vivre allient convivialité et sérénité : salon lumineux avec canapé confortable et vue mer, salle à manger pour 8 convives baignée de lumière, cuisine américaine entièrement équipée — réfrigérateur, plaques à induction, four combiné, micro-ondes, lave-vaisselle, cafetière, toaster. Tout est prêt pour cuisiner comme à la maison, ou pour accueillir un chef à domicile." },
@@ -189,6 +191,7 @@ const BIENS = [
     coords: { lat: 14.4732, lng: -60.9196 },
     mapsEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3863.107902087125!2d-60.943493625540455!3d14.478492985993562!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8c4021b8748ab759%3A0x99f47752da739a0a!2svilla%20Amaryllis!5e0!3m2!1sfr!2sfr!4v1779046798123!5m2!1sfr!2sfr",
     amenities: ["Piscine à débordement", "Jacuzzi privé", "Vue océan", "Wifi Starlink", "Parking", "Animaux OK"],
+    amenitiesEn: ["Infinity pool", "Private jacuzzi", "Ocean view", "Starlink WiFi", "Parking", "Pets welcome"],
     avis: [
       { nom: "Sophie M.", pays: "🇫🇷", note: 5, texte: "Vue extraordinaire, piscine à débordement parfaite et hôte très réactif. Un endroit hors du temps face aux Caraïbes. On reviendra sans hésiter !", date: "Avr. 2025" },
       { nom: "James K.", pays: "🇬🇧", note: 5, texte: "Stunning villa with incredible Caribbean views. The salt water infinity pool and private jacuzzi are exceptional. Best Airbnb we've ever stayed in — period.", date: "Mars 2025" },
@@ -202,6 +205,7 @@ const BIENS = [
     lieu: "Sainte-Luce, Martinique",
     tag: null,
     desc: "Bienvenue à Zandoli, cocon tropical niché au cœur d'un jardin luxuriant sur les hauteurs paisibles de Sainte-Luce. Réveillez-vous face à la mer des Caraïbes dans cet appartement lumineux et décoré avec soin. Plages de sable blanc, distilleries et randonnées à proximité vous invitent à vivre l'expérience martiniquaise authentique. Après vos escapades, admirez le coucher de soleil et laissez la brise chaude et le chant des oiseaux vous bercer.",
+    descEn: "Welcome to Zandoli, a tropical cocoon nestled in a lush garden on the peaceful heights of Sainte-Luce. Wake up facing the Caribbean Sea in this bright, tastefully decorated apartment. White sand beaches, rum distilleries and hiking trails invite you to experience authentic Martinique. After your adventures, admire the sunset and let the warm breeze and birdsong soothe you.",
     descFull: [
       { titre: "L'hébergement", texte: "Zandoli dispose de 2 chambres dont une en mezzanine au charme unique, idéal pour familles, couples ou amis souhaitant goûter à la douceur de vivre caribéenne." },
       { titre: "Espace de vie", texte: "Un salon convivial s'ouvre sur une terrasse ensoleillée où vous pourrez savourer vos repas ou un café face au jardin tropical et à la douce brise. La cuisine équipée vous offre tout le nécessaire pour préparer vos plats préférés. Le linge de maison est fourni — draps, serviettes, torchons — pour faciliter votre séjour." },
@@ -247,6 +251,7 @@ const BIENS = [
     coords: { lat: 14.4725, lng: -60.9201 },
     mapsEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3862.822862640186!2d-60.92853662554015!3d14.49485608597908!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8c4021b73b656873%3A0xdb94b0a0ad33a741!2sresidence%20Amaryllis!5e0!3m2!1sfr!2sfr!4v1779046858310!5m2!1sfr!2sfr",
     amenities: ["Piscine privée", "Vue mer", "Wifi Starlink", "Netflix/Disney+", "Lave-linge", "Jardin", "Animaux OK"],
+    amenitiesEn: ["Private pool", "Sea view", "Starlink WiFi", "Netflix/Disney+", "Washer", "Garden", "Pets welcome"],
     avis: [
       { nom: "Lucie B.", pays: "🇫🇷", note: 5, texte: "Cocon parfait ! La mezzanine est charmante, la piscine délicieuse, et la vue sur la mer au réveil est inoubliable. Hôte très disponible.", date: "Avr. 2025" },
       { nom: "Thomas & Ana", pays: "🇩🇪", note: 5, texte: "Wunderbar! Tropical garden, private pool, sea view — everything we dreamed of. Very clean and well-equipped. We'll be back next winter.", date: "Janv. 2025" },
@@ -260,6 +265,7 @@ const BIENS = [
     lieu: "Sainte-Luce, Martinique",
     tag: null,
     desc: "Bienvenue en Martinique, au sein de la résidence Amaryllis. Bercée par la douceur de vivre, la Villa Iguana se situe sur les hauteurs de Sainte-Luce, dans une résidence calme et fleurie. La villa aménagée avec goût s'étend sur deux niveaux et offre un cadre idéal pour un séjour ressourçant entre nature, vue mer et confort moderne.",
+    descEn: "Welcome to Martinique, within the Amaryllis residence. Lulled by the island's gentle pace, Villa Iguana sits on the heights of Sainte-Luce in a peaceful, flower-filled residence. The tastefully furnished two-level villa offers an ideal setting for a restorative stay combining nature, ocean views and modern comfort.",
     descFull: [
       { titre: "À l'étage", texte: "Une terrasse panoramique donnant sur la mer des Caraïbes, le Rocher du Diamant et l'île de Sainte-Lucie, en communication directe avec la cuisine et le salon — table, 6 chaises et hamac pour vos moments de détente. Un espace de vie avec canapé convertible, table basse et TV. Une cuisine toute équipée — réfrigérateur, plaques de cuisson, four combiné, micro-ondes, cafetière, toaster." },
       { titre: "Au rez-de-chaussée", texte: "Deux chambres climatisées avec lit Queen Size 160×200, tables de chevet et grands dressings avec penderie. Une salle de bain fonctionnelle avec douche et WC." },
@@ -306,6 +312,7 @@ const BIENS = [
     coords: { lat: 14.4718, lng: -60.9188 },
     mapsEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3862.822862640186!2d-60.92853662554015!3d14.49485608597908!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8c4021b73b656873%3A0xdb94b0a0ad33a741!2sresidence%20Amaryllis!5e0!3m2!1sfr!2sfr!4v1779046858310!5m2!1sfr!2sfr",
     amenities: ["Piscine eau salée", "Vue Diamant", "Vue océan", "Wifi Starlink", "Parking", "Animaux OK"],
+    amenitiesEn: ["Saltwater pool", "Diamond Rock view", "Ocean view", "Starlink WiFi", "Parking", "Pets welcome"],
     avis: [
       { nom: "Pierre & Claire", pays: "🇫🇷", note: 5, texte: "Vue imprenable sur le rocher du Diamant ! La piscine d'eau salée est un vrai plus. Villa propre, bien équipée, accueil aux petits soins.", date: "Avr. 2025" },
       { nom: "Rachel T.", pays: "🇬🇧", note: 5, texte: "What a view! Waking up to see the Diamond Rock every morning was magical. The saltwater pool felt like swimming in the sea itself. Perfect.", date: "Mars 2025" },
@@ -319,6 +326,7 @@ const BIENS = [
     lieu: "Sainte-Luce, Martinique",
     tag: null,
     desc: "Bienvenue à Géko, votre refuge paisible au sein de la résidence fleurie Amaryllis sur les hauteurs de Sainte-Luce. Laissez-vous séduire par le jardin tropical luxuriant, la piscine rafraîchissante et la douce brise des alizés. À seulement 7 minutes des plages de sable blanc et du bourg animé de Sainte-Luce, Géko offre un séjour alliant confort moderne, nature apaisante et découverte authentique de la Martinique. Un cocon tropical où chaque détail est pensé pour votre confort et votre bien-être.",
+    descEn: "Welcome to Géko, your peaceful retreat within the flower-filled Amaryllis residence on the heights of Sainte-Luce. Let yourself be seduced by the lush tropical garden, refreshing pool and gentle trade winds. Just 7 minutes from white sand beaches and the lively village of Sainte-Luce, Géko blends modern comfort, soothing nature and authentic Martinique discovery. A tropical cocoon where every detail is designed for your comfort and well-being.",
     descFull: [
       { titre: "Les espaces", texte: "Le séjour cosy dispose d'un canapé convertible, d'une table basse et d'une TV, parfait pour vos soirées détente. La chambre climatisée, équipée d'un lit queen-size 160×200 et de rangements, vous promet des nuits reposantes. La salle de bain moderne avec douche à l'italienne et WC est idéale pour un moment de fraîcheur après une journée au soleil." },
       { titre: "Les extérieurs", texte: "Savourez vos repas sur la terrasse couverte communiquant avec la cuisine extérieure — réfrigérateur, plaques, four, micro-ondes, cafetière, grille-pain. Flânez dans le grand jardin tropical, détendez-vous dans la piscine privée et profitez du salon extérieur pour une lecture ou un apéritif au coucher du soleil. Des soirées barbecue à gaz viendront parfaire vos moments conviviaux." },
@@ -363,6 +371,7 @@ const BIENS = [
     coords: { lat: 14.4729, lng: -60.9194 },
     mapsEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3862.822862640186!2d-60.92853662554015!3d14.49485608597908!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8c4021b73b656873%3A0xdb94b0a0ad33a741!2sresidence%20Amaryllis!5e0!3m2!1sfr!2sfr!4v1779046858310!5m2!1sfr!2sfr",
     amenities: ["Piscine privée", "Jardin tropical", "Climatisation", "Wifi Starlink", "Lave-linge", "Animaux OK"],
+    amenitiesEn: ["Private pool", "Tropical garden", "Air conditioning", "Starlink WiFi", "Washer", "Pets welcome"],
     avis: [
       { nom: "Sandrine L.", pays: "🇫🇷", note: 5, texte: "Un vrai cocon dans un jardin tropical magnifique. La piscine est bien entretenue et la brise des alizés rend la clim presque superflue. On adore !", date: "Mai 2025" },
       { nom: "Marco F.", pays: "🇮🇹", note: 5, texte: "Piccolo paradiso caraibico! Il giardino tropicale è stupendo, la piscina fresca e pulita. Posizione tranquilla a pochi minuti dalla spiaggia. Torneremo!", date: "Avr. 2025" },
@@ -376,6 +385,7 @@ const BIENS = [
     lieu: "Sainte-Luce, Martinique",
     tag: null,
     desc: "Bienvenue au studio Mabouya, votre havre de paix à flanc de colline avec jacuzzi privatif, jardin fleuri et vue mer enchanteresse. Idéal pour une escapade romantique ou ressourçante, Mabouya est une expérience caribéenne tout simplement. Relaxez-vous dans votre jacuzzi privé, savourez votre café au cœur d'un jardin tropical et laissez-vous bercer par le calme et les parfums des fleurs exotiques. Chaque détail a été pensé pour votre bien-être.",
+    descEn: "Welcome to the Mabouya studio, your hillside haven of peace with a private jacuzzi, flower garden and enchanting ocean views. Ideal for a romantic or rejuvenating escape, Mabouya is simply a Caribbean experience. Unwind in your private jacuzzi, savour morning coffee in a tropical garden and let the calm and exotic flower scents soothe your senses. Every detail has been crafted for your well-being.",
     descFull: [
       { titre: "L'hébergement", texte: "L'appartement a été aménagé avec goût et raffinement, conçu pour offrir confort et sérénité. Une terrasse privée avec vue imprenable sur la mer des Caraïbes, parfaite pour des moments de détente inoubliables. L'espace de vie climatisé comprend un grand lit queen-size 160×200, une TV moderne et une commode élégante pour votre rangement." },
       { titre: "Extérieurs & espaces de vie", texte: "Le jardin fleuri luxuriant est un véritable havre de paix. La cuisine extérieure entièrement équipée vous permet de préparer vos repas en profitant de l'air frais, avec un barbecue au charbon et tous les accessoires nécessaires pour des soirées conviviales. Votre jacuzzi privé vous offre des instants de pur bien-être, en harmonie avec la nature environnante." },
@@ -418,6 +428,7 @@ const BIENS = [
     coords: { lat: 14.4741, lng: -60.9209 },
     mapsEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3862.822862640186!2d-60.92853662554015!3d14.49485608597908!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8c4021b73b656873%3A0xdb94b0a0ad33a741!2sresidence%20Amaryllis!5e0!3m2!1sfr!2sfr!4v1779046858310!5m2!1sfr!2sfr",
     amenities: ["Jacuzzi privatif", "Vue mer", "Jardin fleuri", "Wifi Starlink", "Parking", "Animaux OK"],
+    amenitiesEn: ["Private jacuzzi", "Ocean view", "Flower garden", "Starlink WiFi", "Parking", "Pets welcome"],
     avis: [
       { nom: "Élise & Romain", pays: "🇫🇷", note: 5, texte: "Weekend romantique parfait ! Le jacuzzi privatif sous les étoiles avec vue mer est juste magique. Jardin fleuri superbe, endroit très paisible.", date: "Avr. 2025" },
       { nom: "Sarah W.", pays: "🇺🇸", note: 5, texte: "Hidden gem! The private jacuzzi with ocean views made every evening unforgettable. The flowering garden is gorgeous. Perfect romantic escape.", date: "Mars 2025" },
@@ -431,6 +442,7 @@ const BIENS = [
     lieu: "Schœlcher, Martinique",
     tag: null,
     desc: "Imaginez… Au réveil, depuis la terrasse, une vue imprenable sur la mer des Caraïbes, la baie de Fort-de-France et les Trois-Îlets. Situé dans un quartier calme de Schœlcher, cet appartement de standing vous offre un cadre idéal pour découvrir le nord de la Martinique. À 1 minute à pied d'un petit centre commercial, et à 5 minutes en voiture des plages, Bellevue combine tranquillité et proximité de tout. Dernier étage d'une résidence sécurisée : brise marine, calme absolu et couchers de soleil inoubliables.",
+    descEn: "Imagine… waking up on your terrace to sweeping views of the Caribbean Sea, the Bay of Fort-de-France and the Trois-Îlets. Located in a quiet neighbourhood of Schœlcher, this upscale apartment is an ideal base to explore northern Martinique. A 1-minute walk from shops and 5 minutes by car from the beaches, Bellevue combines tranquility with having everything nearby. Top floor of a secure residence: sea breeze, absolute calm and unforgettable sunsets.",
     descFull: [
       { titre: "L'hébergement", texte: "L'appartement dispose d'une chambre avec lit double, d'une salle de bain moderne avec douche, et d'un salon-séjour lumineux avec accès direct à la grande terrasse orientée plein ouest — le lieu idéal pour vos soirées face au spectacle du soleil sur la baie." },
       { titre: "Équipements", texte: "TV HD, wifi haut débit, cuisine équipée, lave-linge, climatisation, parking privé. Le linge de maison (draps, serviettes, torchons) est inclus : vous n'avez rien à apporter." },
@@ -476,6 +488,7 @@ const BIENS = [
     coords: { lat: 14.6121, lng: -61.0887 },
     mapsEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2905.414139928121!2d-61.10181910968834!3d14.634222460364626!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8c6aa753fde6522f%3A0x414570ed7905d25c!2sR%C3%A9sidence%20Belle%20Vue!5e0!3m2!1sfr!2sfr!4v1779047169810!5m2!1sfr!2sfr",
     amenities: ["Vue baie", "Terrasse", "TV HD", "Wifi", "Parking", "Animaux OK"],
+    amenitiesEn: ["Bay view", "Terrace", "HD TV", "WiFi", "Parking", "Pets welcome"],
     avis: [
       { nom: "Isabelle T.", pays: "🇫🇷", note: 5, texte: "Appartement très bien situé avec une vue splendide sur la baie de Fort-de-France. Calme, propre, bien équipé. Idéal pour explorer le nord de la Martinique.", date: "Avr. 2025" },
       { nom: "Dirk H.", pays: "🇳🇱", note: 5, texte: "Amazing view over the bay! The apartment is quiet, clean and has everything you need. Great location to explore the north of Martinique. Highly recommended.", date: "Mars 2025" },
@@ -489,6 +502,7 @@ const BIENS = [
     lieu: "Nogent-sur-Marne, Île-de-France",
     tag: null,
     desc: "Laissez-vous séduire par un appartement élégant, niché au sein d'une résidence luxueuse aux portes de Paris. Havre de paix alliant calme, confort et style — parfait pour des voyageurs en quête d'évasion urbaine sans sacrifier la quiétude. Ce T2 de 39 m² baigné de lumière naturelle à Nogent-sur-Marne, à seulement quelques minutes de Paris, a été pensé dans les moindres détails pour rendre votre séjour absolument magique.",
+    descEn: "Be seduced by an elegant apartment nestled within a luxurious residence at the gates of Paris. A haven of peace combining calm, comfort and style — perfect for travellers seeking urban escape without sacrificing serenity. This sun-drenched 39 m² flat in Nogent-sur-Marne, just minutes from Paris, has been crafted to the last detail to make your stay absolutely magical.",
     descFull: [
       { titre: "L'hébergement", texte: "Votre cocon chic dispose d'une grande chambre avec lit King Size, d'un dressing spacieux et d'une TV. Le confort est digne d'un hôtel haut de gamme, dans un cadre élégant et apaisant." },
       { titre: "Espace de vie", texte: "La cuisine ultra-équipée invite à créer de délicieux repas, tandis que le salon lumineux s'ouvre sur l'extérieur. La connexion entre intérieur et extérieur est fluide, idéale pour savourer chaque moment en toute convivialité." },
@@ -541,6 +555,7 @@ const BIENS = [
     coords: { lat: 48.8374, lng: 2.4836 },
     mapsEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d463.17188664330297!2d2.4757244130102185!3d48.83615034492648!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x47e60d41b4fd90d1%3A0x4f6c2445f955ea44!2s21%20Gd%20Rue%20Charles%20de%20Gaulle%2C%2094130%20Nogent-sur-Marne!5e0!3m2!1sfr!2sfr!4v1779047281540!5m2!1sfr!2sfr",
     amenities: ["Bord Marne", "Jardin", "RER A (20 min Paris)", "Parking", "Wifi"],
+    amenitiesEn: ["Riverside", "Garden", "RER A (20 min Paris)", "Parking", "WiFi"],
     avis: [
       { nom: "Aurélie F.", pays: "🇫🇷", note: 5, texte: "Appartement lumineux et très bien décoré au bord de la Marne. Calme absolu tout en étant à 20 min de Paris. Le jardin est charmant. Parfait pour se ressourcer.", date: "Avr. 2025" },
       { nom: "Oliver M.", pays: "🇬🇧", note: 5, texte: "Lovely flat with a garden right by the river. Peaceful, well-decorated and only 20 minutes from central Paris. The host was very welcoming and helpful.", date: "Mars 2025" },
@@ -1700,7 +1715,7 @@ function FormField({ label, value, onChange, type = "text", multiline, style }) 
 
 // ── Property Card ────────────────────────────────────────────────
 function BienCard({ bien, onDetail, onBook, isFavorite = false, onToggleFavorite, isCompared = false, onToggleCompare, compareDisabled = false }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [photoIdx, setPhotoIdx] = useState(0);
   const [hovered, setHovered] = useState(false);
   const photos = bien.photos || [];
@@ -1828,7 +1843,7 @@ function BienCard({ bien, onDetail, onBook, isFavorite = false, onToggleFavorite
             padding: "4px 10px", borderRadius: 20, letterSpacing: 0.5,
             textTransform: "uppercase",
           }}>
-            {bien.tag}
+            {lang === "fr" ? bien.tag : (bien.tagEn || bien.tag)}
           </div>
         )}
 
@@ -1907,7 +1922,7 @@ function BienCard({ bien, onDetail, onBook, isFavorite = false, onToggleFavorite
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, fontSize: 13, color: MUTED }}>
             <span style={{ color: GOLD }}>★ {bien.rating}</span>
             <span>·</span>
-            {bien.reviews && <span>{bien.reviews} avis</span>}
+            {bien.reviews && <span>{bien.reviews} {t("reviewsLabel")}</span>}
             <span>·</span>
             <span>{bien.capacite} {t("guests")}</span>
             <span>·</span>
@@ -1924,11 +1939,11 @@ function BienCard({ bien, onDetail, onBook, isFavorite = false, onToggleFavorite
           WebkitLineClamp: 2,
           WebkitBoxOrient: "vertical",
           overflow: "hidden",
-        }}>{bien.desc}</p>
+        }}>{lang === "fr" ? bien.desc : (bien.descEn || bien.desc)}</p>
 
         {/* Amenities */}
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 18 }}>
-          {bien.amenities.map(a => (
+          {(lang === "fr" ? bien.amenities : (bien.amenitiesEn || bien.amenities)).map(a => (
             <span key={a} style={{
               background: CREAM,
               border: `1px solid ${SAND}`,
@@ -2040,7 +2055,7 @@ function Stat({ icon, label }) {
 
 // ── Property Detail (full-screen) ───────────────────────────────
 function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail = false }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [photoIdx, setPhotoIdx] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -2320,7 +2335,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
           {bien.rating && (
             <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 18px", color: MUTED, fontSize: 13, marginBottom: 22 }}>
               <span style={{ color: GOLD }}>★ {bien.rating}</span>
-              {bien.reviews && <span>· {bien.reviews} avis</span>}
+              {bien.reviews && <span>· {bien.reviews} {t("reviewsLabel")}</span>}
               <span>· {bien.capacite} {t("guests")}</span>
               <span>· {bien.chambres} {t("rooms")}</span>
               <span>· {bien.sdb} sdb</span>
@@ -2332,7 +2347,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
           {/* Description */}
           <div style={{ marginBottom: 32 }}>
             <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: isMobile ? 17 : 19, fontWeight: 400, lineHeight: 1.85, color: TEXT, margin: 0 }}>
-              {bien.desc}
+              {lang === "fr" ? bien.desc : (bien.descEn || bien.desc)}
             </p>
 
             {bien.descFull && showFull && (
@@ -2394,9 +2409,9 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
 
           {/* Amenities */}
           <div style={{ marginBottom: 32 }}>
-            <div style={{ fontSize: 10, letterSpacing: "0.35em", textTransform: "uppercase", color: MUTED, fontWeight: 600, marginBottom: 14 }}>Équipements</div>
+            <div style={{ fontSize: 10, letterSpacing: "0.35em", textTransform: "uppercase", color: MUTED, fontWeight: 600, marginBottom: 14 }}>{lang === "fr" ? "Équipements" : "Amenities"}</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {bien.amenities.map(a => (
+              {(lang === "fr" ? bien.amenities : (bien.amenitiesEn || bien.amenities)).map(a => (
                 <span key={a} style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 4, fontSize: 12, color: TEXT, padding: "6px 14px", fontFamily: "'Jost', sans-serif", fontWeight: 300, letterSpacing: "0.04em" }}>{a}</span>
               ))}
             </div>
@@ -2407,7 +2422,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
             <>
               <div style={{ height: 1, background: SAND, marginBottom: 26 }} />
               <div style={{ marginBottom: 32 }}>
-                <div style={{ fontSize: 10, letterSpacing: "0.35em", textTransform: "uppercase", color: MUTED, fontWeight: 600, marginBottom: 14 }}>Disponibilités</div>
+                <div style={{ fontSize: 10, letterSpacing: "0.35em", textTransform: "uppercase", color: MUTED, fontWeight: 600, marginBottom: 14 }}>{lang === "fr" ? "Disponibilités" : "Availability"}</div>
                 {loadingAvail ? (
                   <div>
                     {/* Skeleton calendrier */}
@@ -2619,7 +2634,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                 </>
               )}
               {bien.rating && (
-                <div style={{ color: MUTED, fontSize: 12, marginTop: 4, fontFamily: "'Jost', sans-serif", fontWeight: 300 }}>★ {bien.rating} · {bien.reviews} avis Airbnb</div>
+                <div style={{ color: MUTED, fontSize: 12, marginTop: 4, fontFamily: "'Jost', sans-serif", fontWeight: 300 }}>★ {bien.rating} · {bien.reviews} {t("reviewsAirbnb")}</div>
               )}
             </div>
             {!BOOKING_DISABLED.has(bien.id) ? (
@@ -3281,7 +3296,7 @@ function QuickBook({ biens, onBook }) {
 const CAROUSEL_DELAY = 8000;
 
 function HeroCarousel({ biens, onDetail, onBook }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [idx, setIdx] = useState(0);
   const [animKey, setAnimKey] = useState(0);
   const idxRef = useRef(0);
@@ -3368,7 +3383,7 @@ function HeroCarousel({ biens, onDetail, onBook }) {
         {bien.rating && (
           <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 12, color: "rgba(250,245,233,0.55)", marginBottom: 14, letterSpacing: "0.05em" }}>
             <span style={{ color: GOLD }}>★ {bien.rating}</span>
-            {bien.reviews ? ` · ${bien.reviews} avis` : ""}
+            {bien.reviews ? ` · ${bien.reviews} ${t("reviewsLabel")}` : ""}
             {` · ${bien.capacite} ${t("guests")}`}
           </div>
         )}
@@ -3378,7 +3393,7 @@ function HeroCarousel({ biens, onDetail, onBook }) {
           margin: "0 0 22px",
           display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
         }}>
-          {bien.desc}
+          {lang === "fr" ? bien.desc : (bien.descEn || bien.desc)}
         </p>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <div style={{ display: "flex", flexDirection: "row", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
@@ -3442,7 +3457,7 @@ function HeroCarousel({ biens, onDetail, onBook }) {
           animation: "fadeIn 0.9s ease both",
         }}
       >
-        {(bien.amenities || []).slice(0, 5).map((a, i) => (
+        {(lang === "fr" ? (bien.amenities || []) : (bien.amenitiesEn || bien.amenities || [])).slice(0, 5).map((a, i) => (
           <div key={i} style={{
             background: "rgba(7,38,38,0.58)", backdropFilter: "blur(14px)",
             border: "1px solid rgba(250,245,233,0.12)",
