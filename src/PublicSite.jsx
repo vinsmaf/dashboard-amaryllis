@@ -36,8 +36,8 @@ const FRAIS_MENAGE = {
 };
 
 // Voyageurs inclus dans le prix de base — au-delà : supplément
-const BASE_GUESTS      = { amaryllis: 6 };          // 6 inclus, 7-8 avec supplément
-const EXTRA_GUEST_RATE = { amaryllis: 50 };          // €/personne supplémentaire/nuit
+const BASE_GUESTS      = { amaryllis: 6, zandoli: 4 };   // inclus dans le tarif de base
+const EXTRA_GUEST_RATE = { amaryllis: 50, zandoli: 30 }; // €/personne supplémentaire/nuit
 
 // Biens désactivés à la réservation (ex: longue durée)
 const BOOKING_DISABLED = new Set(["iguana"]);
@@ -203,7 +203,7 @@ const BIENS = [
         { label: "Fumeurs", texte: "Non-fumeur à l'intérieur. Autorisé sur la terrasse et dans le jardin." },
         { label: "Stationnement", texte: "Une place de parking intérieur sécurisé réservée." },
         { label: "Dépôt de garantie", texte: "700 € en cas de dommages constatés après le départ." },
-        { label: "Capacité", texte: "5 voyageurs max — 2 chambres (dont mezzanine) + canapé convertible." },
+        { label: "Capacité", texte: "4 voyageurs inclus dans le tarif de base. Possibilité d'accueillir 1 voyageur supplémentaire avec un supplément de 30 € par nuit." },
         { label: "Connexion", texte: "Wifi Starlink dans toute la propriété. Espace de travail dédié inclus." },
         { label: "Accès", texte: "Le logement comporte des marches ou escaliers. Accueil en personne par l'équipe Amaryllis." },
       ]},
