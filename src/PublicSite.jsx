@@ -2369,12 +2369,15 @@ function BenefitsStrip() {
 // ── Quick Book ────────────────────────────────────────────────────
 // ── Exit Intent Modal ────────────────────────────────────────────
 // ── Alerte disponibilité ─────────────────────────────────────────
-function AlerteDispoModal({ bien, checkin, checkout, onClose }) {
-  const [email, setEmail] = useState("");
-  const [nom, setNom]     = useState("");
-  const [sent, setSent]   = useState(false);
-  const [sending, setSending] = useState(false);
-  const [err, setErr]     = useState(false);
+function AlerteDispoModal({ bien, checkin: initCheckin, checkout: initCheckout, onClose }) {
+  const [email, setEmail]       = useState("");
+  const [nom, setNom]           = useState("");
+  const [checkin, setCheckin]   = useState(initCheckin || "");
+  const [checkout, setCheckout] = useState(initCheckout || "");
+  const [sent, setSent]         = useState(false);
+  const [sending, setSending]   = useState(false);
+  const [err, setErr]           = useState(false);
+  const todayVal = today();
 
   useEffect(() => {
     const fn = e => { if (e.key === "Escape") onClose(); };
@@ -2382,12 +2385,13 @@ function AlerteDispoModal({ bien, checkin, checkout, onClose }) {
     return () => window.removeEventListener("keydown", fn);
   }, [onClose]);
 
+  const canSubmit = email && checkin && checkout && checkout > checkin;
+
   async function submit(e) {
     e.preventDefault();
-    if (!email) return;
+    if (!canSubmit) return;
     setSending(true); setErr(false);
-    const dates = checkin && checkout ? `du ${checkin} au ${checkout}` : checkin ? `à partir du ${checkin}` : "";
-    const message = `ALERTE DISPONIBILITÉ — ${bien.nom}${dates ? " " + dates : ""}\nEmail : ${email}${nom ? "\nNom : " + nom : ""}`;
+    const message = `ALERTE DISPONIBILITÉ — ${bien.nom}\nDates souhaitées : du ${checkin} au ${checkout}\nEmail : ${email}${nom ? "\nNom : " + nom : ""}`;
     try {
       const res = await fetch("/api/contact", {
         method: "POST",
@@ -2400,30 +2404,49 @@ function AlerteDispoModal({ bien, checkin, checkout, onClose }) {
     setSending(false);
   }
 
+  const inputStyle = { border: `1px solid ${SAND}`, borderRadius: 8, padding: "10px 14px", fontFamily: "'Jost', sans-serif", fontSize: 13, color: NAVY, outline: "none", background: "#fff", width: "100%", boxSizing: "border-box", colorScheme: "light" };
+
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 2100, background: "rgba(6,22,22,0.72)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, animation: "fadeIn 0.2s ease" }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: IVORY, borderRadius: 16, padding: "36px 32px", maxWidth: 420, width: "100%", boxShadow: "0 24px 64px rgba(0,0,0,0.28)", animation: "slideUpFull 0.28s ease" }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: IVORY, borderRadius: 16, padding: "36px 32px", maxWidth: 440, width: "100%", boxShadow: "0 24px 64px rgba(0,0,0,0.28)", animation: "slideUpFull 0.28s ease" }}>
         {sent ? (
           <div style={{ textAlign: "center" }}>
             <div style={{ fontSize: 36, marginBottom: 12 }}>🔔</div>
             <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 18, color: NAVY, marginBottom: 8 }}>Alerte enregistrée !</div>
-            <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13, color: MUTED, lineHeight: 1.7, margin: "0 0 20px" }}>Nous vous préviendrons dès que <strong>{bien.nom}</strong> se libère sur vos dates.</p>
+            <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13, color: MUTED, lineHeight: 1.7, margin: "0 0 6px" }}>
+              Nous vous préviendrons dès que <strong>{bien.nom}</strong> se libère.
+            </p>
+            <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 12, color: CORAL, margin: "0 0 20px" }}>
+              📅 {checkin} → {checkout}
+            </p>
             <button onClick={onClose} style={{ background: CORAL, border: "none", color: "#fff", borderRadius: 8, padding: "11px 28px", fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer" }}>Fermer</button>
           </div>
         ) : (
           <>
             <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 17, color: NAVY, marginBottom: 4 }}>🔔 Être alerté des disponibilités</div>
             <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 12, color: MUTED, lineHeight: 1.65, margin: "0 0 20px" }}>
-              Recevez un email dès que <strong>{bien.nom}</strong>{checkin && checkout ? ` se libère du ${checkin} au ${checkout}` : " devient disponible"}.
+              Recevez un email dès que <strong>{bien.nom}</strong> se libère sur vos dates.
             </p>
             <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <input type="text" placeholder="Votre prénom (optionnel)" value={nom} onChange={e => setNom(e.target.value)}
-                style={{ border: `1px solid ${SAND}`, borderRadius: 8, padding: "10px 14px", fontFamily: "'Jost', sans-serif", fontSize: 13, color: NAVY, outline: "none", background: "#fff" }} />
-              <input type="email" placeholder="Votre email *" value={email} onChange={e => setEmail(e.target.value)} required
-                style={{ border: `1px solid ${SAND}`, borderRadius: 8, padding: "10px 14px", fontFamily: "'Jost', sans-serif", fontSize: 13, color: NAVY, outline: "none", background: "#fff" }} />
+              {/* Dates */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div>
+                  <div style={{ fontSize: 10, color: MUTED, fontFamily: "'Jost', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 5 }}>Arrivée *</div>
+                  <input type="date" value={checkin} min={todayVal} onChange={e => { setCheckin(e.target.value); if (checkout && e.target.value >= checkout) setCheckout(""); }}
+                    style={inputStyle} required />
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, color: MUTED, fontFamily: "'Jost', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 5 }}>Départ *</div>
+                  <input type="date" value={checkout} min={checkin || todayVal} onChange={e => setCheckout(e.target.value)}
+                    style={inputStyle} required />
+                </div>
+              </div>
+              {/* Contact */}
+              <input type="text" placeholder="Votre prénom (optionnel)" value={nom} onChange={e => setNom(e.target.value)} style={inputStyle} />
+              <input type="email" placeholder="Votre email *" value={email} onChange={e => setEmail(e.target.value)} required style={inputStyle} />
               {err && <div style={{ fontSize: 11, color: CORAL, fontFamily: "'Jost', sans-serif" }}>Erreur — contactez-nous sur WhatsApp.</div>}
-              <button type="submit" disabled={sending || !email}
-                style={{ background: !email || sending ? SAND : NAVY, border: "none", color: !email || sending ? MUTED : "#faf5e9", borderRadius: 8, padding: "12px", fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: "0.1em", textTransform: "uppercase", cursor: !email || sending ? "not-allowed" : "pointer", transition: "background 0.15s" }}>
+              <button type="submit" disabled={sending || !canSubmit}
+                style={{ background: !canSubmit || sending ? SAND : NAVY, border: "none", color: !canSubmit || sending ? MUTED : "#faf5e9", borderRadius: 8, padding: "12px", fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: "0.1em", textTransform: "uppercase", cursor: !canSubmit || sending ? "not-allowed" : "pointer", transition: "background 0.15s" }}>
                 {sending ? "Envoi…" : "M'alerter →"}
               </button>
             </form>
