@@ -4114,6 +4114,25 @@ export default function App() {
   });
   const [mob, setMob] = useState(typeof window !== "undefined" && window.innerWidth < 640);
 
+  // Charger les URLs Booking.com depuis Cloudflare si localStorage vide
+  useEffect(() => {
+    const hasUrls = Object.values(icalUrlsBooking).some(v => v && v.length > 10);
+    if (!hasUrls) {
+      fetch("/api/ical-config")
+        .then(r => r.json())
+        .then(d => {
+          if (d.ok && d.booking) {
+            const filled = Object.fromEntries(Object.entries(d.booking).filter(([, v]) => v));
+            if (Object.keys(filled).length > 0) {
+              setIcalUrlsBooking(prev => ({ ...filled, ...prev }));
+              try { localStorage.setItem("ical_urls_booking", JSON.stringify({ ...filled, ...icalUrlsBooking })); } catch {}
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  }, []);
+
   useEffect(() => {
     const handler = () => setMob(window.innerWidth < 640);
     window.addEventListener("resize", handler);
