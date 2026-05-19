@@ -147,6 +147,29 @@ export default function GuideProximite() {
             ))}
           </div>
 
+          {/* Maillage interne */}
+          <div style={{ marginBottom: 48 }}>
+            <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 11, letterSpacing: "0.25em", textTransform: "uppercase", color: CORAL, margin: "0 0 16px" }}>Nos villas à Sainte-Luce</p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 12 }}>
+              {[
+                { id: "amaryllis", name: "Villa Amaryllis", desc: "Piscine à débordement · Vue mer · Jacuzzi · 8 personnes · À partir de 280€/nuit" },
+                { id: "zandoli",   name: "Zandoli",         desc: "Piscine privée · Vue mer · Jardin tropical · 5 personnes · À partir de 220€/nuit" },
+                { id: "iguana",    name: "Villa Iguana",    desc: "Piscine eau salée · Vue Diamant · 4 personnes · À partir de 180€/nuit" },
+                { id: "geko",      name: "Géko",            desc: "Piscine privée · Jardin tropical · 2 personnes · À partir de 150€/nuit" },
+                { id: "mabouya",   name: "Mabouya",         desc: "Jacuzzi privatif · Vue mer · Romantique · 2 personnes · À partir de 110€/nuit" },
+                { id: "schoelcher",name: "Bellevue",        desc: "Vue panoramique baie de Fort-de-France · 4 personnes · À partir de 100€/nuit" },
+              ].map(v => (
+                <a key={v.id} href={`/${v.id}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#fff", border: `1px solid ${SAND}`, borderRadius: 10, padding: "14px 18px", textDecoration: "none" }}>
+                  <div>
+                    <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 14, color: NAVY, marginBottom: 2 }}>{v.name}</div>
+                    <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 13, color: TEXT, opacity: 0.75 }}>{v.desc}</div>
+                  </div>
+                  <span style={{ color: CORAL, fontSize: 18, flexShrink: 0, marginLeft: 12 }}>›</span>
+                </a>
+              ))}
+            </div>
+          </div>
+
           {/* CTA */}
           <div style={{ background: NAVY, borderRadius: 16, padding: "40px 32px", textAlign: "center", marginBottom: 40 }}>
             <p style={{ color: CORAL, fontSize: 11, letterSpacing: "0.3em", textTransform: "uppercase", marginBottom: 12 }}>Réservation directe</p>

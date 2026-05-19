@@ -3584,7 +3584,6 @@ function FooterSection() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
           <span style={{ fontSize: 11, color: "rgba(250,245,233,0.35)", fontFamily: "'Jost', sans-serif", fontWeight: 300 }}>🔒 Réservation directe propriétaire · Paiement sécurisé Stripe</span>
-          <a href="/admin" style={{ fontSize: 10, color: "rgba(250,245,233,0.15)", textDecoration: "none", letterSpacing: "0.1em", fontFamily: "'Jost', sans-serif" }}>Admin</a>
         </div>
       </div>
     </footer>
@@ -4413,7 +4412,11 @@ export default function PublicSite() {
     if (bien) {
       const url = `https://villamaryllis.com/${bien.id}`;
       const img = `https://villamaryllis.com/photos/${bien.id}/01.webp`;
-      const title = `${bien.nom} — Location ${bien.lieu} | Amaryllis`;
+      const isMartinique = bien.lieu?.includes("Martinique");
+      const keyFeatures = (bien.amenities || []).slice(0, 3).join(", ");
+      const title = isMartinique
+        ? `${bien.nom} — Location villa ${keyFeatures ? `(${keyFeatures}) ` : ""}à ${bien.lieu.split(",")[0]} | À partir de ${bien.prix}€/nuit`
+        : `${bien.nom} — ${bien.lieu} | Amaryllis — À partir de ${bien.prix}€/nuit`;
       const desc = bien.desc.slice(0, 155) + (bien.desc.length > 155 ? "…" : "");
 
       window.history.pushState({}, "", "/" + bien.id);
@@ -4430,26 +4433,48 @@ export default function PublicSite() {
       setMeta('#tw-description', "content", desc);
       setMeta('#tw-image', "content", img);
 
-      // JSON-LD VacationRental pour la propriété
+      // JSON-LD Accommodation riche pour la propriété
       const ld = document.getElementById("ld-main");
       if (ld) {
         ld.textContent = JSON.stringify({
           "@context": "https://schema.org",
-          "@type": "LodgingBusiness",
-          "@id": url,
-          "name": bien.nom,
-          "url": url,
-          "description": bien.desc.slice(0, 300),
-          "image": img,
-          "address": {
-            "@type": "PostalAddress",
-            "addressLocality": bien.lieu.split(",")[0]?.trim(),
-            "addressRegion": bien.lieu.includes("Martinique") ? "Martinique" : "Île-de-France",
-            "addressCountry": "FR"
-          },
-          "priceRange": `À partir de ${bien.prix}€/nuit`,
-          "amenityFeature": (bien.amenities || []).map(e => ({ "@type": "LocationFeatureSpecification", "name": e })),
-          "provider": { "@id": "https://villamaryllis.com/#organization" }
+          "@graph": [
+            {
+              "@type": "VacationRental",
+              "@id": url,
+              "name": bien.nom,
+              "url": url,
+              "description": bien.desc.slice(0, 300),
+              "image": (bien.photos || []).slice(0, 5).map(p => `https://villamaryllis.com${p}`),
+              "address": {
+                "@type": "PostalAddress",
+                "addressLocality": bien.lieu.split(",")[0]?.trim(),
+                "addressRegion": isMartinique ? "Martinique" : "Île-de-France",
+                "addressCountry": isMartinique ? "MQ" : "FR"
+              },
+              ...(bien.rating ? { "starRating": { "@type": "Rating", "ratingValue": bien.rating.replace(",", "."), "bestRating": "5" } } : {}),
+              ...(bien.chambres ? { "numberOfRooms": String(bien.chambres) } : {}),
+              "accommodationCategory": isMartinique ? "Villa" : "Appartement",
+              "amenityFeature": (bien.amenities || []).map(e => ({ "@type": "LocationFeatureSpecification", "name": e, "value": true })),
+              "petsAllowed": (bien.amenities || []).some(a => /animaux/i.test(a)),
+              "occupancy": { "@type": "QuantitativeValue", "maxValue": bien.capacite },
+              "offers": {
+                "@type": "Offer",
+                "price": bien.prix,
+                "priceCurrency": "EUR",
+                "description": `À partir de ${bien.prix}€/nuit — réservation directe sans frais`,
+              },
+              "provider": { "@id": "https://villamaryllis.com/#organization" },
+              "isPartOf": { "@id": "https://villamaryllis.com/#organization" }
+            },
+            {
+              "@type": "Organization",
+              "@id": "https://villamaryllis.com/#organization",
+              "name": "Amaryllis Locations",
+              "url": "https://villamaryllis.com",
+              "telephone": "+33610880772"
+            }
+          ]
         });
       }
 
@@ -4582,6 +4607,11 @@ export default function PublicSite() {
 
   return (
     <div id="top" style={{ minHeight: "100vh", background: IVORY, color: TEXT, fontFamily: "'Jost', system-ui, -apple-system, sans-serif", overflowX: "hidden" }}>
+      {/* H1 SEO — visible uniquement pour les moteurs de recherche */}
+      <h1 style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0 }}>
+        Location villa Martinique avec piscine — Amaryllis, réservation directe sans frais
+      </h1>
+
       {!curtainDone && <Curtain onDone={() => setCurtainDone(true)} />}
       <CookieBanner />
 
@@ -4605,11 +4635,9 @@ export default function PublicSite() {
               <PropertyDropdown onSelect={openDetail} />
             </div>
 
-            {/* Right: contact + admin */}
+            {/* Right: contact */}
             <div style={{ display: "flex", alignItems: "center", gap: 16, flexShrink: 0 }}>
               <HoverContact direction="down" />
-              <div style={{ width: 1, height: 16, background: "rgba(250,245,233,0.1)" }} />
-              <a href="/admin" style={{ fontSize: 10, color: "rgba(250,247,242,0.25)", textDecoration: "none", letterSpacing: "0.12em", textTransform: "uppercase", fontFamily: "'Jost', sans-serif" }}>Admin</a>
             </div>
           </div>
         </div>

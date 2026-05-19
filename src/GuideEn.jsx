@@ -8,15 +8,21 @@ const CREAM = "#f5efe0";
 const SAND  = "#e8dcc8";
 const BASE  = "https://villamaryllis.com";
 
-const properties = [
+const propertiesMartinique = [
   { id: "amaryllis", name: "Villa Amaryllis", location: "Sainte-Luce", price: 280, guests: 8, highlight: "Infinity pool · Ocean view · Private jacuzzi" },
   { id: "zandoli",   name: "Zandoli",         location: "Sainte-Luce", price: 220, guests: 4, highlight: "Private pool · Sea view · Tropical garden" },
   { id: "iguana",    name: "Villa Iguana",    location: "Sainte-Luce", price: 180, guests: 4, highlight: "Salt water pool · Diamond Rock view" },
   { id: "geko",      name: "Géko",            location: "Sainte-Luce", price: 150, guests: 2, highlight: "Private pool · Tropical garden · BBQ" },
   { id: "mabouya",   name: "Mabouya",         location: "Sainte-Luce", price: 110, guests: 2, highlight: "Private jacuzzi · Sea view · Romantic" },
   { id: "schoelcher",name: "Bellevue",        location: "Schœlcher",   price: 100, guests: 4, highlight: "Panoramic sea view · Fort-de-France Bay" },
-  { id: "nogent",    name: "Apt. Paris Gates",location: "Nogent-sur-Marne", price: 85, guests: 4, highlight: "15 min from Paris · RER A · Quiet" },
 ];
+
+const propertiesIDF = [
+  { id: "nogent", name: "Apt. Paris Gates", location: "Nogent-sur-Marne", price: 85, guests: 4, highlight: "15 min from Paris · RER A · Quiet" },
+];
+
+// Combined for schema.org
+const properties = [...propertiesMartinique, ...propertiesIDF];
 
 const faqs = [
   { q: "How do I book a villa in Martinique without Airbnb?", a: "Book directly on villamaryllis.com using our secure payment system (Stripe). You save up to 14% in Airbnb service fees and get direct contact with the host." },
@@ -114,15 +120,34 @@ export default function GuideEn() {
           <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 28, letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY, marginBottom: 32, textAlign: "center" }}>
             Our properties
           </h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 64 }}>
-            {properties.map(p => (
+          {/* Martinique villas */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 48 }}>
+            {propertiesMartinique.map(p => (
               <a key={p.id} href={`/${p.id}`} style={{ textDecoration: "none", background: "#fff", border: `1px solid ${SAND}`, borderRadius: 12, padding: "24px 28px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
                 <div>
                   <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 16, color: NAVY, marginBottom: 4 }}>{p.name}</div>
-                  <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 15, color: TEXT, opacity: 0.8 }}>{p.location} · {p.highlight}</div>
+                  <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 15, color: TEXT, opacity: 0.8 }}>{p.location}, Martinique · {p.highlight}</div>
                 </div>
                 <div style={{ textAlign: "right", flexShrink: 0 }}>
                   <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 18, color: CORAL }}>€{p.price}<span style={{ fontSize: 13, fontWeight: 300 }}>/night</span></div>
+                  <div style={{ fontSize: 12, color: TEXT, opacity: 0.6 }}>up to {p.guests} guests</div>
+                </div>
+              </a>
+            ))}
+          </div>
+
+          {/* Paris / Île-de-France — separate section */}
+          <div style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 14, padding: "28px 32px", marginBottom: 64 }}>
+            <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 11, letterSpacing: "0.25em", textTransform: "uppercase", color: CORAL, margin: "0 0 12px" }}>Also available</p>
+            <h3 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 20, color: NAVY, margin: "0 0 20px", letterSpacing: "0.05em", textTransform: "uppercase" }}>Apartment near Paris</h3>
+            {propertiesIDF.map(p => (
+              <a key={p.id} href={`/${p.id}`} style={{ textDecoration: "none", background: "#fff", border: `1px solid ${SAND}`, borderRadius: 10, padding: "20px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+                <div>
+                  <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 15, color: NAVY, marginBottom: 4 }}>{p.name}</div>
+                  <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 14, color: TEXT, opacity: 0.8 }}>{p.location} · {p.highlight}</div>
+                </div>
+                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                  <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 17, color: CORAL }}>€{p.price}<span style={{ fontSize: 13, fontWeight: 300 }}>/night</span></div>
                   <div style={{ fontSize: 12, color: TEXT, opacity: 0.6 }}>up to {p.guests} guests</div>
                 </div>
               </a>

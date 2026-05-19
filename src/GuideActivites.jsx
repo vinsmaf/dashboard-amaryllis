@@ -199,6 +199,26 @@ export default function GuideActivites() {
             ))}
           </div>
 
+          {/* Maillage interne — villas à proximité des activités */}
+          <div style={{ marginBottom: 32 }}>
+            <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 11, letterSpacing: "0.25em", textTransform: "uppercase", color: CORAL, margin: "0 0 16px" }}>Nos villas — base idéale pour tout explorer</p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 10 }}>
+              {[
+                { id: "amaryllis", name: "Villa Amaryllis", desc: "8 pers. · Piscine à débordement · Vue mer · À partir de 280€/nuit" },
+                { id: "zandoli",   name: "Zandoli",         desc: "5 pers. · Piscine privée · Vue mer · À partir de 220€/nuit" },
+                { id: "iguana",    name: "Villa Iguana",    desc: "4 pers. · Piscine eau salée · À partir de 180€/nuit" },
+                { id: "geko",      name: "Géko",            desc: "2 pers. · Piscine · Jardin · À partir de 150€/nuit" },
+                { id: "mabouya",   name: "Mabouya",         desc: "2 pers. · Jacuzzi privatif · À partir de 110€/nuit" },
+                { id: "schoelcher",name: "Bellevue",        desc: "4 pers. · Vue baie Fort-de-France · À partir de 100€/nuit" },
+              ].map(v => (
+                <a key={v.id} href={`/${v.id}`} style={{ display: "flex", flexDirection: "column", background: "#fff", border: `1px solid ${SAND}`, borderRadius: 10, padding: "14px 16px", textDecoration: "none" }}>
+                  <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 13, color: NAVY, marginBottom: 3 }}>{v.name} ›</div>
+                  <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 13, color: TEXT, opacity: 0.75, lineHeight: 1.4 }}>{v.desc}</div>
+                </a>
+              ))}
+            </div>
+          </div>
+
           {/* CTA villas */}
           <div style={{ background: NAVY, borderRadius: 16, padding: "40px 32px", textAlign: "center", marginBottom: 40 }}>
             <p style={{ color: CORAL, fontSize: 11, letterSpacing: "0.3em", textTransform: "uppercase", marginBottom: 12 }}>Base idéale pour tout explorer</p>
