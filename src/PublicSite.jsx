@@ -63,6 +63,8 @@ if (typeof document !== "undefined" && !document.getElementById("__site_styles")
     @keyframes spin { to { transform: rotate(360deg); } }
     @keyframes fadeUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
     @keyframes slideUpFull { from { opacity:0; transform:translateY(40px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes shimmer { 0% { background-position:-400px 0; } 100% { background-position:400px 0; } }
+    .skeleton { background: linear-gradient(90deg,#e8e0d4 25%,#f4ecdc 50%,#e8e0d4 75%); background-size:800px 100%; animation:shimmer 1.4s infinite linear; border-radius:6px; }
     @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
     @keyframes slideInRight { from { opacity:0; transform:translateX(40px); } to { opacity:1; transform:translateX(0); } }
     @keyframes slideInLeft  { from { opacity:0; transform:translateX(-40px); } to { opacity:1; transform:translateX(0); } }
@@ -1426,10 +1428,12 @@ function BienCard({ bien, onDetail, onBook }) {
             key={photoIdx}
             src={currentPhoto}
             alt={bien.nom}
+            loading={photoIdx === 0 ? "eager" : "lazy"}
+            fetchpriority={photoIdx === 0 ? "high" : "low"}
             style={{
               width: "100%", height: "100%", objectFit: "cover",
               display: "block",
-              transition: "opacity 0.3s",
+              transition: "opacity 0.4s",
             }}
           />
         ) : (
@@ -1671,6 +1675,20 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
     return () => window.removeEventListener("resize", fn);
   }, []);
 
+  // ── Calcul prix sélection calendrier (utilisé top bar + corps) ──
+  const calNights = calCheckin && calCheckout ? dateDiff(calCheckin, calCheckout) : 0;
+  const calRawTotal = useMemo(() => {
+    if (!calNights || !calCheckin) return 0;
+    let sum = 0, cur = calCheckin;
+    for (let i = 0; i < calNights; i++) { sum += dailyPricesMap[cur] ?? bien.prix; cur = addDays(cur, 1); }
+    return sum;
+  }, [calNights, calCheckin, dailyPricesMap, bien.prix]);
+  const calDiscountRate   = getDiscount(calNights);
+  const calDiscountAmount = calDiscountRate > 0 ? Math.round(calRawTotal * calDiscountRate) : 0;
+  const calFrais  = FRAIS_MENAGE[bien.id] ?? 0;
+  const calTotal  = calRawTotal - calDiscountAmount + calFrais;
+  const calBelowMin = calNights > 0 && calNights < (MIN_NIGHTS[bien.id] ?? 1);
+
   const goPrev = useCallback(() => setPhotoIdx(i => (i - 1 + photos.length) % photos.length), [photos.length]);
   const goNext = useCallback(() => setPhotoIdx(i => (i + 1) % photos.length), [photos.length]);
 
@@ -1790,10 +1808,12 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
         </div>
         {!BOOKING_DISABLED.has(bien.id) ? (
           <button
-            onClick={() => onBook(bien)}
+            onClick={() => calCheckin && calCheckout && !calBelowMin ? onBook(bien, calCheckin, calCheckout) : onBook(bien)}
             style={{ background: CORAL, color: "#fff", border: "none", borderRadius: 5, padding: isMobile ? "8px 14px" : "9px 22px", fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 12, letterSpacing: "0.12em", cursor: "pointer", textTransform: "uppercase", flexShrink: 0, whiteSpace: "nowrap" }}
           >
-            {isMobile ? `${bien.prix}€/nuit` : `À partir de ${bien.prix}€/nuit`}
+            {calCheckin && calCheckout && !calBelowMin
+              ? `${calNights} nuits · ${calTotal}€`
+              : isMobile ? `${bien.prix}€/nuit` : `À partir de ${bien.prix}€/nuit`}
           </button>
         ) : (
           <a
@@ -1979,29 +1999,27 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
               <div style={{ marginBottom: 32 }}>
                 <div style={{ fontSize: 10, letterSpacing: "0.35em", textTransform: "uppercase", color: MUTED, fontWeight: 600, marginBottom: 14 }}>Disponibilités</div>
                 {loadingAvail ? (
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, color: MUTED, fontSize: 13, fontFamily: "'Jost', sans-serif", fontWeight: 300 }}>
-                    <OrganicLoader size={18} color={MUTED} /> Chargement du calendrier…
+                  <div>
+                    {/* Skeleton calendrier */}
+                    <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+                      {[0,1].map(col => (
+                        <div key={col} style={{ flex: "1 1 200px" }}>
+                          <div className="skeleton" style={{ height: 16, width: 120, margin: "0 auto 14px" }} />
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4 }}>
+                            {Array.from({ length: 35 }, (_, i) => (
+                              <div key={i} className="skeleton" style={{ height: 30, opacity: 0.4 + (i % 7) * 0.1 }} />
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ) : (() => {
                     const minNights = MIN_NIGHTS[bien.id] ?? 1;
                     const calNights = calCheckin && calCheckout ? dateDiff(calCheckin, calCheckout) : 0;
                     const calBelowMin = calNights > 0 && calNights < minNights;
 
-                    // Calcul du prix (identique à la modale)
-                    const calRawTotal = (() => {
-                      if (calNights === 0) return 0;
-                      let sum = 0, cur = calCheckin;
-                      for (let i = 0; i < calNights; i++) {
-                        sum += dailyPricesMap[cur] ?? bien.prix;
-                        cur = addDays(cur, 1);
-                      }
-                      return sum;
-                    })();
-                    const calDiscountRate   = getDiscount(calNights);
-                    const calDiscountAmount = calDiscountRate > 0 ? Math.round(calRawTotal * calDiscountRate) : 0;
-                    const calFrais  = FRAIS_MENAGE[bien.id] ?? 0;
-                    const calTotal  = calRawTotal - calDiscountAmount + calFrais;
-
+                    // calNights / calRawTotal / calTotal calculés au niveau du composant
                     // Navigation mois
                     const now = new Date();
                     const baseY = now.getFullYear(), baseM = now.getMonth();
@@ -2258,6 +2276,126 @@ function BenefitsStrip() {
 }
 
 // ── Quick Book ────────────────────────────────────────────────────
+// ── Exit Intent Modal ────────────────────────────────────────────
+function ExitIntentModal({ onClose }) {
+  useEffect(() => {
+    const fn = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", fn);
+    return () => window.removeEventListener("keydown", fn);
+  }, [onClose]);
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 2000, background: "rgba(6,22,22,0.75)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, animation: "fadeIn 0.25s ease" }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: IVORY, borderRadius: 16, padding: "40px 36px", maxWidth: 440, width: "100%", textAlign: "center", boxShadow: "0 24px 64px rgba(0,0,0,0.3)", animation: "slideUpFull 0.3s ease" }}>
+        <div style={{ fontSize: 36, marginBottom: 12 }}>🌴</div>
+        <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: 24, color: NAVY, marginBottom: 8, lineHeight: 1.3 }}>
+          Avant de partir…
+        </div>
+        <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 14, color: MUTED, lineHeight: 1.7, margin: "0 0 24px" }}>
+          Une question sur nos villas en Martinique ? Notre équipe répond en moins d'une heure — même le week-end.
+        </p>
+        <a
+          href={`https://wa.me/${WA_NUMBER}?text=${WA_MSG_DEFAULT}`}
+          target="_blank" rel="noopener noreferrer"
+          onClick={onClose}
+          style={{ display: "block", background: "#25D366", color: "#fff", borderRadius: 8, padding: "14px 24px", fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 13, letterSpacing: "0.08em", textDecoration: "none", textTransform: "uppercase", marginBottom: 12 }}
+        >
+          💬 Nous écrire sur WhatsApp
+        </a>
+        <button onClick={onClose} style={{ background: "none", border: "none", color: MUTED, cursor: "pointer", fontSize: 12, fontFamily: "'Jost', sans-serif", textDecoration: "underline" }}>
+          Non merci, je continue
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Recherche par dates ──────────────────────────────────────────
+function SearchByDates({ biens, onBook, onDetail }) {
+  const [checkin, setCheckin] = useState("");
+  const [checkout, setCheckout] = useState("");
+  const [results, setResults] = useState(null); // null = pas lancé
+
+  const todayVal = today();
+
+  function search() {
+    if (!checkin || !checkout || checkout <= checkin) return;
+    const nights = dateDiff(checkin, checkout);
+    const allPrices = loadDailyPrices();
+    const res = biens
+      .filter(b => !BOOKING_DISABLED.has(b.id) && !b.beds24Url)
+      .map(b => {
+        const map = allPrices[b.id] || {};
+        let sum = 0, cur = checkin;
+        for (let i = 0; i < nights; i++) { sum += map[cur] ?? b.prix; cur = addDays(cur, 1); }
+        const disc = getDiscount(nights);
+        const discAmt = disc > 0 ? Math.round(sum * disc) : 0;
+        const frais = FRAIS_MENAGE[b.id] ?? 0;
+        const total = sum - discAmt + frais;
+        const minN = MIN_NIGHTS[b.id] ?? 1;
+        return { bien: b, nights, total, rawTotal: sum, discAmt, frais, belowMin: nights < minN, minN };
+      })
+      .sort((a, b) => a.total - b.total);
+    setResults(res);
+  }
+
+  function reset() { setCheckin(""); setCheckout(""); setResults(null); }
+
+  return (
+    <div style={{ background: NAVY, padding: "24px 32px", borderBottom: "1px solid rgba(250,245,233,0.06)" }}>
+      <div style={{ maxWidth: 1280, margin: "0 auto" }}>
+        <div style={{ fontSize: 10, letterSpacing: "0.3em", textTransform: "uppercase", color: "rgba(250,245,233,0.4)", fontFamily: "'Jost', sans-serif", marginBottom: 14 }}>
+          Rechercher par dates
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(250,245,233,0.06)", borderRadius: 8, padding: "10px 16px", border: "1px solid rgba(250,245,233,0.1)" }}>
+            <span style={{ fontSize: 11, color: "rgba(250,245,233,0.4)", fontFamily: "'Jost', sans-serif", letterSpacing: "0.1em", whiteSpace: "nowrap" }}>Arrivée</span>
+            <input type="date" value={checkin} min={todayVal} onChange={e => { setCheckin(e.target.value); setResults(null); }}
+              style={{ background: "none", border: "none", color: "#faf5e9", fontSize: 13, fontFamily: "'Jost', sans-serif", outline: "none", cursor: "pointer" }} />
+          </div>
+          <div style={{ color: "rgba(250,245,233,0.25)", fontSize: 18 }}>→</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(250,245,233,0.06)", borderRadius: 8, padding: "10px 16px", border: "1px solid rgba(250,245,233,0.1)" }}>
+            <span style={{ fontSize: 11, color: "rgba(250,245,233,0.4)", fontFamily: "'Jost', sans-serif", letterSpacing: "0.1em", whiteSpace: "nowrap" }}>Départ</span>
+            <input type="date" value={checkout} min={checkin || todayVal} onChange={e => { setCheckout(e.target.value); setResults(null); }}
+              style={{ background: "none", border: "none", color: "#faf5e9", fontSize: 13, fontFamily: "'Jost', sans-serif", outline: "none", cursor: "pointer" }} />
+          </div>
+          <button onClick={search} disabled={!checkin || !checkout || checkout <= checkin}
+            style={{ background: CORAL, border: "none", color: "#fff", borderRadius: 8, padding: "11px 28px", fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: "0.1em", textTransform: "uppercase", cursor: (!checkin || !checkout || checkout <= checkin) ? "not-allowed" : "pointer", opacity: (!checkin || !checkout || checkout <= checkin) ? 0.5 : 1, whiteSpace: "nowrap" }}>
+            Voir les prix →
+          </button>
+          {results && <button onClick={reset} style={{ background: "none", border: "none", color: "rgba(250,245,233,0.35)", cursor: "pointer", fontSize: 12, fontFamily: "'Jost', sans-serif", textDecoration: "underline" }}>Effacer</button>}
+        </div>
+
+        {/* Résultats */}
+        {results && (
+          <div style={{ marginTop: 20, display: "flex", gap: 12, flexWrap: "wrap" }}>
+            {results.map(({ bien, nights, total, discAmt, frais, belowMin, minN }) => (
+              <div key={bien.id} style={{ background: "rgba(250,245,233,0.05)", border: `1px solid ${belowMin ? "rgba(239,68,68,0.3)" : "rgba(250,245,233,0.1)"}`, borderRadius: 10, padding: "14px 18px", minWidth: 180, flex: "1 1 180px", maxWidth: 260 }}>
+                <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 13, color: "#faf5e9", marginBottom: 4 }}>{bien.nom}</div>
+                {belowMin ? (
+                  <div style={{ fontSize: 11, color: "#f87171" }}>Séjour min. {minN} nuits</div>
+                ) : (
+                  <>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: CORAL, lineHeight: 1, marginBottom: 2 }}>{total}€</div>
+                    <div style={{ fontSize: 10, color: "rgba(250,245,233,0.35)", marginBottom: 10 }}>
+                      {nights} nuit{nights > 1 ? "s" : ""}
+                      {discAmt > 0 && ` · −${discAmt}€ remise`}
+                      {frais > 0 && ` · +${frais}€ ménage`}
+                    </div>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button onClick={() => onDetail(bien)} style={{ flex: 1, background: "rgba(250,245,233,0.08)", border: "1px solid rgba(250,245,233,0.15)", color: "#faf5e9", borderRadius: 6, padding: "6px 10px", fontSize: 11, cursor: "pointer", fontFamily: "'Jost', sans-serif" }}>Voir</button>
+                      <button onClick={() => onBook(bien, checkin, checkout)} style={{ flex: 1, background: CORAL, border: "none", color: "#fff", borderRadius: 6, padding: "6px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "'Jost', sans-serif" }}>Réserver</button>
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function QuickBook({ biens, onBook }) {
   const amaryllis = biens.find(b => b.id === "amaryllis") || biens[0];
   const [selectedId, setSelectedId] = useState(amaryllis?.id || biens[0]?.id);
@@ -3371,6 +3509,8 @@ export default function PublicSite() {
   const [loadingAvail, setLoadingAvail] = useState(false);
   const [priceOverrides, setPriceOverrides] = useState(loadPriceOverrides);
   const [curtainDone, setCurtainDone] = useState(false);
+  const [showExitIntent, setShowExitIntent] = useState(false);
+  const exitShown = useRef(false);
 
   // Listen for admin price updates — même onglet ET autres onglets (cross-tab)
   useEffect(() => {
@@ -3505,6 +3645,19 @@ export default function PublicSite() {
     return () => window.removeEventListener("scroll", fn);
   }, []);
 
+  // Exit intent — desktop : souris sort par le haut après 10s sur la page
+  useEffect(() => {
+    let ready = false;
+    const t = setTimeout(() => { ready = true; }, 10000);
+    const fn = (e) => {
+      if (!ready || exitShown.current || e.clientY > 10) return;
+      exitShown.current = true;
+      setShowExitIntent(true);
+    };
+    document.addEventListener("mouseleave", fn);
+    return () => { clearTimeout(t); document.removeEventListener("mouseleave", fn); };
+  }, []);
+
   // Auto-open property detail if URL matches a bien ID (e.g. /amaryllis)
   useEffect(() => {
     const pathId = window.location.pathname.slice(1);
@@ -3576,6 +3729,9 @@ export default function PublicSite() {
           </div>
         </div>
       </header>
+
+      {/* ── SEARCH BY DATES ── */}
+      <SearchByDates biens={biensList} onBook={openBien} onDetail={openDetail} />
 
       {/* ── HERO CAROUSEL ── */}
       <HeroCarousel biens={biensList} onDetail={openDetail} onBook={openBien} />
@@ -3707,6 +3863,11 @@ export default function PublicSite() {
       {/* ── BOOKING MODAL ── */}
       {selectedBien && (
         <BookingModal bien={selectedBien} blockedDates={blockedDates} loadingAvail={loadingAvail} onClose={() => { setSelectedBien(null); setBookingInitialDates({ checkin: null, checkout: null }); }} initialCheckin={bookingInitialDates.checkin} initialCheckout={bookingInitialDates.checkout} />
+      )}
+
+      {/* ── EXIT INTENT ── */}
+      {showExitIntent && !detailBien && !selectedBien && (
+        <ExitIntentModal onClose={() => setShowExitIntent(false)} />
       )}
 
       {/* ── WHATSAPP FLOTTANT ── visible quand on scrolle, pas en modal */}
