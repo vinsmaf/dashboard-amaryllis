@@ -2002,6 +2002,152 @@ function Historique({ biens, n, mob, hist = HIST_SEED }) {
 
 // ============================================================================
 // PILOTAGE (Canaux / Fiscal / Détail charges)
+// ── MinNightsConfig — sous-composant UI admin ────────────────────
+const MIN_NIGHTS_DEFAULTS_ADMIN = {
+  amaryllis: 4, geko: 3, zandoli: 3, schoelcher: 3, mabouya: 2, nogent: 1, iguana: 0,
+};
+const BIEN_NAMES_ADMIN = {
+  amaryllis: "Villa Amaryllis", geko: "Géko", zandoli: "Zandoli",
+  schoelcher: "Bellevue", mabouya: "Mabouya", nogent: "Appt. Nogent", iguana: "Villa Iguana",
+};
+
+function MinNightsConfig() {
+  const [config, setConfig] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("amaryllis_min_nights_v2") || "{}");
+      const full = {};
+      for (const id of Object.keys(MIN_NIGHTS_DEFAULTS_ADMIN)) {
+        full[id] = saved[id] ?? { default: MIN_NIGHTS_DEFAULTS_ADMIN[id], periods: [] };
+        if (!Array.isArray(full[id].periods)) full[id].periods = [];
+      }
+      return full;
+    } catch { return Object.fromEntries(Object.entries(MIN_NIGHTS_DEFAULTS_ADMIN).map(([id, v]) => [id, { default: v, periods: [] }])); }
+  });
+  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState(null); // "ok" | "error" | null
+
+  // Charger depuis le serveur au montage
+  useState(() => {
+    fetch("/api/site-config").then(r => r.json()).then(d => {
+      if (d.ok && d.config && Object.keys(d.config).length) {
+        const full = {};
+        for (const id of Object.keys(MIN_NIGHTS_DEFAULTS_ADMIN)) {
+          full[id] = d.config[id] ?? { default: MIN_NIGHTS_DEFAULTS_ADMIN[id], periods: [] };
+          if (!Array.isArray(full[id].periods)) full[id].periods = [];
+        }
+        setConfig(full);
+        localStorage.setItem("amaryllis_min_nights_v2", JSON.stringify(full));
+      }
+    }).catch(() => {});
+  });
+
+  async function save() {
+    setSaving(true); setStatus(null);
+    localStorage.setItem("amaryllis_min_nights_v2", JSON.stringify(config));
+    try {
+      const r = await fetch("/api/site-config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "setConfig", config }),
+      });
+      const d = await r.json();
+      setStatus(d.ok ? "ok" : "error");
+    } catch { setStatus("error"); }
+    setSaving(false);
+    setTimeout(() => setStatus(null), 5000);
+  }
+
+  function upDefault(id, v) {
+    setConfig(p => ({ ...p, [id]: { ...p[id], default: parseInt(v) || 0 } }));
+  }
+  function addPeriod(id) {
+    const y = new Date().getFullYear();
+    setConfig(p => ({
+      ...p,
+      [id]: { ...p[id], periods: [...p[id].periods, { id: Date.now().toString(), label: "Nouvelle période", from: `${y}-07-01`, to: `${y}-08-31`, min: 7 }] },
+    }));
+  }
+  function upPeriod(bienId, pid, field, v) {
+    setConfig(p => ({
+      ...p,
+      [bienId]: { ...p[bienId], periods: p[bienId].periods.map(pr => pr.id === pid ? { ...pr, [field]: field === "min" ? (parseInt(v) || 1) : v } : pr) },
+    }));
+  }
+  function rmPeriod(bienId, pid) {
+    setConfig(p => ({ ...p, [bienId]: { ...p[bienId], periods: p[bienId].periods.filter(pr => pr.id !== pid) } }));
+  }
+
+  const inp = { padding: "5px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.13)", background: "rgba(255,255,255,0.05)", color: "#e2e8f0", fontSize: 12 };
+
+  return (
+    <div>
+      <div style={{ fontSize: 12, color: "#64748b", marginBottom: 16, lineHeight: 1.6 }}>
+        Définissez le nombre de nuits minimum par logement et par période. Les périodes ont priorité sur le défaut.<br />
+        Les règles sont appliquées automatiquement dans le widget de réservation du site public.
+      </div>
+
+      {Object.keys(MIN_NIGHTS_DEFAULTS_ADMIN).map(bienId => {
+        const cfg     = config[bienId] || { default: MIN_NIGHTS_DEFAULTS_ADMIN[bienId], periods: [] };
+        const periods = cfg.periods || [];
+        return (
+          <div key={bienId} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "14px 16px", marginBottom: 10 }}>
+            {/* Header bien */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: periods.length ? 12 : 6, flexWrap: "wrap", gap: 8 }}>
+              <span style={{ fontWeight: 700, color: "#e2e8f0", fontSize: 13 }}>{BIEN_NAMES_ADMIN[bienId]}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 11, color: "#64748b" }}>Défaut :</span>
+                <input type="number" min="0" max="30" value={cfg.default} onChange={e => upDefault(bienId, e.target.value)}
+                  style={{ ...inp, width: 52, textAlign: "center", fontWeight: 700, fontSize: 14 }} />
+                <span style={{ fontSize: 11, color: "#64748b" }}>nuits min.</span>
+              </div>
+            </div>
+
+            {/* En-têtes colonnes */}
+            {periods.length > 0 && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 126px 126px 64px 30px", gap: 6, marginBottom: 5, paddingLeft: 2 }}>
+                {["Libellé période", "Début", "Fin", "Min", ""].map(h => (
+                  <div key={h} style={{ fontSize: 9, color: "#475569", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>{h}</div>
+                ))}
+              </div>
+            )}
+
+            {/* Lignes périodes */}
+            {periods.map(p => (
+              <div key={p.id} style={{ display: "grid", gridTemplateColumns: "1fr 126px 126px 64px 30px", gap: 6, marginBottom: 6, alignItems: "center" }}>
+                <input value={p.label} onChange={e => upPeriod(bienId, p.id, "label", e.target.value)} style={inp} placeholder="ex : Été 2025" />
+                <input type="date"    value={p.from}  onChange={e => upPeriod(bienId, p.id, "from",  e.target.value)} style={inp} />
+                <input type="date"    value={p.to}    onChange={e => upPeriod(bienId, p.id, "to",    e.target.value)} style={inp} />
+                <input type="number" min="1" max="30" value={p.min} onChange={e => upPeriod(bienId, p.id, "min", e.target.value)}
+                  style={{ ...inp, textAlign: "center", fontWeight: 700 }} />
+                <button onClick={() => rmPeriod(bienId, p.id)}
+                  style={{ background: "rgba(239,68,68,0.13)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 6, color: "#ef4444", cursor: "pointer", fontSize: 13, lineHeight: 1, padding: "4px 0", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  ✕
+                </button>
+              </div>
+            ))}
+
+            {/* Add period */}
+            <button onClick={() => addPeriod(bienId)}
+              style={{ background: "rgba(14,165,233,0.08)", border: "1px solid rgba(14,165,233,0.22)", borderRadius: 6, color: "#38bdf8", cursor: "pointer", fontSize: 11, padding: "5px 12px", fontWeight: 600, marginTop: periods.length ? 4 : 0 }}>
+              + Ajouter une période
+            </button>
+          </div>
+        );
+      })}
+
+      {/* Save */}
+      <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 12 }}>
+        <button onClick={save} disabled={saving}
+          style={{ background: saving ? "rgba(14,165,233,0.4)" : "#0ea5e9", border: "none", borderRadius: 8, color: "#fff", cursor: saving ? "default" : "pointer", fontSize: 13, padding: "10px 28px", fontWeight: 700 }}>
+          {saving ? "Sauvegarde…" : "💾 Sauvegarder"}
+        </button>
+        {status === "ok"    && <span style={{ fontSize: 12, color: "#10b981" }}>✓ Sauvegardé — visible immédiatement sur le site</span>}
+        {status === "error" && <span style={{ fontSize: 12, color: "#f59e0b" }}>⚠ Erreur serveur — config enregistrée localement seulement</span>}
+      </div>
+    </div>
+  );
+}
+
 // ============================================================================
 function Pilotage({ biens, n, mob }) {
   const [view, setView] = useState("canaux");
@@ -2095,11 +2241,12 @@ function Pilotage({ biens, n, mob }) {
       {/* Sub-tabs */}
       <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
         {[
-          { id: "canaux",  l: "💼 Canaux" },
-          { id: "marche",  l: "🎯 Marché" },
-          { id: "fiscal",  l: "📋 Fiscal" },
-          { id: "conseil", l: "🎓 Conseil" },
-          { id: "detail",  l: "📊 Détail charges" },
+          { id: "canaux",    l: "💼 Canaux" },
+          { id: "marche",    l: "🎯 Marché" },
+          { id: "fiscal",    l: "📋 Fiscal" },
+          { id: "conseil",   l: "🎓 Conseil" },
+          { id: "detail",    l: "📊 Détail charges" },
+          { id: "minnights", l: "🗓 Nuits min." },
         ].map(v => (
           <button key={v.id} onClick={() => setView(v.id)} style={{
             padding: "7px 14px", borderRadius: 20, border: "none", cursor: "pointer",
@@ -2886,6 +3033,8 @@ function Pilotage({ biens, n, mob }) {
           </div>
         </div>
       )}
+
+      {view === "minnights" && <MinNightsConfig />}
     </div>
   );
 }

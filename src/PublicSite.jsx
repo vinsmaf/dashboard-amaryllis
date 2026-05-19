@@ -18,7 +18,8 @@ function discountLabel(nights) {
   return "semaine";
 }
 
-const MIN_NIGHTS = {
+// Valeurs par défaut — surchargées par la config admin (séjour minimum)
+const MIN_NIGHTS_DEFAULT = {
   amaryllis:  4,
   geko:       3,
   zandoli:    3,
@@ -27,6 +28,33 @@ const MIN_NIGHTS = {
   nogent:     1,
   iguana:     0,
 };
+
+function loadMinNightsConfig() {
+  try { return JSON.parse(localStorage.getItem("amaryllis_min_nights_v2") || "{}"); }
+  catch { return {}; }
+}
+function saveMinNightsConfig(cfg) {
+  try { localStorage.setItem("amaryllis_min_nights_v2", JSON.stringify(cfg)); } catch {}
+}
+/**
+ * Retourne le séjour minimum pour un bien à une date de check-in donnée.
+ * Parcourt les périodes configurées (de la plus récente à la plus ancienne) ;
+ * si aucune ne correspond, retourne la valeur par défaut du bien.
+ * @param {string} bienId
+ * @param {string|null} checkinDate  YYYY-MM-DD ou null
+ */
+function getMinNights(bienId, checkinDate) {
+  const cfg     = loadMinNightsConfig();
+  const bienCfg = cfg[bienId];
+  const fallback = MIN_NIGHTS_DEFAULT[bienId] ?? 1;
+  if (!bienCfg) return fallback;
+  if (checkinDate && Array.isArray(bienCfg.periods) && bienCfg.periods.length) {
+    for (const p of bienCfg.periods) {
+      if (checkinDate >= p.from && checkinDate <= p.to) return p.min;
+    }
+  }
+  return bienCfg.default ?? fallback;
+}
 
 const FRAIS_MENAGE = {
   nogent:     45,
@@ -1254,7 +1282,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
   const extraGuestSuppl = extraGuests * extraGuestRate * nights;
   const petSuppl        = nbPets > 0 ? PET_SUPPLEMENT : 0;
   const total = rawTotal - discountAmount + fraisMenage + extraGuestSuppl + petSuppl;
-  const minNights = MIN_NIGHTS[bien.id] ?? 1;
+  const minNights = getMinNights(bien.id, checkin);
   const belowMin = nights > 0 && nights < minNights;
 
   const formOk = form.prenom && form.nom && form.email && form.email.includes("@");
@@ -2110,7 +2138,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
   const calDiscountAmount = calDiscountRate > 0 ? Math.round(calRawTotal * calDiscountRate) : 0;
   const calFrais  = FRAIS_MENAGE[bien.id] ?? 0;
   const calTotal  = calRawTotal - calDiscountAmount + calFrais;
-  const calBelowMin = calNights > 0 && calNights < (MIN_NIGHTS[bien.id] ?? 1);
+  const calBelowMin = calNights > 0 && calNights < getMinNights(bien.id, calCheckin);
 
   const goPrev = useCallback(() => setPhotoIdx(i => (i - 1 + photos.length) % photos.length), [photos.length]);
   const goNext = useCallback(() => setPhotoIdx(i => (i + 1) % photos.length), [photos.length]);
@@ -2440,7 +2468,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                     </div>
                   </div>
                 ) : (() => {
-                    const minNights = MIN_NIGHTS[bien.id] ?? 1;
+                    const minNights = getMinNights(bien.id, calCheckin);
                     const calNights = calCheckin && calCheckout ? dateDiff(calCheckin, calCheckout) : 0;
                     const calBelowMin = calNights > 0 && calNights < minNights;
 
@@ -2810,7 +2838,7 @@ function ComparatorModal({ biens, onClose }) {
     { label: "Capacité",    render: b => <span style={{ fontSize:13, color:TEXT }}>👥 {b.capacite} pers.</span> },
     { label: "Chambres",    render: b => <span style={{ fontSize:13, color:TEXT }}>🛏 {b.chambres} ch. · {b.sdb} SDB</span> },
     { label: "Frais ménage",render: b => <span style={{ fontSize:13, color:TEXT }}>{FRAIS_MENAGE[b.id] ? `${FRAIS_MENAGE[b.id]}€` : "Inclus"}</span> },
-    { label: "Séjour min.", render: b => <span style={{ fontSize:13, color:TEXT }}>{MIN_NIGHTS[b.id] ? `${MIN_NIGHTS[b.id]} nuits` : "Pas de minimum"}</span> },
+    { label: "Séjour min.", render: b => { const mn = getMinNights(b.id); return <span style={{ fontSize:13, color:TEXT }}>{mn > 0 ? `${mn} nuits` : "Pas de minimum"}</span>; } },
     { label: "Équipements", render: b => (
       <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
         {(b.amenities || []).slice(0,4).map(a => (
@@ -2959,7 +2987,7 @@ function SearchByDates({ biens, onBook, onDetail }) {
 
     const res = candidates.map(b => {
       const blocked = availMap[b.id] || [];
-      const minN = MIN_NIGHTS[b.id] ?? 1;
+      const minN = getMinNights(b.id, checkin);
 
       // Vérifier capacité
       if (gFilter > 0 && b.capacite < gFilter) return null;
@@ -4663,6 +4691,14 @@ export default function PublicSite() {
   const exitShown = useRef(!!sessionStorage.getItem("amaryllis_exit_shown"));
   const [compareIds, setCompareIds] = useState(new Set());
   const [showComparator, setShowComparator] = useState(false);
+
+  // Charger la config séjour minimum depuis le serveur au démarrage
+  useEffect(() => {
+    fetch("/api/site-config")
+      .then(r => r.json())
+      .then(d => { if (d.ok && d.config && Object.keys(d.config).length) saveMinNightsConfig(d.config); })
+      .catch(() => {});
+  }, []);
 
   // Listen for admin price updates — même onglet ET autres onglets (cross-tab)
   useEffect(() => {

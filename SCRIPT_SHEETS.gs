@@ -37,6 +37,7 @@ function doGet(e) {
   if (action === "importAllReservations") return importAllReservations_(e.parameter);
   if (action === "sendCheckinAlerts") { sendCheckinAlerts_(); return json_({ ok: true }); }
   if (action === "setNtfyTopic") return setNtfyTopic_(e.parameter);
+  if (action === "getConfig")    return getConfig_();
 
   return json_({ error: "action inconnue: " + action });
 }
@@ -49,8 +50,30 @@ function doPost(e) {
   var action = body.action || "";
   if (action === "importBeds24")       return importBeds24_(body.bookings || []);
   if (action === "importAllReservations") return importAllReservations_(body.reservations || []);
+  if (action === "setConfig")             return setConfig_(body);
 
   return json_({ error: "action POST inconnue: " + action });
+}
+
+// ── Config séjour minimum ─────────────────────────────────────────
+function getConfig_() {
+  try {
+    var props = PropertiesService.getScriptProperties();
+    var val   = props.getProperty("min_nights_config");
+    return json_({ ok: true, config: val ? JSON.parse(val) : {} });
+  } catch(e) {
+    return json_({ ok: false, error: String(e) });
+  }
+}
+
+function setConfig_(body) {
+  try {
+    var props = PropertiesService.getScriptProperties();
+    props.setProperty("min_nights_config", JSON.stringify(body.config || {}));
+    return json_({ ok: true });
+  } catch(e) {
+    return json_({ ok: false, error: String(e) });
+  }
 }
 
 function readAll_() {
