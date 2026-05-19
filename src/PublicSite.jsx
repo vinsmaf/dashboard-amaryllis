@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { loadDailyPrices } from "./seedPrices.js";
 import SEOMeta from "./SEOMeta.jsx";
+import { Reveal } from "./useReveal.jsx";
 
 // ── Brand palette (from logos.jsx) ──────────────────────────────
 // Remises par durée de séjour (appliquées sur le sous-total)
@@ -4876,7 +4877,7 @@ export default function PublicSite() {
         {/* ── Reassurance blocks ── */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 20, marginBottom: 52 }}>
           {/* Block 1 — Pourquoi en direct */}
-          <div style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 14, padding: "28px 28px 24px" }}>
+          <Reveal anim="fadeLeft" delay={0} style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 14, padding: "28px 28px 24px" }}>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.3em", textTransform: "uppercase", color: CORAL, marginBottom: 14 }}>Pourquoi réserver en direct chez Amaryllis ?</div>
             {[
               ["💰", "Tarifs propriétaires", "Jusqu'à −20% par rapport à Airbnb ou Booking.com — aucune commission plateforme."],
@@ -4892,10 +4893,10 @@ export default function PublicSite() {
                 </div>
               </div>
             ))}
-          </div>
+          </Reveal>
 
           {/* Block 2 — Avis voyageurs */}
-          <div style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 14, padding: "28px 28px 24px" }}>
+          <Reveal anim="fadeRight" delay={0.15} style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 14, padding: "28px 28px 24px" }}>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.3em", textTransform: "uppercase", color: CORAL, marginBottom: 14 }}>Des séjours plébiscités par nos voyageurs</div>
             <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 16 }}>
               <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 800, fontSize: 48, color: NAVY, lineHeight: 1 }}>4,8</span>
@@ -4915,22 +4916,28 @@ export default function PublicSite() {
                 <span key={r} style={{ background: IVORY, border: `1px solid ${SAND}`, borderRadius: 20, padding: "3px 10px", fontSize: 10, color: MUTED, fontFamily: "'Jost', sans-serif" }}>{r}</span>
               ))}
             </div>
-          </div>
+          </Reveal>
         </div>
 
         {/* Grid */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: 24 }}>
-          {filtered.map(b => (
-            <BienCard key={b.id} bien={b} onDetail={openDetail} onBook={openBien} isFavorite={favorites.has(b.id)} onToggleFavorite={toggleFavorite} isCompared={compareIds.has(b.id)} onToggleCompare={toggleCompare} />
+          {filtered.map((b, i) => (
+            <Reveal key={b.id} delay={Math.min(i * 0.08, 0.4)}>
+              <BienCard bien={b} onDetail={openDetail} onBook={openBien} isFavorite={favorites.has(b.id)} onToggleFavorite={toggleFavorite} isCompared={compareIds.has(b.id)} onToggleCompare={toggleCompare} />
+            </Reveal>
           ))}
         </div>
       </div>
 
       {/* ── CARTE ── */}
-      <MapSection biens={biensList} onDetail={openDetail} />
+      <Reveal anim="fadeIn" threshold={0.05}>
+        <MapSection biens={biensList} onDetail={openDetail} />
+      </Reveal>
 
       {/* ── FAQ + GUIDE ── */}
-      <FaqSection />
+      <Reveal anim="fadeUp" threshold={0.08}>
+        <FaqSection />
+      </Reveal>
 
       {/* ── FOOTER + CONTACT ── */}
       <FooterSection />
