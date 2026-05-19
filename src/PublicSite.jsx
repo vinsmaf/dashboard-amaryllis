@@ -4710,6 +4710,7 @@ export default function PublicSite() {
       // JSON-LD Accommodation riche pour la propriété
       const ld = document.getElementById("ld-main");
       if (ld) {
+        const locality = bien.lieu.split(",")[0]?.trim();
         ld.textContent = JSON.stringify({
           "@context": "https://schema.org",
           "@graph": [
@@ -4719,34 +4720,67 @@ export default function PublicSite() {
               "name": bien.nom,
               "url": url,
               "description": bien.desc.slice(0, 300),
-              "image": (bien.photos || []).slice(0, 5).map(p => `https://villamaryllis.com${p}`),
+              "image": (bien.photos || []).slice(0, 8).map(p => ({
+                "@type": "ImageObject",
+                "url": `https://villamaryllis.com${p}`,
+                "contentUrl": `https://villamaryllis.com${p}`,
+              })),
               "address": {
                 "@type": "PostalAddress",
-                "addressLocality": bien.lieu.split(",")[0]?.trim(),
+                "addressLocality": locality,
                 "addressRegion": isMartinique ? "Martinique" : "Île-de-France",
-                "addressCountry": isMartinique ? "MQ" : "FR"
+                "addressCountry": isMartinique ? "MQ" : "FR",
+                "postalCode": isMartinique ? "97228" : "94130",
               },
-              ...(bien.rating ? { "starRating": { "@type": "Rating", "ratingValue": bien.rating.replace(",", "."), "bestRating": "5" } } : {}),
+              ...(bien.coords ? { "geo": { "@type": "GeoCoordinates", "latitude": bien.coords.lat, "longitude": bien.coords.lng } } : {}),
+              ...(bien.rating ? {
+                "aggregateRating": {
+                  "@type": "AggregateRating",
+                  "ratingValue": bien.rating.replace(",", "."),
+                  "reviewCount": bien.reviews || 1,
+                  "bestRating": "5",
+                  "worstRating": "1"
+                }
+              } : bien.id === "amaryllis" ? {
+                "aggregateRating": { "@type": "AggregateRating", "ratingValue": "5", "reviewCount": "20", "bestRating": "5", "worstRating": "1" }
+              } : {}),
               ...(bien.chambres ? { "numberOfRooms": String(bien.chambres) } : {}),
               "accommodationCategory": isMartinique ? "Villa" : "Appartement",
               "amenityFeature": (bien.amenities || []).map(e => ({ "@type": "LocationFeatureSpecification", "name": e, "value": true })),
               "petsAllowed": (bien.amenities || []).some(a => /animaux/i.test(a)),
               "occupancy": { "@type": "QuantitativeValue", "maxValue": bien.capacite },
-              "offers": {
-                "@type": "Offer",
-                "price": bien.prix,
-                "priceCurrency": "EUR",
-                "description": `À partir de ${bien.prix}€/nuit — réservation directe sans frais`,
-              },
+              "checkinTime": "17:00",
+              "checkoutTime": "12:00",
+              ...(!PRICE_HIDDEN.has(bien.id) ? {
+                "offers": {
+                  "@type": "Offer",
+                  "price": bien.prix,
+                  "priceCurrency": "EUR",
+                  "priceSpecification": {
+                    "@type": "UnitPriceSpecification",
+                    "price": bien.prix,
+                    "priceCurrency": "EUR",
+                    "unitText": "nuit",
+                  },
+                  "description": `À partir de ${bien.prix}€/nuit — réservation directe sans frais de service`,
+                  "url": url,
+                  "availability": "https://schema.org/InStock",
+                  "seller": { "@id": "https://villamaryllis.com/#organization" },
+                }
+              } : {}),
+              "tourBookingPage": url,
               "provider": { "@id": "https://villamaryllis.com/#organization" },
               "isPartOf": { "@id": "https://villamaryllis.com/#organization" }
             },
             {
-              "@type": "Organization",
+              "@type": ["Organization", "LodgingBusiness"],
               "@id": "https://villamaryllis.com/#organization",
               "name": "Amaryllis Locations",
               "url": "https://villamaryllis.com",
-              "telephone": "+33610880772"
+              "telephone": "+33610880772",
+              "email": "contact@villamaryllis.com",
+              "priceRange": "€€€",
+              "aggregateRating": { "@type": "AggregateRating", "ratingValue": "5", "reviewCount": "20", "bestRating": "5", "worstRating": "1" }
             }
           ]
         });
@@ -4771,13 +4805,22 @@ export default function PublicSite() {
       setMeta('#tw-description', "content", homeDesc);
       setMeta('#tw-image', "content", "https://villamaryllis.com/photos/amaryllis/01.webp");
 
-      // Restaurer le JSON-LD global
+      // Restaurer le JSON-LD global (home)
       const ld = document.getElementById("ld-main");
       if (ld) {
         ld.textContent = JSON.stringify({
           "@context": "https://schema.org",
           "@graph": [
-            { "@type": "Organization", "@id": "https://villamaryllis.com/#organization", "name": "Amaryllis Locations", "url": "https://villamaryllis.com" },
+            {
+              "@type": ["Organization", "LodgingBusiness"],
+              "@id": "https://villamaryllis.com/#organization",
+              "name": "Amaryllis Locations",
+              "url": "https://villamaryllis.com",
+              "telephone": "+33610880772",
+              "email": "contact@villamaryllis.com",
+              "priceRange": "€€€",
+              "aggregateRating": { "@type": "AggregateRating", "ratingValue": "5", "reviewCount": "20", "bestRating": "5", "worstRating": "1" }
+            },
             { "@type": "WebSite", "@id": "https://villamaryllis.com/#website", "url": "https://villamaryllis.com", "name": "Amaryllis Locations" }
           ]
         });

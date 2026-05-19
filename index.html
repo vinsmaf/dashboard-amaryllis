@@ -43,25 +43,66 @@
       "@context": "https://schema.org",
       "@graph": [
         {
-          "@type": "Organization",
+          "@type": ["Organization", "LodgingBusiness"],
           "@id": "https://villamaryllis.com/#organization",
           "name": "Amaryllis Locations",
           "url": "https://villamaryllis.com",
-          "logo": "https://villamaryllis.com/favicon.svg",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://villamaryllis.com/favicon.svg",
+            "width": 512,
+            "height": 512
+          },
+          "image": "https://villamaryllis.com/photos/amaryllis/01.webp",
           "description": "Location de villas et appartements de prestige en Martinique et Île-de-France. Réservation directe, sans frais de service.",
+          "telephone": "+33610880772",
+          "email": "contact@villamaryllis.com",
+          "priceRange": "€€€",
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "Sainte-Luce",
+            "addressRegion": "Martinique",
+            "addressCountry": "MQ"
+          },
+          "geo": {
+            "@type": "GeoCoordinates",
+            "latitude": 14.4732,
+            "longitude": -60.9196
+          },
           "areaServed": ["Martinique", "Île-de-France"],
+          "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": "5",
+            "reviewCount": "20",
+            "bestRating": "5",
+            "worstRating": "1"
+          },
           "contactPoint": {
             "@type": "ContactPoint",
+            "telephone": "+33610880772",
             "contactType": "reservations",
-            "availableLanguage": ["French", "English"]
-          }
+            "availableLanguage": ["French", "English"],
+            "contactOption": "TollFree"
+          },
+          "sameAs": [
+            "https://www.airbnb.fr/users/show/196346991",
+            "https://www.booking.com/hotel/mq/villa-amaryllis.fr.html",
+            "https://www.instagram.com/amaryllislocations"
+          ]
         },
         {
           "@type": "WebSite",
           "@id": "https://villamaryllis.com/#website",
           "url": "https://villamaryllis.com",
           "name": "Amaryllis Locations",
-          "publisher": { "@id": "https://villamaryllis.com/#organization" }
+          "description": "Villas avec piscine en Martinique — réservation directe sans frais",
+          "inLanguage": ["fr-FR", "en-US"],
+          "publisher": { "@id": "https://villamaryllis.com/#organization" },
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://villamaryllis.com/?q={search_term_string}",
+            "query-input": "required name=search_term_string"
+          }
         },
         {
           "@type": "ItemList",
@@ -69,41 +110,13 @@
           "url": "https://villamaryllis.com/",
           "numberOfItems": 7,
           "itemListElement": [
-            {
-              "@type": "ListItem", "position": 1,
-              "url": "https://villamaryllis.com/amaryllis",
-              "name": "Villa Amaryllis — Sainte-Luce, Martinique"
-            },
-            {
-              "@type": "ListItem", "position": 2,
-              "url": "https://villamaryllis.com/zandoli",
-              "name": "Zandoli — Sainte-Luce, Martinique"
-            },
-            {
-              "@type": "ListItem", "position": 3,
-              "url": "https://villamaryllis.com/iguana",
-              "name": "Villa Iguana — Sainte-Luce, Martinique"
-            },
-            {
-              "@type": "ListItem", "position": 4,
-              "url": "https://villamaryllis.com/geko",
-              "name": "Géko — Sainte-Luce, Martinique"
-            },
-            {
-              "@type": "ListItem", "position": 5,
-              "url": "https://villamaryllis.com/mabouya",
-              "name": "Mabouya — Sainte-Luce, Martinique"
-            },
-            {
-              "@type": "ListItem", "position": 6,
-              "url": "https://villamaryllis.com/schoelcher",
-              "name": "Bellevue — Schœlcher, Martinique"
-            },
-            {
-              "@type": "ListItem", "position": 7,
-              "url": "https://villamaryllis.com/nogent",
-              "name": "Appartement aux Portes de Paris — Nogent-sur-Marne"
-            }
+            { "@type": "ListItem", "position": 1, "url": "https://villamaryllis.com/amaryllis", "name": "Villa Amaryllis — Sainte-Luce, Martinique" },
+            { "@type": "ListItem", "position": 2, "url": "https://villamaryllis.com/zandoli",   "name": "Zandoli — Sainte-Luce, Martinique" },
+            { "@type": "ListItem", "position": 3, "url": "https://villamaryllis.com/iguana",    "name": "Villa Iguana — Sainte-Luce, Martinique" },
+            { "@type": "ListItem", "position": 4, "url": "https://villamaryllis.com/geko",      "name": "Géko — Sainte-Luce, Martinique" },
+            { "@type": "ListItem", "position": 5, "url": "https://villamaryllis.com/mabouya",   "name": "Mabouya — Sainte-Luce, Martinique" },
+            { "@type": "ListItem", "position": 6, "url": "https://villamaryllis.com/schoelcher","name": "Bellevue — Schœlcher, Martinique" },
+            { "@type": "ListItem", "position": 7, "url": "https://villamaryllis.com/nogent",    "name": "Appartement aux Portes de Paris — Nogent-sur-Marne" }
           ]
         }
       ]
