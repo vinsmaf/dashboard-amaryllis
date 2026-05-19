@@ -407,7 +407,7 @@ const DESTINATIONS = [
     tags: ["Plages", "Gastronomie", "Famille"],
     must: "Ti Sable & plages de sable blanc",
     href: "/",
-    photo: null,
+    photo: "https://villamaryllis.com/photos/amaryllis/01.webp",
     isBase: true,
   },
   {
@@ -420,7 +420,7 @@ const DESTINATIONS = [
     tags: ["Culture", "Gastronomie", "Couple"],
     must: "Le village des pêcheurs au coucher du soleil",
     href: "/guide-trois-ilets",
-    photo: null,
+    photo: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/Les_Trois-Ilets_%28Martinique%29.jpg/960px-Les_Trois-Ilets_%28Martinique%29.jpg",
   },
 ];
 
@@ -534,12 +534,10 @@ export default function GuideExplorer() {
                 >
                   <Popup closeButton={false} maxWidth={250} minWidth={230}>
                     <div className="ge-popup">
-                      {dest.photo
-                        ? <div className="ge-popup-photo" style={{ backgroundImage: `url(${dest.photo})` }}>
-                            {dest.isMust && <div className="ge-popup-badge">Incontournable</div>}
-                          </div>
-                        : <div className="ge-popup-photo-empty" />
-                      }
+                      <div className="ge-popup-photo" style={{ backgroundImage: dest.photo ? `url(${dest.photo})` : "none", backgroundColor: dest.photo ? "#c8d4de" : "#1a2b4a" }}>
+                        {dest.isMust && <div className="ge-popup-badge">Incontournable</div>}
+                        {dest.isBase && <div className="ge-popup-badge" style={{ background: "#1a2b4a" }}>📍 Votre base</div>}
+                      </div>
                       <div className="ge-popup-body">
                         <div className="ge-popup-name">{dest.emoji} {dest.nom}</div>
                         <div className="ge-popup-accroche">{dest.accroche}</div>
@@ -568,14 +566,10 @@ export default function GuideExplorer() {
                 className={`ge-card${selected?.id === dest.id ? " selected" : ""}`}
                 onClick={e => { e.preventDefault(); handleSelect(dest); }}
               >
-                {dest.photo
-                  ? <div className="ge-card-photo" style={{ backgroundImage: `url(${dest.photo})` }}>
-                      {dest.isMust && <div className="ge-card-ribbon">Incontournable</div>}
-                    </div>
-                  : <div className="ge-card-photo-empty">
-                      {dest.isBase && <span style={{ color: "rgba(250,245,233,.5)", fontSize: 11, fontWeight: 300, letterSpacing: ".04em" }}>📍 Votre logement</span>}
-                    </div>
-                }
+                <div className="ge-card-photo" style={{ backgroundImage: dest.photo ? `url(${dest.photo})` : "none", backgroundColor: dest.photo ? "#c8d4de" : "#1a2b4a" }}>
+                  {dest.isMust && <div className="ge-card-ribbon">Incontournable</div>}
+                  {dest.isBase && <div className="ge-card-ribbon" style={{ background: "#1a2b4a" }}>📍 Votre base</div>}
+                </div>
                 <div className="ge-card-body">
                   <div className="ge-card-name"><span>{dest.emoji}</span><span>{dest.nom}</span></div>
                   <div className="ge-card-accroche">{dest.accroche}</div>
