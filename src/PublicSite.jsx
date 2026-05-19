@@ -2168,6 +2168,21 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                           </span>
                         </div>
 
+                        {/* Alerte disponibilité */}
+                        {(() => {
+                          const [showAlerte, setShowAlerte] = React.useState(false);
+                          return (
+                            <>
+                              <div style={{ marginTop: 14 }}>
+                                <button onClick={() => setShowAlerte(true)} style={{ background: "none", border: "none", color: MUTED, fontSize: 11, fontFamily: "'Jost', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, padding: 0, textDecoration: "underline", textDecorationColor: SAND }}>
+                                  🔔 Être alerté des disponibilités
+                                </button>
+                              </div>
+                              {showAlerte && <AlerteDispoModal bien={bien} checkin={calCheckin} checkout={calCheckout} onClose={() => setShowAlerte(false)} />}
+                            </>
+                          );
+                        })()}
+
                         {/* Résumé prix (affiché quand les deux dates sont sélectionnées) */}
                         {calCheckin && calCheckout && !calBelowMin && (
                           <div style={{ marginTop: 18, background: CREAM, border: `1px solid ${SAND}`, borderRadius: 12, padding: "16px 20px" }}>
@@ -2359,6 +2374,73 @@ function BenefitsStrip() {
 
 // ── Quick Book ────────────────────────────────────────────────────
 // ── Exit Intent Modal ────────────────────────────────────────────
+// ── Alerte disponibilité ─────────────────────────────────────────
+function AlerteDispoModal({ bien, checkin, checkout, onClose }) {
+  const [email, setEmail] = useState("");
+  const [nom, setNom]     = useState("");
+  const [sent, setSent]   = useState(false);
+  const [sending, setSending] = useState(false);
+  const [err, setErr]     = useState(false);
+
+  useEffect(() => {
+    const fn = e => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", fn);
+    return () => window.removeEventListener("keydown", fn);
+  }, [onClose]);
+
+  async function submit(e) {
+    e.preventDefault();
+    if (!email) return;
+    setSending(true); setErr(false);
+    const dates = checkin && checkout ? `du ${checkin} au ${checkout}` : checkin ? `à partir du ${checkin}` : "";
+    const message = `ALERTE DISPONIBILITÉ — ${bien.nom}${dates ? " " + dates : ""}\nEmail : ${email}${nom ? "\nNom : " + nom : ""}`;
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nom: nom || "Alerte dispo", email, message }),
+      });
+      const data = await res.json();
+      if (data.ok) { setSent(true); } else { setErr(true); }
+    } catch { setErr(true); }
+    setSending(false);
+  }
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 2100, background: "rgba(6,22,22,0.72)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, animation: "fadeIn 0.2s ease" }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: IVORY, borderRadius: 16, padding: "36px 32px", maxWidth: 420, width: "100%", boxShadow: "0 24px 64px rgba(0,0,0,0.28)", animation: "slideUpFull 0.28s ease" }}>
+        {sent ? (
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>🔔</div>
+            <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 18, color: NAVY, marginBottom: 8 }}>Alerte enregistrée !</div>
+            <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13, color: MUTED, lineHeight: 1.7, margin: "0 0 20px" }}>Nous vous préviendrons dès que <strong>{bien.nom}</strong> se libère sur vos dates.</p>
+            <button onClick={onClose} style={{ background: CORAL, border: "none", color: "#fff", borderRadius: 8, padding: "11px 28px", fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer" }}>Fermer</button>
+          </div>
+        ) : (
+          <>
+            <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 17, color: NAVY, marginBottom: 4 }}>🔔 Être alerté des disponibilités</div>
+            <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 12, color: MUTED, lineHeight: 1.65, margin: "0 0 20px" }}>
+              Recevez un email dès que <strong>{bien.nom}</strong>{checkin && checkout ? ` se libère du ${checkin} au ${checkout}` : " devient disponible"}.
+            </p>
+            <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <input type="text" placeholder="Votre prénom (optionnel)" value={nom} onChange={e => setNom(e.target.value)}
+                style={{ border: `1px solid ${SAND}`, borderRadius: 8, padding: "10px 14px", fontFamily: "'Jost', sans-serif", fontSize: 13, color: NAVY, outline: "none", background: "#fff" }} />
+              <input type="email" placeholder="Votre email *" value={email} onChange={e => setEmail(e.target.value)} required
+                style={{ border: `1px solid ${SAND}`, borderRadius: 8, padding: "10px 14px", fontFamily: "'Jost', sans-serif", fontSize: 13, color: NAVY, outline: "none", background: "#fff" }} />
+              {err && <div style={{ fontSize: 11, color: CORAL, fontFamily: "'Jost', sans-serif" }}>Erreur — contactez-nous sur WhatsApp.</div>}
+              <button type="submit" disabled={sending || !email}
+                style={{ background: !email || sending ? SAND : NAVY, border: "none", color: !email || sending ? MUTED : "#faf5e9", borderRadius: 8, padding: "12px", fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: "0.1em", textTransform: "uppercase", cursor: !email || sending ? "not-allowed" : "pointer", transition: "background 0.15s" }}>
+                {sending ? "Envoi…" : "M'alerter →"}
+              </button>
+            </form>
+            <button onClick={onClose} style={{ display: "block", margin: "14px auto 0", background: "none", border: "none", color: MUTED, fontSize: 11, cursor: "pointer", textDecoration: "underline", fontFamily: "'Jost', sans-serif" }}>Annuler</button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ExitIntentModal({ onClose }) {
   useEffect(() => {
     const fn = (e) => { if (e.key === "Escape") onClose(); };
@@ -2415,6 +2497,7 @@ function SearchByDates({ biens, onBook, onDetail }) {
   const [minChambres, setMinChambres] = useState("0");
   const [results, setResults]   = useState(null); // null = pas lancé
   const [loading, setLoading]   = useState(false);
+  const [alerteTarget, setAlerteTarget] = useState(null); // { bien, checkin, checkout }
 
   const todayVal = today();
 
@@ -2621,7 +2704,12 @@ function SearchByDates({ biens, onBook, onDetail }) {
                         </div>
 
                         {!isAvailable ? (
-                          <div style={{ fontSize: 10, color: "#ef4444", fontFamily: "'Jost', sans-serif" }}>Indisponible</div>
+                          <div>
+                            <div style={{ fontSize: 10, color: "#ef4444", fontFamily: "'Jost', sans-serif", marginBottom: 6 }}>Indisponible</div>
+                            <button onClick={() => setAlerteTarget({ bien, checkin, checkout })} style={{ fontSize: 10, color: MUTED, fontFamily: "'Jost', sans-serif", background: "none", border: `1px solid ${SAND}`, borderRadius: 5, padding: "4px 8px", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+                              🔔 M'alerter
+                            </button>
+                          </div>
                         ) : belowMin ? (
                           <div style={{ fontSize: 10, color: "#f97316", fontFamily: "'Jost', sans-serif" }}>Min. {minN} nuits</div>
                         ) : (
@@ -2652,6 +2740,7 @@ function SearchByDates({ biens, onBook, onDetail }) {
           </div>
         )}
       </div>
+      {alerteTarget && <AlerteDispoModal bien={alerteTarget.bien} checkin={alerteTarget.checkin} checkout={alerteTarget.checkout} onClose={() => setAlerteTarget(null)} />}
     </div>
   );
 }
