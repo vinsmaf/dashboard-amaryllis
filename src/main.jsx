@@ -16,6 +16,7 @@ const GuideProximite = lazy(() => import('./GuideProximite.jsx'))
 const GuideArlet     = lazy(() => import('./GuideArlet.jsx'))
 const GuideExplorer  = lazy(() => import('./GuideExplorer.jsx'))
 const GuideTroisIlets = lazy(() => import('./GuideTroisIlets.jsx'))
+const NotFound        = lazy(() => import('./NotFound.jsx'))
 
 const path = window.location.pathname;
 
@@ -27,12 +28,10 @@ const isKnown = KNOWN.includes(path)
   || path.startsWith("/api/")
   || BIEN_IDS.some(id => path === `/${id}`);
 
-if (!isKnown) {
-  window.location.replace("/");
-}
-
 let Component;
-if (path.startsWith("/admin")) {
+if (!isKnown) {
+  Component = NotFound;
+} else if (path.startsWith("/admin")) {
   Component = App;
 } else if (path.startsWith("/landing")) {
   Component = Landing;
