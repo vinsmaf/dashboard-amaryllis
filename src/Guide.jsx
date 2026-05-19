@@ -270,6 +270,11 @@ export default function Guide() {
               <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 14, color: NAVY, marginBottom: 6 }}>À proximité de la villa</div>
               <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 15, color: TEXT, opacity: 0.8 }}>Plages, forêt, distillerie · &lt; 15 min</div>
             </a>
+            <a href="/guide-arlet" style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 12, padding: "24px 28px", textDecoration: "none", textAlign: "center" }}>
+              <div style={{ fontSize: 28, marginBottom: 8 }}>🐢</div>
+              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 14, color: NAVY, marginBottom: 6 }}>Guide Grande Anse d'Arlet</div>
+              <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 15, color: TEXT, opacity: 0.8 }}>Tortues, snorkeling, village de pêcheurs · 25 min</div>
+            </a>
           </div>
 
           {/* FAQ */}
