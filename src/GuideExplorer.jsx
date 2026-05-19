@@ -420,7 +420,7 @@ const DESTINATIONS = [
     tags: ["Culture", "Gastronomie", "Couple"],
     must: "Le village des pêcheurs au coucher du soleil",
     href: "/guide-trois-ilets",
-    photo: "https://villamaryllis.com/photos/schoelcher/01.webp",
+    photo: "/photos/trois-ilets.avif",
   },
 ];
 
