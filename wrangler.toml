@@ -1,0 +1,24 @@
+name = "amaryllis-ical-sync"
+main = "workers/ical-sync/index.js"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+[triggers]
+crons = ["0 * * * *"]   # Toutes les heures, minute 0
+
+# KV namespace pour stocker les UIDs connus (anti-doublon notifications)
+# Pour créer : wrangler kv:namespace create "ICAL_STORE"
+# Puis remplacer les IDs ci-dessous
+[[kv_namespaces]]
+binding = "ICAL_STORE"
+id = "REPLACE_WITH_YOUR_KV_ID"
+preview_id = "REPLACE_WITH_YOUR_KV_PREVIEW_ID"
+
+# Variables d'environnement publiques
+[vars]
+NOTIFICATION_EMAIL = "contact@villamaryllis.com"
+SITE_URL           = "https://villamaryllis.com"
+
+# Secrets à ajouter via :
+#   wrangler secret put APPS_SCRIPT_URL
+#   wrangler secret put RESEND_API_KEY

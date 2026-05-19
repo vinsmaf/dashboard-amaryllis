@@ -729,6 +729,14 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
     return () => window.removeEventListener("amaryllis_prices_updated", handler);
   }, []);
 
+  // Toast notifications pour nouvelles réservations
+  const [resaToasts, setResaToasts] = useState([]);
+  const addToast = useCallback((msg) => {
+    const id = Date.now();
+    setResaToasts(t => [...t, { id, msg }]);
+    setTimeout(() => setResaToasts(t => t.filter(x => x.id !== id)), 8000);
+  }, []);
+
   const importIcal = useCallback(async (bienId, canal, url, currentResas) => {
     if (!url) return currentResas;
     const statusKey = `${bienId}_${canal}`;
@@ -741,13 +749,9 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
     try {
       let text = "";
       const proxies = [
-        // 1. Notre propre proxy Netlify (server-side, pas de CORS)
         () => tryFetch(`/api/fetch-ical?url=${encodeURIComponent(url)}`),
-        // 2. Fetch direct (marche pour Airbnb, pas Booking.com en prod)
         () => tryFetch(url),
-        // 3. Google Apps Script proxy (si configuré)
         scriptUrl ? () => tryFetch(`${scriptUrl}?action=fetchIcal&url=${encodeURIComponent(url)}`) : null,
-        // 4. Proxies publics en dernier recours
         () => tryFetch(`https://corsproxy.io/?${encodeURIComponent(url)}`),
         () => tryFetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`),
       ].filter(Boolean);
@@ -756,6 +760,17 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
       }
       if (!text.includes("VCALENDAR")) throw new Error("Format invalide");
       const newEvents = parseICS(text, bienId, canal);
+
+      // ── Détection nouvelles réservations (comparaison UIDs) ──
+      const prevIds = new Set(
+        currentResas.filter(r => r.fromIcal && r.bienId === bienId && r.canal === canal).map(r => r.id)
+      );
+      const trueNew = newEvents.filter(e => !prevIds.has(e.id));
+      if (trueNew.length > 0) {
+        const bienNom = trueNew[0].bienId.charAt(0).toUpperCase() + trueNew[0].bienId.slice(1);
+        addToast(`🔔 ${trueNew.length} nouvelle${trueNew.length > 1 ? "s" : ""} réservation${trueNew.length > 1 ? "s" : ""} — ${bienNom} (${canal})`);
+      }
+
       const merged = [...currentResas.filter(r => !(r.bienId === bienId && r.fromIcal && r.canal === canal)), ...newEvents];
       saveRes(merged);
       setIcalStatus(s => ({ ...s, [statusKey]: `✓ ${newEvents.length}` }));
@@ -765,31 +780,27 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
       setIcalStatus(s => ({ ...s, [statusKey]: `⚠ ${e.message}` }));
       return currentResas;
     }
-  }, [saveRes, scriptUrl]);
+  }, [saveRes, scriptUrl, addToast]);
 
+  // ── Auto-sync au chargement + toutes les heures ──────────────────────────
   useEffect(() => {
     const sources = [];
     Object.keys(icalUrls).forEach(k => { if (icalUrls[k]?.length > 10) sources.push({ bienId: k, canal: "airbnb", url: icalUrls[k] }); });
     Object.keys(icalUrlsBooking).forEach(k => { if (icalUrlsBooking[k]?.length > 10) sources.push({ bienId: k, canal: "booking", url: icalUrlsBooking[k] }); });
     if (sources.length === 0) return;
-    let current = reservations;
-    const timer = setTimeout(() => {}, 0);
-    (async () => {
+
+    const doSync = async () => {
+      let current = reservationsRef.current;
       for (const s of sources) {
         current = await importIcal(s.bienId, s.canal, s.url, current) || current;
       }
       if (onApplyRevenusFromResas) onApplyRevenusFromResas(computeRevenusFromResas(current));
       pushReservationsToScript(current);
-    })();
-    const interval = setInterval(() => {
-      let current = reservationsRef.current;
-      (async () => {
-        for (const s of sources) {
-          current = await importIcal(s.bienId, s.canal, s.url, current) || current;
-        }
-      })();
-    }, 60 * 60 * 1000); // 1 heure
-    return () => { clearTimeout(timer); clearInterval(interval); };
+    };
+
+    doSync(); // sync immédiate au chargement
+    const interval = setInterval(doSync, 60 * 60 * 1000); // puis toutes les heures
+    return () => clearInterval(interval);
   }, []);
 
   // ── Auto-sync Beds24 (Nogent) dans le Planning ─────────────────────
@@ -925,6 +936,26 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
 
   return (
     <div>
+      {/* ── Toasts nouvelles réservations ── */}
+      {resaToasts.length > 0 && (
+        <div style={{ position: "fixed", top: 16, right: 16, zIndex: 9999, display: "flex", flexDirection: "column", gap: 8 }}>
+          {resaToasts.map(t => (
+            <div key={t.id} style={{
+              background: "#0f172a", border: "1px solid #22c55e", borderRadius: 10,
+              padding: "12px 16px", color: "#fff", fontSize: 13, fontWeight: 600,
+              boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+              animation: "fadeIn 0.3s ease",
+              display: "flex", alignItems: "center", gap: 10, maxWidth: 340,
+            }}>
+              <span style={{ fontSize: 18 }}>🔔</span>
+              <span style={{ flex: 1 }}>{t.msg}</span>
+              <button onClick={() => setResaToasts(x => x.filter(r => r.id !== t.id))}
+                style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 16, padding: 0 }}>×</button>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
         {[{ id: "todo", l: "✅ To-do" }, { id: "gantt", l: "📅 Calendrier" }, { id: "trous", l: "🕳 Trous" }, { id: "list", l: "📋 Réservations" }, { id: "beds24", l: "🏙️ Beds24 Nogent" }].map(v => (
           <button
