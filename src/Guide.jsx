@@ -1,4 +1,4 @@
-// Guide Sainte-Luce Martinique — page SEO /guide
+// Guide Sainte-Luce — hub Explorer Martinique — /guide — v2 immersif
 
 const NAVY  = "#0e3b3a";
 const IVORY = "#faf5e9";
@@ -6,299 +6,284 @@ const CORAL = "#c47254";
 const TEXT  = "#2c2c2c";
 const CREAM = "#f5efe0";
 const SAND  = "#e8dcc8";
+const MUTED = "#7a6b5a";
+const BASE  = "https://villamaryllis.com";
 
-const sections = [
+const HERO_IMG = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Salines_beach.jpg/960px-Salines_beach.jpg";
+
+// Destination guides — cards visuelles
+const destinations = [
   {
+    href: "/guide-sainte-anne",
+    img: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Salines_beach.jpg/960px-Salines_beach.jpg",
     emoji: "🏖️",
-    titre: "Les plus belles plages de Sainte-Luce",
-    contenu: [
-      {
-        nom: "Anse Corps de Garde",
-        texte: "La plage emblématique de Sainte-Luce : un croissant de sable blond bordé de cocotiers, eaux turquoise calmes, idéal pour les familles. Transats, snack-bars et vue directe sur les îlets. À 7 min de la résidence Amaryllis.",
-      },
-      {
-        nom: "Anse Gros Raisin",
-        texte: "Plus sauvage et moins fréquentée, cette anse offre une eau cristalline parfaite pour le snorkeling. Accessoirement l'une des plus belles plages du sud Martinique, nichée dans la végétation tropicale.",
-      },
-      {
-        nom: "Grande Anse d'Arlet",
-        texte: "À 20 min en voiture, ce village de pêcheurs est l'un des spots les plus photographiés de l'île. Église en bord de mer, kayak, snorkeling avec des tortues — incontournable.",
-      },
-    ],
+    nom: "Sainte-Anne & Les Salines",
+    accroche: "La plus belle plage des Caraïbes — arrivez avant 9h",
+    distance: "20 min",
+    tags: ["Plage", "Kitesurf", "Catamaran"],
+    must: true,
   },
   {
-    emoji: "🍽️",
-    titre: "Restaurants & bonnes adresses à Sainte-Luce",
-    contenu: [
-      {
-        nom: "Le Ti' Sable",
-        texte: "Restaurant de poisson et de fruits de mer les pieds dans le sable, face à la plage de Corps de Garde. Ambiance créole authentique, langouste grillée et accras mémorables.",
-      },
-      {
-        nom: "Le Petibonum",
-        texte: "Institution locale, réputé pour ses rhums arrangés et son poisson du jour. Vue imprenable sur la Caraïbe, terrasse en bois sous les cocotiers. Réservation conseillée.",
-      },
-      {
-        nom: "Snack Chez Josephine",
-        texte: "L'adresse locale par excellence pour un déjeuner créole copieux à petit prix — colombo de poulet, accras, boudin et jus de fruits frais. Fréquenté par les habitants, gage de qualité.",
-      },
-      {
-        nom: "La Dunette — Sainte-Anne",
-        texte: "À 15 min, ce restaurant en hauteur offre une des plus belles vues de la Martinique sur les îlets du Sud. Menu gastronomique caribéen raffiné pour les soirées spéciales.",
-      },
-    ],
+    href: "/guide-arlet",
+    img: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2d/Grande_Anse_d%27_Arlet_%2847001622912%29.jpg/960px-Grande_Anse_d%27_Arlet_%2847001622912%29.jpg",
+    emoji: "🐢",
+    nom: "Grande Anse d'Arlet",
+    accroche: "Nager avec les tortues marines — garanties tôt le matin",
+    distance: "25 min",
+    tags: ["Tortues", "Snorkeling", "Pêcheurs"],
+    must: true,
   },
   {
-    emoji: "🤿",
-    titre: "Activités & excursions depuis Sainte-Luce",
-    contenu: [
-      {
-        nom: "Plongée & snorkeling",
-        texte: "Le sud de la Martinique est l'un des meilleurs spots de plongée des Antilles. Le rocher du Diamant (à 15 min) offre des plongées spectaculaires. Plusieurs clubs de plongée opèrent depuis Corps de Garde.",
-      },
-      {
-        nom: "Visite des distilleries",
-        texte: "La route des rhums passe par le sud : distillerie Trois-Rivières (Sainte-Luce), Simon et Depaz à proximité. Dégustations gratuites, visite des chais, panoramas sur les champs de canne.",
-      },
-      {
-        nom: "Kayak & paddle",
-        texte: "Location à la plage de Corps de Garde pour rejoindre les îlets voisins à la pagaie — un moment magique au lever du soleil. Comptez 15€/heure environ.",
-      },
-      {
-        nom: "Randonnée & Nature",
-        texte: "Le sentier des crêtes entre Sainte-Luce et Rivière-Pilote offre des vues à 360°. La Réserve Naturelle de la Caravelle (1h de route) et la Montagne Pelée valent le détour pour les amateurs de trail.",
-      },
-      {
-        nom: "Catamaran dans les îlets",
-        texte: "Excursion journée au départ de la marina de la Pointe du Bout ou du Marin. Snorkeling, déjeuner barbecue à bord, mouillage dans les baies préservées. Expérience incontournable en Martinique.",
-      },
-    ],
+    href: "/guide-le-diamant",
+    img: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/Diamond_Rock.jpg/960px-Diamond_Rock.jpg",
+    emoji: "🗿",
+    nom: "Le Diamant",
+    accroche: "Plongée d'exception et coucher de soleil face au Rocher",
+    distance: "15 min",
+    tags: ["Plongée", "Histoire", "Coucher de soleil"],
+    must: false,
   },
   {
-    emoji: "🚗",
-    titre: "Pratique : se déplacer depuis Sainte-Luce",
-    contenu: [
-      {
-        nom: "Location de voiture",
-        texte: "Indispensable pour explorer l'île librement. Plusieurs agences à l'aéroport Aimé Césaire (Fort-de-France) et dans les villages. Budget : 40–70€/jour. Réserver à l'avance en haute saison (déc–avril).",
-      },
-      {
-        nom: "Distances clés",
-        texte: "Fort-de-France : 30 min · Le Diamant : 15 min · Les Anses d'Arlet : 20 min · Sainte-Anne : 20 min · Marin (marina) : 15 min · Aéroport : 35 min.",
-      },
-      {
-        nom: "Scooter & vélo",
-        texte: "Pour les courts trajets, location de scooters disponible à Corps de Garde. Idéal pour rejoindre les plages alentour sans chercher à se garer.",
-      },
-    ],
+    href: "/activites-sainte-luce",
+    img: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Salines_beach.jpg/960px-Salines_beach.jpg",
+    emoji: "🌟",
+    nom: "10 activités incontournables",
+    accroche: "La sélection de vos hôtes — testée et approuvée",
+    distance: "Depuis la villa",
+    tags: ["Excursions", "Nature", "Culture"],
+    must: false,
   },
   {
-    emoji: "🌤️",
-    titre: "Quelle période pour visiter Sainte-Luce ?",
-    contenu: [
-      {
-        nom: "Haute saison (décembre – avril)",
-        texte: "La saison sèche — le Carême. Temps ensoleillé, alizés réguliers, mer calme. Idéal pour les plages et la plongée. Réservez vos villas 3 à 6 mois à l'avance, les logements partent vite.",
-      },
-      {
-        nom: "Basse saison (juin – novembre)",
-        texte: "Saison des pluies — averses courtes et intenses, végétation luxuriante. Températures très douces. Moins de touristes, tarifs nettement plus bas. Juillet–août reste animé malgré tout.",
-      },
-      {
-        nom: "Octobre – novembre",
-        texte: "Saison cyclonique théorique : risque faible mais réel. Certains logements proposent des tarifs attractifs. La Martinique reste belle mais vérifiez les conditions météo.",
-      },
-    ],
+    href: "/guide-proximite",
+    img: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Rocher_du_Diamant_%28Le_Diamant%2C_Martinique%29_-_03.jpg/960px-Rocher_du_Diamant_%28Le_Diamant%2C_Martinique%29_-_03.jpg",
+    emoji: "📍",
+    nom: "À 15 min de la villa",
+    accroche: "Plages, distillerie Trois-Rivières, sentiers tropicaux",
+    distance: "< 15 min",
+    tags: ["Plages", "Rhum", "Randonnée"],
+    must: false,
   },
-  {
-    emoji: "🏡",
-    titre: "Pourquoi louer à Sainte-Luce plutôt qu'ailleurs ?",
-    contenu: [
-      {
-        nom: "Position idéale dans le sud",
-        texte: "Sainte-Luce est à équidistance des plus beaux sites du sud : Sainte-Anne, le Diamant, les Anses d'Arlet. Vous accédez à tout sans jamais faire plus de 25 minutes de route.",
-      },
-      {
-        nom: "Village vivant, sans le chaos touristique",
-        texte: "Contrairement à Fort-de-France ou Sainte-Anne en haute saison, Sainte-Luce conserve une atmosphère de village créole authentique avec ses marchés, ses snacks locaux et ses habitants chaleureux.",
-      },
-      {
-        nom: "Plages au calme",
-        texte: "Les plages de Sainte-Luce sont moins fréquentées que celles de Sainte-Anne. On y trouve encore des coins tranquilles même en juillet-août.",
-      },
-    ],
-  },
+];
+
+const whySainteuce = [
+  { icon: "🌐", titre: "Au centre de tout", texte: "Diamant 15 min · Salines 20 min · Arlet 25 min · Aéroport 35 min. Vous accédez à tous les sites majeurs du sud sans jamais faire plus de 25 minutes." },
+  { icon: "🏘️", titre: "Village créole authentique", texte: "Pas le chaos de Fort-de-France, pas la foule de Sainte-Anne. Des marchés locaux, des snacks créoles, une atmosphère vraie." },
+  { icon: "🌊", titre: "Vos plages à vous", texte: "Corps de Garde, Anse Gros Raisin, Anse du Bourg — moins fréquentées que le reste du sud. Tranquillité garantie même en juillet-août." },
 ];
 
 const faqs = [
-  {
-    q: "Combien coûte la location d'une villa à Sainte-Luce Martinique ?",
-    a: "Nos villas à Sainte-Luce sont disponibles à partir de 110€/nuit (studio avec jacuzzi privatif) jusqu'à 280€/nuit pour la Villa Amaryllis avec piscine à débordement et vue mer. En réservant directement sur notre site, vous évitez les frais de service Airbnb (jusqu'à 14% du prix).",
-  },
-  {
-    q: "Quelle villa choisir avec piscine à débordement en Martinique ?",
-    a: "La Villa Amaryllis est notre propriété phare : piscine à débordement eau salée, terrasse de 100m² face à la Caraïbe, jacuzzi privatif. Pour un budget plus accessible, Zandoli dispose d'une piscine privée avec vue mer à 220€/nuit.",
-  },
-  {
-    q: "Comment réserver une villa en Martinique sans passer par Airbnb ?",
-    a: "Directement sur villamaryllis.com ! Sélectionnez votre logement, choisissez vos dates et payez de façon sécurisée par carte bancaire (Stripe). Vous économisez les frais de service Airbnb et vous avez un contact direct avec l'hôte.",
-  },
-  {
-    q: "Peut-on venir avec des animaux dans vos villas ?",
-    a: "Oui, certaines de nos propriétés acceptent les animaux de compagnie (Villa Amaryllis, Villa Iguana). Mentionnez-le lors de votre réservation pour que nous puissions tout préparer.",
-  },
-  {
-    q: "Y a-t-il un aéroport proche de Sainte-Luce ?",
-    a: "L'aéroport Aimé Césaire de Fort-de-France (Lamentin) est à 35 minutes de Sainte-Luce. Location de voiture recommandée à l'arrivée pour explorer librement le sud de l'île.",
-  },
-  {
-    q: "Vos logements sont-ils climatisés ?",
-    a: "Oui, toutes nos villas et appartements sont climatisés et disposent du WiFi Starlink haut débit. La plupart bénéficient également d'une ventilation naturelle grâce aux alizés.",
-  },
+  { q: "Combien coûte la location d'une villa à Sainte-Luce ?", a: "À partir de 110€/nuit (Mabouya, jacuzzi privatif) jusqu'à 280€/nuit (Villa Amaryllis, piscine à débordement eau salée, vue mer, jacuzzi). En réservant directement, vous évitez les frais Airbnb — jusqu'à 14% d'économie." },
+  { q: "Quelle villa choisir avec piscine à débordement ?", a: "La Villa Amaryllis est notre propriété phare : piscine infinity eau salée, terrasse 100m² vue Caraïbe, jacuzzi privatif, 8 personnes. Zandoli offre une piscine privée vue mer à partir de 220€/nuit pour 5 personnes." },
+  { q: "Comment réserver sans passer par Airbnb ?", a: "Directement sur villamaryllis.com — sélectionnez votre logement, choisissez vos dates, payez par carte (Stripe sécurisé). Contact direct WhatsApp avec l'hôte inclus." },
+  { q: "Peut-on venir avec des animaux ?", a: "Oui, la Villa Amaryllis et la Villa Iguana acceptent les animaux (supplément 40€/séjour, max 2 animaux). Mentionnez-le à la réservation." },
+  { q: "Meilleure période pour visiter la Martinique ?", a: "Décembre–avril (saison sèche, alizés, mer calme) — le meilleur mais il faut réserver 3 à 6 mois à l'avance. Juillet–août reste animé. Octobre–novembre : tarifs bas mais risque cyclonique faible." },
+  { q: "Y a-t-il le WiFi dans vos villas ?", a: "Oui, toutes les propriétés disposent du WiFi Starlink haut débit inclus dans le tarif. Pas de supplément." },
 ];
+
+const css = `
+  .guide-hub-dest {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px;
+    margin-bottom: 72px;
+  }
+  .guide-hub-card {
+    position: relative; border-radius: 18px; overflow: hidden;
+    text-decoration: none; display: block;
+    box-shadow: 0 4px 20px rgba(14,59,58,0.1);
+    transition: transform 0.25s, box-shadow 0.25s;
+  }
+  .guide-hub-card:hover { transform: translateY(-4px); box-shadow: 0 12px 36px rgba(14,59,58,0.18); }
+  .guide-hub-card img { width: 100%; height: 220px; object-fit: cover; display: block; }
+  .guide-hub-card .overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(to bottom, transparent 30%, rgba(14,59,58,0.92) 100%);
+  }
+  .guide-hub-card .card-content {
+    position: absolute; bottom: 0; left: 0; right: 0; padding: 20px 22px;
+  }
+  .guide-hub-card .card-dist {
+    font-family: 'Jost', sans-serif; font-size: 10px; font-weight: 600;
+    letter-spacing: 0.2em; text-transform: uppercase; color: ${CORAL};
+    margin-bottom: 6px;
+  }
+  .guide-hub-card .card-nom {
+    font-family: 'Jost', sans-serif; font-weight: 300; font-size: 19px;
+    letter-spacing: 0.06em; text-transform: uppercase; color: #faf5e9;
+    margin-bottom: 6px; line-height: 1.2;
+  }
+  .guide-hub-card .card-accroche {
+    font-family: 'Cormorant Garamond', Georgia, serif; font-size: 15px;
+    color: rgba(250,245,233,0.75); line-height: 1.45; margin-bottom: 12px;
+  }
+  .guide-hub-card .card-tags {
+    display: flex; gap: 6px; flex-wrap: wrap;
+  }
+  .guide-hub-card .tag {
+    font-family: 'Jost', sans-serif; font-size: 10px; font-weight: 500;
+    letter-spacing: 0.08em; color: rgba(250,245,233,0.7);
+    background: rgba(250,245,233,0.12); border: 1px solid rgba(250,245,233,0.2);
+    border-radius: 100px; padding: 3px 10px;
+  }
+  .guide-hub-card .must-ribbon {
+    position: absolute; top: 16px; left: 16px;
+    background: ${CORAL}; color: #fff;
+    font-family: 'Jost', sans-serif; font-size: 10px; font-weight: 700;
+    letter-spacing: 0.15em; text-transform: uppercase;
+    padding: 5px 12px; border-radius: 100px;
+  }
+
+  .guide-why { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 72px; }
+  .guide-why-item { background: ${CREAM}; border: 1px solid ${SAND}; border-radius: 16px; padding: 28px 26px; }
+  .guide-why-icon { font-size: 28px; margin-bottom: 12px; }
+  .guide-why-titre { font-family: 'Jost', sans-serif; font-weight: 500; font-size: 15px; color: ${NAVY}; margin-bottom: 10px; letter-spacing: 0.03em; }
+  .guide-why-texte { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 16px; line-height: 1.7; color: ${TEXT}; }
+
+  @media (max-width: 720px) {
+    .guide-hub-dest { grid-template-columns: 1fr; }
+    .guide-hub-card img { height: 200px; }
+    .guide-why { grid-template-columns: 1fr; }
+  }
+`;
 
 export default function Guide() {
   return (
     <>
-      {/* JSON-LD FAQ */}
+      <style dangerouslySetInnerHTML={{ __html: css }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         "@context": "https://schema.org",
         "@graph": [
           {
             "@type": "FAQPage",
             "mainEntity": faqs.map(f => ({
-              "@type": "Question",
-              "name": f.q,
+              "@type": "Question", "name": f.q,
               "acceptedAnswer": { "@type": "Answer", "text": f.a },
             })),
           },
           {
             "@type": "Article",
-            "@id": "https://villamaryllis.com/guide",
-            "headline": "Guide Sainte-Luce Martinique : plages, restaurants et activités",
-            "description": "Tout ce qu'il faut savoir pour visiter Sainte-Luce en Martinique : les meilleures plages, restaurants créoles, activités et conseils pratiques.",
-            "url": "https://villamaryllis.com/guide",
-            "image": "https://villamaryllis.com/photos/amaryllis/01.webp",
-            "author": { "@id": "https://villamaryllis.com/#organization" },
-            "publisher": { "@id": "https://villamaryllis.com/#organization" },
+            "headline": "Explorer le Sud Martinique — Guide de voyage depuis Sainte-Luce",
+            "description": "Les Salines, les tortues d'Arlet, la plongée au Diamant — le guide complet du sud de la Martinique depuis nos villas à Sainte-Luce.",
+            "url": `${BASE}/guide`,
+            "image": HERO_IMG,
+            "author": { "@id": `${BASE}/#organization` },
+            "publisher": { "@id": `${BASE}/#organization` },
           },
         ],
       })}} />
 
       <div style={{ minHeight: "100vh", background: IVORY, color: TEXT, fontFamily: "'Jost', system-ui, sans-serif" }}>
 
-        {/* Header nav */}
         <header style={{ background: NAVY, padding: "0 24px" }}>
-          <div style={{ maxWidth: 900, margin: "0 auto", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <a href="/" style={{ color: IVORY, textDecoration: "none", fontWeight: 300, fontSize: 18, letterSpacing: "0.15em", textTransform: "uppercase" }}>
-              Amaryllis
-            </a>
-            <a href="/" style={{ color: IVORY, textDecoration: "none", fontSize: 13, letterSpacing: "0.08em", opacity: 0.7 }}>
-              ← Voir nos villas
-            </a>
+          <div style={{ maxWidth: 960, margin: "0 auto", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <a href="/" style={{ color: IVORY, textDecoration: "none", fontWeight: 300, fontSize: 18, letterSpacing: "0.15em", textTransform: "uppercase" }}>Amaryllis</a>
+            <a href="/" style={{ color: IVORY, textDecoration: "none", fontSize: 12, letterSpacing: "0.08em", opacity: 0.7 }}>← Voir nos villas</a>
           </div>
         </header>
 
-        {/* Hero */}
-        <div style={{ background: NAVY, padding: "64px 24px 48px", textAlign: "center" }}>
-          <p style={{ color: CORAL, fontSize: 12, letterSpacing: "0.3em", textTransform: "uppercase", marginBottom: 16 }}>Guide de voyage</p>
-          <h1 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: "clamp(28px, 5vw, 52px)", letterSpacing: "0.05em", color: IVORY, textTransform: "uppercase", margin: "0 0 20px" }}>
-            Sainte-Luce, Martinique
-          </h1>
-          <p style={{ color: "rgba(250,245,233,0.7)", fontSize: 17, maxWidth: 600, margin: "0 auto", lineHeight: 1.7, fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
-            Plages, restaurants, activités et conseils pratiques pour profiter pleinement de cette perle du sud martiniquais.
-          </p>
+        {/* HERO */}
+        <div style={{ position: "relative", height: "min(70vh, 500px)", overflow: "hidden" }}>
+          <img src={HERO_IMG} alt="Le sud de la Martinique vu depuis la mer"
+            style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 35%" }} />
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(14,59,58,0.3) 0%, rgba(14,59,58,0.85) 100%)" }} />
+          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "0 32px 52px" }}>
+            <div style={{ maxWidth: 760, margin: "0 auto", width: "100%" }}>
+              <p style={{ color: CORAL, fontSize: 12, letterSpacing: "0.3em", textTransform: "uppercase", margin: "0 0 14px" }}>Résidence Amaryllis · Sainte-Luce</p>
+              <h1 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: "clamp(30px, 6vw, 60px)", letterSpacing: "0.05em", color: IVORY, textTransform: "uppercase", margin: "0 0 18px", lineHeight: 1.05 }}>
+                Explorer<br />le Sud Martinique
+              </h1>
+              <p style={{ color: "rgba(250,245,233,0.85)", fontSize: "clamp(16px, 2.2vw, 19px)", maxWidth: 560, margin: 0, lineHeight: 1.65, fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
+                Les Salines. Les tortues d'Arlet. Le Rocher du Diamant. Tous à moins de 25 minutes de nos villas.
+              </p>
+            </div>
+          </div>
         </div>
 
-        {/* Contenu */}
-        <div style={{ maxWidth: 860, margin: "0 auto", padding: "48px 24px 80px" }}>
+        <div style={{ maxWidth: 900, margin: "0 auto", padding: "64px 24px 80px" }}>
 
-          {sections.map((section, si) => (
-            <div key={si} style={{ marginBottom: 64 }}>
-              <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 24, letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY, marginBottom: 28, display: "flex", alignItems: "center", gap: 12 }}>
-                <span>{section.emoji}</span>
-                <span>{section.titre}</span>
-              </h2>
-              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                {section.contenu.map((item, ii) => (
-                  <div key={ii} style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 10, padding: "24px 28px" }}>
-                    <h3 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 15, color: NAVY, margin: "0 0 10px", letterSpacing: "0.04em" }}>
-                      {item.nom}
-                    </h3>
-                    <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 17, lineHeight: 1.75, color: TEXT, margin: 0 }}>
-                      {item.texte}
-                    </p>
+          {/* GUIDES — cartes visuelles */}
+          <div style={{ marginBottom: 16 }}>
+            <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 11, letterSpacing: "0.3em", textTransform: "uppercase", color: CORAL, margin: "0 0 8px" }}>À explorer</p>
+            <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 32, letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY, margin: "0 0 36px" }}>Nos guides de destination</h2>
+          </div>
+
+          <div className="guide-hub-dest">
+            {destinations.map(d => (
+              <a key={d.href} href={d.href} className="guide-hub-card">
+                <img src={d.img} alt={d.nom} loading="lazy" />
+                <div className="overlay" />
+                {d.must && <div className="must-ribbon">Incontournable</div>}
+                <div className="card-content">
+                  <div className="card-dist">{d.emoji} · {d.distance}</div>
+                  <div className="card-nom">{d.nom}</div>
+                  <div className="card-accroche">{d.accroche}</div>
+                  <div className="card-tags">
+                    {d.tags.map(t => <span key={t} className="tag">{t}</span>)}
                   </div>
-                ))}
+                </div>
+              </a>
+            ))}
+          </div>
+
+          {/* POURQUOI SAINTE-LUCE */}
+          <div style={{ marginBottom: 16 }}>
+            <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 11, letterSpacing: "0.3em", textTransform: "uppercase", color: CORAL, margin: "0 0 8px" }}>Votre base</p>
+            <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 32, letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY, margin: "0 0 32px" }}>Pourquoi Sainte-Luce ?</h2>
+          </div>
+          <div className="guide-why">
+            {whySainteuce.map(w => (
+              <div key={w.titre} className="guide-why-item">
+                <div className="guide-why-icon">{w.icon}</div>
+                <div className="guide-why-titre">{w.titre}</div>
+                <div className="guide-why-texte">{w.texte}</div>
               </div>
-            </div>
-          ))}
-
-          {/* CTA villas */}
-          <div style={{ background: NAVY, borderRadius: 16, padding: "40px 32px", textAlign: "center", marginBottom: 64 }}>
-            <p style={{ color: CORAL, fontSize: 11, letterSpacing: "0.3em", textTransform: "uppercase", marginBottom: 12 }}>Séjour en Martinique</p>
-            <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 28, letterSpacing: "0.08em", color: IVORY, textTransform: "uppercase", margin: "0 0 16px" }}>
-              Loger à Sainte-Luce
-            </h2>
-            <p style={{ color: "rgba(250,245,233,0.65)", fontSize: 15, maxWidth: 500, margin: "0 auto 28px", lineHeight: 1.7, fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
-              Villas avec piscine à débordement, vue mer et jacuzzi privatif. Réservez directement sans frais de service.
-            </p>
-            <a href="/" style={{ display: "inline-block", background: CORAL, color: "#fff", textDecoration: "none", padding: "14px 32px", borderRadius: 8, fontSize: 13, fontWeight: 400, letterSpacing: "0.12em", textTransform: "uppercase" }}>
-              Voir toutes les villas
-            </a>
+            ))}
           </div>
 
-          {/* Guides voisins */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 64 }}>
-            <a href="/guide-le-diamant" style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 12, padding: "24px 28px", textDecoration: "none", textAlign: "center" }}>
-              <div style={{ fontSize: 28, marginBottom: 8 }}>🗿</div>
-              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 14, color: NAVY, marginBottom: 6 }}>Guide Le Diamant</div>
-              <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 15, color: TEXT, opacity: 0.8 }}>Rocher mythique, plongée, plages · 15 min</div>
-            </a>
-            <a href="/guide-sainte-anne" style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 12, padding: "24px 28px", textDecoration: "none", textAlign: "center" }}>
-              <div style={{ fontSize: 28, marginBottom: 8 }}>🏖️</div>
-              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 14, color: NAVY, marginBottom: 6 }}>Guide Sainte-Anne</div>
-              <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 15, color: TEXT, opacity: 0.8 }}>Les Salines, kitesurf, catamaran · 20 min</div>
-            </a>
-            <a href="/activites-sainte-luce" style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 12, padding: "24px 28px", textDecoration: "none", textAlign: "center" }}>
-              <div style={{ fontSize: 28, marginBottom: 8 }}>🌟</div>
-              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 14, color: NAVY, marginBottom: 6 }}>10 activités incontournables</div>
-              <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 15, color: TEXT, opacity: 0.8 }}>Sélection de vos hôtes</div>
-            </a>
-            <a href="/guide-proximite" style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 12, padding: "24px 28px", textDecoration: "none", textAlign: "center" }}>
-              <div style={{ fontSize: 28, marginBottom: 8 }}>📍</div>
-              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 14, color: NAVY, marginBottom: 6 }}>À proximité de la villa</div>
-              <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 15, color: TEXT, opacity: 0.8 }}>Plages, forêt, distillerie · &lt; 15 min</div>
-            </a>
-            <a href="/guide-arlet" style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 12, padding: "24px 28px", textDecoration: "none", textAlign: "center" }}>
-              <div style={{ fontSize: 28, marginBottom: 8 }}>🐢</div>
-              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 14, color: NAVY, marginBottom: 6 }}>Guide Grande Anse d'Arlet</div>
-              <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 15, color: TEXT, opacity: 0.8 }}>Tortues, snorkeling, village de pêcheurs · 25 min</div>
-            </a>
-          </div>
-
-          {/* FAQ */}
-          <div>
-            <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 24, letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY, marginBottom: 28 }}>
-              ❓ Questions fréquentes
+          {/* INFOS MARTINIQUE */}
+          <div style={{ background: "linear-gradient(135deg, #0a2e2d 0%, #0e3b3a 100%)", borderRadius: 20, padding: "40px 36px", marginBottom: 72 }}>
+            <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 26, letterSpacing: "0.08em", textTransform: "uppercase", color: IVORY, margin: "0 0 28px" }}>
+              🌴 Savoir avant de partir
             </h2>
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {faqs.map((faq, i) => (
-                <details key={i} style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 10, padding: "0" }}>
-                  <summary style={{ padding: "20px 24px", cursor: "pointer", fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 15, color: NAVY, letterSpacing: "0.03em", listStyle: "none", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    {faq.q}
-                    <span style={{ color: CORAL, flexShrink: 0, marginLeft: 12 }}>+</span>
-                  </summary>
-                  <p style={{ margin: 0, padding: "0 24px 20px", fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 17, lineHeight: 1.75, color: TEXT }}>
-                    {faq.a}
-                  </p>
-                </details>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
+              {[
+                { label: "Aéroport", value: "Fort-de-France (FDF) — vols directs Paris (8h), Miami (4h)" },
+                { label: "Voiture", value: "Indispensable — location 40–70€/jour, réservez à l'avance" },
+                { label: "Meilleure saison", value: "Déc–Avr (sec, alizés, mer calme) · Réservez 3–6 mois avant" },
+                { label: "Monnaie & langue", value: "Euro (€) · Français · Créole martiniquais" },
+              ].map(item => (
+                <div key={item.label} style={{ background: "rgba(250,245,233,0.06)", border: "1px solid rgba(250,245,233,0.1)", borderRadius: 12, padding: "18px 20px" }}>
+                  <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 10, fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase", color: CORAL, marginBottom: 6 }}>{item.label}</div>
+                  <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 13, color: "rgba(250,245,233,0.8)", lineHeight: 1.5 }}>{item.value}</div>
+                </div>
               ))}
             </div>
           </div>
+
+          {/* CTA */}
+          <div style={{ background: NAVY, borderRadius: 20, padding: "44px 36px", textAlign: "center", marginBottom: 64 }}>
+            <p style={{ color: CORAL, fontSize: 11, letterSpacing: "0.3em", textTransform: "uppercase", marginBottom: 12 }}>Réservation directe · Sans frais</p>
+            <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 28, letterSpacing: "0.08em", color: IVORY, textTransform: "uppercase", margin: "0 0 16px" }}>Nos villas à Sainte-Luce</h2>
+            <p style={{ color: "rgba(250,245,233,0.65)", fontSize: 15, maxWidth: 460, margin: "0 auto 28px", lineHeight: 1.7, fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
+              Piscine privée, vue mer, jacuzzi. À partir de 110€/nuit. Économisez jusqu'à 14% vs Airbnb.
+            </p>
+            <a href="/" style={{ display: "inline-block", background: CORAL, color: "#fff", textDecoration: "none", padding: "15px 36px", borderRadius: 8, fontSize: 13, fontWeight: 400, letterSpacing: "0.12em", textTransform: "uppercase" }}>Voir les disponibilités</a>
+          </div>
+
+          {/* FAQ */}
+          <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 24, letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY, marginBottom: 24 }}>
+            Questions fréquentes
+          </h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 16 }}>
+            {faqs.map((faq, i) => (
+              <details key={i} style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 12 }}>
+                <summary style={{ padding: "20px 24px", cursor: "pointer", fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 14, color: NAVY, letterSpacing: "0.03em", listStyle: "none", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  {faq.q}<span style={{ color: CORAL, flexShrink: 0, marginLeft: 12, fontSize: 18 }}>+</span>
+                </summary>
+                <p style={{ margin: 0, padding: "0 24px 20px", fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 17, lineHeight: 1.75, color: TEXT }}>{faq.a}</p>
+              </details>
+            ))}
+          </div>
         </div>
 
-        {/* Footer */}
         <div style={{ background: NAVY, padding: "24px", textAlign: "center" }}>
           <p style={{ color: "rgba(250,245,233,0.4)", fontSize: 13, margin: 0 }}>
             © {new Date().getFullYear()} Amaryllis Locations · <a href="/" style={{ color: "rgba(250,245,233,0.4)", textDecoration: "none" }}>villamaryllis.com</a>
