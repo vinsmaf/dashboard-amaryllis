@@ -13,14 +13,28 @@
  *   RESEND_API_KEY   — Clé API Resend (resend.com, gratuit jusqu'à 3000 emails/mois)
  */
 
-// ── iCal URLs par logement ──────────────────────────────────────────────────
-const ICAL_URLS = {
+// ── iCal URLs Airbnb (hardcodées) ───────────────────────────────────────────
+const ICAL_AIRBNB = {
   amaryllis:  "https://www.airbnb.fr/calendar/ical/54269844.ics?t=681e7d55c76a4845839d24c0bc18ca94",
   schoelcher: "https://www.airbnb.fr/calendar/ical/24242415.ics?t=400f2712fa95485692d5911972f5533d",
   geko:       "https://www.airbnb.fr/calendar/ical/1263155865459755724.ics?t=1c95f057feda4b2fa08519aad1001ca9",
   mabouya:    "https://www.airbnb.fr/calendar/ical/1046596752160926069.ics?t=05c0e5dbdd9542878d58aa760416cf4f",
   zandoli:    "https://www.airbnb.fr/calendar/ical/792768220924504884.ics?t=cfc774d9c7fa40bfbe5f0757ba06b090",
 };
+
+// ── iCal URLs Booking.com (depuis secrets Cloudflare) ───────────────────────
+// Variables : ICAL_BOOKING_AMARYLLIS, ICAL_BOOKING_GEKO, ICAL_BOOKING_MABOUYA,
+//             ICAL_BOOKING_SCHOELCHER, ICAL_BOOKING_ZANDOLI
+function getBookingUrls(env) {
+  const map = {};
+  const keys = { amaryllis: "ICAL_BOOKING_AMARYLLIS", geko: "ICAL_BOOKING_GEKO",
+                 mabouya: "ICAL_BOOKING_MABOUYA", schoelcher: "ICAL_BOOKING_SCHOELCHER",
+                 zandoli: "ICAL_BOOKING_ZANDOLI" };
+  for (const [bienId, envKey] of Object.entries(keys)) {
+    if (env[envKey]) map[bienId] = env[envKey];
+  }
+  return map;
+}
 
 const NOMS = {
   amaryllis:  "Villa Amaryllis",
@@ -60,7 +74,7 @@ function parseICS(text, bienId) {
     };
     const montantRaw = descGet(["Montant total","Total","Amount","Payout"]);
     const montant = montantRaw ? parseFloat(montantRaw.replace(/[^0-9.,]/g, "").replace(",", ".")) || 0 : 0;
-    let voyageur = sum.replace(/^(Réservé|Reserved|Booking)\s*[-–]?\s*/i, "").replace(/\(.*\)/g, "").trim() || "Voyageur Airbnb";
+    let voyageur = sum.replace(/^(Réservé|Reserved|Booking)\s*[-–]?\s*/i, "").replace(/\(.*\)/g, "").trim() || "Voyageur";
     events.push({ uid, bienId, nom: NOMS[bienId] || bienId, voyageur, checkin: ci, checkout: co, montant });
   }
   return events;
@@ -85,17 +99,17 @@ async function sendEmail(env, nouvelles) {
     return;
   }
   const lignes = nouvelles.map(e =>
-    `• <strong>${e.nom}</strong> — ${e.voyageur}<br>
+    `• <strong>${e.nom}</strong> — ${e.voyageur} <span style="background:#e0f0e8;color:#2e7d32;padding:1px 6px;border-radius:10px;font-size:11px;">${e.canal}</span><br>
      &nbsp;&nbsp;📅 ${e.checkin} → ${e.checkout}${e.montant ? ` · ${e.montant}€` : ""}`
   ).join("<br><br>");
 
   const body = {
     from: "Amaryllis Sync <sync@villamaryllis.com>",
     to:   [env.NOTIFICATION_EMAIL || "contact@villamaryllis.com"],
-    subject: `🔔 ${nouvelles.length} nouvelle${nouvelles.length > 1 ? "s" : ""} réservation${nouvelles.length > 1 ? "s" : ""} Airbnb`,
+    subject: `🔔 ${nouvelles.length} nouvelle${nouvelles.length > 1 ? "s" : ""} réservation${nouvelles.length > 1 ? "s" : ""}`,
     html: `
       <div style="font-family:sans-serif;max-width:520px;margin:auto;padding:32px;background:#f4ecdc;border-radius:12px;">
-        <h2 style="color:#0e3b3a;margin:0 0 16px">🌺 Nouvelles réservations Airbnb</h2>
+        <h2 style="color:#0e3b3a;margin:0 0 16px">🌺 Nouvelles réservations</h2>
         <p style="color:#7a6b5a;font-size:14px;margin:0 0 20px">
           ${nouvelles.length} nouvelle${nouvelles.length > 1 ? "s" : ""} réservation${nouvelles.length > 1 ? "s" : ""} détectée${nouvelles.length > 1 ? "s" : ""} — ${new Date().toLocaleString("fr-FR", { timeZone: "America/Martinique" })} (heure Martinique)
         </p>
@@ -135,7 +149,7 @@ async function pushToSheets(env, allEvents) {
     id: e.uid,
     bienId: e.bienId,
     voyageur: e.voyageur,
-    canal: "airbnb",
+    canal: e.canal,
     checkin: e.checkin,
     checkout: e.checkout,
     montant: e.montant,
@@ -154,38 +168,47 @@ async function pushToSheets(env, allEvents) {
   }
 }
 
+// ── Sync un flux iCal (Airbnb ou Booking) ───────────────────────────────────
+async function syncFeed(env, bienId, url, canal, allEvents, nouvelles) {
+  try {
+    const text = await fetchICS(url);
+    const events = parseICS(text, bienId).map(e => ({ ...e, canal }));
+
+    const kvKey = `uids:${bienId}:${canal}`;
+    const stored = await env.ICAL_STORE.get(kvKey, "json") || [];
+    const knownUids = new Set(stored);
+
+    const newForFeed = events.filter(e => !knownUids.has(e.uid));
+    if (newForFeed.length > 0) {
+      console.log(`[amaryllis-sync] ${bienId}/${canal}: ${newForFeed.length} nouvelle(s)`);
+      nouvelles.push(...newForFeed);
+    }
+
+    const currentUids = events.map(e => e.uid);
+    await env.ICAL_STORE.put(kvKey, JSON.stringify(currentUids), { expirationTtl: 60 * 60 * 24 * 90 });
+
+    allEvents.push(...events);
+    console.log(`[amaryllis-sync] ${bienId}/${canal}: ${events.length} événements`);
+  } catch (err) {
+    console.error(`[amaryllis-sync] ${bienId}/${canal} erreur:`, err.message);
+  }
+}
+
 // ── Handler principal (cron) ─────────────────────────────────────────────────
 async function runSync(env) {
   console.log(`[amaryllis-sync] Démarrage sync — ${new Date().toISOString()}`);
   const allEvents = [];
   const nouvelles = [];
 
-  for (const [bienId, url] of Object.entries(ICAL_URLS)) {
-    try {
-      const text = await fetchICS(url);
-      const events = parseICS(text, bienId);
+  // Airbnb
+  for (const [bienId, url] of Object.entries(ICAL_AIRBNB)) {
+    await syncFeed(env, bienId, url, "airbnb", allEvents, nouvelles);
+  }
 
-      // Charger les UIDs connus depuis KV
-      const kvKey = `uids:${bienId}`;
-      const stored = await env.ICAL_STORE.get(kvKey, "json") || [];
-      const knownUids = new Set(stored);
-
-      // Détecter les nouvelles réservations
-      const newForBien = events.filter(e => !knownUids.has(e.uid));
-      if (newForBien.length > 0) {
-        console.log(`[amaryllis-sync] ${bienId}: ${newForBien.length} nouvelle(s) réservation(s)`);
-        nouvelles.push(...newForBien);
-      }
-
-      // Mettre à jour KV avec les UIDs actuels (TTL 90 jours)
-      const currentUids = events.map(e => e.uid);
-      await env.ICAL_STORE.put(kvKey, JSON.stringify(currentUids), { expirationTtl: 60 * 60 * 24 * 90 });
-
-      allEvents.push(...events);
-      console.log(`[amaryllis-sync] ${bienId}: ${events.length} événements, ${newForBien.length} nouveaux`);
-    } catch (err) {
-      console.error(`[amaryllis-sync] ${bienId} erreur:`, err.message);
-    }
+  // Booking.com (depuis secrets Cloudflare)
+  const bookingUrls = getBookingUrls(env);
+  for (const [bienId, url] of Object.entries(bookingUrls)) {
+    await syncFeed(env, bienId, url, "booking", allEvents, nouvelles);
   }
 
   // Notifications email si nouvelles réservations
@@ -193,13 +216,13 @@ async function runSync(env) {
     await sendEmail(env, nouvelles);
   }
 
-  // Push tout vers Google Sheets (même si rien de nouveau — garde les données à jour)
+  // Push tout vers Google Sheets
   if (allEvents.length > 0) {
     await pushToSheets(env, allEvents);
   }
 
   console.log(`[amaryllis-sync] Terminé — ${allEvents.length} événements total, ${nouvelles.length} nouveaux`);
-  return { total: allEvents.length, nouvelles: nouvelles.length };
+  return { total: allEvents.length, nouvelles: nouvelles.length, booking: Object.keys(bookingUrls).length };
 }
 
 // ── Exports Cloudflare Worker ────────────────────────────────────────────────
