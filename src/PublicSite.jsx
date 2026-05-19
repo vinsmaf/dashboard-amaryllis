@@ -3881,7 +3881,7 @@ export default function PublicSite() {
   const [priceOverrides, setPriceOverrides] = useState(loadPriceOverrides);
   const [curtainDone, setCurtainDone] = useState(false);
   const [showExitIntent, setShowExitIntent] = useState(false);
-  const exitShown = useRef(false);
+  const exitShown = useRef(!!sessionStorage.getItem("amaryllis_exit_shown"));
 
   // Listen for admin price updates — même onglet ET autres onglets (cross-tab)
   useEffect(() => {
@@ -4033,6 +4033,7 @@ export default function PublicSite() {
     const fn = (e) => {
       if (!ready || exitShown.current || e.clientY > 10) return;
       exitShown.current = true;
+      sessionStorage.setItem("amaryllis_exit_shown", "1");
       setShowExitIntent(true);
     };
     document.addEventListener("mouseleave", fn);
