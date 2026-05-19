@@ -66,8 +66,8 @@ if (typeof document !== "undefined" && !document.getElementById("__site_styles")
     @keyframes shimmer { 0% { background-position:-400px 0; } 100% { background-position:400px 0; } }
     .skeleton { background: linear-gradient(90deg,#e8e0d4 25%,#f4ecdc 50%,#e8e0d4 75%); background-size:800px 100%; animation:shimmer 1.4s infinite linear; border-radius:6px; }
     @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
-    @keyframes slideInRight { from { opacity:0; transform:translateX(40px); } to { opacity:1; transform:translateX(0); } }
-    @keyframes slideInLeft  { from { opacity:0; transform:translateX(-40px); } to { opacity:1; transform:translateX(0); } }
+    @keyframes slideInRight { from { opacity:0; clip-path:inset(0); transform:translateX(28px); } to { opacity:1; transform:translateX(0); } }
+    @keyframes slideInLeft  { from { opacity:0; clip-path:inset(0); transform:translateX(-28px); } to { opacity:1; transform:translateX(0); } }
     @keyframes floatLeaf { 0%,100% { transform:translateY(0) rotate(-3deg); } 50% { transform:translateY(-12px) rotate(3deg); } }
     @keyframes bloomIn { from { opacity:0; transform:scale(0.92); } to { opacity:1; transform:scale(1); } }
     @keyframes organicMorph {
@@ -3869,7 +3869,7 @@ export default function PublicSite() {
   const filtered = filterLieu === "all" ? biensList : biensList.filter(b => b.lieu.includes(filterLieu));
 
   return (
-    <div id="top" style={{ minHeight: "100vh", background: IVORY, color: TEXT, fontFamily: "'Jost', system-ui, -apple-system, sans-serif" }}>
+    <div id="top" style={{ minHeight: "100vh", background: IVORY, color: TEXT, fontFamily: "'Jost', system-ui, -apple-system, sans-serif", overflowX: "hidden" }}>
       {!curtainDone && <Curtain onDone={() => setCurtainDone(true)} />}
       <CookieBanner />
 
