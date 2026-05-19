@@ -4745,8 +4745,11 @@ export default function PublicSite() {
               <PropertyDropdown onSelect={openDetail} />
             </div>
 
-            {/* Right: contact */}
-            <div style={{ display: "flex", alignItems: "center", gap: 16, flexShrink: 0 }}>
+            {/* Right: explorer + contact */}
+            <div style={{ display: "flex", alignItems: "center", gap: 20, flexShrink: 0 }}>
+              <a href="/guide" style={{ fontSize: 12, fontFamily: "'Jost', sans-serif", fontWeight: 300, color: "rgba(250,245,233,0.6)", textDecoration: "none", letterSpacing: "0.08em", whiteSpace: "nowrap", display: window.innerWidth < 480 ? "none" : "block" }}>
+                Explorer Martinique
+              </a>
               <HoverContact direction="down" />
             </div>
           </div>
