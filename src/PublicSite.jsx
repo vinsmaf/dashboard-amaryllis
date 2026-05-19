@@ -1004,7 +1004,7 @@ function generateDevis({ bien, checkin, checkout, nights, rawTotal, discountRate
     /* Header */
     .header { background:#0e3b3a; color:#fff; border-radius:12px; padding:28px 32px; margin-bottom:28px; display:flex; justify-content:space-between; align-items:flex-start; }
     .header-brand { }
-    .header-brand .logo { font-size:22px; font-weight:700; letter-spacing:-0.5px; }
+    .header-brand .logo { font-size:22px; font-weight:200; letter-spacing:0.25em; text-transform:uppercase; }
     .header-brand .tagline { font-size:11px; opacity:0.6; margin-top:3px; letter-spacing:1px; text-transform:uppercase; }
     .header-doc { text-align:right; }
     .header-doc .doc-title { font-size:26px; font-weight:800; letter-spacing:-0.5px; }
@@ -1072,7 +1072,7 @@ function generateDevis({ bien, checkin, checkout, nights, rawTotal, discountRate
   <!-- Header -->
   <div class="header">
     <div class="header-brand">
-      <div class="logo">🌺 Amaryllis</div>
+      <div class="logo">Amaryllis</div>
       <div class="tagline">Locations de prestige · Martinique &amp; Île-de-France</div>
     </div>
     <div class="header-doc">
@@ -1123,7 +1123,7 @@ function generateDevis({ bien, checkin, checkout, nights, rawTotal, discountRate
       </tr>` : ""}
       ${extraGuestSuppl > 0 ? `<tr>
         <td>Supplément voyageurs</td>
-        <td style="color:#7a6b5a;font-size:12px;">${extraGuests} pers. suppl. × ${nights} nuit${nights > 1 ? "s" : ""} × 50€</td>
+        <td style="color:#7a6b5a;font-size:12px;">${extraGuests} pers. suppl. × ${nights} nuit${nights > 1 ? "s" : ""} × ${EXTRA_GUEST_RATE[bien.id] ?? 50}€</td>
         <td>${extraGuestSuppl}€</td>
       </tr>` : ""}
       ${petSuppl > 0 ? `<tr>
@@ -1166,10 +1166,8 @@ function generateDevis({ bien, checkin, checkout, nights, rawTotal, discountRate
 
 </div>
 <script>
-  // Auto-print si ouvert depuis le site
-  if (document.referrer.includes('villamaryllis.com') || window.opener) {
-    setTimeout(() => window.print(), 600);
-  }
+  // Auto-print dès que la popup est ouverte depuis le site
+  if (window.opener) { setTimeout(() => window.print(), 700); }
 </script>
 </body>
 </html>`;
