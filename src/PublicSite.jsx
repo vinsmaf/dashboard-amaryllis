@@ -1399,7 +1399,7 @@ function FormField({ label, value, onChange, type = "text", multiline, style }) 
 }
 
 // ── Property Card ────────────────────────────────────────────────
-function BienCard({ bien, onDetail, onBook }) {
+function BienCard({ bien, onDetail, onBook, isFavorite = false, onToggleFavorite }) {
   const [photoIdx, setPhotoIdx] = useState(0);
   const [hovered, setHovered] = useState(false);
   const photos = bien.photos || [];
@@ -1529,6 +1529,30 @@ function BienCard({ bien, onDetail, onBook }) {
           }}>
             {bien.tag}
           </div>
+        )}
+
+        {/* Bouton favori */}
+        {onToggleFavorite && (
+          <button
+            onClick={e => onToggleFavorite(e, bien.id)}
+            title={isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
+            style={{
+              position: "absolute", top: 14, left: 14, zIndex: 4,
+              width: 34, height: 34, borderRadius: "50%",
+              background: isFavorite ? "rgba(232,89,138,0.92)" : "rgba(255,255,255,0.82)",
+              backdropFilter: "blur(8px)",
+              border: "none", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 17, lineHeight: 1,
+              transition: "transform 0.18s, background 0.18s",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+              transform: isFavorite ? "scale(1.08)" : "scale(1)",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.15)"; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = isFavorite ? "scale(1.08)" : "scale(1)"; }}
+          >
+            {isFavorite ? "♥" : "♡"}
+          </button>
         )}
 
         {/* Price badge */}
@@ -3721,6 +3745,11 @@ export default function PublicSite() {
   const [beds24Bien, setBeds24Bien] = useState(null);
   const [detailBien, setDetailBien] = useState(null);
   const [filterLieu, setFilterLieu] = useState("all");
+  const [showFavorites, setShowFavorites] = useState(false);
+  const [favorites, setFavorites] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem("amaryllis_favorites") || "[]")); }
+    catch { return new Set(); }
+  });
   const [scrolled, setScrolled] = useState(false);
   const [blockedDates, setBlockedDates] = useState([]);
   const [loadingAvail, setLoadingAvail] = useState(false);
@@ -3856,6 +3885,16 @@ export default function PublicSite() {
     await fetchAvailability(bien.id);
   }
 
+  function toggleFavorite(e, id) {
+    e.stopPropagation();
+    setFavorites(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      localStorage.setItem("amaryllis_favorites", JSON.stringify([...next]));
+      return next;
+    });
+  }
+
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 60);
     window.addEventListener("scroll", fn, { passive: true });
@@ -3910,7 +3949,9 @@ export default function PublicSite() {
     { key: "Île-de-France", label: "Île-de-France" },
   ];
 
-  const filtered = filterLieu === "all" ? biensList : biensList.filter(b => b.lieu.includes(filterLieu));
+  const filtered = biensList
+    .filter(b => filterLieu === "all" || b.lieu.includes(filterLieu))
+    .filter(b => !showFavorites || favorites.has(b.id));
 
   return (
     <div id="top" style={{ minHeight: "100vh", background: IVORY, color: TEXT, fontFamily: "'Jost', system-ui, -apple-system, sans-serif", overflowX: "hidden" }}>
@@ -3981,20 +4022,20 @@ export default function PublicSite() {
             Toutes nos villas avec piscine à Sainte-Luce se réservent en direct, sans frais de service. Location vacances Martinique vue mer, jacuzzi privatif, piscine à débordement — réservez en direct et économisez jusqu'à 20% par rapport aux plateformes.
           </p>
 
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 24 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 24, alignItems: "center" }}>
             {lieux.map(({ key, label }) => (
               <button
                 key={key}
-                onClick={() => setFilterLieu(key)}
+                onClick={() => { setFilterLieu(key); setShowFavorites(false); }}
                 style={{
                   padding: "8px 20px",
                   borderRadius: 20,
-                  border: `1px solid ${filterLieu === key ? CORAL + "88" : SAND}`,
-                  background: filterLieu === key ? `rgba(200,85,61,0.08)` : "transparent",
-                  color: filterLieu === key ? CORAL : MUTED,
+                  border: `1px solid ${filterLieu === key && !showFavorites ? CORAL + "88" : SAND}`,
+                  background: filterLieu === key && !showFavorites ? `rgba(200,85,61,0.08)` : "transparent",
+                  color: filterLieu === key && !showFavorites ? CORAL : MUTED,
                   cursor: "pointer",
                   fontSize: 13,
-                  fontWeight: filterLieu === key ? 700 : 400,
+                  fontWeight: filterLieu === key && !showFavorites ? 700 : 400,
                   transition: "all 0.2s",
                   letterSpacing: 0.5,
                 }}
@@ -4002,6 +4043,44 @@ export default function PublicSite() {
                 {label}
               </button>
             ))}
+            {/* Séparateur */}
+            <div style={{ width: 1, height: 18, background: SAND, margin: "0 4px" }} />
+            {/* Chip Favoris */}
+            <button
+              onClick={() => { setShowFavorites(f => !f); }}
+              style={{
+                padding: "8px 18px",
+                borderRadius: 20,
+                border: `1px solid ${showFavorites ? "#e8598a88" : SAND}`,
+                background: showFavorites ? "rgba(232,89,138,0.08)" : "transparent",
+                color: showFavorites ? "#e8598a" : MUTED,
+                cursor: "pointer",
+                fontSize: 13,
+                fontWeight: showFavorites ? 700 : 400,
+                transition: "all 0.2s",
+                display: "flex", alignItems: "center", gap: 6,
+              }}
+            >
+              <span style={{ fontSize: 14 }}>{showFavorites ? "♥" : "♡"}</span>
+              Favoris
+              {favorites.size > 0 && (
+                <span style={{
+                  background: showFavorites ? "#e8598a" : SAND,
+                  color: showFavorites ? "#fff" : MUTED,
+                  borderRadius: 10, fontSize: 10, fontWeight: 700,
+                  padding: "1px 6px", lineHeight: 1.5,
+                  transition: "all 0.2s",
+                }}>
+                  {favorites.size}
+                </span>
+              )}
+            </button>
+            {/* Message si aucun favori et filtre actif */}
+            {showFavorites && favorites.size === 0 && (
+              <span style={{ fontSize: 12, color: MUTED, fontFamily: "'Jost',sans-serif", fontStyle: "italic" }}>
+                Cliquez sur ♡ sur une villa pour l'ajouter
+              </span>
+            )}
           </div>
 
           {/* Separator */}
@@ -4056,7 +4135,7 @@ export default function PublicSite() {
         {/* Grid */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: 24 }}>
           {filtered.map(b => (
-            <BienCard key={b.id} bien={b} onDetail={openDetail} onBook={openBien} />
+            <BienCard key={b.id} bien={b} onDetail={openDetail} onBook={openBien} isFavorite={favorites.has(b.id)} onToggleFavorite={toggleFavorite} />
           ))}
         </div>
       </div>
