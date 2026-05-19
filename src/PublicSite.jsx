@@ -36,15 +36,45 @@ function loadMinNightsConfig() {
 function saveMinNightsConfig(cfg) {
   try { localStorage.setItem("amaryllis_min_nights_v2", JSON.stringify(cfg)); } catch {}
 }
+
+// ── Cache module-level + listeners pour réactivité cross-composant ──
+let _mnCfg = loadMinNightsConfig();
+const _mnListeners = new Set();
+
+function _refreshMnCache() {
+  _mnCfg = loadMinNightsConfig();
+  _mnListeners.forEach(fn => fn(_mnCfg));
+}
+
+// Écoute les changements depuis l'admin (même onglet) et autres onglets
+if (typeof window !== "undefined") {
+  window.addEventListener("amaryllis_config_updated", _refreshMnCache); // même onglet
+  window.addEventListener("storage", e => {
+    if (!e.key || e.key === "amaryllis_min_nights_v2") _refreshMnCache();
+  });
+}
+
+/**
+ * Hook React — force un re-render quand la config min-nuits change.
+ * Utiliser dans les composants qui affichent ou vérifient le minimum.
+ */
+function useMinNights() {
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const fn = () => tick(n => n + 1);
+    _mnListeners.add(fn);
+    return () => _mnListeners.delete(fn);
+  }, []);
+}
+
 /**
  * Retourne le séjour minimum pour un bien à une date de check-in donnée.
- * Parcourt les périodes configurées (de la plus récente à la plus ancienne) ;
- * si aucune ne correspond, retourne la valeur par défaut du bien.
+ * Lit depuis le cache module-level (toujours à jour via les listeners).
  * @param {string} bienId
  * @param {string|null} checkinDate  YYYY-MM-DD ou null
  */
 function getMinNights(bienId, checkinDate) {
-  const cfg     = loadMinNightsConfig();
+  const cfg     = _mnCfg;
   const bienCfg = cfg[bienId];
   const fallback = MIN_NIGHTS_DEFAULT[bienId] ?? 1;
   if (!bienCfg) return fallback;
@@ -1227,6 +1257,7 @@ function generateDevis({ bien, checkin, checkout, nights, rawTotal, discountRate
 
 // ── Booking Modal ────────────────────────────────────────────────
 function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialCheckin = null, initialCheckout = null }) {
+  useMinNights(); // re-render when admin changes min nights
   const [step, setStep] = useState(1);
   const [checkin, setCheckin] = useState(initialCheckin);
   const [checkout, setCheckout] = useState(initialCheckout);
@@ -2083,6 +2114,7 @@ function Stat({ icon, label }) {
 
 // ── Property Detail (full-screen) ───────────────────────────────
 function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail = false }) {
+  useMinNights(); // re-render when admin changes min nights
   const { t, lang } = useLang();
   const [photoIdx, setPhotoIdx] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -4692,11 +4724,16 @@ export default function PublicSite() {
   const [compareIds, setCompareIds] = useState(new Set());
   const [showComparator, setShowComparator] = useState(false);
 
-  // Charger la config séjour minimum depuis le serveur au démarrage
+  // Charger la config séjour minimum depuis le serveur au démarrage → met à jour le cache
   useEffect(() => {
     fetch("/api/site-config")
       .then(r => r.json())
-      .then(d => { if (d.ok && d.config && Object.keys(d.config).length) saveMinNightsConfig(d.config); })
+      .then(d => {
+        if (d.ok && d.config && Object.keys(d.config).length) {
+          saveMinNightsConfig(d.config);
+          _refreshMnCache(); // met à jour le cache + notifie tous les composants
+        }
+      })
       .catch(() => {});
   }, []);
 

@@ -2012,51 +2012,75 @@ const BIEN_NAMES_ADMIN = {
 };
 
 function MinNightsConfig() {
-  const [config, setConfig] = useState(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem("amaryllis_min_nights_v2") || "{}");
-      const full = {};
-      for (const id of Object.keys(MIN_NIGHTS_DEFAULTS_ADMIN)) {
-        full[id] = saved[id] ?? { default: MIN_NIGHTS_DEFAULTS_ADMIN[id], periods: [] };
-        if (!Array.isArray(full[id].periods)) full[id].periods = [];
-      }
-      return full;
-    } catch { return Object.fromEntries(Object.entries(MIN_NIGHTS_DEFAULTS_ADMIN).map(([id, v]) => [id, { default: v, periods: [] }])); }
-  });
-  const [saving, setSaving] = useState(false);
-  const [status, setStatus] = useState(null); // "ok" | "error" | null
-
-  // Charger depuis le serveur au montage
-  useState(() => {
-    fetch("/api/site-config").then(r => r.json()).then(d => {
-      if (d.ok && d.config && Object.keys(d.config).length) {
-        const full = {};
-        for (const id of Object.keys(MIN_NIGHTS_DEFAULTS_ADMIN)) {
-          full[id] = d.config[id] ?? { default: MIN_NIGHTS_DEFAULTS_ADMIN[id], periods: [] };
-          if (!Array.isArray(full[id].periods)) full[id].periods = [];
-        }
-        setConfig(full);
-        localStorage.setItem("amaryllis_min_nights_v2", JSON.stringify(full));
-      }
-    }).catch(() => {});
-  });
-
-  async function save() {
-    setSaving(true); setStatus(null);
-    localStorage.setItem("amaryllis_min_nights_v2", JSON.stringify(config));
-    try {
-      const r = await fetch("/api/site-config", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "setConfig", config }),
-      });
-      const d = await r.json();
-      setStatus(d.ok ? "ok" : "error");
-    } catch { setStatus("error"); }
-    setSaving(false);
-    setTimeout(() => setStatus(null), 5000);
+  // ── Init depuis localStorage ──────────────────────────────────
+  function buildFull(raw) {
+    const full = {};
+    for (const id of Object.keys(MIN_NIGHTS_DEFAULTS_ADMIN)) {
+      full[id] = raw[id] ?? { default: MIN_NIGHTS_DEFAULTS_ADMIN[id], periods: [] };
+      if (!Array.isArray(full[id].periods)) full[id].periods = [];
+    }
+    return full;
   }
 
+  const [config, setConfig] = useState(() => {
+    try { return buildFull(JSON.parse(localStorage.getItem("amaryllis_min_nights_v2") || "{}")); }
+    catch { return buildFull({}); }
+  });
+
+  // "idle" | "local" | "syncing" | "synced" | "error"
+  const [syncStatus, setSyncStatus] = useState("idle");
+  const isFirstRender = useRef(true);
+  const localTimer    = useRef(null);
+  const serverTimer   = useRef(null);
+
+  // ── Charger depuis le serveur au montage (useEffect, pas useState!) ──
+  useEffect(() => {
+    fetch("/api/site-config")
+      .then(r => r.json())
+      .then(d => {
+        if (d.ok && d.config && Object.keys(d.config).length) {
+          const full = buildFull(d.config);
+          isFirstRender.current = true;      // skip auto-save for server-loaded data
+          setConfig(full);
+          localStorage.setItem("amaryllis_min_nights_v2", JSON.stringify(full));
+          window.dispatchEvent(new Event("amaryllis_config_updated"));
+          setSyncStatus("synced");
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // ── Auto-save : localStorage immédiat + serveur différé ────────
+  useEffect(() => {
+    if (isFirstRender.current) { isFirstRender.current = false; return; }
+
+    // 1. Enregistrement local immédiat (300 ms debounce anti-keystroke)
+    clearTimeout(localTimer.current);
+    localTimer.current = setTimeout(() => {
+      localStorage.setItem("amaryllis_min_nights_v2", JSON.stringify(config));
+      window.dispatchEvent(new Event("amaryllis_config_updated")); // même onglet
+      setSyncStatus("local");
+
+      // 2. Synchronisation serveur 2,5 s après le dernier changement
+      clearTimeout(serverTimer.current);
+      serverTimer.current = setTimeout(async () => {
+        setSyncStatus("syncing");
+        try {
+          const r = await fetch("/api/site-config", {
+            method:  "POST",
+            headers: { "Content-Type": "application/json" },
+            body:    JSON.stringify({ action: "setConfig", config }),
+          });
+          const d = await r.json();
+          setSyncStatus(d.ok ? "synced" : "error");
+        } catch { setSyncStatus("error"); }
+      }, 2500);
+    }, 300);
+
+    return () => { clearTimeout(localTimer.current); clearTimeout(serverTimer.current); };
+  }, [config]);
+
+  // ── Mutations ─────────────────────────────────────────────────
   function upDefault(id, v) {
     setConfig(p => ({ ...p, [id]: { ...p[id], default: parseInt(v) || 0 } }));
   }
@@ -2064,7 +2088,7 @@ function MinNightsConfig() {
     const y = new Date().getFullYear();
     setConfig(p => ({
       ...p,
-      [id]: { ...p[id], periods: [...p[id].periods, { id: Date.now().toString(), label: "Nouvelle période", from: `${y}-07-01`, to: `${y}-08-31`, min: 7 }] },
+      [id]: { ...p[id], periods: [...p[id].periods, { id: `${Date.now()}`, label: "Nouvelle période", from: `${y}-07-01`, to: `${y}-08-31`, min: 7 }] },
     }));
   }
   function upPeriod(bienId, pid, field, v) {
@@ -2077,13 +2101,26 @@ function MinNightsConfig() {
     setConfig(p => ({ ...p, [bienId]: { ...p[bienId], periods: p[bienId].periods.filter(pr => pr.id !== pid) } }));
   }
 
+  // ── Indicateur de synchronisation ───────────────────────────
+  const statusBadge = {
+    idle:    null,
+    local:   <span style={{ fontSize: 11, color: "#f59e0b", display: "flex", alignItems: "center", gap: 4 }}>💾 Sauvegardé localement · sync serveur…</span>,
+    syncing: <span style={{ fontSize: 11, color: "#94a3b8", display: "flex", alignItems: "center", gap: 4 }}>⟳ Synchronisation…</span>,
+    synced:  <span style={{ fontSize: 11, color: "#10b981", display: "flex", alignItems: "center", gap: 4 }}>✓ Synchronisé — visible sur tout le site</span>,
+    error:   <span style={{ fontSize: 11, color: "#ef4444", display: "flex", alignItems: "center", gap: 4 }}>⚠ Erreur serveur — actif localement seulement</span>,
+  }[syncStatus];
+
   const inp = { padding: "5px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.13)", background: "rgba(255,255,255,0.05)", color: "#e2e8f0", fontSize: 12 };
 
   return (
     <div>
-      <div style={{ fontSize: 12, color: "#64748b", marginBottom: 16, lineHeight: 1.6 }}>
-        Définissez le nombre de nuits minimum par logement et par période. Les périodes ont priorité sur le défaut.<br />
-        Les règles sont appliquées automatiquement dans le widget de réservation du site public.
+      {/* Header + statut */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16, gap: 12, flexWrap: "wrap" }}>
+        <div style={{ fontSize: 12, color: "#64748b", lineHeight: 1.6 }}>
+          Les règles sont sauvegardées <strong style={{ color: "#94a3b8" }}>automatiquement</strong> à chaque modification
+          et appliquées instantanément dans le widget de réservation.
+        </div>
+        {statusBadge && <div style={{ flexShrink: 0 }}>{statusBadge}</div>}
       </div>
 
       {Object.keys(MIN_NIGHTS_DEFAULTS_ADMIN).map(bienId => {
@@ -2126,7 +2163,6 @@ function MinNightsConfig() {
               </div>
             ))}
 
-            {/* Add period */}
             <button onClick={() => addPeriod(bienId)}
               style={{ background: "rgba(14,165,233,0.08)", border: "1px solid rgba(14,165,233,0.22)", borderRadius: 6, color: "#38bdf8", cursor: "pointer", fontSize: 11, padding: "5px 12px", fontWeight: 600, marginTop: periods.length ? 4 : 0 }}>
               + Ajouter une période
@@ -2134,16 +2170,6 @@ function MinNightsConfig() {
           </div>
         );
       })}
-
-      {/* Save */}
-      <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 12 }}>
-        <button onClick={save} disabled={saving}
-          style={{ background: saving ? "rgba(14,165,233,0.4)" : "#0ea5e9", border: "none", borderRadius: 8, color: "#fff", cursor: saving ? "default" : "pointer", fontSize: 13, padding: "10px 28px", fontWeight: 700 }}>
-          {saving ? "Sauvegarde…" : "💾 Sauvegarder"}
-        </button>
-        {status === "ok"    && <span style={{ fontSize: 12, color: "#10b981" }}>✓ Sauvegardé — visible immédiatement sur le site</span>}
-        {status === "error" && <span style={{ fontSize: 12, color: "#f59e0b" }}>⚠ Erreur serveur — config enregistrée localement seulement</span>}
-      </div>
     </div>
   );
 }
