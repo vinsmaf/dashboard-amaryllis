@@ -223,6 +223,18 @@ export default function Guide() {
             ))}
           </div>
 
+          {/* CTA CARTE INTERACTIVE */}
+          <div style={{ background: "linear-gradient(135deg, #0a2e2d 0%, #1a2b4a 100%)", borderRadius: 16, padding: "28px 32px", marginBottom: 64, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 20 }}>
+            <div>
+              <p style={{ color: CORAL, fontSize: 11, letterSpacing: "0.25em", textTransform: "uppercase", margin: "0 0 6px", fontFamily: "'Jost', sans-serif" }}>Nouveau</p>
+              <p style={{ color: IVORY, fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 20, letterSpacing: "0.05em", margin: "0 0 6px" }}>🗺️ Carte interactive du Sud Martinique</p>
+              <p style={{ color: "rgba(250,245,233,0.6)", fontSize: 13, margin: 0, fontFamily: "'Jost', sans-serif", fontWeight: 300 }}>Filtrez par activité · Explorez les destinations sur la carte</p>
+            </div>
+            <a href="/explorer" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: CORAL, color: "white", textDecoration: "none", padding: "12px 26px", borderRadius: 100, fontSize: 13, fontWeight: 600, fontFamily: "'Jost', sans-serif", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>
+              Ouvrir la carte →
+            </a>
+          </div>
+
           {/* POURQUOI SAINTE-LUCE */}
           <div style={{ marginBottom: 16 }}>
             <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 11, letterSpacing: "0.3em", textTransform: "uppercase", color: CORAL, margin: "0 0 8px" }}>Votre base</p>

@@ -4747,8 +4747,11 @@ export default function PublicSite() {
 
             {/* Right: explorer + contact */}
             <div style={{ display: "flex", alignItems: "center", gap: 20, flexShrink: 0 }}>
-              <a href="/guide" style={{ fontSize: 12, fontFamily: "'Jost', sans-serif", fontWeight: 300, color: "rgba(250,245,233,0.6)", textDecoration: "none", letterSpacing: "0.08em", whiteSpace: "nowrap", display: window.innerWidth < 480 ? "none" : "block" }}>
+              <a href="/guide" style={{ fontSize: 12, fontFamily: "'Jost', sans-serif", fontWeight: 300, color: "rgba(250,245,233,0.6)", textDecoration: "none", letterSpacing: "0.08em", whiteSpace: "nowrap", display: window.innerWidth < 600 ? "none" : "block" }}>
                 Explorer Martinique
+              </a>
+              <a href="/explorer" style={{ fontSize: 12, fontFamily: "'Jost', sans-serif", fontWeight: 300, color: "rgba(250,245,233,0.6)", textDecoration: "none", letterSpacing: "0.08em", whiteSpace: "nowrap", display: window.innerWidth < 768 ? "none" : "block" }}>
+                🗺️ Carte
               </a>
               <HoverContact direction="down" />
             </div>
