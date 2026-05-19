@@ -3167,122 +3167,41 @@ function SearchByDates({ biens, onBook, onDetail }) {
   );
 }
 
-/* ─── WeatherWidget ─────────────────────────────────────────────
-   Météo en temps réel à Sainte-Luce via Open-Meteo (gratuit, sans clé)
-──────────────────────────────────────────────────────────────── */
-const WMO = {
-  0:  ["☀️","Ensoleillé"],   1: ["🌤️","Peu nuageux"],  2: ["⛅","Nuageux"],
-  3:  ["☁️","Couvert"],      45:["🌫️","Brume"],        48:["🌫️","Brume givrante"],
-  51: ["🌦️","Bruine légère"],53:["🌦️","Bruine"],      55:["🌧️","Bruine forte"],
-  61: ["🌧️","Pluie légère"], 63:["🌧️","Pluie"],       65:["🌧️","Pluie forte"],
-  80: ["🌦️","Averses"],     81:["🌧️","Averses mod."], 82:["⛈️","Averses fortes"],
-  95: ["⛈️","Orage"],       96:["⛈️","Orage+grêle"],  99:["⛈️","Orage violent"],
+/* ─── WeatherPill — pill discret dans le header ─────────────── */
+const WMO_ICON = {
+  0:"☀️", 1:"🌤️", 2:"⛅", 3:"☁️", 45:"🌫️", 48:"🌫️",
+  51:"🌦️", 53:"🌦️", 55:"🌧️", 61:"🌧️", 63:"🌧️", 65:"🌧️",
+  80:"🌦️", 81:"🌧️", 82:"⛈️", 95:"⛈️", 96:"⛈️", 99:"⛈️",
 };
-function wmoLabel(code) { return WMO[code] ?? ["🌡️","–"]; }
-const DAYS_FR = ["Dim","Lun","Mar","Mer","Jeu","Ven","Sam"];
-
-function WeatherWidget() {
-  const [wx, setWx]     = useState(null);
-  const [error, setErr] = useState(false);
-
+function WeatherPill() {
+  const [wx, setWx] = useState(null);
   useEffect(() => {
-    const cached = sessionStorage.getItem("wx_sainte_luce");
-    if (cached) { try { setWx(JSON.parse(cached)); return; } catch {} }
-
+    try {
+      const c = sessionStorage.getItem("wx_sl");
+      if (c) { setWx(JSON.parse(c)); return; }
+    } catch {}
     fetch(
-      "https://api.open-meteo.com/v1/forecast" +
-      "?latitude=14.472&longitude=-60.933" +
-      "&current=temperature_2m,weathercode,windspeed_10m,relative_humidity_2m" +
-      "&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max" +
-      "&timezone=America%2FMartinique&forecast_days=5"
+      "https://api.open-meteo.com/v1/forecast?latitude=14.472&longitude=-60.933" +
+      "&current=temperature_2m,weathercode&timezone=America%2FMartinique"
     )
       .then(r => r.json())
       .then(d => {
-        const data = {
-          temp:     Math.round(d.current.temperature_2m),
-          code:     d.current.weathercode,
-          wind:     Math.round(d.current.windspeed_10m),
-          humidity: d.current.relative_humidity_2m,
-          daily:    d.daily.time.slice(1, 5).map((t, i) => ({
-            date:    t,
-            code:    d.daily.weathercode[i + 1],
-            max:     Math.round(d.daily.temperature_2m_max[i + 1]),
-            min:     Math.round(d.daily.temperature_2m_min[i + 1]),
-            precip:  d.daily.precipitation_probability_max[i + 1],
-          })),
-        };
-        setWx(data);
-        sessionStorage.setItem("wx_sainte_luce", JSON.stringify(data));
+        const v = { t: Math.round(d.current.temperature_2m), c: d.current.weathercode };
+        setWx(v);
+        try { sessionStorage.setItem("wx_sl", JSON.stringify(v)); } catch {}
       })
-      .catch(() => setErr(true));
+      .catch(() => {});
   }, []);
-
-  if (error || (!wx && !error)) return null; // masqué si erreur ou en cours
-
-  const [icon, label] = wmoLabel(wx.code);
-
+  if (!wx) return null;
   return (
-    <div style={{
-      background: `linear-gradient(135deg, #072626 0%, #0e3b3a 60%, #1a5c5a 100%)`,
-      padding: "20px 32px",
-      borderBottom: "1px solid rgba(250,245,233,0.07)",
+    <span style={{
+      display: "flex", alignItems: "center", gap: 4,
+      fontSize: 12, fontFamily: "'Jost',sans-serif", fontWeight: 300,
+      color: "rgba(250,245,233,0.6)", letterSpacing: "0.03em",
+      whiteSpace: "nowrap",
     }}>
-      <div style={{ maxWidth: 1280, margin: "0 auto", display: "flex", alignItems: "center", gap: 32, flexWrap: "wrap" }}>
-
-        {/* Météo actuelle */}
-        <div style={{ display: "flex", alignItems: "center", gap: 16, flexShrink: 0 }}>
-          <span style={{ fontSize: 40, lineHeight: 1 }}>{icon}</span>
-          <div>
-            <div style={{ fontFamily: "'Jost',sans-serif", fontWeight: 200, fontSize: 11, letterSpacing: "0.25em", textTransform: "uppercase", color: "rgba(250,245,233,0.5)", marginBottom: 2 }}>
-              Sainte-Luce · maintenant
-            </div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-              <span style={{ fontFamily: "'Jost',sans-serif", fontWeight: 700, fontSize: 36, color: "#faf5e9", lineHeight: 1 }}>{wx.temp}°</span>
-              <span style={{ fontFamily: "'Jost',sans-serif", fontWeight: 300, fontSize: 14, color: "rgba(250,245,233,0.7)" }}>{label}</span>
-            </div>
-            <div style={{ fontFamily: "'Jost',sans-serif", fontWeight: 300, fontSize: 11, color: "rgba(250,245,233,0.45)", marginTop: 3, display: "flex", gap: 14 }}>
-              <span>💨 {wx.wind} km/h</span>
-              <span>💧 {wx.humidity}%</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Séparateur */}
-        <div style={{ width: 1, height: 52, background: "rgba(250,245,233,0.12)", flexShrink: 0 }} />
-
-        {/* Prévisions 4 jours */}
-        <div style={{ display: "flex", gap: 8, flex: 1, flexWrap: "wrap" }}>
-          {wx.daily.map(d => {
-            const [dIcon, dLabel] = wmoLabel(d.code);
-            const dayName = DAYS_FR[new Date(d.date + "T12:00:00").getDay()];
-            return (
-              <div key={d.date} style={{
-                background: "rgba(250,245,233,0.06)",
-                border: "1px solid rgba(250,245,233,0.1)",
-                borderRadius: 10,
-                padding: "10px 14px",
-                textAlign: "center",
-                minWidth: 72,
-                flex: "1 1 72px",
-                maxWidth: 110,
-              }}>
-                <div style={{ fontFamily: "'Jost',sans-serif", fontWeight: 600, fontSize: 11, color: "rgba(250,245,233,0.5)", letterSpacing: "0.08em", marginBottom: 5 }}>{dayName}</div>
-                <div style={{ fontSize: 22, marginBottom: 4 }}>{dIcon}</div>
-                <div style={{ fontFamily: "'Jost',sans-serif", fontSize: 12, color: "#faf5e9", fontWeight: 500 }}>{d.max}° <span style={{ color: "rgba(250,245,233,0.4)", fontWeight: 300 }}>{d.min}°</span></div>
-                {d.precip > 20 && (
-                  <div style={{ fontFamily: "'Jost',sans-serif", fontSize: 10, color: "#7ec8e3", marginTop: 3 }}>🌂 {d.precip}%</div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Label discret */}
-        <div style={{ fontFamily: "'Jost',sans-serif", fontWeight: 300, fontSize: 10, color: "rgba(250,245,233,0.25)", letterSpacing: "0.08em", flexShrink: 0, alignSelf: "flex-end" }}>
-          Open-Meteo
-        </div>
-      </div>
-    </div>
+      {WMO_ICON[wx.c] ?? "🌡️"} {wx.t}°C
+    </span>
   );
 }
 
@@ -4909,6 +4828,7 @@ export default function PublicSite() {
               <a href="/explorer" style={{ fontSize: 12, fontFamily: "'Jost', sans-serif", fontWeight: 300, color: "rgba(250,245,233,0.6)", textDecoration: "none", letterSpacing: "0.08em", whiteSpace: "nowrap", display: window.innerWidth < 768 ? "none" : "block" }}>
                 🗺️ Carte
               </a>
+              <WeatherPill />
               {/* Toggle mode sombre */}
               <button
                 onClick={() => setDarkMode(d => !d)}
@@ -4948,9 +4868,6 @@ export default function PublicSite() {
           ))}
         </div>
       </div>
-
-      {/* ── MÉTÉO SAINTE-LUCE ── */}
-      <WeatherWidget />
 
       {/* ── QUICK BOOK ── */}
       <QuickBook biens={biensList} onBook={openBien} />
