@@ -2419,113 +2419,149 @@ function SearchByDates({ biens, onBook, onDetail }) {
 
   function reset() { setCheckin(""); setCheckout(""); setResults(null); }
 
+  const [open, setOpen] = useState(false);
   const canSearch = checkin && checkout && checkout > checkin;
   const availableCount = results ? results.filter(r => r.isAvailable && !r.belowMin).length : 0;
 
+  // Fermer et réinitialiser
+  function reset() { setCheckin(""); setCheckout(""); setResults(null); setOpen(false); }
+
   return (
-    <div style={{ background: NAVY, padding: "24px 32px", borderBottom: "1px solid rgba(250,245,233,0.06)" }}>
-      <div style={{ maxWidth: 1280, margin: "0 auto" }}>
-        <div style={{ fontSize: 10, letterSpacing: "0.3em", textTransform: "uppercase", color: "rgba(250,245,233,0.4)", fontFamily: "'Jost', sans-serif", marginBottom: 14 }}>
-          Rechercher par dates
-        </div>
+    <div style={{ background: IVORY, borderBottom: `1px solid ${SAND}` }}>
+      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 32px" }}>
 
-        {/* Barre de filtres */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          {/* Arrivée */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(250,245,233,0.06)", borderRadius: 8, padding: "10px 16px", border: "1px solid rgba(250,245,233,0.1)" }}>
-            <span style={{ fontSize: 11, color: "rgba(250,245,233,0.4)", fontFamily: "'Jost', sans-serif", letterSpacing: "0.1em", whiteSpace: "nowrap" }}>Arrivée</span>
-            <input type="date" value={checkin} min={todayVal} onChange={e => { setCheckin(e.target.value); setResults(null); }}
-              style={{ background: "none", border: "none", color: "#faf5e9", fontSize: 13, fontFamily: "'Jost', sans-serif", outline: "none", cursor: "pointer" }} />
-          </div>
+        {/* Trigger — ligne discrète */}
+        <button
+          onClick={() => { setOpen(o => !o); if (open) { setResults(null); } }}
+          style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", background: "none", border: "none", padding: "13px 0", cursor: "pointer", textAlign: "left" }}
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, opacity: 0.45 }}>
+            <circle cx="6.5" cy="6.5" r="5" stroke={NAVY} strokeWidth="1.5"/>
+            <line x1="10.5" y1="10.5" x2="15" y2="15" stroke={NAVY} strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+          <span style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, fontWeight: 400, letterSpacing: "0.18em", textTransform: "uppercase", color: MUTED }}>
+            Rechercher par dates
+          </span>
+          {results && !open && (
+            <span style={{ marginLeft: 6, fontSize: 10, color: CORAL, fontFamily: "'Jost', sans-serif", letterSpacing: "0.05em" }}>
+              · {availableCount} disponible{availableCount > 1 ? "s" : ""}
+            </span>
+          )}
+          <svg width="10" height="6" viewBox="0 0 10 6" fill="none" style={{ marginLeft: "auto", transition: "transform 0.2s", transform: open ? "rotate(180deg)" : "rotate(0deg)", opacity: 0.35 }}>
+            <path d="M1 1l4 4 4-4" stroke={NAVY} strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+        </button>
 
-          <div style={{ color: "rgba(250,245,233,0.25)", fontSize: 18 }}>→</div>
+        {/* Panel dépliable */}
+        {open && (
+          <div style={{ paddingBottom: 20, animation: "fadeUp 0.18s ease" }}>
+            {/* Filtres */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 0 }}>
+              {/* Arrivée */}
+              <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#fff", borderRadius: 7, padding: "8px 14px", border: `1px solid ${SAND}` }}>
+                <span style={{ fontSize: 10, color: MUTED, fontFamily: "'Jost', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase", whiteSpace: "nowrap" }}>Arrivée</span>
+                <input type="date" value={checkin} min={todayVal} onChange={e => { setCheckin(e.target.value); setResults(null); }}
+                  style={{ background: "none", border: "none", color: NAVY, fontSize: 13, fontFamily: "'Jost', sans-serif", outline: "none", cursor: "pointer" }} />
+              </div>
 
-          {/* Départ */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(250,245,233,0.06)", borderRadius: 8, padding: "10px 16px", border: "1px solid rgba(250,245,233,0.1)" }}>
-            <span style={{ fontSize: 11, color: "rgba(250,245,233,0.4)", fontFamily: "'Jost', sans-serif", letterSpacing: "0.1em", whiteSpace: "nowrap" }}>Départ</span>
-            <input type="date" value={checkout} min={checkin || todayVal} onChange={e => { setCheckout(e.target.value); setResults(null); }}
-              style={{ background: "none", border: "none", color: "#faf5e9", fontSize: 13, fontFamily: "'Jost', sans-serif", outline: "none", cursor: "pointer" }} />
-          </div>
+              <div style={{ color: SAND, fontSize: 16, fontWeight: 300 }}>→</div>
 
-          {/* Voyageurs */}
-          <NavySelect value={minGuests} onChange={e => { setMinGuests(e.target.value); setResults(null); }}>
-            <option value="0">👥 Voyageurs</option>
-            {[1,2,3,4,5,6,7,8].map(n => <option key={n} value={n}>{n} voyageur{n > 1 ? "s" : ""}</option>)}
-          </NavySelect>
+              {/* Départ */}
+              <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#fff", borderRadius: 7, padding: "8px 14px", border: `1px solid ${SAND}` }}>
+                <span style={{ fontSize: 10, color: MUTED, fontFamily: "'Jost', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase", whiteSpace: "nowrap" }}>Départ</span>
+                <input type="date" value={checkout} min={checkin || todayVal} onChange={e => { setCheckout(e.target.value); setResults(null); }}
+                  style={{ background: "none", border: "none", color: NAVY, fontSize: 13, fontFamily: "'Jost', sans-serif", outline: "none", cursor: "pointer" }} />
+              </div>
 
-          {/* Chambres */}
-          <NavySelect value={minChambres} onChange={e => { setMinChambres(e.target.value); setResults(null); }}>
-            <option value="0">🛏 Chambres</option>
-            {[1,2,3].map(n => <option key={n} value={n}>{n} chambre{n > 1 ? "s" : ""}</option>)}
-          </NavySelect>
+              {/* Voyageurs */}
+              <select value={minGuests} onChange={e => { setMinGuests(e.target.value); setResults(null); }} style={{
+                background: "#fff", border: `1px solid ${SAND}`, borderRadius: 7, padding: "8px 32px 8px 14px",
+                color: minGuests === "0" ? MUTED : NAVY, fontSize: 12, fontFamily: "'Jost', sans-serif", outline: "none", cursor: "pointer",
+                appearance: "none", WebkitAppearance: "none",
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237a6b5a' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,
+                backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center",
+              }}>
+                <option value="0">Voyageurs</option>
+                {[1,2,3,4,5,6,7,8].map(n => <option key={n} value={n}>{n} voyageur{n > 1 ? "s" : ""}</option>)}
+              </select>
 
-          {/* Bouton recherche */}
-          <button onClick={search} disabled={!canSearch || loading}
-            style={{ background: CORAL, border: "none", color: "#fff", borderRadius: 8, padding: "11px 24px", fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: "0.1em", textTransform: "uppercase", cursor: (!canSearch || loading) ? "not-allowed" : "pointer", opacity: (!canSearch || loading) ? 0.5 : 1, whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 8 }}>
-            {loading ? (
-              <><span style={{ display: "inline-block", width: 12, height: 12, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />Vérification…</>
-            ) : "Voir les disponibilités →"}
-          </button>
+              {/* Chambres */}
+              <select value={minChambres} onChange={e => { setMinChambres(e.target.value); setResults(null); }} style={{
+                background: "#fff", border: `1px solid ${SAND}`, borderRadius: 7, padding: "8px 32px 8px 14px",
+                color: minChambres === "0" ? MUTED : NAVY, fontSize: 12, fontFamily: "'Jost', sans-serif", outline: "none", cursor: "pointer",
+                appearance: "none", WebkitAppearance: "none",
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237a6b5a' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,
+                backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center",
+              }}>
+                <option value="0">Chambres</option>
+                {[1,2,3].map(n => <option key={n} value={n}>{n} chambre{n > 1 ? "s" : ""}</option>)}
+              </select>
 
-          {results && <button onClick={reset} style={{ background: "none", border: "none", color: "rgba(250,245,233,0.35)", cursor: "pointer", fontSize: 12, fontFamily: "'Jost', sans-serif", textDecoration: "underline" }}>Effacer</button>}
-        </div>
+              {/* Bouton recherche */}
+              <button onClick={search} disabled={!canSearch || loading}
+                style={{ background: canSearch && !loading ? NAVY : SAND, border: "none", color: canSearch && !loading ? "#faf5e9" : MUTED, borderRadius: 7, padding: "9px 20px", fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", cursor: (!canSearch || loading) ? "not-allowed" : "pointer", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 7, transition: "background 0.15s" }}>
+                {loading
+                  ? <><span style={{ display: "inline-block", width: 11, height: 11, border: "1.5px solid rgba(255,255,255,0.35)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />Vérification…</>
+                  : "Vérifier →"}
+              </button>
 
-        {/* Résultats */}
-        {results && (
-          <div style={{ marginTop: 20 }}>
-            {/* Compteur */}
-            <div style={{ fontSize: 11, color: "rgba(250,245,233,0.45)", fontFamily: "'Jost', sans-serif", marginBottom: 12, letterSpacing: "0.05em" }}>
-              {availableCount === 0
-                ? "Aucun logement disponible pour ces critères"
-                : `${availableCount} logement${availableCount > 1 ? "s" : ""} disponible${availableCount > 1 ? "s" : ""} · trié${availableCount > 1 ? "s" : ""} par prix`}
+              {results && (
+                <button onClick={reset} style={{ background: "none", border: "none", color: MUTED, cursor: "pointer", fontSize: 11, fontFamily: "'Jost', sans-serif", textDecoration: "underline", opacity: 0.6 }}>Effacer</button>
+              )}
             </div>
 
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-              {results.map(({ bien, nights, total, discAmt, frais, belowMin, minN, isAvailable }) => {
-                const unavailable = !isAvailable || belowMin;
-                return (
-                  <div key={bien.id} style={{
-                    background: unavailable ? "rgba(250,245,233,0.02)" : "rgba(250,245,233,0.06)",
-                    border: `1px solid ${unavailable ? "rgba(250,245,233,0.06)" : "rgba(250,245,233,0.14)"}`,
-                    borderRadius: 10, padding: "14px 18px", minWidth: 190, flex: "1 1 190px", maxWidth: 270,
-                    opacity: unavailable ? 0.45 : 1,
-                    transition: "opacity 0.2s",
-                  }}>
-                    {/* Nom + capacité */}
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
-                      <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 13, color: "#faf5e9", lineHeight: 1.2 }}>{bien.nom}</div>
-                      <div style={{ fontSize: 10, color: "rgba(250,245,233,0.35)", fontFamily: "'Jost', sans-serif", textAlign: "right", lineHeight: 1.4, marginLeft: 8, flexShrink: 0 }}>
-                        {bien.capacite} pers.<br />{bien.chambres} ch.
-                      </div>
-                    </div>
+            {/* Résultats */}
+            {results && (
+              <div style={{ marginTop: 16 }}>
+                <div style={{ fontSize: 10, color: MUTED, fontFamily: "'Jost', sans-serif", marginBottom: 10, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                  {availableCount === 0
+                    ? "Aucun logement disponible pour ces critères"
+                    : `${availableCount} logement${availableCount > 1 ? "s" : ""} disponible${availableCount > 1 ? "s" : ""}`}
+                </div>
 
-                    {/* Statut */}
-                    {!isAvailable ? (
-                      <div style={{ fontSize: 11, color: "#f87171", fontFamily: "'Jost', sans-serif", marginBottom: 6 }}>
-                        Indisponible sur ces dates
-                      </div>
-                    ) : belowMin ? (
-                      <div style={{ fontSize: 11, color: "#fb923c", fontFamily: "'Jost', sans-serif", marginBottom: 6 }}>
-                        Séjour min. {minN} nuit{minN > 1 ? "s" : ""}
-                      </div>
-                    ) : (
-                      <>
-                        <div style={{ fontSize: 22, fontWeight: 800, color: CORAL, lineHeight: 1, marginBottom: 2 }}>{total.toLocaleString("fr-FR")}€</div>
-                        <div style={{ fontSize: 10, color: "rgba(250,245,233,0.35)", marginBottom: 10, fontFamily: "'Jost', sans-serif" }}>
-                          {nights} nuit{nights > 1 ? "s" : ""}
-                          {discAmt > 0 && ` · −${discAmt}€ remise`}
-                          {frais > 0 && ` · +${frais}€ ménage`}
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  {results.map(({ bien, nights, total, discAmt, frais, belowMin, minN, isAvailable }) => {
+                    const unavailable = !isAvailable || belowMin;
+                    return (
+                      <div key={bien.id} style={{
+                        background: unavailable ? "rgba(14,59,58,0.02)" : "#fff",
+                        border: `1px solid ${unavailable ? SAND : "rgba(14,59,58,0.12)"}`,
+                        borderRadius: 9, padding: "12px 16px", minWidth: 175, flex: "1 1 175px", maxWidth: 255,
+                        opacity: unavailable ? 0.45 : 1,
+                        transition: "opacity 0.2s, box-shadow 0.2s",
+                        boxShadow: unavailable ? "none" : "0 1px 6px rgba(14,59,58,0.06)",
+                      }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
+                          <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 12, color: NAVY, lineHeight: 1.2 }}>{bien.nom}</div>
+                          <div style={{ fontSize: 10, color: MUTED, fontFamily: "'Jost', sans-serif", textAlign: "right", lineHeight: 1.4, marginLeft: 6, flexShrink: 0 }}>
+                            {bien.capacite} pers · {bien.chambres} ch.
+                          </div>
                         </div>
-                        <div style={{ display: "flex", gap: 6 }}>
-                          <button onClick={() => onDetail(bien)} style={{ flex: 1, background: "rgba(250,245,233,0.08)", border: "1px solid rgba(250,245,233,0.15)", color: "#faf5e9", borderRadius: 6, padding: "6px 10px", fontSize: 11, cursor: "pointer", fontFamily: "'Jost', sans-serif" }}>Voir</button>
-                          <button onClick={() => onBook(bien, checkin, checkout)} style={{ flex: 1, background: CORAL, border: "none", color: "#fff", borderRadius: 6, padding: "6px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "'Jost', sans-serif" }}>Réserver</button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+
+                        {!isAvailable ? (
+                          <div style={{ fontSize: 10, color: "#ef4444", fontFamily: "'Jost', sans-serif" }}>Indisponible</div>
+                        ) : belowMin ? (
+                          <div style={{ fontSize: 10, color: "#f97316", fontFamily: "'Jost', sans-serif" }}>Min. {minN} nuits</div>
+                        ) : (
+                          <>
+                            <div style={{ fontSize: 20, fontWeight: 700, color: CORAL, lineHeight: 1, margin: "4px 0 2px" }}>{total.toLocaleString("fr-FR")}€</div>
+                            <div style={{ fontSize: 10, color: MUTED, marginBottom: 9, fontFamily: "'Jost', sans-serif" }}>
+                              {nights} nuit{nights > 1 ? "s" : ""}
+                              {discAmt > 0 && ` · −${discAmt}€`}
+                              {frais > 0 && ` · +${frais}€ ménage`}
+                            </div>
+                            <div style={{ display: "flex", gap: 5 }}>
+                              <button onClick={() => onDetail(bien)} style={{ flex: 1, background: IVORY, border: `1px solid ${SAND}`, color: NAVY, borderRadius: 5, padding: "5px 8px", fontSize: 10, cursor: "pointer", fontFamily: "'Jost', sans-serif" }}>Voir</button>
+                              <button onClick={() => onBook(bien, checkin, checkout)} style={{ flex: 1, background: CORAL, border: "none", color: "#fff", borderRadius: 5, padding: "5px 8px", fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: "'Jost', sans-serif" }}>Réserver</button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
