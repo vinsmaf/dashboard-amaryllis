@@ -44,6 +44,16 @@ const destinations = [
     must: false,
   },
   {
+    href: "/guide-trois-ilets",
+    img: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Les_Trois-Ilets%2C_Martinique_%28%3D%3D_Les_Trois-Ilets%2C_Martinique_%29.jpg/960px-Les_Trois-Ilets%2C_Martinique_%28%3D%3D_Les_Trois-Ilets%2C_Martinique_%29.jpg",
+    emoji: "⚓",
+    nom: "Les Trois-Îlets",
+    accroche: "Musée de la Pagerie, village créole & marina face à Fort-de-France",
+    distance: "35 min",
+    tags: ["Culture", "Histoire", "Plages"],
+    must: false,
+  },
+  {
     href: "/activites-sainte-luce",
     img: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Salines_beach.jpg/960px-Salines_beach.jpg",
     emoji: "🌟",
