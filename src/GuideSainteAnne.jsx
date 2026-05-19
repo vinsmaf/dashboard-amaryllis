@@ -1,6 +1,7 @@
 // Guide Sainte-Anne Martinique — /guide-sainte-anne — v2 immersif
 
 import SEOMeta from "./SEOMeta.jsx";
+import WikiImg from "./WikiImg.jsx";
 
 const NAVY  = "#0e3b3a";
 const IVORY = "#faf5e9";
@@ -114,9 +115,10 @@ export default function GuideSainteAnne() {
 
         {/* HERO */}
         <div style={{ position: "relative", height: "min(90vh, 620px)", overflow: "hidden" }}>
-          <img
+          <WikiImg
             src={HERO_IMG}
             alt="Grande Anse des Salines, Sainte-Anne, Martinique"
+            loading="eager" fetchPriority="high"
             style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 40%" }}
           />
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(14,59,58,0.2) 0%, rgba(14,59,58,0.15) 40%, rgba(14,59,58,0.88) 100%)" }} />
@@ -201,7 +203,7 @@ export default function GuideSainteAnne() {
               { nom: "Anse Meunier — la plage secrète", img: null, texte: "Accessible à pied depuis les Salines (15 min). Peu connue des touristes, eau cristalline, rochers et végétation tropicale. Le coin idéal pour ceux qui fuient la foule — même en haute saison." },
             ].map(item => (
               <div key={item.nom} className="gs-card">
-                {item.img && <img src={item.img} alt={item.nom} loading="lazy" />}
+                {item.img && <WikiImg src={item.img} alt={item.nom} loading="lazy" />}
                 <div className="gs-card-body">
                   <h3>{item.nom}</h3>
                   <p>{item.texte}</p>

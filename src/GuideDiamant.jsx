@@ -1,6 +1,7 @@
 // Guide Le Diamant Martinique — /guide-le-diamant — v2 immersif
 
 import SEOMeta from "./SEOMeta.jsx";
+import WikiImg from "./WikiImg.jsx";
 
 const NAVY  = "#0e3b3a";
 const IVORY = "#faf5e9";
@@ -116,7 +117,8 @@ export default function GuideDiamant() {
 
         {/* HERO */}
         <div style={{ position: "relative", height: "min(90vh, 620px)", overflow: "hidden" }}>
-          <img src={HERO_IMG} alt="Rocher du Diamant, Martinique"
+          <WikiImg src={HERO_IMG} alt="Rocher du Diamant, Martinique"
+            loading="eager" fetchPriority="high"
             style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 45%" }} />
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(14,59,58,0.25) 0%, rgba(14,59,58,0.1) 35%, rgba(14,59,58,0.9) 100%)" }} />
           <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "0 32px 48px" }}>
@@ -186,7 +188,7 @@ export default function GuideDiamant() {
               { nom: "Anse Cafard — Mémorial de l'esclavage", img: null, texte: "Au nord du bourg, 20 statues de pierre blanche commémorent le naufrage d'un navire négrier en 1830. Site solennel et poignant, vue panoramique sur le rocher. Un moment de recueillement qui complète bien la journée." },
             ].map(item => (
               <div key={item.nom} className="gd-card">
-                {item.img && <img src={item.img} alt={item.nom} loading="lazy" />}
+                {item.img && <WikiImg src={item.img} alt={item.nom} loading="lazy" />}
                 <div className="gd-card-body">
                   <h3>{item.nom}</h3>
                   <p>{item.texte}</p>

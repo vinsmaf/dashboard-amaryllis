@@ -1,6 +1,7 @@
 // Guide Sainte-Luce — hub Explorer Martinique — /guide — v2 immersif
 
 import SEOMeta from "./SEOMeta.jsx";
+import WikiImg from "./WikiImg.jsx";
 
 const NAVY  = "#0e3b3a";
 const IVORY = "#faf5e9";
@@ -194,7 +195,8 @@ export default function Guide() {
 
         {/* HERO */}
         <div style={{ position: "relative", height: "min(70vh, 500px)", overflow: "hidden" }}>
-          <img src={HERO_IMG} alt="Le sud de la Martinique vu depuis la mer"
+          <WikiImg src={HERO_IMG} alt="Le sud de la Martinique vu depuis la mer"
+            loading="eager" fetchPriority="high"
             style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 35%" }} />
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(14,59,58,0.3) 0%, rgba(14,59,58,0.85) 100%)" }} />
           <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "0 32px 52px" }}>
@@ -221,7 +223,7 @@ export default function Guide() {
           <div className="guide-hub-dest">
             {destinations.map(d => (
               <a key={d.href} href={d.href} className="guide-hub-card">
-                <img src={d.img} alt={d.nom} loading="lazy" />
+                <WikiImg src={d.img} alt={d.nom} loading="lazy" />
                 <div className="overlay" />
                 {d.must && <div className="must-ribbon">Incontournable</div>}
                 <div className="card-content">

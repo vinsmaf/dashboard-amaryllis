@@ -2,6 +2,7 @@
 // Design immersif v2 — tortues en héros absolu
 
 import SEOMeta from "./SEOMeta.jsx";
+import WikiImg from "./WikiImg.jsx";
 
 const NAVY  = "#0e3b3a";
 const IVORY = "#faf5e9";
@@ -291,7 +292,7 @@ export default function GuideArlet() {
                 {spot.contenu.map((item, ii) => (
                   <div key={ii} className="regular-card">
                     {ii === 0 && spot.img && (
-                      <img src={spot.img} alt={item.nom} loading="lazy" />
+                      <WikiImg src={spot.img} alt={item.nom} loading="lazy" />
                     )}
                     <div className="regular-card-body">
                       <h3>{item.nom}</h3>
