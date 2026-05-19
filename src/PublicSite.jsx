@@ -2109,13 +2109,15 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                           ))}
                         </div>
 
-                        {/* Légende */}
-                        <div style={{ marginTop: 12, display: "flex", gap: 16, flexWrap: "wrap" }}>
+                        {/* Légende disponibilité */}
+                        <div style={{ marginTop: 12, display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
                           <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: MUTED, fontFamily: "'Jost', sans-serif" }}>
-                            <span style={{ width: 12, height: 12, background: CREAM, border: `1px solid ${SAND}`, borderRadius: 3, display: "inline-block" }} /> Disponible
+                            <span style={{ width: 22, height: 22, background: "#fff", border: `1px solid ${SAND}`, borderRadius: 5, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: NAVY, fontWeight: 500 }}>8</span>
+                            Disponible
                           </span>
                           <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: MUTED, fontFamily: "'Jost', sans-serif" }}>
-                            <span style={{ width: 12, height: 12, background: "#D4C8BC", borderRadius: 3, display: "inline-block" }} /> Indisponible
+                            <span style={{ width: 22, height: 22, background: "#f0ebe3", border: `1px solid ${SAND}`, borderRadius: 5, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#bbb", fontWeight: 400, textDecoration: "line-through" }}>8</span>
+                            Indisponible
                           </span>
                         </div>
 
