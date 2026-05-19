@@ -4470,6 +4470,7 @@ export default function PublicSite() {
   const [detailBien, setDetailBien] = useState(null);
   const [filterLieu, setFilterLieu] = useState("all");
   const [showFavorites, setShowFavorites] = useState(false);
+  const [filterGuests, setFilterGuests] = useState(0);
   const [favorites, setFavorites] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem("amaryllis_favorites") || "[]")); }
     catch { return new Set(); }
@@ -4715,7 +4716,8 @@ export default function PublicSite() {
 
   const filtered = biensList
     .filter(b => filterLieu === "all" || b.lieu.includes(filterLieu))
-    .filter(b => !showFavorites || favorites.has(b.id));
+    .filter(b => !showFavorites || favorites.has(b.id))
+    .filter(b => filterGuests === 0 || b.capacite >= filterGuests);
 
   /* ── SEO dynamique par bien ── */
   const _pathId  = window.location.pathname.slice(1);
@@ -4871,7 +4873,48 @@ export default function PublicSite() {
           </div>
 
           {/* Separator */}
-          <div style={{ height: 1, background: SAND }} />
+          <div style={{ height: 1, background: SAND, margin: "0 0 16px" }} />
+
+          {/* ── Filtre voyageurs ── */}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 32 }}>
+            <span style={{ fontSize: 12, color: MUTED, fontFamily: "'Jost',sans-serif", fontWeight: 500, letterSpacing: "0.06em", marginRight: 4 }}>
+              👥 Voyageurs :
+            </span>
+            {[
+              { key: 0, label: "Tous" },
+              { key: 2, label: "2+" },
+              { key: 4, label: "4+" },
+              { key: 6, label: "6+" },
+              { key: 8, label: "8+" },
+            ].map(({ key, label }) => {
+              const active = filterGuests === key;
+              return (
+                <button
+                  key={key}
+                  onClick={() => setFilterGuests(key)}
+                  style={{
+                    padding: "6px 16px",
+                    borderRadius: 20,
+                    border: `1px solid ${active ? NAVY + "99" : SAND}`,
+                    background: active ? NAVY : "transparent",
+                    color: active ? IVORY : MUTED,
+                    cursor: "pointer",
+                    fontSize: 12,
+                    fontFamily: "'Jost',sans-serif",
+                    fontWeight: active ? 600 : 400,
+                    transition: "all 0.2s",
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+            {filterGuests > 0 && (
+              <span style={{ fontSize: 11, color: MUTED, fontStyle: "italic", marginLeft: 4 }}>
+                {filtered.length} villa{filtered.length !== 1 ? "s" : ""} disponible{filtered.length !== 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* ── Reassurance blocks ── */}
