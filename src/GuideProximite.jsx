@@ -1,5 +1,7 @@
 // Guide activités à proximité de la Villa Amaryllis — /guide-proximite
 
+import SEOMeta from "./SEOMeta.jsx";
+
 const NAVY  = "#0e3b3a";
 const IVORY = "#faf5e9";
 const CORAL = "#c47254";
@@ -69,6 +71,7 @@ const infos = [
 export default function GuideProximite() {
   return (
     <>
+      <SEOMeta title="Activités à 15 min de Sainte-Luce Martinique — Guide de proximité | Amaryllis" description="Les meilleures adresses à moins de 15 minutes de la résidence Amaryllis : Anse Corps de Garde, Forêt de Montravail, Distillerie Trois-Rivières, snorkeling avec les tortues." canonical="/guide-proximite" image="https://villamaryllis.com/photos/amaryllis/01.webp" type="article" />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         "@context": "https://schema.org",
         "@type": "Article",

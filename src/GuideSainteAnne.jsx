@@ -1,5 +1,7 @@
 // Guide Sainte-Anne Martinique — /guide-sainte-anne — v2 immersif
 
+import SEOMeta from "./SEOMeta.jsx";
+
 const NAVY  = "#0e3b3a";
 const IVORY = "#faf5e9";
 const CORAL = "#c47254";
@@ -86,6 +88,7 @@ export default function GuideSainteAnne() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: css }} />
+<SEOMeta title="Guide Sainte-Anne Martinique — Les Salines, la plus belle plage des Caraïbes | Amaryllis" description="Guide Sainte-Anne depuis Sainte-Luce (20 min) : Les Salines avant 9h, kitesurf, catamaran, restaurants créoles. La plage incontournable du Sud Martinique." canonical="/guide-sainte-anne" image="https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Salines_beach.jpg/960px-Salines_beach.jpg" type="article" />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         "@context": "https://schema.org",
         "@type": "Article",

@@ -1,5 +1,7 @@
 // 10 meilleures activités à Sainte-Luce — /activites-sainte-luce
 
+import SEOMeta from "./SEOMeta.jsx";
+
 const NAVY  = "#0e3b3a";
 const IVORY = "#faf5e9";
 const CORAL = "#c47254";
@@ -101,6 +103,7 @@ const conseils = [
 export default function GuideActivites() {
   return (
     <>
+      <SEOMeta title="10 activités incontournables à Sainte-Luce Martinique | Amaryllis" description="Les 10 meilleures activités depuis nos villas : snorkeling avec les tortues, randonnée Montravail, rhum Trois-Rivières, catamaran, cuisine créole. Sélection testée par vos hôtes." canonical="/activites-sainte-luce" image="https://villamaryllis.com/photos/amaryllis/01.webp" type="article" />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         "@context": "https://schema.org",
         "@graph": [

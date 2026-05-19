@@ -1,5 +1,7 @@
 // Guide Le Diamant Martinique — /guide-le-diamant — v2 immersif
 
+import SEOMeta from "./SEOMeta.jsx";
+
 const NAVY  = "#0e3b3a";
 const IVORY = "#faf5e9";
 const CORAL = "#c47254";
@@ -88,6 +90,7 @@ export default function GuideDiamant() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: css }} />
+<SEOMeta title="Guide Le Diamant Martinique — Rocher, plongée & plages | Amaryllis" description="Guide complet du Diamant depuis Sainte-Luce (15 min). Plonger autour du Rocher historique, HMS Diamond Rock, plages sauvages — le must absolu du Sud Martinique." canonical="/guide-le-diamant" image="https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/Diamond_Rock.jpg/960px-Diamond_Rock.jpg" type="article" />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         "@context": "https://schema.org",
         "@type": "Article",

@@ -1,6 +1,8 @@
 // Guide Grande Anse d'Arlet Martinique — /guide-arlet
 // Design immersif v2 — tortues en héros absolu
 
+import SEOMeta from "./SEOMeta.jsx";
+
 const NAVY  = "#0e3b3a";
 const IVORY = "#faf5e9";
 const CORAL = "#c47254";
@@ -189,6 +191,7 @@ export default function GuideArlet() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: cssStyles }} />
+<SEOMeta title="Guide Anses d'Arlet Martinique — Nager avec les tortues marines | Amaryllis" description="Les Anses d'Arlet (25 min de Sainte-Luce) : le seul spot de Martinique où nager avec des tortues marines garanties tôt le matin. Village de pêcheurs, snorkeling, restaurants." canonical="/guide-arlet" image="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2d/Grande_Anse_d%27_Arlet_%2847001622912%29.jpg/960px-Grande_Anse_d%27_Arlet_%2847001622912%29.jpg" type="article" />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         "@context": "https://schema.org",
         "@type": "Article",

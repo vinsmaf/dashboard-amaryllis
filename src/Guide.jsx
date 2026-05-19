@@ -1,5 +1,7 @@
 // Guide Sainte-Luce — hub Explorer Martinique — /guide — v2 immersif
 
+import SEOMeta from "./SEOMeta.jsx";
+
 const NAVY  = "#0e3b3a";
 const IVORY = "#faf5e9";
 const CORAL = "#c47254";
@@ -158,6 +160,7 @@ export default function Guide() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: css }} />
+<SEOMeta title="Explorer le Sud Martinique — Guides de destination depuis Sainte-Luce | Amaryllis" description="Les Salines, les tortues d'Arlet, le Rocher du Diamant — tous à moins de 25 min de nos villas à Sainte-Luce. Guides immersifs pour explorer le Sud Martinique." canonical="/guide" image="https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Salines_beach.jpg/960px-Salines_beach.jpg" type="website" />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         "@context": "https://schema.org",
         "@graph": [

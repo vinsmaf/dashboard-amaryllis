@@ -1,6 +1,7 @@
 // GuideExplorer.jsx — /explorer — Hub carte interactive Sud Martinique
 
 import { useState, useCallback, useRef } from "react";
+import SEOMeta from "./SEOMeta.jsx";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -469,10 +470,12 @@ export default function GuideExplorer() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
-
-      {/* SEO */}
-      <title>Explorer le Sud Martinique — Carte interactive</title>
-      <meta name="description" content="Carte interactive des destinations du Sud Martinique depuis Sainte-Luce : tortues marines à Arlet, Les Salines à Sainte-Anne, Rocher du Diamant. Filtrez par activité." />
+      <SEOMeta
+        title="Carte interactive du Sud Martinique — Explorer depuis Sainte-Luce | Amaryllis"
+        description="Carte interactive des destinations du Sud Martinique. Filtrez par activité : plages, snorkeling, famille, culture. Tortues d'Arlet, Les Salines, Rocher du Diamant."
+        canonical="/explorer"
+        image="https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Salines_beach.jpg/960px-Salines_beach.jpg"
+      />
 
       <div className="ge-wrap">
 

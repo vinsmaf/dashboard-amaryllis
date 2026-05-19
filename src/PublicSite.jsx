@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { loadDailyPrices } from "./seedPrices.js";
+import SEOMeta from "./SEOMeta.jsx";
 
 // ── Brand palette (from logos.jsx) ──────────────────────────────
 // Remises par durée de séjour (appliquées sur le sous-total)
@@ -4715,8 +4716,18 @@ export default function PublicSite() {
     .filter(b => filterLieu === "all" || b.lieu.includes(filterLieu))
     .filter(b => !showFavorites || favorites.has(b.id));
 
+  /* ── SEO dynamique par bien ── */
+  const _pathId  = window.location.pathname.slice(1);
+  const _metaBien = _pathId ? BIENS.find(b => b.id === _pathId) : null;
+
   return (
     <div id="top" style={{ minHeight: "100vh", background: IVORY, color: TEXT, fontFamily: "'Jost', system-ui, -apple-system, sans-serif", overflowX: "hidden" }}>
+      <SEOMeta
+        title={_metaBien ? `${_metaBien.nom} — Villa Martinique, piscine vue mer | Amaryllis` : undefined}
+        description={_metaBien ? `Réservez ${_metaBien.nom} à ${_metaBien.lieu}. Piscine, vue mer, jacuzzi privatif. ${_metaBien.capacite} voyageurs. À partir de ${_metaBien.prix}€/nuit. Réservation directe sans frais Airbnb.` : undefined}
+        canonical={_metaBien ? `/${_metaBien.id}` : "/"}
+        image={_metaBien ? `https://villamaryllis.com/photos/${_metaBien.id}/01.webp` : undefined}
+      />
       {/* H1 SEO — visible uniquement pour les moteurs de recherche */}
       <h1 style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0 }}>
         Location villa Martinique avec piscine — Amaryllis, réservation directe sans frais
