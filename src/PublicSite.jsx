@@ -1556,16 +1556,25 @@ function BienCard({ bien, onDetail, onBook, isFavorite = false, onToggleFavorite
         )}
 
         {/* Price badge */}
-        <div style={{
-          position: "absolute", bottom: 14, right: 14, zIndex: 2,
-          background: "rgba(14,59,58,0.85)", backdropFilter: "blur(10px)",
-          border: "1px solid rgba(255,255,255,0.1)",
-          borderRadius: 10, padding: "8px 14px", textAlign: "right",
-        }}>
-          <div style={{ fontSize: 11, color: "rgba(250,247,242,0.5)", marginBottom: 1, fontFamily: "'Jost', sans-serif", fontWeight: 300, letterSpacing: "0.05em" }}>À partir de</div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: "#fff", lineHeight: 1 }}>{minPrix}€</div>
-          <div style={{ fontSize: 11, color: "rgba(250,247,242,0.6)" }}>/ nuit</div>
-        </div>
+        {(() => {
+          const airbnbNuit = Math.round(minPrix * 1.15);
+          const economieSemaine = Math.round(minPrix * 7 * 0.15 / 5) * 5; // arrondi à 5€
+          return (
+            <div style={{
+              position: "absolute", bottom: 14, right: 14, zIndex: 2,
+              background: "rgba(14,59,58,0.85)", backdropFilter: "blur(10px)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: 10, padding: "8px 14px", textAlign: "right",
+            }}>
+              <div style={{ fontSize: 11, color: "rgba(250,247,242,0.5)", marginBottom: 1, fontFamily: "'Jost', sans-serif", fontWeight: 300, letterSpacing: "0.05em" }}>À partir de</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: "#fff", lineHeight: 1 }}>{minPrix}€</div>
+              <div style={{ fontSize: 11, color: "rgba(250,247,242,0.45)", textDecoration: "line-through", marginBottom: 2 }}>≈ {airbnbNuit}€ Airbnb</div>
+              <div style={{ fontSize: 10, color: "#4ade80", fontWeight: 600, fontFamily: "'Jost', sans-serif", letterSpacing: "0.04em" }}>
+                −{economieSemaine}€ / semaine
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Info section */}
@@ -2171,8 +2180,11 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                                 🎁 Réduction {discountLabel(calNights)} −{calDiscountAmount}€ (−{Math.round(calDiscountRate * 100)}%)
                               </div>
                             )}
-                            <div style={{ fontSize: 22, fontWeight: 800, color: NAVY, marginTop: 8, marginBottom: 14 }}>
+                            <div style={{ fontSize: 22, fontWeight: 800, color: NAVY, marginTop: 8, marginBottom: 6 }}>
                               Total : {calTotal}€
+                            </div>
+                            <div style={{ fontSize: 11, color: "#16a34a", fontFamily: "'Jost', sans-serif", fontWeight: 600, marginBottom: 14, display: "flex", alignItems: "center", gap: 5 }}>
+                              💰 Vous économisez ~{Math.round(calTotal * 0.15 / 5) * 5}€ vs Airbnb en réservant en direct
                             </div>
                             <button
                               onClick={() => onBook(bien, calCheckin, calCheckout)}
@@ -2612,11 +2624,16 @@ function SearchByDates({ biens, onBook, onDetail }) {
                           <div style={{ fontSize: 10, color: "#f97316", fontFamily: "'Jost', sans-serif" }}>Min. {minN} nuits</div>
                         ) : (
                           <>
-                            <div style={{ fontSize: 20, fontWeight: 700, color: CORAL, lineHeight: 1, margin: "4px 0 2px" }}>{total.toLocaleString("fr-FR")}€</div>
-                            <div style={{ fontSize: 10, color: MUTED, marginBottom: 9, fontFamily: "'Jost', sans-serif" }}>
+                            <div style={{ fontSize: 20, fontWeight: 700, color: CORAL, lineHeight: 1, margin: "4px 0 1px" }}>{total.toLocaleString("fr-FR")}€</div>
+                            <div style={{ fontSize: 10, color: MUTED, marginBottom: 4, fontFamily: "'Jost', sans-serif" }}>
                               {nights} nuit{nights > 1 ? "s" : ""}
                               {discAmt > 0 && ` · −${discAmt}€`}
                               {frais > 0 && ` · +${frais}€ ménage`}
+                            </div>
+                            {/* Badge économie Airbnb */}
+                            <div style={{ fontSize: 10, color: "#16a34a", fontFamily: "'Jost', sans-serif", fontWeight: 600, marginBottom: 8, display: "flex", alignItems: "center", gap: 4 }}>
+                              <span>💰</span>
+                              <span>−{Math.round(total * 0.15 / 5) * 5}€ vs Airbnb</span>
                             </div>
                             <div style={{ display: "flex", gap: 5 }}>
                               <button onClick={() => onDetail(bien)} style={{ flex: 1, background: IVORY, border: `1px solid ${SAND}`, color: NAVY, borderRadius: 5, padding: "5px 8px", fontSize: 10, cursor: "pointer", fontFamily: "'Jost', sans-serif" }}>Voir</button>
