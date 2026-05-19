@@ -614,6 +614,27 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
     cells.push(`${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`);
   }
 
+  // ── Heatmap : calcul min/max sur les jours libres du mois ─────────
+  const freePrices = cells
+    .filter(ds => ds && ds >= todayStr && !blockedDates.includes(ds))
+    .map(ds => dailyPricesMap[ds] ?? basePrice)
+    .filter(p => p > 0);
+  const heatMin = freePrices.length ? Math.min(...freePrices) : 0;
+  const heatMax = freePrices.length ? Math.max(...freePrices) : 0;
+  const heatRange = heatMax - heatMin;
+
+  function heatBg(ds) {
+    if (!ds || !heatRange || ds < todayStr || blockedDates.includes(ds)) return null;
+    const p = dailyPricesMap[ds] ?? basePrice;
+    if (!p) return null;
+    const t = Math.max(0, Math.min(1, (p - heatMin) / heatRange));
+    // t=0 → vert (bon prix), t=1 → corail (prix élevé)
+    if (t <= 0.35)  return `rgba(20,184,166,${0.22 - t * 0.3})`; // teal-vert
+    if (t >= 0.65)  return `rgba(196,114,84,${0.10 + (t - 0.65) * 0.38})`; // corail
+    return null; // milieu : fond neutre
+  }
+  // ──────────────────────────────────────────────────────────────────
+
   function isBelowMin(ds) {
     if (!checkin || checkout || !ds || ds <= checkin) return false;
     const n = Math.round((new Date(ds) - new Date(checkin)) / 86400000);
@@ -649,9 +670,10 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
           const blocked = state === "blocked";
           const past = state === "past";
           const belowMin = state === "belowmin";
+          const isFree = state === "free";
           const disabled = blocked || past || belowMin || !ds;
 
-          let bg = "transparent";
+          let bg = isFree ? (heatBg(ds) ?? "transparent") : "transparent";
           let color = "#94a3b8";
           let borderRadius = "8px";
           let fontWeight = 400;
@@ -679,7 +701,7 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
                 fontSize: 13,
                 cursor: readOnly ? "default" : disabled ? "not-allowed" : "pointer",
                 background: bg,
-                color: blocked ? "#D4C8BC" : past ? "#D4C8BC" : belowMin ? "#D4C8BC" : color,
+                color: blocked ? "#D4C8BC" : past ? "#D4C8BC" : belowMin ? "#D4C8BC" : isFree ? NAVY : color,
                 borderRadius,
                 fontWeight,
                 textDecoration: blocked ? "line-through" : "none",
@@ -711,6 +733,14 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
           );
         })}
       </div>
+      {/* Légende heatmap */}
+      {heatRange > 0 && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 8 }}>
+          <span style={{ fontSize: 9, color: MUTED, fontFamily: "'Jost',sans-serif", letterSpacing: "0.06em" }}>{heatMin}€</span>
+          <div style={{ width: 64, height: 5, borderRadius: 3, background: "linear-gradient(to right, rgba(20,184,166,0.5), transparent 40%, transparent 60%, rgba(196,114,84,0.55))" }} />
+          <span style={{ fontSize: 9, color: MUTED, fontFamily: "'Jost',sans-serif", letterSpacing: "0.06em" }}>{heatMax}€</span>
+        </div>
+      )}
     </div>
   );
 }
