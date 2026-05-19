@@ -1769,7 +1769,7 @@ function BienCard({ bien, onDetail, onBook, isFavorite = false, onToggleFavorite
           <img
             key={photoIdx}
             src={currentPhoto}
-            alt={bien.nom}
+            alt={`${bien.nom} — ${bien.lieu} — photo ${photoIdx + 1}`}
             loading={photoIdx === 0 ? "eager" : "lazy"}
             fetchpriority={photoIdx === 0 ? "high" : "low"}
             style={{
@@ -2164,7 +2164,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
           {photos[photoIdx] && (
             <img
               src={photos[photoIdx]}
-              alt={bien.nom}
+              alt={`${bien.nom} — ${bien.lieu} — photo ${photoIdx + 1}`}
               onClick={e => e.stopPropagation()}
               style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", display: "block", userSelect: "none" }}
             />
@@ -2265,7 +2265,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
               <img
                 key={photoIdx}
                 src={photos[photoIdx]}
-                alt={bien.nom}
+                alt={`${bien.nom} — ${bien.lieu} — photo ${photoIdx + 1}`}
                 style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain", display: "block", transition: "opacity 0.3s" }}
               />
             )}
@@ -2294,7 +2294,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                   onClick={() => setPhotoIdx(i)}
                   style={{ flex: "0 0 auto", width: 110, cursor: "pointer", overflow: "hidden", opacity: i === photoIdx ? 1 : 0.45, transition: "opacity 0.2s", outline: i === photoIdx ? `2px solid ${CORAL}` : "none", outlineOffset: -2 }}
                 >
-                  <img src={p} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                  <img src={p} alt={`${bien.nom} — miniature ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                 </div>
               ))}
             </div>
@@ -3310,7 +3310,7 @@ function HeroCarousel({ biens, onDetail, onBook }) {
         <img
           key={`photo-${animKey}`}
           src={photo}
-          alt={bien.nom}
+          alt={`${bien.nom} — ${bien.lieu}`}
           style={{
             position: "absolute",
             right: 0, top: 0, bottom: 0,
@@ -4771,6 +4771,13 @@ export default function PublicSite() {
               "tourBookingPage": url,
               "provider": { "@id": "https://villamaryllis.com/#organization" },
               "isPartOf": { "@id": "https://villamaryllis.com/#organization" }
+            },
+            {
+              "@type": "BreadcrumbList",
+              "itemListElement": [
+                { "@type": "ListItem", "position": 1, "name": "Accueil", "item": "https://villamaryllis.com/" },
+                { "@type": "ListItem", "position": 2, "name": bien.nom, "item": url }
+              ]
             },
             {
               "@type": ["Organization", "LodgingBusiness"],
