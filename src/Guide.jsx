@@ -45,7 +45,7 @@ const destinations = [
   },
   {
     href: "/guide-trois-ilets",
-    img: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Les_Trois-Ilets%2C_Martinique_%28%3D%3D_Les_Trois-Ilets%2C_Martinique_%29.jpg/960px-Les_Trois-Ilets%2C_Martinique_%28%3D%3D_Les_Trois-Ilets%2C_Martinique_%29.jpg",
+    img: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Rocher_du_Diamant_%28Le_Diamant%2C_Martinique%29_-_03.jpg/960px-Rocher_du_Diamant_%28Le_Diamant%2C_Martinique%29_-_03.jpg",
     emoji: "⚓",
     nom: "Les Trois-Îlets",
     accroche: "Musée de la Pagerie, village créole & marina face à Fort-de-France",

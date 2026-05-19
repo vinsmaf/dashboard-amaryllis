@@ -10,8 +10,8 @@ const SAND  = "#e8dcc8";
 const MUTED = "#7a6b5a";
 const BASE  = "https://villamaryllis.com";
 
-const HERO_IMG  = "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Les_Trois-Ilets%2C_Martinique_%28%3D%3D_Les_Trois-Ilets%2C_Martinique_%29.jpg/960px-Les_Trois-Ilets%2C_Martinique_%28%3D%3D_Les_Trois-Ilets%2C_Martinique_%29.jpg";
-const BEACH_IMG = "https://upload.wikimedia.org/wikipedia/commons/thumb/7/73/Anse_Mitan%2C_Martinique.jpg/960px-Anse_Mitan%2C_Martinique.jpg";
+const HERO_IMG  = "https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Rocher_du_Diamant_%28Le_Diamant%2C_Martinique%29_-_03.jpg/960px-Rocher_du_Diamant_%28Le_Diamant%2C_Martinique%29_-_03.jpg";
+const BEACH_IMG = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Salines_beach.jpg/960px-Salines_beach.jpg";
 
 const badges = [
   { icon: "🏛️", label: "Musée de la Pagerie", must: true },
@@ -232,12 +232,12 @@ export default function GuideTroisIlets() {
         </header>
 
         {/* HERO */}
-        <div style={{ position: "relative", height: "min(90vh, 620px)", overflow: "hidden" }}>
-          <img
-            src={HERO_IMG}
-            alt="Le village des Trois-Îlets, Martinique"
-            style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 40%" }}
-          />
+        <div style={{
+          position: "relative", height: "min(90vh, 620px)", overflow: "hidden",
+          backgroundImage: `url(${HERO_IMG})`,
+          backgroundSize: "cover", backgroundPosition: "center 40%",
+          backgroundColor: "#0a2e2d",
+        }}>
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(14,59,58,.15) 0%, rgba(14,59,58,.82) 100%)" }} />
           <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "0 28px 48px" }}>
             <div style={{ maxWidth: 680, margin: "0 auto", width: "100%" }}>
@@ -282,7 +282,8 @@ export default function GuideTroisIlets() {
           ) : (
             <div key={spot.titre} className="gt-card">
               {spot.img && (
-                <img src={spot.img} alt={spot.titre} className="gt-card-img" loading="lazy" />
+                <img src={spot.img} alt={spot.titre} className="gt-card-img" loading="lazy"
+                  onError={e => { e.currentTarget.style.display = "none"; }} />
               )}
               <div className="gt-card-header">
                 <span className="gt-card-emoji">{spot.emoji}</span>
