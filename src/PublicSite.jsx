@@ -3607,7 +3607,7 @@ function GoogleReviews() {
               </div>
             </div>
           </div>
-          <a href={`https://www.google.com/maps/search/Amaryllis+Sainte-Luce+Martinique`} target="_blank" rel="noopener noreferrer"
+          <a href="https://www.google.com/maps/place/?q=place_id:ChIJWbeKdLghQIwRCppz2lJ39Jk" target="_blank" rel="noopener noreferrer"
             style={{ fontSize: 12, color: MUTED, fontFamily: "'Jost',sans-serif", textDecoration: "none", display: "flex", alignItems: "center", gap: 6, border: `1px solid ${SAND}`, borderRadius: 8, padding: "8px 14px", transition: "border-color 0.2s" }}
             onMouseEnter={e => e.currentTarget.style.borderColor = NAVY}
             onMouseLeave={e => e.currentTarget.style.borderColor = SAND}

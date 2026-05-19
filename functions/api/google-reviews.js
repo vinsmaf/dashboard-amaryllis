@@ -11,11 +11,11 @@ export async function onRequestGet(context) {
   };
 
   const apiKey  = context.env.GOOGLE_PLACES_API_KEY;
-  const placeId = context.env.GOOGLE_PLACE_ID;
+  const placeId = context.env.GOOGLE_PLACE_ID || "ChIJWbeKdLghQIwRCppz2lJ39Jk";
 
-  if (!apiKey || !placeId) {
+  if (!apiKey) {
     return Response.json(
-      { ok: false, error: "Google Places non configuré (GOOGLE_PLACES_API_KEY / GOOGLE_PLACE_ID manquants)" },
+      { ok: false, error: "Google Places non configuré (GOOGLE_PLACES_API_KEY manquant)" },
       { status: 503, headers: corsHeaders }
     );
   }
