@@ -11,8 +11,8 @@ crons = ["0 * * * *"]   # Toutes les heures, minute 0
 # Puis remplacer les IDs ci-dessous
 [[kv_namespaces]]
 binding = "ICAL_STORE"
-id = "REPLACE_WITH_YOUR_KV_ID"
-preview_id = "REPLACE_WITH_YOUR_KV_PREVIEW_ID"
+id = "7d431dde6407494b979e5720e5c7a71c"
+preview_id = "75d715c5f2f5492f975c86c7995738d4"
 
 # Variables d'environnement publiques
 [vars]
