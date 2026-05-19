@@ -1401,7 +1401,7 @@ function FormField({ label, value, onChange, type = "text", multiline, style }) 
 }
 
 // ── Property Card ────────────────────────────────────────────────
-function BienCard({ bien, onDetail, onBook, isFavorite = false, onToggleFavorite }) {
+function BienCard({ bien, onDetail, onBook, isFavorite = false, onToggleFavorite, isCompared = false, onToggleCompare }) {
   const [photoIdx, setPhotoIdx] = useState(0);
   const [hovered, setHovered] = useState(false);
   const photos = bien.photos || [];
@@ -1631,6 +1631,24 @@ function BienCard({ bien, onDetail, onBook, isFavorite = false, onToggleFavorite
 
         {/* CTA row */}
         <div style={{ display: "flex", gap: 8 }}>
+          {onToggleCompare && (
+            <button
+              onClick={e => onToggleCompare(e, bien.id)}
+              title={isCompared ? "Retirer de la comparaison" : "Comparer"}
+              style={{
+                flexShrink: 0, width: 36, height: 36,
+                background: isCompared ? NAVY : "transparent",
+                border: `1px solid ${isCompared ? NAVY : SAND}`,
+                borderRadius: 6, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 15, transition: "all 0.15s", color: isCompared ? "#fff" : MUTED,
+              }}
+              onMouseEnter={e => { if (!isCompared) e.currentTarget.style.borderColor = NAVY; }}
+              onMouseLeave={e => { if (!isCompared) e.currentTarget.style.borderColor = SAND; }}
+            >
+              {isCompared ? "✓" : "⊕"}
+            </button>
+          )}
           <button
             onClick={e => { e.stopPropagation(); onDetail(bien); }}
             style={{
@@ -2453,6 +2471,76 @@ function AlerteDispoModal({ bien, checkin: initCheckin, checkout: initCheckout, 
             <button onClick={onClose} style={{ display: "block", margin: "14px auto 0", background: "none", border: "none", color: MUTED, fontSize: 11, cursor: "pointer", textDecoration: "underline", fontFamily: "'Jost', sans-serif" }}>Annuler</button>
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+function ComparatorModal({ biens, onClose }) {
+  useEffect(() => {
+    const fn = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", fn);
+    return () => document.removeEventListener("keydown", fn);
+  }, [onClose]);
+
+  const rows = [
+    { label: "Photo",       render: b => <img src={b.photos[0]} alt={b.nom} style={{ width:"100%", height:110, objectFit:"cover", borderRadius:8, display:"block" }} /> },
+    { label: "Logement",    render: b => <span style={{ fontWeight:600, color:NAVY, fontSize:13 }}>{b.nom}</span> },
+    { label: "Lieu",        render: b => <span style={{ fontSize:12, color:MUTED }}>{b.lieu}</span> },
+    { label: "Note",        render: b => <span style={{ fontSize:13, color:GOLD, fontWeight:600 }}>★ {b.rating} <span style={{ color:MUTED, fontWeight:400, fontSize:11 }}>({b.reviews} avis)</span></span> },
+    { label: "Prix / nuit", render: b => <span style={{ fontSize:15, fontWeight:700, color:CORAL }}>{b.prix}€</span> },
+    { label: "Capacité",    render: b => <span style={{ fontSize:13, color:TEXT }}>👥 {b.capacite} pers.</span> },
+    { label: "Chambres",    render: b => <span style={{ fontSize:13, color:TEXT }}>🛏 {b.chambres} ch. · {b.sdb} SDB</span> },
+    { label: "Frais ménage",render: b => <span style={{ fontSize:13, color:TEXT }}>{FRAIS_MENAGE[b.id] ? `${FRAIS_MENAGE[b.id]}€` : "Inclus"}</span> },
+    { label: "Séjour min.", render: b => <span style={{ fontSize:13, color:TEXT }}>{MIN_NIGHTS[b.id] ? `${MIN_NIGHTS[b.id]} nuits` : "Pas de minimum"}</span> },
+    { label: "Équipements", render: b => (
+      <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
+        {(b.amenities || []).slice(0,4).map(a => (
+          <span key={a} style={{ fontSize:11, color:MUTED }}>✓ {a}</span>
+        ))}
+      </div>
+    )},
+    { label: "Réserver",    render: b => (
+      <span style={{ display:"inline-block", background:CORAL, color:"#fff", borderRadius:8, padding:"7px 14px", fontSize:12, fontWeight:600, cursor:"pointer", textAlign:"center", width:"100%", boxSizing:"border-box" }}
+        onClick={() => { onClose(); document.getElementById(`cta-${b.id}`)?.click(); }}>
+        Réserver →
+      </span>
+    )},
+  ];
+
+  return (
+    <div style={{ position:"fixed", inset:0, zIndex:900, background:"rgba(14,59,58,0.65)", backdropFilter:"blur(4px)", display:"flex", alignItems:"center", justifyContent:"center", padding:"16px 8px" }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ background:IVORY, borderRadius:16, width:"100%", maxWidth:860, maxHeight:"90vh", overflow:"auto", boxShadow:"0 24px 60px rgba(0,0,0,0.35)", animation:"bloomIn 0.25s ease" }}>
+        {/* Header */}
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"20px 24px 16px", borderBottom:`1px solid ${SAND}`, position:"sticky", top:0, background:IVORY, zIndex:1 }}>
+          <h2 style={{ margin:0, fontSize:18, color:NAVY, fontFamily:"'Jost', sans-serif", fontWeight:600 }}>Comparer les logements</h2>
+          <button onClick={onClose} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:MUTED, lineHeight:1, padding:4 }}>×</button>
+        </div>
+
+        {/* Table */}
+        <div style={{ overflowX:"auto" }}>
+          <table style={{ width:"100%", borderCollapse:"collapse", tableLayout:"fixed" }}>
+            <colgroup>
+              <col style={{ width:110 }} />
+              {biens.map(b => <col key={b.id} />)}
+            </colgroup>
+            <tbody>
+              {rows.map(row => (
+                <tr key={row.label} style={{ borderBottom:`1px solid ${SAND}` }}>
+                  <td style={{ padding:"12px 16px", fontSize:11, color:MUTED, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.5px", verticalAlign:"top", background:"rgba(224,212,188,0.15)", whiteSpace:"nowrap" }}>
+                    {row.label}
+                  </td>
+                  {biens.map(b => (
+                    <td key={b.id} style={{ padding:"12px 16px", verticalAlign:"top", textAlign:"center" }}>
+                      {row.render(b)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -3882,6 +3970,8 @@ export default function PublicSite() {
   const [curtainDone, setCurtainDone] = useState(false);
   const [showExitIntent, setShowExitIntent] = useState(false);
   const exitShown = useRef(!!sessionStorage.getItem("amaryllis_exit_shown"));
+  const [compareIds, setCompareIds] = useState(new Set());
+  const [showComparator, setShowComparator] = useState(false);
 
   // Listen for admin price updates — même onglet ET autres onglets (cross-tab)
   useEffect(() => {
@@ -4008,6 +4098,16 @@ export default function PublicSite() {
     setBookingInitialDates({ checkin: initialCheckin, checkout: initialCheckout });
     setSelectedBien(bien);
     await fetchAvailability(bien.id);
+  }
+
+  function toggleCompare(e, id) {
+    e.stopPropagation();
+    setCompareIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) { next.delete(id); }
+      else if (next.size < 3) { next.add(id); }
+      return next;
+    });
   }
 
   function toggleFavorite(e, id) {
@@ -4261,7 +4361,7 @@ export default function PublicSite() {
         {/* Grid */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: 24 }}>
           {filtered.map(b => (
-            <BienCard key={b.id} bien={b} onDetail={openDetail} onBook={openBien} isFavorite={favorites.has(b.id)} onToggleFavorite={toggleFavorite} />
+            <BienCard key={b.id} bien={b} onDetail={openDetail} onBook={openBien} isFavorite={favorites.has(b.id)} onToggleFavorite={toggleFavorite} isCompared={compareIds.has(b.id)} onToggleCompare={toggleCompare} />
           ))}
         </div>
       </div>
@@ -4290,6 +4390,54 @@ export default function PublicSite() {
       {/* ── EXIT INTENT ── */}
       {showExitIntent && !detailBien && !selectedBien && (
         <ExitIntentModal onClose={() => setShowExitIntent(false)} />
+      )}
+
+      {/* ── COMPARATEUR — barre sticky ── */}
+      {compareIds.size >= 2 && !detailBien && !selectedBien && !showComparator && (
+        <div style={{
+          position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 700,
+          background: NAVY, color: "#fff",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "14px 24px", boxShadow: "0 -4px 24px rgba(0,0,0,0.25)",
+          animation: "slideUpFull 0.25s ease",
+          gap: 12, flexWrap: "wrap",
+        }}>
+          <div style={{ display:"flex", alignItems:"center", gap:12, flexWrap:"wrap" }}>
+            {[...compareIds].map(id => {
+              const b = biensList.find(x => x.id === id);
+              return b ? (
+                <div key={id} style={{ display:"flex", alignItems:"center", gap:6, background:"rgba(255,255,255,0.1)", borderRadius:6, padding:"4px 10px" }}>
+                  <img src={b.photos[0]} alt={b.nom} style={{ width:28, height:28, borderRadius:4, objectFit:"cover" }} />
+                  <span style={{ fontSize:13, fontWeight:500 }}>{b.nom}</span>
+                  <button onClick={e => toggleCompare(e, id)} style={{ background:"none", border:"none", color:"rgba(255,255,255,0.5)", cursor:"pointer", fontSize:16, lineHeight:1, padding:"0 2px" }}>×</button>
+                </div>
+              ) : null;
+            })}
+          </div>
+          <div style={{ display:"flex", gap:10, alignItems:"center" }}>
+            {compareIds.size < 3 && (
+              <span style={{ fontSize:12, color:"rgba(255,255,255,0.5)" }}>Ajoutez jusqu'à 3 logements</span>
+            )}
+            <button
+              onClick={() => setShowComparator(true)}
+              style={{ background:CORAL, border:"none", color:"#fff", borderRadius:8, padding:"10px 20px", fontSize:13, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap" }}>
+              Comparer {compareIds.size} logements →
+            </button>
+            <button
+              onClick={() => setCompareIds(new Set())}
+              style={{ background:"transparent", border:"1px solid rgba(255,255,255,0.25)", color:"rgba(255,255,255,0.7)", borderRadius:8, padding:"9px 14px", fontSize:12, cursor:"pointer" }}>
+              Tout effacer
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── COMPARATEUR — modal ── */}
+      {showComparator && (
+        <ComparatorModal
+          biens={[...compareIds].map(id => biensList.find(b => b.id === id)).filter(Boolean)}
+          onClose={() => setShowComparator(false)}
+        />
       )}
 
       {/* ── WHATSAPP FLOTTANT ── visible quand on scrolle, pas en modal */}
