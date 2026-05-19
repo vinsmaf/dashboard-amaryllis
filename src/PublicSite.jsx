@@ -81,6 +81,12 @@ if (typeof document !== "undefined" && !document.getElementById("__site_styles")
     @keyframes curtainLift { 0% { transform:translateY(0); } 100% { transform:translateY(-100%); } }
     @keyframes curtainFadeIn { from { opacity:0; } to { opacity:1; } }
     @keyframes curtainPetalSpin { from { transform:rotate(0deg) scale(1); } 50% { transform:rotate(180deg) scale(1.08); } to { transform:rotate(360deg) scale(1); } }
+    .map-grid { display:grid; grid-template-columns:1fr 300px; gap:20px; align-items:start; }
+    .map-grid-map { border-radius:16px; overflow:hidden; border:1px solid #e0d4bc; height:480px; box-shadow:0 4px 20px rgba(0,0,0,0.07); }
+    @media (max-width:700px) {
+      .map-grid { grid-template-columns:1fr; }
+      .map-grid-map { height:300px; }
+    }
     input[type="date"]::-webkit-calendar-picker-indicator { opacity:0.55; cursor:pointer; filter:invert(0.25) sepia(0.3); }
     input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity:0.9; }
     ::selection { background:rgba(196,114,84,0.2); color:#0e3b3a; }
@@ -4316,9 +4322,9 @@ function MapSection({ biens, onDetail }) {
         </div>
 
         {/* Layout : carte + liste logements */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 20, alignItems: "start" }}>
+        <div className="map-grid">
           {/* Carte */}
-          <div style={{ borderRadius: 16, overflow: "hidden", border: `1px solid ${SAND}`, height: 480, boxShadow: "0 4px 20px rgba(0,0,0,0.07)" }}>
+          <div className="map-grid-map">
             <div ref={mapRef} style={{ width: "100%", height: "100%" }} />
           </div>
 
