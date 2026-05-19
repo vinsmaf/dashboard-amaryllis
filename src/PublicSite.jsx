@@ -81,6 +81,8 @@ if (typeof document !== "undefined" && !document.getElementById("__site_styles")
     @keyframes curtainLift { 0% { transform:translateY(0); } 100% { transform:translateY(-100%); } }
     @keyframes curtainFadeIn { from { opacity:0; } to { opacity:1; } }
     @keyframes curtainPetalSpin { from { transform:rotate(0deg) scale(1); } 50% { transform:rotate(180deg) scale(1.08); } to { transform:rotate(360deg) scale(1); } }
+    input[type="date"]::-webkit-calendar-picker-indicator { opacity:0.55; cursor:pointer; filter:invert(0.25) sepia(0.3); }
+    input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity:0.9; }
     ::selection { background:rgba(196,114,84,0.2); color:#0e3b3a; }
     ::-webkit-scrollbar { width:4px; }
     ::-webkit-scrollbar-track { background:#faf5e9; }
@@ -2541,7 +2543,7 @@ function SearchByDates({ biens, onBook, onDetail }) {
               <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#fff", borderRadius: 7, padding: "8px 14px", border: `1px solid ${SAND}` }}>
                 <span style={{ fontSize: 10, color: MUTED, fontFamily: "'Jost', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase", whiteSpace: "nowrap" }}>Arrivée</span>
                 <input type="date" value={checkin} min={todayVal} onChange={e => { setCheckin(e.target.value); setResults(null); }}
-                  style={{ background: "none", border: "none", color: NAVY, fontSize: 13, fontFamily: "'Jost', sans-serif", outline: "none", cursor: "pointer" }} />
+                  style={{ background: "none", border: "none", color: NAVY, fontSize: 13, fontFamily: "'Jost', sans-serif", outline: "none", cursor: "pointer", colorScheme: "light" }} />
               </div>
 
               <div style={{ color: SAND, fontSize: 16, fontWeight: 300 }}>→</div>
@@ -2550,7 +2552,7 @@ function SearchByDates({ biens, onBook, onDetail }) {
               <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#fff", borderRadius: 7, padding: "8px 14px", border: `1px solid ${SAND}` }}>
                 <span style={{ fontSize: 10, color: MUTED, fontFamily: "'Jost', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase", whiteSpace: "nowrap" }}>Départ</span>
                 <input type="date" value={checkout} min={checkin || todayVal} onChange={e => { setCheckout(e.target.value); setResults(null); }}
-                  style={{ background: "none", border: "none", color: NAVY, fontSize: 13, fontFamily: "'Jost', sans-serif", outline: "none", cursor: "pointer" }} />
+                  style={{ background: "none", border: "none", color: NAVY, fontSize: 13, fontFamily: "'Jost', sans-serif", outline: "none", cursor: "pointer", colorScheme: "light" }} />
               </div>
 
               {/* Voyageurs */}
