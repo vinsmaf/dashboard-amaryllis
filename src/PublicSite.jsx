@@ -4991,7 +4991,7 @@ export default function PublicSite() {
           target="_blank" rel="noopener noreferrer"
           title="Nous contacter sur WhatsApp"
           style={{
-            position: "fixed", bottom: showComparator ? 84 : 24, right: 22, zIndex: 800,
+            position: "fixed", bottom: showComparator ? 84 : 24, right: 22, zIndex: 950,
             width: 54, height: 54, borderRadius: "50%",
             background: "#25D366",
             display: "flex", alignItems: "center", justifyContent: "center",
