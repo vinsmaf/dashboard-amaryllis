@@ -35,6 +35,10 @@ const FRAIS_MENAGE = {
   iguana:     0,
 };
 
+// Voyageurs inclus dans le prix de base — au-delà : supplément
+const BASE_GUESTS      = { amaryllis: 6 };          // 6 inclus, 7-8 avec supplément
+const EXTRA_GUEST_RATE = { amaryllis: 50 };          // €/personne supplémentaire/nuit
+
 // Biens désactivés à la réservation (ex: longue durée)
 const BOOKING_DISABLED = new Set(["iguana"]);
 
@@ -131,6 +135,7 @@ const BIENS = [
       { titre: "Informations pratiques", items: [
         { label: "Check-in / Check-out", texte: "Check-in à partir de 17h, check-out avant 12h. Early check-in et late check-out possibles selon disponibilité (supplément 80 €)." },
         { label: "Règlement", texte: "Villa non-fumeur. Événements, fiestas et réceptions interdits. Seuls les voyageurs inscrits sur la réservation sont autorisés." },
+        { label: "Capacité", texte: "6 voyageurs inclus dans le tarif de base. Possibilité d'accueillir jusqu'à 8 personnes avec un supplément de 50 € par voyageur supplémentaire par nuit." },
         { label: "Animaux", texte: "Bienvenus, jusqu'à 2 maximum — supplément 50 € par séjour." },
         { label: "Dépôt de garantie", texte: "1 500 € en cas de dommages constatés après le départ." },
         { label: "Transport", texte: "Une voiture automatique est recommandée pour profiter pleinement de la région." },
@@ -972,7 +977,7 @@ function Beds24Modal({ bien, onClose }) {
 }
 
 // ── Devis PDF (HTML print) ────────────────────────────────────────
-function generateDevis({ bien, checkin, checkout, nights, rawTotal, discountRate, discountAmount, fraisMenage, total, depositAmt }) {
+function generateDevis({ bien, checkin, checkout, nights, rawTotal, discountRate, discountAmount, fraisMenage, extraGuestSuppl = 0, extraGuests = 0, total, depositAmt }) {
   const validUntil = new Date(Date.now() + 48 * 3600 * 1000).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
   const today = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
   const ref = `AMR-${bien.id.slice(0,3).toUpperCase()}-${Date.now().toString(36).toUpperCase().slice(-6)}`;
@@ -1108,6 +1113,11 @@ function generateDevis({ bien, checkin, checkout, nights, rawTotal, discountRate
         <td style="color:#7a6b5a;font-size:12px;">Nettoyage fin de séjour</td>
         <td>${fraisMenage}€</td>
       </tr>` : ""}
+      ${extraGuestSuppl > 0 ? `<tr>
+        <td>Supplément voyageurs</td>
+        <td style="color:#7a6b5a;font-size:12px;">${extraGuests} pers. suppl. × ${nights} nuit${nights > 1 ? "s" : ""} × 50€</td>
+        <td>${extraGuestSuppl}€</td>
+      </tr>` : ""}
       <tr class="total-row">
         <td colspan="2">TOTAL SÉJOUR</td>
         <td>${total}€</td>
@@ -1163,6 +1173,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
   const [step, setStep] = useState(1);
   const [checkin, setCheckin] = useState(initialCheckin);
   const [checkout, setCheckout] = useState(initialCheckout);
+  const [nbGuests, setNbGuests] = useState(1);
   const [form, setForm] = useState({ prenom: "", nom: "", email: "", tel: "", message: "" });
   const [stripe, setStripe] = useState(null);
   const [elements, setElements] = useState(null);
@@ -1206,7 +1217,12 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
   const hasDiscount    = discountRate > 0;
   const discountAmount = hasDiscount ? Math.round(rawTotal * discountRate) : 0;
   const fraisMenage = FRAIS_MENAGE[bien.id] ?? 0;
-  const total = rawTotal - discountAmount + fraisMenage;
+  // Supplément voyageurs supplémentaires (ex : Amaryllis 7e et 8e voyageur = +50€/pers./nuit)
+  const baseGuests      = BASE_GUESTS[bien.id] ?? bien.capacite;
+  const extraGuestRate  = EXTRA_GUEST_RATE[bien.id] ?? 0;
+  const extraGuests     = Math.max(0, nbGuests - baseGuests);
+  const extraGuestSuppl = extraGuests * extraGuestRate * nights;
+  const total = rawTotal - discountAmount + fraisMenage + extraGuestSuppl;
   const minNights = MIN_NIGHTS[bien.id] ?? 1;
   const belowMin = nights > 0 && nights < minNights;
 
@@ -1402,9 +1418,35 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
             )}
             <DateRangePicker checkin={checkin} checkout={checkout} blockedDates={blockedDates} onChange={(ci, co) => { setCheckin(ci); setCheckout(co); }} dailyPricesMap={dailyPricesMap} basePrice={bien.prix} minNights={minNights} />
 
+            {/* Sélecteur voyageurs — affiché si le bien a une capacité > 1 */}
+            {bien.capacite > 1 && (
+              <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 12, background: CREAM, border: `1px solid ${SAND}`, borderRadius: 12, padding: "14px 18px" }}>
+                <span style={{ fontSize: 18 }}>👥</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: NAVY, fontFamily: "'Jost', sans-serif" }}>Voyageurs</div>
+                  {extraGuestRate > 0 && (
+                    <div style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>
+                      {baseGuests} inclus · {extraGuestRate}€/pers. supplémentaire/nuit (max {bien.capacite})
+                    </div>
+                  )}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <button
+                    onClick={() => setNbGuests(g => Math.max(1, g - 1))}
+                    style={{ width: 32, height: 32, borderRadius: "50%", border: `1px solid ${SAND}`, background: "#fff", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: NAVY, lineHeight: 1 }}
+                  >−</button>
+                  <span style={{ fontSize: 16, fontWeight: 700, color: NAVY, minWidth: 20, textAlign: "center" }}>{nbGuests}</span>
+                  <button
+                    onClick={() => setNbGuests(g => Math.min(bien.capacite, g + 1))}
+                    style={{ width: 32, height: 32, borderRadius: "50%", border: `1px solid ${SAND}`, background: "#fff", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: NAVY, lineHeight: 1 }}
+                  >+</button>
+                </div>
+              </div>
+            )}
+
             {nights > 0 ? (
               <div style={{
-                marginTop: 24,
+                marginTop: 16,
                 background: belowMin ? "rgba(239,68,68,0.04)" : "rgba(200,85,61,0.04)",
                 border: `1px solid ${belowMin ? "rgba(239,68,68,0.25)" : SAND}`,
                 borderRadius: 16,
@@ -1426,6 +1468,11 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
                       {hasDiscount && (
                         <div style={{ fontSize: 13, color: CORAL, marginTop: 2, fontWeight: 600 }}>
                           🎁 Réduction {discountLabel(nights)} −{discountAmount}€ (−{Math.round(discountRate * 100)}%)
+                        </div>
+                      )}
+                      {extraGuestSuppl > 0 && (
+                        <div style={{ fontSize: 13, color: MUTED, marginTop: 2 }}>
+                          👥 Supplément {extraGuests} voyageur{extraGuests > 1 ? "s" : ""} suppl. +{extraGuestSuppl}€
                         </div>
                       )}
                       <div style={{ fontSize: 26, fontWeight: 800, color: NAVY, marginTop: 6 }}>{total}€</div>
@@ -1454,7 +1501,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
                   </button>
                   {!belowMin && (
                     <button
-                      onClick={() => generateDevis({ bien, checkin, checkout, nights, rawTotal, discountRate, discountAmount, fraisMenage, total, depositAmt })}
+                      onClick={() => generateDevis({ bien, checkin, checkout, nights, rawTotal, discountRate, discountAmount, fraisMenage, extraGuestSuppl, extraGuests, total, depositAmt })}
                       title="Télécharger le devis PDF"
                       style={{
                         background: "transparent", border: `1px solid ${SAND}`,
@@ -1490,10 +1537,11 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
               fontSize: 14, color: MUTED,
               display: "flex", justifyContent: "space-between",
             }}>
-              <span>{formatDateLong(checkin)} → {formatDateLong(checkout)}</span>
+              <span>{formatDateLong(checkin)} → {formatDateLong(checkout)} · {nbGuests} voyageur{nbGuests > 1 ? "s" : ""}</span>
               <span style={{ fontWeight: 700, color: NAVY }}>
                 {nights} nuits · {total}€
                 {hasDiscount && <span style={{ fontSize: 11, color: CORAL, marginLeft: 6 }}>−{Math.round(discountRate * 100)}% {discountLabel(nights)}</span>}
+                {extraGuestSuppl > 0 && <span style={{ fontSize: 11, color: MUTED, marginLeft: 6 }}>+{extraGuestSuppl}€ suppl.</span>}
               </span>
             </div>
 
