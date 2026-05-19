@@ -4,7 +4,10 @@ compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 
 [triggers]
-crons = ["0 * * * *"]   # Toutes les heures, minute 0
+crons = [
+  "0 * * * *",   # Sync iCal — toutes les heures
+  "0 9 * * *",   # Audit monitoring — chaque jour à 9h UTC (5h Martinique)
+]
 
 # KV namespace pour stocker les UIDs connus (anti-doublon notifications)
 # Pour créer : wrangler kv:namespace create "ICAL_STORE"

@@ -225,11 +225,87 @@ async function runSync(env) {
   return { total: allEvents.length, nouvelles: nouvelles.length, booking: Object.keys(bookingUrls).length };
 }
 
+// ── Monitoring quotidien ─────────────────────────────────────────────────────
+const CHECKS = [
+  { name: "Home",            url: "https://villamaryllis.com/",                  expect: 200 },
+  { name: "Villa Amaryllis", url: "https://villamaryllis.com/amaryllis",          expect: 200 },
+  { name: "API reviews",     url: "https://villamaryllis.com/api/google-reviews", expect: 200, expectJson: "ok" },
+  { name: "API ical-config", url: "https://villamaryllis.com/api/ical-config",    expect: 200, expectJson: "ok" },
+  { name: "Sitemap",         url: "https://villamaryllis.com/sitemap.xml",        expect: 200 },
+];
+
+async function runMonitor(env) {
+  console.log("[amaryllis-monitor] Démarrage audit —", new Date().toISOString());
+  const errors = [];
+  const results = [];
+
+  for (const check of CHECKS) {
+    try {
+      const res = await fetch(check.url, { headers: { "User-Agent": "AmaryllisMonitor/1.0" } });
+      const ok = res.status === check.expect;
+      let jsonOk = true;
+
+      if (check.expectJson) {
+        try {
+          const data = await res.clone().json();
+          jsonOk = data[check.expectJson] === true;
+        } catch { jsonOk = false; }
+      }
+
+      const pass = ok && jsonOk;
+      results.push({ name: check.name, status: res.status, pass });
+      if (!pass) errors.push(`❌ ${check.name} — HTTP ${res.status}${!jsonOk ? " (réponse JSON invalide)" : ""}`);
+      else console.log(`[monitor] ✓ ${check.name} — ${res.status}`);
+    } catch (e) {
+      results.push({ name: check.name, status: 0, pass: false });
+      errors.push(`❌ ${check.name} — Erreur réseau: ${e.message}`);
+    }
+  }
+
+  if (errors.length > 0 && env.RESEND_API_KEY) {
+    const lignes = errors.join("<br>") + "<br><br>" + results.filter(r => r.pass).map(r => `✅ ${r.name} — OK`).join("<br>");
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: "Amaryllis Monitor <sync@villamaryllis.com>",
+        to: [env.NOTIFICATION_EMAIL || "contact@villamaryllis.com"],
+        subject: `🚨 ${errors.length} problème${errors.length > 1 ? "s" : ""} détecté${errors.length > 1 ? "s" : ""} — villamaryllis.com`,
+        html: `
+          <div style="font-family:sans-serif;max-width:520px;margin:auto;padding:32px;background:#f4ecdc;border-radius:12px;">
+            <h2 style="color:#c47254;margin:0 0 16px">🚨 Audit villamaryllis.com</h2>
+            <p style="color:#7a6b5a;font-size:13px;margin:0 0 20px">${new Date().toLocaleString("fr-FR", { timeZone: "America/Martinique" })} · Martinique</p>
+            <div style="background:#fff;border-radius:8px;padding:16px 20px;font-size:13px;color:#0e3b3a;line-height:2;">
+              ${lignes}
+            </div>
+            <div style="margin-top:20px;text-align:center;">
+              <a href="https://villamaryllis.com" style="background:#0e3b3a;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:700;font-size:13px;">
+                Vérifier le site →
+              </a>
+            </div>
+          </div>
+        `,
+      }),
+    });
+    console.log(`[monitor] Email d'alerte envoyé — ${errors.length} erreur(s)`);
+  } else if (errors.length === 0) {
+    console.log("[monitor] Tout est OK — aucune alerte envoyée");
+  }
+
+  return { checked: CHECKS.length, errors: errors.length, results };
+}
+
 // ── Exports Cloudflare Worker ────────────────────────────────────────────────
 export default {
-  // Cron trigger (toutes les heures)
+  // Cron triggers
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(runSync(env));
+    if (event.cron === "0 9 * * *") {
+      // Audit quotidien à 9h
+      ctx.waitUntil(runMonitor(env));
+    } else {
+      // Sync iCal toutes les heures
+      ctx.waitUntil(runSync(env));
+    }
   },
 
   // HTTP trigger manuel (GET /sync depuis le navigateur pour tester)
@@ -241,11 +317,17 @@ export default {
         headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
       });
     }
+    if (url.pathname === "/monitor") {
+      const result = await runMonitor(env);
+      return new Response(JSON.stringify({ ok: true, ...result }), {
+        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+      });
+    }
     return new Response(JSON.stringify({
       name: "amaryllis-ical-sync",
-      cron: "0 * * * *",
-      properties: Object.keys(ICAL_URLS),
-      endpoints: { manual: "/sync" },
+      crons: ["0 * * * * (sync iCal)", "0 9 * * * (audit monitoring)"],
+      properties: Object.keys(ICAL_AIRBNB),
+      endpoints: { sync: "/sync", monitor: "/monitor" },
     }), { headers: { "Content-Type": "application/json" } });
   },
 };
