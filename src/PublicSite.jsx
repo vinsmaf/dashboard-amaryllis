@@ -2149,6 +2149,8 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
       {lightboxOpen && (
         <div
           onClick={() => setLightboxOpen(false)}
+          onTouchStart={onDetailTouchStart}
+          onTouchEnd={onDetailTouchEnd}
           style={{
             position: "fixed", inset: 0, zIndex: 1100,
             background: "rgba(0,0,0,0.96)",
