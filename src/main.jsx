@@ -1,6 +1,7 @@
 import { StrictMode, lazy, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
+import { LangProvider } from './i18n.jsx'
 
 // Code splitting — chaque composant est chargé uniquement si la route correspond
 const App        = lazy(() => import('./App.jsx'))
@@ -59,8 +60,10 @@ if (path.startsWith("/admin")) {
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <Suspense fallback={<div style={{ minHeight: "100vh", background: "#0e3b3a" }} />}>
-      <Component />
-    </Suspense>
+    <LangProvider>
+      <Suspense fallback={<div style={{ minHeight: "100vh", background: "#0e3b3a" }} />}>
+        <Component />
+      </Suspense>
+    </LangProvider>
   </StrictMode>,
 )

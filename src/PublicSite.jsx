@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { loadDailyPrices } from "./seedPrices.js";
 import SEOMeta from "./SEOMeta.jsx";
 import { Reveal } from "./useReveal.jsx";
+import { useLang, LangToggle } from "./i18n.jsx";
 
 // ── Brand palette (from logos.jsx) ──────────────────────────────
 // Remises par durée de séjour (appliquées sur le sous-total)
@@ -4513,6 +4514,7 @@ function MapSection({ biens, onDetail }) {
 }
 
 export default function PublicSite() {
+  const { t } = useLang();
   const [selectedBien, setSelectedBien] = useState(null);
   const [bookingInitialDates, setBookingInitialDates] = useState({ checkin: null, checkout: null });
   const [beds24Bien, setBeds24Bien] = useState(null);
@@ -4766,9 +4768,9 @@ export default function PublicSite() {
   if (path === "/devis") return <DevisPage />;
 
   const lieux = [
-    { key: "all", label: "Tous" },
-    { key: "Martinique", label: "Martinique" },
-    { key: "Île-de-France", label: "Île-de-France" },
+    { key: "all", label: t("filterAll") },
+    { key: "Martinique", label: t("martinique") },
+    { key: "Île-de-France", label: t("idf") },
   ];
 
   const filtered = biensList
@@ -4823,11 +4825,12 @@ export default function PublicSite() {
             {/* Right: explorer + contact */}
             <div style={{ display: "flex", alignItems: "center", gap: 20, flexShrink: 0 }}>
               <a href="/guide" style={{ fontSize: 12, fontFamily: "'Jost', sans-serif", fontWeight: 300, color: "rgba(250,245,233,0.6)", textDecoration: "none", letterSpacing: "0.08em", whiteSpace: "nowrap", display: window.innerWidth < 600 ? "none" : "block" }}>
-                Explorer Martinique
+                {t("exploreLink")}
               </a>
               <a href="/explorer" style={{ fontSize: 12, fontFamily: "'Jost', sans-serif", fontWeight: 300, color: "rgba(250,245,233,0.6)", textDecoration: "none", letterSpacing: "0.08em", whiteSpace: "nowrap", display: window.innerWidth < 768 ? "none" : "block" }}>
-                🗺️ Carte
+                {t("mapLink")}
               </a>
+              <LangToggle />
               <WeatherPill />
               {/* Toggle mode sombre */}
               <button
@@ -4860,9 +4863,7 @@ export default function PublicSite() {
       <div style={{ background: "#072626", borderBottom: "1px solid rgba(250,245,233,0.07)", padding: "13px 28px" }}>
         <div style={{ maxWidth: 1280, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "center", gap: 28, flexWrap: "wrap" }}>
           {[
-            "✓ Réservation directe chez le propriétaire",
-            "✓ Sans frais de service Airbnb",
-            "✓ Paiement sécurisé Stripe",
+            t("banner1"), t("banner2"), t("banner3"),
           ].map(t => (
             <span key={t} style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 12, color: "rgba(250,245,233,0.55)", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{t}</span>
           ))}
@@ -4878,10 +4879,10 @@ export default function PublicSite() {
         {/* Section header + filters */}
         <div style={{ marginBottom: 40 }}>
           <h2 style={{ fontFamily: "'Jost', sans-serif", fontSize: 32, fontWeight: 200, letterSpacing: "0.15em", textTransform: "uppercase", color: NAVY, margin: "0 0 12px" }}>
-            Villas &amp; locations en Martinique
+            {t("sectionTitle")}
           </h2>
           <p style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: 15, color: MUTED, lineHeight: 1.7, margin: "0 0 32px", maxWidth: 720 }}>
-            Toutes nos villas avec piscine à Sainte-Luce se réservent en direct, sans frais de service. Location vacances Martinique vue mer, jacuzzi privatif, piscine à débordement — réservez en direct et économisez jusqu'à 20% par rapport aux plateformes.
+            {t("sectionSub")}
           </p>
 
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 24, alignItems: "center" }}>
@@ -4924,7 +4925,7 @@ export default function PublicSite() {
               }}
             >
               <span style={{ fontSize: 14 }}>{showFavorites ? "♥" : "♡"}</span>
-              Favoris
+              {t("filterFav")}
               {favorites.size > 0 && (
                 <span style={{
                   background: showFavorites ? "#e8598a" : SAND,
@@ -4940,7 +4941,7 @@ export default function PublicSite() {
             {/* Message si aucun favori et filtre actif */}
             {showFavorites && favorites.size === 0 && (
               <span style={{ fontSize: 12, color: MUTED, fontFamily: "'Jost',sans-serif", fontStyle: "italic" }}>
-                Cliquez sur ♡ sur une villa pour l'ajouter
+                {t("addFav")}
               </span>
             )}
           </div>
@@ -4951,10 +4952,10 @@ export default function PublicSite() {
           {/* ── Filtre voyageurs ── */}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 32 }}>
             <span style={{ fontSize: 12, color: MUTED, fontFamily: "'Jost',sans-serif", fontWeight: 500, letterSpacing: "0.06em", marginRight: 4 }}>
-              👥 Voyageurs :
+              {t("filterGuests")}
             </span>
             {[
-              { key: 0, label: "Tous" },
+              { key: 0, label: t("guestAll") },
               { key: 2, label: "2+" },
               { key: 4, label: "4+" },
               { key: 6, label: "6+" },
@@ -4984,7 +4985,7 @@ export default function PublicSite() {
             })}
             {filterGuests > 0 && (
               <span style={{ fontSize: 11, color: MUTED, fontStyle: "italic", marginLeft: 4 }}>
-                {filtered.length} villa{filtered.length !== 1 ? "s" : ""} disponible{filtered.length !== 1 ? "s" : ""}
+                {t("nResults", filtered.length)}
               </span>
             )}
           </div>
@@ -4994,12 +4995,12 @@ export default function PublicSite() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 20, marginBottom: 52 }}>
           {/* Block 1 — Pourquoi en direct */}
           <Reveal anim="fadeLeft" delay={0} style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 14, padding: "28px 28px 24px" }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.3em", textTransform: "uppercase", color: CORAL, marginBottom: 14 }}>Pourquoi réserver en direct chez Amaryllis ?</div>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.3em", textTransform: "uppercase", color: CORAL, marginBottom: 14 }}>{t("whyTitle")}</div>
             {[
-              ["💰", "Tarifs propriétaires", "Jusqu'à −20% par rapport à Airbnb ou Booking.com — aucune commission plateforme."],
-              ["⚡", "Réponse en moins de 2h", "Contact direct WhatsApp ou email — flexibilité sur les dates et services."],
-              ["🎯", "Séjour sur mesure", "Ménage, transfert aéroport, panier d'accueil — on s'adapte à vos besoins."],
-              ["🔒", "Paiement 100% sécurisé", "Stripe : données protégées, remboursement garanti en cas d'annulation."],
+              ["💰", t("why1t"), t("why1d")],
+              ["⚡", t("why2t"), t("why2d")],
+              ["🎯", t("why3t"), t("why3d")],
+              ["🔒", t("why4t"), t("why4d")],
             ].map(([icon, title, text]) => (
               <div key={title} style={{ display: "flex", gap: 12, marginBottom: 14 }}>
                 <span style={{ fontSize: 18, flexShrink: 0, marginTop: 1 }}>{icon}</span>
@@ -5013,12 +5014,12 @@ export default function PublicSite() {
 
           {/* Block 2 — Avis voyageurs */}
           <Reveal anim="fadeRight" delay={0.15} style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 14, padding: "28px 28px 24px" }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.3em", textTransform: "uppercase", color: CORAL, marginBottom: 14 }}>Des séjours plébiscités par nos voyageurs</div>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.3em", textTransform: "uppercase", color: CORAL, marginBottom: 14 }}>{t("reviewTitle")}</div>
             <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 16 }}>
               <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 800, fontSize: 48, color: NAVY, lineHeight: 1 }}>4,8</span>
               <div>
                 <div style={{ color: GOLD, fontSize: 16, letterSpacing: 2 }}>★★★★★</div>
-                <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11, color: MUTED, marginTop: 2 }}>Note moyenne · 117 avis vérifiés</div>
+                <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11, color: MUTED, marginTop: 2 }}>{t("reviewNote")}</div>
               </div>
             </div>
             <p style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: 14, color: MUTED, lineHeight: 1.65, margin: "0 0 20px" }}>
@@ -5103,22 +5104,22 @@ export default function PublicSite() {
           <div style={{ display:"flex", gap:10, alignItems:"center" }}>
             {compareIds.size < 3 ? (
               <span style={{ fontSize:12, color:"rgba(255,255,255,0.5)" }}>
-                Ajoutez jusqu'à {3 - compareIds.size} logement{3 - compareIds.size > 1 ? "s" : ""} de plus
+                {t("addMore", 3 - compareIds.size)}
               </span>
             ) : (
               <span style={{ fontSize:12, color: CORAL, fontWeight: 600 }}>
-                ✓ Maximum atteint — 3/3
+                {t("maxReached")}
               </span>
             )}
             <button
               onClick={() => setShowComparator(true)}
               style={{ background:CORAL, border:"none", color:"#fff", borderRadius:8, padding:"10px 20px", fontSize:13, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap" }}>
-              Comparer {compareIds.size} logements →
+              {t("compareBtn", compareIds.size)}
             </button>
             <button
               onClick={() => setCompareIds(new Set())}
               style={{ background:"transparent", border:"1px solid rgba(255,255,255,0.25)", color:"rgba(255,255,255,0.7)", borderRadius:8, padding:"9px 14px", fontSize:12, cursor:"pointer" }}>
-              Tout effacer
+              {t("clearAll")}
             </button>
           </div>
         </div>
