@@ -2310,35 +2310,117 @@ function ExitIntentModal({ onClose }) {
 }
 
 // ── Recherche par dates ──────────────────────────────────────────
+// Filtre select style NAVY
+function NavySelect({ value, onChange, children }) {
+  return (
+    <select value={value} onChange={onChange} style={{
+      background: "rgba(250,245,233,0.06)", border: "1px solid rgba(250,245,233,0.1)",
+      borderRadius: 8, padding: "10px 36px 10px 16px", color: "#faf5e9",
+      fontSize: 13, fontFamily: "'Jost', sans-serif", outline: "none", cursor: "pointer",
+      appearance: "none", WebkitAppearance: "none",
+      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23faf5e9' stroke-opacity='.4' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,
+      backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center",
+    }}>
+      {children}
+    </select>
+  );
+}
+
 function SearchByDates({ biens, onBook, onDetail }) {
-  const [checkin, setCheckin] = useState("");
+  const [checkin, setCheckin]   = useState("");
   const [checkout, setCheckout] = useState("");
-  const [results, setResults] = useState(null); // null = pas lancé
+  const [minGuests, setMinGuests] = useState("0");   // "0" = pas de filtre
+  const [minChambres, setMinChambres] = useState("0");
+  const [results, setResults]   = useState(null); // null = pas lancé
+  const [loading, setLoading]   = useState(false);
 
   const todayVal = today();
 
-  function search() {
+  // Candidats : logements réservables (hors BOOKING_DISABLED et beds24)
+  const candidates = biens.filter(b => !BOOKING_DISABLED.has(b.id) && !b.beds24Url);
+
+  async function search() {
     if (!checkin || !checkout || checkout <= checkin) return;
+    setLoading(true);
+    setResults(null);
+
     const nights = dateDiff(checkin, checkout);
     const allPrices = loadDailyPrices();
-    const res = biens
-      .filter(b => !BOOKING_DISABLED.has(b.id) && !b.beds24Url)
-      .map(b => {
-        const map = allPrices[b.id] || {};
-        let sum = 0, cur = checkin;
-        for (let i = 0; i < nights; i++) { sum += map[cur] ?? b.prix; cur = addDays(cur, 1); }
-        const disc = getDiscount(nights);
-        const discAmt = disc > 0 ? Math.round(sum * disc) : 0;
-        const frais = FRAIS_MENAGE[b.id] ?? 0;
-        const total = sum - discAmt + frais;
-        const minN = MIN_NIGHTS[b.id] ?? 1;
-        return { bien: b, nights, total, rawTotal: sum, discAmt, frais, belowMin: nights < minN, minN };
+
+    // Charger les URLs iCal depuis localStorage (mêmes que PropertyDetail)
+    let bookingUrls = {};
+    try { bookingUrls = JSON.parse(localStorage.getItem("ical_urls_booking") || "{}"); } catch {}
+
+    // Fetch dispo en parallèle pour tous les candidats
+    const availMap = {}; // bienId → blockedDates[]
+    await Promise.all(
+      candidates.map(async b => {
+        try {
+          let url = `/api/get-availability?bienId=${b.id}`;
+          if (bookingUrls[b.id]) url += `&bookingUrl=${encodeURIComponent(bookingUrls[b.id])}`;
+          const r = await fetch(url);
+          if (r.ok) { const d = await r.json(); availMap[b.id] = d.blockedDates || []; }
+          else availMap[b.id] = [];
+        } catch { availMap[b.id] = []; }
       })
-      .sort((a, b) => a.total - b.total);
+    );
+
+    // Construire résultats
+    const gFilter = parseInt(minGuests, 10);
+    const cFilter = parseInt(minChambres, 10);
+
+    const res = candidates.map(b => {
+      const blocked = availMap[b.id] || [];
+      const minN = MIN_NIGHTS[b.id] ?? 1;
+
+      // Vérifier capacité
+      if (gFilter > 0 && b.capacite < gFilter) return null;
+      if (cFilter > 0 && b.chambres < cFilter) return null;
+
+      // Vérifier séjour minimum
+      const belowMin = nights < minN;
+
+      // Vérifier disponibilité : aucune date dans la plage ne doit être bloquée
+      // (on vérifie du checkin inclus au checkout exclu)
+      let isAvailable = true;
+      if (!belowMin) {
+        let cur = checkin;
+        for (let i = 0; i < nights; i++) {
+          if (blocked.includes(cur)) { isAvailable = false; break; }
+          cur = addDays(cur, 1);
+        }
+      }
+
+      // Calculer prix
+      const map = allPrices[b.id] || {};
+      let sum = 0, cur = checkin;
+      for (let i = 0; i < nights; i++) { sum += map[cur] ?? b.prix; cur = addDays(cur, 1); }
+      const disc = getDiscount(nights);
+      const discAmt = disc > 0 ? Math.round(sum * disc) : 0;
+      const frais = FRAIS_MENAGE[b.id] ?? 0;
+      const total = sum - discAmt + frais;
+
+      return { bien: b, nights, total, rawTotal: sum, discAmt, frais, belowMin, minN, isAvailable };
+    }).filter(Boolean);
+
+    // Trier : disponibles + conformes séjour min en premier (par prix), ensuite indispos
+    res.sort((a, b) => {
+      const aOk = a.isAvailable && !a.belowMin;
+      const bOk = b.isAvailable && !b.belowMin;
+      if (aOk && !bOk) return -1;
+      if (!aOk && bOk) return 1;
+      if (aOk && bOk) return a.total - b.total;
+      return 0;
+    });
+
     setResults(res);
+    setLoading(false);
   }
 
   function reset() { setCheckin(""); setCheckout(""); setResults(null); }
+
+  const canSearch = checkin && checkout && checkout > checkin;
+  const availableCount = results ? results.filter(r => r.isAvailable && !r.belowMin).length : 0;
 
   return (
     <div style={{ background: NAVY, padding: "24px 32px", borderBottom: "1px solid rgba(250,245,233,0.06)" }}>
@@ -2346,49 +2428,104 @@ function SearchByDates({ biens, onBook, onDetail }) {
         <div style={{ fontSize: 10, letterSpacing: "0.3em", textTransform: "uppercase", color: "rgba(250,245,233,0.4)", fontFamily: "'Jost', sans-serif", marginBottom: 14 }}>
           Rechercher par dates
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+
+        {/* Barre de filtres */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          {/* Arrivée */}
           <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(250,245,233,0.06)", borderRadius: 8, padding: "10px 16px", border: "1px solid rgba(250,245,233,0.1)" }}>
             <span style={{ fontSize: 11, color: "rgba(250,245,233,0.4)", fontFamily: "'Jost', sans-serif", letterSpacing: "0.1em", whiteSpace: "nowrap" }}>Arrivée</span>
             <input type="date" value={checkin} min={todayVal} onChange={e => { setCheckin(e.target.value); setResults(null); }}
               style={{ background: "none", border: "none", color: "#faf5e9", fontSize: 13, fontFamily: "'Jost', sans-serif", outline: "none", cursor: "pointer" }} />
           </div>
+
           <div style={{ color: "rgba(250,245,233,0.25)", fontSize: 18 }}>→</div>
+
+          {/* Départ */}
           <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(250,245,233,0.06)", borderRadius: 8, padding: "10px 16px", border: "1px solid rgba(250,245,233,0.1)" }}>
             <span style={{ fontSize: 11, color: "rgba(250,245,233,0.4)", fontFamily: "'Jost', sans-serif", letterSpacing: "0.1em", whiteSpace: "nowrap" }}>Départ</span>
             <input type="date" value={checkout} min={checkin || todayVal} onChange={e => { setCheckout(e.target.value); setResults(null); }}
               style={{ background: "none", border: "none", color: "#faf5e9", fontSize: 13, fontFamily: "'Jost', sans-serif", outline: "none", cursor: "pointer" }} />
           </div>
-          <button onClick={search} disabled={!checkin || !checkout || checkout <= checkin}
-            style={{ background: CORAL, border: "none", color: "#fff", borderRadius: 8, padding: "11px 28px", fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: "0.1em", textTransform: "uppercase", cursor: (!checkin || !checkout || checkout <= checkin) ? "not-allowed" : "pointer", opacity: (!checkin || !checkout || checkout <= checkin) ? 0.5 : 1, whiteSpace: "nowrap" }}>
-            Voir les prix →
+
+          {/* Voyageurs */}
+          <NavySelect value={minGuests} onChange={e => { setMinGuests(e.target.value); setResults(null); }}>
+            <option value="0">👥 Voyageurs</option>
+            {[1,2,3,4,5,6,7,8].map(n => <option key={n} value={n}>{n} voyageur{n > 1 ? "s" : ""}</option>)}
+          </NavySelect>
+
+          {/* Chambres */}
+          <NavySelect value={minChambres} onChange={e => { setMinChambres(e.target.value); setResults(null); }}>
+            <option value="0">🛏 Chambres</option>
+            {[1,2,3].map(n => <option key={n} value={n}>{n} chambre{n > 1 ? "s" : ""}</option>)}
+          </NavySelect>
+
+          {/* Bouton recherche */}
+          <button onClick={search} disabled={!canSearch || loading}
+            style={{ background: CORAL, border: "none", color: "#fff", borderRadius: 8, padding: "11px 24px", fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: "0.1em", textTransform: "uppercase", cursor: (!canSearch || loading) ? "not-allowed" : "pointer", opacity: (!canSearch || loading) ? 0.5 : 1, whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 8 }}>
+            {loading ? (
+              <><span style={{ display: "inline-block", width: 12, height: 12, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />Vérification…</>
+            ) : "Voir les disponibilités →"}
           </button>
+
           {results && <button onClick={reset} style={{ background: "none", border: "none", color: "rgba(250,245,233,0.35)", cursor: "pointer", fontSize: 12, fontFamily: "'Jost', sans-serif", textDecoration: "underline" }}>Effacer</button>}
         </div>
 
         {/* Résultats */}
         {results && (
-          <div style={{ marginTop: 20, display: "flex", gap: 12, flexWrap: "wrap" }}>
-            {results.map(({ bien, nights, total, discAmt, frais, belowMin, minN }) => (
-              <div key={bien.id} style={{ background: "rgba(250,245,233,0.05)", border: `1px solid ${belowMin ? "rgba(239,68,68,0.3)" : "rgba(250,245,233,0.1)"}`, borderRadius: 10, padding: "14px 18px", minWidth: 180, flex: "1 1 180px", maxWidth: 260 }}>
-                <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 13, color: "#faf5e9", marginBottom: 4 }}>{bien.nom}</div>
-                {belowMin ? (
-                  <div style={{ fontSize: 11, color: "#f87171" }}>Séjour min. {minN} nuits</div>
-                ) : (
-                  <>
-                    <div style={{ fontSize: 22, fontWeight: 800, color: CORAL, lineHeight: 1, marginBottom: 2 }}>{total}€</div>
-                    <div style={{ fontSize: 10, color: "rgba(250,245,233,0.35)", marginBottom: 10 }}>
-                      {nights} nuit{nights > 1 ? "s" : ""}
-                      {discAmt > 0 && ` · −${discAmt}€ remise`}
-                      {frais > 0 && ` · +${frais}€ ménage`}
+          <div style={{ marginTop: 20 }}>
+            {/* Compteur */}
+            <div style={{ fontSize: 11, color: "rgba(250,245,233,0.45)", fontFamily: "'Jost', sans-serif", marginBottom: 12, letterSpacing: "0.05em" }}>
+              {availableCount === 0
+                ? "Aucun logement disponible pour ces critères"
+                : `${availableCount} logement${availableCount > 1 ? "s" : ""} disponible${availableCount > 1 ? "s" : ""} · trié${availableCount > 1 ? "s" : ""} par prix`}
+            </div>
+
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+              {results.map(({ bien, nights, total, discAmt, frais, belowMin, minN, isAvailable }) => {
+                const unavailable = !isAvailable || belowMin;
+                return (
+                  <div key={bien.id} style={{
+                    background: unavailable ? "rgba(250,245,233,0.02)" : "rgba(250,245,233,0.06)",
+                    border: `1px solid ${unavailable ? "rgba(250,245,233,0.06)" : "rgba(250,245,233,0.14)"}`,
+                    borderRadius: 10, padding: "14px 18px", minWidth: 190, flex: "1 1 190px", maxWidth: 270,
+                    opacity: unavailable ? 0.45 : 1,
+                    transition: "opacity 0.2s",
+                  }}>
+                    {/* Nom + capacité */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
+                      <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 13, color: "#faf5e9", lineHeight: 1.2 }}>{bien.nom}</div>
+                      <div style={{ fontSize: 10, color: "rgba(250,245,233,0.35)", fontFamily: "'Jost', sans-serif", textAlign: "right", lineHeight: 1.4, marginLeft: 8, flexShrink: 0 }}>
+                        {bien.capacite} pers.<br />{bien.chambres} ch.
+                      </div>
                     </div>
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <button onClick={() => onDetail(bien)} style={{ flex: 1, background: "rgba(250,245,233,0.08)", border: "1px solid rgba(250,245,233,0.15)", color: "#faf5e9", borderRadius: 6, padding: "6px 10px", fontSize: 11, cursor: "pointer", fontFamily: "'Jost', sans-serif" }}>Voir</button>
-                      <button onClick={() => onBook(bien, checkin, checkout)} style={{ flex: 1, background: CORAL, border: "none", color: "#fff", borderRadius: 6, padding: "6px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "'Jost', sans-serif" }}>Réserver</button>
-                    </div>
-                  </>
-                )}
-              </div>
-            ))}
+
+                    {/* Statut */}
+                    {!isAvailable ? (
+                      <div style={{ fontSize: 11, color: "#f87171", fontFamily: "'Jost', sans-serif", marginBottom: 6 }}>
+                        Indisponible sur ces dates
+                      </div>
+                    ) : belowMin ? (
+                      <div style={{ fontSize: 11, color: "#fb923c", fontFamily: "'Jost', sans-serif", marginBottom: 6 }}>
+                        Séjour min. {minN} nuit{minN > 1 ? "s" : ""}
+                      </div>
+                    ) : (
+                      <>
+                        <div style={{ fontSize: 22, fontWeight: 800, color: CORAL, lineHeight: 1, marginBottom: 2 }}>{total.toLocaleString("fr-FR")}€</div>
+                        <div style={{ fontSize: 10, color: "rgba(250,245,233,0.35)", marginBottom: 10, fontFamily: "'Jost', sans-serif" }}>
+                          {nights} nuit{nights > 1 ? "s" : ""}
+                          {discAmt > 0 && ` · −${discAmt}€ remise`}
+                          {frais > 0 && ` · +${frais}€ ménage`}
+                        </div>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button onClick={() => onDetail(bien)} style={{ flex: 1, background: "rgba(250,245,233,0.08)", border: "1px solid rgba(250,245,233,0.15)", color: "#faf5e9", borderRadius: 6, padding: "6px 10px", fontSize: 11, cursor: "pointer", fontFamily: "'Jost', sans-serif" }}>Voir</button>
+                          <button onClick={() => onBook(bien, checkin, checkout)} style={{ flex: 1, background: CORAL, border: "none", color: "#fff", borderRadius: 6, padding: "6px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "'Jost', sans-serif" }}>Réserver</button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
