@@ -4984,14 +4984,14 @@ export default function PublicSite() {
         />
       )}
 
-      {/* ── WHATSAPP FLOTTANT ── visible quand on scrolle, pas en modal */}
-      {scrolled && !detailBien && !selectedBien && !beds24Bien && (
+      {/* ── WHATSAPP FLOTTANT ── visible homepage (après scroll) ET sur la fiche villa */}
+      {!selectedBien && !beds24Bien && (scrolled || detailBien) && (
         <a
-          href={`https://wa.me/${WA_NUMBER}?text=${WA_MSG_DEFAULT}`}
+          href={`https://wa.me/${WA_NUMBER}?text=${detailBien ? encodeURIComponent(`Bonjour, j'ai une question sur ${detailBien.nom} à Sainte-Luce. `) : WA_MSG_DEFAULT}`}
           target="_blank" rel="noopener noreferrer"
           title="Nous contacter sur WhatsApp"
           style={{
-            position: "fixed", bottom: 24, right: 22, zIndex: 600,
+            position: "fixed", bottom: showComparator ? 84 : 24, right: 22, zIndex: 800,
             width: 54, height: 54, borderRadius: "50%",
             background: "#25D366",
             display: "flex", alignItems: "center", justifyContent: "center",
