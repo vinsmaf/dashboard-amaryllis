@@ -39,6 +39,10 @@ const FRAIS_MENAGE = {
 const BASE_GUESTS      = { amaryllis: 6, zandoli: 4 };   // inclus dans le tarif de base
 const EXTRA_GUEST_RATE = { amaryllis: 50, zandoli: 30 }; // €/personne supplémentaire/nuit
 
+// Animaux — forfait par séjour, max 2
+const PET_SUPPLEMENT = 40; // € / séjour (1 ou 2 animaux = même forfait)
+const MAX_PETS       = 2;
+
 // Biens désactivés à la réservation (ex: longue durée)
 const BOOKING_DISABLED = new Set(["iguana"]);
 
@@ -136,7 +140,7 @@ const BIENS = [
         { label: "Check-in / Check-out", texte: "Check-in à partir de 17h, check-out avant 12h. Early check-in et late check-out possibles selon disponibilité (supplément 80 €)." },
         { label: "Règlement", texte: "Villa non-fumeur. Événements, fiestas et réceptions interdits. Seuls les voyageurs inscrits sur la réservation sont autorisés." },
         { label: "Capacité", texte: "6 voyageurs inclus dans le tarif de base. Possibilité d'accueillir jusqu'à 8 personnes avec un supplément de 50 € par voyageur supplémentaire par nuit." },
-        { label: "Animaux", texte: "Bienvenus, jusqu'à 2 maximum — supplément 50 € par séjour." },
+        { label: "Animaux", texte: "Bienvenus, jusqu'à 2 maximum — supplément 40 € par séjour." },
         { label: "Dépôt de garantie", texte: "1 500 € en cas de dommages constatés après le départ." },
         { label: "Transport", texte: "Une voiture automatique est recommandée pour profiter pleinement de la région." },
         { label: "Ménage", texte: "La villa est nettoyée et désinfectée en profondeur entre chaque séjour." },
@@ -198,7 +202,7 @@ const BIENS = [
       { titre: "Équipements & services", texte: "Wifi Starlink haut débit dans toute la propriété. Netflix et Disney+ inclus. Lave-linge. Jardin tropical luxuriant. Parking intérieur sécurisé. Linge de maison fourni." },
       { titre: "Votre hôte", texte: "L'équipe Amaryllis est toujours là pour vous — avant votre arrivée, pendant votre séjour, et même après. Nous répondons rapidement à vos questions, vous conseillons sur les meilleures découvertes autour de Sainte-Luce et vous aidons pour tout ce dont vous aurez besoin. Un contact simple et chaleureux, pour que vous vous sentiez accompagnés sans perdre votre liberté." },
       { titre: "Informations pratiques", items: [
-        { label: "Animaux", texte: "Bienvenus — supplément 40 € par séjour." },
+        { label: "Animaux", texte: "Bienvenus, jusqu'à 2 maximum — supplément 40 € par séjour." },
         { label: "Check-in / Check-out", texte: "Check-in à partir de 17h, check-out avant 12h. Early/late possible selon disponibilité (supplément 50 €)." },
         { label: "Fumeurs", texte: "Non-fumeur à l'intérieur. Autorisé sur la terrasse et dans le jardin." },
         { label: "Stationnement", texte: "Une place de parking intérieur sécurisé réservée." },
@@ -256,7 +260,7 @@ const BIENS = [
       { titre: "Équipements & services", texte: "Wifi Starlink dans toute la propriété. Linge de maison fourni — draps, serviettes, torchons de cuisine. Animaux bienvenus." },
       { titre: "Votre hôte", texte: "L'équipe Amaryllis est à votre écoute avant, pendant et après votre séjour. Nous répondons rapidement à vos questions, vous conseillons sur les meilleures découvertes autour de Sainte-Luce et vous aidons pour tout ce dont vous aurez besoin. Une communication chaleureuse et humaine, pour que vous vous sentiez accompagnés sans perdre votre liberté." },
       { titre: "Informations pratiques", items: [
-        { label: "Animaux", texte: "Bienvenus — supplément 40 € par séjour." },
+        { label: "Animaux", texte: "Bienvenus, jusqu'à 2 maximum — supplément 40 € par séjour." },
         { label: "Check-in / Check-out", texte: "Check-in à partir de 17h, check-out avant 12h. Early/late possible selon disponibilité (supplément 50 €)." },
         { label: "Fumeurs", texte: "Non-fumeur à l'intérieur. Autorisé dans les espaces extérieurs." },
         { label: "Stationnement", texte: "2 places de parking extérieures privatives." },
@@ -315,7 +319,7 @@ const BIENS = [
       { titre: "Pourquoi Géko", texte: "Parce que Géko est plus qu'un logement : c'est une expérience. Un écrin de verdure alliant confort moderne et charme tropical, un point de départ idéal entre plages de sable blanc, distilleries emblématiques et marchés créoles colorés. Dès votre arrivée, franchissez le portillon privé qui ouvre les portes de votre havre de paix. Un parking privé vous est réservé juste en face, votre entrée indépendante préserve votre intimité." },
       { titre: "Votre hôte", texte: "Votre confort et votre sérénité sont notre priorité du premier contact au départ. Avant votre arrivée, nous répondons à toutes vos questions et partageons nos coups de cœur locaux. Lors de l'accueil, nous vous accompagnons pour une prise en main simple et autonome. Pendant votre séjour, nous restons disponibles — souvent en moins de 30 minutes. Nous cultivons une communication chaleureuse et humaine, pour que vous viviez un séjour en toute confiance." },
       { titre: "Informations pratiques", items: [
-        { label: "Animaux", texte: "Bienvenus — supplément 40 € par séjour." },
+        { label: "Animaux", texte: "Bienvenus, jusqu'à 2 maximum — supplément 40 € par séjour." },
         { label: "Check-in / Check-out", texte: "Check-in à partir de 17h, check-out avant 12h. Early/late possible selon disponibilité (supplément 50 €)." },
         { label: "Fumeurs", texte: "Non-fumeur à l'intérieur. Fumer autorisé sur la terrasse et dans le jardin." },
         { label: "Stationnement", texte: "Une place de parking intérieur réservée." },
@@ -373,7 +377,7 @@ const BIENS = [
       { titre: "Votre hôte", texte: "L'équipe Amaryllis est à votre écoute avant, pendant et après votre séjour — conseils sur les plages paradisiaques, restaurants locaux ou activités uniques. Nous privilégions une communication fluide, chaleureuse et réactive pour vous garantir une expérience sans stress et mémorable. Notre mission : faire de votre séjour un moment d'évasion inoubliable." },
       { titre: "Informations pratiques", items: [
         { label: "Check-in / Check-out", texte: "Early check-in et late check-out possibles selon disponibilité — supplément 30 €." },
-        { label: "Animaux", texte: "Bienvenus — supplément 40 € par séjour." },
+        { label: "Animaux", texte: "Bienvenus, jusqu'à 2 maximum — supplément 40 € par séjour." },
         { label: "Capacité", texte: "2 personnes maximum." },
         { label: "Fumeurs", texte: "Logement non-fumeur." },
         { label: "Dépôt de garantie", texte: "500 € en cas de dommages constatés après le départ." },
@@ -426,7 +430,7 @@ const BIENS = [
       { titre: "Accès & proximité", texte: "L'appartement est au 4ème et dernier étage d'une résidence sécurisée avec ascenseur. Une place de parking privative vous est réservée, accès libre 24h/24. À 1 minute à pied : centre commercial, boulangerie, médecin, kiné, pharmacie. À 5 minutes en voiture : plages de sable blanc, restaurants et activités nautiques. Fort-de-France en 15 minutes." },
       { titre: "Votre hôte", texte: "L'équipe Amaryllis met un point d'honneur à ce que votre séjour soit parfait. Avant votre arrivée, nous vous transmettons toutes les informations utiles : accès, stationnement, équipements et nos meilleures adresses locales. Pendant votre séjour, nous restons disponibles par messagerie et WhatsApp — toujours dans le respect de votre intimité." },
       { titre: "Informations pratiques", items: [
-        { label: "Animaux", texte: "Bienvenus — supplément 40 € par séjour." },
+        { label: "Animaux", texte: "Bienvenus, jusqu'à 2 maximum — supplément 40 € par séjour." },
         { label: "Check-in / Check-out", texte: "Check-in à partir de 17h, check-out avant 12h. Early/late possible selon disponibilité (supplément 50 €)." },
         { label: "Fumeurs", texte: "Non-fumeur à l'intérieur. Autorisé sur la terrasse." },
         { label: "Stationnement", texte: "Une place de parking privative en résidence réservée." },
@@ -977,7 +981,7 @@ function Beds24Modal({ bien, onClose }) {
 }
 
 // ── Devis PDF (HTML print) ────────────────────────────────────────
-function generateDevis({ bien, checkin, checkout, nights, rawTotal, discountRate, discountAmount, fraisMenage, extraGuestSuppl = 0, extraGuests = 0, total, depositAmt }) {
+function generateDevis({ bien, checkin, checkout, nights, rawTotal, discountRate, discountAmount, fraisMenage, extraGuestSuppl = 0, extraGuests = 0, petSuppl = 0, nbPets = 0, total, depositAmt }) {
   const validUntil = new Date(Date.now() + 48 * 3600 * 1000).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
   const today = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
   const ref = `AMR-${bien.id.slice(0,3).toUpperCase()}-${Date.now().toString(36).toUpperCase().slice(-6)}`;
@@ -1118,6 +1122,11 @@ function generateDevis({ bien, checkin, checkout, nights, rawTotal, discountRate
         <td style="color:#7a6b5a;font-size:12px;">${extraGuests} pers. suppl. × ${nights} nuit${nights > 1 ? "s" : ""} × 50€</td>
         <td>${extraGuestSuppl}€</td>
       </tr>` : ""}
+      ${petSuppl > 0 ? `<tr>
+        <td>Animaux (${nbPets})</td>
+        <td style="color:#7a6b5a;font-size:12px;">Forfait séjour — max 2 animaux</td>
+        <td>${petSuppl}€</td>
+      </tr>` : ""}
       <tr class="total-row">
         <td colspan="2">TOTAL SÉJOUR</td>
         <td>${total}€</td>
@@ -1174,6 +1183,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
   const [checkin, setCheckin] = useState(initialCheckin);
   const [checkout, setCheckout] = useState(initialCheckout);
   const [nbGuests, setNbGuests] = useState(1);
+  const [nbPets, setNbPets] = useState(0);
   const [form, setForm] = useState({ prenom: "", nom: "", email: "", tel: "", message: "" });
   const [stripe, setStripe] = useState(null);
   const [elements, setElements] = useState(null);
@@ -1222,7 +1232,8 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
   const extraGuestRate  = EXTRA_GUEST_RATE[bien.id] ?? 0;
   const extraGuests     = Math.max(0, nbGuests - baseGuests);
   const extraGuestSuppl = extraGuests * extraGuestRate * nights;
-  const total = rawTotal - discountAmount + fraisMenage + extraGuestSuppl;
+  const petSuppl        = nbPets > 0 ? PET_SUPPLEMENT : 0;
+  const total = rawTotal - discountAmount + fraisMenage + extraGuestSuppl + petSuppl;
   const minNights = MIN_NIGHTS[bien.id] ?? 1;
   const belowMin = nights > 0 && nights < minNights;
 
@@ -1444,6 +1455,20 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
               </div>
             )}
 
+            {/* Sélecteur animaux */}
+            <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 12, background: CREAM, border: `1px solid ${SAND}`, borderRadius: 12, padding: "14px 18px" }}>
+              <span style={{ fontSize: 18 }}>🐾</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: NAVY, fontFamily: "'Jost', sans-serif" }}>Animaux</div>
+                <div style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>Max {MAX_PETS} · {PET_SUPPLEMENT}€ forfait/séjour si 1 ou 2 animaux</div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <button onClick={() => setNbPets(p => Math.max(0, p - 1))} style={{ width: 32, height: 32, borderRadius: "50%", border: `1px solid ${SAND}`, background: "#fff", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: NAVY, lineHeight: 1 }}>−</button>
+                <span style={{ fontSize: 16, fontWeight: 700, color: NAVY, minWidth: 20, textAlign: "center" }}>{nbPets}</span>
+                <button onClick={() => setNbPets(p => Math.min(MAX_PETS, p + 1))} style={{ width: 32, height: 32, borderRadius: "50%", border: `1px solid ${SAND}`, background: "#fff", fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: NAVY, lineHeight: 1 }}>+</button>
+              </div>
+            </div>
+
             {nights > 0 ? (
               <div style={{
                 marginTop: 16,
@@ -1475,6 +1500,11 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
                           👥 Supplément {extraGuests} voyageur{extraGuests > 1 ? "s" : ""} suppl. +{extraGuestSuppl}€
                         </div>
                       )}
+                      {petSuppl > 0 && (
+                        <div style={{ fontSize: 13, color: MUTED, marginTop: 2 }}>
+                          🐾 Animaux ({nbPets}) +{petSuppl}€ forfait séjour
+                        </div>
+                      )}
                       <div style={{ fontSize: 26, fontWeight: 800, color: NAVY, marginTop: 6 }}>{total}€</div>
                     </>
                   )}
@@ -1501,7 +1531,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
                   </button>
                   {!belowMin && (
                     <button
-                      onClick={() => generateDevis({ bien, checkin, checkout, nights, rawTotal, discountRate, discountAmount, fraisMenage, extraGuestSuppl, extraGuests, total, depositAmt })}
+                      onClick={() => generateDevis({ bien, checkin, checkout, nights, rawTotal, discountRate, discountAmount, fraisMenage, extraGuestSuppl, extraGuests, petSuppl, nbPets, total, depositAmt })}
                       title="Télécharger le devis PDF"
                       style={{
                         background: "transparent", border: `1px solid ${SAND}`,
