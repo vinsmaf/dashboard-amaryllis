@@ -1700,6 +1700,7 @@ function FormField({ label, value, onChange, type = "text", multiline, style }) 
 
 // ── Property Card ────────────────────────────────────────────────
 function BienCard({ bien, onDetail, onBook, isFavorite = false, onToggleFavorite, isCompared = false, onToggleCompare, compareDisabled = false }) {
+  const { t } = useLang();
   const [photoIdx, setPhotoIdx] = useState(0);
   const [hovered, setHovered] = useState(false);
   const photos = bien.photos || [];
@@ -1863,7 +1864,7 @@ function BienCard({ bien, onDetail, onBook, isFavorite = false, onToggleFavorite
             border: "1px solid rgba(255,255,255,0.1)",
             borderRadius: 10, padding: "8px 14px", textAlign: "right",
           }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#fff", letterSpacing: "0.04em", fontFamily: "'Jost', sans-serif" }}>Location longue durée</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#fff", letterSpacing: "0.04em", fontFamily: "'Jost', sans-serif" }}>{t("longTermShort")}</div>
           </div>
         ) : (() => {
           const airbnbNuit = Math.round(minPrix * 1.15);
@@ -1875,7 +1876,7 @@ function BienCard({ bien, onDetail, onBook, isFavorite = false, onToggleFavorite
               border: "1px solid rgba(255,255,255,0.1)",
               borderRadius: 10, padding: "8px 14px", textAlign: "right",
             }}>
-              <div style={{ fontSize: 11, color: "rgba(250,247,242,0.5)", marginBottom: 1, fontFamily: "'Jost', sans-serif", fontWeight: 300, letterSpacing: "0.05em" }}>À partir de</div>
+              <div style={{ fontSize: 11, color: "rgba(250,247,242,0.5)", marginBottom: 1, fontFamily: "'Jost', sans-serif", fontWeight: 300, letterSpacing: "0.05em" }}>{t("from")}</div>
               <div style={{ fontSize: 22, fontWeight: 800, color: "#fff", lineHeight: 1 }}>{minPrix}€</div>
               <div style={{ fontSize: 11, color: "rgba(250,247,242,0.45)", textDecoration: "line-through", marginBottom: 2 }}>≈ {airbnbNuit}€ Airbnb</div>
               <div style={{ fontSize: 10, color: "#4ade80", fontWeight: 600, fontFamily: "'Jost', sans-serif", letterSpacing: "0.04em" }}>
@@ -1908,7 +1909,7 @@ function BienCard({ bien, onDetail, onBook, isFavorite = false, onToggleFavorite
             <span>·</span>
             {bien.reviews && <span>{bien.reviews} avis</span>}
             <span>·</span>
-            <span>{bien.capacite} pers.</span>
+            <span>{bien.capacite} {t("guests")}</span>
             <span>·</span>
             <span>{bien.lits} lit{bien.lits > 1 ? "s" : ""}</span>
           </div>
@@ -1979,7 +1980,7 @@ function BienCard({ bien, onDetail, onBook, isFavorite = false, onToggleFavorite
             onMouseEnter={e => { e.currentTarget.style.borderColor = NAVY; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = SAND; }}
           >
-            Voir plus →
+            {t("viewMore")}
           </button>
           {BOOKING_DISABLED.has(bien.id) ? (
             <a
@@ -2010,18 +2011,18 @@ function BienCard({ bien, onDetail, onBook, isFavorite = false, onToggleFavorite
               onMouseEnter={e => { e.currentTarget.style.opacity = "0.88"; }}
               onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
             >
-              Réserver
+              {t("book")}
             </button>
           )}
         </div>
         {!BOOKING_DISABLED.has(bien.id) && (
           <div style={{ marginTop: 8, fontSize: 11, color: MUTED, textAlign: "center", fontFamily: "'Jost', sans-serif", fontWeight: 300, letterSpacing: "0.02em" }}>
-            ✓ Réservation directe, sans frais de service.
+            {t("banner1")}
           </div>
         )}
         {BOOKING_DISABLED.has(bien.id) && (
           <div style={{ marginTop: 8, fontSize: 11, color: MUTED, textAlign: "center", fontFamily: "'Jost', sans-serif", fontWeight: 300, letterSpacing: "0.02em" }}>
-            Location longue durée uniquement
+            {t("longTermOnly")}
           </div>
         )}
       </div>
@@ -2039,6 +2040,7 @@ function Stat({ icon, label }) {
 
 // ── Property Detail (full-screen) ───────────────────────────────
 function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail = false }) {
+  const { t } = useLang();
   const [photoIdx, setPhotoIdx] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -2319,8 +2321,8 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
             <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 18px", color: MUTED, fontSize: 13, marginBottom: 22 }}>
               <span style={{ color: GOLD }}>★ {bien.rating}</span>
               {bien.reviews && <span>· {bien.reviews} avis</span>}
-              <span>· {bien.capacite} voyageurs</span>
-              <span>· {bien.chambres} chambre{bien.chambres > 1 ? "s" : ""}</span>
+              <span>· {bien.capacite} {t("guests")}</span>
+              <span>· {bien.chambres} {t("rooms")}</span>
               <span>· {bien.sdb} sdb</span>
             </div>
           )}
@@ -2607,12 +2609,12 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
             <div>
               {PRICE_HIDDEN.has(bien.id) ? (
-                <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 16, color: NAVY }}>Location longue durée</div>
+                <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 16, color: NAVY }}>{t("longTermShort")}</div>
               ) : (
                 <>
-                  <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 10, color: MUTED, letterSpacing: "0.2em", textTransform: "uppercase", marginBottom: 4 }}>À partir de</div>
+                  <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 10, color: MUTED, letterSpacing: "0.2em", textTransform: "uppercase", marginBottom: 4 }}>{t("from")}</div>
                   <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 36, color: NAVY, lineHeight: 1 }}>
-                    {bien.prix}€<span style={{ fontSize: 14, fontWeight: 300, color: MUTED, marginLeft: 6 }}>/ nuit</span>
+                    {bien.prix}€<span style={{ fontSize: 14, fontWeight: 300, color: MUTED, marginLeft: 6 }}>{t("perNight")}</span>
                   </div>
                 </>
               )}
@@ -2627,7 +2629,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                 onMouseEnter={e => { e.currentTarget.style.opacity = "0.88"; }}
                 onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
               >
-                Réserver →
+                {t("book")} →
               </button>
             ) : (
               <a
@@ -3279,6 +3281,7 @@ function QuickBook({ biens, onBook }) {
 const CAROUSEL_DELAY = 8000;
 
 function HeroCarousel({ biens, onDetail, onBook }) {
+  const { t } = useLang();
   const [idx, setIdx] = useState(0);
   const [animKey, setAnimKey] = useState(0);
   const idxRef = useRef(0);
@@ -3366,7 +3369,7 @@ function HeroCarousel({ biens, onDetail, onBook }) {
           <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 12, color: "rgba(250,245,233,0.55)", marginBottom: 14, letterSpacing: "0.05em" }}>
             <span style={{ color: GOLD }}>★ {bien.rating}</span>
             {bien.reviews ? ` · ${bien.reviews} avis` : ""}
-            {` · ${bien.capacite} voyageurs`}
+            {` · ${bien.capacite} ${t("guests")}`}
           </div>
         )}
         <p style={{
@@ -3395,7 +3398,7 @@ function HeroCarousel({ biens, onDetail, onBook }) {
                 onMouseEnter={e => { e.currentTarget.style.opacity = "0.9"; e.currentTarget.style.transform = "translateY(-2px)"; }}
                 onMouseLeave={e => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.transform = "translateY(0)"; }}
               >
-                Voir les disponibilités
+                {t("searchBtn")}
               </button>
             ) : (
               <a
@@ -3403,7 +3406,7 @@ function HeroCarousel({ biens, onDetail, onBook }) {
                 target="_blank" rel="noopener noreferrer"
                 style={{ display: "inline-block", background: "rgba(250,245,233,0.08)", border: "1px solid rgba(250,245,233,0.3)", borderRadius: 8, padding: "14px 24px", fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11, letterSpacing: "0.12em", color: "#faf5e9", textTransform: "uppercase", whiteSpace: "nowrap", textDecoration: "none", transition: "background 0.2s" }}
               >
-                Contact long séjour →
+                {t("contactLongStay")}
               </a>
             )}
             {/* Secondary CTA */}
@@ -3419,12 +3422,12 @@ function HeroCarousel({ biens, onDetail, onBook }) {
               onMouseEnter={e => { e.currentTarget.style.background = "rgba(250,245,233,0.08)"; e.currentTarget.style.borderColor = "rgba(250,245,233,0.6)"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "rgba(250,245,233,0.35)"; }}
             >
-              Voir photos &amp; détails →
+              {t("viewPhotosDetails")}
             </button>
           </div>
           {!BOOKING_DISABLED.has(bien.id) && (
             <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 10, color: "rgba(250,245,233,0.45)", letterSpacing: "0.06em" }}>
-              Réservation directe propriétaire · Paiement sécurisé Stripe
+              {t("directOwnerPay")}
             </span>
           )}
         </div>
