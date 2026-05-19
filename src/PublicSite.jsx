@@ -5108,10 +5108,9 @@ export default function PublicSite() {
           </div>
         </div>
 
-        {/* ── Reassurance blocks ── */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 20, marginBottom: 52 }}>
-          {/* Block 1 — Pourquoi en direct */}
-          <Reveal anim="fadeLeft" delay={0} style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 14, padding: "28px 28px 24px" }}>
+        {/* ── Reassurance block ── */}
+        <div style={{ marginBottom: 52 }}>
+          <Reveal anim="fadeUp" delay={0} style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 14, padding: "28px 28px 24px", maxWidth: 560 }}>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.3em", textTransform: "uppercase", color: CORAL, marginBottom: 14 }}>{t("whyTitle")}</div>
             {[
               ["💰", t("why1t"), t("why1d")],
@@ -5127,29 +5126,6 @@ export default function PublicSite() {
                 </div>
               </div>
             ))}
-          </Reveal>
-
-          {/* Block 2 — Avis voyageurs */}
-          <Reveal anim="fadeRight" delay={0.15} style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 14, padding: "28px 28px 24px" }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.3em", textTransform: "uppercase", color: CORAL, marginBottom: 14 }}>{t("reviewTitle")}</div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 16 }}>
-              <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 800, fontSize: 48, color: NAVY, lineHeight: 1 }}>4,8</span>
-              <div>
-                <div style={{ color: GOLD, fontSize: 16, letterSpacing: 2 }}>★★★★★</div>
-                <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11, color: MUTED, marginTop: 2 }}>{t("reviewNote")}</div>
-              </div>
-            </div>
-            <p style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: 14, color: MUTED, lineHeight: 1.65, margin: "0 0 20px" }}>
-              "Vue extraordinaire, piscine à débordement parfaite. Un endroit hors du temps face aux Caraïbes. On reviendra sans hésiter !"
-            </p>
-            <div style={{ fontSize: 11, color: MUTED, fontFamily: "'Jost', sans-serif", fontWeight: 300 }}>
-              — Sophie M. 🇫🇷, Villa Amaryllis · Avr. 2025
-            </div>
-            <div style={{ marginTop: 16, display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {["Amaryllis 4,94 ★", "Géko 4,83 ★", "Schoelcher 4,8 ★", "Iguana 4,75 ★", "Mabouya 4,55 ★"].map(r => (
-                <span key={r} style={{ background: IVORY, border: `1px solid ${SAND}`, borderRadius: 20, padding: "3px 10px", fontSize: 10, color: MUTED, fontFamily: "'Jost', sans-serif" }}>{r}</span>
-              ))}
-            </div>
           </Reveal>
         </div>
 
