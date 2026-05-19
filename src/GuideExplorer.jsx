@@ -420,7 +420,7 @@ const DESTINATIONS = [
     tags: ["Culture", "Gastronomie", "Couple"],
     must: "Le village des pêcheurs au coucher du soleil",
     href: "/guide-trois-ilets",
-    photo: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/Les_Trois-Ilets_%28Martinique%29.jpg/960px-Les_Trois-Ilets_%28Martinique%29.jpg",
+    photo: "https://villamaryllis.com/photos/schoelcher/01.webp",
   },
 ];
 
