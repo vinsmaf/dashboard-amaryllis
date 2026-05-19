@@ -19,9 +19,9 @@ export async function onRequestGet(context) {
     );
   }
 
-  // Cache Cloudflare 6h
+  // Cache Cloudflare 6h (clé sous notre propre domaine obligatoire)
   const cache    = caches.default;
-  const cacheKey = new Request(`https://places.googleapis.com/v1/places/${PLACE_ID}/__cached`);
+  const cacheKey = new Request(`https://villamaryllis.com/api/google-reviews/__cache`);
   const cached   = await cache.match(cacheKey);
   if (cached) {
     const data = await cached.json();
