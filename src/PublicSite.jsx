@@ -4740,11 +4740,13 @@ export default function PublicSite() {
       <header style={{ position: "sticky", top: 0, zIndex: 200 }}>
         <div style={{
           height: 62,
-          background: scrolled ? NAVY : "transparent",
+          background: scrolled ? NAVY : "rgba(7,18,42,0.45)",
+          backdropFilter: scrolled ? "none" : "blur(6px)",
+          WebkitBackdropFilter: scrolled ? "none" : "blur(6px)",
           padding: "0 28px",
           display: "flex", alignItems: "center",
           borderBottom: scrolled ? "1px solid rgba(250,245,233,0.07)" : "none",
-          transition: "background 0.35s ease, border-color 0.35s ease",
+          transition: "background 0.35s ease, border-color 0.35s ease, backdrop-filter 0.35s ease",
         }}>
           <div style={{ maxWidth: 1280, margin: "0 auto", width: "100%", display: "flex", alignItems: "center", gap: 20 }}>
             {/* Logo menu */}
