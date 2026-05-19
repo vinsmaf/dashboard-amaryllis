@@ -1,4 +1,4 @@
-// Guide Sainte-Anne Martinique — /guide-sainte-anne
+// Guide Sainte-Anne Martinique — /guide-sainte-anne — v2 immersif
 
 const NAVY  = "#0e3b3a";
 const IVORY = "#faf5e9";
@@ -6,164 +6,263 @@ const CORAL = "#c47254";
 const TEXT  = "#2c2c2c";
 const CREAM = "#f5efe0";
 const SAND  = "#e8dcc8";
+const MUTED = "#7a6b5a";
 const BASE  = "https://villamaryllis.com";
 
-const sections = [
-  {
-    emoji: "🏖️",
-    titre: "Les plages de Sainte-Anne",
-    contenu: [
-      {
-        nom: "Grande Anse des Salines",
-        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Salines_beach.jpg/960px-Salines_beach.jpg",
-        texte: "La plage la plus belle de Martinique, et l'une des plus belles des Caraïbes. Sable blanc poudreux, cocotiers inclinés sur l'eau, mer turquoise et calme. À l'extrême sud de l'île, accessible depuis Sainte-Luce en 25 minutes. Arrivez tôt en haute saison — c'est la plage la plus fréquentée de l'île.",
-      },
-      {
-        nom: "Plage de Sainte-Anne (bourg)",
-        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Grande_Anse_des_Salines_%28Sainte-Anne%2C_Martinique%29_-_01.jpg/960px-Grande_Anse_des_Salines_%28Sainte-Anne%2C_Martinique%29_-_01.jpg",
-        texte: "En plein cœur du village, cette plage familiale et animée offre transats, restaurants, artisans locaux et une eau calme protégée. Idéale pour un après-midi détendu avec enfants, à deux pas des boutiques et restaurants.",
-      },
-      {
-        nom: "Anse Meunier",
-        img: null,
-        texte: "Plage sauvage et préservée entre Sainte-Anne et Les Salines, accessible à pied. Peu connue des touristes, eau cristalline, rochers, végétation tropicale. Un coin de paradis pour ceux qui cherchent la tranquillité.",
-      },
-      {
-        nom: "Anse du Marin",
-        img: null,
-        texte: "À proximité de la marina du Marin (15 min), cette plage calme est le point de départ idéal pour des excursions en catamaran vers les îlets du Sud — Îlet Cabrit, Hardy, Burgaux.",
-      },
-    ],
-  },
-  {
-    emoji: "⛵",
-    titre: "Activités nautiques depuis Sainte-Anne",
-    contenu: [
-      {
-        nom: "Catamaran aux îlets du Sud",
-        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2d/Grande_Anse_d%27_Arlet_%2847001622912%29.jpg/960px-Grande_Anse_d%27_Arlet_%2847001622912%29.jpg",
-        texte: "L'excursion incontournable de la Martinique. Départ du Marin ou de Sainte-Anne, journée complète aux îlets avec snorkeling, déjeuner barbecue à bord et baignade dans des eaux turquoise préservées. Comptez 80-100€/personne.",
-      },
-      {
-        nom: "Kitesurf et windsurf",
-        img: null,
-        texte: "La pointe des Salines est l'un des meilleurs spots de kitesurf des Antilles grâce aux alizés constants. Plusieurs écoles proposent des cours pour débutants et des locations pour confirmés.",
-      },
-      {
-        nom: "Snorkeling aux Salines",
-        img: null,
-        texte: "Le lagon protégé entre les Salines et l'Îlet Cabrit regorge de poissons tropicaux, tortues et coraux. Location de palmes/masque sur place. Eau peu profonde, idéale pour les débutants.",
-      },
-    ],
-  },
-  {
-    emoji: "🍽️",
-    titre: "Restaurants et bonnes tables",
-    contenu: [
-      {
-        nom: "Le Bakoua",
-        img: null,
-        texte: "Sur la plage du bourg, ambiance créole typique, poisson du jour grillé au feu de bois, rhum arrangé maison. Une institution locale à Sainte-Anne.",
-      },
-      {
-        nom: "Les Tamariniers",
-        img: null,
-        texte: "Restaurant gastronomique créole avec terrasse vue mer. Cuisine raffinée mêlant saveurs locales et techniques modernes. Idéal pour un dîner en amoureux.",
-      },
-      {
-        nom: "Snacks de plage aux Salines",
-        img: null,
-        texte: "Plusieurs snacks creoles sont installés à l'entrée de la plage des Salines. Accras, brochettes, jus de coco frais — déjeuner typique et pas cher après la baignade.",
-      },
-    ],
-  },
-  {
-    emoji: "🗺️",
-    titre: "Sainte-Anne depuis Sainte-Luce",
-    contenu: [
-      {
-        nom: "Itinéraire",
-        img: null,
-        texte: "Sainte-Anne est à 20 minutes de Sainte-Luce via la N6. Trajet agréable le long de la côte caraïbe avec quelques points de vue sur la mer. Prévoir la voiture — les transports en commun sont limités.",
-      },
-      {
-        nom: "Journée idéale",
-        img: null,
-        texte: "Départ tôt depuis Sainte-Luce → Grande Anse des Salines le matin (avant l'affluence) → déjeuner au bourg de Sainte-Anne → après-midi snorkeling ou catamaran depuis le Marin → retour via Le Diamant au coucher du soleil.",
-      },
-    ],
-  },
+const HERO_IMG = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Salines_beach.jpg/960px-Salines_beach.jpg";
+
+const badges = [
+  { icon: "🏖️", label: "Plus belle plage des Caraïbes" },
+  { icon: "📍", label: "20 min de Sainte-Luce" },
+  { icon: "⛵", label: "Catamaran aux îlets" },
+  { icon: "🪁", label: "Kitesurf & windsurf" },
+  { icon: "🤿", label: "Snorkeling & tortues" },
 ];
+
+const css = `
+  .gs-badge {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: rgba(250,245,233,0.13); border: 1px solid rgba(250,245,233,0.25);
+    border-radius: 100px; padding: 8px 16px;
+    font-family: 'Jost', sans-serif; font-size: 12px; font-weight: 400;
+    color: rgba(250,245,233,0.9); letter-spacing: 0.04em; white-space: nowrap;
+    backdrop-filter: blur(6px);
+  }
+  .gs-badge.must { background: rgba(196,114,84,0.3); border-color: rgba(196,114,84,0.6); font-weight: 600; }
+
+  .gs-must {
+    background: linear-gradient(135deg, #0a2e2d 0%, #0e3b3a 60%, #163f3e 100%);
+    border: 1px solid rgba(196,114,84,0.3); border-radius: 20px; overflow: hidden; margin-bottom: 64px;
+  }
+  .gs-must-head { padding: 36px 40px 28px; border-bottom: 1px solid rgba(250,245,233,0.08); }
+  .gs-must-body { padding: 32px 40px 40px; display: flex; flex-direction: column; gap: 20px; }
+  .gs-must-item {
+    background: rgba(250,245,233,0.05); border: 1px solid rgba(250,245,233,0.08);
+    border-radius: 12px; padding: 22px 26px;
+  }
+  .gs-must-item h4 {
+    font-family: 'Jost', sans-serif; font-weight: 500; font-size: 13px;
+    color: ${CORAL}; margin: 0 0 8px; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .gs-must-item p {
+    font-family: 'Cormorant Garamond', Georgia, serif; font-size: 17px;
+    line-height: 1.75; color: rgba(250,245,233,0.82); margin: 0;
+  }
+
+  .gs-section { margin-bottom: 56px; }
+  .gs-card { background: #fff; border: 1px solid ${SAND}; border-radius: 14px; overflow: hidden; margin-bottom: 16px; }
+  .gs-card img { width: 100%; height: 240px; object-fit: cover; display: block; }
+  .gs-card-body { padding: 24px 28px; }
+  .gs-card-body h3 { font-family: 'Jost', sans-serif; font-weight: 500; font-size: 15px; color: ${NAVY}; margin: 0 0 10px; letter-spacing: 0.04em; }
+  .gs-card-body p { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 17px; line-height: 1.75; color: ${TEXT}; margin: 0; }
+
+  .gs-day {
+    background: linear-gradient(135deg, ${CREAM} 0%, #ede5d4 100%);
+    border: 1px solid ${SAND}; border-radius: 16px; padding: 32px 36px; margin-bottom: 56px;
+  }
+  .gs-day-steps { display: flex; flex-direction: column; gap: 0; margin-top: 20px; }
+  .gs-day-step { display: flex; gap: 18px; align-items: flex-start; padding: 16px 0; border-bottom: 1px solid rgba(232,220,200,0.6); }
+  .gs-day-step:last-child { border-bottom: none; padding-bottom: 0; }
+  .gs-day-time { font-family: 'Jost', sans-serif; font-size: 11px; font-weight: 600; letter-spacing: 0.15em; color: ${CORAL}; min-width: 52px; padding-top: 3px; text-transform: uppercase; }
+  .gs-day-text { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 17px; line-height: 1.65; color: ${TEXT}; }
+
+  .gs-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 48px; }
+  .gs-info { background: ${CREAM}; border: 1px solid ${SAND}; border-radius: 12px; padding: 20px 22px; }
+  .gs-info-label { font-family: 'Jost', sans-serif; font-size: 10px; font-weight: 600; letter-spacing: 0.25em; text-transform: uppercase; color: ${CORAL}; margin-bottom: 6px; }
+  .gs-info-value { font-family: 'Jost', sans-serif; font-size: 14px; font-weight: 400; color: ${NAVY}; line-height: 1.5; }
+
+  @media (max-width: 640px) {
+    .gs-must-head, .gs-must-body { padding: 24px 20px; }
+    .gs-must-item { padding: 18px 18px; }
+    .gs-grid2 { grid-template-columns: 1fr; }
+    .gs-day { padding: 24px 20px; }
+    .gs-card img { height: 180px; }
+    .gs-badges { gap: 8px !important; }
+    .gs-badge { font-size: 11px; padding: 7px 12px; }
+  }
+`;
 
 export default function GuideSainteAnne() {
   return (
     <>
+      <style dangerouslySetInnerHTML={{ __html: css }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         "@context": "https://schema.org",
         "@type": "Article",
-        "headline": "Guide Sainte-Anne Martinique : plages, activités et restaurants",
-        "description": "Tout sur Sainte-Anne en Martinique : Grande Anse des Salines (plus belle plage des Caraïbes), kitesurf, catamaran aux îlets et restaurants créoles. À 20 min de Sainte-Luce.",
+        "headline": "Guide Sainte-Anne Martinique : Les Salines, kitesurf et catamaran",
+        "description": "La Grande Anse des Salines, plus belle plage des Caraïbes. Kitesurf, catamaran aux îlets, restaurants créoles. À 20 min de Sainte-Luce.",
         "url": `${BASE}/guide-sainte-anne`,
-        "image": `${BASE}/photos/amaryllis/05.webp`,
+        "image": HERO_IMG,
         "author": { "@id": `${BASE}/#organization` },
         "publisher": { "@id": `${BASE}/#organization` },
       })}} />
 
       <div style={{ minHeight: "100vh", background: IVORY, color: TEXT, fontFamily: "'Jost', system-ui, sans-serif" }}>
+
         <header style={{ background: NAVY, padding: "0 24px" }}>
-          <div style={{ maxWidth: 900, margin: "0 auto", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ maxWidth: 960, margin: "0 auto", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <a href="/" style={{ color: IVORY, textDecoration: "none", fontWeight: 300, fontSize: 18, letterSpacing: "0.15em", textTransform: "uppercase" }}>Amaryllis</a>
-            <a href="/guide" style={{ color: IVORY, textDecoration: "none", fontSize: 13, letterSpacing: "0.08em", opacity: 0.7 }}>← Guide Sainte-Luce</a>
+            <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
+              <a href="/guide" style={{ color: IVORY, textDecoration: "none", fontSize: 12, letterSpacing: "0.08em", opacity: 0.6 }}>Explorer Martinique</a>
+              <a href="/guide" style={{ color: IVORY, textDecoration: "none", fontSize: 12, letterSpacing: "0.08em", opacity: 0.7 }}>← Tous les guides</a>
+            </div>
           </div>
         </header>
 
-        {/* Hero avec photo */}
-        <div style={{ position: "relative", height: 300, overflow: "hidden" }}>
+        {/* HERO */}
+        <div style={{ position: "relative", height: "min(90vh, 620px)", overflow: "hidden" }}>
           <img
-            src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Salines_beach.jpg/960px-Salines_beach.jpg"
+            src={HERO_IMG}
             alt="Grande Anse des Salines, Sainte-Anne, Martinique"
-            style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }}
+            style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 40%" }}
           />
-          <div style={{ position: "absolute", inset: 0, background: "rgba(14,59,58,0.65)" }} />
-          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 24px", textAlign: "center" }}>
-            <p style={{ color: CORAL, fontSize: 12, letterSpacing: "0.3em", textTransform: "uppercase", marginBottom: 14 }}>Guide de voyage · Résidence Amaryllis</p>
-            <h1 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: "clamp(24px, 5vw, 50px)", letterSpacing: "0.05em", color: IVORY, textTransform: "uppercase", margin: "0 0 14px", lineHeight: 1.15 }}>
-              Sainte-Anne,<br />Martinique
-            </h1>
-            <p style={{ color: "rgba(250,245,233,0.8)", fontSize: 15, maxWidth: 520, margin: 0, lineHeight: 1.65, fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
-              La Grande Anse des Salines, le kitesurf, les îlets du Sud — la perle de la côte caraïbe, à 20 minutes de nos villas.
-            </p>
-          </div>
-        </div>
-
-        <div style={{ maxWidth: 860, margin: "0 auto", padding: "48px 24px 80px" }}>
-          {sections.map((section, si) => (
-            <div key={si} style={{ marginBottom: 64 }}>
-              <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 24, letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY, marginBottom: 28, display: "flex", alignItems: "center", gap: 12 }}>
-                <span>{section.emoji}</span><span>{section.titre}</span>
-              </h2>
-              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                {section.contenu.map((item, ii) => (
-                  <div key={ii} style={{ background: "#fff", border: `1px solid ${SAND}`, borderRadius: 12, overflow: "hidden" }}>
-                    {item.img && (
-                      <img
-                        src={item.img}
-                        alt={item.nom}
-                        style={{ width: "100%", height: 220, objectFit: "cover", display: "block" }}
-                        loading="lazy"
-                      />
-                    )}
-                    <div style={{ padding: "24px 28px" }}>
-                      <h3 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 15, color: NAVY, margin: "0 0 10px", letterSpacing: "0.04em" }}>{item.nom}</h3>
-                      <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 17, lineHeight: 1.75, color: TEXT, margin: 0 }}>{item.texte}</p>
-                    </div>
-                  </div>
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(14,59,58,0.2) 0%, rgba(14,59,58,0.15) 40%, rgba(14,59,58,0.88) 100%)" }} />
+          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "0 32px 48px" }}>
+            <div style={{ maxWidth: 760, margin: "0 auto", width: "100%" }}>
+              <p style={{ color: CORAL, fontSize: 12, letterSpacing: "0.3em", textTransform: "uppercase", margin: "0 0 14px" }}>Guide de voyage · Résidence Amaryllis</p>
+              <h1 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: "clamp(32px, 6vw, 64px)", letterSpacing: "0.04em", color: IVORY, textTransform: "uppercase", margin: "0 0 20px", lineHeight: 1.05 }}>
+                Sainte-Anne<br />&amp; Les Salines
+              </h1>
+              <p style={{ color: "rgba(250,245,233,0.9)", fontSize: "clamp(16px, 2.5vw, 20px)", maxWidth: 580, margin: "0 0 28px", lineHeight: 1.6, fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
+                La plus belle plage des Caraïbes. Les îlets turquoise. Le meilleur kitesurf des Antilles. À 20 minutes de nos villas.
+              </p>
+              <div className="gs-badges" style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                {badges.map(b => (
+                  <span key={b.label} className={`gs-badge${b.icon === "🏖️" ? " must" : ""}`}>
+                    <span>{b.icon}</span>{b.label}
+                  </span>
                 ))}
               </div>
             </div>
-          ))}
+          </div>
+        </div>
 
-          {/* Maillage interne */}
+        <div style={{ maxWidth: 860, margin: "0 auto", padding: "56px 24px 80px" }}>
+
+          {/* MUST ABSOLU — LES SALINES */}
+          <div className="gs-must">
+            <div className="gs-must-head">
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+                <span style={{ fontSize: 32 }}>🏖️</span>
+                <span style={{ background: CORAL, color: "#fff", fontSize: 10, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", padding: "4px 12px", borderRadius: 100 }}>Must absolu</span>
+              </div>
+              <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: "clamp(22px, 4vw, 34px)", letterSpacing: "0.06em", textTransform: "uppercase", color: IVORY, margin: "0 0 14px", lineHeight: 1.15 }}>
+                Grande Anse des Salines
+              </h2>
+              <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 19, lineHeight: 1.65, color: "rgba(250,245,233,0.75)", margin: 0, fontStyle: "italic" }}>
+                Sable blanc poudreux, cocotiers sur l'eau, mer turquoise — classée parmi les dix plus belles plages du monde.
+              </p>
+            </div>
+            <div className="gs-must-body">
+              {[
+                { titre: "Pourquoi c'est unique", texte: "Les Salines combinent tout ce qu'on cherche : sable immaculé à grain très fin, cocotiers inclinés sur l'eau qui donnent cette silhouette si photographiée, lagon naturellement calme grâce à l'Îlet Cabrit qui brise les vagues. L'eau est turquoise et chaude toute l'année. C'est objectivement l'une des plus belles plages des Caraïbes — et c'est à 20 minutes de nos villas." },
+                { titre: "Arrivez avant 9h — impératif", texte: "En juillet-août et pendant les fêtes, la plage est bondée dès 10h. Arrivez au lever du soleil : vous avez la plage pour vous seul pendant 1 à 2 heures. La lumière du matin sur les cocotiers est aussi incomparable pour les photos. Parking gratuit à cette heure-là — il sera plein à 9h30 en haute saison." },
+                { titre: "Le lagon et l'Îlet Cabrit", texte: "Entre la plage et l'Îlet Cabrit (500 m au large), un lagon peu profond regorge de poissons tropicaux, raies et tortues. L'eau y est encore plus calme qu'en plage ouverte. Location de masque/tuba à l'entrée de la plage (5€). En catamaran depuis le Marin, vous pouvez y déjeuner à bord avec barbecue les pieds dans l'eau." },
+              ].map(item => (
+                <div key={item.titre} className="gs-must-item">
+                  <h4>{item.titre}</h4>
+                  <p>{item.texte}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* JOURNÉE IDÉALE */}
+          <div className="gs-day">
+            <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 11, letterSpacing: "0.25em", textTransform: "uppercase", color: CORAL, margin: "0 0 6px" }}>Programme</p>
+            <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 24, letterSpacing: "0.06em", textTransform: "uppercase", color: NAVY, margin: 0 }}>La journée idéale</h2>
+            <div className="gs-day-steps">
+              {[
+                { time: "7h00", text: "Départ de Sainte-Luce — 20 min sur la N6 vers Sainte-Anne. La route longe la côte caraïbe." },
+                { time: "7h30", text: "Arrivée aux Salines — plage vide, lumière dorée, parking gratuit. Baignade et photos." },
+                { time: "10h00", text: "Snorkeling dans le lagon côté Îlet Cabrit — poissons tropicaux et tortues." },
+                { time: "12h30", text: "Déjeuner au bourg de Sainte-Anne — poisson grillé au Bakoua ou snacks créoles à l'entrée des Salines." },
+                { time: "14h30", text: "Kitesurf à la pointe des Salines (cours débutants) — ou catamaran depuis le Marin pour les îlets du Sud." },
+                { time: "17h30", text: "Retour via Le Diamant pour le coucher de soleil face au Rocher. Cocktail de bienvenue à la villa." },
+              ].map(step => (
+                <div key={step.time} className="gs-day-step">
+                  <div className="gs-day-time">{step.time}</div>
+                  <div className="gs-day-text">{step.text}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* AUTRES PLAGES */}
+          <div className="gs-section">
+            <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 22, letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY, marginBottom: 24, display: "flex", alignItems: "center", gap: 12 }}>
+              <span>🌊</span><span>Les autres plages</span>
+            </h2>
+            {[
+              { nom: "Plage du bourg de Sainte-Anne", img: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Grande_Anse_des_Salines_%28Sainte-Anne%2C_Martinique%29_-_01.jpg/960px-Grande_Anse_des_Salines_%28Sainte-Anne%2C_Martinique%29_-_01.jpg", texte: "Plage familiale en plein cœur du village. Transats, restaurants de plage, artisans locaux. Eau calme protégée. Idéale pour un après-midi détendu avec enfants, à deux pas des boutiques." },
+              { nom: "Anse Meunier — la plage secrète", img: null, texte: "Accessible à pied depuis les Salines (15 min). Peu connue des touristes, eau cristalline, rochers et végétation tropicale. Le coin idéal pour ceux qui fuient la foule — même en haute saison." },
+            ].map(item => (
+              <div key={item.nom} className="gs-card">
+                {item.img && <img src={item.img} alt={item.nom} loading="lazy" />}
+                <div className="gs-card-body">
+                  <h3>{item.nom}</h3>
+                  <p>{item.texte}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* ACTIVITÉS NAUTIQUES */}
+          <div className="gs-section">
+            <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 22, letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY, marginBottom: 24, display: "flex", alignItems: "center", gap: 12 }}>
+              <span>⛵</span><span>Activités nautiques</span>
+            </h2>
+            {[
+              { nom: "Catamaran aux îlets du Sud — l'excursion incontournable", texte: "Journée complète depuis le Marin ou Sainte-Anne. Snorkeling sur les îlets préservés, déjeuner barbecue à bord, baignade dans des criques turquoise inaccessibles par la route. 80–100€/personne. Réservation recommandée 48h à l'avance en haute saison." },
+              { nom: "Kitesurf & windsurf — spot de référence", texte: "La pointe des Salines est l'un des meilleurs spots de kitesurf des Antilles grâce aux alizés constants et réguliers. Écoles sur place pour débutants (stage 3 jours ~350€), location de matériel pour confirmés. Vent garanti de décembre à mai." },
+            ].map(item => (
+              <div key={item.nom} className="gs-card">
+                <div className="gs-card-body">
+                  <h3>{item.nom}</h3>
+                  <p>{item.texte}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* OÙ MANGER */}
+          <div className="gs-section">
+            <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 22, letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY, marginBottom: 24, display: "flex", alignItems: "center", gap: 12 }}>
+              <span>🍽️</span><span>Où manger</span>
+            </h2>
+            {[
+              { nom: "Le Bakoua — institution locale", texte: "Sur la plage du bourg. Poisson du jour grillé au feu de bois, rhum arrangé maison, ambiance créole typique. Déjeuner en terrasse les pieds dans le sable. Prix raisonnables, qualité constante." },
+              { nom: "Les Tamariniers — gastronomie créole", texte: "Restaurant gastronomique avec terrasse vue mer. Cuisine raffinée mêlant saveurs locales et techniques modernes. Idéal pour un dîner en amoureux. Réservation impérative." },
+              { nom: "Snacks des Salines", texte: "À l'entrée de la plage des Salines, plusieurs snacks créoles proposent accras, brochettes et jus de coco frais. Déjeuner typique à 12-15€, idéal entre deux baignades." },
+            ].map(item => (
+              <div key={item.nom} className="gs-card">
+                <div className="gs-card-body">
+                  <h3>{item.nom}</h3>
+                  <p>{item.texte}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* INFOS PRATIQUES */}
+          <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 22, letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY, marginBottom: 20 }}>
+            🗓️ Infos pratiques
+          </h2>
+          <div className="gs-grid2">
+            {[
+              { label: "Depuis Sainte-Luce", value: "20 min — N6 direction Sainte-Anne, côte caraïbe" },
+              { label: "Meilleur moment", value: "7h–9h pour les Salines · Après-midi pour les activités nautiques" },
+              { label: "Parking Salines", value: "Gratuit le matin · Payant à partir de 9h30 en haute saison (2€)" },
+              { label: "Catamaran", value: "Réservez 48h à l'avance · Départ depuis Le Marin (15 min)" },
+            ].map(item => (
+              <div key={item.label} className="gs-info">
+                <div className="gs-info-label">{item.label}</div>
+                <div className="gs-info-value">{item.value}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* MAILLAGE VILLAS */}
           <div style={{ marginBottom: 32 }}>
             <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 11, letterSpacing: "0.25em", textTransform: "uppercase", color: CORAL, margin: "0 0 16px" }}>Nos villas à 20 min de Sainte-Anne</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -185,19 +284,20 @@ export default function GuideSainteAnne() {
             </div>
           </div>
 
-          <div style={{ background: NAVY, borderRadius: 16, padding: "40px 32px", textAlign: "center", marginBottom: 40 }}>
+          {/* CTA */}
+          <div style={{ background: NAVY, borderRadius: 20, padding: "44px 36px", textAlign: "center", marginBottom: 40 }}>
             <p style={{ color: CORAL, fontSize: 11, letterSpacing: "0.3em", textTransform: "uppercase", marginBottom: 12 }}>Base idéale pour le sud</p>
             <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 28, letterSpacing: "0.08em", color: IVORY, textTransform: "uppercase", margin: "0 0 16px" }}>Nos villas à Sainte-Luce</h2>
-            <p style={{ color: "rgba(250,245,233,0.65)", fontSize: 15, maxWidth: 500, margin: "0 auto 28px", lineHeight: 1.7, fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
-              À 20 min de Sainte-Anne et des Salines, 15 min du Diamant. Piscine, vue mer, réservation directe sans frais.
+            <p style={{ color: "rgba(250,245,233,0.65)", fontSize: 15, maxWidth: 480, margin: "0 auto 28px", lineHeight: 1.7, fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
+              À 20 min des Salines, 15 min du Diamant, 25 min d'Arlet. Piscine privée, vue mer, réservation directe sans frais.
             </p>
-            <a href="/" style={{ display: "inline-block", background: CORAL, color: "#fff", textDecoration: "none", padding: "14px 32px", borderRadius: 8, fontSize: 13, fontWeight: 400, letterSpacing: "0.12em", textTransform: "uppercase" }}>Voir toutes nos villas</a>
+            <a href="/" style={{ display: "inline-block", background: CORAL, color: "#fff", textDecoration: "none", padding: "15px 36px", borderRadius: 8, fontSize: 13, fontWeight: 400, letterSpacing: "0.12em", textTransform: "uppercase" }}>Voir toutes nos villas</a>
           </div>
 
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap", justifyContent: "center" }}>
             <a href="/guide-le-diamant" style={{ padding: "12px 24px", border: `1px solid ${SAND}`, borderRadius: 8, textDecoration: "none", color: NAVY, fontSize: 13, letterSpacing: "0.08em" }}>← Guide Le Diamant</a>
-            <a href="/guide" style={{ padding: "12px 24px", border: `1px solid ${SAND}`, borderRadius: 8, textDecoration: "none", color: NAVY, fontSize: 13, letterSpacing: "0.08em" }}>Guide Sainte-Luce</a>
-            <a href="/guide-arlet" style={{ padding: "12px 24px", border: `1px solid ${SAND}`, borderRadius: 8, textDecoration: "none", color: NAVY, fontSize: 13, letterSpacing: "0.08em" }}>Guide Arlet →</a>
+            <a href="/guide"            style={{ padding: "12px 24px", border: `1px solid ${SAND}`, borderRadius: 8, textDecoration: "none", color: NAVY, fontSize: 13, letterSpacing: "0.08em" }}>Tous les guides</a>
+            <a href="/guide-arlet"      style={{ padding: "12px 24px", border: `1px solid ${SAND}`, borderRadius: 8, textDecoration: "none", color: NAVY, fontSize: 13, letterSpacing: "0.08em" }}>Guide Arlet →</a>
           </div>
         </div>
 
