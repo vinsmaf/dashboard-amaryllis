@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { loadDailyPrices } from "./seedPrices.js";
 
 // ── Brand palette (from logos.jsx) ──────────────────────────────
@@ -62,6 +62,7 @@ if (typeof document !== "undefined" && !document.getElementById("__site_styles")
   s.textContent = `
     @keyframes spin { to { transform: rotate(360deg); } }
     @keyframes fadeUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes slideUpFull { from { opacity:0; transform:translateY(40px); } to { opacity:1; transform:translateY(0); } }
     @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
     @keyframes slideInRight { from { opacity:0; transform:translateX(40px); } to { opacity:1; transform:translateX(0); } }
     @keyframes slideInLeft  { from { opacity:0; transform:translateX(-40px); } to { opacity:1; transform:translateX(0); } }
@@ -87,6 +88,8 @@ if (typeof document !== "undefined" && !document.getElementById("__site_styles")
 }
 
 const STRIPE_PK = "pk_live_51QAsyQDstT3IRAj26eVHpBuMZI8UllaKGCCJUNAW5O9BfC3NqzVJwhrgfF0VndNMWPph0vijKomm24OwrTXCG58N00Co6GOWh1";
+const WA_NUMBER = "33610880772";
+const WA_MSG_DEFAULT = encodeURIComponent("Bonjour, je souhaite obtenir des informations sur une location Amaryllis.");
 
 const DEPOSIT_AMOUNTS = {
   amaryllis: 1500,
@@ -530,8 +533,8 @@ function Curtain({ onDone }) {
   const onDoneRef = useRef(onDone);
 
   useEffect(() => {
-    const t1 = setTimeout(() => setLifting(true), 1800);
-    const t2 = setTimeout(() => onDoneRef.current(), 2700);
+    const t1 = setTimeout(() => setLifting(true), 700);
+    const t2 = setTimeout(() => onDoneRef.current(), 1500);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []);
 
@@ -716,6 +719,12 @@ function DateRangePicker({ checkin, checkout, blockedDates = [], onChange, daily
   const initM = new Date().getMonth();
   const [offset, setOffset] = useState(0);
   const [hovered, setHovered] = useState(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const fn = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", fn, { passive: true });
+    return () => window.removeEventListener("resize", fn);
+  }, []);
 
   const m1 = (initM + offset) % 12;
   const y1 = initY + Math.floor((initM + offset) / 12);
@@ -757,7 +766,7 @@ function DateRangePicker({ checkin, checkout, blockedDates = [], onChange, daily
       </div>
       <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
         <CalendarMonth year={y1} month={m1} checkin={checkin} checkout={checkout} hovered={hovered} blockedDates={blockedDates} onSelect={handleSelect} onHover={setHovered} dailyPricesMap={dailyPricesMap} basePrice={basePrice} minNights={minNights} />
-        <CalendarMonth year={y2} month={m2} checkin={checkin} checkout={checkout} hovered={hovered} blockedDates={blockedDates} onSelect={handleSelect} onHover={setHovered} dailyPricesMap={dailyPricesMap} basePrice={basePrice} minNights={minNights} />
+        {!isMobile && <CalendarMonth year={y2} month={m2} checkin={checkin} checkout={checkout} hovered={hovered} blockedDates={blockedDates} onSelect={handleSelect} onHover={setHovered} dailyPricesMap={dailyPricesMap} basePrice={basePrice} minNights={minNights} />}
       </div>
       {checkin && checkout && (
         <div style={{ marginTop: 12, textAlign: "right" }}>
@@ -1351,9 +1360,33 @@ function BienCard({ bien, onDetail, onBook }) {
   const [hovered, setHovered] = useState(false);
   const photos = bien.photos || [];
   const currentPhoto = photos[photoIdx] || "";
+  const touchStartX = useRef(null);
 
   function prev(e) { e.stopPropagation(); setPhotoIdx(i => (i - 1 + photos.length) % photos.length); }
   function next(e) { e.stopPropagation(); setPhotoIdx(i => (i + 1) % photos.length); }
+
+  // Swipe tactile
+  function onTouchStart(e) { touchStartX.current = e.touches[0].clientX; }
+  function onTouchEnd(e) {
+    if (touchStartX.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    if (Math.abs(dx) > 40) { dx < 0 ? setPhotoIdx(i => (i + 1) % photos.length) : setPhotoIdx(i => (i - 1 + photos.length) % photos.length); }
+    touchStartX.current = null;
+  }
+
+  // Prix minimum sur les 90 prochains jours (indicateur "À partir de")
+  const minPrix = useMemo(() => {
+    try {
+      const map = loadDailyPrices()[bien.id] || {};
+      const now = new Date(); let min = Infinity;
+      for (let i = 0; i < 90; i++) {
+        const d = new Date(now); d.setDate(now.getDate() + i);
+        const ds = d.toISOString().slice(0, 10);
+        const p = map[ds]; if (p !== undefined && p < min) min = p;
+      }
+      return min === Infinity ? bien.prix : min;
+    } catch { return bien.prix; }
+  }, [bien.id, bien.prix]);
 
   // Auto-avance toutes les 5 s — se réinitialise à chaque navigation manuelle
   useEffect(() => {
@@ -1383,7 +1416,10 @@ function BienCard({ bien, onDetail, onBook }) {
       }}
     >
       {/* Photo section */}
-      <div style={{ position: "relative", height: 260, overflow: "hidden", background: "#0e2020" }}>
+      <div
+        style={{ position: "relative", height: 260, overflow: "hidden", background: "#0e2020" }}
+        onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}
+      >
 
         {currentPhoto ? (
           <img
@@ -1457,7 +1493,7 @@ function BienCard({ bien, onDetail, onBook }) {
           borderRadius: 10, padding: "8px 14px", textAlign: "right",
         }}>
           <div style={{ fontSize: 11, color: "rgba(250,247,242,0.5)", marginBottom: 1, fontFamily: "'Jost', sans-serif", fontWeight: 300, letterSpacing: "0.05em" }}>À partir de</div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: "#fff", lineHeight: 1 }}>{bien.prix}€</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: "#fff", lineHeight: 1 }}>{minPrix}€</div>
           <div style={{ fontSize: 11, color: "rgba(250,247,242,0.6)" }}>/ nuit</div>
         </div>
       </div>
@@ -1603,6 +1639,15 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
   const [calHovered, setCalHovered] = useState(null);
   const [calOffset, setCalOffset] = useState(0);
   const photos = bien.photos || [];
+  const touchStartXDetail = useRef(null);
+
+  function onDetailTouchStart(e) { touchStartXDetail.current = e.touches[0].clientX; }
+  function onDetailTouchEnd(e) {
+    if (touchStartXDetail.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartXDetail.current;
+    if (Math.abs(dx) > 40) { dx < 0 ? goNext() : goPrev(); }
+    touchStartXDetail.current = null;
+  }
 
   // Prix journaliers — réactifs (se mettent à jour si l'admin sync les prix)
   const [dailyPricesMap, setDailyPricesMap] = useState(() => {
@@ -1677,7 +1722,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
       position: "fixed", inset: 0, zIndex: 900,
       background: IVORY,
       display: "flex", flexDirection: "column",
-      animation: "bloomIn 0.3s cubic-bezier(0.23,1,0.32,1) both",
+      animation: "slideUpFull 0.38s cubic-bezier(0.23,1,0.32,1) both",
     }}>
 
       {/* ── Lightbox ── */}
@@ -1781,9 +1826,11 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
           position: "relative",
           flexShrink: 0,
         }}>
-          {/* Main image — clickable → lightbox */}
+          {/* Main image — clickable → lightbox, swipeable on mobile */}
           <div
             onClick={() => photos.length > 0 && setLightboxOpen(true)}
+            onTouchStart={onDetailTouchStart}
+            onTouchEnd={onDetailTouchEnd}
             style={{ flex: 1, minHeight: 0, overflow: "hidden", position: "relative", cursor: "zoom-in" }}
           >
             {photos[photoIdx] && (
@@ -2604,7 +2651,6 @@ function FaqSection() {
 }
 
 // ── Contact Section ──────────────────────────────────────────────
-const WA_NUMBER = "33610880772";
 const EMAIL = "vinsmaf@hotmail.com";
 
 function FooterSection() {
@@ -3661,6 +3707,31 @@ export default function PublicSite() {
       {/* ── BOOKING MODAL ── */}
       {selectedBien && (
         <BookingModal bien={selectedBien} blockedDates={blockedDates} loadingAvail={loadingAvail} onClose={() => { setSelectedBien(null); setBookingInitialDates({ checkin: null, checkout: null }); }} initialCheckin={bookingInitialDates.checkin} initialCheckout={bookingInitialDates.checkout} />
+      )}
+
+      {/* ── WHATSAPP FLOTTANT ── visible quand on scrolle, pas en modal */}
+      {scrolled && !detailBien && !selectedBien && !beds24Bien && (
+        <a
+          href={`https://wa.me/${WA_NUMBER}?text=${WA_MSG_DEFAULT}`}
+          target="_blank" rel="noopener noreferrer"
+          title="Nous contacter sur WhatsApp"
+          style={{
+            position: "fixed", bottom: 24, right: 22, zIndex: 600,
+            width: 54, height: 54, borderRadius: "50%",
+            background: "#25D366",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: "0 4px 18px rgba(37,211,102,0.45)",
+            textDecoration: "none",
+            animation: "fadeIn 0.4s ease",
+            transition: "transform 0.2s",
+          }}
+          onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.1)"; }}
+          onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; }}
+        >
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+          </svg>
+        </a>
       )}
 
     </div>

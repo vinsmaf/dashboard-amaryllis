@@ -3262,6 +3262,29 @@ function CalendrierTarifs() {
   const [rangeSaved, setRangeSaved] = useState(false);
   const [rangePrice, setRangePrice] = useState("");
 
+  // Copie d'un mois entier vers un autre mois (même bien)
+  const [copyFrom, setCopyFrom] = useState(""); // "2026-07"
+  const [copyTo,   setCopyTo]   = useState(""); // "2027-07"
+  const [copySaved, setCopySaved] = useState(false);
+
+  function copyMonth() {
+    if (!copyFrom || !copyTo || copyFrom === copyTo) return;
+    const [fy, fm] = copyFrom.split("-").map(Number);
+    const [ty, tm] = copyTo.split("-").map(Number);
+    const daysInFrom = new Date(fy, fm, 0).getDate();
+    const daysInTo   = new Date(ty, tm, 0).getDate();
+    const bienPrices = { ...(daily[bienId] || {}) };
+    for (let d = 1; d <= Math.min(daysInFrom, daysInTo); d++) {
+      const fromDate = `${fy}-${String(fm).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+      const toDate   = `${ty}-${String(tm).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+      const srcPrice = getPrice(fromDate) ?? SEED_DAILY_PRICES[bienId]?.[fromDate] ?? basePrice;
+      bienPrices[toDate] = srcPrice;
+    }
+    const next = { ...daily, [bienId]: bienPrices };
+    setDaily(next); saveDailyPrices(next);
+    setCopySaved(true); setTimeout(() => setCopySaved(false), 2000);
+  }
+
   const getPrice = (date) => daily[bienId]?.[date] ?? null;
   const basePrice = DEFAULT_PRIX[bienId];
 
@@ -3357,6 +3380,21 @@ function CalendrierTarifs() {
           </>
         )}
         {rangeSaved && <span style={{ fontSize: 11, color: "#10b981" }}>✓ Plage enregistrée</span>}
+      </div>
+
+      {/* Copier un mois entier */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "10px 14px", flexWrap: "wrap" }}>
+        <span style={{ fontSize: 11, color: "#64748b" }}>Copier un mois :</span>
+        <input type="month" value={copyFrom} min="2026-01" max="2027-07" onChange={e => setCopyFrom(e.target.value)}
+          style={{ padding: "4px 8px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.1)", background: "#0f172a", color: "#e2e8f0", fontSize: 12, outline: "none" }} />
+        <span style={{ fontSize: 11, color: "#475569" }}>→</span>
+        <input type="month" value={copyTo} min="2026-01" max="2027-07" onChange={e => setCopyTo(e.target.value)}
+          style={{ padding: "4px 8px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.1)", background: "#0f172a", color: "#e2e8f0", fontSize: 12, outline: "none" }} />
+        <button onClick={copyMonth} disabled={!copyFrom || !copyTo || copyFrom === copyTo}
+          style={{ padding: "5px 12px", borderRadius: 7, border: "none", background: (copyFrom && copyTo && copyFrom !== copyTo) ? "#6366f1" : "#334155", color: "#fff", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+          Copier les prix
+        </button>
+        {copySaved && <span style={{ fontSize: 11, color: "#10b981" }}>✓ Mois copié !</span>}
       </div>
 
       {/* Grille des mois : 12 pour 2026, Jan→Jul pour 2027 */}
@@ -3455,6 +3493,44 @@ function CalendrierTarifs() {
             <span style={{ fontSize: 10, color: "#475569" }}>{label}</span>
           </div>
         ))}
+      </div>
+
+      {/* ── Résumé tarifaire : min / moy / max par mois ── */}
+      <div style={{ marginTop: 28 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: "#94a3b8", marginBottom: 10 }}>
+          Résumé tarifaire — {BIEN_LABELS[bienId]} {calYear}
+        </div>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+                {["Mois","Min €","Moy €","Max €"].map(h => (
+                  <th key={h} style={{ padding: "6px 10px", color: "#475569", fontWeight: 600, textAlign: h === "Mois" ? "left" : "right" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from({ length: calYear === 2026 ? 12 : 7 }, (_, m) => {
+                const daysInM = new Date(calYear, m + 1, 0).getDate();
+                const prices2 = [];
+                for (let d = 1; d <= daysInM; d++) {
+                  const date = `${calYear}-${String(m + 1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+                  prices2.push(getPrice(date) ?? (SEED_DAILY_PRICES[bienId]?.[date] ?? basePrice));
+                }
+                const mn = Math.min(...prices2), mx = Math.max(...prices2);
+                const avg = Math.round(prices2.reduce((s, p) => s + p, 0) / prices2.length);
+                return (
+                  <tr key={m} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                    <td style={{ padding: "5px 10px", color: "#94a3b8" }}>{MOIS_CAL[m]}</td>
+                    <td style={{ padding: "5px 10px", color: "#10b981", textAlign: "right", fontWeight: 600 }}>{mn}</td>
+                    <td style={{ padding: "5px 10px", color: "#0ea5e9", textAlign: "right", fontWeight: 600 }}>{avg}</td>
+                    <td style={{ padding: "5px 10px", color: "#f59e0b", textAlign: "right", fontWeight: 600 }}>{mx}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
