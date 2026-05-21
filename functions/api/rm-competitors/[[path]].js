@@ -66,7 +66,15 @@ async function handleList(db, url) {
     listings: listings.filter((l) => l.set_id === s.id),
   }));
 
-  return json({ competitor_sets: setsWithListings, total_listings: listings.length });
+  // Also return flat competitors array (UI-friendly) with listing_id alias
+  const competitors = listings.map(l => ({
+    ...l,
+    listing_id: l.platform_listing_id, // alias for UI
+    area_km: l.distance_km,
+    standing: l.standing_estimated,
+  }));
+
+  return json({ competitor_sets: setsWithListings, competitors, total_listings: listings.length });
 }
 
 async function handleSnapshot(db, body) {
@@ -360,25 +368,25 @@ async function handleImportListings(db, body) {
   }
   const set_id = setRow.id;
 
-  // Upsert each listing
+  // Upsert each listing — match actual schema column names
   let imported = 0;
   let errors = [];
   for (const row of rows) {
     try {
       // Similarity score simple basé sur standing (affiné par le scraping)
       const simScore = row.standing === "premium" ? 75 : row.standing === "standard" ? 55 : 35;
-      const url = `https://www.airbnb.com/rooms/${row.listing_id}`;
+      const listingUrl = `https://www.airbnb.com/rooms/${row.listing_id}`;
+      const id = crypto.randomUUID();
       await db
         .prepare(`INSERT INTO rm_competitor_listings
-                    (id, set_id, property_id, listing_id, platform, name, url,
-                     capacity, bedrooms, bathrooms, has_pool, has_sea_view,
-                     area_km, standing, similarity_score, is_active, notes, created_at, updated_at)
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)
-                  ON CONFLICT(id) DO NOTHING`)
+                    (id, set_id, property_id, platform, platform_listing_id, url,
+                     name, capacity, bedrooms, bathrooms, has_pool, has_sea_view,
+                     distance_km, standing_estimated, similarity_score, is_active, notes, created_at, updated_at)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)`)
         .bind(
-          crypto.randomUUID(), set_id, property_id,
-          row.listing_id, row.platform, row.name, url,
-          row.capacity, row.bedrooms, row.bathrooms,
+          id, set_id, property_id,
+          row.platform, row.listing_id, listingUrl,
+          row.name, row.capacity, row.bedrooms, row.bathrooms,
           row.has_pool, row.has_sea_view, row.area_km,
           row.standing, simScore, row.notes, now, now
         )
@@ -408,8 +416,8 @@ async function handleExportListings(db, url) {
   ];
   for (const r of results || []) {
     lines.push([
-      r.listing_id, r.name, r.platform, r.capacity, r.bedrooms, r.bathrooms,
-      r.has_pool, r.has_sea_view, r.area_km, r.standing, r.notes || "",
+      r.platform_listing_id, r.name, r.platform, r.capacity, r.bedrooms, r.bathrooms,
+      r.has_pool, r.has_sea_view, r.distance_km, r.standing_estimated, r.notes || "",
     ].join(","));
   }
 
