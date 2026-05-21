@@ -1,0 +1,9 @@
+# Concurrents Airbnb — T2 Nogent (Nogent-sur-Marne, 4 pers, standard, Île-de-France)
+# Colonnes : listing_id, name, platform, capacity, bedrooms, bathrooms, has_pool, has_sea_view, area_km, standing, notes
+# has_pool / has_sea_view : 1 = oui, 0 = non | standing : premium | standard | budget
+listing_id,name,platform,capacity,bedrooms,bathrooms,has_pool,has_sea_view,area_km,standing,notes
+32334148,Bel appartement Nogent-sur-Marne 4 personnes,airbnb,4,2,1,0,0,0.5,standard,T2 4 personnes bien noté Nogent
+1164594851818756604,Duplex cosy 2 pièces — 10min RER 4 voyageurs,airbnb,4,2,1,0,0,0.8,standard,Duplex rénové centre Nogent RER A
+1444082105607186813,Location Nogent-sur-Marne — studio,airbnb,2,1,1,0,0,1.0,standard,Studio 1 chambre bien noté
+1107105311729568120,Appartement Nogent 1 chambre,airbnb,2,1,1,0,0,1.2,standard,1 chambre proche transports
+# Ajouter ici des concurrents Vincennes / Saint-Mandé / Joinville pour élargir le marché

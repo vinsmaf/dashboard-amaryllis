@@ -299,6 +299,130 @@ async function handleGetSignals(db, url) {
 }
 
 // ---------------------------------------------------------------------------
+// CSV import — charge competitors depuis /competitors/{property_id}.csv
+// Format attendu (lignes commençant par # ignorées) :
+// listing_id,name,platform,capacity,bedrooms,bathrooms,has_pool,has_sea_view,area_km,standing,notes
+// ---------------------------------------------------------------------------
+
+function parseCSV(text) {
+  const rows = [];
+  for (const raw of text.split("\n")) {
+    const line = raw.trim();
+    if (!line || line.startsWith("#")) continue;
+    // Skip header line
+    if (line.startsWith("listing_id")) continue;
+    // Split on comma, respecting quoted fields
+    const cols = line.split(",").map(c => c.trim());
+    if (cols.length < 6) continue;
+    const [listing_id, name, platform, capacity, bedrooms, bathrooms,
+           has_pool, has_sea_view, area_km, standing, ...noteParts] = cols;
+    if (!listing_id || !name) continue;
+    rows.push({
+      listing_id: listing_id.trim(),
+      name: name.trim(),
+      platform: (platform || "airbnb").trim(),
+      capacity: parseInt(capacity) || 0,
+      bedrooms: parseInt(bedrooms) || 0,
+      bathrooms: parseFloat(bathrooms) || 0,
+      has_pool: parseInt(has_pool) || 0,
+      has_sea_view: parseInt(has_sea_view) || 0,
+      area_km: parseFloat(area_km) || 0,
+      standing: (standing || "standard").trim(),
+      notes: noteParts.join(",").trim(),
+    });
+  }
+  return rows;
+}
+
+async function handleImportListings(db, body) {
+  const { property_id, csv_content } = body;
+  if (!property_id) return json({ error: "property_id required" }, 400);
+  if (!csv_content)  return json({ error: "csv_content required" }, 400);
+
+  const rows = parseCSV(csv_content);
+  if (!rows.length) return json({ error: "No valid rows found in CSV" }, 400);
+
+  // Find or create the default competitor set for this property
+  let setRow = await db
+    .prepare(`SELECT id FROM rm_competitor_sets WHERE property_id = ? AND is_default = 1`)
+    .bind(property_id)
+    .first();
+
+  const now = Date.now();
+  if (!setRow) {
+    const setId = crypto.randomUUID();
+    await db
+      .prepare(`INSERT INTO rm_competitor_sets (id, property_id, name, is_default, created_at, updated_at)
+                VALUES (?, ?, ?, 1, ?, ?)`)
+      .bind(setId, property_id, "Concurrents principaux", now, now)
+      .run();
+    setRow = { id: setId };
+  }
+  const set_id = setRow.id;
+
+  // Upsert each listing
+  let imported = 0;
+  let errors = [];
+  for (const row of rows) {
+    try {
+      // Similarity score simple basé sur standing (affiné par le scraping)
+      const simScore = row.standing === "premium" ? 75 : row.standing === "standard" ? 55 : 35;
+      const url = `https://www.airbnb.com/rooms/${row.listing_id}`;
+      await db
+        .prepare(`INSERT INTO rm_competitor_listings
+                    (id, set_id, property_id, listing_id, platform, name, url,
+                     capacity, bedrooms, bathrooms, has_pool, has_sea_view,
+                     area_km, standing, similarity_score, is_active, notes, created_at, updated_at)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)
+                  ON CONFLICT(id) DO NOTHING`)
+        .bind(
+          crypto.randomUUID(), set_id, property_id,
+          row.listing_id, row.platform, row.name, url,
+          row.capacity, row.bedrooms, row.bathrooms,
+          row.has_pool, row.has_sea_view, row.area_km,
+          row.standing, simScore, row.notes, now, now
+        )
+        .run();
+      imported++;
+    } catch (e) {
+      errors.push(`${row.listing_id}: ${e.message}`);
+    }
+  }
+
+  return json({ ok: true, property_id, imported, total: rows.length, errors });
+}
+
+async function handleExportListings(db, url) {
+  const property_id = url.searchParams.get("property_id");
+  if (!property_id) return json({ error: "property_id required" }, 400);
+
+  const { results } = await db
+    .prepare(`SELECT * FROM rm_competitor_listings WHERE property_id = ? AND is_active = 1 ORDER BY similarity_score DESC`)
+    .bind(property_id)
+    .all();
+
+  const lines = [
+    `# Concurrents Airbnb — ${property_id}`,
+    `# listing_id,name,platform,capacity,bedrooms,bathrooms,has_pool,has_sea_view,area_km,standing,notes`,
+    `listing_id,name,platform,capacity,bedrooms,bathrooms,has_pool,has_sea_view,area_km,standing,notes`,
+  ];
+  for (const r of results || []) {
+    lines.push([
+      r.listing_id, r.name, r.platform, r.capacity, r.bedrooms, r.bathrooms,
+      r.has_pool, r.has_sea_view, r.area_km, r.standing, r.notes || "",
+    ].join(","));
+  }
+
+  return new Response(lines.join("\n"), {
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="${property_id}-competitors.csv"`,
+      "Access-Control-Allow-Origin": "*",
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Router
 // ---------------------------------------------------------------------------
 
@@ -314,7 +438,8 @@ export async function onRequest(context) {
 
   try {
     if (request.method === "GET") {
-      if (path.endsWith("/signals")) return handleGetSignals(db, url);
+      if (path.endsWith("/signals"))  return handleGetSignals(db, url);
+      if (path.endsWith("/export"))   return handleExportListings(db, url);
       return handleList(db, url);
     }
 
@@ -322,7 +447,8 @@ export async function onRequest(context) {
       const body = await request.json().catch(() => ({}));
       if (path.endsWith("/snapshot"))             return handleSnapshot(db, body);
       if (path.endsWith("/recalculate-signals"))  return handleRecalculateSignals(db, body);
-      return json({ error: "Unknown POST action. Use /snapshot or /recalculate-signals" }, 400);
+      if (path.endsWith("/import-listings"))      return handleImportListings(db, body);
+      return json({ error: "Unknown POST action. Use /snapshot, /recalculate-signals or /import-listings" }, 400);
     }
 
     return json({ error: "Method not allowed" }, 405);

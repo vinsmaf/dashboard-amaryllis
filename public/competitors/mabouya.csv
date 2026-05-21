@@ -1,0 +1,9 @@
+# Concurrents Airbnb — Mabouya (Sainte-Luce, 3 pers, standard, petit logement)
+# Colonnes : listing_id, name, platform, capacity, bedrooms, bathrooms, has_pool, has_sea_view, area_km, standing, notes
+# has_pool / has_sea_view : 1 = oui, 0 = non | standing : premium | standard | budget
+listing_id,name,platform,capacity,bedrooms,bathrooms,has_pool,has_sea_view,area_km,standing,notes
+25290631,Le Mabouyas — Sainte-Luce,airbnb,4,2,1,0,0,0.6,standard,T2 concurrent direct Sainte-Luce
+1210909428441845902,T2 chez Lulu — Sainte-Luce,airbnb,4,2,1,0,0,0.8,standard,T2 bien équipé
+934091612012769600,Studio Sainte-Luce Martinique,airbnb,2,1,1,0,0,1.2,standard,Studio 2 personnes
+756725204473121621,The feet in water — pieds dans l'eau,airbnb,4,2,1,0,1,2.5,standard,Vue mer différenciant
+40105044,Villa Anolis — référence zone,airbnb,8,4,3,1,1,0.5,premium,Référence premium pour positionnement

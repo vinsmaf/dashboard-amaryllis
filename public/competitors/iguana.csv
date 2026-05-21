@@ -1,0 +1,9 @@
+# Concurrents Airbnb — Villa Iguana (Martinique, location longue durée 30+ jours, 4 pers)
+# Colonnes : listing_id, name, platform, capacity, bedrooms, bathrooms, has_pool, has_sea_view, area_km, standing, notes
+# Pour la location longue durée : rechercher sur Airbnb les logements avec réductions mensuelles
+listing_id,name,platform,capacity,bedrooms,bathrooms,has_pool,has_sea_view,area_km,standing,notes
+40105044,Villa Anolis — longue durée disponible,airbnb,8,4,3,1,1,0.5,premium,Propose réductions mensuel
+1023823631029551112,Villa Carpe Diem — séjour longue durée,airbnb,8,4,2,1,1,1.0,premium,Adapté séjours longs
+25290631,Le Mabouyas — location mensuelle,airbnb,4,2,1,0,0,0.6,standard,T2 longue durée Sainte-Luce
+1210909428441845902,T2 chez Lulu — mensuel,airbnb,4,2,1,0,0,0.8,standard,T2 avec rabais mensuel
+# Astuce : sur Airbnb, filtrer par "séjours d'un mois ou plus" pour trouver les concurrents longue durée en Martinique

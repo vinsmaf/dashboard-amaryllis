@@ -1,0 +1,15 @@
+# Concurrents Airbnb — Villa Amaryllis (Sainte-Luce, 8 pers, piscine, vue mer)
+# Colonnes : listing_id, name, platform, capacity, bedrooms, bathrooms, has_pool, has_sea_view, area_km, standing, notes
+# has_pool / has_sea_view : 1 = oui, 0 = non
+# standing : premium | standard | budget
+# area_km : distance approximative en km depuis Villa Amaryllis
+# Modifiez librement ce fichier — rechargez depuis l'onglet Concurrents
+listing_id,name,platform,capacity,bedrooms,bathrooms,has_pool,has_sea_view,area_km,standing,notes
+2373326,La Kalenda — villa piscine vue mer,airbnb,12,6,4,1,1,1.2,premium,6 chambres 180° vue Caraïbes
+644142632524198672,Lana & Livia — grande piscine vue mer,airbnb,10,5,3,1,1,0.8,premium,Piscine infinity + vue mer panoramique
+708799384172492585,Villa Caraïbes — spa piscine vue mer,airbnb,8,4,3,1,1,1.5,premium,Spa + salle de jeux + vue Caraïbes
+40105044,Villa Anolis 4* — piscine vue mer,airbnb,8,4,3,1,1,0.5,premium,Classé 4 étoiles piscine vue mer Sainte-Luce
+23109336,Luxury Villa Private Salt Pool,airbnb,6,3,3,1,0,2.1,premium,Piscine eau salée privée haut de gamme
+26159360,Villa piscine sécurisée PMR,airbnb,8,4,2,1,0,1.8,standard,Piscine chauffée accès PMR Netflix
+1023823631029551112,Villa Carpe Diem — hauteurs Sainte-Luce,airbnb,8,4,2,1,1,1.0,premium,Vue panoramique hauteurs Sainte-Luce
+756725204473121621,The feet in water — pieds dans l'eau,airbnb,4,2,1,0,1,2.5,standard,Bord de mer sans piscine

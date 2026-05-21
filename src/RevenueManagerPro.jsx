@@ -115,6 +115,11 @@ function RevenueManagerPro({ biens = [], reservations = [], mob = false }) {
   const [scrapeLoading, setScrapeLoading] = useState(false);
   const [signalsLoading, setSignalsLoading] = useState(false);
   const csvRef = useRef(null);
+  // CSV editor state
+  const [csvContent, setCsvContent] = useState('');
+  const [csvEditMode, setCsvEditMode] = useState(false);
+  const [csvSaving, setCsvSaving] = useState(false);
+  const [csvLoading, setCsvLoading] = useState(false);
 
   // Filtrer les biens courts termes
   const shortTermBiens = useMemo(() =>
@@ -382,6 +387,57 @@ function RevenueManagerPro({ biens = [], reservations = [], mob = false }) {
       loadCompetitors();
     }
   }, [selProp, apiCall, addLog, loadCompetitors]);
+
+  // ── CSV editor handlers ──────────────────────────────────────────────────
+
+  const loadCSVFromFile = useCallback(async (propId) => {
+    setCsvLoading(true);
+    try {
+      const res = await fetch(`/competitors/${propId || selProp}.csv`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      setCsvContent(text);
+      addLog(`CSV chargé depuis /competitors/${propId || selProp}.csv`, 'info');
+    } catch (e) {
+      addLog(`Erreur chargement CSV : ${e.message}`, 'error');
+    } finally {
+      setCsvLoading(false);
+    }
+  }, [selProp, addLog]);
+
+  const handleSaveCSV = useCallback(async () => {
+    if (!csvContent.trim()) return;
+    setCsvSaving(true);
+    try {
+      const res = await apiCall('/api/rm-competitors/import-listings', {
+        method: 'POST',
+        body: JSON.stringify({ property_id: selProp, csv_content: csvContent }),
+      });
+      if (res?.ok) {
+        addLog(`✓ ${res.imported} concurrents importés depuis CSV`, 'success');
+        loadCompetitors();
+      } else {
+        addLog(`Erreur import : ${res?.error || 'inconnue'}`, 'error');
+      }
+    } catch (e) {
+      addLog(`Erreur : ${e.message}`, 'error');
+    } finally {
+      setCsvSaving(false);
+    }
+  }, [selProp, csvContent, apiCall, addLog, loadCompetitors]);
+
+  const handleDownloadCSV = useCallback(async () => {
+    const url = `/api/rm-competitors/export?property_id=${selProp}`;
+    const res = await fetch(url);
+    if (!res.ok) { addLog('Erreur export CSV', 'error'); return; }
+    const text = await res.text();
+    const blob = new Blob([text], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${selProp}-competitors.csv`;
+    a.click();
+    addLog(`CSV exporté : ${selProp}-competitors.csv`, 'success');
+  }, [selProp, addLog]);
 
   const handleRecalcAllBiens = useCallback(async () => {
     addLog(`Recalcul pour ${shortTermBiens.length} biens…`);
@@ -915,58 +971,117 @@ function RevenueManagerPro({ biens = [], reservations = [], mob = false }) {
       {/* ── COMPETITORS ──────────────────────────────────────────────────── */}
       {tab === 'competitors' && (
         <div>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-            <Btn onClick={() => csvRef.current?.click()}>📂 Importer CSV</Btn>
-            <input
-              ref={csvRef}
-              type="file"
-              accept=".csv"
-              style={{ display: 'none' }}
-              onChange={e => e.target.files?.[0] && handleCSVImport(e.target.files[0])}
-            />
+          {/* ── Actions bar ── */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+            <Btn
+              onClick={() => { setCsvEditMode(true); loadCSVFromFile(selProp); }}
+              disabled={csvLoading}
+            >
+              {csvLoading ? '⏳ Chargement…' : '📋 Éditer le CSV'}
+            </Btn>
+            <BtnSec onClick={handleDownloadCSV}>⬇️ Télécharger CSV</BtnSec>
             <BtnSec onClick={handleScrape} disabled={scrapeLoading}>
-              {scrapeLoading ? '⏳ Lancement…' : '🕷️ Déclencher scraping'}
+              {scrapeLoading ? '⏳ Lancement…' : '🕷️ Scraping Airbnb'}
             </BtnSec>
+            <BtnSec onClick={() => {
+              apiCall('/api/rm-competitors/recalculate-signals', {
+                method: 'POST', body: JSON.stringify({ property_id: selProp }),
+              }).then(r => r?.ok && addLog('✓ Signaux recalculés', 'success'));
+            }}>🔄 Recalculer signaux</BtnSec>
           </div>
 
-          <div style={{ marginBottom: 12, fontSize: 10, color: '#475569' }}>
-            Format CSV attendu: <code style={{ color: '#94a3b8' }}>listing_id,date,price_eur,is_available</code>
-          </div>
+          {/* ── CSV Editor ── */}
+          {csvEditMode && (
+            <div style={{ marginBottom: 20, background: 'rgba(14,165,233,0.05)', border: '1px solid rgba(14,165,233,0.2)', borderRadius: 12, padding: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <div>
+                  <span style={{ fontWeight: 700, color: '#e2e8f0', fontSize: 13 }}>✏️ Éditeur CSV — {selProp}</span>
+                  <span style={{ marginLeft: 10, fontSize: 10, color: '#64748b' }}>
+                    Une ligne = un concurrent. Lignes commençant par # ignorées.
+                  </span>
+                </div>
+                <button onClick={() => setCsvEditMode(false)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 16 }}>✕</button>
+              </div>
+              <textarea
+                value={csvContent}
+                onChange={e => setCsvContent(e.target.value)}
+                spellCheck={false}
+                style={{
+                  width: '100%', height: 280, fontFamily: 'monospace', fontSize: 11,
+                  background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: 8, color: '#e2e8f0', padding: 12, resize: 'vertical',
+                  lineHeight: 1.5, boxSizing: 'border-box',
+                }}
+              />
+              <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center' }}>
+                <Btn onClick={handleSaveCSV} disabled={csvSaving}>
+                  {csvSaving ? '⏳ Enregistrement…' : '💾 Sauvegarder dans la DB'}
+                </Btn>
+                <BtnSec onClick={() => loadCSVFromFile(selProp)} disabled={csvLoading}>
+                  ↺ Recharger le fichier
+                </BtnSec>
+                <span style={{ fontSize: 10, color: '#475569', marginLeft: 'auto' }}>
+                  Format : listing_id, name, platform, capacity, bedrooms, bathrooms, has_pool, has_sea_view, area_km, standing, notes
+                </span>
+              </div>
+            </div>
+          )}
 
+          {/* ── Competitors list ── */}
           {competitors.length === 0 ? (
-            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: 32, textAlign: 'center', color: '#64748b' }}>
-              Aucun concurrent chargé. Importez un CSV ou déclenchez un scraping.
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: 12, padding: 32, textAlign: 'center', color: '#64748b' }}>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>🏢</div>
+              <div style={{ marginBottom: 8 }}>Aucun concurrent chargé pour <strong style={{ color: '#e2e8f0' }}>{selProp}</strong></div>
+              <div style={{ fontSize: 11 }}>Cliquez sur <em>"Éditer le CSV"</em> puis <em>"Sauvegarder dans la DB"</em></div>
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: mob ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap: 12 }}>
-              {competitors.map((c, i) => (
-                <div key={i} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: 16 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: 13, color: '#e2e8f0', marginBottom: 3 }}>{c.name || c.listing_id || `Concurrent ${i + 1}`}</div>
-                      <div style={{ fontSize: 11, color: '#64748b' }}>{c.area || c.location || '—'}</div>
+            <div>
+              <div style={{ fontSize: 11, color: '#64748b', marginBottom: 10 }}>
+                {competitors.length} concurrent{competitors.length > 1 ? 's' : ''} chargé{competitors.length > 1 ? 's' : ''}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: mob ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap: 12 }}>
+                {competitors.map((c, i) => (
+                  <div key={c.listing_id || i} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: 16 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                      <div style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
+                        <div style={{ fontWeight: 700, fontSize: 13, color: '#e2e8f0', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {c.name || `Concurrent ${c.listing_id}`}
+                        </div>
+                        <div style={{ fontSize: 10, color: '#475569', fontFamily: 'monospace' }}>
+                          ID: {c.listing_id}
+                        </div>
+                      </div>
+                      <Badge color={simColor(c.similarity_score || 0)}>{c.similarity_score || '?'}%</Badge>
                     </div>
-                    <Badge color={simColor(c.similarity_score || 0)}>{c.similarity_score || '?'}% sim</Badge>
+                    <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 10 }}>
+                      {c.capacity > 0 && <Badge color="#94a3b8">👥 {c.capacity}</Badge>}
+                      {c.bedrooms > 0 && <Badge color="#64748b">🛏 {c.bedrooms}</Badge>}
+                      {c.has_pool === 1 && <Badge color="#0ea5e9">🏊</Badge>}
+                      {c.has_sea_view === 1 && <Badge color="#06b6d4">🌊</Badge>}
+                      {c.standing && <Badge color={c.standing === 'premium' ? '#f59e0b' : '#64748b'}>{c.standing}</Badge>}
+                      {c.platform && <Badge color="#8b5cf6">{c.platform}</Badge>}
+                    </div>
+                    {c.area_km > 0 && (
+                      <div style={{ fontSize: 11, color: '#64748b', marginBottom: 6 }}>📍 {c.area_km} km</div>
+                    )}
+                    {c.avg_price_eur != null && (
+                      <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 6 }}>
+                        Prix moyen : <span style={{ color: '#e2e8f0', fontWeight: 700, fontFamily: 'monospace' }}>{Math.round(c.avg_price_eur)}€</span>
+                      </div>
+                    )}
+                    {c.notes && (
+                      <div style={{ fontSize: 10, color: '#475569', marginBottom: 6, fontStyle: 'italic' }}>{c.notes}</div>
+                    )}
+                    <a
+                      href={c.url || `https://www.airbnb.com/rooms/${c.listing_id}`}
+                      target="_blank" rel="noopener noreferrer"
+                      style={{ fontSize: 10, color: '#0ea5e9', textDecoration: 'none' }}
+                    >
+                      Voir l'annonce →
+                    </a>
                   </div>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-                    {c.capacity && <Badge color="#94a3b8">👥 {c.capacity} pers.</Badge>}
-                    {c.has_pool && <Badge color="#0ea5e9">🏊 Piscine</Badge>}
-                    {c.has_sea_view && <Badge color="#06b6d4">🌊 Vue mer</Badge>}
-                    {c.platform && <Badge color="#8b5cf6">{c.platform}</Badge>}
-                    {c.bedrooms && <Badge color="#94a3b8">🛏 {c.bedrooms}</Badge>}
-                  </div>
-                  {c.avg_price_eur && (
-                    <div style={{ fontSize: 12, color: '#94a3b8' }}>
-                      Prix moyen: <span style={{ color: '#e2e8f0', fontFamily: 'monospace', fontWeight: 700 }}>{Math.round(c.avg_price_eur)}€</span>
-                    </div>
-                  )}
-                  {c.listing_url && (
-                    <div style={{ marginTop: 8 }}>
-                      <a href={c.listing_url} target="_blank" rel="noopener noreferrer" style={{ color: '#0ea5e9', fontSize: 10 }}>Voir l'annonce →</a>
-                    </div>
-                  )}
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
         </div>
