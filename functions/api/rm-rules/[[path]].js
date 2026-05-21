@@ -4,7 +4,7 @@
 const CORS = {
   "Content-Type": "application/json",
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+  "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
 };
 const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: CORS });
@@ -78,8 +78,10 @@ async function handlePost(db, body) {
   return json({ ok: true, rule: inserted }, 201);
 }
 
-async function handlePut(db, body) {
-  const { id, ...fields } = body;
+async function handlePut(db, body, pathId) {
+  // id can come from path segment (PATCH /api/rm-rules/{id}) or from body
+  const { id: bodyId, ...fields } = body;
+  const id = pathId || bodyId;
   if (!id) return json({ error: "id required" }, 400);
 
   const existing = await db.prepare(`SELECT * FROM rm_pricing_rules WHERE id = ?`).bind(id).first();
@@ -146,6 +148,9 @@ export async function onRequest(context) {
   if (!db) return json({ error: "D1 binding 'revenue_manager' not found" }, 503);
 
   const url = new URL(request.url);
+  // Extract optional id from path: /api/rm-rules/{id}
+  const pathSegments = url.pathname.split("/").filter(Boolean);
+  const pathId = pathSegments.length > 2 ? pathSegments[pathSegments.length - 1] : null;
 
   try {
     if (request.method === "GET")    return handleGet(db, url);
@@ -153,9 +158,9 @@ export async function onRequest(context) {
       const body = await request.json().catch(() => ({}));
       return handlePost(db, body);
     }
-    if (request.method === "PUT") {
+    if (request.method === "PUT" || request.method === "PATCH") {
       const body = await request.json().catch(() => ({}));
-      return handlePut(db, body);
+      return handlePut(db, body, pathId);
     }
     if (request.method === "DELETE") return handleDelete(db, url);
 
