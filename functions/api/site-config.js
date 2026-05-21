@@ -28,7 +28,10 @@ export async function onRequest(context) {
   try {
     // ── GET : lecture de la config ────────────────────────────────
     if (request.method === "GET") {
-      const res  = await fetch(`${scriptUrl}?action=getConfig`, { redirect: "follow" });
+      const url  = new URL(request.url);
+      const type = url.searchParams.get("type") || "config";
+      const key  = type === "prices" ? "daily_prices" : "min_nights_config";
+      const res  = await fetch(`${scriptUrl}?action=getConfig&key=${encodeURIComponent(key)}`, { redirect: "follow" });
       const text = await res.text();
       try {
         JSON.parse(text);
@@ -42,15 +45,15 @@ export async function onRequest(context) {
     }
 
     // ── POST : sauvegarde de la config ────────────────────────────
+    // ⚠️ Apps Script redirige les POST et supprime le body — on envoie
+    //    un GET avec le config encodé en paramètre URL à la place.
     if (request.method === "POST") {
-      const body = await request.text();
-      const res  = await fetch(scriptUrl, {
-        method:   "POST",
-        headers:  { "Content-Type": "application/json" },
-        body,
-        redirect: "follow",
-      });
-      const text = await res.text();
+      const body    = await request.json();
+      const key     = body.type === "prices" ? "daily_prices" : "min_nights_config";
+      const cfgStr  = JSON.stringify(body.config || {});
+      const params  = new URLSearchParams({ action: "setConfig", key, config: cfgStr });
+      const res     = await fetch(`${scriptUrl}?${params}`, { redirect: "follow" });
+      const text    = await res.text();
       try {
         JSON.parse(text);
         return new Response(text, {

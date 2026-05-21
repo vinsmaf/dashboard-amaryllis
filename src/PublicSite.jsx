@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { loadDailyPrices } from "./seedPrices.js";
+import { loadDailyPrices, applyServerPriceOverrides } from "./seedPrices.js";
 import SEOMeta from "./SEOMeta.jsx";
 import { Reveal } from "./useReveal.jsx";
 import { useLang, LangToggle } from "./i18n.jsx";
@@ -1834,11 +1834,13 @@ function BienCard({ bien, onDetail, onBook, isFavorite = false, onToggleFavorite
         cursor: "pointer",
       }}
     >
-      {/* Photo section */}
+      {/* Photo section — aspect ratio 3:2 */}
       <div
-        style={{ position: "relative", height: 260, overflow: "hidden", background: "#0e2020" }}
+        style={{ position: "relative", paddingBottom: "66.6%", overflow: "hidden", background: "#0e2020" }}
         onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}
       >
+        {/* Skeleton placeholder */}
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, #0e2020 0%, #193535 100%)" }} />
 
         {currentPhoto ? (
           <img
@@ -1846,15 +1848,19 @@ function BienCard({ bien, onDetail, onBook, isFavorite = false, onToggleFavorite
             src={currentPhoto}
             alt={`${bien.nom} — ${bien.lieu} — photo ${photoIdx + 1}`}
             loading={photoIdx === 0 ? "eager" : "lazy"}
+            decoding="async"
             fetchpriority={photoIdx === 0 ? "high" : "low"}
+            onLoad={e => { e.currentTarget.style.opacity = "1"; }}
             style={{
+              position: "absolute", top: 0, left: 0,
               width: "100%", height: "100%", objectFit: "cover",
               display: "block",
-              transition: "opacity 0.4s",
+              opacity: 0,
+              transition: "opacity 0.5s ease",
             }}
           />
         ) : (
-          <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64 }}>🏡</div>
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64 }}>🏡</div>
         )}
 
         {/* 2px coral line on hover */}
@@ -1903,6 +1909,22 @@ function BienCard({ bien, onDetail, onBook, isFavorite = false, onToggleFavorite
             textTransform: "uppercase",
           }}>
             {lang === "fr" ? bien.tag : (bien.tagEn || bien.tag)}
+          </div>
+        )}
+
+        {/* Badge "Réservation directe" */}
+        {!PRICE_HIDDEN.has(bien.id) && (
+          <div style={{
+            position: "absolute", top: bien.tag ? 50 : 16, right: 14, zIndex: 3,
+            background: "rgba(22,163,74,0.92)",
+            backdropFilter: "blur(6px)",
+            border: "1px solid rgba(255,255,255,0.18)",
+            color: "#fff", fontSize: 10, fontWeight: 700,
+            padding: "4px 10px", borderRadius: 20, letterSpacing: 0.4,
+            fontFamily: "'Jost', sans-serif",
+            textTransform: "uppercase",
+          }}>
+            ✓ Direct −15%
           </div>
         )}
 
@@ -2074,7 +2096,7 @@ function BienCard({ bien, onDetail, onBook, isFavorite = false, onToggleFavorite
             </a>
           ) : (
             <button
-              onClick={e => { e.stopPropagation(); onBook(bien); }}
+              onClick={e => { e.stopPropagation(); if (window.gtag) window.gtag("event", "select_item", { item_list_id: "villas", items: [{ item_id: bien.id, item_name: bien.nom, price: bien.prix || 0, currency: "EUR" }] }); onBook(bien); }}
               style={{
                 flex: 2, background: CORAL, border: "none", color: "#fff",
                 borderRadius: 6, padding: "11px 20px",
@@ -2795,7 +2817,10 @@ function AlerteDispoModal({ bien, checkin: initCheckin, checkout: initCheckout, 
         body: JSON.stringify({ nom: nom || "Alerte dispo", email, message }),
       });
       const data = await res.json();
-      if (data.ok) { setSent(true); } else { setErr(true); }
+      if (data.ok) {
+        setSent(true);
+        if (window.gtag) window.gtag("event", "generate_lead", { method: "alerte_dispo", item_id: bien.id, item_name: bien.nom });
+      } else { setErr(true); }
     } catch { setErr(true); }
     setSending(false);
   }
@@ -3617,6 +3642,88 @@ const STATIC_REVIEWS = [
   { author: "Jean-Paul B.", avatar: null, rating: 4, text: "Très belle villa avec une vue imprenable. Quelques petits détails à améliorer mais globalement un excellent séjour. La piscine est top !", time: "il y a 6 mois" },
 ];
 
+/* ─── TestimonialsSection ─────────────────────────────────────────
+   Bandeau d'avis clients sélectionnés, entre le hero et QuickBook
+──────────────────────────────────────────────────────────────── */
+const CURATED_TESTIMONIALS = [
+  { nom: "Sophie M.",      pays: "🇫🇷", note: 5, texte: "Vue extraordinaire, piscine à débordement parfaite et hôte très réactif. Un endroit hors du temps face aux Caraïbes. On reviendra sans hésiter !", villa: "Villa Amaryllis", villaId: "amaryllis", date: "Avr. 2025" },
+  { nom: "Pierre & Claire",pays: "🇫🇷", note: 5, texte: "Vue imprenable sur le rocher du Diamant ! La piscine d'eau salée est un vrai plus. Villa propre, bien équipée, accueil aux petits soins.", villa: "Villa Iguana",    villaId: "iguana",    date: "Avr. 2025" },
+  { nom: "Élise & Romain", pays: "🇫🇷", note: 5, texte: "Weekend romantique parfait ! Le jacuzzi privatif sous les étoiles avec vue mer est juste magique. Jardin fleuri superbe, endroit très paisible.", villa: "Studio Mabouya",  villaId: "mabouya",   date: "Avr. 2025" },
+  { nom: "Lucie B.",       pays: "🇫🇷", note: 5, texte: "Cocon parfait ! La mezzanine est charmante, la piscine délicieuse, et la vue sur la mer au réveil est inoubliable. Hôte très disponible.", villa: "Zandoli",          villaId: "zandoli",   date: "Avr. 2025" },
+];
+
+function TestimonialsSection({ onDetail }) {
+  const { t } = useLang();
+  return (
+    <div style={{ background: NAVY, padding: "56px 28px" }}>
+      <div style={{ maxWidth: 1280, margin: "0 auto" }}>
+        {/* Header */}
+        <div style={{ textAlign: "center", marginBottom: 40 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.35em", textTransform: "uppercase", color: CORAL, marginBottom: 12 }}>
+            Avis vérifiés Airbnb · 4.9 ★
+          </div>
+          <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: "clamp(22px, 4vw, 30px)", letterSpacing: "0.14em", textTransform: "uppercase", color: IVORY, margin: 0 }}>
+            Ce que disent nos hôtes
+          </h2>
+        </div>
+
+        {/* Cards grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
+          {CURATED_TESTIMONIALS.map((r, i) => (
+            <Reveal key={r.nom} delay={i * 0.08} style={{
+              background: "rgba(250,245,233,0.05)",
+              border: "1px solid rgba(250,245,233,0.1)",
+              borderRadius: 14,
+              padding: "24px 22px 20px",
+              display: "flex", flexDirection: "column", gap: 14,
+              cursor: onDetail ? "pointer" : "default",
+              transition: "border-color 0.25s, background 0.25s",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(232,105,74,0.45)"; e.currentTarget.style.background = "rgba(250,245,233,0.08)"; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(250,245,233,0.1)"; e.currentTarget.style.background = "rgba(250,245,233,0.05)"; }}
+            onClick={() => onDetail && onDetail({ id: r.villaId })}
+            >
+              {/* Stars */}
+              <div style={{ display: "flex", gap: 3 }}>
+                {[1,2,3,4,5].map(i => (
+                  <span key={i} style={{ fontSize: 13, color: i <= r.note ? "#f5a623" : "rgba(250,245,233,0.2)" }}>★</span>
+                ))}
+              </div>
+
+              {/* Quote */}
+              <p style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: 14, color: "rgba(250,245,233,0.8)", lineHeight: 1.65, margin: 0, flex: 1 }}>
+                &ldquo;{r.texte}&rdquo;
+              </p>
+
+              {/* Footer */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, borderTop: "1px solid rgba(250,245,233,0.08)", paddingTop: 14 }}>
+                <div>
+                  <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, color: IVORY }}>
+                    {r.pays} {r.nom}
+                  </div>
+                  <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11, color: CORAL, marginTop: 2, letterSpacing: "0.03em" }}>
+                    {r.villa}
+                  </div>
+                </div>
+                <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11, color: "rgba(250,245,233,0.35)", flexShrink: 0 }}>
+                  {r.date}
+                </div>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+
+        {/* Overall score */}
+        <div style={{ textAlign: "center", marginTop: 32 }}>
+          <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 12, color: "rgba(250,245,233,0.4)", letterSpacing: "0.05em" }}>
+            ✓ Tous les avis proviennent de voyageurs vérifiés via Airbnb &amp; Booking.com
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function StarRating({ rating, size = 14 }) {
   return (
     <span style={{ display: "inline-flex", gap: 2 }}>
@@ -3810,6 +3917,7 @@ function FooterSection() {
       if (data.ok) {
         setSent(true);
         setForm({ nom: "", email: "", message: "" });
+        if (window.gtag) window.gtag("event", "generate_lead", { method: "contact_form" });
       } else {
         setSentError(true);
       }
@@ -4078,10 +4186,13 @@ function LogoDropdown() {
   }, []);
 
   const NAV = [
-    { label: "Accueil", href: "#top" },
-    { label: "Nos propriétés", href: "#properties" },
-    { label: "Contact", href: "#contact" },
-    { label: "Réservations", href: "#properties" },
+    { label: "🏠  Accueil",            href: "/" },
+    { label: "🏡  Nos propriétés",     href: "/#properties" },
+    { label: "⭐  Nos avis",           href: "/avis" },
+    { label: "🗺️  Guide Martinique",   href: "/guide" },
+    { label: "📍  Carte interactive",  href: "/explorer" },
+    { label: "❓  FAQ",                href: "/#faq" },
+    { label: "💬  Contactez-nous",     href: "/#contact" },
   ];
 
   return (
@@ -4215,7 +4326,7 @@ function PropertyDropdown({ onSelect }) {
 }
 
 // ── Hover Contact Preview ─────────────────────────────────────────
-function HoverContact({ light = false, direction = "up" }) {
+function HoverContact({ light = false, direction = "up", pill = false }) {
   const [show, setShow] = useState(false);
   const waMsg = encodeURIComponent("Bonjour, je souhaite obtenir des informations sur une location Amaryllis.");
   const baseColor = light ? "rgba(14,59,58,0.75)" : "rgba(250,245,233,0.6)";
@@ -4227,6 +4338,19 @@ function HoverContact({ light = false, direction = "up" }) {
       onMouseEnter={() => setShow(true)}
       onMouseLeave={() => setShow(false)}
     >
+      {pill ? (
+        <span style={{
+          fontSize: 12, fontFamily: "'Jost', sans-serif", fontWeight: 600,
+          color: "#faf5e9", cursor: "pointer",
+          border: "1px solid rgba(250,245,233,0.3)",
+          borderRadius: 20, padding: "6px 16px",
+          letterSpacing: "0.06em", display: "inline-block",
+          transition: "border-color 0.2s, background 0.2s",
+          background: show ? "rgba(250,245,233,0.08)" : "transparent",
+        }}>
+          Contact
+        </span>
+      ) : (
       <span style={{
         fontSize: 12, fontFamily: "'Jost', sans-serif", fontWeight: 300,
         color: baseColor, cursor: "default",
@@ -4236,6 +4360,7 @@ function HoverContact({ light = false, direction = "up" }) {
       }}>
         Contact
       </span>
+      )}
 
       {show && (
         <div style={{
@@ -4707,6 +4832,7 @@ export default function PublicSite() {
   const [filterLieu, setFilterLieu] = useState("all");
   const [showFavorites, setShowFavorites] = useState(false);
   const [filterGuests, setFilterGuests] = useState(0);
+  const [themeFilter, setThemeFilter] = useState("tout");
   const [favorites, setFavorites] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem("amaryllis_favorites") || "[]")); }
     catch { return new Set(); }
@@ -4732,6 +4858,18 @@ export default function PublicSite() {
         if (d.ok && d.config && Object.keys(d.config).length) {
           saveMinNightsConfig(d.config);
           _refreshMnCache(); // met à jour le cache + notifie tous les composants
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Charger les tarifs depuis le serveur au démarrage → fusionne dans localStorage
+  useEffect(() => {
+    fetch("/api/site-config?type=prices")
+      .then(r => r.json())
+      .then(d => {
+        if (d.ok && d.config && Object.keys(d.config).length) {
+          applyServerPriceOverrides(d.config); // merge + dispatch amaryllis_prices_updated
         }
       })
       .catch(() => {});
@@ -4884,6 +5022,12 @@ export default function PublicSite() {
         });
       }
 
+      // GA4 — vue fiche villa (funnel : view_item → begin_checkout → purchase)
+      if (window.gtag) window.gtag("event", "view_item", {
+        item_list_id: "villas",
+        items: [{ item_id: bien.id, item_name: bien.nom, item_category: bien.lieu?.split(",")[0]?.trim() || "Martinique", price: bien.prix || 0, currency: "EUR" }],
+      });
+
       if (!BOOKING_DISABLED.has(bien.id) && !bien.beds24Url) fetchAvailability(bien.id);
     } else {
       const homeTitle = "Amaryllis — Location villa Martinique avec piscine | Réservation directe";
@@ -5021,10 +5165,21 @@ export default function PublicSite() {
     { key: "Île-de-France", label: t("idf") },
   ];
 
+  const THEME_FILTERS = {
+    "tout":       () => true,
+    "vue-mer":    b => (b.amenities || []).some(a => /vue/i.test(a)),
+    "piscine":    b => (b.amenities || []).some(a => /piscine|jacuzzi/i.test(a)),
+    "famille":    b => b.capacite >= 5,
+    "couple":     b => b.capacite <= 2,
+    "martinique": b => (b.lieu || "").includes("Martinique"),
+    "idf":        b => (b.lieu || "").includes("Île-de-France"),
+  };
+
   const filtered = biensList
     .filter(b => filterLieu === "all" || b.lieu.includes(filterLieu))
     .filter(b => !showFavorites || favorites.has(b.id))
-    .filter(b => filterGuests === 0 || b.capacite >= filterGuests);
+    .filter(b => filterGuests === 0 || b.capacite >= filterGuests)
+    .filter(b => (THEME_FILTERS[themeFilter] || (() => true))(b));
 
   /* ── SEO dynamique par bien ── */
   const _pathId  = window.location.pathname.slice(1);
@@ -5070,33 +5225,23 @@ export default function PublicSite() {
               <PropertyDropdown onSelect={openDetail} />
             </div>
 
-            {/* Right: explorer + contact */}
-            <div style={{ display: "flex", alignItems: "center", gap: 20, flexShrink: 0 }}>
-              <a href="/guide" style={{ fontSize: 12, fontFamily: "'Jost', sans-serif", fontWeight: 300, color: "rgba(250,245,233,0.6)", textDecoration: "none", letterSpacing: "0.08em", whiteSpace: "nowrap", display: window.innerWidth < 600 ? "none" : "block" }}>
+            {/* Right: liens + contact CTA */}
+            <div style={{ display: "flex", alignItems: "center", gap: 18, flexShrink: 0 }}>
+              <a href="/guide" style={{ fontSize: 12, fontFamily: "'Jost', sans-serif", fontWeight: 300, color: "rgba(250,245,233,0.6)", textDecoration: "none", letterSpacing: "0.08em", whiteSpace: "nowrap", display: window.innerWidth < 860 ? "none" : "block", transition: "color 0.2s" }}
+                onMouseEnter={e => e.currentTarget.style.color = "#faf5e9"}
+                onMouseLeave={e => e.currentTarget.style.color = "rgba(250,245,233,0.6)"}
+              >
                 {t("exploreLink")}
               </a>
-              <a href="/explorer" style={{ fontSize: 12, fontFamily: "'Jost', sans-serif", fontWeight: 300, color: "rgba(250,245,233,0.6)", textDecoration: "none", letterSpacing: "0.08em", whiteSpace: "nowrap", display: window.innerWidth < 768 ? "none" : "block" }}>
-                {t("mapLink")}
+              <a href="/avis" style={{ fontSize: 12, fontFamily: "'Jost', sans-serif", fontWeight: 300, color: "rgba(250,245,233,0.6)", textDecoration: "none", letterSpacing: "0.08em", whiteSpace: "nowrap", display: window.innerWidth < 860 ? "none" : "block", transition: "color 0.2s" }}
+                onMouseEnter={e => e.currentTarget.style.color = "#faf5e9"}
+                onMouseLeave={e => e.currentTarget.style.color = "rgba(250,245,233,0.6)"}
+              >
+                Avis
               </a>
               <LangToggle />
-              <WeatherPill />
-              {/* Toggle mode sombre */}
-              <button
-                onClick={() => setDarkMode(d => !d)}
-                title={darkMode ? "Mode clair" : "Mode sombre"}
-                style={{
-                  background: "none", border: "none", cursor: "pointer",
-                  fontSize: 18, lineHeight: 1, padding: "4px 2px",
-                  opacity: 0.7, transition: "opacity 0.2s",
-                  color: "inherit",
-                }}
-                onMouseEnter={e => e.currentTarget.style.opacity = "1"}
-                onMouseLeave={e => e.currentTarget.style.opacity = "0.7"}
-              >
-                {darkMode ? "☀️" : "🌙"}
-              </button>
-              <HoverContact direction="down" />
-            </div>
+              {/* CTA Contact — pill */}
+              <HoverContact direction="down" pill /></div>
           </div>
         </div>
       </header>
@@ -5118,6 +5263,9 @@ export default function PublicSite() {
         </div>
       </div>
 
+      {/* ── TESTIMONIALS ── */}
+      <TestimonialsSection onDetail={openDetail} />
+
       {/* ── QUICK BOOK ── */}
       <QuickBook biens={biensList} onBook={openBien} />
 
@@ -5132,6 +5280,44 @@ export default function PublicSite() {
           <p style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: 15, color: MUTED, lineHeight: 1.7, margin: "0 0 32px", maxWidth: 720 }}>
             {t("sectionSub")}
           </p>
+
+          {/* ── Filtres thématiques ── */}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14, alignItems: "center" }}>
+            {[
+              { key: "tout",       label: "Tout",              icon: "✦" },
+              { key: "vue-mer",    label: "Vue mer",           icon: "🌊" },
+              { key: "piscine",    label: "Piscine / Jacuzzi", icon: "🏊" },
+              { key: "famille",    label: "Famille (5+)",      icon: "👨‍👩‍👧" },
+              { key: "couple",     label: "Couple",            icon: "💑" },
+              { key: "martinique", label: "Martinique",        icon: "🌴" },
+              { key: "idf",        label: "Île-de-France",     icon: "🏙️" },
+            ].map(({ key, label, icon }) => {
+              const active = themeFilter === key;
+              return (
+                <button
+                  key={key}
+                  onClick={() => { setThemeFilter(key); setShowFavorites(false); }}
+                  style={{
+                    padding: "7px 16px",
+                    borderRadius: 20,
+                    border: `1px solid ${active ? CORAL : SAND}`,
+                    background: active ? CORAL : "transparent",
+                    color: active ? "#fff" : MUTED,
+                    cursor: "pointer",
+                    fontSize: 12,
+                    fontFamily: "'Jost', sans-serif",
+                    fontWeight: active ? 600 : 400,
+                    transition: "all 0.2s",
+                    display: "flex", alignItems: "center", gap: 5,
+                    letterSpacing: 0.3,
+                  }}
+                >
+                  <span style={{ fontSize: 13 }}>{icon}</span>
+                  {label}
+                </button>
+              );
+            })}
+          </div>
 
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 24, alignItems: "center" }}>
             {lieux.map(({ key, label }) => (

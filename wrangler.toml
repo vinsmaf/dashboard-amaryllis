@@ -25,3 +25,13 @@ SITE_URL           = "https://villamaryllis.com"
 # Secrets à ajouter via :
 #   wrangler secret put APPS_SCRIPT_URL
 #   wrangler secret put RESEND_API_KEY
+
+# ─── Revenue Manager — D1 database ───────────────────────────────────────────
+# Binding for Cloudflare Pages Functions (rm-* endpoints)
+# Add this binding in Cloudflare Pages dashboard:
+#   Dashboard → Pages → dashboard-amaryllis → Settings → Functions → D1 database bindings
+#   Variable name: revenue_manager   Database: revenue-manager (dbfa8069-8013-4400-a854-8324a1290a6e)
+[[d1_databases]]
+binding = "revenue_manager"
+database_name = "revenue-manager"
+database_id = "dbfa8069-8013-4400-a854-8324a1290a6e"

@@ -1,10 +1,27 @@
 // GuideExplorer.jsx — /explorer — Hub carte interactive Sud Martinique
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import SEOMeta from "./SEOMeta.jsx";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+
+/* ─── WeatherPill (Sainte-Luce) ─────────────────────────────── */
+const WMO_ICON = { 0:"☀️",1:"🌤️",2:"⛅",3:"☁️",45:"🌫️",48:"🌫️",51:"🌦️",53:"🌦️",55:"🌧️",61:"🌧️",63:"🌧️",65:"🌧️",80:"🌦️",81:"🌧️",82:"⛈️",95:"⛈️",96:"⛈️",99:"⛈️" };
+function WeatherPill() {
+  const [wx, setWx] = useState(null);
+  useEffect(() => {
+    try { const c = sessionStorage.getItem("wx_sl"); if (c) { setWx(JSON.parse(c)); return; } } catch {}
+    fetch("https://api.open-meteo.com/v1/forecast?latitude=14.472&longitude=-60.933&current=temperature_2m,weathercode&timezone=America%2FMartinique")
+      .then(r => r.json()).then(d => {
+        const v = { t: Math.round(d.current.temperature_2m), c: d.current.weathercode };
+        setWx(v);
+        try { sessionStorage.setItem("wx_sl", JSON.stringify(v)); } catch {}
+      }).catch(() => {});
+  }, []);
+  if (!wx) return null;
+  return <span style={{ fontSize: 12, fontFamily: "'Jost',sans-serif", fontWeight: 300, color: "rgba(250,245,233,0.65)", whiteSpace: "nowrap", letterSpacing: "0.03em" }}>{WMO_ICON[wx.c] ?? "🌡️"} {wx.t}°C · Sainte-Luce</span>;
+}
 
 /* ─── Palette ────────────────────────────────────────────────── */
 const NAVY  = "#1a2b4a";
@@ -484,6 +501,7 @@ export default function GuideExplorer() {
           <a href="/guide" className="ge-back">← Guides</a>
           <div className="ge-title">🗺️ Explorer le Sud Martinique</div>
           <div className="ge-subtitle">Cliquez une destination pour découvrir</div>
+          <WeatherPill />
         </header>
 
         {/* ── Filtres ── */}

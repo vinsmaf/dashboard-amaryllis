@@ -18,6 +18,26 @@ export function loadDailyPrices() {
   } catch { return { ...SEED_DAILY_PRICES }; }
 }
 
+// Retourne uniquement les overrides (delta vs seed) — utilisé pour la sync serveur
+export function loadPriceOverrides() {
+  try { return JSON.parse(localStorage.getItem(PRICE_KEY) || "{}"); }
+  catch { return {}; }
+}
+
+// Fusionne des overrides serveur dans localStorage (serveur prioritaire)
+export function applyServerPriceOverrides(serverOverrides) {
+  try {
+    const local = JSON.parse(localStorage.getItem(PRICE_KEY) || "{}");
+    const merged = {};
+    const allBiens = new Set([...Object.keys(local), ...Object.keys(serverOverrides)]);
+    for (const bid of allBiens) {
+      merged[bid] = { ...(local[bid] || {}), ...(serverOverrides[bid] || {}) };
+    }
+    localStorage.setItem(PRICE_KEY, JSON.stringify(merged));
+    window.dispatchEvent(new Event("amaryllis_prices_updated"));
+  } catch {}
+}
+
 export function saveDailyPrices(data) {
   // Ne stocker que les overrides manuels (diff vs SEED)
   const overrides = {};

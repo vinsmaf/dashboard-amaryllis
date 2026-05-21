@@ -37,7 +37,8 @@ function doGet(e) {
   if (action === "importAllReservations") return importAllReservations_(e.parameter);
   if (action === "sendCheckinAlerts") { sendCheckinAlerts_(); return json_({ ok: true }); }
   if (action === "setNtfyTopic") return setNtfyTopic_(e.parameter);
-  if (action === "getConfig")    return getConfig_();
+  if (action === "getConfig")    return getConfig_(e.parameter);
+  if (action === "setConfig")    return setConfig_(e.parameter);
 
   return json_({ error: "action inconnue: " + action });
 }
@@ -55,21 +56,32 @@ function doPost(e) {
   return json_({ error: "action POST inconnue: " + action });
 }
 
-// ── Config séjour minimum ─────────────────────────────────────────
-function getConfig_() {
+// ── Config générique (min_nights_config, daily_prices, …) ────────
+function getConfig_(params) {
   try {
+    var key   = (params && params.key) ? params.key : "min_nights_config";
     var props = PropertiesService.getScriptProperties();
-    var val   = props.getProperty("min_nights_config");
+    var val   = props.getProperty(key);
     return json_({ ok: true, config: val ? JSON.parse(val) : {} });
   } catch(e) {
     return json_({ ok: false, error: String(e) });
   }
 }
 
-function setConfig_(body) {
+function setConfig_(params) {
+  // Accepte : { key: "daily_prices", config: "<JSON string>" }  (depuis doGet params)
+  //       ou : { config: {...} }                                  (depuis doPost body, legacy)
   try {
+    var key   = (params && params.key) ? params.key : "min_nights_config";
     var props = PropertiesService.getScriptProperties();
-    props.setProperty("min_nights_config", JSON.stringify(body.config || {}));
+    var raw   = params.config;
+    var cfg;
+    if (typeof raw === "string") {
+      try { cfg = JSON.parse(raw); } catch(e) { return json_({ ok: false, error: "JSON invalide: " + e.message }); }
+    } else {
+      cfg = raw || {};
+    }
+    props.setProperty(key, JSON.stringify(cfg));
     return json_({ ok: true });
   } catch(e) {
     return json_({ ok: false, error: String(e) });

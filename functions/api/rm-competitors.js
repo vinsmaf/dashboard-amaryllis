@@ -1,0 +1,332 @@
+// Cloudflare Pages Function — /api/rm-competitors
+// Competitor management, snapshots, and market signal recalculation
+
+const CORS = {
+  "Content-Type": "application/json",
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: CORS });
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function median(sorted) {
+  if (!sorted.length) return null;
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0
+    ? Math.round((sorted[mid - 1] + sorted[mid]) / 2)
+    : sorted[mid];
+}
+
+function mean(arr) {
+  if (!arr.length) return null;
+  return Math.round(arr.reduce((a, b) => a + b, 0) / arr.length);
+}
+
+function percentile(sorted, p) {
+  if (!sorted.length) return null;
+  const idx = (p / 100) * (sorted.length - 1);
+  const lo = Math.floor(idx);
+  const hi = Math.ceil(idx);
+  if (lo === hi) return sorted[lo];
+  return Math.round(sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo));
+}
+
+// ---------------------------------------------------------------------------
+// Handlers
+// ---------------------------------------------------------------------------
+
+async function handleList(db, url) {
+  const property_id = url.searchParams.get("property_id");
+  if (!property_id) return json({ error: "property_id required" }, 400);
+
+  const [setsRes, listingsRes] = await Promise.all([
+    db.prepare(`SELECT * FROM rm_competitor_sets WHERE property_id = ? ORDER BY is_default DESC, name`).bind(property_id).all(),
+    db
+      .prepare(
+        `SELECT cl.*, cs.name as set_name
+         FROM rm_competitor_listings cl
+         JOIN rm_competitor_sets cs ON cs.id = cl.set_id
+         WHERE cl.property_id = ?
+         ORDER BY cl.is_active DESC, cl.similarity_score DESC`
+      )
+      .bind(property_id)
+      .all(),
+  ]);
+
+  const sets = setsRes.results || [];
+  const listings = listingsRes.results || [];
+
+  // Attach listings to sets
+  const setsWithListings = sets.map((s) => ({
+    ...s,
+    listings: listings.filter((l) => l.set_id === s.id),
+  }));
+
+  return json({ competitor_sets: setsWithListings, total_listings: listings.length });
+}
+
+async function handleSnapshot(db, body) {
+  const { property_id, snapshots } = body;
+  if (!property_id || !Array.isArray(snapshots) || !snapshots.length) {
+    return json({ error: "property_id and snapshots[] required" }, 400);
+  }
+
+  const now = Date.now();
+  const insertSQL = `
+    INSERT INTO rm_competitor_snapshots
+      (id, listing_id, snapshot_date, observed_at, price_cents, is_available,
+       min_stay_observed, source, apify_run_id, confidence, created_at)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?)
+    ON CONFLICT DO NOTHING
+  `;
+
+  const stmts = snapshots.map((s) =>
+    db.prepare(insertSQL).bind(
+      crypto.randomUUID(),
+      s.listing_id,
+      s.date,
+      now,
+      s.price_cents !== undefined ? s.price_cents : null,
+      s.is_available !== undefined ? (s.is_available ? 1 : 0) : null,
+      s.min_stay_observed || null,
+      s.source || "manual",
+      s.apify_run_id || null,
+      s.confidence || "medium",
+      now
+    )
+  );
+
+  const CHUNK = 80;
+  let inserted = 0;
+  for (let i = 0; i < stmts.length; i += CHUNK) {
+    await db.batch(stmts.slice(i, i + CHUNK));
+    inserted += Math.min(CHUNK, stmts.length - i);
+  }
+
+  return json({ ok: true, inserted, property_id });
+}
+
+async function handleRecalculateSignals(db, body) {
+  const { property_id, horizon_days = 180 } = body;
+  if (!property_id) return json({ error: "property_id required" }, 400);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const endDate = new Date(Date.now() + horizon_days * 86400000).toISOString().slice(0, 10);
+  const now = Date.now();
+
+  // Get all active listings in the default set for this property
+  const { results: listings } = await db
+    .prepare(
+      `SELECT cl.id, cl.similarity_score
+       FROM rm_competitor_listings cl
+       JOIN rm_competitor_sets cs ON cs.id = cl.set_id
+       WHERE cl.property_id = ? AND cl.is_active = 1 AND cs.is_default = 1`
+    )
+    .bind(property_id)
+    .all();
+
+  if (!listings || listings.length === 0) {
+    return json({ ok: true, property_id, message: "No active competitor listings found", signals_created: 0 });
+  }
+
+  const listingIds = listings.map((l) => l.id);
+  const listingMap = {};
+  for (const l of listings) listingMap[l.id] = l;
+
+  // Get all snapshots in range for these listings
+  const placeholders = listingIds.map(() => "?").join(",");
+  const { results: snapshots } = await db
+    .prepare(
+      `SELECT listing_id, snapshot_date, price_cents, is_available, confidence
+       FROM rm_competitor_snapshots
+       WHERE listing_id IN (${placeholders}) AND snapshot_date >= ? AND snapshot_date <= ?
+       ORDER BY snapshot_date ASC`
+    )
+    .bind(...listingIds, today, endDate)
+    .all();
+
+  // Group snapshots by date
+  const byDate = {};
+  for (const s of snapshots) {
+    if (!byDate[s.snapshot_date]) byDate[s.snapshot_date] = [];
+    byDate[s.snapshot_date].push(s);
+  }
+
+  // Generate all dates
+  const dates = [];
+  const cur = new Date(today + "T00:00:00Z");
+  const end = new Date(endDate + "T00:00:00Z");
+  while (cur <= end) {
+    dates.push(cur.toISOString().slice(0, 10));
+    cur.setUTCDate(cur.getUTCDate() + 1);
+  }
+
+  const upsertSQL = `
+    INSERT INTO rm_market_signals
+      (id, property_id, signal_date, calculated_at,
+       competitors_total, competitors_with_data, competitors_available, competitors_unavailable,
+       availability_rate, price_median_cents, price_mean_cents, price_p25_cents, price_p75_cents,
+       price_min_cents, price_max_cents, high_sim_price_median,
+       market_pressure_score, scarcity_score, premium_opportunity, vacancy_risk,
+       data_confidence, market_label, alert_flags, created_at)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    ON CONFLICT(property_id, signal_date) DO UPDATE SET
+      calculated_at = excluded.calculated_at,
+      competitors_total = excluded.competitors_total,
+      competitors_with_data = excluded.competitors_with_data,
+      competitors_available = excluded.competitors_available,
+      competitors_unavailable = excluded.competitors_unavailable,
+      availability_rate = excluded.availability_rate,
+      price_median_cents = excluded.price_median_cents,
+      price_mean_cents = excluded.price_mean_cents,
+      price_p25_cents = excluded.price_p25_cents,
+      price_p75_cents = excluded.price_p75_cents,
+      price_min_cents = excluded.price_min_cents,
+      price_max_cents = excluded.price_max_cents,
+      high_sim_price_median = excluded.high_sim_price_median,
+      market_pressure_score = excluded.market_pressure_score,
+      scarcity_score = excluded.scarcity_score,
+      premium_opportunity = excluded.premium_opportunity,
+      vacancy_risk = excluded.vacancy_risk,
+      data_confidence = excluded.data_confidence,
+      market_label = excluded.market_label,
+      alert_flags = excluded.alert_flags
+  `;
+
+  const signalStmts = [];
+
+  for (const dateStr of dates) {
+    const daySnaps = byDate[dateStr] || [];
+    const total = listingIds.length;
+    const withData = daySnaps.length;
+    const available = daySnaps.filter((s) => s.is_available === 1).length;
+    const unavailable = daySnaps.filter((s) => s.is_available === 0).length;
+
+    const availRate = withData > 0 ? +(available / withData).toFixed(3) : null;
+
+    const prices = daySnaps
+      .filter((s) => s.price_cents !== null && s.price_cents > 0)
+      .map((s) => s.price_cents)
+      .sort((a, b) => a - b);
+
+    const priceMedian = median(prices);
+    const priceMean = mean(prices);
+    const priceP25 = percentile(prices, 25);
+    const priceP75 = percentile(prices, 75);
+    const priceMin = prices.length ? prices[0] : null;
+    const priceMax = prices.length ? prices[prices.length - 1] : null;
+
+    // High-similarity price median (similarity_score >= 70)
+    const highSimSnaps = daySnaps.filter((s) => {
+      const listing = listingMap[s.listing_id];
+      return listing && (listing.similarity_score || 0) >= 70 && s.price_cents > 0;
+    }).map((s) => s.price_cents).sort((a, b) => a - b);
+    const highSimMedian = median(highSimSnaps);
+
+    // Market scores
+    const pressure = availRate !== null ? Math.round((1 - availRate) * 100) : null;
+
+    let scarcity = 20;
+    if (availRate !== null) {
+      if (availRate < 0.3) scarcity = 90;
+      else if (availRate < 0.5) scarcity = 70;
+      else if (availRate < 0.7) scarcity = 50;
+    }
+
+    const premiumOpp = Math.max(0, scarcity - 10);
+
+    let vacancyRisk = 15;
+    if (availRate !== null) {
+      if (availRate > 0.7) vacancyRisk = 70;
+      else if (availRate > 0.5) vacancyRisk = 40;
+    }
+
+    let marketLabel = "balanced";
+    if (pressure !== null) {
+      if (pressure > 70) marketLabel = "strong";
+      else if (pressure < 40) marketLabel = "weak";
+    }
+
+    const dataConfidence = total > 0 ? Math.min(100, Math.round((withData / total) * 100)) : 0;
+
+    const alertFlags = [];
+    if (pressure !== null && pressure > 80) alertFlags.push("high_demand");
+    if (vacancyRisk > 60) alertFlags.push("low_demand");
+
+    signalStmts.push(
+      db.prepare(upsertSQL).bind(
+        crypto.randomUUID(), property_id, dateStr, now,
+        total, withData, available, unavailable,
+        availRate, priceMedian, priceMean, priceP25, priceP75,
+        priceMin, priceMax, highSimMedian,
+        pressure, scarcity, premiumOpp, vacancyRisk,
+        dataConfidence, marketLabel, JSON.stringify(alertFlags), now
+      )
+    );
+  }
+
+  const CHUNK = 50;
+  let created = 0;
+  for (let i = 0; i < signalStmts.length; i += CHUNK) {
+    await db.batch(signalStmts.slice(i, i + CHUNK));
+    created += Math.min(CHUNK, signalStmts.length - i);
+  }
+
+  return json({ ok: true, property_id, signals_created: created, dates_range: `${today} → ${endDate}` });
+}
+
+async function handleGetSignals(db, url) {
+  const property_id = url.searchParams.get("property_id");
+  const from = url.searchParams.get("from") || new Date().toISOString().slice(0, 10);
+  const to = url.searchParams.get("to") || new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+
+  if (!property_id) return json({ error: "property_id required" }, 400);
+
+  const { results } = await db
+    .prepare(
+      `SELECT * FROM rm_market_signals
+       WHERE property_id = ? AND signal_date >= ? AND signal_date <= ?
+       ORDER BY signal_date ASC`
+    )
+    .bind(property_id, from, to)
+    .all();
+
+  return json({ signals: results || [], count: (results || []).length });
+}
+
+// ---------------------------------------------------------------------------
+// Router
+// ---------------------------------------------------------------------------
+
+export async function onRequest(context) {
+  const { request, env } = context;
+  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
+
+  const db = env.revenue_manager;
+  if (!db) return json({ error: "D1 binding 'revenue_manager' not found" }, 503);
+
+  const url = new URL(request.url);
+  const path = url.pathname;
+
+  try {
+    if (request.method === "GET") {
+      if (path.endsWith("/signals")) return handleGetSignals(db, url);
+      return handleList(db, url);
+    }
+
+    if (request.method === "POST") {
+      const body = await request.json().catch(() => ({}));
+      if (path.endsWith("/snapshot"))             return handleSnapshot(db, body);
+      if (path.endsWith("/recalculate-signals"))  return handleRecalculateSignals(db, body);
+      return json({ error: "Unknown POST action. Use /snapshot or /recalculate-signals" }, 400);
+    }
+
+    return json({ error: "Method not allowed" }, 405);
+  } catch (err) {
+    return json({ error: err.message, stack: err.stack }, 500);
+  }
+}

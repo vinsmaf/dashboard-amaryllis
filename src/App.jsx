@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import EmailSync from "./EmailSync.jsx";
-import { SEED_DAILY_PRICES, loadDailyPrices, saveDailyPrices } from "./seedPrices.js";
+import RevenueManagerPro from "./RevenueManagerPro.jsx";
+import { SEED_DAILY_PRICES, loadDailyPrices, saveDailyPrices, loadPriceOverrides, applyServerPriceOverrides } from "./seedPrices.js";
 import {
   BarChart, Bar, LineChart, Line, ComposedChart,
   PieChart, Pie,
@@ -595,7 +596,7 @@ function RevCell({ bienId, month, value, onSave }) {
   );
 }
 
-function Cockpit({ biens, n, mob, onUpdateRevenu }) {
+function Cockpit({ biens, n, mob, onUpdateRevenu, reservations = [] }) {
   const BIEN_COLORS = { nogent: "#0ea5e9", amaryllis: "#10b981", iguana: "#6366f1", geko: "#f59e0b", zandoli: "#3b82f6", mabouya: "#ec4899", schoelcher: "#8b5cf6" };
   const monthly = MOIS.slice(0, Math.min(n + 2, 8)).map((_, i) => {
     const row = { m: MOIS[i] };
@@ -605,9 +606,75 @@ function Cockpit({ biens, n, mob, onUpdateRevenu }) {
   const tc = { court: "#0ea5e9", long: "#10b981", moyen: "#f59e0b" };
   const tl = { court: "Court", long: "Long", moyen: "Moyen" };
 
+  // ── Métriques temps réel ─────────────────────────────────────────────────
+  const todayTs = new Date();
+  const d30Ts = new Date(todayTs - 30 * 86400000);
+  let bookedNights30 = 0;
+  const shortTermBiens = biens.filter(b => b.type !== "long");
+  shortTermBiens.forEach(b => {
+    reservations.filter(r => r.bienId === b.id).forEach(r => {
+      if (!r.checkin || !r.checkout) return;
+      const ci = new Date(r.checkin + "T12:00:00Z");
+      const co = new Date(r.checkout + "T12:00:00Z");
+      const s = ci < d30Ts ? d30Ts : ci;
+      const e = co > todayTs ? todayTs : co;
+      if (e > s) bookedNights30 += (e - s) / 86400000;
+    });
+  });
+  const avail30 = shortTermBiens.length * 30;
+  const occ30j = avail30 > 0 ? Math.min(Math.round(bookedNights30 / avail30 * 100), 100) : 0;
+
+  const curMonth = todayTs.getMonth(); // 0-based
+  const revparActuel = biens.filter(b => b.type !== "long").reduce((s, b) => s + (b.revpar[curMonth] || 0), 0)
+    / Math.max(biens.filter(b => b.type !== "long").length, 1);
+
+  // CA cumulé YTD
+  let cum = 0;
+  const cumulData = MOIS.slice(0, n).map((m, i) => {
+    const monthly = biens.reduce((s, b) => s + (b.revenus[i] || 0), 0);
+    cum += monthly;
+    return { m, mensuel: monthly, cumul: cum };
+  });
+  const ytdTotal = cum;
+
   return (
     <div>
       <AISummary biens={biens} n={n} />
+      <YieldAlerts biens={biens} reservations={reservations} mob={mob} />
+
+      {/* ── KPIs temps réel ── */}
+      <div style={{ display: "grid", gridTemplateColumns: mob ? "repeat(2,1fr)" : "repeat(4,1fr)", gap: 10, marginBottom: 16 }}>
+        {[
+          { label: "CA YTD", value: fmtK(biens.reduce((s, b) => s + sumN(b.revenus, n), 0)), sub: `${n} mois`, color: "#0ea5e9" },
+          { label: "CF YTD", value: fmtK(biens.reduce((s, b) => s + sumN(b.cashflow, n), 0)), sub: "cashflow net", color: biens.reduce((s, b) => s + sumN(b.cashflow, n), 0) >= 0 ? "#10b981" : "#ef4444" },
+          { label: "Occ. 30j", value: `${occ30j}%`, sub: `${Math.round(bookedNights30)}/${avail30} nuits`, color: occ30j >= 60 ? "#10b981" : occ30j >= 40 ? "#f59e0b" : "#ef4444" },
+          { label: "RevPAR mois", value: `${revparActuel.toFixed(0)}€`, sub: MOIS[curMonth], color: "#f59e0b" },
+        ].map(k => (
+          <div key={k.label} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "12px 14px" }}>
+            <div style={{ fontSize: 10, color: "#64748b", marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>{k.label}</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: k.color, fontFamily: "monospace" }}>{k.value}</div>
+            <div style={{ fontSize: 10, color: "#475569", marginTop: 2 }}>{k.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── CA cumulé YTD ── */}
+      <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 14, padding: mob ? 12 : 18, marginBottom: 18 }}>
+        <div style={{ fontSize: 13, color: "#94a3b8", marginBottom: 12, fontWeight: 600, display: "flex", justifyContent: "space-between" }}>
+          <span>CA cumulé 2026</span>
+          <span style={{ fontSize: 12, color: "#0ea5e9", fontFamily: "monospace" }}>{fmtK(ytdTotal)} total</span>
+        </div>
+        <ResponsiveContainer width="100%" height={mob ? 100 : 130}>
+          <ComposedChart data={cumulData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+            <XAxis dataKey="m" tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={fmtK} />
+            <Tooltip contentStyle={TT} formatter={(v, k) => [fmt(v), k === "cumul" ? "Cumulé" : "Mensuel"]} />
+            <Bar dataKey="mensuel" fill="rgba(14,165,233,0.25)" radius={[3,3,0,0]} name="Mensuel" />
+            <Line type="monotone" dataKey="cumul" stroke="#0ea5e9" strokeWidth={2} dot={false} name="Cumulé" />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
 
       <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 14, padding: mob ? 12 : 18, marginBottom: 18 }}>
         <div style={{ fontSize: 13, color: "#94a3b8", marginBottom: 12, fontWeight: 600 }}>Revenus mensuels 2026</div>
@@ -721,6 +788,7 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
   const [lastIcalSync, setLastIcalSync] = useState(null);
   const [view, setView] = useState("todo");
   const [ganttBienFilter, setGanttBienFilter] = useState(null); // null = all
+  const [searchQuery, setSearchQuery] = useState("");
   const [dailyPrices, setDailyPrices] = useState(loadDailyPrices);
 
   useEffect(() => {
@@ -905,7 +973,9 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
   const monthStart = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-01`;
   const monthEnd = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(daysInMonth).padStart(2, "0")}`;
-  const rMonth = reservations.filter(r => r.checkin <= monthEnd && r.checkout >= monthStart);
+  // Filtre global par bien (partagé entre toutes les vues)
+  const filteredReservations = ganttBienFilter ? reservations.filter(r => r.bienId === ganttBienFilter) : reservations;
+  const rMonth = filteredReservations.filter(r => r.checkin <= monthEnd && r.checkout >= monthStart);
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
   const isToday = (d) => `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}` === td;
   const getCell = (bienId, day) => {
@@ -916,7 +986,7 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
   };
 
   const todos = [];
-  reservations.forEach(r => {
+  filteredReservations.forEach(r => {
     const b = biens.find(x => x.id === r.bienId);
     if (!b) return;
     const ciSub = [r.voyageur, r.checkin_time ? `🕐 ${r.checkin_time}` : "", r.nb_guests ? `👥 ${r.nb_guests}` : ""].filter(Boolean).join(" · ");
@@ -956,8 +1026,8 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
         </div>
       )}
 
-      <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
-        {[{ id: "todo", l: "✅ To-do" }, { id: "gantt", l: "📅 Calendrier" }, { id: "trous", l: "🕳 Trous" }, { id: "list", l: "📋 Réservations" }, { id: "beds24", l: "🏙️ Beds24 Nogent" }].map(v => (
+      <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
+        {[{ id: "todo", l: "✅ To-do" }, { id: "gantt", l: "📅 Calendrier" }, { id: "trous", l: "🕳 Trous" }, { id: "list", l: "📋 Réservations" }, { id: "beds24", l: "🏙️ Beds24 Nogent" }, { id: "minnights", l: "🗓 Nuits min." }].map(v => (
           <button
             key={v.id}
             onClick={() => setView(v.id)}
@@ -972,6 +1042,15 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
           onClick={() => setShowForm(true)}
           style={{ marginLeft: "auto", padding: "7px 14px", borderRadius: 20, border: "1px dashed #334155", background: "none", color: "#0ea5e9", cursor: "pointer", fontSize: 12, fontWeight: 600 }}
         >+ Ajouter</button>
+      </div>
+
+      {/* Filtre par bien — global à toutes les vues */}
+      <div style={{ display: "flex", gap: 4, marginBottom: 14, flexWrap: "wrap", alignItems: "center" }}>
+        <span style={{ fontSize: 10, color: "#475569", marginRight: 2 }}>Bien :</span>
+        <button onClick={() => setGanttBienFilter(null)} style={{ padding: "3px 10px", borderRadius: 14, border: "none", cursor: "pointer", fontSize: 10, fontWeight: ganttBienFilter === null ? 700 : 400, background: ganttBienFilter === null ? "#6366f1" : "rgba(255,255,255,0.06)", color: ganttBienFilter === null ? "#fff" : "#64748b" }}>Tous</button>
+        {biens.map(b => (
+          <button key={b.id} onClick={() => setGanttBienFilter(ganttBienFilter === b.id ? null : b.id)} style={{ padding: "3px 10px", borderRadius: 14, border: "none", cursor: "pointer", fontSize: 10, fontWeight: ganttBienFilter === b.id ? 700 : 400, background: ganttBienFilter === b.id ? "#6366f1" : "rgba(255,255,255,0.06)", color: ganttBienFilter === b.id ? "#fff" : "#64748b" }}>{b.emoji} {b.nom.replace("Villa ", "").replace("T2 ", "")}</button>
+        ))}
       </div>
 
       {view === "todo" && (
@@ -1075,10 +1154,10 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
             </div>
           )}
 
-          {reservations.filter(r => r.checkin > td && r.checkin <= addDays(td, 7)).length > 0 && (
+          {filteredReservations.filter(r => r.checkin > td && r.checkin <= addDays(td, 7)).length > 0 && (
             <>
               <div style={{ fontSize: 12, fontWeight: 600, color: "#94a3b8", margin: "16px 0 8px" }}>7 prochains jours</div>
-              {reservations
+              {filteredReservations
                 .filter(r => r.checkin > td && r.checkin <= addDays(td, 7))
                 .sort((a, b) => a.checkin.localeCompare(b.checkin))
                 .map(r => {
@@ -1101,14 +1180,6 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
 
       {view === "gantt" && (
         <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 13, padding: 14, overflowX: "auto" }}>
-          {/* Bien selector */}
-          <div style={{ display: "flex", gap: 4, marginBottom: 10, flexWrap: "wrap", alignItems: "center" }}>
-            <button onClick={() => setGanttBienFilter(null)} style={{ padding: "3px 10px", borderRadius: 14, border: "none", cursor: "pointer", fontSize: 10, fontWeight: ganttBienFilter === null ? 700 : 400, background: ganttBienFilter === null ? "#0ea5e9" : "rgba(255,255,255,0.06)", color: ganttBienFilter === null ? "#fff" : "#64748b" }}>Tous</button>
-            {biens.map(b => (
-              <button key={b.id} onClick={() => setGanttBienFilter(ganttBienFilter === b.id ? null : b.id)} style={{ padding: "3px 10px", borderRadius: 14, border: "none", cursor: "pointer", fontSize: 10, fontWeight: ganttBienFilter === b.id ? 700 : 400, background: ganttBienFilter === b.id ? "#0ea5e9" : "rgba(255,255,255,0.06)", color: ganttBienFilter === b.id ? "#fff" : "#64748b" }}>{b.emoji} {b.nom.replace("Villa ", "").replace("T2 ", "")}</button>
-            ))}
-          </div>
-
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             <span style={{ fontSize: 13, color: "#94a3b8", fontWeight: 600 }}>{MOIS_FULL[viewMonth]} {viewYear}</span>
             <div style={{ display: "flex", gap: 5 }}>
@@ -1286,15 +1357,44 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
 
       {view === "list" && (
         <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 13, overflow: "hidden" }}>
-          <div style={{ padding: "11px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)", fontSize: 12, color: "#94a3b8", fontWeight: 600, display: "flex", justifyContent: "space-between" }}>
-            <span>Réservations ({reservations.length})</span>
-            <span style={{ fontSize: 10, color: "#10b981" }}>
-              {reservations.filter(r => r.fromIcal).length} Airbnb · {reservations.filter(r => !r.fromIcal).length} manuelles
+          <div style={{ padding: "11px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>
+              Réservations ({filteredReservations.length}{ganttBienFilter ? ` · ${biens.find(b=>b.id===ganttBienFilter)?.nom || ganttBienFilter}` : ""})
             </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <input
+                type="text"
+                placeholder="🔍 Voyageur, bien, canal…"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                style={{ padding: "5px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#0f172a", color: "#e2e8f0", fontSize: 11, width: 180, outline: "none" }}
+              />
+              {searchQuery && <button onClick={() => setSearchQuery("")} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 12 }}>✕</button>}
+              <span style={{ fontSize: 10, color: "#10b981" }}>
+                {filteredReservations.filter(r => r.fromIcal).length} Airbnb · {filteredReservations.filter(r => !r.fromIcal).length} manuelles
+              </span>
+            </div>
           </div>
-          {reservations.length === 0 ? (
-            <div style={{ padding: 20, textAlign: "center", color: "#475569", fontSize: 12 }}>Aucune réservation</div>
-          ) : (
+          {(() => {
+            const q = searchQuery.toLowerCase().trim();
+            const listResas = q
+              ? filteredReservations.filter(r => {
+                  const bien = biens.find(x => x.id === r.bienId);
+                  return (r.voyageur || "").toLowerCase().includes(q)
+                    || (r.canal || "").toLowerCase().includes(q)
+                    || (bien?.nom || "").toLowerCase().includes(q)
+                    || (r.checkin || "").includes(q)
+                    || (r.checkout || "").includes(q)
+                    || (r.notes || "").toLowerCase().includes(q)
+                    || (r.reservation_code || "").toLowerCase().includes(q);
+                })
+              : filteredReservations;
+            if (listResas.length === 0) return (
+              <div style={{ padding: 20, textAlign: "center", color: "#475569", fontSize: 12 }}>
+                {q ? `Aucun résultat pour "${q}"` : `Aucune réservation${ganttBienFilter ? " pour ce bien" : ""}`}
+              </div>
+            );
+            return (
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 660 }}>
                 <thead>
@@ -1305,7 +1405,7 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
                   </tr>
                 </thead>
                 <tbody>
-                  {[...reservations].sort((a, b) => a.checkin.localeCompare(b.checkin)).map(r => {
+                  {[...listResas].sort((a, b) => a.checkin.localeCompare(b.checkin)).map(r => {
                     const b = biens.find(x => x.id === r.bienId);
                     const isPast = r.checkout < td;
                     const isCurr = r.checkin <= td && r.checkout > td;
@@ -1341,7 +1441,8 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
                 </tbody>
               </table>
             </div>
-          )}
+            );
+          })()}
         </div>
       )}
 
@@ -1387,6 +1488,7 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
       {view === "beds24" && (
         <Beds24Admin scriptUrl={scriptUrl} reservations={reservations} saveRes={saveRes} />
       )}
+      {view === "minnights" && <MinNightsConfig />}
     </div>
   );
 }
@@ -2175,8 +2277,8 @@ function MinNightsConfig() {
 }
 
 // ============================================================================
-function Pilotage({ biens, n, mob }) {
-  const [view, setView] = useState("canaux");
+function Pilotage({ biens, n, mob, reservations = [] }) {
+  const [view, setView] = useState("canal-live");
   const PIE_COLORS = ["#0ea5e9", "#FF5A5F", "#10b981", "#f59e0b", "#a855f7", "#ec4899", "#06b6d4"];
 
   // ===== CANAUX =====
@@ -2267,12 +2369,12 @@ function Pilotage({ biens, n, mob }) {
       {/* Sub-tabs */}
       <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
         {[
-          { id: "canaux",    l: "💼 Canaux" },
-          { id: "marche",    l: "🎯 Marché" },
-          { id: "fiscal",    l: "📋 Fiscal" },
-          { id: "conseil",   l: "🎓 Conseil" },
-          { id: "detail",    l: "📊 Détail charges" },
-          { id: "minnights", l: "🗓 Nuits min." },
+          { id: "canal-live", l: "⚡ Canaux live" },
+          { id: "canaux",     l: "💼 Canaux 2025" },
+          { id: "marche",     l: "🎯 Marché" },
+          { id: "fiscal",     l: "📋 Fiscal" },
+          { id: "conseil",    l: "🎓 Conseil" },
+          { id: "detail",     l: "📊 Charges" },
         ].map(v => (
           <button key={v.id} onClick={() => setView(v.id)} style={{
             padding: "7px 14px", borderRadius: 20, border: "none", cursor: "pointer",
@@ -2282,6 +2384,10 @@ function Pilotage({ biens, n, mob }) {
           }}>{v.l}</button>
         ))}
       </div>
+
+      {view === "canal-live" && (
+        <CanalLivePerf biens={biens} reservations={reservations} mob={mob} />
+      )}
 
       {view === "canaux" && (
         <div>
@@ -3059,8 +3165,6 @@ function Pilotage({ biens, n, mob }) {
           </div>
         </div>
       )}
-
-      {view === "minnights" && <MinNightsConfig />}
     </div>
   );
 }
@@ -3441,94 +3545,1212 @@ function Comparatif({ biens, n, mob }) {
 }
 
 // ============================================================================
+// REVENUE MANAGER — inspiré PriceLabs
+// ============================================================================
+function RevenueManager({ biens, reservations, hist, mob }) {
+  const [view, setView]         = useState("opportunites");
+  const [selBien, setSelBien]   = useState("all");
+  const dailyPrices             = useMemo(() => { try { return loadDailyPrices(); } catch { return {}; } }, []);
+
+  const today    = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d; }, []);
+  const todayStr = today.toISOString().slice(0,10);
+  const shortBiens = biens.filter(b => b.type !== "long");
+  const visBiens   = selBien === "all" ? shortBiens : shortBiens.filter(b => b.id === selBien);
+
+  // ── Helpers ──────────────────────────────────────────────────────────
+  const dateStr  = d => d.toISOString().slice(0,10);
+  const addDays  = (d, n) => { const r = new Date(d); r.setDate(r.getDate() + n); return r; };
+  const daysDiff = (a, b) => Math.round((b - a) / 86400000);
+
+  // Booked set par bien : Set de dates "YYYY-MM-DD"
+  const bookedSets = useMemo(() => {
+    const map = {};
+    biens.forEach(b => { map[b.id] = new Set(); });
+    reservations.forEach(r => {
+      if (!r.checkin || !r.checkout || !map[r.bienId]) return;
+      const ci = new Date(r.checkin + "T12:00:00Z");
+      const co = new Date(r.checkout + "T12:00:00Z");
+      for (let d = new Date(ci); d < co; d.setDate(d.getDate() + 1)) {
+        map[r.bienId].add(d.toISOString().slice(0,10));
+      }
+    });
+    return map;
+  }, [biens, reservations]);
+
+  // Réservations triées par bien
+  const resasByBien = useMemo(() => {
+    const map = {};
+    biens.forEach(b => { map[b.id] = []; });
+    reservations.forEach(r => { if (map[r.bienId]) map[r.bienId].push(r); });
+    Object.values(map).forEach(arr => arr.sort((a,z) => a.checkin.localeCompare(z.checkin)));
+    return map;
+  }, [biens, reservations]);
+
+  // ══════════════════════════════════════════════════════════════════════
+  //  VUE 1 — OPPORTUNITÉS  (cœur PriceLabs)
+  // ══════════════════════════════════════════════════════════════════════
+  const opportunites = useMemo(() => {
+    const ops = [];
+    visBiens.forEach(b => {
+      const booked = bookedSets[b.id] || new Set();
+      const resas  = resasByBien[b.id] || [];
+      const prices = dailyPrices[b.id] || {};
+      const minN   = MIN_NIGHTS_DEFAULTS_ADMIN[b.id] || 3;
+
+      // 1. TROUS ORPHELINS — gaps < min nights entre 2 réservations
+      for (let i = 0; i < resas.length - 1; i++) {
+        const r1 = resas[i], r2 = resas[i+1];
+        if (r1.bienId !== b.id || r2.bienId !== b.id) continue;
+        const co = new Date(r1.checkout + "T12:00:00Z");
+        const ci = new Date(r2.checkin  + "T12:00:00Z");
+        const gap = daysDiff(co, ci);
+        if (gap > 0 && gap < minN && co >= today) {
+          ops.push({
+            bienId: b.id, bienNom: b.nom, bienEmoji: b.emoji || "🏡",
+            type: "gap", priority: "high",
+            icon: "🔵", color: "#3b82f6",
+            label: `Trou isolé : ${gap} nuit${gap>1?"s":""} invendable${gap>1?"s":""}`,
+            detail: `${r1.checkout} → ${r2.checkin} (min nights = ${minN})`,
+            action: `Réduire min-nuits à ${gap} sur cette fenêtre ou casser le prix à ${Math.round((prices[r1.checkout] || b.prix || 100) * 0.7)}€/nuit`,
+            daysAway: daysDiff(today, co),
+          });
+        }
+      }
+
+      // 2. NUITS LAST-MINUTE vides (J-0 à J-14)
+      let lmBlock = null;
+      for (let i = 0; i <= 14; i++) {
+        const ds = dateStr(addDays(today, i));
+        if (!booked.has(ds)) {
+          if (!lmBlock) lmBlock = { start: ds, count: 0, daysAway: i };
+          lmBlock.count++;
+          lmBlock.end = ds;
+        } else if (lmBlock) {
+          const disc = lmBlock.daysAway <= 3 ? 25 : lmBlock.daysAway <= 7 ? 15 : 10;
+          const basePrice = prices[lmBlock.start] || b.prix || 100;
+          ops.push({
+            bienId: b.id, bienNom: b.nom, bienEmoji: b.emoji || "🏡",
+            type: "lastminute", priority: lmBlock.daysAway <= 3 ? "urgent" : "high",
+            icon: "🔴", color: "#ef4444",
+            label: `${lmBlock.count} nuit${lmBlock.count>1?"s":""} vide${lmBlock.count>1?"s":""} — J+${lmBlock.daysAway} à J+${lmBlock.daysAway + lmBlock.count - 1}`,
+            detail: `Du ${lmBlock.start} au ${lmBlock.end}`,
+            action: `Last-minute : appliquer −${disc}% → ${Math.round(basePrice * (1 - disc/100))}€/nuit`,
+            daysAway: lmBlock.daysAway,
+          });
+          lmBlock = null;
+        }
+      }
+      if (lmBlock) {
+        const disc = lmBlock.daysAway <= 3 ? 25 : 15;
+        const basePrice = prices[lmBlock.start] || b.prix || 100;
+        ops.push({
+          bienId: b.id, bienNom: b.nom, bienEmoji: b.emoji || "🏡",
+          type: "lastminute", priority: lmBlock.daysAway <= 3 ? "urgent" : "high",
+          icon: "🔴", color: "#ef4444",
+          label: `${lmBlock.count} nuit${lmBlock.count>1?"s":""} vide${lmBlock.count>1?"s":""} — J+${lmBlock.daysAway} à J+${lmBlock.daysAway + lmBlock.count - 1}`,
+          detail: `Du ${lmBlock.start} au ${lmBlock.end}`,
+          action: `Last-minute : appliquer −${disc}% → ${Math.round(basePrice * (1 - disc/100))}€/nuit`,
+          daysAway: lmBlock.daysAway,
+        });
+      }
+
+      // 3. FORTE DEMANDE — occ > 85% dans les 30 prochains jours
+      let booked30 = 0;
+      for (let i = 0; i < 30; i++) { if (booked.has(dateStr(addDays(today, i)))) booked30++; }
+      const occ30 = Math.round(booked30 / 30 * 100);
+      if (occ30 >= 85) {
+        const nextFreeStr = (() => {
+          for (let i = 0; i < 60; i++) { const ds = dateStr(addDays(today, i)); if (!booked.has(ds)) return ds; }
+          return null;
+        })();
+        if (nextFreeStr) {
+          const basePrice = prices[nextFreeStr] || b.prix || 100;
+          ops.push({
+            bienId: b.id, bienNom: b.nom, bienEmoji: b.emoji || "🏡",
+            type: "demand", priority: "opportunity",
+            icon: "🟢", color: "#10b981",
+            label: `Forte demande — ${occ30}% d'occupation sur 30 jours`,
+            detail: `Prochaine nuit libre : ${nextFreeStr}`,
+            action: `Augmenter le tarif de +15-20% → ${Math.round(basePrice * 1.17)}€/nuit`,
+            daysAway: 0,
+          });
+        }
+      }
+
+      // 4. WEEKEND PREMIUM — check if weekends are priced higher than weekdays
+      let wePrices = [], wdPrices = [];
+      for (let i = 7; i <= 60; i++) {
+        const d = addDays(today, i);
+        const ds = dateStr(d);
+        if (booked.has(ds)) continue;
+        const p = prices[ds] || b.prix || 0;
+        if (p <= 0) continue;
+        const dow = d.getDay(); // 0=Sun, 6=Sat
+        if (dow === 5 || dow === 6 || dow === 0) wePrices.push(p);
+        else wdPrices.push(p);
+      }
+      if (wePrices.length > 3 && wdPrices.length > 3) {
+        const avgWe = Math.round(wePrices.reduce((s,v)=>s+v,0) / wePrices.length);
+        const avgWd = Math.round(wdPrices.reduce((s,v)=>s+v,0) / wdPrices.length);
+        const premiumPct = Math.round((avgWe - avgWd) / avgWd * 100);
+        if (premiumPct < 5) {
+          ops.push({
+            bienId: b.id, bienNom: b.nom, bienEmoji: b.emoji || "🏡",
+            type: "weekend", priority: "medium",
+            icon: "🟡", color: "#f59e0b",
+            label: `Weekend premium faible : +${premiumPct}% (recommandé +15-20%)`,
+            detail: `Ven/Sam/Dim moy. ${avgWe}€ vs semaine ${avgWd}€`,
+            action: `Appliquer +${Math.max(15, premiumPct + 10)}% les vendredi-samedi → ${Math.round(avgWd * 1.15)}€`,
+            daysAway: -1,
+          });
+        }
+      }
+    });
+
+    // Trier : urgent → high → opportunity → medium
+    const ORDER = { urgent: 0, high: 1, opportunity: 2, medium: 3 };
+    return ops.sort((a, z) => (ORDER[a.priority] ?? 9) - (ORDER[z.priority] ?? 9));
+  }, [visBiens, bookedSets, resasByBien, dailyPrices, today]);
+
+  // ══════════════════════════════════════════════════════════════════════
+  //  VUE 2 — PACING  (comparaison vs année précédente)
+  // ══════════════════════════════════════════════════════════════════════
+  const pacingData = useMemo(() => {
+    const curMonth  = today.getMonth(); // 0-based
+    const curYear   = today.getFullYear();
+
+    return shortBiens.map(b => {
+      // Occupation actuelle (mois en cours depuis J1 à aujourd'hui)
+      const booked = bookedSets[b.id] || new Set();
+      const daysInMonth = new Date(curYear, curMonth + 1, 0).getDate();
+      let bookedThisMonth = 0;
+      for (let d = 1; d <= today.getDate(); d++) {
+        const ds = `${curYear}-${String(curMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        if (booked.has(ds)) bookedThisMonth++;
+      }
+      const occActuel = Math.round(bookedThisMonth / today.getDate() * 100);
+
+      // Occupation historique même mois — via b.occ (données 2025 courantes)
+      const histMonthOcc = b.occ?.[curMonth] ?? null; // 0-100, peut être 0
+
+      // CA actuel vs historique — hist[lastYear][bienId][curMonth]
+      const caActuel = reservations
+        .filter(r => r.bienId === b.id && r.checkin?.startsWith(`${curYear}-${String(curMonth+1).padStart(2,'0')}`))
+        .reduce((s, r) => s + (r.montant || 0), 0);
+      const lastYear = curYear - 1;
+      const caHist = hist?.[lastYear]?.[b.id]?.[curMonth] ?? null;
+
+      const diff = histMonthOcc !== null ? occActuel - histMonthOcc : null;
+      const trend = diff === null ? "—" : diff > 5 ? "↑ En avance" : diff < -5 ? "↓ En retard" : "→ Dans la norme";
+      const trendColor = diff === null ? "#64748b" : diff > 5 ? "#10b981" : diff < -5 ? "#ef4444" : "#f59e0b";
+
+      return { b, occActuel, histMonthOcc, caActuel, caHist, diff, trend, trendColor, daysInMonth };
+    });
+  }, [shortBiens, bookedSets, reservations, hist, today]);
+
+  // ══════════════════════════════════════════════════════════════════════
+  //  VUE 3 — TENDANCES  (analyse des réservations)
+  // ══════════════════════════════════════════════════════════════════════
+  const tendances = useMemo(() => {
+    const validResas = reservations.filter(r => r.checkin && r.checkout && r.montant > 0);
+
+    // Durées de séjour
+    const durees = validResas.map(r => {
+      const ci = new Date(r.checkin + "T12:00:00Z"), co = new Date(r.checkout + "T12:00:00Z");
+      return Math.max(1, Math.round((co - ci) / 86400000));
+    });
+    const avgDuree = durees.length ? Math.round(durees.reduce((s,v)=>s+v,0) / durees.length * 10) / 10 : 0;
+    const durDist = [
+      { label: "1 nuit",    count: durees.filter(d => d === 1).length },
+      { label: "2-3 nuits", count: durees.filter(d => d >= 2 && d <= 3).length },
+      { label: "4-6 nuits", count: durees.filter(d => d >= 4 && d <= 6).length },
+      { label: "7-13 nuits",count: durees.filter(d => d >= 7 && d <= 13).length },
+      { label: "14+ nuits", count: durees.filter(d => d >= 14).length },
+    ].filter(d => d.count > 0);
+
+    // ADR par jour de la semaine
+    const DOW = ["Dim","Lun","Mar","Mer","Jeu","Ven","Sam"];
+    const dowStats = Array.from({length:7}, () => ({ rev: 0, nights: 0 }));
+    validResas.forEach(r => {
+      const ci = new Date(r.checkin + "T12:00:00Z"), co = new Date(r.checkout + "T12:00:00Z");
+      const nights = Math.max(1, Math.round((co - ci) / 86400000));
+      const adr = r.montant / nights;
+      for (let d = new Date(ci); d < co; d.setDate(d.getDate()+1)) {
+        dowStats[d.getDay()].rev += adr;
+        dowStats[d.getDay()].nights++;
+      }
+    });
+    const dowData = DOW.map((l, i) => ({
+      label: l, adr: dowStats[i].nights > 0 ? Math.round(dowStats[i].rev / dowStats[i].nights) : 0, nights: dowStats[i].nights,
+    }));
+    const maxAdr = Math.max(...dowData.map(d => d.adr), 1);
+
+    // Mois les plus performants
+    const moisStats = Array.from({length:12}, () => ({ rev: 0, resas: 0 }));
+    validResas.forEach(r => {
+      const m = parseInt(r.checkin?.slice(5,7)) - 1;
+      if (m >= 0 && m < 12) { moisStats[m].rev += r.montant; moisStats[m].resas++; }
+    });
+    const moisData = MOIS.map((l, i) => ({ label: l, rev: moisStats[i].rev, resas: moisStats[i].resas }))
+      .filter(m => m.resas > 0);
+    const maxRev = Math.max(...moisData.map(m => m.rev), 1);
+
+    // Canal mix
+    const canalMix = {};
+    validResas.forEach(r => {
+      const c = (r.canal || "autre").toLowerCase().includes("airbnb") ? "Airbnb"
+              : (r.canal || "").toLowerCase().includes("booking") ? "Booking"
+              : "Autre";
+      if (!canalMix[c]) canalMix[c] = { count: 0, rev: 0 };
+      canalMix[c].count++;
+      canalMix[c].rev += r.montant;
+    });
+
+    return { avgDuree, durDist, dowData, maxAdr, moisData, maxRev, canalMix, totalResas: validResas.length };
+  }, [reservations]);
+
+  // ── Render ────────────────────────────────────────────────────────────
+  return (
+    <div>
+      {/* Sub-nav */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+        {[
+          { id: "opportunites", l: "💡 Opportunités" },
+          { id: "pacing",       l: "📈 Pacing" },
+          { id: "tendances",    l: "🔬 Tendances" },
+        ].map(v => (
+          <button key={v.id} onClick={() => setView(v.id)} style={{ padding: "7px 14px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, background: view === v.id ? "#0ea5e9" : "rgba(255,255,255,0.06)", color: view === v.id ? "#fff" : "#94a3b8" }}>
+            {v.l}
+          </button>
+        ))}
+        {/* Filtre bien */}
+        <div style={{ marginLeft: "auto", display: "flex", gap: 4, flexWrap: "wrap" }}>
+          {[{ id:"all", l:"Tout" }, ...shortBiens.map(b => ({ id: b.id, l: (b.emoji||"") + " " + b.nom.replace("Villa ","") }))].map(o => (
+            <button key={o.id} onClick={() => setSelBien(o.id)} style={{ padding: "4px 10px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.1)", cursor: "pointer", fontSize: 10, background: selBien === o.id ? "rgba(14,165,233,0.2)" : "transparent", color: selBien === o.id ? "#0ea5e9" : "#64748b" }}>
+              {o.l}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── OPPORTUNITÉS ── */}
+      {view === "opportunites" && (
+        <div>
+          {opportunites.length === 0 ? (
+            <div style={{ textAlign: "center", padding: 48, color: "#475569" }}>
+              <div style={{ fontSize: 40, marginBottom: 12 }}>✅</div>
+              Aucune opportunité détectée — pricing optimal !
+            </div>
+          ) : (
+            <>
+              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 14 }}>
+                {opportunites.length} opportunité{opportunites.length>1?"s":""} détectée{opportunites.length>1?"s":""} — triées par priorité
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {opportunites.map((op, i) => (
+                  <div key={i} style={{ background: `${op.color}0d`, border: `1px solid ${op.color}33`, borderRadius: 12, padding: "14px 16px", display: "flex", gap: 14, alignItems: "flex-start" }}>
+                    <span style={{ fontSize: 22, flexShrink: 0, marginTop: 1 }}>{op.bienEmoji}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 4 }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "#e2e8f0" }}>{op.bienNom.replace("Villa ","")}</span>
+                        <span style={{ fontSize: 9, background: `${op.color}22`, color: op.color, borderRadius: 4, padding: "2px 7px", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1 }}>
+                          {op.priority === "urgent" ? "🚨 Urgent" : op.priority === "high" ? "⚡ Prioritaire" : op.priority === "opportunity" ? "💰 Opportunité" : "ℹ️ Info"}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 12, color: "#e2e8f0", marginBottom: 4 }}>{op.label}</div>
+                      <div style={{ fontSize: 11, color: "#64748b", marginBottom: 6 }}>{op.detail}</div>
+                      <div style={{ fontSize: 11, color: op.color, fontWeight: 600, background: `${op.color}12`, borderRadius: 6, padding: "6px 10px", display: "inline-block" }}>
+                        → {op.action}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── PACING ── */}
+      {view === "pacing" && (
+        <div>
+          <div style={{ fontSize: 11, color: "#64748b", marginBottom: 14 }}>
+            Comparaison occupation actuelle vs même mois année précédente (HIST)
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+            {pacingData.filter(p => selBien === "all" || p.b.id === selBien).map(({ b, occActuel, histMonthOcc, caActuel, caHist, trend, trendColor, daysInMonth }) => (
+              <div key={b.id} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "16px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                  <span style={{ fontSize: 18 }}>{b.emoji || "🏡"}</span>
+                  <span style={{ fontWeight: 700, fontSize: 13, color: "#e2e8f0" }}>{b.nom.replace("Villa ","")}</span>
+                  <span style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, color: trendColor }}>{trend}</span>
+                </div>
+                {/* Occupation */}
+                <div style={{ marginBottom: 10 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#64748b", marginBottom: 4 }}>
+                    <span>Occ. ce mois (à ce jour)</span>
+                    <span style={{ color: "#e2e8f0", fontWeight: 700 }}>{occActuel}%</span>
+                  </div>
+                  <div style={{ height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 2 }}>
+                    <div style={{ height: 4, width: `${occActuel}%`, background: "#0ea5e9", borderRadius: 2 }} />
+                  </div>
+                  {histMonthOcc !== null && (
+                    <>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#64748b", marginTop: 6, marginBottom: 4 }}>
+                        <span>Historique même mois</span>
+                        <span>{histMonthOcc}%</span>
+                      </div>
+                      <div style={{ height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 2 }}>
+                        <div style={{ height: 4, width: `${histMonthOcc}%`, background: "rgba(255,255,255,0.2)", borderRadius: 2, backgroundImage: "repeating-linear-gradient(90deg,rgba(255,255,255,0.3) 0px,rgba(255,255,255,0.3) 4px,transparent 4px,transparent 8px)" }} />
+                      </div>
+                    </>
+                  )}
+                </div>
+                {/* CA */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  <div>
+                    <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>CA ce mois</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: "#0ea5e9", fontFamily: "monospace" }}>{fmtK(caActuel)}</div>
+                  </div>
+                  {caHist !== null && (
+                    <div>
+                      <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>Historique</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: "#475569", fontFamily: "monospace" }}>{fmtK(caHist)}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── TENDANCES ── */}
+      {view === "tendances" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* KPIs globaux */}
+          <div style={{ display: "grid", gridTemplateColumns: mob ? "repeat(2,1fr)" : "repeat(4,1fr)", gap: 10 }}>
+            {[
+              { label: "Réservations", value: tendances.totalResas, color: "#0ea5e9" },
+              { label: "Durée moy.",   value: `${tendances.avgDuree} nuits`, color: "#f59e0b" },
+              { label: "Meilleur jour", value: tendances.dowData.reduce((a,b) => b.adr > a.adr ? b : a, {label:"—",adr:0}).label, color: "#10b981" },
+              { label: "Meilleur mois", value: tendances.moisData.reduce((a,b) => b.rev > a.rev ? b : a, {label:"—",rev:0}).label, color: "#a855f7" },
+            ].map(k => (
+              <div key={k.label} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: "12px 14px" }}>
+                <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{k.label}</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: k.color }}>{k.value}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "1fr 1fr", gap: 14 }}>
+            {/* Durée de séjour */}
+            <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", marginBottom: 12 }}>Durée de séjour</div>
+              {tendances.durDist.map(d => {
+                const pct = Math.round(d.count / tendances.totalResas * 100);
+                return (
+                  <div key={d.label} style={{ marginBottom: 8 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#94a3b8", marginBottom: 3 }}>
+                      <span>{d.label}</span>
+                      <span style={{ color: "#e2e8f0" }}>{d.count} · {pct}%</span>
+                    </div>
+                    <div style={{ height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 2 }}>
+                      <div style={{ height: 4, width: `${pct}%`, background: "#0ea5e9", borderRadius: 2 }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* ADR par jour de semaine */}
+            <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", marginBottom: 12 }}>ADR moyen par jour de semaine</div>
+              {tendances.dowData.filter(d => d.adr > 0).map(d => (
+                <div key={d.label} style={{ marginBottom: 8 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#94a3b8", marginBottom: 3 }}>
+                    <span>{d.label}</span>
+                    <span style={{ color: "#e2e8f0", fontFamily: "monospace" }}>{d.adr}€</span>
+                  </div>
+                  <div style={{ height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 2 }}>
+                    <div style={{ height: 4, width: `${Math.round(d.adr / tendances.maxAdr * 100)}%`, background: d.label === "Ven" || d.label === "Sam" ? "#f59e0b" : "#3b82f6", borderRadius: 2 }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Revenus par mois */}
+            <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", marginBottom: 12 }}>Revenus par mois (réservations actuelles)</div>
+              {tendances.moisData.map(m => (
+                <div key={m.label} style={{ marginBottom: 8 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#94a3b8", marginBottom: 3 }}>
+                    <span>{m.label}</span>
+                    <span style={{ color: "#e2e8f0", fontFamily: "monospace" }}>{fmtK(m.rev)} · {m.resas} résa</span>
+                  </div>
+                  <div style={{ height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 2 }}>
+                    <div style={{ height: 4, width: `${Math.round(m.rev / tendances.maxRev * 100)}%`, background: "#a855f7", borderRadius: 2 }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Canal mix */}
+            <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", marginBottom: 12 }}>Mix canal (réservations)</div>
+              {Object.entries(tendances.canalMix).map(([canal, s]) => {
+                const pct = Math.round(s.count / tendances.totalResas * 100);
+                const color = canal === "Airbnb" ? "#FF5A5F" : canal === "Booking" ? "#0ea5e9" : "#10b981";
+                return (
+                  <div key={canal} style={{ marginBottom: 10 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#94a3b8", marginBottom: 3 }}>
+                      <span>{canal}</span>
+                      <span style={{ color: "#e2e8f0" }}>{s.count} résa · {fmtK(s.rev)} · {pct}%</span>
+                    </div>
+                    <div style={{ height: 5, background: "rgba(255,255,255,0.06)", borderRadius: 2 }}>
+                      <div style={{ height: 5, width: `${pct}%`, background: color, borderRadius: 2 }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// YIELD ALERTS — alertes de remplissage pour le Cockpit
+// ============================================================================
+function YieldAlerts({ biens, reservations, mob }) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const in14  = new Date(today.getTime() + 14 * 86400000);
+  const in30  = new Date(today.getTime() + 30 * 86400000);
+
+  const alerts = biens.filter(b => b.type !== "long").map(b => {
+    const resas = reservations.filter(r => r.bienId === b.id && r.checkin && r.checkout);
+    const booked = (end) => {
+      let n = 0;
+      resas.forEach(r => {
+        const ci = new Date(r.checkin + "T12:00:00Z"), co = new Date(r.checkout + "T12:00:00Z");
+        const s = ci < today ? today : ci, e = co > end ? end : co;
+        if (e > s) n += (e - s) / 86400000;
+      });
+      return n;
+    };
+    const occ14 = Math.round(booked(in14) / 14 * 100);
+    const occ30 = Math.round(booked(in30) / 30 * 100);
+    let level, advice;
+    if (occ14 === 0)      { level = "danger";  advice = "Aucune résa · baisser le prix"; }
+    else if (occ14 < 30)  { level = "warning"; advice = `${occ14}% · vérifier les prix`; }
+    else if (occ14 >= 90) { level = "success"; advice = `${occ14}% complet · possibilité d'augmenter`; }
+    else                  { level = "ok";       advice = `${occ14}% · dans la norme`; }
+    return { b, occ14, occ30, level, advice };
+  });
+
+  const relevant = alerts.filter(a => a.level !== "ok");
+  if (relevant.length === 0) return null;
+
+  return (
+    <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", letterSpacing: 2, textTransform: "uppercase", marginBottom: 10 }}>
+        ⚡ Alertes rendement — 14 prochains jours
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "repeat(auto-fill, minmax(220px, 1fr))", gap: 8 }}>
+        {alerts.map(({ b, occ14, occ30, level, advice }) => {
+          const color = level === "danger" ? "#ef4444" : level === "warning" ? "#f59e0b" : level === "success" ? "#10b981" : "#475569";
+          const icon  = level === "danger" ? "🔴" : level === "warning" ? "🟡" : level === "success" ? "🟢" : "⚪";
+          return (
+            <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 10, background: `${color}10`, border: `1px solid ${color}30`, borderRadius: 8, padding: "8px 12px" }}>
+              <span style={{ fontSize: 16, flexShrink: 0 }}>{b.emoji || icon}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#e2e8f0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{b.nom.replace("Villa ", "")}</div>
+                <div style={{ fontSize: 10, color, marginTop: 1 }}>{icon} {advice}</div>
+                <div style={{ fontSize: 9, color: "#475569", marginTop: 1 }}>30j : {occ30}%</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// CANAL LIVE PERFORMANCE — depuis les réservations iCal/Beds24 réelles
+// ============================================================================
+function CanalLivePerf({ biens, reservations, mob }) {
+  const CANAL_CONF = {
+    airbnb:       { label: "Airbnb",       color: "#FF5A5F", comm: 0.03  },
+    booking:      { label: "Booking.com",  color: "#0ea5e9", comm: 0.15  },
+    direct:       { label: "Direct",       color: "#10b981", comm: 0     },
+    beds24:       { label: "Beds24",       color: "#a855f7", comm: 0     },
+  };
+  const normalize = c => {
+    if (!c) return "autre";
+    const l = c.toLowerCase();
+    if (l.includes("airbnb"))  return "airbnb";
+    if (l.includes("booking")) return "booking";
+    if (l.includes("direct"))  return "direct";
+    if (l.includes("beds24"))  return "beds24";
+    return "autre";
+  };
+
+  const stats = {};
+  reservations.forEach(r => {
+    if (!r.montant || r.montant <= 0 || !r.checkin || !r.checkout) return;
+    const canal = normalize(r.canal);
+    if (!stats[canal]) stats[canal] = { count: 0, brut: 0, nights: 0 };
+    const ci = new Date(r.checkin + "T12:00:00Z"), co = new Date(r.checkout + "T12:00:00Z");
+    const nights = Math.max(1, Math.round((co - ci) / 86400000));
+    stats[canal].count++;
+    stats[canal].brut += r.montant;
+    stats[canal].nights += nights;
+  });
+
+  const rows = Object.entries(stats)
+    .map(([canal, s]) => {
+      const conf = CANAL_CONF[canal] || { label: canal, color: "#64748b", comm: 0 };
+      const commission = Math.round(s.brut * conf.comm);
+      const net = s.brut - commission;
+      const adr = s.nights > 0 ? Math.round(s.brut / s.nights) : 0;
+      return { canal, ...conf, ...s, commission, net, adr };
+    })
+    .sort((a, b) => b.brut - a.brut);
+
+  const totalBrut = rows.reduce((s, r) => s + r.brut, 0);
+  const totalComm = rows.reduce((s, r) => s + r.commission, 0);
+  const totalNet  = rows.reduce((s, r) => s + r.net, 0);
+
+  if (rows.length === 0) return (
+    <div style={{ color: "#475569", fontSize: 12, padding: 16 }}>Aucune donnée de réservation disponible. Synchronisez l'iCal ou Beds24.</div>
+  );
+
+  return (
+    <div>
+      {/* KPI cards */}
+      <div style={{ display: "grid", gridTemplateColumns: mob ? "repeat(2,1fr)" : "repeat(4,1fr)", gap: 10, marginBottom: 16 }}>
+        {[
+          { label: "CA brut total",   value: `${(totalBrut/1000).toFixed(1)}k€`, color: "#0ea5e9" },
+          { label: "Commissions",     value: `${(totalComm/1000).toFixed(1)}k€`, color: "#ef4444" },
+          { label: "Net perçu",       value: `${(totalNet/1000).toFixed(1)}k€`,  color: "#10b981" },
+          { label: "Taux comm. moy.", value: totalBrut > 0 ? `${Math.round(totalComm/totalBrut*100)}%` : "—", color: "#f59e0b" },
+        ].map(k => (
+          <div key={k.label} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: "12px 14px" }}>
+            <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{k.label}</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: k.color, fontFamily: "monospace" }}>{k.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Par canal */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {rows.map(r => (
+          <div key={r.canal} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: "12px 14px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+              <div style={{ width: 10, height: 10, borderRadius: "50%", background: r.color, flexShrink: 0 }} />
+              <span style={{ fontWeight: 700, fontSize: 13, color: "#e2e8f0" }}>{r.label}</span>
+              <span style={{ fontSize: 11, color: "#475569", marginLeft: "auto" }}>{r.count} résa · {r.nights} nuits</span>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8 }}>
+              {[
+                { l: "CA brut",    v: `${r.brut.toLocaleString("fr-FR")}€`,       c: "#e2e8f0" },
+                { l: "Commission", v: r.comm > 0 ? `-${r.commission.toLocaleString("fr-FR")}€ (${Math.round(r.comm*100)}%)` : "0€", c: r.comm > 0 ? "#f87171" : "#64748b" },
+                { l: "Net",        v: `${r.net.toLocaleString("fr-FR")}€`,         c: "#10b981" },
+                { l: "ADR/nuit",   v: `${r.adr}€`,                                 c: "#f59e0b" },
+              ].map(k => (
+                <div key={k.l}>
+                  <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>{k.l}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: k.c, fontFamily: "monospace" }}>{k.v}</div>
+                </div>
+              ))}
+            </div>
+            {/* Barre progression */}
+            <div style={{ marginTop: 10, height: 3, background: "rgba(255,255,255,0.06)", borderRadius: 2 }}>
+              <div style={{ height: 3, width: `${totalBrut > 0 ? Math.round(r.brut/totalBrut*100) : 0}%`, background: r.color, borderRadius: 2 }} />
+            </div>
+            <div style={{ fontSize: 9, color: "#475569", marginTop: 3 }}>
+              {totalBrut > 0 ? Math.round(r.brut/totalBrut*100) : 0}% du CA total
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ fontSize: 9, color: "#334155", marginTop: 10 }}>
+        Commissions estimées : Airbnb 3% (frais hôte) · Booking 15% · Direct 0%. Basé sur les données iCal + Beds24 synchronisées.
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// MÉNAGE TAB — planning de ménage dédié
+// ============================================================================
+function MenageCard({ m, saveRes }) {
+  const [assigne, setAssigne] = useState(m.resa.assigne || "");
+  const windowColor = m.windowHours === null ? "#64748b" : m.windowHours < 4 ? "#ef4444" : m.windowHours < 8 ? "#f59e0b" : "#10b981";
+  const fmt = d => d ? d.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" }) : "—";
+  const save = (field, val) => saveRes(m.resa.id, field, val);
+
+  return (
+    <div style={{ background: m.resa.menage_done ? "rgba(16,185,129,0.06)" : "rgba(255,255,255,0.03)", border: `1px solid ${m.resa.menage_done ? "rgba(16,185,129,0.25)" : "rgba(255,255,255,0.08)"}`, borderRadius: 12, padding: "14px 16px", marginBottom: 8, display: "flex", gap: 12, alignItems: "flex-start" }}>
+      {/* Done toggle */}
+      <button onClick={() => save("menage_done", !m.resa.menage_done)} style={{ width: 30, height: 30, borderRadius: "50%", border: `2px solid ${m.resa.menage_done ? "#10b981" : "#334155"}`, background: m.resa.menage_done ? "#10b981" : "transparent", color: "#fff", fontSize: 15, cursor: "pointer", flexShrink: 0, marginTop: 2, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {m.resa.menage_done ? "✓" : ""}
+      </button>
+
+      <div style={{ flex: 1 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 6 }}>
+          <span style={{ fontWeight: 700, fontSize: 13, color: "#e2e8f0" }}>{m.bienEmoji} {m.bienNom}</span>
+          {m.resa.canal && <span style={{ fontSize: 9, background: "rgba(255,255,255,0.06)", borderRadius: 4, padding: "2px 6px", color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1 }}>{m.resa.canal}</span>}
+          {m.resa.menage_done && <span style={{ fontSize: 9, color: "#10b981", fontWeight: 700 }}>✓ FAIT</span>}
+        </div>
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", fontSize: 12, color: "#94a3b8", marginBottom: 8 }}>
+          <span>🚪 Sortie : <b style={{ color: "#e2e8f0" }}>{m.resa.voyageur || "—"}</b></span>
+          {m.nextResa
+            ? <span>🔑 Arrivée : <b style={{ color: "#e2e8f0" }}>{m.nextResa.voyageur || "—"}</b> · <b style={{ color: "#f59e0b" }}>{fmt(m.nextCheckin)}</b></span>
+            : <span style={{ color: "#334155" }}>Pas d'arrivée suivante planifiée</span>}
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          {m.windowHours !== null && (
+            <span style={{ fontSize: 11, color: windowColor, fontWeight: 600, background: `${windowColor}18`, borderRadius: 6, padding: "3px 8px" }}>
+              ⏱ {m.windowHours}h de fenêtre
+            </span>
+          )}
+          <input
+            type="text"
+            placeholder="Prestataire / assigné…"
+            value={assigne}
+            onChange={e => { setAssigne(e.target.value); save("assigne", e.target.value); }}
+            style={{ fontSize: 11, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "5px 10px", color: "#e2e8f0", width: 200 }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MenageTab({ biens, reservations, saveRes, mob }) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const in21  = new Date(today.getTime() + 21 * 86400000);
+  const todayStr = today.toISOString().slice(0,10);
+  const tomorStr = new Date(today.getTime() + 86400000).toISOString().slice(0,10);
+
+  // Collecte toutes les sorties dans les 21 prochains jours
+  const menages = [];
+  biens.forEach(b => {
+    const bienResas = reservations
+      .filter(r => r.bienId === b.id && r.checkout)
+      .sort((a, z) => a.checkout.localeCompare(z.checkout));
+
+    bienResas.forEach((r, i) => {
+      const coDate = new Date(r.checkout + "T12:00:00"); coDate.setHours(0,0,0,0);
+      if (coDate < today || coDate > in21) return;
+      const nextResa = bienResas.find((r2, j) => j > i && r2.checkin >= r.checkout);
+      const nextCi = nextResa ? (() => { const d = new Date(nextResa.checkin + "T12:00:00"); d.setHours(0,0,0,0); return d; })() : null;
+      const windowHours = nextCi ? Math.round((nextCi - coDate) / 3600000) : null;
+      menages.push({ bienId: b.id, bienNom: b.nom, bienEmoji: b.emoji || "🏡", resa: r, checkout: coDate, nextResa, nextCheckin: nextCi, windowHours });
+    });
+  });
+  menages.sort((a, z) => a.checkout - z.checkout);
+
+  // Grouper par jour
+  const byDay = {};
+  menages.forEach(m => {
+    const dk = m.checkout.toISOString().slice(0,10);
+    if (!byDay[dk]) byDay[dk] = [];
+    byDay[dk].push(m);
+  });
+
+  const fmt = d => d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+  const done = menages.filter(m => m.resa.menage_done).length;
+
+  // saveRes pour MenageCard : met à jour un champ d'une résa
+  const saveMenageField = (id, field, val) => {
+    saveRes(reservations.map(r => r.id === id ? { ...r, [field]: val } : r));
+  };
+
+  return (
+    <div>
+      {/* KPIs */}
+      <div style={{ display: "grid", gridTemplateColumns: mob ? "repeat(2,1fr)" : "repeat(4,1fr)", gap: 10, marginBottom: 20 }}>
+        {[
+          { label: "Total 21 jours",   value: menages.length, color: "#a855f7" },
+          { label: "Faits",            value: done,           color: "#10b981" },
+          { label: "À faire",          value: menages.length - done, color: menages.length - done > 0 ? "#ef4444" : "#475569" },
+          { label: "Aujourd'hui",      value: (byDay[todayStr] || []).length, color: "#f59e0b" },
+        ].map(k => (
+          <div key={k.label} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: "12px 14px" }}>
+            <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{k.label}</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: k.color, fontFamily: "monospace" }}>{k.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {menages.length === 0 ? (
+        <div style={{ textAlign: "center", padding: 48, color: "#475569" }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>✨</div>
+          Aucun ménage prévu dans les 21 prochains jours
+        </div>
+      ) : (
+        Object.entries(byDay).map(([dk, list]) => {
+          const isToday = dk === todayStr, isTomorrow = dk === tomorStr;
+          const dateLabel = isToday ? "Aujourd'hui" : isTomorrow ? "Demain" : fmt(new Date(dk + "T12:00:00"));
+          return (
+            <div key={dk} style={{ marginBottom: 22 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: isToday ? "#ef4444" : "#64748b", letterSpacing: 2, textTransform: "uppercase", marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
+                {isToday && <span style={{ background: "#ef4444", borderRadius: 4, padding: "1px 6px", color: "#fff", fontSize: 9 }}>URGENT</span>}
+                {dateLabel}
+              </div>
+              {list.map(m => <MenageCard key={m.resa.id} m={m} saveRes={saveMenageField} />)}
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// MESSAGES — templates de communication voyageur
+// ============================================================================
+function MessageTemplates({ biens, reservations, mob }) {
+  const [tplKey, setTplKey]   = useState("welcome");
+  const [resaId, setResaId]   = useState(null);
+  const [copied, setCopied]   = useState(false);
+
+  const TPLS = {
+    welcome: {
+      label: "🏡 Bienvenue",
+      fn: (r, b) =>
+`Bonjour ${r?.voyageur?.split(" ")[0] || ""},
+
+Nous sommes ravis de vous accueillir à ${b?.nom || "notre logement"} du ${r?.checkin || "[dates]"} au ${r?.checkout || "[dates]"}.
+
+Informations pratiques :
+• Check-in à partir de 17h
+• Code d'accès : [CODE]
+• WiFi : [SSID] / Mot de passe : [MDP]
+• Guide d'accueil : https://villamaryllis.com
+
+N'hésitez pas à nous contacter si vous avez des questions !
+
+Bonne route et à très bientôt,
+Vincent`,
+    },
+    checkin: {
+      label: "🔑 Rappel arrivée",
+      fn: (r, b) =>
+`Bonjour ${r?.voyageur?.split(" ")[0] || ""},
+
+Votre arrivée à ${b?.nom || ""} est prévue demain.
+
+• Check-in à partir de 17h
+• Code d'accès : [CODE]
+• Parking : [INFO PARKING]
+
+Si votre heure d'arrivée change, merci de nous prévenir.
+
+À demain !
+Vincent`,
+    },
+    checkout: {
+      label: "🚪 Rappel départ",
+      fn: (r, b) =>
+`Bonjour ${r?.voyageur?.split(" ")[0] || ""},
+
+J'espère que vous passez un excellent séjour à ${b?.nom || ""} !
+
+Petit rappel : le check-out est demain avant 12h.
+
+• Laisser les clés sur la table d'entrée
+• Fermer les volets et la porte à clé
+• Vider réfrigérateur et poubelles
+
+Merci et à bientôt !
+Vincent`,
+    },
+    review: {
+      label: "⭐ Demande d'avis",
+      fn: (r, b) =>
+`Bonjour ${r?.voyageur?.split(" ")[0] || ""},
+
+Merci beaucoup pour votre séjour à ${b?.nom || ""}. C'était un vrai plaisir de vous accueillir !
+
+Si vous avez apprécié votre séjour, un avis Airbnb nous aide énormément à faire connaître nos logements.
+
+J'espère vous revoir bientôt !
+Vincent`,
+    },
+    devis: {
+      label: "💶 Devis direct",
+      fn: (r, b) =>
+`Bonjour,
+
+Merci pour votre intérêt pour ${b?.nom || "nos logements"}.
+
+Pour une réservation directe (sans frais Airbnb) :
+• Prix : [X]€/nuit
+• Ménage : [X]€
+• Caution : [X]€ (remboursée sous 48h)
+
+Réservez directement : https://villamaryllis.com/${b?.id || ""}
+
+À votre disposition,
+Vincent`,
+    },
+    incident: {
+      label: "⚠️ Signalement incident",
+      fn: (r, b) =>
+`Bonjour ${r?.voyageur?.split(" ")[0] || ""},
+
+J'ai bien pris note de votre signalement concernant ${b?.nom || "le logement"}.
+
+Je prends cela très au sérieux et vais intervenir dès que possible.
+
+Pouvez-vous me préciser :
+1. La nature exacte du problème
+2. Si vous avez des photos
+3. Si cela affecte votre confort immédiatement
+
+Je reviens vers vous dans les plus brefs délais.
+Vincent`,
+    },
+  };
+
+  const upcoming = reservations
+    .filter(r => r.checkin >= new Date().toISOString().slice(0,10))
+    .sort((a, b) => a.checkin.localeCompare(b.checkin))
+    .slice(0, 15);
+
+  const r  = resaId ? reservations.find(x => x.id === resaId) : null;
+  const b  = r ? biens.find(x => x.id === r.bienId) : null;
+  const tpl = TPLS[tplKey];
+  const msg = tpl ? tpl.fn(r, b) : "";
+
+  const copy = () => {
+    navigator.clipboard.writeText(msg).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
+  };
+
+  return (
+    <div>
+      <div style={{ fontSize: 11, color: "#64748b", marginBottom: 12 }}>
+        Messages types prêts à envoyer — sélectionnez un template, choisissez une réservation (optionnel), copiez.
+      </div>
+
+      {/* Template selector */}
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16 }}>
+        {Object.entries(TPLS).map(([k, t]) => (
+          <button key={k} onClick={() => setTplKey(k)} style={{ padding: "6px 12px", borderRadius: 20, border: "1px solid", borderColor: tplKey === k ? "#0ea5e9" : "rgba(255,255,255,0.1)", background: tplKey === k ? "rgba(14,165,233,0.15)" : "transparent", color: tplKey === k ? "#0ea5e9" : "#64748b", fontSize: 11, cursor: "pointer" }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Réservation selector */}
+      {upcoming.length > 0 && (
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 10, color: "#64748b", marginBottom: 6 }}>Pré-remplir avec une réservation :</div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            <button onClick={() => setResaId(null)} style={{ fontSize: 10, padding: "4px 10px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)", background: !resaId ? "rgba(255,255,255,0.08)" : "transparent", color: "#94a3b8", cursor: "pointer" }}>
+              Générique
+            </button>
+            {upcoming.slice(0, 10).map(res => {
+              const bb = biens.find(x => x.id === res.bienId);
+              return (
+                <button key={res.id} onClick={() => setResaId(res.id)} style={{ fontSize: 10, padding: "4px 10px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)", background: resaId === res.id ? "rgba(14,165,233,0.15)" : "transparent", color: resaId === res.id ? "#0ea5e9" : "#94a3b8", cursor: "pointer" }}>
+                  {bb?.emoji} {res.voyageur?.split(" ")[0] || "?"} · {res.checkin}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Message textarea */}
+      <div style={{ position: "relative" }}>
+        <textarea
+          readOnly value={msg}
+          style={{ width: "100%", minHeight: 240, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "14px 70px 14px 14px", color: "#e2e8f0", fontSize: 12, lineHeight: 1.75, fontFamily: "system-ui,sans-serif", resize: "vertical", boxSizing: "border-box" }}
+        />
+        <button onClick={copy} style={{ position: "absolute", top: 10, right: 10, padding: "5px 12px", borderRadius: 8, border: "none", background: copied ? "rgba(16,185,129,0.25)" : "rgba(14,165,233,0.2)", color: copied ? "#10b981" : "#0ea5e9", fontSize: 10, cursor: "pointer", fontWeight: 700 }}>
+          {copied ? "✓ Copié" : "Copier"}
+        </button>
+      </div>
+
+      {/* Actions */}
+      <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+        {r?.phone && (
+          <a href={`https://wa.me/${r.phone.replace(/[^0-9+]/g,"")}?text=${encodeURIComponent(msg)}`} target="_blank" rel="noopener noreferrer"
+            style={{ fontSize: 11, padding: "7px 16px", borderRadius: 8, background: "rgba(37,211,102,0.15)", color: "#25D366", textDecoration: "none", fontWeight: 600 }}>
+            📱 WhatsApp
+          </a>
+        )}
+        <a href={`mailto:?subject=Votre séjour à ${b?.nom || "Amaryllis"}&body=${encodeURIComponent(msg)}`}
+          style={{ fontSize: 11, padding: "7px 16px", borderRadius: 8, background: "rgba(14,165,233,0.1)", color: "#0ea5e9", textDecoration: "none", fontWeight: 600 }}>
+          ✉️ Email
+        </a>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
 // ============================================================================
 // TARIFS (gestion des prix publics)
 // ============================================================================
 const DEFAULT_PRIX = { amaryllis: 280, zandoli: 220, iguana: 180, geko: 150, mabouya: 110, schoelcher: 100, nogent: 85 };
 const BIEN_LABELS  = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", iguana: "Villa Iguana", geko: "Géko", mabouya: "Mabouya", schoelcher: "T2 Schœlcher", nogent: "T2 Nogent-sur-Marne" };
 const BIEN_IDS = Object.keys(DEFAULT_PRIX);
+// Garde-fous tarifaires par bien : [min, max] en €
+const PRIX_LIMITS = {
+  amaryllis:  [200, 800],
+  zandoli:    [100, 300],
+  iguana:     [50,  600],
+  geko:       [100, 300],
+  mabouya:    [60,  150],
+  schoelcher: [90,  160],
+  nogent:     [70,  300],
+};
 
 const MOIS_CAL = ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Jul", "Aoû", "Sep", "Oct", "Nov", "Déc"];
 // Logements actifs sur le site direct (hors Iguana et Nogent)
-const CAL_BIEN_IDS = ["amaryllis", "zandoli", "geko", "mabouya", "schoelcher"];
+const CAL_BIEN_IDS = ["amaryllis", "zandoli", "iguana", "geko", "mabouya", "schoelcher", "nogent"];
 
-function CalendrierTarifs() {
+// Règles saisonnières par défaut — [moisDébut, moisFin] (1=Jan, 12=Déc), inclusif
+const DEFAULT_SAISONS = [
+  { id: "pic",    label: "Pic",          color: "#ef4444", months: [12, 1]  }, // Déc–Jan
+  { id: "haute",  label: "Haute saison", color: "#f59e0b", months: [2, 4]   }, // Fév–Avr
+  { id: "mi",     label: "Mi-saison",    color: "#0ea5e9", months: [5, 6]   }, // Mai–Jun
+  { id: "basse",  label: "Basse saison", color: "#10b981", months: [7, 11]  }, // Jul–Nov
+];
+
+function loadSaisons() {
+  try { return JSON.parse(localStorage.getItem("saisons_config") || "null") || DEFAULT_SAISONS; } catch { return DEFAULT_SAISONS; }
+}
+function saveSaisons(s) { try { localStorage.setItem("saisons_config", JSON.stringify(s)); } catch {} }
+
+function loadSaisonPrix() {
+  try { return JSON.parse(localStorage.getItem("saison_prix") || "null") || {}; } catch { return {}; }
+}
+function saveSaisonPrix(p) { try { localStorage.setItem("saison_prix", JSON.stringify(p)); } catch {} }
+
+function CalendrierTarifs({ reservations = [] }) {
   const [bienId, setBienId] = useState("amaryllis");
-  const [calYear, setCalYear] = useState(2026);
+  const [calYear, setCalYear] = useState(new Date().getFullYear());
   const [daily, setDaily] = useState(loadDailyPrices);
-  const [editing, setEditing] = useState(null); // { date, val }
+  const [selectedDates, setSelectedDates] = useState(new Set());
+  const [bulkPrice, setBulkPrice] = useState("");
+  const [syncStatus, setSyncStatus] = useState("idle"); // idle|local|syncing|synced|error
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragMode, setDragMode] = useState("add"); // "add" | "remove"
+  const [tooltip, setTooltip] = useState(null); // { x, y, text }
+  const [showSaisons, setShowSaisons] = useState(false);
+  const [showCopie, setShowCopie] = useState(false);
+  const [copieSource, setCopieSource] = useState("");
+  const [copieFactor, setCopieFactor] = useState("100");
+  const [saisons, setSaisons] = useState(loadSaisons);
+  const [saisonPrix, setSaisonPrix] = useState(() => {
+    const stored = loadSaisonPrix();
+    // init prix par défaut basés sur DEFAULT_PRIX si pas encore défini
+    const result = {};
+    DEFAULT_SAISONS.forEach(s => {
+      result[s.id] = stored[s.id] || {};
+    });
+    return result;
+  });
+  const [history, setHistory] = useState([]); // stack of previous daily states (max 10)
+  const serverTimer = useRef(null);
+
+  useEffect(() => {
+    const stop = () => setIsDragging(false);
+    window.addEventListener("mouseup", stop);
+    return () => window.removeEventListener("mouseup", stop);
+  }, []);
+
+  // Undo : pousse l'état actuel dans l'historique, applique le nouvel état
+  function commitChange(next) {
+    setHistory(h => [...h.slice(-9), daily]);
+    setDaily(next); saveDailyPrices(next); scheduleServerSync();
+  }
+
+  // Ctrl+Z + Échap
+  useEffect(() => {
+    const onKey = e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && history.length > 0) {
+        e.preventDefault();
+        const prev = history[history.length - 1];
+        setHistory(h => h.slice(0, -1));
+        setDaily(prev); saveDailyPrices(prev); scheduleServerSync();
+      }
+      if (e.key === "Escape") {
+        setSelectedDates(new Set());
+        setBulkPrice("");
+        setIsDragging(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [history]);
+
+  // Charger les overrides depuis le serveur au montage
+  useEffect(() => {
+    fetch("/api/site-config?type=prices")
+      .then(r => r.json())
+      .then(d => {
+        if (d.ok && d.config && Object.keys(d.config).length) {
+          applyServerPriceOverrides(d.config);
+          setDaily(loadDailyPrices());
+          setSyncStatus("synced");
+        }
+      }).catch(() => {});
+  }, []);
 
   // Rafraîchir si un autre onglet admin modifie les prix
   useEffect(() => {
     const refresh = () => setDaily(loadDailyPrices());
     window.addEventListener("storage", refresh);
-    return () => window.removeEventListener("storage", refresh);
+    window.addEventListener("amaryllis_prices_updated", refresh);
+    return () => {
+      window.removeEventListener("storage", refresh);
+      window.removeEventListener("amaryllis_prices_updated", refresh);
+    };
   }, []);
-  const [rangeStart, setRangeStart] = useState(null);
-  const [rangeSaved, setRangeSaved] = useState(false);
-  const [rangePrice, setRangePrice] = useState("");
-
-  // Copie d'un mois entier vers un autre mois (même bien)
-  const [copyFrom, setCopyFrom] = useState(""); // "2026-07"
-  const [copyTo,   setCopyTo]   = useState(""); // "2027-07"
-  const [copySaved, setCopySaved] = useState(false);
-
-  function copyMonth() {
-    if (!copyFrom || !copyTo || copyFrom === copyTo) return;
-    const [fy, fm] = copyFrom.split("-").map(Number);
-    const [ty, tm] = copyTo.split("-").map(Number);
-    const daysInFrom = new Date(fy, fm, 0).getDate();
-    const daysInTo   = new Date(ty, tm, 0).getDate();
-    const bienPrices = { ...(daily[bienId] || {}) };
-    for (let d = 1; d <= Math.min(daysInFrom, daysInTo); d++) {
-      const fromDate = `${fy}-${String(fm).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
-      const toDate   = `${ty}-${String(tm).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
-      const srcPrice = getPrice(fromDate) ?? SEED_DAILY_PRICES[bienId]?.[fromDate] ?? basePrice;
-      bienPrices[toDate] = srcPrice;
-    }
-    const next = { ...daily, [bienId]: bienPrices };
-    setDaily(next); saveDailyPrices(next);
-    setCopySaved(true); setTimeout(() => setCopySaved(false), 2000);
-  }
-
   const getPrice = (date) => daily[bienId]?.[date] ?? null;
   const basePrice = DEFAULT_PRIX[bienId];
 
+  // Prix N-1 : même jour de l'année précédente
+  const getPriceN1 = (date) => {
+    const prevDate = date.replace(/^\d{4}/, String(calYear - 1));
+    return daily[bienId]?.[prevDate] ?? null;
+  };
+
+  const bookedDates = useMemo(() => {
+    const set = new Set();
+    reservations.filter(r => r.bienId === bienId).forEach(r => {
+      if (!r.checkin || !r.checkout) return;
+      const cur = new Date(r.checkin + "T12:00:00Z");
+      const end = new Date(r.checkout + "T12:00:00Z");
+      while (cur < end) {
+        set.add(cur.toISOString().slice(0, 10));
+        cur.setUTCDate(cur.getUTCDate() + 1);
+      }
+    });
+    return set;
+  }, [reservations, bienId]);
+
+  // Sync serveur déboncée 2.5s après chaque modif locale
+  function scheduleServerSync() {
+    setSyncStatus("local");
+    clearTimeout(serverTimer.current);
+    serverTimer.current = setTimeout(async () => {
+      setSyncStatus("syncing");
+      try {
+        const overrides = loadPriceOverrides();
+        const r = await fetch("/api/site-config", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "prices", config: overrides }),
+        });
+        const d = await r.json();
+        setSyncStatus(d.ok ? "synced" : "error");
+      } catch { setSyncStatus("error"); }
+    }, 2500);
+  }
+
   function setDayPrice(date, price) {
     const next = { ...daily, [bienId]: { ...(daily[bienId] || {}), [date]: price } };
-    setDaily(next);
-    saveDailyPrices(next);
+    setDaily(next); saveDailyPrices(next); scheduleServerSync();
   }
   function clearDayPrice(date) {
     const bienPrices = { ...(daily[bienId] || {}) };
     delete bienPrices[date];
     const next = { ...daily, [bienId]: bienPrices };
-    setDaily(next);
-    saveDailyPrices(next);
+    setDaily(next); saveDailyPrices(next); scheduleServerSync();
   }
-  function applyRange() {
-    if (!rangeStart || !rangePrice) return;
-    const price = parseInt(rangePrice);
-    if (!price || price < 0) return;
+
+  // Applique toutes les règles saisonnières sur l'année courante pour le bien actif
+  function applySaisons() {
     const bienPrices = { ...(daily[bienId] || {}) };
-    // rangeStart is "YYYY-MM-DD", apply to all selected days (stored in rangeStart)
-    // For simplicity: range is from rangeStart to editing.date
-    const start = new Date(rangeStart + "T12:00:00Z");
-    const end = editing ? new Date(editing.date + "T12:00:00Z") : start;
-    const [a, b2] = start <= end ? [start, end] : [end, start];
-    const cur = new Date(a);
-    while (cur <= b2) {
-      bienPrices[cur.toISOString().slice(0, 10)] = price;
-      cur.setUTCDate(cur.getUTCDate() + 1);
+    const [pMin, pMax] = PRIX_LIMITS[bienId] || [25, 900];
+    for (let m = 1; m <= 12; m++) {
+      // Trouver la saison applicable
+      const saison = saisons.find(s => {
+        const [a, b] = s.months;
+        return a <= b ? m >= a && m <= b : m >= a || m <= b; // gère Déc–Jan (wrap)
+      });
+      if (!saison) continue;
+      const prix = saisonPrix[saison.id]?.[bienId];
+      if (!prix || prix < pMin || prix > pMax) continue;
+      const daysInM = new Date(calYear, m, 0).getDate();
+      for (let d = 1; d <= daysInM; d++) {
+        const date = `${calYear}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+        bienPrices[date] = prix;
+      }
     }
-    const next = { ...daily, [bienId]: bienPrices };
-    setDaily(next);
-    saveDailyPrices(next);
-    setRangeStart(null);
-    setRangePrice("");
-    setEditing(null);
-    setRangeSaved(true);
-    setTimeout(() => setRangeSaved(false), 2000);
+    commitChange({ ...daily, [bienId]: bienPrices });
+  }
+  function applyCopie() {
+    if (!copieSource || copieSource === bienId) return;
+    const factor = parseFloat(copieFactor) / 100;
+    if (!factor || factor <= 0) return;
+    const sourcePrices = daily[copieSource] || {};
+    const lim = PRIX_LIMITS[bienId] || [25, 900];
+    const bienPrices = { ...(daily[bienId] || {}) };
+    Object.entries(sourcePrices).forEach(([date, price]) => {
+      // Ne copier que les dates de l'année affichée
+      if (!date.startsWith(String(calYear))) return;
+      const adjusted = Math.round(price * factor);
+      const clamped = Math.min(Math.max(adjusted, lim[0]), lim[1]);
+      bienPrices[date] = clamped;
+    });
+    commitChange({ ...daily, [bienId]: bienPrices });
+    setShowCopie(false);
+  }
+
+  function applyBulk() {
+    const price = parseInt(bulkPrice);
+    const [pMin, pMax] = PRIX_LIMITS[bienId] || [25, 900];
+    if (!price || price < pMin || price > pMax || selectedDates.size === 0) return;
+    const bienPrices = { ...(daily[bienId] || {}) };
+    for (const d of selectedDates) bienPrices[d] = price;
+    commitChange({ ...daily, [bienId]: bienPrices });
+    setSelectedDates(new Set()); setBulkPrice("");
+  }
+  function clearBulk() {
+    if (selectedDates.size === 0) return;
+    const bienPrices = { ...(daily[bienId] || {}) };
+    for (const d of selectedDates) delete bienPrices[d];
+    commitChange({ ...daily, [bienId]: bienPrices });
+    setSelectedDates(new Set()); setBulkPrice("");
+  }
+  function toggleDate(date) {
+    setSelectedDates(prev => {
+      const next = new Set(prev);
+      next.has(date) ? next.delete(date) : next.add(date);
+      return next;
+    });
+  }
+  function handleDateMouseDown(e, date) {
+    e.preventDefault();
+    const adding = !selectedDates.has(date);
+    setDragMode(adding ? "add" : "remove");
+    setIsDragging(true);
+    setSelectedDates(prev => {
+      const next = new Set(prev);
+      adding ? next.add(date) : next.delete(date);
+      return next;
+    });
+  }
+  function handleDateMouseEnter(date) {
+    if (!isDragging) return;
+    setSelectedDates(prev => {
+      const next = new Set(prev);
+      dragMode === "add" ? next.add(date) : next.delete(date);
+      return next;
+    });
   }
 
   function priceColor(price) {
@@ -3548,22 +4770,50 @@ function CalendrierTarifs() {
     return "#0ea5e9";
   }
 
+  const syncBadge = { idle: null, local: "💾 local", syncing: "⟳ sync...", synced: "✓ serveur", error: "⚠ erreur serveur" }[syncStatus];
+  const syncColor = { idle: null, local: "#94a3b8", syncing: "#f59e0b", synced: "#10b981", error: "#ef4444" }[syncStatus];
+
   return (
     <div>
+      {/* Tooltip custom */}
+      {tooltip && (
+        <div style={{
+          position: "fixed", left: tooltip.x + 12, top: tooltip.y - 32,
+          background: "#1e293b", border: "1px solid rgba(255,255,255,0.12)",
+          color: "#e2e8f0", fontSize: 11, padding: "4px 8px", borderRadius: 6,
+          pointerEvents: "none", zIndex: 9999, whiteSpace: "nowrap",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.4)"
+        }}>
+          {tooltip.text}
+        </div>
+      )}
       {/* Bien tabs + navigation année */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           {CAL_BIEN_IDS.map(id => (
-            <button key={id} onClick={() => setBienId(id)} style={{
+            <button key={id} onClick={() => { setBienId(id); setSelectedDates(new Set()); setBulkPrice(""); }} style={{
               padding: "6px 14px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 12, fontWeight: bienId === id ? 700 : 400,
               background: bienId === id ? "#0ea5e9" : "rgba(255,255,255,0.06)",
               color: bienId === id ? "#fff" : "#64748b",
             }}>{BIEN_LABELS[id]}</button>
           ))}
         </div>
-        <div style={{ display: "flex", gap: 6 }}>
-          {[2026, 2027].map(y => (
-            <button key={y} onClick={() => setCalYear(y)} style={{
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          {syncBadge && <span style={{ fontSize: 11, color: syncColor, fontWeight: 600 }}>{syncBadge}</span>}
+          {history.length > 0 && (
+            <button
+              onClick={() => {
+                const prev = history[history.length - 1];
+                setHistory(h => h.slice(0, -1));
+                setDaily(prev); saveDailyPrices(prev); scheduleServerSync();
+              }}
+              title="Annuler la dernière modification (Ctrl+Z)"
+              style={{ padding: "4px 10px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)", color: "#94a3b8", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+              ↩ Annuler{history.length > 1 ? ` (${history.length})` : ""}
+            </button>
+          )}
+          {[new Date().getFullYear() - 1, new Date().getFullYear(), new Date().getFullYear() + 1].map(y => (
+            <button key={y} onClick={() => { setCalYear(y); setSelectedDates(new Set()); setBulkPrice(""); }} style={{
               padding: "6px 16px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 12, fontWeight: calYear === y ? 700 : 400,
               background: calYear === y ? "#6366f1" : "rgba(255,255,255,0.06)",
               color: calYear === y ? "#fff" : "#64748b",
@@ -3572,49 +4822,199 @@ function CalendrierTarifs() {
         </div>
       </div>
 
-      {/* Range tool */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "10px 14px", flexWrap: "wrap" }}>
-        <span style={{ fontSize: 11, color: "#64748b" }}>
-          {rangeStart ? `Début : ${rangeStart} — Clic sur une autre date pour sélectionner la plage` : "Clic sur une date pour éditer · Shift+clic pour sélection plage"}
-        </span>
-        {rangeStart && (
+      {/* Multi-select panel */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "10px 14px", flexWrap: "wrap", minHeight: 44 }}>
+        {selectedDates.size === 0 ? (
+          <span style={{ fontSize: 11, color: "#64748b" }}>Cliquez sur des dates pour les sélectionner — modifiez-les toutes en même temps</span>
+        ) : (
           <>
-            <input type="number" placeholder="Prix €" value={rangePrice} onChange={e => setRangePrice(e.target.value)}
-              style={{ width: 80, padding: "5px 8px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.1)", background: "#0f172a", color: "#e2e8f0", fontSize: 12, outline: "none" }} />
-            <button onClick={applyRange} disabled={!editing} style={{ padding: "5px 12px", borderRadius: 7, border: "none", background: editing ? "#0ea5e9" : "#334155", color: editing ? "#fff" : "#64748b", fontSize: 11, fontWeight: 600, cursor: editing ? "pointer" : "not-allowed" }} title={!editing ? "Cliquez d'abord une date de fin" : ""}>Appliquer la plage</button>
-            <button onClick={() => setRangeStart(null)} style={{ padding: "5px 10px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "#64748b", fontSize: 11, cursor: "pointer" }}>Annuler</button>
+            <span style={{ fontSize: 11, color: "#0ea5e9", fontWeight: 600 }}>{selectedDates.size} date{selectedDates.size > 1 ? "s" : ""} sélectionnée{selectedDates.size > 1 ? "s" : ""}</span>
+            {(() => {
+              const [pMin, pMax] = PRIX_LIMITS[bienId] || [25, 900];
+              const pv = parseInt(bulkPrice);
+              const outOfRange = bulkPrice !== "" && (!pv || pv < pMin || pv > pMax);
+              const valid = bulkPrice !== "" && pv >= pMin && pv <= pMax;
+              return (<>
+                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  <input
+                    autoFocus type="number" placeholder={`Prix € (${pMin}–${pMax})`} value={bulkPrice}
+                    onChange={e => setBulkPrice(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && applyBulk()}
+                    style={{ width: 110, padding: "5px 8px", borderRadius: 7, border: `1px solid ${outOfRange ? "#ef4444" : valid ? "#0ea5e9" : "#334155"}`, background: outOfRange ? "rgba(239,68,68,0.08)" : "#0f172a", color: outOfRange ? "#ef4444" : "#e2e8f0", fontSize: 12, outline: "none" }}
+                  />
+                  {outOfRange && (
+                    <span style={{ fontSize: 9, color: "#ef4444", paddingLeft: 2 }}>
+                      {pv < pMin ? `Min ${pMin}€` : `Max ${pMax}€`} pour {BIEN_LABELS[bienId]}
+                    </span>
+                  )}
+                </div>
+                <button onClick={applyBulk} disabled={!valid}
+                  style={{ padding: "5px 14px", borderRadius: 7, border: "none", background: valid ? "#0ea5e9" : "#334155", color: "#fff", fontSize: 11, fontWeight: 600, cursor: valid ? "pointer" : "not-allowed", alignSelf: "flex-start" }}>
+                  Appliquer
+                </button>
+              </>);
+            })()}
+            <button onClick={clearBulk}
+              style={{ padding: "5px 10px", borderRadius: 7, border: "1px solid rgba(239,68,68,0.3)", background: "transparent", color: "#ef4444", fontSize: 11, cursor: "pointer" }}>
+              Effacer prix
+            </button>
+            <button onClick={() => { setSelectedDates(new Set()); setBulkPrice(""); }}
+              style={{ padding: "5px 10px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "#64748b", fontSize: 11, cursor: "pointer" }}>
+              Désélectionner
+            </button>
           </>
         )}
-        {rangeSaved && <span style={{ fontSize: 11, color: "#10b981" }}>✓ Plage enregistrée</span>}
       </div>
 
-      {/* Copier un mois entier */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "10px 14px", flexWrap: "wrap" }}>
-        <span style={{ fontSize: 11, color: "#64748b" }}>Copier un mois :</span>
-        <input type="month" value={copyFrom} min="2026-01" max="2027-07" onChange={e => setCopyFrom(e.target.value)}
-          style={{ padding: "4px 8px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.1)", background: "#0f172a", color: "#e2e8f0", fontSize: 12, outline: "none" }} />
-        <span style={{ fontSize: 11, color: "#475569" }}>→</span>
-        <input type="month" value={copyTo} min="2026-01" max="2027-07" onChange={e => setCopyTo(e.target.value)}
-          style={{ padding: "4px 8px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.1)", background: "#0f172a", color: "#e2e8f0", fontSize: 12, outline: "none" }} />
-        <button onClick={copyMonth} disabled={!copyFrom || !copyTo || copyFrom === copyTo}
-          style={{ padding: "5px 12px", borderRadius: 7, border: "none", background: (copyFrom && copyTo && copyFrom !== copyTo) ? "#6366f1" : "#334155", color: "#fff", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
-          Copier les prix
-        </button>
-        {copySaved && <span style={{ fontSize: 11, color: "#10b981" }}>✓ Mois copié !</span>}
+      {/* ── Règles saisonnières ── */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: showSaisons ? 12 : 0 }}>
+          <button onClick={() => setShowSaisons(s => !s)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.08)", background: showSaisons ? "rgba(99,102,241,0.12)" : "rgba(255,255,255,0.03)", color: showSaisons ? "#a5b4fc" : "#64748b", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+            🗓 Règles saisonnières {showSaisons ? "▲" : "▼"}
+          </button>
+          {!showSaisons && saisons.some(s => saisonPrix[s.id]?.[bienId]) && (
+            <button onClick={applySaisons} style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "#6366f1", color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+              ⚡ Appliquer les saisons
+            </button>
+          )}
+        </div>
+        {showSaisons && (
+          <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "14px 16px" }}>
+            <div style={{ fontSize: 11, color: "#64748b", marginBottom: 12 }}>
+              Définissez un prix par saison pour <strong style={{ color: "#94a3b8" }}>{BIEN_LABELS[bienId]}</strong>, puis cliquez "Appliquer" pour remplir tout le calendrier.
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10, marginBottom: 14 }}>
+              {saisons.map(s => {
+                const [pMin, pMax] = PRIX_LIMITS[bienId] || [25, 900];
+                const val = saisonPrix[s.id]?.[bienId] || "";
+                const pv = parseInt(val);
+                const outOfRange = val !== "" && (!pv || pv < pMin || pv > pMax);
+                const [ma, mb] = s.months;
+                const mLabel = ma <= mb
+                  ? `${MOIS_CAL[ma-1]}–${MOIS_CAL[mb-1]}`
+                  : `${MOIS_CAL[ma-1]}–Déc / Jan–${MOIS_CAL[mb-1]}`;
+                return (
+                  <div key={s.id} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 8, padding: "10px 12px", border: `1px solid ${s.color}22` }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: s.color, display: "inline-block", flexShrink: 0 }} />
+                      <span style={{ fontSize: 12, fontWeight: 700, color: "#e2e8f0" }}>{s.label}</span>
+                      <span style={{ fontSize: 10, color: "#475569", marginLeft: "auto" }}>{mLabel}</span>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                      <input
+                        type="number"
+                        placeholder={`${pMin}–${pMax} €`}
+                        value={val}
+                        onChange={e => {
+                          const next = { ...saisonPrix, [s.id]: { ...(saisonPrix[s.id] || {}), [bienId]: e.target.value } };
+                          setSaisonPrix(next); saveSaisonPrix(next);
+                        }}
+                        style={{ width: "100%", padding: "5px 8px", borderRadius: 6, border: `1px solid ${outOfRange ? "#ef4444" : "rgba(255,255,255,0.1)"}`, background: outOfRange ? "rgba(239,68,68,0.08)" : "#0f172a", color: outOfRange ? "#ef4444" : "#e2e8f0", fontSize: 12, outline: "none", boxSizing: "border-box" }}
+                      />
+                      {outOfRange && <span style={{ fontSize: 9, color: "#ef4444" }}>{pv < pMin ? `Min ${pMin}€` : `Max ${pMax}€`}</span>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <button
+              onClick={applySaisons}
+              disabled={!saisons.some(s => { const v = parseInt(saisonPrix[s.id]?.[bienId]); const lim = PRIX_LIMITS[bienId]||[25,900]; return v >= lim[0] && v <= lim[1]; })}
+              style={{ padding: "7px 20px", borderRadius: 8, border: "none", background: "#6366f1", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+              ⚡ Appliquer sur {calYear}
+            </button>
+            <span style={{ fontSize: 10, color: "#475569", marginLeft: 10 }}>Les jours déjà personnalisés seront écrasés</span>
+          </div>
+        )}
       </div>
 
-      {/* Grille des mois : 12 pour 2026, Jan→Jul pour 2027 */}
+      {/* ── Copie entre biens ── */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <button onClick={() => setShowCopie(s => !s)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.08)", background: showCopie ? "rgba(6,182,212,0.12)" : "rgba(255,255,255,0.03)", color: showCopie ? "#67e8f9" : "#64748b", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+            📋 Copier depuis un autre bien {showCopie ? "▲" : "▼"}
+          </button>
+        </div>
+        {showCopie && (
+          <div style={{ marginTop: 10, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "flex-end", gap: 12, flexWrap: "wrap" }}>
+            <div>
+              <div style={{ fontSize: 10, color: "#64748b", marginBottom: 5 }}>Source</div>
+              <select
+                value={copieSource}
+                onChange={e => setCopieSource(e.target.value)}
+                style={{ padding: "6px 10px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.1)", background: "#0f172a", color: "#e2e8f0", fontSize: 12, outline: "none", cursor: "pointer" }}
+              >
+                <option value="">— Choisir —</option>
+                {CAL_BIEN_IDS.filter(id => id !== bienId).map(id => (
+                  <option key={id} value={id}>{BIEN_LABELS[id]}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <div style={{ fontSize: 10, color: "#64748b", marginBottom: 5 }}>Ajustement %</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <input
+                  type="number" value={copieFactor} min="1" max="300"
+                  onChange={e => setCopieFactor(e.target.value)}
+                  style={{ width: 70, padding: "6px 8px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.1)", background: "#0f172a", color: "#e2e8f0", fontSize: 12, outline: "none" }}
+                />
+                <span style={{ fontSize: 11, color: "#64748b" }}>%</span>
+                {parseFloat(copieFactor) !== 100 && (
+                  <span style={{ fontSize: 10, color: parseFloat(copieFactor) > 100 ? "#f59e0b" : "#10b981" }}>
+                    {parseFloat(copieFactor) > 100 ? `+${Math.round(parseFloat(copieFactor)-100)}%` : `−${Math.round(100-parseFloat(copieFactor))}%`}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {copieSource && (
+                <div style={{ fontSize: 10, color: "#475569" }}>
+                  Copie les prix {calYear} de <strong style={{ color: "#94a3b8" }}>{BIEN_LABELS[copieSource]}</strong> → <strong style={{ color: "#94a3b8" }}>{BIEN_LABELS[bienId]}</strong>
+                  {parseFloat(copieFactor) !== 100 ? ` × ${parseFloat(copieFactor)/100}` : ""}
+                  , clampé sur [{(PRIX_LIMITS[bienId]||[25,900])[0]}€–{(PRIX_LIMITS[bienId]||[25,900])[1]}€]
+                </div>
+              )}
+              <button
+                onClick={applyCopie}
+                disabled={!copieSource || copieSource === bienId}
+                style={{ padding: "7px 18px", borderRadius: 8, border: "none", background: copieSource ? "#06b6d4" : "#334155", color: "#fff", fontSize: 12, fontWeight: 700, cursor: copieSource ? "pointer" : "not-allowed", alignSelf: "flex-start" }}>
+                📋 Copier
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Grille des mois */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 14 }}>
-        {Array.from({ length: calYear === 2026 ? 12 : 7 }, (_, m) => {
+        {Array.from({ length: 12 }, (_, m) => {
           const daysInM = new Date(calYear, m + 1, 0).getDate();
           const firstDow = (new Date(calYear, m, 1).getDay() + 6) % 7; // Mon=0
           const cells = [];
           for (let i = 0; i < firstDow; i++) cells.push(null);
           for (let d = 1; d <= daysInM; d++) cells.push(d);
+          const monthDates = Array.from({ length: daysInM }, (_, i) =>
+            `${calYear}-${String(m + 1).padStart(2,"0")}-${String(i + 1).padStart(2,"0")}`
+          );
+          const allSelected = monthDates.every(d => selectedDates.has(d));
+          function toggleMonth() {
+            setSelectedDates(prev => {
+              const next = new Set(prev);
+              if (allSelected) monthDates.forEach(d => next.delete(d));
+              else monthDates.forEach(d => next.add(d));
+              return next;
+            });
+          }
           return (
             <div key={m} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "12px 10px" }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "#94a3b8", marginBottom: 8, textAlign: "center" }}>{MOIS_CAL[m]} {calYear}</div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
+              <div
+                onClick={toggleMonth}
+                title={allSelected ? "Désélectionner tout le mois" : "Sélectionner tout le mois"}
+                style={{ fontSize: 12, fontWeight: 600, color: allSelected ? "#0ea5e9" : "#94a3b8", marginBottom: 8, textAlign: "center", cursor: "pointer", userSelect: "none",
+                  borderRadius: 5, padding: "2px 4px", background: allSelected ? "rgba(14,165,233,0.1)" : "transparent",
+                  transition: "background 0.15s" }}
+              >{MOIS_CAL[m]} {calYear}</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, userSelect: "none" }}>
                 {["L","M","M","J","V","S","D"].map((d, i) => (
                   <div key={i} style={{ fontSize: 8, color: "#334155", textAlign: "center", paddingBottom: 3 }}>{d}</div>
                 ))}
@@ -3622,32 +5022,42 @@ function CalendrierTarifs() {
                   if (!d) return <div key={i} />;
                   const date = `${calYear}-${String(m + 1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
                   const price = getPrice(date);
-                  const isEditing = editing?.date === date;
+                  const priceN1 = getPriceN1(date);
+                  const isSelected = selectedDates.has(date);
+                  const isBooked = bookedDates.has(date);
+                  const effectivePrice = price ?? basePrice;
+                  const effectiveN1 = priceN1 ?? basePrice;
+                  const n1Diff = priceN1 !== null ? Math.round((effectivePrice - effectiveN1) / effectiveN1 * 100) : null;
+                  const n1Arrow = n1Diff === null ? "" : n1Diff > 0 ? "↑" : n1Diff < 0 ? "↓" : "";
+                  const n1Color = n1Diff > 0 ? "#10b981" : "#ef4444";
+                  const n1Label = n1Diff !== null ? ` · ${calYear - 1}: ${effectiveN1}€ ${n1Arrow}${Math.abs(n1Diff)}%` : "";
+                  const tooltipText = `${isBooked ? "🟣 Réservé · " : ""}${price !== null ? `${price}€` : `${basePrice}€ (défaut)`}${n1Label}`;
                   return (
                     <div
                       key={i}
-                      title={price !== null ? `${price}€` : `${basePrice}€ (défaut)`}
-                      onClick={(e) => {
-                        if (e.shiftKey || rangeStart) {
-                          if (!rangeStart) { setRangeStart(date); }
-                          else { setEditing({ date, val: String(price ?? basePrice) }); }
-                        } else {
-                          setEditing({ date, val: String(price ?? basePrice) });
-                          setRangeStart(null);
-                        }
-                      }}
+                      onMouseDown={e => handleDateMouseDown(e, date)}
+                      onMouseEnter={e => { handleDateMouseEnter(date); setTooltip({ x: e.clientX, y: e.clientY, text: tooltipText }); }}
+                      onMouseLeave={() => setTooltip(null)}
                       style={{
                         position: "relative", borderRadius: 3, padding: "3px 1px",
-                        background: rangeStart === date ? "rgba(14,165,233,0.35)" : priceColor(price),
+                        background: isSelected ? "rgba(14,165,233,0.3)" : priceColor(price),
                         cursor: "pointer", textAlign: "center", minHeight: 28,
-                        border: isEditing ? "1px solid #0ea5e9" : "1px solid transparent",
+                        border: isSelected ? "1px solid #0ea5e9" : isBooked ? "1px solid rgba(167,139,250,0.4)" : "1px solid transparent",
+                        outline: isSelected ? "1px solid #0ea5e940" : "none",
                       }}
                     >
-                      <div style={{ fontSize: 9, color: isEditing ? "#0ea5e9" : "#94a3b8", fontWeight: 500 }}>{d}</div>
+                      <div style={{ fontSize: 9, color: isSelected ? "#0ea5e9" : "#94a3b8", fontWeight: isSelected ? 700 : 500 }}>{d}</div>
                       {price !== null
                         ? <div style={{ fontSize: 8, color: priceTextColor(price), fontWeight: 600 }}>{price}</div>
                         : <div style={{ fontSize: 7, color: "#1e293b" }}>{basePrice}</div>
                       }
+                      {/* Indicateur N-1 */}
+                      {n1Arrow && (
+                        <div style={{ position: "absolute", top: 1, left: 2, fontSize: 6, color: n1Color, fontWeight: 700, lineHeight: 1 }}>{n1Arrow}</div>
+                      )}
+                      {isBooked && (
+                        <div style={{ position: "absolute", bottom: 1, right: 1, width: 4, height: 4, borderRadius: "50%", background: "#a78bfa" }} />
+                      )}
                     </div>
                   );
                 })}
@@ -3657,36 +5067,9 @@ function CalendrierTarifs() {
         })}
       </div>
 
-      {/* Inline edit popover */}
-      {editing && !rangeStart && (
-        <div style={{ position: "fixed", bottom: 80, right: 24, background: "#1e293b", borderRadius: 12, padding: 16, border: "1px solid rgba(255,255,255,0.12)", boxShadow: "0 8px 24px rgba(0,0,0,0.5)", zIndex: 200, minWidth: 200 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: "#94a3b8", marginBottom: 8 }}>{editing.date}</div>
-          <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 10 }}>
-            <input
-              type="number" autoFocus value={editing.val}
-              onChange={e => setEditing(ed => ({ ...ed, val: e.target.value }))}
-              onKeyDown={e => {
-                if (e.key === "Enter") { setDayPrice(editing.date, parseInt(editing.val) || basePrice); setEditing(null); }
-                if (e.key === "Escape") setEditing(null);
-              }}
-              style={{ width: 80, padding: "7px 10px", borderRadius: 7, border: "1px solid #0ea5e9", background: "#0f172a", color: "#e2e8f0", fontSize: 14, outline: "none" }}
-            />
-            <span style={{ color: "#475569", fontSize: 12 }}>€/nuit</span>
-          </div>
-          <div style={{ display: "flex", gap: 6 }}>
-            <button onClick={() => { setDayPrice(editing.date, parseInt(editing.val) || basePrice); setEditing(null); }}
-              style={{ flex: 1, padding: "7px", borderRadius: 7, border: "none", background: "#0ea5e9", color: "#fff", fontWeight: 600, fontSize: 12, cursor: "pointer" }}>OK</button>
-            <button onClick={() => { clearDayPrice(editing.date); setEditing(null); }}
-              style={{ padding: "7px 10px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "#ef4444", fontSize: 11, cursor: "pointer" }} title="Supprimer (retour défaut)">✕</button>
-            <button onClick={() => setEditing(null)}
-              style={{ padding: "7px 10px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "#64748b", fontSize: 11, cursor: "pointer" }}>Esc</button>
-          </div>
-          <div style={{ fontSize: 9, color: "#334155", marginTop: 8 }}>Défaut: {basePrice}€ · Entrée pour valider</div>
-        </div>
-      )}
 
       {/* Legend */}
-      <div style={{ display: "flex", gap: 14, marginTop: 18, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 14, marginTop: 18, flexWrap: "wrap", alignItems: "center" }}>
         {[
           { color: "rgba(16,185,129,0.25)", label: "Promo (−15%+)" },
           { color: "rgba(14,165,233,0.15)", label: "Standard" },
@@ -3699,6 +5082,12 @@ function CalendrierTarifs() {
             <span style={{ fontSize: 10, color: "#475569" }}>{label}</span>
           </div>
         ))}
+        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <span style={{ display: "inline-block", width: 12, height: 12, borderRadius: 3, background: "transparent", border: "1px solid rgba(167,139,250,0.4)", position: "relative" }}>
+            <span style={{ position: "absolute", bottom: 1, right: 1, width: 3, height: 3, borderRadius: "50%", background: "#a78bfa", display: "block" }} />
+          </span>
+          <span style={{ fontSize: 10, color: "#475569" }}>Réservé</span>
+        </div>
       </div>
 
       {/* ── Résumé tarifaire : min / moy / max par mois ── */}
@@ -3716,7 +5105,7 @@ function CalendrierTarifs() {
               </tr>
             </thead>
             <tbody>
-              {Array.from({ length: calYear === 2026 ? 12 : 7 }, (_, m) => {
+              {Array.from({ length: 12 }, (_, m) => {
                 const daysInM = new Date(calYear, m + 1, 0).getDate();
                 const prices2 = [];
                 for (let d = 1; d <= daysInM; d++) {
@@ -3742,7 +5131,7 @@ function CalendrierTarifs() {
   );
 }
 
-function Tarifs() {
+function Tarifs({ reservations = [] }) {
   const [prices, setPrices] = useState(() => {
     try {
       const stored = JSON.parse(localStorage.getItem("amaryllis_prices") || "{}");
@@ -3750,8 +5139,6 @@ function Tarifs() {
     } catch { return { ...DEFAULT_PRIX }; }
   });
   const [saved, setSaved] = useState(false);
-  const [synced, setSynced] = useState(false);
-
   function save() {
     localStorage.setItem("amaryllis_prices", JSON.stringify(prices));
     window.dispatchEvent(new Event("amaryllis_prices_updated"));
@@ -3759,39 +5146,8 @@ function Tarifs() {
     setTimeout(() => setSaved(false), 2500);
   }
 
-  function syncToSite() {
-    // saveDailyPrices est déjà appelé à chaque modification — pas besoin de re-sauvegarder.
-    // On écrit un timestamp dans localStorage pour déclencher l'event "storage"
-    // dans les autres onglets (cross-tab communication).
-    localStorage.setItem("amaryllis_sync_ts", Date.now().toString());
-    // Aussi sync les prix de base
-    localStorage.setItem("amaryllis_prices", JSON.stringify(prices));
-    // Même onglet (l'event "storage" ne se déclenche pas dans l'onglet émetteur)
-    window.dispatchEvent(new Event("amaryllis_prices_updated"));
-    setSynced(true);
-    setTimeout(() => setSynced(false), 3000);
-  }
-
   return (
     <div style={{ padding: "16px 0" }}>
-
-      {/* ── Bouton sync site ── */}
-      <div style={{ background: synced ? "rgba(16,185,129,0.08)" : "rgba(14,165,233,0.06)", border: `1px solid ${synced ? "rgba(16,185,129,0.3)" : "rgba(14,165,233,0.2)"}`, borderRadius: 12, padding: "14px 18px", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-        <div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "#e2e8f0", marginBottom: 2 }}>
-            {synced ? "✓ Site synchronisé" : "Synchroniser les prix sur le site public"}
-          </div>
-          <div style={{ fontSize: 11, color: "#475569" }}>
-            {synced ? "Tous les prix (base + calendrier) sont maintenant visibles sur le site." : "Publie tous les prix du calendrier + les prix de base sur le site visiteur."}
-          </div>
-        </div>
-        <button
-          onClick={syncToSite}
-          style={{ padding: "9px 20px", borderRadius: 8, border: "none", background: synced ? "#10b981" : "#0ea5e9", color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer", whiteSpace: "nowrap", transition: "background 0.25s", letterSpacing: "0.04em" }}
-        >
-          {synced ? "✓ Synchronisé" : "⟳ Sync → Site"}
-        </button>
-      </div>
 
       {/* ── Prix de base (barre compacte) ── */}
       <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 12, padding: "14px 18px", marginBottom: 28 }}>
@@ -3828,7 +5184,7 @@ function Tarifs() {
 
       {/* ── Calendrier des prix (toujours visible) ── */}
       <div style={{ fontSize: 14, fontWeight: 700, color: "#e2e8f0", marginBottom: 16 }}>Calendrier des prix</div>
-      <CalendrierTarifs />
+      <CalendrierTarifs reservations={reservations} />
     </div>
   );
 }
@@ -4263,16 +5619,289 @@ function Beds24Admin({ scriptUrl, reservations = [], saveRes }) {
 }
 
 // ============================================================================
+// ANALYTICS
+// ============================================================================
+function AnalyticsTab({ mob }) {
+  const [data, setData]     = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]   = useState(null);
+
+  useEffect(() => {
+    setLoading(true);
+    fetch("/api/analytics")
+      .then(r => r.json())
+      .then(d => {
+        if (d.error) setError(d.error);
+        else setData(d);
+        setLoading(false);
+      })
+      .catch(e => { setError(e.message); setLoading(false); });
+  }, []);
+
+  if (loading) return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 300, flexDirection: "column", gap: 12 }}>
+      <div style={{ fontSize: 28 }}>📊</div>
+      <div style={{ color: "#64748b", fontSize: 13 }}>Chargement Analytics…</div>
+    </div>
+  );
+
+  if (error) return (
+    <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 12, padding: 20, marginTop: 12 }}>
+      <div style={{ fontWeight: 700, color: "#f87171", marginBottom: 6 }}>⚠ Analytics non disponible</div>
+      <div style={{ fontSize: 11, color: "#94a3b8", fontFamily: "monospace" }}>{error}</div>
+      {error.includes("non configuré") && (
+        <div style={{ marginTop: 12, fontSize: 11, color: "#94a3b8", lineHeight: 1.8 }}>
+          <b style={{ color: "#e2e8f0" }}>Configuration requise :</b><br />
+          1. Google Cloud → créer un Service Account → télécharger le JSON<br />
+          2. GA4 Admin → Gestion des accès → ajouter l'email du service account (Lecteur)<br />
+          3. Ajouter les secrets Cloudflare : <code style={{ color: "#f59e0b" }}>GA4_PROPERTY_ID</code>, <code style={{ color: "#f59e0b" }}>GA4_CLIENT_EMAIL</code>, <code style={{ color: "#f59e0b" }}>GA4_PRIVATE_KEY</code>
+        </div>
+      )}
+    </div>
+  );
+
+  if (!data) return null;
+
+  // ── Agrégats overview (dateRange 0 = 30j, dateRange 1 = 30j précédents) ──
+  const agg = (range) => {
+    const rows = (data.overview || []).filter(r => r.dateRange === `date_range_${range}`);
+    // Si pas de dateRange dans la réponse (rapport simple), on prend tout
+    const all = rows.length > 0 ? rows : (data.overview || []);
+    return all.reduce((a, r) => ({
+      sessions:    a.sessions    + (r.sessions    || 0),
+      users:       a.users       + (r.totalUsers  || 0),
+      pageviews:   a.pageviews   + (r.screenPageViews || 0),
+      bounceRate:  a.bounceRate  + (r.bounceRate  || 0) / Math.max(all.length, 1),
+      avgDuration: a.avgDuration + (r.averageSessionDuration || 0) / Math.max(all.length, 1),
+    }), { sessions: 0, users: 0, pageviews: 0, bounceRate: 0, avgDuration: 0 });
+  };
+
+  const cur  = agg(0);
+  const prev = agg(1);
+  const delta = (c, p) => p > 0 ? Math.round((c - p) / p * 100) : null;
+
+  // Trier l'overview par date pour le graphe
+  const overviewByDate = [...(data.overview || [])]
+    .filter(r => !r.dateRange || r.dateRange === "date_range_0")
+    .sort((a, b) => (a.date || "").localeCompare(b.date || ""))
+    .map(r => ({ date: r.date ? `${r.date.slice(6,8)}/${r.date.slice(4,6)}` : "?", sessions: r.sessions || 0, users: r.totalUsers || 0 }));
+
+  // ── Devices ──
+  const totalDevSessions = (data.devices || []).reduce((s, r) => s + (r.sessions || 0), 0);
+  const devColors = { desktop: "#0ea5e9", mobile: "#10b981", tablet: "#f59e0b" };
+
+  // ── Top sources ──
+  const topSources = [...(data.sources || [])]
+    .map(r => ({
+      label: r.sessionSource === "(direct)" ? "Direct" : `${r.sessionSource}`,
+      medium: r.sessionMedium,
+      sessions: r.sessions || 0,
+    }))
+    .slice(0, 8);
+  const maxSrc = Math.max(...topSources.map(s => s.sessions), 1);
+
+  // ── Top pages ──
+  const topPages = [...(data.pages || [])]
+    .map(r => ({ path: r.pagePath || "/", sessions: r.sessions || 0, users: r.totalUsers || 0, duration: Math.round(r.averageSessionDuration || 0) }))
+    .slice(0, 12);
+  const maxPage = Math.max(...topPages.map(p => p.sessions), 1);
+
+  // ── Top pays ──
+  const topCountries = (data.countries || []).slice(0, 6);
+  const maxCountry = Math.max(...topCountries.map(c => c.sessions || 0), 1);
+
+  const fmt2 = n => n >= 1000 ? (n / 1000).toFixed(1) + "k" : String(Math.round(n));
+  const fmtDur = s => `${Math.floor(s/60)}m${Math.round(s%60).toString().padStart(2,"0")}s`;
+
+  const KPI = ({ label, value, prev: p, color = "#0ea5e9", suffix = "" }) => {
+    const d = p !== undefined ? delta(value, p) : null;
+    return (
+      <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "12px 14px" }}>
+        <div style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{label}</div>
+        <div style={{ fontSize: 22, fontWeight: 700, color, fontFamily: "monospace" }}>{fmt2(value)}{suffix}</div>
+        {d !== null && (
+          <div style={{ fontSize: 10, color: d >= 0 ? "#10b981" : "#ef4444", marginTop: 3 }}>
+            {d >= 0 ? "▲" : "▼"} {Math.abs(d)}% vs 30j préc.
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const srcColor = (medium) => {
+    if (medium === "organic")  return "#10b981";
+    if (medium === "referral") return "#f59e0b";
+    if (medium === "social")   return "#6366f1";
+    if (medium === "(none)")   return "#0ea5e9";
+    return "#64748b";
+  };
+
+  return (
+    <div>
+      <div style={{ fontSize: 16, fontWeight: 700, color: "#e2e8f0", marginBottom: 4 }}>📊 Google Analytics — 30 derniers jours</div>
+      <div style={{ fontSize: 11, color: "#64748b", marginBottom: 18 }}>Propriété G-N9BM709ZBL · {data.overview?.length || 0} jours de données</div>
+
+      {/* KPIs */}
+      <div style={{ display: "grid", gridTemplateColumns: mob ? "repeat(2,1fr)" : "repeat(5,1fr)", gap: 10, marginBottom: 20 }}>
+        <KPI label="Sessions"   value={cur.sessions}    prev={prev.sessions}    color="#0ea5e9" />
+        <KPI label="Visiteurs"  value={cur.users}       prev={prev.users}       color="#10b981" />
+        <KPI label="Pages vues" value={cur.pageviews}   prev={prev.pageviews}   color="#6366f1" />
+        <KPI label="Rebond"     value={Math.round(cur.bounceRate * 100)} suffix="%" color="#f59e0b" />
+        <KPI label="Durée moy." value={cur.avgDuration} color="#ec4899" suffix="" />
+      </div>
+
+      {/* Graphe sessions / jour */}
+      {overviewByDate.length > 0 && (
+        <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 13, padding: mob ? 12 : 18, marginBottom: 16 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "#94a3b8", marginBottom: 10 }}>Trafic quotidien — 30j</div>
+          <ResponsiveContainer width="100%" height={mob ? 110 : 140}>
+            <ComposedChart data={overviewByDate}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+              <XAxis dataKey="date" tick={{ fill: "#64748b", fontSize: 9 }} axisLine={false} tickLine={false} interval={Math.floor(overviewByDate.length / 7)} />
+              <YAxis tick={{ fill: "#64748b", fontSize: 9 }} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={TT} />
+              <Bar dataKey="sessions" fill="rgba(14,165,233,0.3)" radius={[2,2,0,0]} name="Sessions" />
+              <Line type="monotone" dataKey="users" stroke="#10b981" strokeWidth={1.5} dot={false} name="Visiteurs" />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      <div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "1fr 1fr", gap: 14, marginBottom: 16 }}>
+
+        {/* Appareils */}
+        <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 13, padding: 16 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "#94a3b8", marginBottom: 12 }}>📱 Appareils</div>
+          {(data.devices || []).map(d => {
+            const pct = totalDevSessions > 0 ? Math.round(d.sessions / totalDevSessions * 100) : 0;
+            const cat = d.deviceCategory || "other";
+            const color = devColors[cat] || "#64748b";
+            return (
+              <div key={cat} style={{ marginBottom: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 3 }}>
+                  <span style={{ color: "#e2e8f0", textTransform: "capitalize" }}>{cat === "desktop" ? "💻 Desktop" : cat === "mobile" ? "📱 Mobile" : "📟 Tablette"}</span>
+                  <span style={{ color, fontFamily: "monospace", fontWeight: 600 }}>{pct}% · {fmt2(d.sessions)}</span>
+                </div>
+                <div style={{ height: 5, background: "rgba(255,255,255,0.06)", borderRadius: 3 }}>
+                  <div style={{ height: 5, width: pct + "%", background: color, borderRadius: 3, transition: "width 0.4s" }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Pays */}
+        <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 13, padding: 16 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "#94a3b8", marginBottom: 12 }}>🌍 Pays visiteurs</div>
+          {topCountries.map((c, i) => {
+            const pct = Math.round((c.sessions || 0) / maxCountry * 100);
+            return (
+              <div key={c.country || i} style={{ marginBottom: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 3 }}>
+                  <span style={{ color: "#e2e8f0" }}>{c.country || "—"}</span>
+                  <span style={{ color: "#0ea5e9", fontFamily: "monospace", fontWeight: 600 }}>{fmt2(c.sessions || 0)}</span>
+                </div>
+                <div style={{ height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 2 }}>
+                  <div style={{ height: 4, width: pct + "%", background: "#0ea5e9", borderRadius: 2, opacity: 0.6 + 0.4 * pct / 100 }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Sources de trafic */}
+      <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 13, padding: 16, marginBottom: 16 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: "#94a3b8", marginBottom: 12 }}>🔗 Sources de trafic</div>
+        <div style={{ display: "grid", gap: 7 }}>
+          {topSources.map((s, i) => {
+            const pct = Math.round(s.sessions / maxSrc * 100);
+            const color = srcColor(s.medium);
+            const medLabel = s.medium === "(none)" ? "direct" : s.medium === "organic" ? "organique" : s.medium;
+            return (
+              <div key={i}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 2 }}>
+                  <span style={{ color: "#e2e8f0" }}>{s.label} <span style={{ color: "#64748b", fontSize: 9 }}>/ {medLabel}</span></span>
+                  <span style={{ color, fontFamily: "monospace", fontWeight: 600 }}>{fmt2(s.sessions)}</span>
+                </div>
+                <div style={{ height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 2 }}>
+                  <div style={{ height: 4, width: pct + "%", background: color, borderRadius: 2 }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Top pages */}
+      <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 13, overflow: "hidden" }}>
+        <div style={{ padding: "11px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)", fontSize: 12, fontWeight: 600, color: "#94a3b8" }}>📄 Pages les plus visitées</div>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ background: "rgba(255,255,255,0.02)" }}>
+              {["Page", "Sessions", "Visiteurs", "Durée moy."].map(h => (
+                <th key={h} style={{ padding: "7px 14px", textAlign: "left", fontSize: 9, color: "#475569", fontWeight: 600, textTransform: "uppercase" }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {topPages.map((p, i) => {
+              const pct = Math.round(p.sessions / maxPage * 100);
+              // Détecter le type de page
+              const isBien  = ["/amaryllis","/zandoli","/iguana","/geko","/mabouya","/schoelcher","/nogent"].some(b => p.path.startsWith(b));
+              const isGuide = p.path.startsWith("/guide") || p.path.startsWith("/explorer") || p.path.startsWith("/activites");
+              const isAdmin = p.path.startsWith("/admin");
+              const badge = isBien ? { l: "Villa", c: "#10b981" } : isGuide ? { l: "Guide", c: "#6366f1" } : isAdmin ? { l: "Admin", c: "#f59e0b" } : { l: "Page", c: "#475569" };
+              return (
+                <tr key={i} style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                  <td style={{ padding: "8px 14px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ fontSize: 8, padding: "2px 5px", borderRadius: 4, background: badge.c + "22", color: badge.c, fontWeight: 700, whiteSpace: "nowrap" }}>{badge.l}</span>
+                      <span style={{ fontSize: 11, color: "#94a3b8", fontFamily: "monospace" }}>{p.path.length > 40 ? p.path.slice(0,38) + "…" : p.path}</span>
+                    </div>
+                    <div style={{ height: 3, marginTop: 3, background: "rgba(255,255,255,0.05)", borderRadius: 2 }}>
+                      <div style={{ height: 3, width: pct + "%", background: badge.c, borderRadius: 2, opacity: 0.5 }} />
+                    </div>
+                  </td>
+                  <td style={{ padding: "8px 14px", fontFamily: "monospace", fontSize: 12, color: "#0ea5e9", fontWeight: 600 }}>{fmt2(p.sessions)}</td>
+                  <td style={{ padding: "8px 14px", fontFamily: "monospace", fontSize: 11, color: "#64748b" }}>{fmt2(p.users)}</td>
+                  <td style={{ padding: "8px 14px", fontFamily: "monospace", fontSize: 11, color: "#64748b" }}>{fmtDur(p.duration)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
 // APP
 // ============================================================================
 export default function App() {
   const [authed, setAuthed] = useState(() => localStorage.getItem(PWD_KEY) === "ok");
-  const [tab, setTab] = useState("planning");
+  const [tab, setTabRaw] = useState(() => { try { return localStorage.getItem("admin_tab") || "planning"; } catch { return "planning"; } });
+  const setTab = useCallback((t) => { setTabRaw(t); try { localStorage.setItem("admin_tab", t); } catch {} }, []);
   const [biens, setBiens] = useState([...SEED_BIENS]);
   const [n, setN] = useState(N);
   const [sync, setSync] = useState({ status: "idle", msg: "Données locales" });
   const [lastSync, setLastSync] = useState(null);
+  const [lastSyncTs, setLastSyncTs] = useState(() => { try { const v = localStorage.getItem("last_sync_ts"); return v ? Number(v) : null; } catch { return null; } });
   const [scriptUrl, setScriptUrl] = useState(() => localStorage.getItem("sheets_script_url") || "");
+
+  // Récupérer l'URL Apps Script depuis le serveur Cloudflare au démarrage
+  useEffect(() => {
+    fetch("/api/get-config")
+      .then(r => r.json())
+      .then(d => {
+        if (d.scriptUrl && !scriptUrl) {
+          setScriptUrl(d.scriptUrl);
+          try { localStorage.setItem("sheets_script_url", d.scriptUrl); } catch {}
+        }
+      })
+      .catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [showScriptSetup, setShowScriptSetup] = useState(false);
   const [showPushSetup, setShowPushSetup] = useState(false);
   const [ntfyTopic, setNtfyTopic] = useState(() => localStorage.getItem("ntfy_topic") || "");
@@ -4336,6 +5965,7 @@ export default function App() {
       setBiens(f.biens);
       setN(f.moisActifs || N);
       setLastSync(f.lastSync);
+      const ts = Date.now(); setLastSyncTs(ts); try { localStorage.setItem("last_sync_ts", String(ts)); } catch {}
       if (f.hist && Object.keys(f.hist).length > 0) setHist(prev => ({ ...prev, ...f.hist }));
       setSync({ status: "ok", msg: `✓ ${f.lastSync}` });
     } catch (e) {
@@ -4446,10 +6076,11 @@ export default function App() {
 
   // Alertes pour badges sur onglets
   const today = todayStr();
+  const tomorrow = addDays(today, 1);
   const planningAlerts = reservations.filter(r => {
     const b = biens.find(x => x.id === r.bienId);
     if (!b) return false;
-    return r.checkin === today || r.checkout === today ||
+    return r.checkin === today || r.checkin === tomorrow || r.checkout === today ||
       (r.checkout <= today && r.checkout >= addDays(today, -7) && !r.menage_done);
   }).length;
 
@@ -4462,14 +6093,18 @@ export default function App() {
   const TABS = [
     { id: "planning", l: mob ? "📅" : `📅 Planning${planningAlerts > 0 ? ` (${planningAlerts})` : ""}`, alert: planningAlerts > 0, alertColor: "#f59e0b" },
     { id: "cockpit", l: mob ? "🎯" : `🎯 Cockpit${cockpitAlerts > 0 ? ` ⚠` : ""}`, alert: cockpitAlerts > 0, alertColor: "#ef4444" },
+    { id: "revenue", l: mob ? "💡" : "💡 Revenue Mgr" },
     { id: "tarifs", l: mob ? "🏷️" : "🏷️ Tarifs" },
     { id: "previsionnel", l: mob ? "🔮" : "🔮 Prévisionnel" },
     { id: "charges", l: mob ? "💰" : "💰 Charges" },
     { id: "pilotage", l: mob ? "💼" : "💼 Pilotage" },
     { id: "historique", l: mob ? "📈" : "📈 Historique" },
-    { id: "emails", l: mob ? "📧" : "📧 Emails" },
+    { id: "analytics", l: mob ? "📊" : "📊 Analytics" },
+    { id: "menage",   l: mob ? "🧹" : `🧹 Ménage${(() => { const today = new Date(); today.setHours(0,0,0,0); const t = reservations.filter(r => { const co = new Date(r.checkout + "T12:00:00"); co.setHours(0,0,0,0); return co >= today && co <= new Date(today.getTime()+21*86400000) && !r.menage_done; }).length; return t > 0 ? ` (${t})` : ""; })()}` },
+    { id: "messages", l: mob ? "💬" : "💬 Messages" },
+    { id: "emails",   l: mob ? "📧" : "📧 Emails" },
     { id: "cautions", l: mob ? "🔒" : "🔒 Cautions" },
-    { id: "devis", l: mob ? "📋" : "📋 Devis" },
+    { id: "devis",    l: mob ? "📋" : "📋 Devis" },
   ];
 
   return (
@@ -4489,6 +6124,9 @@ export default function App() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "0 6px", flexShrink: 0, borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
           {!mob && <span style={{ fontSize: 9, color: sync.status === "error" ? "#ef4444" : sync.status === "ok" ? "#10b981" : "#64748b", marginRight: 2 }}>{sync.msg}</span>}
+          {!mob && lastSyncTs && (Date.now() - lastSyncTs) > 6 * 3600000 && (
+            <span title={`Dernière sync : ${new Date(lastSyncTs).toLocaleString("fr-FR")}`} style={{ fontSize: 9, color: "#f59e0b", marginRight: 4, cursor: "help" }}>⚠ données {Math.floor((Date.now()-lastSyncTs)/3600000)}h</span>
+          )}
           {!mob && <span style={{ fontSize: 11, fontWeight: 700, color: "#0ea5e9", fontFamily: "monospace", marginRight: 4 }}>{fmtK(ytd)}</span>}
           <button onClick={doSync} disabled={sync.status === "loading"} style={{ padding: "4px 9px", borderRadius: 6, border: "1px solid #0ea5e9", background: "rgba(14,165,233,0.1)", color: "#0ea5e9", fontSize: 10, fontWeight: 600, cursor: "pointer" }}>
             {sync.status === "loading" ? "⟳…" : "⟳"}
@@ -4508,12 +6146,16 @@ export default function App() {
 
       <div style={{ padding: mob ? "12px" : "18px 22px", maxWidth: 1200, paddingBottom: "calc(76px + env(safe-area-inset-bottom))" }}>
         {tab === "planning" && <Planning biens={biens} mob={mob} reservations={reservations} saveRes={saveRes} icalUrls={icalUrls} saveUrls={saveUrls} icalUrlsBooking={icalUrlsBooking} saveUrlsBooking={saveUrlsBooking} scriptUrl={scriptUrl} onApplyRevenusFromResas={onApplyRevenusFromResas} pushReservationsToScript={pushReservationsToScript} />}
-        {tab === "cockpit" && <Cockpit biens={biens} n={n} mob={mob} onUpdateRevenu={onUpdateRevenu} />}
+        {tab === "cockpit" && <Cockpit biens={biens} n={n} mob={mob} onUpdateRevenu={onUpdateRevenu} reservations={reservations} />}
         {tab === "previsionnel" && <Previsionnel biens={biens} n={n} mob={mob} hist={hist} />}
         {tab === "charges" && <Charges biens={biens} n={n} mob={mob} />}
-        {tab === "pilotage" && <Pilotage biens={biens} n={n} mob={mob} />}
+        {tab === "pilotage" && <Pilotage biens={biens} n={n} mob={mob} reservations={reservations} />}
         {tab === "historique" && <Historique biens={biens} n={n} mob={mob} hist={hist} />}
-        {tab === "tarifs" && <Tarifs />}
+        {tab === "revenue"  && <RevenueManagerPro biens={biens} reservations={reservations} mob={mob} />}
+        {tab === "tarifs" && <Tarifs reservations={reservations} />}
+        {tab === "analytics" && <AnalyticsTab mob={mob} />}
+        {tab === "menage"   && <MenageTab biens={biens} reservations={reservations} saveRes={saveRes} mob={mob} />}
+        {tab === "messages" && <MessageTemplates biens={biens} reservations={reservations} mob={mob} />}
         {tab === "emails" && <EmailSync mob={mob} />}
         {tab === "cautions" && <Cautions />}
         {tab === "devis" && <DevisEditor />}
