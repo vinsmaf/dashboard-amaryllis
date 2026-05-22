@@ -1081,12 +1081,6 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
 
   useEffect(() => { if (window.Stripe) setStripe(window.Stripe(STRIPE_PK)); }, []);
 
-  useEffect(() => {
-    const fn = (e) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", fn);
-    return () => window.removeEventListener("keydown", fn);
-  }, [onClose]);
-
   // Mount Stripe Elements once phase 3 renders
   useEffect(() => {
     if (phase === 3 && elements) {
@@ -1189,11 +1183,9 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
 
   return (
     <div
-      onClick={onClose}
       style={{ position: "fixed", inset: 0, zIndex: 1200, background: "rgba(6,22,22,0.72)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px 16px" }}
     >
       <div
-        onClick={e => e.stopPropagation()}
         style={{ background: IVORY, borderRadius: 12, overflow: "hidden", width: "100%", maxWidth: phase === 1 ? 860 : 500, maxHeight: "calc(92vh - env(safe-area-inset-bottom))", display: "flex", flexDirection: "column", boxShadow: "0 32px 80px rgba(0,0,0,0.45)", transition: "max-width 0.3s ease" }}
       >
         {/* Header */}
