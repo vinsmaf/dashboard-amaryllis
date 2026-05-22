@@ -3,7 +3,9 @@
 // Retourne : bookingId + prix (local si Beds24 ne le fournit pas).
 
 const BEDS24_V2_BOOKINGS = "https://beds24.com/api/v2/bookings";
+const BEDS24_AUTH_TOKEN  = "https://beds24.com/api/v2/authentication/token";
 const DEFAULT_PROP_ID    = "158192";
+const DEFAULT_ROOM_ID    = "348880";   // Appartement Nogent (propId 158192)
 
 const CORS = {
   "Content-Type": "application/json",
@@ -13,14 +15,31 @@ const CORS = {
 };
 const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: CORS });
 
+// Échange le refreshToken contre un access token (valable 24h)
+async function getAccessToken(refreshToken) {
+  const res  = await fetch(BEDS24_AUTH_TOKEN, { headers: { refreshToken } });
+  const data = await res.json();
+  if (!data.token) throw new Error("Refresh token invalide ou expiré");
+  return data.token;
+}
+
 export async function onRequestOptions() {
   return new Response(null, { status: 204, headers: CORS });
 }
 
 export async function onRequestPost(context) {
   const { request, env } = context;
-  const token = env.BEDS24_TOKEN;
-  if (!token) return json({ error: "BEDS24_TOKEN manquant" }, 500);
+
+  // Préférer le refreshToken (write access) ; fallback sur token statique
+  let token;
+  if (env.BEDS24_REFRESH_TOKEN) {
+    try { token = await getAccessToken(env.BEDS24_REFRESH_TOKEN); }
+    catch (e) { return json({ error: `Auth Beds24 échouée: ${e.message}` }, 500); }
+  } else if (env.BEDS24_TOKEN) {
+    token = env.BEDS24_TOKEN;
+  } else {
+    return json({ error: "BEDS24_TOKEN ou BEDS24_REFRESH_TOKEN manquant" }, 500);
+  }
 
   let body;
   try { body = await request.json(); }
@@ -58,6 +77,7 @@ export async function onRequestPost(context) {
   // ── Création de la réservation ────────────────────────────────────────────
   const bookingPayload = [{
     propId:    String(propId),
+    roomId:    DEFAULT_ROOM_ID,
     arrival:   checkin,
     departure: checkout,
     firstName: firstName.trim(),
@@ -80,15 +100,18 @@ export async function onRequestPost(context) {
 
     let createData;
     try   { createData = await createRes.json(); }
-    catch { return json({ error: "Réponse non-JSON de Beds24" }, 502); }
+    catch { return json({ error: "Réponse non-JSON de Beds24" }, 500); }
 
-    if (!createRes.ok || !createData.success) {
-      return json({ error: "Création Beds24 échouée", raw: createData }, 502);
+    // La réponse Beds24 V2 POST /bookings est un tableau [{success, new, info}]
+    const firstResult = Array.isArray(createData) ? createData[0] : createData;
+    if (!createRes.ok || !firstResult?.success) {
+      // Debug: include token metadata (never the full token)
+      const tokenMeta = token ? `len=${token.length},start=${token.substring(0,8)}` : "null";
+      return json({ error: "Création Beds24 échouée", raw: createData, tokenMeta }, 500);
     }
 
-    const created   = createData.data?.[0];
-    const bookingId = created?.id;
-    if (!bookingId) return json({ error: "bookingId absent dans la réponse Beds24", raw: createData }, 502);
+    const bookingId = firstResult?.new?.id;
+    if (!bookingId) return json({ error: "bookingId absent dans la réponse Beds24", raw: createData }, 500);
 
     // ── Récupérer le prix depuis Beds24 (GET immédiat) ────────────────────
     let price = 0;
@@ -129,6 +152,6 @@ export async function onRequestPost(context) {
     });
 
   } catch (e) {
-    return json({ error: e.message }, 502);
+    return json({ error: e.message }, 500);
   }
 }
