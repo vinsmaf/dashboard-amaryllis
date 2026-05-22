@@ -67,6 +67,42 @@ function json(data, status = 200) {
   });
 }
 
+// ── Beds24 : convertit les réservations en dates bloquées ─────────────────
+async function fetchBeds24Blocked(env) {
+  const token = env.BEDS24_TOKEN;
+  if (!token) return new Set();
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    // Récupérer toutes les réservations futures (arrivée à partir d'aujourd'hui)
+    // + réservations en cours (arrivée dans les 30 derniers jours)
+    const since = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+    const qp = new URLSearchParams({
+      propId:       "158192",
+      arrivalFrom:  since,
+      numId:        "200",
+    });
+    const res  = await fetch(`https://beds24.com/api/v2/bookings?${qp}`, { headers: { token } });
+    const data = await res.json();
+    if (!data.success) return new Set();
+
+    const blocked = new Set();
+    for (const b of (data.data || [])) {
+      if (b.status === "cancelled") continue;
+      if (!b.arrival || !b.departure) continue;
+      // Bloquer toutes les nuits du séjour (arrivée incluse, départ exclu)
+      const cur = new Date(b.arrival   + "T12:00:00Z");
+      const end = new Date(b.departure + "T12:00:00Z");
+      while (cur < end) {
+        blocked.add(cur.toISOString().slice(0, 10));
+        cur.setUTCDate(cur.getUTCDate() + 1);
+      }
+    }
+    return blocked;
+  } catch {
+    return new Set();
+  }
+}
+
 export async function onRequest(context) {
   const { request, env } = context;
   const url = new URL(request.url);
@@ -74,6 +110,16 @@ export async function onRequest(context) {
 
   if (!bienId) return json({ error: "bienId requis" }, 400);
 
+  // ── Cas Nogent : disponibilités depuis Beds24 API (pas d'iCal) ───────────
+  if (bienId === "nogent") {
+    const blocked = await fetchBeds24Blocked(env);
+    return json({
+      blockedDates: Array.from(blocked).sort(),
+      sources: { beds24: { ok: blocked.size >= 0, count: blocked.size } },
+    });
+  }
+
+  // ── Autres propriétés : iCal Airbnb + Booking.com ────────────────────────
   const maps = icalBienMap(env);
   const airbnbUrl = maps.airbnb[bienId];
 

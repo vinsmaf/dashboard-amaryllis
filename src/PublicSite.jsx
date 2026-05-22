@@ -2781,7 +2781,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
       <div ref={infoPanelRef} style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
 
         {/* ── Sticky mini-bar — appears after scrolling 200px ── */}
-        {showStickyBar && !BOOKING_DISABLED.has(bien.id) && !bien.beds24Url && (
+        {showStickyBar && !BOOKING_DISABLED.has(bien.id) && (
           <div style={{ position: "sticky", top: 0, zIndex: 50, background: IVORY, borderBottom: `1px solid ${SAND}`, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 24px", animation: "fadeIn 0.2s ease" }}>
             <div>
               <span style={{ fontWeight: 700, color: NAVY, fontFamily: "'Jost', sans-serif", fontSize: 14 }}>{bien.nom}</span>
@@ -3016,7 +3016,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
             </div>
 
             {/* Disponibilités — always in left column (mobile: always; desktop: if booking enabled) */}
-            {!BOOKING_DISABLED.has(bien.id) && !bien.beds24Url && (() => {
+            {!BOOKING_DISABLED.has(bien.id) && (() => {
               const minNights = getMinNights(bien.id, calCheckin);
               const calNightsLocal = calCheckin && calCheckout ? dateDiff(calCheckin, calCheckout) : 0;
               const calBelowMinLocal = calNightsLocal > 0 && calNightsLocal < minNights;
@@ -3278,7 +3278,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
           </div>
 
           {/* ── Right column: sticky booking widget (desktop only) ── */}
-          {!isMobile && !BOOKING_DISABLED.has(bien.id) && !bien.beds24Url && (
+          {!isMobile && !BOOKING_DISABLED.has(bien.id) && (
             <div style={{ width: 380, flexShrink: 0, position: "sticky", top: 24, alignSelf: "flex-start", paddingTop: 40, paddingBottom: 40 }}>
               <div style={{
                 background: IVORY, border: `1px solid ${SAND}`, borderRadius: 16,
@@ -3824,7 +3824,7 @@ function SearchByDates({ biens, onBook, onDetail }) {
   const todayVal = today();
 
   // Candidats : logements réservables (hors BOOKING_DISABLED et beds24)
-  const candidates = biens.filter(b => !BOOKING_DISABLED.has(b.id) && !b.beds24Url);
+  const candidates = biens.filter(b => !BOOKING_DISABLED.has(b.id));
 
   async function search() {
     if (!checkin || !checkout || checkout <= checkin) return;
@@ -5909,7 +5909,7 @@ export default function PublicSite() {
         items: [{ item_id: bien.id, item_name: bien.nom, item_category: bien.lieu?.split(",")[0]?.trim() || "Martinique", price: bien.prix || 0, currency: "EUR" }],
       });
 
-      if (!BOOKING_DISABLED.has(bien.id) && !bien.beds24Url) fetchAvailability(bien.id);
+      if (!BOOKING_DISABLED.has(bien.id)) fetchAvailability(bien.id);
     } else {
       const homeTitle = "Amaryllis — Location villa Martinique avec piscine | Réservation directe";
       const homeDesc = "Louez directement nos villas et appartements en Martinique (Sainte-Luce, Schœlcher) et en Île-de-France. Piscine à débordement, vue mer, jacuzzi privatif. Sans frais de service Airbnb.";
@@ -6025,7 +6025,7 @@ export default function PublicSite() {
       if (match) {
         const withPrice = { ...match, prix: loadPriceOverrides()[match.id] ?? match.prix };
         setDetailBien(withPrice);
-        if (!BOOKING_DISABLED.has(match.id) && !match.beds24Url) fetchAvailability(match.id);
+        if (!BOOKING_DISABLED.has(match.id)) fetchAvailability(match.id);
       }
     }
   }, []);
