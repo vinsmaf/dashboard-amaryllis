@@ -1093,58 +1093,93 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
 
   async function goToStripe() {
     if (!stripe) return;
-    setPaying(true); setPayError("");
+    setPaying(true); setPayError(""); setFindingBooking(true);
+
+    // Variables locales — ne pas lire le state React après des await
+    let finalAmount  = amount;          // prix calculé localement (si dates props)
+    let finalCheckin  = localCheckin;
+    let finalCheckout = localCheckout;
+
     try {
-      // 1. Chercher la réservation Beds24 → récupérer prix + dates réels
-      setFindingBooking(true);
-      let finalAmount = amount;
+      // ── 1. Chercher la réservation Beds24 → récupérer prix + dates réels ──
       try {
         const fr = await fetch("/api/beds24-manage", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "find", email: form.email, lastName: form.nom, checkin: localCheckin || undefined }),
+          body: JSON.stringify({
+            action:   "find",
+            email:    form.email,
+            lastName: form.nom.trim(),
+            checkin:  localCheckin || undefined,
+          }),
         });
         const fd = await fr.json();
         if (fd.ok && fd.bookingId) {
           setBookingId(fd.bookingId);
           bookingIdRef.current = fd.bookingId;
-          // ── Prix et dates récupérés depuis Beds24 ──
+          // Prix Beds24 — source de vérité
           if (fd.price > 0) {
             finalAmount = Math.round(fd.price);
             setAmount(finalAmount);
           }
-          if (fd.arrival)   { setLocalCheckin(fd.arrival); }
-          if (fd.departure) { setLocalCheckout(fd.departure); }
+          // Dates Beds24 — source de vérité
+          if (fd.arrival)   { finalCheckin  = fd.arrival;   setLocalCheckin(fd.arrival); }
+          if (fd.departure) { finalCheckout = fd.departure; setLocalCheckout(fd.departure); }
         }
-        // Si non trouvé : on continue quand même (cron worker annulera si besoin)
-      } catch {}
+      } catch (findErr) {
+        console.warn("[beds24-find] échec:", findErr.message);
+        // Non bloquant — on utilise le prix calculé localement si dispo
+      }
       setFindingBooking(false);
 
-      // 2. Créer le PaymentIntent Stripe
+      // ── 2. Validation du montant ──
+      if (!finalAmount || finalAmount < 50) {
+        // Tenter le calcul local à partir des dates Beds24 récupérées
+        if (finalCheckin && finalCheckout) {
+          const n = dateDiff(finalCheckin, finalCheckout);
+          if (n > 0) {
+            const raw = n * bien.prix;
+            const disc = Math.round(raw * getDiscount(n));
+            finalAmount = raw - disc + (FRAIS_MENAGE[bien.id] ?? 0);
+            setAmount(finalAmount);
+          }
+        }
+        if (!finalAmount || finalAmount < 50) {
+          throw new Error("Impossible de déterminer le montant. Vérifiez que votre réservation Beds24 est bien confirmée, puis réessayez.");
+        }
+      }
+
+      // ── 3. Créer le PaymentIntent Stripe ──
       const res = await fetch("/api/create-payment-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amount: finalAmount * 100,
+          amount:   finalAmount * 100,
           currency: "eur",
           metadata: {
-            bienId:    bien.id,
-            checkin:   localCheckin  || "",
-            checkout:  localCheckout || "",
-            voyageur:  `${form.prenom} ${form.nom}`.trim(),
-            email:     form.email,
-            beds24Id:  bookingIdRef.current || "",
+            bienId:   bien.id,
+            checkin:  finalCheckin,
+            checkout: finalCheckout,
+            voyageur: `${form.prenom} ${form.nom}`.trim(),
+            email:    form.email,
+            beds24Id: bookingIdRef.current || "",
           },
         }),
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
+
       const el = stripe.elements({ clientSecret: data.clientSecret, appearance: stripeAppearance });
       el.create("payment");
       setElements(el);
       setPhase(3);
-    } catch (e) { setPayError(e.message); }
-    finally { setPaying(false); setFindingBooking(false); }
+
+    } catch (e) {
+      setPayError(e.message);
+    } finally {
+      setPaying(false);
+      setFindingBooking(false);
+    }
   }
 
   async function handlePay() {
@@ -1179,7 +1214,8 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
     setPaying(false);
   }
 
-  const formOk = form.email.includes("@") && form.nom && amount >= 50;
+  // amount n'est pas requis ici : il sera récupéré/validé dans goToStripe()
+  const formOk = form.email.includes("@") && form.nom.trim().length > 0;
 
   return (
     <div
@@ -1301,16 +1337,15 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
               <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="jean.dupont@email.com" style={{ width: "100%", padding: "9px 12px", borderRadius: 7, border: `1px solid ${SAND}`, background: IVORY, color: NAVY, fontSize: 13, outline: "none", boxSizing: "border-box" }} />
             </div>
 
-            {/* Montant — calculé automatiquement, non modifiable */}
+            {/* Montant — récupéré depuis Beds24 au clic sur Continuer */}
             <div style={{ marginBottom: 20 }}>
               <label style={{ fontSize: 11, color: MUTED, display: "block", marginBottom: 4 }}>Montant à régler</label>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, background: amount > 0 ? "rgba(16,185,129,0.06)" : "rgba(239,68,68,0.06)", borderRadius: 9, border: `2px solid ${amount > 0 ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.25)"}`, padding: "12px 16px" }}>
-                <span style={{ flex: 1, fontSize: 22, fontWeight: 800, color: amount > 0 ? NAVY : "#ef4444" }}>
-                  {amount > 0 ? `${amount} €` : "—"}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, background: amount > 0 ? "rgba(16,185,129,0.06)" : "rgba(255,255,255,0.04)", borderRadius: 9, border: `2px solid ${amount > 0 ? "rgba(16,185,129,0.3)" : SAND}`, padding: "12px 16px" }}>
+                <span style={{ flex: 1, fontSize: 22, fontWeight: 800, color: amount > 0 ? NAVY : MUTED }}>
+                  {amount > 0 ? `${amount} €` : "Calculé automatiquement →"}
                 </span>
-                {amount > 0 && <span style={{ fontSize: 11, color: MUTED }}>calculé automatiquement</span>}
+                {amount > 0 && <span style={{ fontSize: 11, color: MUTED }}>confirmé par Beds24</span>}
               </div>
-              {amount < 50 && <div style={{ fontSize: 11, color: "#ef4444", marginTop: 4 }}>Saisissez les dates ci-dessus pour calculer le montant</div>}
             </div>
 
             {payError && <div style={{ color: "#e53e3e", fontSize: 12, marginBottom: 12, background: "rgba(229,62,62,0.08)", borderRadius: 7, padding: "8px 12px" }}>{payError}</div>}
@@ -1320,7 +1355,7 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
               disabled={paying || !formOk || !stripe}
               style={{ width: "100%", padding: "13px", borderRadius: 9, border: "none", background: formOk && !paying && stripe ? CORAL : SAND, color: formOk && !paying && stripe ? "#fff" : MUTED, fontWeight: 700, fontSize: 14, cursor: formOk && !paying ? "pointer" : "not-allowed", transition: "background 0.2s" }}
             >
-              {findingBooking ? "Vérification réservation…" : paying ? "Préparation…" : `Continuer · ${amount} €`}
+              {findingBooking ? "Récupération du prix…" : paying ? "Préparation du paiement…" : "Continuer →"}
             </button>
             <div style={{ textAlign: "center", marginTop: 10, fontSize: 11, color: MUTED }}>🔒 Paiement sécurisé par Stripe</div>
             <button onClick={() => setPhase(1)} style={{ display: "block", margin: "14px auto 0", background: "none", border: "none", color: MUTED, fontSize: 11, cursor: "pointer", textDecoration: "underline" }}>
