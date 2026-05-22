@@ -3,15 +3,29 @@
  *
  * Crons :
  *   "0 * * * *"   → sync iCal toutes les heures
- *   "0 9 * * *"   → audit + rappels J-3/J-1/J+1 + alertes occupation
+ *   "0 9 * * *"   → audit + rappels J-3/J-1/J+1/J+2/J-7direct + alertes + gap pricing + yield pricing
  *   "0 6 * * 1"   → rapport hebdomadaire (lundi matin)
  *   "0 1 1 * *"   → export comptable mensuel (1er du mois)
+ *
+ * Fonctions principales :
+ *   runSync            — Fetch iCal Airbnb + Booking, détecte nouvelles réservations
+ *   runReminders       — Rappels J-3, J-1 (+ ntfy ménage), J+1, J+2 avis, J-7 direct
+ *   runOccupancyAlerts — Alertes sous-occupation 30j + urgence 0 résa 14j
+ *   runGapPricing      — Remises automatiques sur trous de calendrier 1-4 nuits
+ *   runYieldPricing    — Yield management : -20%/-15% si occ < 30% sur 14j
+ *   runMonitor         — Audit HTTP + alerte expiration token Beds24
+ *   runWeeklyReport    — Rapport hebdomadaire (occupation, revenus, arrivées)
+ *   runMonthlyExport   — Export CSV comptable mensuel
+ *   runCautionAutoRelease — Libération automatique des cautions Stripe J+3
  *
  * Secrets requis :
  *   RESEND_API_KEY        — Resend (email)
  *   APPS_SCRIPT_URL       — Google Apps Script
  *   NTFY_TOPIC            — Topic ntfy.sh pour notifs ménage (ex: menage-amaryllis-2025)
  *   NOTIFICATION_EMAIL    — Email hôte (défaut: contact@villamaryllis.com)
+ *   BEDS24_TOKEN          — Token API Beds24 V2 (optionnel, alerte expiration)
+ *   STRIPE_SECRET_KEY     — Stripe (caution + auto-release)
+ *   WORKER_SECRET         — Token de sécurité pour les endpoints déclencheurs
  */
 
 // ── iCal URLs Airbnb ─────────────────────────────────────────────────────────
@@ -263,9 +277,10 @@ async function sendNouvellesResas(env, nouvelles) {
   });
 }
 
-// ── Rappels hôte (J-3 / J-1 / J+1) ─────────────────────────────────────────
-async function runReminders(env, allEvents) {
-  const todayStr = today();
+// ── Rappels hôte (J-3 / J-1 / J+1 / J+2 avis / J-7 direct) ─────────────────
+async function runReminders(env, allEvents, allEventsCtx) {
+  const todayStr  = today();
+  const eventsCtx = allEventsCtx || allEvents; // contexte complet pour chercher prochaine arrivée
 
   for (const e of allEvents) {
     const daysToCheckin  = diffDays(todayStr, e.checkin);
@@ -299,6 +314,10 @@ Voici quelques informations pratiques pour préparer votre arrivée :
 N'hésitez pas si vous avez des questions. À très bientôt !
 — Vincent</div>
           </div>
+          ${(e.canal === "airbnb" || e.canal === "booking") ? `
+          <div style="margin-top:12px;background:#fef9c3;border:1px solid #fde047;border-radius:8px;padding:10px 14px;font-size:12px;color:#713f12;">
+            ⚠️ <strong>${e.canal === "airbnb" ? "Airbnb" : "Booking.com"} envoie déjà ses propres rappels au voyageur.</strong> N'envoie ce message que si tu souhaites ajouter une info spécifique — sinon le voyageur recevrait 2 messages identiques.
+          </div>` : ""}
           <div style="margin-top:16px;text-align:center;">
             <a href="${env.SITE_URL || "https://villamaryllis.com"}/admin" style="background:#0e3b3a;color:#fff;text-decoration:none;padding:10px 20px;border-radius:8px;font-weight:700;font-size:13px;">Voir le planning →</a>
           </div>
@@ -341,8 +360,28 @@ Merci et à bientôt !
         `),
       });
 
-      // WhatsApp ménage
-      const waText = `🏠 Ménage demain\n${nom}\n⏰ Départ avant 11h — ${formatDate(e.checkout)}\nVoyageur : ${guest} (${nights} nuits)\nProchaine arrivée : vérifier planning`;
+      // WhatsApp ménage — checklist détaillée avec prochaine arrivée
+      const nextArrival = eventsCtx
+        .filter(x => x.bienId === e.bienId && x.checkin > e.checkout)
+        .sort((a, b) => a.checkin.localeCompare(b.checkin))[0];
+      const nextArrivalLine = nextArrival
+        ? `➡️ Prochaine arrivée : ${formatDate(nextArrival.checkin)} (${nextArrival.voyageur})`
+        : "➡️ Prochaine arrivée : aucune planifiée";
+      const waText = [
+        `🏠 MÉNAGE — ${nom}`,
+        `👤 Voyageur : ${guest} (${nights} nuit${nights > 1 ? "s" : ""})`,
+        `⏰ Départ avant 11h — ${formatDate(e.checkout)}`,
+        nextArrivalLine,
+        "",
+        "📋 Checklist ménage :",
+        "□ Retirer et mettre draps/serviettes à laver",
+        "□ Vider et sortir les poubelles",
+        "□ Nettoyage complet cuisine (plan de travail, four, frigo)",
+        "□ Nettoyage WC",
+        "□ Nettoyage salle de bain (douche, lavabo, miroir)",
+        "□ Vérifier inventaire (vaisselle, linge, équipements)",
+        "□ Aérer + remettre climatisation sur mode auto",
+      ].join("\n");
       await sendWhatsApp(env, waText);
 
       await env.ICAL_STORE.put(kvKey, "sent", { expirationTtl: 60 * 60 * 24 * 14 });
@@ -373,11 +412,85 @@ Un avis de votre part nous aiderait vraiment — merci d'avance 🙏
 À bientôt en Martinique !
 — Vincent</div>
           </div>
+          ${(e.canal === "airbnb" || e.canal === "booking") ? `
+          <div style="margin-top:12px;background:#fef9c3;border:1px solid #fde047;border-radius:8px;padding:10px 14px;font-size:12px;color:#713f12;">
+            ⚠️ <strong>${e.canal === "airbnb" ? "Airbnb" : "Booking.com"} envoie déjà un message post-séjour automatique.</strong> N'envoie ce message que si tu veux personnaliser — sinon le voyageur recevrait 2 messages.
+          </div>` : ""}
         `),
       });
 
       await env.ICAL_STORE.put(kvKey, "sent", { expirationTtl: 60 * 60 * 24 * 14 });
       console.log(`[reminders] J+1 envoyé — ${nom} · ${guest}`);
+    }
+
+    // ── J+2 : demande d'avis ─────────────────────────────────────────────────
+    if (daysToCheckout === -2) {
+      const kvKey = `reminder:j2review:${e.uid}`;
+      if (await env.ICAL_STORE.get(kvKey)) continue;
+
+      const bookingLink = `https://villamaryllis.com/${e.bienId}`;
+      const canalNote = e.canal === "airbnb"
+        ? `<p style="margin:12px 0 0;font-size:12px;color:#0f766e;background:#e0f8f4;padding:10px 14px;border-radius:6px;">💡 Rappel : pense à laisser un avis au voyageur aussi sur Airbnb !</p>`
+        : "";
+
+      await sendEmail(env, {
+        subject: `⭐ Demande d'avis — ${guest} · ${nom}`,
+        html: emailWrapper(`
+          <h2 style="color:#0e3b3a;margin:0 0 8px">⭐ Rappel J+2 · Demande d'avis</h2>
+          <p style="color:#7a6b5a;font-size:13px;margin:0 0 20px">${nom} · ${guest} · séjour du ${formatDate(e.checkin)} au ${formatDate(e.checkout)}</p>
+          <div style="background:#fff;border-radius:8px;padding:20px 24px;font-size:14px;color:#0e3b3a;line-height:1.9;">
+            <p style="margin:0 0 12px;font-weight:700;">💬 Message à copier-coller sur Airbnb/Booking pour demander un avis :</p>
+            <div style="background:#f8f4ed;border-left:3px solid #c47254;border-radius:0 8px 8px 0;padding:16px 20px;font-size:13px;color:#3d2c1e;white-space:pre-line;">Bonjour ${guest},
+
+J'espère que votre retour s'est bien passé 🙂 Votre séjour à ${nom} nous a fait très plaisir !
+
+Si vous avez quelques minutes, un avis de votre part nous aide énormément à accueillir de futurs voyageurs dans les meilleures conditions.
+
+Vous pouvez également retrouver et réserver directement nos logements sur :
+🌐 ${bookingLink}
+
+Merci encore, et à bientôt peut-être en Martinique !
+— Vincent</div>
+          </div>
+          ${canalNote}
+        `),
+      });
+
+      await env.ICAL_STORE.put(kvKey, "sent", { expirationTtl: 60 * 60 * 24 * 21 });
+      console.log(`[reminders] J+2 avis envoyé — ${nom} · ${guest}`);
+    }
+
+    // ── J-7 : réservation directe ────────────────────────────────────────────
+    if (daysToCheckin === 7 && e.canal !== "airbnb" && e.canal !== "booking") {
+      const kvKey = `reminder:j7direct:${e.uid}`;
+      if (await env.ICAL_STORE.get(kvKey)) continue;
+
+      const cautionAmt = CAUTION_AMOUNTS[e.bienId] || 500;
+      const guide = GUIDE_URLS[e.bienId] || "https://villamaryllis.com";
+
+      await sendEmail(env, {
+        subject: `🌺 J-7 · Réservation directe — ${guest} arrive bientôt · ${nom}`,
+        html: emailWrapper(`
+          <h2 style="color:#0e3b3a;margin:0 0 8px">🌺 Rappel J-7 · Réservation directe</h2>
+          <p style="color:#7a6b5a;font-size:13px;margin:0 0 20px">${nom} · ${guest} · arrivée le ${formatDate(e.checkin)}</p>
+          <div style="background:#fff;border-radius:8px;padding:20px 24px;font-size:14px;color:#0e3b3a;line-height:1.9;">
+            <p style="margin:0 0 12px;font-weight:700;">✅ Checklist actions hôte — réservation directe :</p>
+            <ul style="margin:0;padding-left:20px;font-size:13px;color:#3d2c1e;line-height:2;">
+              <li>📖 Envoyer le guide voyageur : <a href="${guide}" style="color:#0e3b3a;">${guide}</a></li>
+              <li>📅 Confirmer l'heure d'arrivée et modalités d'accès avec ${guest}</li>
+              <li>🔒 Envoyer le lien de caution (${cautionAmt}€) si pas encore fait</li>
+              <li>🏠 Vérifier l'état du logement + linge de maison prêt</li>
+              <li>📞 Partager un numéro d'urgence joignable le jour J</li>
+            </ul>
+          </div>
+          <div style="margin-top:16px;text-align:center;">
+            <a href="${env.SITE_URL || "https://villamaryllis.com"}/admin" style="background:#0e3b3a;color:#fff;text-decoration:none;padding:10px 20px;border-radius:8px;font-weight:700;font-size:13px;">Voir le planning →</a>
+          </div>
+        `),
+      });
+
+      await env.ICAL_STORE.put(kvKey, "sent", { expirationTtl: 60 * 60 * 24 * 14 });
+      console.log(`[reminders] J-7 direct envoyé — ${nom} · ${guest}`);
     }
   }
 }
@@ -542,38 +655,77 @@ async function runWeeklyReport(env, allEvents) {
 // ── Alertes sous-occupation ──────────────────────────────────────────────────
 async function runOccupancyAlerts(env, allEvents) {
   const todayStr = today();
+  const in14 = addDays(todayStr, 14);
   const in30 = addDays(todayStr, 30);
 
-  const byProp = {};
+  const byProp = {}, byProp14 = {};
   for (const e of allEvents) {
-    if (e.checkin > in30 || e.checkout < todayStr) continue;
-    const start = e.checkin > todayStr ? e.checkin : todayStr;
-    const end   = e.checkout < in30 ? e.checkout : in30;
-    byProp[e.bienId] = (byProp[e.bienId] || 0) + diffDays(start, end);
+    if (e.checkout < todayStr) continue;
+
+    // Occupation 30j
+    if (e.checkin <= in30) {
+      const start = e.checkin > todayStr ? e.checkin : todayStr;
+      const end   = e.checkout < in30 ? e.checkout : in30;
+      byProp[e.bienId] = (byProp[e.bienId] || 0) + diffDays(start, end);
+    }
+
+    // Occupation 14j
+    if (e.checkin <= in14) {
+      const start14 = e.checkin > todayStr ? e.checkin : todayStr;
+      const end14   = e.checkout < in14 ? e.checkout : in14;
+      byProp14[e.bienId] = (byProp14[e.bienId] || 0) + diffDays(start14, end14);
+    }
   }
+
+  // Biens actifs (dans Airbnb ou Booking URLs)
+  const activeBiens = new Set(Object.keys(ICAL_AIRBNB));
+
+  // Alertes 0 résa dans 14j pour biens actifs
+  const zeroAlerts = [];
+  for (const bienId of activeBiens) {
+    if ((byProp14[bienId] || 0) === 0) {
+      zeroAlerts.push(bienId);
+    }
+  }
+  const hasUrgent = zeroAlerts.length > 0;
 
   const alerts = Object.entries(NOMS).filter(([id]) => {
     const pct = ((byProp[id] || 0) / 30) * 100;
     return pct < 40; // seuil 40%
   });
 
-  if (alerts.length === 0) return;
+  if (alerts.length === 0 && !hasUrgent) return;
+
+  const urgentBlock = hasUrgent ? `
+    <div style="background:#fde8e0;border-radius:8px;padding:14px 18px;margin-bottom:20px;border-left:4px solid #c47254;">
+      <strong style="color:#c47254;">🚨 URGENT — 0 réservation dans les 14 prochains jours :</strong>
+      <ul style="margin:8px 0 0;padding-left:18px;color:#c47254;font-size:13px;">
+        ${zeroAlerts.map(id => `<li>${NOMS[id] || id}</li>`).join("")}
+      </ul>
+    </div>` : "";
+
+  const subjectPrefix = hasUrgent ? "⚠️ URGENT" : "⚠️";
 
   const rows = alerts.map(([id, nom]) => {
-    const occ = byProp[id] || 0;
-    const pct = Math.round(occ / 30 * 100);
-    return `<tr><td style="padding:8px 14px;font-weight:600;color:#0e3b3a;">${nom}</td><td style="padding:8px 14px;color:#c47254;font-weight:700;">${pct}%</td><td style="padding:8px 14px;color:#7a6b5a;">${occ} nuits sur 30</td></tr>`;
+    const occ   = byProp[id] || 0;
+    const pct   = Math.round(occ / 30 * 100);
+    const occ14 = byProp14[id] || 0;
+    const pct14 = Math.round(occ14 / 14 * 100);
+    const isZero14 = occ14 === 0 && activeBiens.has(id);
+    return `<tr><td style="padding:8px 14px;font-weight:600;color:#0e3b3a;">${nom}${isZero14 ? ' <span style="font-size:10px;background:#fde8e0;color:#c47254;padding:1px 5px;border-radius:8px;">0 résa 14j</span>' : ""}</td><td style="padding:8px 14px;color:#c47254;font-weight:700;">${pct14}%</td><td style="padding:8px 14px;color:#c47254;font-weight:700;">${pct}%</td><td style="padding:8px 14px;color:#7a6b5a;">${occ} nuits sur 30</td></tr>`;
   }).join("");
 
   await sendEmail(env, {
-    subject: `⚠️ ${alerts.length} logement${alerts.length > 1 ? "s" : ""} sous-occupé${alerts.length > 1 ? "s" : ""} — 30 prochains jours`,
+    subject: `${subjectPrefix} ${alerts.length} logement${alerts.length > 1 ? "s" : ""} sous-occupé${alerts.length > 1 ? "s" : ""} — 30 prochains jours`,
     html: emailWrapper(`
-      <h2 style="color:#c47254;margin:0 0 8px">⚠️ Alerte sous-occupation</h2>
+      <h2 style="color:#c47254;margin:0 0 8px">${hasUrgent ? "🚨 Alerte URGENTE — sous-occupation" : "⚠️ Alerte sous-occupation"}</h2>
       <p style="color:#7a6b5a;font-size:13px;margin:0 0 20px">Logements avec moins de 40% d'occupation dans les 30 prochains jours</p>
+      ${urgentBlock}
       <table style="width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;">
         <thead><tr style="background:#fde8e0;">
           <th style="padding:8px 14px;text-align:left;font-size:11px;color:#7a6b5a;">Logement</th>
-          <th style="padding:8px 14px;text-align:left;font-size:11px;color:#7a6b5a;">Occupation</th>
+          <th style="padding:8px 14px;text-align:left;font-size:11px;color:#7a6b5a;">Occ. 14j</th>
+          <th style="padding:8px 14px;text-align:left;font-size:11px;color:#7a6b5a;">Occ. 30j</th>
           <th style="padding:8px 14px;text-align:left;font-size:11px;color:#7a6b5a;">Détail</th>
         </tr></thead>
         <tbody>${rows}</tbody>
@@ -585,7 +737,7 @@ async function runOccupancyAlerts(env, allEvents) {
     `),
   });
 
-  console.log(`[occupancy] Alerte envoyée — ${alerts.length} logement(s) sous le seuil`);
+  console.log(`[occupancy] Alerte envoyée — ${alerts.length} logement(s) sous le seuil${hasUrgent ? `, ${zeroAlerts.length} URGENT(s) 0 résa 14j` : ""}`);
 }
 
 // ── Export comptable mensuel ─────────────────────────────────────────────────
@@ -717,6 +869,21 @@ async function runMonitor(env) {
       if (res.status !== 200 || !jsonOk) errors.push(`❌ ${check.name} — HTTP ${res.status}`);
     } catch (e) { errors.push(`❌ ${check.name} — ${e.message}`); }
   }
+  // ── Alerte expiration token Beds24 ──────────────────────────────────────────
+  if (env.BEDS24_TOKEN) {
+    try {
+      const b24 = await fetch("https://beds24.com/api/v2/authentication/details", { headers: { token: env.BEDS24_TOKEN } });
+      const d = await b24.json();
+      if (!d.validToken) {
+        errors.push("❌ Beds24 — Token invalide !");
+      } else {
+        const expiresIn = d.token?.expiresIn ?? 0;
+        const days = Math.floor(expiresIn / 86400);
+        if (days < 7) errors.push(`⚠️ Beds24 — Token expire dans ${days} jour${days !== 1 ? "s" : ""} — renouveler sur beds24.com`);
+      }
+    } catch (err) { errors.push(`❌ Beds24 — ${err.message}`); }
+  }
+
   if (errors.length > 0) {
     await sendEmail(env, {
       subject: `🚨 ${errors.length} problème(s) — villamaryllis.com`,
@@ -830,6 +997,138 @@ async function runGapPricing(env, allEvents) {
   return gaps;
 }
 
+// ── Yield Management — ajustement tarifaire automatique sur 14j ─────────────
+// Couvre également les "last-minute deals" (feature #3) — pas de fonction séparée :
+//   les dates libres à J+0→J+4 obtiennent -20%, J+5→J+13 -15% si occ < 30%.
+// Logique :
+//   occ < 30% sur 14j  → -20% sur J à J+4 libres, -15% sur J+5 à J+13 libres
+//   occ > 80% sur 7j   → log seulement, pas de modification des prix
+// Merge dans la clé KV `gap_prices` (prend le max entre gap_pricing et yield)
+// Envoie un email récap à l'hôte si des remises ont été appliquées
+async function runYieldPricing(env, allEvents) {
+  const todayStr = today();
+  const in14     = addDays(todayStr, 14);
+  const in7      = addDays(todayStr, 7);
+  const yieldPrices = {}; // { bienId: { date: pct } }
+
+  // Calculer occupation par bien sur 14j et 7j
+  const occ14 = {}, occ7 = {};
+  for (const e of allEvents) {
+    if (e.checkin > in14 || e.checkout <= todayStr) continue;
+    const start14 = e.checkin > todayStr ? e.checkin : todayStr;
+    const end14   = e.checkout < in14 ? e.checkout : in14;
+    const n14 = diffDays(start14, end14);
+    occ14[e.bienId] = (occ14[e.bienId] || 0) + n14;
+
+    if (e.checkin < in7 && e.checkout > todayStr) {
+      const start7 = e.checkin > todayStr ? e.checkin : todayStr;
+      const end7   = e.checkout < in7 ? e.checkout : in7;
+      const n7 = diffDays(start7, end7);
+      occ7[e.bienId] = (occ7[e.bienId] || 0) + n7;
+    }
+  }
+
+  // Calculer les dates réservées par bien (pour ne jamais promo une date occupée)
+  const reservedDates = {};
+  for (const e of allEvents) {
+    if (e.checkout <= todayStr || e.checkin > in14) continue;
+    if (!reservedDates[e.bienId]) reservedDates[e.bienId] = new Set();
+    let cur = e.checkin > todayStr ? e.checkin : todayStr;
+    const endR = e.checkout < in14 ? e.checkout : in14;
+    while (cur < endR) {
+      reservedDates[e.bienId].add(cur);
+      cur = addDays(cur, 1);
+    }
+  }
+
+  const allBienIds = new Set([
+    ...Object.keys(ICAL_AIRBNB),
+    ...Object.keys(occ14),
+  ]);
+
+  let totalAdjusted = 0;
+
+  for (const bienId of allBienIds) {
+    const pct14 = ((occ14[bienId] || 0) / 14) * 100;
+    const pct7  = ((occ7[bienId]  || 0) / 7)  * 100;
+
+    // Trop chargé sur 7j — log et skip
+    if (pct7 > 80) {
+      console.log(`[yield] ${bienId} — occupation >80% sur 7j (${Math.round(pct7)}%), pas de remise`);
+      continue;
+    }
+
+    // Sous-occupation sur 14j → appliquer remises
+    if (pct14 < 30) {
+      if (!yieldPrices[bienId]) yieldPrices[bienId] = {};
+      const reserved = reservedDates[bienId] || new Set();
+      for (let d = 0; d < 14; d++) {
+        const dateStr = addDays(todayStr, d);
+        if (reserved.has(dateStr)) continue; // date occupée, skip
+        const discount = d <= 4 ? 20 : 15;
+        yieldPrices[bienId][dateStr] = discount;
+        totalAdjusted++;
+      }
+    }
+  }
+
+  // Merge dans gap_prices (prend le max entre gap et yield)
+  const gapRaw = await env.ICAL_STORE.get("gap_prices").catch(() => null);
+  const gapPrices = gapRaw ? JSON.parse(gapRaw) : {};
+  for (const [bienId, dates] of Object.entries(yieldPrices)) {
+    if (!gapPrices[bienId]) gapPrices[bienId] = {};
+    for (const [date, pct] of Object.entries(dates)) {
+      gapPrices[bienId][date] = Math.max(gapPrices[bienId][date] || 0, pct);
+    }
+  }
+  await env.ICAL_STORE.put("gap_prices", JSON.stringify(gapPrices), { expirationTtl: 86400 });
+
+  console.log(`[yield] ${totalAdjusted} dates ajustées`);
+
+  // ── Email récap yield pricing ────────────────────────────────────────────────
+  if (Object.keys(yieldPrices).length > 0) {
+    const rows = Object.entries(yieldPrices).map(([bienId, dates]) => {
+      const nom = NOMS[bienId] || bienId;
+      const pct14 = Math.round(((occ14[bienId] || 0) / 14) * 100);
+      const datesSorted = Object.keys(dates).sort();
+      const first = datesSorted[0], last = datesSorted[datesSorted.length - 1];
+      const sample20 = Object.entries(dates).filter(([, p]) => p === 20).length;
+      const sample15 = Object.entries(dates).filter(([, p]) => p === 15).length;
+      return `<tr>
+        <td style="padding:8px 14px;font-weight:600;color:#0e3b3a;">${nom}</td>
+        <td style="padding:8px 14px;color:#c47254;font-weight:700;">${pct14}% occ.</td>
+        <td style="padding:8px 14px;color:#0e3b3a;">${datesSorted.length} dates<br><span style="font-size:11px;color:#7a6b5a;">${first} → ${last}</span></td>
+        <td style="padding:8px 14px;font-size:12px;color:#0e3b3a;">${sample20 > 0 ? `<span style="color:#ef4444;font-weight:700;">-20%</span> × ${sample20}` : ""}${sample20 > 0 && sample15 > 0 ? " · " : ""}${sample15 > 0 ? `<span style="color:#f59e0b;font-weight:700;">-15%</span> × ${sample15}` : ""}</td>
+      </tr>`;
+    }).join("");
+
+    await sendEmail(env, {
+      subject: `📉 Yield pricing appliqué — ${Object.keys(yieldPrices).length} bien(s) remisé(s)`,
+      html: emailWrapper(`
+        <h2 style="color:#0e3b3a;margin:0 0 8px">📉 Yield Management — Récapitulatif</h2>
+        <p style="color:#7a6b5a;font-size:13px;margin:0 0 20px">${new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })} · ${totalAdjusted} dates remisées au total</p>
+        <table style="width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;">
+          <thead><tr style="background:#fde8e0;">
+            <th style="padding:8px 14px;text-align:left;font-size:11px;color:#7a6b5a;">Logement</th>
+            <th style="padding:8px 14px;text-align:left;font-size:11px;color:#7a6b5a;">Occupation 14j</th>
+            <th style="padding:8px 14px;text-align:left;font-size:11px;color:#7a6b5a;">Dates concernées</th>
+            <th style="padding:8px 14px;text-align:left;font-size:11px;color:#7a6b5a;">Remises</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <p style="margin-top:16px;font-size:12px;color:#7a6b5a;">Les remises sont visibles sur le calendrier public et se désactivent automatiquement une fois les dates réservées.</p>
+        <div style="margin-top:12px;text-align:center;">
+          <a href="${env.SITE_URL || "https://villamaryllis.com"}/admin" style="background:#0e3b3a;color:#fff;text-decoration:none;padding:10px 20px;border-radius:8px;font-weight:700;font-size:13px;">Voir le planning →</a>
+        </div>
+      `),
+    });
+  } else {
+    console.log("[yield] Aucune remise appliquée aujourd'hui (tous les biens bien occupés)");
+  }
+
+  return yieldPrices;
+}
+
 // ── Exports Cloudflare Worker ────────────────────────────────────────────────
 export default {
   async scheduled(event, env, ctx) {
@@ -850,9 +1149,10 @@ export default {
       const { allEvents } = await runSync(env);
       ctx.waitUntil((async () => {
         await runMonitor(env);
-        await runReminders(env, allEvents);
+        await runReminders(env, allEvents, allEvents);
         await runOccupancyAlerts(env, allEvents);
         await runGapPricing(env, allEvents);
+        await runYieldPricing(env, allEvents);
         await runCautionAutoRelease(env);
       })());
 
@@ -879,7 +1179,7 @@ export default {
       const r = await runSync(env); return new Response(JSON.stringify({ ok: true, ...r }), { headers: { "Content-Type": "application/json" } });
     }
     if (url.pathname === "/reminders") {
-      const { allEvents } = await runSync(env); await runReminders(env, allEvents);
+      const { allEvents } = await runSync(env); await runReminders(env, allEvents, allEvents);
       return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
     }
     if (url.pathname === "/weekly") {
@@ -924,10 +1224,22 @@ export default {
       const gaps = await runGapPricing(env, allEvents);
       return new Response(JSON.stringify({ ok: true, gaps }), { headers: CORS_H });
     }
+    if (url.pathname === "/yield") {
+      const CORS_H = { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" };
+      // Retourne les prix yield actuels depuis KV (merge gap_prices)
+      const raw = await env.ICAL_STORE.get("gap_prices");
+      return new Response(raw || "{}", { headers: CORS_H });
+    }
+    if (url.pathname === "/yield/refresh") {
+      const CORS_H = { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" };
+      const { allEvents } = await runSync(env);
+      const yieldPrices = await runYieldPricing(env, allEvents);
+      return new Response(JSON.stringify({ ok: true, yieldPrices }), { headers: CORS_H });
+    }
     return new Response(JSON.stringify({
       name: "amaryllis-ical-sync",
-      crons: ["0 * * * * (sync)", "0 9 * * * (rappels+alertes)", "0 6 * * 1 (hebdo)", "0 1 1 * * (mensuel)"],
-      endpoints: ["/sync", "/reminders", "/weekly", "/monthly", "/occupancy", "/monitor", "/test-ntfy", "/gap-prices", "/gap-prices/refresh"],
+      crons: ["0 * * * * (sync)", "0 9 * * * (rappels+alertes+yield)", "0 6 * * 1 (hebdo)", "0 1 1 * * (mensuel)"],
+      endpoints: ["/sync", "/reminders", "/weekly", "/monthly", "/occupancy", "/monitor", "/test-ntfy", "/gap-prices", "/gap-prices/refresh", "/yield", "/yield/refresh"],
     }), { headers: { "Content-Type": "application/json" } });
   },
 };
