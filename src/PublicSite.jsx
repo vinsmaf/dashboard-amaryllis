@@ -1014,6 +1014,7 @@ function OrganicLoader({ size = 32, color = CORAL }) {
 function Beds24Modal({ bien, checkin, checkout, onClose }) {
   // phase 1 = iframe Beds24, phase 2 = formulaire + montant, phase 3 = Stripe Elements
   const [phase, setPhase] = useState(1);
+  const [phase1Confirmed, setPhase1Confirmed] = useState(false);
   const [form, setForm] = useState({ prenom: "", nom: "", email: "" });
   const [stripe, setStripe] = useState(null);
   const [elements, setElements] = useState(null);
@@ -1211,19 +1212,36 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
         {/* Phase 1 — Beds24 iframe */}
         {phase === 1 && (
           <>
+            {/* Instruction étape 1 */}
+            <div style={{ padding: "10px 24px", background: "rgba(196,114,84,0.07)", borderBottom: `1px solid ${SAND}`, display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+              <span style={{ background: CORAL, color: "#fff", borderRadius: "50%", width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, flexShrink: 0 }}>1</span>
+              <span style={{ fontSize: 12, color: NAVY, fontWeight: 600 }}>Remplissez et validez le formulaire de réservation ci-dessous</span>
+            </div>
+
             <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
               <iframe src={bien.beds24Url} width="100%" height="100%" style={{ border: "none", display: "block", minHeight: "600px" }} title="Réservation Beds24" />
             </div>
-            <div style={{ padding: "16px 24px", borderTop: `1px solid ${SAND}`, background: IVORY, flexShrink: 0 }}>
+
+            {/* Étape 2 — visible seulement après confirmation par checkbox */}
+            <div style={{ padding: "14px 24px", borderTop: `1px solid ${SAND}`, background: IVORY, flexShrink: 0 }}>
+              <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer", marginBottom: 12 }}>
+                <input
+                  type="checkbox"
+                  checked={!!phase1Confirmed}
+                  onChange={e => setPhase1Confirmed(e.target.checked)}
+                  style={{ marginTop: 2, width: 16, height: 16, accentColor: CORAL, cursor: "pointer", flexShrink: 0 }}
+                />
+                <span style={{ fontSize: 13, color: NAVY, lineHeight: 1.4 }}>
+                  <strong>Ma réservation est confirmée</strong> — j'ai cliqué sur le bouton de réservation dans le formulaire ci-dessus et reçu une confirmation
+                </span>
+              </label>
               <button
                 onClick={() => setPhase(2)}
-                style={{ width: "100%", padding: "13px", borderRadius: 9, border: "none", background: CORAL, color: "#fff", fontWeight: 700, fontSize: 14, cursor: "pointer", letterSpacing: "0.02em" }}
+                disabled={!phase1Confirmed}
+                style={{ width: "100%", padding: "13px", borderRadius: 9, border: "none", background: phase1Confirmed ? CORAL : SAND, color: phase1Confirmed ? "#fff" : MUTED, fontWeight: 700, fontSize: 14, cursor: phase1Confirmed ? "pointer" : "not-allowed", letterSpacing: "0.02em", transition: "background 0.2s, color 0.2s" }}
               >
-                ✓ Réservation confirmée — Procéder au paiement →
+                Procéder au paiement →
               </button>
-              <p style={{ fontSize: 11, color: MUTED, textAlign: "center", marginTop: 8, marginBottom: 0 }}>
-                Cliquez uniquement après avoir validé le formulaire de réservation ci-dessus
-              </p>
             </div>
           </>
         )}
