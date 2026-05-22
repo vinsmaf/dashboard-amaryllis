@@ -1,4 +1,4 @@
-const CACHE = "amaryllis-v3";
+const CACHE = "amaryllis-v4";
 const ASSETS = ["/", "/index.html"];
 
 self.addEventListener("install", e => {
