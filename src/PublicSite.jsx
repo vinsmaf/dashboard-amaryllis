@@ -1309,6 +1309,15 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
         {phase === 2 && (
           <div style={{ flex: 1, overflowY: "auto", padding: "24px" }}>
 
+            {/* Instruction claire */}
+            <div style={{ background: "rgba(196,114,84,0.08)", border: `1px solid rgba(196,114,84,0.25)`, borderRadius: 10, padding: "12px 16px", marginBottom: 20, display: "flex", gap: 10, alignItems: "flex-start" }}>
+              <span style={{ fontSize: 18, flexShrink: 0 }}>📋</span>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 3 }}>Saisissez vos coordonnées</div>
+                <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.5 }}>Utilisez le <strong>même nom et email</strong> que lors de votre réservation Beds24. Le montant exact sera récupéré automatiquement.</div>
+              </div>
+            </div>
+
             {/* Dates du séjour — lecture seule */}
             <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
               {[["Arrivée", localCheckin], ["Départ", localCheckout]].map(([label, val]) => (
@@ -1372,8 +1381,8 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
             <div style={{ marginBottom: 20 }}>
               <label style={{ fontSize: 11, color: MUTED, display: "block", marginBottom: 4 }}>Montant à régler</label>
               <div style={{ display: "flex", alignItems: "center", gap: 8, background: amount > 0 ? "rgba(16,185,129,0.06)" : "rgba(255,255,255,0.04)", borderRadius: 9, border: `2px solid ${amount > 0 ? "rgba(16,185,129,0.3)" : SAND}`, padding: "12px 16px" }}>
-                <span style={{ flex: 1, fontSize: 22, fontWeight: 800, color: amount > 0 ? NAVY : MUTED }}>
-                  {amount > 0 ? `${amount} €` : "Calculé automatiquement →"}
+                <span style={{ flex: 1, fontSize: amount > 0 ? 22 : 14, fontWeight: amount > 0 ? 800 : 400, color: amount > 0 ? NAVY : MUTED }}>
+                  {amount > 0 ? `${amount} €` : "Confirmé depuis Beds24 au clic sur le bouton"}
                 </span>
                 {amount > 0 && <span style={{ fontSize: 11, color: MUTED }}>confirmé par Beds24</span>}
               </div>
@@ -1386,7 +1395,7 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
               disabled={paying || !formOk || !stripe}
               style={{ width: "100%", padding: "13px", borderRadius: 9, border: "none", background: formOk && !paying && stripe ? CORAL : SAND, color: formOk && !paying && stripe ? "#fff" : MUTED, fontWeight: 700, fontSize: 14, cursor: formOk && !paying ? "pointer" : "not-allowed", transition: "background 0.2s" }}
             >
-              {findingBooking ? "Récupération du prix…" : paying ? "Préparation du paiement…" : "Continuer →"}
+              {findingBooking ? "⏳ Vérification de votre réservation…" : paying ? "⏳ Préparation du paiement…" : "Vérifier ma réservation et payer →"}
             </button>
             <div style={{ textAlign: "center", marginTop: 10, fontSize: 11, color: MUTED }}>🔒 Paiement sécurisé par Stripe</div>
             <button onClick={() => setPhase(1)} style={{ display: "block", margin: "14px auto 0", background: "none", border: "none", color: MUTED, fontSize: 11, cursor: "pointer", textDecoration: "underline" }}>
