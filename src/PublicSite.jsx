@@ -1038,6 +1038,31 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
   // ── Suivi réservation Beds24 pour annulation automatique ──
   const [bookingId, setBookingId] = useState(null);      // ID Beds24 une fois trouvé
   const [findingBooking, setFindingBooking] = useState(false);
+  // ── Lookup anticipé : dès que l'email est saisi en phase 2 ──
+  const [lookupStatus, setLookupStatus] = useState(null); // null | "loading" | "found" | "not_found"
+
+  async function lookupFromEmail(email, nom) {
+    if (!email.includes("@") || !nom.trim()) return;
+    setLookupStatus("loading");
+    try {
+      const res = await fetch("/api/beds24-manage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "find", email, lastName: nom.trim(), checkin: localCheckin || undefined }),
+      });
+      const d = await res.json();
+      if (d.ok && d.bookingId) {
+        bookingIdRef.current = d.bookingId;
+        setBookingId(d.bookingId);
+        if (d.price > 0) setAmount(Math.round(d.price));
+        if (d.arrival)   setLocalCheckin(d.arrival);
+        if (d.departure) setLocalCheckout(d.departure);
+        setLookupStatus("found");
+      } else {
+        setLookupStatus("not_found");
+      }
+    } catch { setLookupStatus("not_found"); }
+  }
   const paymentDoneRef = useRef(false);                  // vrai dès que Stripe confirme
   const bookingIdRef   = useRef(null);                   // ref stable pour le cleanup
 
@@ -1360,13 +1385,42 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
               </div>
               <div style={{ flex: 1 }}>
                 <label style={{ fontSize: 11, color: MUTED, display: "block", marginBottom: 4 }}>Nom *</label>
-                <input value={form.nom} onChange={e => setForm(f => ({ ...f, nom: e.target.value }))} placeholder="Dupont" style={{ width: "100%", padding: "9px 12px", borderRadius: 7, border: `1px solid ${SAND}`, background: IVORY, color: NAVY, fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+                <input
+                  value={form.nom}
+                  onChange={e => setForm(f => ({ ...f, nom: e.target.value }))}
+                  onBlur={e => lookupFromEmail(form.email, e.target.value)}
+                  placeholder="Dupont"
+                  style={{ width: "100%", padding: "9px 12px", borderRadius: 7, border: `1px solid ${SAND}`, background: IVORY, color: NAVY, fontSize: 13, outline: "none", boxSizing: "border-box" }}
+                />
               </div>
             </div>
             <div style={{ marginBottom: 16 }}>
               <label style={{ fontSize: 11, color: MUTED, display: "block", marginBottom: 4 }}>E-mail *</label>
-              <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="jean.dupont@email.com" style={{ width: "100%", padding: "9px 12px", borderRadius: 7, border: `1px solid ${SAND}`, background: IVORY, color: NAVY, fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+              <input
+                type="email"
+                value={form.email}
+                onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                onBlur={e => lookupFromEmail(e.target.value, form.nom)}
+                placeholder="jean.dupont@email.com"
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 7, border: `1px solid ${SAND}`, background: IVORY, color: NAVY, fontSize: 13, outline: "none", boxSizing: "border-box" }}
+              />
             </div>
+            {/* Statut lookup Beds24 */}
+            {lookupStatus === "loading" && (
+              <div style={{ fontSize: 12, color: MUTED, marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ animation: "spin 1s linear infinite", display: "inline-block" }}>⏳</span> Recherche de votre réservation…
+              </div>
+            )}
+            {lookupStatus === "found" && (
+              <div style={{ fontSize: 12, color: "#10b981", marginBottom: 12, background: "rgba(16,185,129,0.08)", borderRadius: 7, padding: "8px 12px", border: "1px solid rgba(16,185,129,0.25)" }}>
+                ✅ Réservation trouvée — montant et dates confirmés
+              </div>
+            )}
+            {lookupStatus === "not_found" && (
+              <div style={{ fontSize: 12, color: "#f59e0b", marginBottom: 12, background: "rgba(245,158,11,0.08)", borderRadius: 7, padding: "8px 12px", border: "1px solid rgba(245,158,11,0.25)" }}>
+                ⚠️ Réservation non trouvée — vérifiez votre nom et email, ou le montant sera récupéré à l'étape suivante
+              </div>
+            )}
 
             {/* Montant — récupéré depuis Beds24 au clic sur Continuer */}
             <div style={{ marginBottom: 20 }}>
