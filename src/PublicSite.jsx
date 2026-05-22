@@ -2552,15 +2552,15 @@ function Stat({ icon, label }) {
 }
 
 // ── Property Detail (full-screen) ───────────────────────────────
-function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail = false, isPage = false }) {
+function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail = false, isPage = false, initialCheckin = null, initialCheckout = null }) {
   useMinNights(); // re-render when admin changes min nights
   const { t, lang } = useLang();
   const [photoIdx, setPhotoIdx] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [showFull, setShowFull] = useState(false);
-  const [calCheckin, setCalCheckin] = useState(null);
-  const [calCheckout, setCalCheckout] = useState(null);
+  const [calCheckin, setCalCheckin] = useState(initialCheckin || null);
+  const [calCheckout, setCalCheckout] = useState(initialCheckout || null);
   const [calHovered, setCalHovered] = useState(null);
   const [calOffset, setCalOffset] = useState(0);
   const [showAlerte, setShowAlerte] = useState(false);
@@ -5971,8 +5971,13 @@ export default function PublicSite() {
     if (BOOKING_DISABLED.has(bien.id)) return;
     if (bien.beds24Url) {
       openDetail(null);
+      // Fallback : lire les dates depuis l'URL si non fournies par le calendrier
+      const _p = new URLSearchParams(window.location.search);
       setBeds24Bien(bien);
-      setBeds24Dates({ checkin: initialCheckin, checkout: initialCheckout });
+      setBeds24Dates({
+        checkin:  initialCheckin  || _p.get("checkin")  || null,
+        checkout: initialCheckout || _p.get("checkout") || null,
+      });
       return;
     }
     openDetail(null);
@@ -6060,6 +6065,9 @@ export default function PublicSite() {
   const _directBien = _directPathId ? BIENS.find(b => b.id === _directPathId) : null;
   if (_directBien) {
     const directBienWithPrice = { ..._directBien, prix: loadPriceOverrides()[_directBien.id] ?? _directBien.prix };
+    const _directParams = new URLSearchParams(window.location.search);
+    const _directCheckin  = _directParams.get("checkin")  || null;
+    const _directCheckout = _directParams.get("checkout") || null;
     return (
       <div style={{ background: IVORY, fontFamily: "'Jost', system-ui, -apple-system, sans-serif", overflowX: "hidden" }}>
         <SEOMeta
@@ -6075,6 +6083,8 @@ export default function PublicSite() {
           onBook={openBien}
           blockedDates={blockedDates}
           loadingAvail={loadingAvail}
+          initialCheckin={_directCheckin}
+          initialCheckout={_directCheckout}
         />
         {selectedBien && (
           <BookingModal
