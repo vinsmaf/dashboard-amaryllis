@@ -1015,8 +1015,11 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
   // phase 1 = iframe Beds24, phase 2 = formulaire + montant, phase 3 = Stripe Elements
   const [phase, setPhase] = useState(1);
   const [phase1Confirmed, setPhase1Confirmed] = useState(false);
-  // Détection de soumission du formulaire Beds24 via onLoad (2ème chargement = confirmation)
-  const iframeLoadCount = useRef(0);
+  // Détection de soumission du formulaire Beds24 via onLoad
+  // Le 2ème load est la confirmation SEULEMENT si ≥12s après le 1er
+  // (Beds24 auto-recharge son widget en < 3s — la vraie soumission prend 20s+)
+  const iframeLoadCount   = useRef(0);
+  const iframeFirstLoadTs = useRef(null);
   const [beds24Submitted, setBeds24Submitted] = useState(false);
   const [form, setForm] = useState({ prenom: "", nom: "", email: "" });
   const [stripe, setStripe] = useState(null);
@@ -1258,7 +1261,12 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
                 title="Réservation Beds24"
                 onLoad={() => {
                   iframeLoadCount.current += 1;
-                  if (iframeLoadCount.current >= 2) setBeds24Submitted(true);
+                  if (iframeLoadCount.current === 1) {
+                    iframeFirstLoadTs.current = Date.now();
+                  } else if (iframeLoadCount.current >= 2) {
+                    const elapsed = Date.now() - (iframeFirstLoadTs.current || 0);
+                    if (elapsed >= 12000) setBeds24Submitted(true);
+                  }
                 }}
               />
             </div>
