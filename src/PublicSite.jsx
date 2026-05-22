@@ -1060,7 +1060,11 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
     };
   }, []);
 
-  const nights = checkin && checkout ? dateDiff(checkin, checkout) : 0;
+  // Dates locales : props si pré-sélectionnées, sinon saisies en phase 2
+  const [localCheckin,  setLocalCheckin]  = useState(checkin  || "");
+  const [localCheckout, setLocalCheckout] = useState(checkout || "");
+
+  const nights = localCheckin && localCheckout ? dateDiff(localCheckin, localCheckout) : 0;
   const rawTotal = nights > 0 ? nights * bien.prix : 0;
   const fraisMenage = FRAIS_MENAGE[bien.id] ?? 0;
   const discountRate = getDiscount(nights);
@@ -1068,8 +1072,11 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
   const computedTotal = rawTotal - discountAmt + fraisMenage;
   const [amount, setAmount] = useState(() => computedTotal || 0);
 
-  // Sync amount when dates prop change (user arrived with pre-selected dates)
-  useEffect(() => { if (computedTotal > 0) setAmount(computedTotal); }, [computedTotal]);
+  // Recalcul automatique du montant quand les dates changent (sauf si l'utilisateur l'a modifié manuellement)
+  const amountManualRef = useRef(false);
+  useEffect(() => {
+    if (computedTotal > 0 && !amountManualRef.current) setAmount(computedTotal);
+  }, [computedTotal]);
 
   useEffect(() => { if (window.Stripe) setStripe(window.Stripe(STRIPE_PK)); }, []);
 
@@ -1093,20 +1100,29 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
     if (!stripe) return;
     setPaying(true); setPayError("");
     try {
-      // 1. Chercher la réservation Beds24 correspondante pour pouvoir l'annuler si besoin
+      // 1. Chercher la réservation Beds24 → récupérer prix + dates réels
       setFindingBooking(true);
+      let finalAmount = amount;
       try {
         const fr = await fetch("/api/beds24-manage", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "find", email: form.email, lastName: form.nom, checkin: checkin || undefined }),
+          body: JSON.stringify({ action: "find", email: form.email, lastName: form.nom, checkin: localCheckin || undefined }),
         });
         const fd = await fr.json();
         if (fd.ok && fd.bookingId) {
           setBookingId(fd.bookingId);
           bookingIdRef.current = fd.bookingId;
+          // ── Prix et dates récupérés depuis Beds24 ──
+          if (fd.price > 0) {
+            finalAmount = Math.round(fd.price);
+            amountManualRef.current = true; // empêche l'écrasement par recalcul local
+            setAmount(finalAmount);
+          }
+          if (fd.arrival)   { setLocalCheckin(fd.arrival); }
+          if (fd.departure) { setLocalCheckout(fd.departure); }
         }
-        // Si non trouvé : on continue quand même (la réservation sera annulée par le cron worker)
+        // Si non trouvé : on continue quand même (cron worker annulera si besoin)
       } catch {}
       setFindingBooking(false);
 
@@ -1115,12 +1131,12 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amount: amount * 100,
+          amount: finalAmount * 100,
           currency: "eur",
           metadata: {
             bienId:    bien.id,
-            checkin:   checkin  || "",
-            checkout:  checkout || "",
+            checkin:   localCheckin  || "",
+            checkout:  localCheckout || "",
             voyageur:  `${form.prenom} ${form.nom}`.trim(),
             email:     form.email,
             beds24Id:  bookingIdRef.current || "",
@@ -1216,11 +1232,28 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
         {/* Phase 2 — Coordonnées + montant */}
         {phase === 2 && (
           <div style={{ flex: 1, overflowY: "auto", padding: "24px" }}>
-            {/* Récapitulatif séjour */}
-            {checkin && checkout && nights > 0 ? (
+
+            {/* Dates du séjour (pré-remplies si sélectionnées avant, sinon saisie libre) */}
+            <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: 11, color: MUTED, display: "block", marginBottom: 4 }}>Arrivée</label>
+                <input type="date" value={localCheckin} onChange={e => { setLocalCheckin(e.target.value); amountManualRef.current = false; }}
+                  style={{ width: "100%", padding: "9px 10px", borderRadius: 7, border: `1px solid ${SAND}`, background: IVORY, color: NAVY, fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: 11, color: MUTED, display: "block", marginBottom: 4 }}>Départ</label>
+                <input type="date" value={localCheckout} onChange={e => { setLocalCheckout(e.target.value); amountManualRef.current = false; }}
+                  style={{ width: "100%", padding: "9px 10px", borderRadius: 7, border: `1px solid ${SAND}`, background: IVORY, color: NAVY, fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+              </div>
+            </div>
+
+            {/* Récapitulatif séjour — affiché dès que les dates sont connues */}
+            {nights > 0 && (
               <div style={{ background: "rgba(196,114,84,0.07)", border: `1px solid rgba(196,114,84,0.22)`, borderRadius: 10, padding: "14px 16px", marginBottom: 20 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: CORAL, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Récapitulatif</div>
-                <div style={{ fontSize: 12, color: NAVY, fontWeight: 600, marginBottom: 8 }}>{bien.nom} · {checkin} → {checkout} ({nights} nuit{nights > 1 ? "s" : ""})</div>
+                <div style={{ fontSize: 12, color: NAVY, fontWeight: 600, marginBottom: 8 }}>
+                  {bien.nom} · {localCheckin} → {localCheckout} ({nights} nuit{nights > 1 ? "s" : ""})
+                </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: MUTED }}>
                     <span>Hébergement ({nights} × {bien.prix} €)</span><span>{rawTotal} €</span>
@@ -1234,13 +1267,9 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
                     <span>Frais de ménage</span><span>{fraisMenage} €</span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 700, color: NAVY, borderTop: `1px solid ${SAND}`, paddingTop: 6, marginTop: 2 }}>
-                    <span>Total</span><span>{computedTotal} €</span>
+                    <span>Total calculé</span><span>{computedTotal} €</span>
                   </div>
                 </div>
-              </div>
-            ) : (
-              <div style={{ background: "rgba(196,114,84,0.07)", border: `1px solid rgba(196,114,84,0.22)`, borderRadius: 10, padding: "12px 16px", marginBottom: 20, fontSize: 12, color: MUTED }}>
-                ℹ️ Saisissez le montant indiqué dans votre confirmation Beds24 ci-dessous.
               </div>
             )}
 
@@ -1260,19 +1289,27 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
               <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="jean.dupont@email.com" style={{ width: "100%", padding: "9px 12px", borderRadius: 7, border: `1px solid ${SAND}`, background: IVORY, color: NAVY, fontSize: 13, outline: "none", boxSizing: "border-box" }} />
             </div>
 
-            {/* Montant */}
+            {/* Montant — auto-calculé, modifiable */}
             <div style={{ marginBottom: 20 }}>
-              <label style={{ fontSize: 11, color: MUTED, display: "block", marginBottom: 4 }}>Montant à régler (€) *</label>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <input type="number" value={amount} onChange={e => setAmount(parseInt(e.target.value) || 0)} min={50} style={{ flex: 1, padding: "10px 12px", borderRadius: 7, border: `1px solid ${SAND}`, background: IVORY, color: NAVY, fontSize: 15, fontWeight: 700, outline: "none", boxSizing: "border-box" }} />
-                <span style={{ fontSize: 13, color: MUTED }}>€</span>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                <label style={{ fontSize: 11, color: MUTED }}>Montant à régler (€) *</label>
+                {computedTotal > 0 && amount !== computedTotal && (
+                  <span style={{ fontSize: 11, color: CORAL, cursor: "pointer", textDecoration: "underline" }}
+                    onClick={() => { setAmount(computedTotal); amountManualRef.current = false; }}>
+                    ↺ Rétablir ({computedTotal} €)
+                  </span>
+                )}
               </div>
-              {computedTotal > 0 && amount !== computedTotal && (
-                <div style={{ fontSize: 11, color: MUTED, marginTop: 5 }}>
-                  Montant calculé : {computedTotal} € ·{" "}
-                  <span style={{ color: CORAL, cursor: "pointer", textDecoration: "underline" }} onClick={() => setAmount(computedTotal)}>Rétablir</span>
-                </div>
-              )}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, background: amount > 0 ? "rgba(16,185,129,0.06)" : "rgba(239,68,68,0.06)", borderRadius: 9, border: `2px solid ${amount > 0 ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.25)"}`, padding: "2px 12px 2px 2px" }}>
+                <input
+                  type="number" value={amount}
+                  onChange={e => { setAmount(parseInt(e.target.value) || 0); amountManualRef.current = true; }}
+                  min={50}
+                  style={{ flex: 1, padding: "10px 10px", borderRadius: 7, border: "none", background: "transparent", color: NAVY, fontSize: 18, fontWeight: 800, outline: "none", boxSizing: "border-box" }}
+                />
+                <span style={{ fontSize: 14, color: MUTED, fontWeight: 600 }}>€</span>
+              </div>
+              {amount < 50 && <div style={{ fontSize: 11, color: "#ef4444", marginTop: 4 }}>Saisissez les dates ci-dessus ou entrez le montant indiqué par Beds24</div>}
             </div>
 
             {payError && <div style={{ color: "#e53e3e", fontSize: 12, marginBottom: 12, background: "rgba(229,62,62,0.08)", borderRadius: 7, padding: "8px 12px" }}>{payError}</div>}
