@@ -1015,6 +1015,9 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
   // phase 1 = iframe Beds24, phase 2 = formulaire + montant, phase 3 = Stripe Elements
   const [phase, setPhase] = useState(1);
   const [phase1Confirmed, setPhase1Confirmed] = useState(false);
+  // Détection de soumission du formulaire Beds24 via onLoad (2ème chargement = confirmation)
+  const iframeLoadCount = useRef(0);
+  const [beds24Submitted, setBeds24Submitted] = useState(false);
   const [form, setForm] = useState({ prenom: "", nom: "", email: "" });
   const [stripe, setStripe] = useState(null);
   const [elements, setElements] = useState(null);
@@ -1247,17 +1250,34 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
             </div>
 
             <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
-              <iframe src={bien.beds24Url} width="100%" height="100%" style={{ border: "none", display: "block", minHeight: "600px" }} title="Réservation Beds24" />
+              <iframe
+                src={bien.beds24Url}
+                width="100%"
+                height="100%"
+                style={{ border: "none", display: "block", minHeight: "600px" }}
+                title="Réservation Beds24"
+                onLoad={() => {
+                  iframeLoadCount.current += 1;
+                  if (iframeLoadCount.current >= 2) setBeds24Submitted(true);
+                }}
+              />
             </div>
 
             {/* Étape 2 — visible seulement après confirmation par checkbox */}
             <div style={{ padding: "14px 24px", borderTop: `1px solid ${SAND}`, background: IVORY, flexShrink: 0 }}>
-              <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer", marginBottom: 12 }}>
+              {!beds24Submitted && (
+                <div style={{ fontSize: 11, color: MUTED, marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontSize: 14 }}>⏳</span>
+                  <span>Validez d'abord votre réservation dans le formulaire ci-dessus pour continuer</span>
+                </div>
+              )}
+              <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: beds24Submitted ? "pointer" : "not-allowed", marginBottom: 12, opacity: beds24Submitted ? 1 : 0.45 }}>
                 <input
                   type="checkbox"
                   checked={!!phase1Confirmed}
-                  onChange={e => setPhase1Confirmed(e.target.checked)}
-                  style={{ marginTop: 2, width: 16, height: 16, accentColor: CORAL, cursor: "pointer", flexShrink: 0 }}
+                  disabled={!beds24Submitted}
+                  onChange={e => beds24Submitted && setPhase1Confirmed(e.target.checked)}
+                  style={{ marginTop: 2, width: 16, height: 16, accentColor: CORAL, cursor: beds24Submitted ? "pointer" : "not-allowed", flexShrink: 0 }}
                 />
                 <span style={{ fontSize: 13, color: NAVY, lineHeight: 1.4 }}>
                   <strong>Ma réservation est confirmée</strong> — j'ai cliqué sur le bouton de réservation dans le formulaire ci-dessus et reçu une confirmation
