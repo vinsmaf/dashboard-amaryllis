@@ -1013,7 +1013,7 @@ function OrganicLoader({ size = 32, color = CORAL }) {
 // ── Beds24 Modal (Nogent — formulaire natif + paiement Stripe) ────────────
 // Option B : plus d'iframe. On crée la réservation Beds24 via notre propre API
 // puis on enchaîne directement sur Stripe. Flux : phase 1 (form) → phase 2 (Stripe).
-function Beds24Modal({ bien, checkin, checkout, onClose }) {
+function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) {
   const [phase, setPhase] = useState(1);
 
   // ── Formulaire voyageur ───────────────────────────────────────────────────
@@ -1024,9 +1024,21 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
   const [localCheckin,  setLocalCheckin]  = useState(checkin  || "");
   const [localCheckout, setLocalCheckout] = useState(checkout || "");
 
-  // ── Prix calculé localement (source de vérité pour le montant à facturer) ─
-  const nights       = localCheckin && localCheckout ? dateDiff(localCheckin, localCheckout) : 0;
-  const rawTotal     = nights > 0 ? nights * bien.prix : 0;
+  // ── Prix calculé depuis les tarifs Beds24 par jour (source de vérité) ────
+  // dailyPricesMap est synchro en temps réel depuis /api/beds24-rates
+  // Fallback : bien.prix si la date n'est pas dans la map
+  const nights = localCheckin && localCheckout ? dateDiff(localCheckin, localCheckout) : 0;
+  const rawTotal = useMemo(() => {
+    if (nights <= 0) return 0;
+    let total = 0;
+    const cur = new Date(localCheckin + "T12:00:00Z");
+    for (let i = 0; i < nights; i++) {
+      const ds = cur.toISOString().slice(0, 10);
+      total += dailyPricesMap[ds] ?? bien.prix;
+      cur.setDate(cur.getDate() + 1);
+    }
+    return total;
+  }, [localCheckin, nights, dailyPricesMap, bien.prix]);
   const fraisMenage  = FRAIS_MENAGE[bien.id] ?? 0;
   const discountRate = getDiscount(nights);
   const discountAmt  = Math.round(rawTotal * discountRate);
@@ -1232,7 +1244,7 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 4, borderTop: `1px solid ${SAND}`, paddingTop: 10 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: MUTED }}>
-                    <span>Hébergement ({nights} nuit{nights > 1 ? "s" : ""} × {bien.prix} €)</span>
+                    <span>Hébergement ({nights} nuit{nights > 1 ? "s" : ""}{nights > 0 && rawTotal > 0 ? ` · moy. ${Math.round(rawTotal / nights)} €/nuit` : ""})</span>
                     <span>{rawTotal} €</span>
                   </div>
                   {discountAmt > 0 && (
@@ -5698,6 +5710,32 @@ export default function PublicSite() {
       .catch(() => {});
   }, []);
 
+  // ── Sync tarifs Beds24 → localStorage (Nogent uniquement, TTL 1h) ──────────
+  // Beds24 est la source de vérité pour les prix. Toute modification dans Beds24
+  // est répercutée automatiquement sur le site à la prochaine visite (ou après 1h).
+  const [beds24RatesMap, setBeds24RatesMap] = useState(() => {
+    try { return loadDailyPrices()["nogent"] || {}; } catch { return {}; }
+  });
+  useEffect(() => {
+    const SYNC_KEY = "beds24_rates_synced_at";
+    const lastSync = localStorage.getItem(SYNC_KEY);
+    const stale    = !lastSync || (Date.now() - Number(lastSync)) > 3600_000; // 1h
+    if (!stale) return; // données fraîches, pas besoin de re-fetch
+
+    fetch("/api/beds24-rates")
+      .then(r => r.json())
+      .then(d => {
+        if (!d.ok || !d.prices || !Object.keys(d.prices).length) return;
+        // Injecter dans le système de prix existant (merge + dispatch event)
+        applyServerPriceOverrides({ [d.bienId]: d.prices });
+        // Mettre à jour le state local du modal
+        setBeds24RatesMap(d.prices);
+        localStorage.setItem(SYNC_KEY, String(Date.now()));
+        console.log(`[beds24-rates] sync OK — ${Object.keys(d.prices).length} jours, ${d.meta?.minPrice}–${d.meta?.maxPrice}€/nuit`);
+      })
+      .catch(e => console.warn("[beds24-rates] sync échouée:", e.message));
+  }, []);
+
   // Listen for admin price updates — même onglet ET autres onglets (cross-tab)
   useEffect(() => {
     const fn = () => setPriceOverrides(loadPriceOverrides());
@@ -6044,7 +6082,7 @@ export default function PublicSite() {
             initialCheckout={bookingInitialDates.checkout}
           />
         )}
-        {beds24Bien && <Beds24Modal bien={beds24Bien} checkin={beds24Dates.checkin} checkout={beds24Dates.checkout} onClose={() => { setBeds24Bien(null); setBeds24Dates({ checkin: null, checkout: null }); }} />}
+        {beds24Bien && <Beds24Modal bien={beds24Bien} checkin={beds24Dates.checkin} checkout={beds24Dates.checkout} dailyPricesMap={beds24RatesMap} onClose={() => { setBeds24Bien(null); setBeds24Dates({ checkin: null, checkout: null }); }} />}
       </div>
     );
   }
