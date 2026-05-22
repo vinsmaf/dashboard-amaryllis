@@ -1021,6 +1021,45 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
   const [payError, setPayError] = useState("");
   const spRef = useRef(null);
 
+  // ── Suivi réservation Beds24 pour annulation automatique ──
+  const [bookingId, setBookingId] = useState(null);      // ID Beds24 une fois trouvé
+  const [findingBooking, setFindingBooking] = useState(false);
+  const paymentDoneRef = useRef(false);                  // vrai dès que Stripe confirme
+  const bookingIdRef   = useRef(null);                   // ref stable pour le cleanup
+
+  // Annule la réservation Beds24 (best-effort)
+  const cancelBeds24Booking = async (id) => {
+    if (!id) return;
+    try {
+      await fetch("/api/beds24-manage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "cancel", bookingId: id }),
+      });
+    } catch {}
+  };
+
+  // Confirme la réservation Beds24 (best-effort)
+  const confirmBeds24Booking = async (id) => {
+    if (!id) return;
+    try {
+      await fetch("/api/beds24-manage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "confirm", bookingId: id }),
+      });
+    } catch {}
+  };
+
+  // Quand le composant se démonte : annuler si pas payé et booking trouvé
+  useEffect(() => {
+    return () => {
+      if (!paymentDoneRef.current && bookingIdRef.current) {
+        cancelBeds24Booking(bookingIdRef.current);
+      }
+    };
+  }, []);
+
   const nights = checkin && checkout ? dateDiff(checkin, checkout) : 0;
   const rawTotal = nights > 0 ? nights * bien.prix : 0;
   const fraisMenage = FRAIS_MENAGE[bien.id] ?? 0;
@@ -1054,13 +1093,38 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
     if (!stripe) return;
     setPaying(true); setPayError("");
     try {
+      // 1. Chercher la réservation Beds24 correspondante pour pouvoir l'annuler si besoin
+      setFindingBooking(true);
+      try {
+        const fr = await fetch("/api/beds24-manage", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "find", email: form.email, lastName: form.nom, checkin: checkin || undefined }),
+        });
+        const fd = await fr.json();
+        if (fd.ok && fd.bookingId) {
+          setBookingId(fd.bookingId);
+          bookingIdRef.current = fd.bookingId;
+        }
+        // Si non trouvé : on continue quand même (la réservation sera annulée par le cron worker)
+      } catch {}
+      setFindingBooking(false);
+
+      // 2. Créer le PaymentIntent Stripe
       const res = await fetch("/api/create-payment-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           amount: amount * 100,
           currency: "eur",
-          metadata: { bienId: bien.id, checkin: checkin || "", checkout: checkout || "", voyageur: `${form.prenom} ${form.nom}`.trim(), email: form.email },
+          metadata: {
+            bienId:    bien.id,
+            checkin:   checkin  || "",
+            checkout:  checkout || "",
+            voyageur:  `${form.prenom} ${form.nom}`.trim(),
+            email:     form.email,
+            beds24Id:  bookingIdRef.current || "",
+          },
         }),
       });
       const data = await res.json();
@@ -1070,7 +1134,7 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
       setElements(el);
       setPhase(3);
     } catch (e) { setPayError(e.message); }
-    finally { setPaying(false); }
+    finally { setPaying(false); setFindingBooking(false); }
   }
 
   async function handlePay() {
@@ -1081,9 +1145,25 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
       confirmParams: { return_url: window.location.origin + "/merci" },
       redirect: "if_required",
     });
-    if (error) { setPayError(error.message); setPaying(false); return; }
+    if (error) {
+      // Paiement échoué : annuler la réservation Beds24
+      setPayError(error.message);
+      if (bookingIdRef.current) {
+        await cancelBeds24Booking(bookingIdRef.current);
+        bookingIdRef.current = null;
+        setBookingId(null);
+        setPayError(error.message + " — Votre réservation Beds24 a été annulée. Vous pouvez recommencer.");
+      }
+      setPaying(false);
+      return;
+    }
     if (paymentIntent?.status === "succeeded") {
-      if (window.gtag) window.gtag("event", "purchase", { transaction_id: paymentIntent.id, currency: "EUR", value: amount, items: [{ item_id: bien.id, item_name: bien.nom, price: bien.prix, quantity: nights || 1 }] });
+      paymentDoneRef.current = true;                        // empêche l'annulation au démontage
+      await confirmBeds24Booking(bookingIdRef.current);    // confirmer côté Beds24
+      if (window.gtag) window.gtag("event", "purchase", {
+        transaction_id: paymentIntent.id, currency: "EUR", value: amount,
+        items: [{ item_id: bien.id, item_name: bien.nom, price: bien.prix, quantity: nights || 1 }],
+      });
       window.location.href = "/merci";
     }
     setPaying(false);
@@ -1202,7 +1282,7 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
               disabled={paying || !formOk || !stripe}
               style={{ width: "100%", padding: "13px", borderRadius: 9, border: "none", background: formOk && !paying && stripe ? CORAL : SAND, color: formOk && !paying && stripe ? "#fff" : MUTED, fontWeight: 700, fontSize: 14, cursor: formOk && !paying ? "pointer" : "not-allowed", transition: "background 0.2s" }}
             >
-              {paying ? "Préparation…" : `Continuer · ${amount} €`}
+              {findingBooking ? "Vérification réservation…" : paying ? "Préparation…" : `Continuer · ${amount} €`}
             </button>
             <div style={{ textAlign: "center", marginTop: 10, fontSize: 11, color: MUTED }}>🔒 Paiement sécurisé par Stripe</div>
             <button onClick={() => setPhase(1)} style={{ display: "block", margin: "14px auto 0", background: "none", border: "none", color: MUTED, fontSize: 11, cursor: "pointer", textDecoration: "underline" }}>

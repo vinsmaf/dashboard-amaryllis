@@ -893,6 +893,54 @@ async function runMonitor(env) {
   return { errors: errors.length };
 }
 
+// ── Annulation des réservations Beds24 non payées (Nogent) ───────────────────
+// Toutes les heures : cherche les réservations avec status="new" créées il y a
+// plus de 4h et les annule (l'utilisateur n'a pas finalisé le paiement).
+// Les réservations confirmées (status="confirmed") sont épargnées.
+async function runCancelUnpaidBeds24Bookings(env) {
+  const token = env.BEDS24_TOKEN;
+  if (!token) return;
+
+  const PROP_ID = "158192";
+  const THRESHOLD_HOURS = 4; // délai avant annulation automatique
+
+  try {
+    // Chercher les réservations récentes non confirmées
+    const since = new Date(Date.now() - 48 * 3600 * 1000).toISOString().slice(0, 10); // 48h max
+    const qp = new URLSearchParams({ propId: PROP_ID, modifiedFrom: since, numId: "100" });
+    const res = await fetch(`https://beds24.com/api/v2/bookings?${qp}`, { headers: { token } });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data.success || !Array.isArray(data.data)) return;
+
+    const now = Date.now();
+    const toCancel = data.data.filter(b => {
+      if (b.status !== "new") return false; // garder: confirmed, cancelled, etc.
+      // bookingTime format : "2026-05-22 14:35:00" ou ISO
+      const created = b.bookingTime ? new Date(b.bookingTime.replace(" ", "T") + "Z").getTime() : 0;
+      if (!created) return false;
+      const ageHours = (now - created) / 3600000;
+      return ageHours >= THRESHOLD_HOURS;
+    });
+
+    if (toCancel.length === 0) return;
+
+    console.log(`[beds24-cleanup] ${toCancel.length} réservation(s) non payée(s) à annuler`);
+
+    const payload = toCancel.map(b => ({ id: String(b.id), status: "cancelled" }));
+    const putRes = await fetch("https://beds24.com/api/v2/bookings", {
+      method: "PUT",
+      headers: { token, "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const putData = await putRes.json().catch(() => ({}));
+    console.log(`[beds24-cleanup] Annulation PUT → ${putRes.status}`, JSON.stringify(putData).slice(0, 200));
+
+  } catch (e) {
+    console.error("[beds24-cleanup] Erreur:", e.message);
+  }
+}
+
 // ── Caution auto-release J+3 ──────────────────────────────────────────────────
 // Interroge Stripe pour tous les PaymentIntents de type "caution" en requires_capture
 // Si checkout + 3 jours <= today → annule (libère les fonds)
@@ -1157,8 +1205,11 @@ export default {
       })());
 
     } else {
-      // Toutes les heures — sync iCal uniquement
-      ctx.waitUntil(runSync(env));
+      // Toutes les heures — sync iCal + annulation des réservations Beds24 non payées
+      ctx.waitUntil((async () => {
+        await runSync(env);
+        await runCancelUnpaidBeds24Bookings(env);
+      })());
     }
   },
 
