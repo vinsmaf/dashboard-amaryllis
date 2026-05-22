@@ -1069,7 +1069,8 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
   const fraisMenage = FRAIS_MENAGE[bien.id] ?? 0;
   const discountRate = getDiscount(nights);
   const discountAmt  = Math.round(rawTotal * discountRate);
-  const computedTotal = rawTotal - discountAmt + fraisMenage;
+  // fraisMenage inclus seulement si les dates sont connues
+  const computedTotal = nights > 0 ? rawTotal - discountAmt + fraisMenage : 0;
   const [amount, setAmount] = useState(() => computedTotal || 0);
 
   // Recalcul automatique du montant quand les dates changent
