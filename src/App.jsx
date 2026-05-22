@@ -1753,6 +1753,73 @@ function Previsionnel({ biens, n, mob, hist = HIST_SEED }) {
           </tbody>
         </table>
       </div>
+
+      {/* ── Projection N+1 (2027) ── */}
+      {(() => {
+        // CAGR sur 2022-2026 projeté
+        const rev2022 = 107062, rev2025 = 161331;
+        const cagr4ans = Math.pow(rev2025 / rev2022, 1 / 3) - 1; // 3 ans 2022→2025
+        const proj26 = Math.round(projAnnuelle); // projection 2026 courante
+        // Tendance linéaire 2023-2025 → delta annuel moyen
+        const deltaLinRaw = (161331 - 107062) / 3;
+        const proj27_real = Math.round(proj26 + deltaLinRaw);
+        const proj27_pess = Math.round(proj26 * 1.03);   // +3%
+        const proj27_opt  = Math.round(proj26 * 1.18);   // +18%
+        const chartData27 = MOIS.map((_, m) => ({
+          mois: MOIS[m],
+          "2025": hist[2025]?.total[m] || 0,
+          "2026 proj.": Math.round(projAnnuelle * poidsNorm[m]),
+          "2027 réaliste": Math.round(proj27_real * poidsNorm[m]),
+        }));
+        const chargesAnnuelles2027 = biens.reduce((s, b) => s + b.charges * 12, 0) * 1.03; // +3% inflation
+        const cf27 = proj27_real - chargesAnnuelles2027;
+        return (
+          <div style={{ marginTop: 24, background: "rgba(168,85,247,0.05)", border: "1px solid rgba(168,85,247,0.2)", borderRadius: 14, padding: mob ? 14 : 20 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#a855f7", marginBottom: 4 }}>🔮 Projection 2027 — N+1</div>
+            <div style={{ fontSize: 11, color: "#64748b", marginBottom: 14 }}>
+              Basée sur la tendance 2022-2026 (+{(deltaLinRaw/1000).toFixed(0)}k€/an en moyenne) et la saisonnalité historique.
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: mob ? "1fr 1fr" : "repeat(3,1fr)", gap: 10, marginBottom: 16 }}>
+              {[
+                { label: "Pessimiste +3%", value: proj27_pess, color: "#ef4444" },
+                { label: "Réaliste (tendance)", value: proj27_real, color: "#a855f7" },
+                { label: "Optimiste +18%", value: proj27_opt, color: "#10b981" },
+              ].map(s => (
+                <div key={s.label} style={{ background: `${s.color}11`, border: `1px solid ${s.color}33`, borderRadius: 10, padding: "12px 14px", textAlign: "center" }}>
+                  <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{s.label}</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: s.color, fontFamily: "monospace" }}>{fmtK(s.value)}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
+              <div style={{ flex: 1, minWidth: 120, background: "rgba(255,255,255,0.03)", borderRadius: 9, padding: "10px 12px" }}>
+                <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 3 }}>CF projeté 2027</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: cf27 >= 0 ? "#10b981" : "#ef4444", fontFamily: "monospace" }}>{cf27 >= 0 ? "+" : ""}{fmtK(cf27)}</div>
+              </div>
+              <div style={{ flex: 1, minWidth: 120, background: "rgba(255,255,255,0.03)", borderRadius: 9, padding: "10px 12px" }}>
+                <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 3 }}>CAGR 2022→2027</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: "#a855f7", fontFamily: "monospace" }}>{(Math.pow(proj27_real / rev2022, 1 / 5) - 1).toFixed(1).replace(".", ",")}{" "}%/an</div>
+              </div>
+              <div style={{ flex: 1, minWidth: 120, background: "rgba(255,255,255,0.03)", borderRadius: 9, padding: "10px 12px" }}>
+                <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 3 }}>Revenus cumulés 2022-2027</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: "#f59e0b", fontFamily: "monospace" }}>{fmtK(107062 + 121730 + 143341 + 161331 + proj26 + proj27_real)}</div>
+              </div>
+            </div>
+            <ResponsiveContainer width="100%" height={mob ? 130 : 165}>
+              <ComposedChart data={chartData27}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <XAxis dataKey="mois" tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={fmtK} />
+                <Tooltip contentStyle={TT} formatter={(v) => [fmt(v)]} />
+                <Legend wrapperStyle={{ fontSize: 9, color: "#94a3b8" }} />
+                <Bar dataKey="2025" fill="rgba(14,165,233,0.25)" name="2025 réel" radius={[2,2,0,0]} />
+                <Line type="monotone" dataKey="2026 proj." stroke="#0ea5e9" strokeWidth={2} dot={false} strokeDasharray="4 2" />
+                <Line type="monotone" dataKey="2027 réaliste" stroke="#a855f7" strokeWidth={2} dot={false} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -6136,6 +6203,8 @@ export default function App() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [showScriptSetup, setShowScriptSetup] = useState(false);
   const [showPushSetup, setShowPushSetup] = useState(false);
+  const [showRapport, setShowRapport] = useState(false);
+  const [rapportMois, setRapportMois] = useState(() => new Date().getMonth());
   const [ntfyTopic, setNtfyTopic] = useState(() => localStorage.getItem("ntfy_topic") || "");
   const [hist, setHist] = useState(HIST_SEED);
   const [globalSyncStatus, setGlobalSyncStatus] = useState("idle"); // idle | syncing | ok | error
@@ -6378,6 +6447,7 @@ export default function App() {
       <button onClick={() => setShowScriptSetup(true)} title="Configurer Apps Script" style={{ padding: "4px 6px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: scriptUrl ? "#10b981" : "#64748b", fontSize: 10, cursor: "pointer" }}>{scriptUrl ? "⚙✓" : "⚙"}</button>
       <button onClick={syncAllToSheets} disabled={globalSyncStatus === "syncing"} title="Sync Sheets" style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(16,185,129,0.4)", background: globalSyncStatus === "ok" ? "rgba(16,185,129,0.2)" : globalSyncStatus === "error" ? "rgba(239,68,68,0.15)" : "transparent", color: globalSyncStatus === "ok" ? "#10b981" : globalSyncStatus === "error" ? "#f87171" : "#64748b", fontSize: 10, cursor: "pointer", fontWeight: 600 }}>{globalSyncStatus === "syncing" ? "⟳…" : globalSyncStatus === "ok" ? "📊✓" : globalSyncStatus === "error" ? "📊✗" : "📊"}</button>
       <button onClick={() => setShowPushSetup(true)} title="Notifications push" style={{ padding: "4px 6px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: ntfyTopic ? "#f59e0b" : "#64748b", fontSize: 10, cursor: "pointer" }}>{ntfyTopic ? "🔔" : "🔕"}</button>
+      <button onClick={() => setShowRapport(true)} title="Rapport mensuel" style={{ padding: "4px 6px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "transparent", color: "#475569", fontSize: 10, cursor: "pointer" }}>📄</button>
       <button onClick={() => {
         const year = new Date().getFullYear();
         const rows = [["Bien","Voyageur","Canal","Checkin","Checkout","Nuits","Montant €","Notes"]];
@@ -6508,6 +6578,109 @@ export default function App() {
       <div style={{ padding: "8px 22px", borderTop: "1px solid rgba(255,255,255,0.04)", fontSize: 9, color: "#334155", textAlign: "center" }}>
         Locatif Dashboard · {lastSync ? "Synchro : " + lastSync : "Non synchronisé"}
       </div>
+
+      {showRapport && (() => {
+        const moisLabel = MOIS[rapportMois] || "";
+        const yr = new Date().getFullYear();
+        const resas = reservations.filter(r => r.checkin && r.checkin.startsWith(`${yr}-${String(rapportMois + 1).padStart(2, "0")}`));
+        const rapportBiens = biens.map(b => {
+          const rev = b.revenus[rapportMois] || 0;
+          const occ = b.occ[rapportMois] || 0;
+          const adr = b.adr[rapportMois] || 0;
+          const cf = b.cashflow[rapportMois] || 0;
+          const resasBien = resas.filter(r => r.bienId === b.id);
+          return { ...b, rev, occ, adr, cf, nbResas: resasBien.length, nbNuits: resasBien.reduce((s, r) => { if (!r.checkin || !r.checkout) return s; return s + Math.round((new Date(r.checkout+"T12:00:00Z") - new Date(r.checkin+"T12:00:00Z")) / 86400000); }, 0) };
+        });
+        const totalRev = rapportBiens.reduce((s, b) => s + b.rev, 0);
+        const totalCf = rapportBiens.reduce((s, b) => s + b.cf, 0);
+        return (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={() => setShowRapport(false)}>
+            <div id="rapport-content" style={{ background: "#0a0f1e", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 14, padding: 24, maxWidth: 680, width: "100%", maxHeight: "calc(92vh - env(safe-area-inset-bottom))", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: "#e2e8f0" }}>📄 Rapport mensuel</div>
+                  <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>Locatif · Villa Maryllis</div>
+                </div>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <select value={rapportMois} onChange={e => setRapportMois(Number(e.target.value))} style={{ padding: "5px 8px", background: "#1e293b", border: "1px solid #334155", borderRadius: 7, color: "#e2e8f0", fontSize: 11 }}>
+                    {MOIS.map((m, i) => <option key={i} value={i}>{m} {yr}</option>)}
+                  </select>
+                  <button onClick={() => { window.print(); }} style={{ padding: "6px 12px", borderRadius: 7, border: "none", background: "#0ea5e9", color: "#fff", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>🖨 Imprimer / PDF</button>
+                  <button onClick={() => setShowRapport(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "#475569", fontSize: 18, lineHeight: 1 }}>✕</button>
+                </div>
+              </div>
+              <div style={{ background: "linear-gradient(135deg,rgba(14,165,233,0.1),rgba(99,102,241,0.06))", border: "1px solid rgba(14,165,233,0.2)", borderRadius: 12, padding: "14px 18px", marginBottom: 16, display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12 }}>
+                {[
+                  { label: "CA " + moisLabel, value: fmt(totalRev), color: "#0ea5e9" },
+                  { label: "Cashflow net", value: (totalCf >= 0 ? "+" : "") + fmt(totalCf), color: totalCf >= 0 ? "#10b981" : "#ef4444" },
+                  { label: "Réservations", value: resas.length, color: "#f59e0b" },
+                ].map(k => (
+                  <div key={k.label} style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{k.label}</div>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: k.color, fontFamily: "monospace" }}>{k.value}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ overflowX: "auto", marginBottom: 16 }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 520 }}>
+                  <thead>
+                    <tr style={{ background: "rgba(255,255,255,0.04)" }}>
+                      {["Logement","CA","Occ.","ADR","CF","Rés.","Nuits"].map(h => (
+                        <th key={h} style={{ padding: "8px 10px", textAlign: h === "Logement" ? "left" : "right", fontSize: 9, color: "#64748b", fontWeight: 700, textTransform: "uppercase" }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rapportBiens.map(b => (
+                      <tr key={b.id} style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                        <td style={{ padding: "9px 10px", fontSize: 11, color: "#e2e8f0" }}>{b.emoji} {b.nom}</td>
+                        <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: "#0ea5e9", fontFamily: "monospace", fontWeight: 600 }}>{fmt(b.rev)}</td>
+                        <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: b.occ >= 60 ? "#10b981" : b.occ >= 30 ? "#f59e0b" : "#ef4444", fontFamily: "monospace" }}>{b.occ.toFixed(0)}%</td>
+                        <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: "#94a3b8", fontFamily: "monospace" }}>{b.adr.toFixed(0)} €</td>
+                        <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: b.cf >= 0 ? "#10b981" : "#ef4444", fontFamily: "monospace" }}>{b.cf >= 0 ? "+" : ""}{fmt(b.cf)}</td>
+                        <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: "#94a3b8" }}>{b.nbResas}</td>
+                        <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: "#94a3b8" }}>{b.nbNuits}</td>
+                      </tr>
+                    ))}
+                    <tr style={{ borderTop: "2px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.02)", fontWeight: 700 }}>
+                      <td style={{ padding: "9px 10px", fontSize: 11, color: "#e2e8f0" }}>TOTAL</td>
+                      <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 12, color: "#0ea5e9", fontFamily: "monospace", fontWeight: 800 }}>{fmt(totalRev)}</td>
+                      <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: "#94a3b8" }}>—</td>
+                      <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: "#94a3b8" }}>—</td>
+                      <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 12, color: totalCf >= 0 ? "#10b981" : "#ef4444", fontFamily: "monospace", fontWeight: 800 }}>{totalCf >= 0 ? "+" : ""}{fmt(totalCf)}</td>
+                      <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: "#94a3b8" }}>{resas.length}</td>
+                      <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: "#94a3b8" }}>{rapportBiens.reduce((s, b) => s + b.nbNuits, 0)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              {resas.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>Détail des réservations</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    {resas.map(r => {
+                      const b = biens.find(x => x.id === r.bienId);
+                      const nuits = r.checkin && r.checkout ? Math.round((new Date(r.checkout+"T12:00:00Z") - new Date(r.checkin+"T12:00:00Z")) / 86400000) : "?";
+                      return (
+                        <div key={r.id} style={{ display: "flex", gap: 10, alignItems: "center", padding: "6px 10px", background: "rgba(255,255,255,0.02)", borderRadius: 7, flexWrap: "wrap" }}>
+                          <span style={{ fontSize: 11, color: "#94a3b8", fontFamily: "monospace", whiteSpace: "nowrap" }}>{r.checkin} → {r.checkout}</span>
+                          <span style={{ fontSize: 11, color: "#e2e8f0", fontWeight: 600 }}>{r.voyageur || "—"}</span>
+                          <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 6, background: CB[r.canal] || "#334155", color: CC[r.canal] || "#94a3b8", fontWeight: 600 }}>{r.canal}</span>
+                          <span style={{ fontSize: 10, color: "#64748b" }}>{b?.emoji} {b?.nom?.replace("Villa ", "")}</span>
+                          <span style={{ fontSize: 11, color: "#f59e0b", fontFamily: "monospace", marginLeft: "auto" }}>{nuits}n · {fmt(r.montant || 0)}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              <div style={{ marginTop: 16, padding: "8px 12px", background: "rgba(255,255,255,0.02)", borderRadius: 8, fontSize: 9, color: "#334155", textAlign: "center" }}>
+                Rapport généré le {new Date().toLocaleDateString("fr-FR", { weekday: "long", year: "numeric", month: "long", day: "numeric" })} · Locatif Dashboard villamaryllis.com
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {showPushSetup && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={() => setShowPushSetup(false)}>
