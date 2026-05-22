@@ -1015,12 +1015,19 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
   // phase 1 = iframe Beds24, phase 2 = formulaire + montant, phase 3 = Stripe Elements
   const [phase, setPhase] = useState(1);
   const [phase1Confirmed, setPhase1Confirmed] = useState(false);
-  // Détection de soumission du formulaire Beds24 via onLoad
-  // Le 2ème load est la confirmation SEULEMENT si ≥12s après le 1er
-  // (Beds24 auto-recharge son widget en < 3s — la vraie soumission prend 20s+)
-  const iframeLoadCount   = useRef(0);
-  const iframeFirstLoadTs = useRef(null);
-  const [beds24Submitted, setBeds24Submitted] = useState(false);
+  // Compte à rebours : la checkbox se déverrouille après 45s
+  // (délai fiable pour laisser le temps de remplir le formulaire Beds24)
+  const LOCK_DURATION = 45;
+  const [countdown, setCountdown] = useState(LOCK_DURATION);
+  const beds24Submitted = countdown === 0;
+
+  useEffect(() => {
+    if (phase !== 1) return;
+    const t = setInterval(() => {
+      setCountdown(c => (c > 0 ? c - 1 : 0));
+    }, 1000);
+    return () => clearInterval(t);
+  }, [phase]);
   const [form, setForm] = useState({ prenom: "", nom: "", email: "" });
   const [stripe, setStripe] = useState(null);
   const [elements, setElements] = useState(null);
@@ -1259,24 +1266,20 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
                 height="100%"
                 style={{ border: "none", display: "block", minHeight: "600px" }}
                 title="Réservation Beds24"
-                onLoad={() => {
-                  iframeLoadCount.current += 1;
-                  if (iframeLoadCount.current === 1) {
-                    iframeFirstLoadTs.current = Date.now();
-                  } else if (iframeLoadCount.current >= 2) {
-                    const elapsed = Date.now() - (iframeFirstLoadTs.current || 0);
-                    if (elapsed >= 12000) setBeds24Submitted(true);
-                  }
-                }}
               />
             </div>
 
             {/* Étape 2 — visible seulement après confirmation par checkbox */}
             <div style={{ padding: "14px 24px", borderTop: `1px solid ${SAND}`, background: IVORY, flexShrink: 0 }}>
               {!beds24Submitted && (
-                <div style={{ fontSize: 11, color: MUTED, marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontSize: 14 }}>⏳</span>
-                  <span>Validez d'abord votre réservation dans le formulaire ci-dessus pour continuer</span>
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 5 }}>
+                    <span style={{ fontSize: 12, color: MUTED }}>⏳ Remplissez le formulaire ci-dessus, puis attendez…</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: CORAL, minWidth: 30, textAlign: "right" }}>{countdown}s</span>
+                  </div>
+                  <div style={{ height: 4, borderRadius: 4, background: SAND, overflow: "hidden" }}>
+                    <div style={{ height: "100%", borderRadius: 4, background: CORAL, width: `${((LOCK_DURATION - countdown) / LOCK_DURATION) * 100}%`, transition: "width 1s linear" }} />
+                  </div>
                 </div>
               )}
               <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: beds24Submitted ? "pointer" : "not-allowed", marginBottom: 12, opacity: beds24Submitted ? 1 : 0.45 }}>
