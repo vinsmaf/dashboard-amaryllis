@@ -1010,193 +1010,145 @@ function OrganicLoader({ size = 32, color = CORAL }) {
   );
 }
 
-// ── Beds24 Modal (Nogent — réservation + paiement Stripe) ────────
+// ── Beds24 Modal (Nogent — formulaire natif + paiement Stripe) ────────────
+// Option B : plus d'iframe. On crée la réservation Beds24 via notre propre API
+// puis on enchaîne directement sur Stripe. Flux : phase 1 (form) → phase 2 (Stripe).
 function Beds24Modal({ bien, checkin, checkout, onClose }) {
-  // phase 1 = iframe Beds24, phase 2 = formulaire + montant, phase 3 = Stripe Elements
   const [phase, setPhase] = useState(1);
-  const [phase1Confirmed, setPhase1Confirmed] = useState(false);
-  // Compte à rebours : la checkbox se déverrouille après 45s
-  // (délai fiable pour laisser le temps de remplir le formulaire Beds24)
-  const LOCK_DURATION = 45;
-  const [countdown, setCountdown] = useState(LOCK_DURATION);
-  const beds24Submitted = countdown === 0;
 
-  useEffect(() => {
-    if (phase !== 1) return;
-    const t = setInterval(() => {
-      setCountdown(c => (c > 0 ? c - 1 : 0));
-    }, 1000);
-    return () => clearInterval(t);
-  }, [phase]);
-  const [form, setForm] = useState({ prenom: "", nom: "", email: "" });
-  const [stripe, setStripe] = useState(null);
-  const [elements, setElements] = useState(null);
-  const [paying, setPaying] = useState(false);
-  const [payError, setPayError] = useState("");
-  const spRef = useRef(null);
+  // ── Formulaire voyageur ───────────────────────────────────────────────────
+  const [form, setForm] = useState({ prenom: "", nom: "", email: "", tel: "", adultes: "2", enfants: "0" });
+  const setF = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
-  // ── Suivi réservation Beds24 pour annulation automatique ──
-  const [bookingId, setBookingId] = useState(null);      // ID Beds24 une fois trouvé
-  const [findingBooking, setFindingBooking] = useState(false);
-  const paymentDoneRef = useRef(false);                  // vrai dès que Stripe confirme
-  const bookingIdRef   = useRef(null);                   // ref stable pour le cleanup
-
-  // Annule la réservation Beds24 (best-effort)
-  const cancelBeds24Booking = async (id) => {
-    if (!id) return;
-    try {
-      await fetch("/api/beds24-manage", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "cancel", bookingId: id }),
-      });
-    } catch {}
-  };
-
-  // Confirme la réservation Beds24 (best-effort)
-  const confirmBeds24Booking = async (id) => {
-    if (!id) return;
-    try {
-      await fetch("/api/beds24-manage", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "confirm", bookingId: id }),
-      });
-    } catch {}
-  };
-
-  // Quand le composant se démonte : annuler si pas payé et booking trouvé
-  useEffect(() => {
-    return () => {
-      if (!paymentDoneRef.current && bookingIdRef.current) {
-        cancelBeds24Booking(bookingIdRef.current);
-      }
-    };
-  }, []);
-
-  // Dates locales : props si pré-sélectionnées, sinon saisies en phase 2
+  // ── Dates (pré-remplies depuis les props ou le calendrier) ───────────────
   const [localCheckin,  setLocalCheckin]  = useState(checkin  || "");
   const [localCheckout, setLocalCheckout] = useState(checkout || "");
 
-  const nights = localCheckin && localCheckout ? dateDiff(localCheckin, localCheckout) : 0;
-  const rawTotal = nights > 0 ? nights * bien.prix : 0;
-  const fraisMenage = FRAIS_MENAGE[bien.id] ?? 0;
+  // ── Prix calculé localement (source de vérité pour le montant à facturer) ─
+  const nights       = localCheckin && localCheckout ? dateDiff(localCheckin, localCheckout) : 0;
+  const rawTotal     = nights > 0 ? nights * bien.prix : 0;
+  const fraisMenage  = FRAIS_MENAGE[bien.id] ?? 0;
   const discountRate = getDiscount(nights);
   const discountAmt  = Math.round(rawTotal * discountRate);
-  // fraisMenage inclus seulement si les dates sont connues
   const computedTotal = nights > 0 ? rawTotal - discountAmt + fraisMenage : 0;
   const [amount, setAmount] = useState(() => computedTotal || 0);
+  useEffect(() => { if (computedTotal > 0) setAmount(computedTotal); }, [computedTotal]);
 
-  // Recalcul automatique du montant quand les dates changent
-  useEffect(() => {
-    if (computedTotal > 0) setAmount(computedTotal);
-  }, [computedTotal]);
-
+  // ── Stripe ────────────────────────────────────────────────────────────────
+  const [stripe,   setStripe]   = useState(null);
+  const [elements, setElements] = useState(null);
+  const [paying,   setPaying]   = useState(false);
+  const [payError, setPayError] = useState("");
+  const spRef = useRef(null);
   useEffect(() => { if (window.Stripe) setStripe(window.Stripe(STRIPE_PK)); }, []);
-
-  // Mount Stripe Elements once phase 3 renders
   useEffect(() => {
-    if (phase === 3 && elements) {
+    if (phase === 2 && elements) {
       const pe = elements.getElement("payment");
       if (pe) pe.mount("#b24-spe");
     }
   }, [phase, elements]);
-
   const stripeAppearance = { theme: "stripe", variables: { colorPrimary: CORAL, borderRadius: "8px", colorBackground: CREAM, colorText: NAVY } };
 
-  async function goToStripe() {
-    if (!stripe) return;
-    setPaying(true); setPayError(""); setFindingBooking(true);
+  // ── Suivi réservation Beds24 (annulation si l'utilisateur ferme sans payer) ─
+  const [bookingId,  setBookingId]  = useState(null);
+  const [creating,   setCreating]   = useState(false);
+  const [createErr,  setCreateErr]  = useState("");
+  const paymentDoneRef = useRef(false);
+  const bookingIdRef   = useRef(null);
 
-    // Variables locales — ne pas lire le state React après des await
-    let finalAmount  = amount;          // prix calculé localement (si dates props)
-    let finalCheckin  = localCheckin;
-    let finalCheckout = localCheckout;
+  const cancelBeds24 = async (id) => {
+    if (!id) return;
+    try {
+      await fetch("/api/beds24-manage", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "cancel", bookingId: id }),
+      });
+    } catch {}
+  };
+  const confirmBeds24 = async (id) => {
+    if (!id) return;
+    try {
+      await fetch("/api/beds24-manage", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "confirm", bookingId: id }),
+      });
+    } catch {}
+  };
+  // Cleanup : annuler la réservation Beds24 si l'utilisateur ferme la modal sans payer
+  useEffect(() => {
+    return () => {
+      if (!paymentDoneRef.current && bookingIdRef.current) {
+        cancelBeds24(bookingIdRef.current);
+      }
+    };
+  }, []);
+
+  // ── Étape 1 → 2 : créer la réservation Beds24 puis préparer Stripe ────────
+  async function handleBook() {
+    if (!stripe || !localCheckin || !localCheckout) return;
+    setCreating(true); setCreateErr("");
 
     try {
-      // ── 1. Chercher la réservation Beds24 → récupérer prix + dates réels ──
-      try {
-        const fr = await fetch("/api/beds24-manage", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action:   "find",
-            email:    form.email,
-            lastName: form.nom.trim(),
-            checkin:  localCheckin || undefined,
-          }),
-        });
-        const fd = await fr.json();
-        console.log("[beds24-find] réponse complète:", fd);
-        if (fd.priceDebug) console.log("[beds24-find] champs prix:", fd.priceDebug);
-        if (fd.ok && fd.bookingId) {
-          setBookingId(fd.bookingId);
-          bookingIdRef.current = fd.bookingId;
-          // Prix Beds24 — source de vérité (totalPrice inclut frais ménage + taxes)
-          if (fd.price > 0) {
-            finalAmount = Math.ceil(fd.price); // Math.ceil pour ne jamais sous-facturer
-            setAmount(finalAmount);
-          }
-          // Dates Beds24 — source de vérité
-          if (fd.arrival)   { finalCheckin  = fd.arrival;   setLocalCheckin(fd.arrival); }
-          if (fd.departure) { finalCheckout = fd.departure; setLocalCheckout(fd.departure); }
-        }
-      } catch (findErr) {
-        console.warn("[beds24-find] échec:", findErr.message);
-        // Non bloquant — on utilise le prix calculé localement si dispo
-      }
-      setFindingBooking(false);
+      // 1. Créer la réservation dans Beds24 via notre API
+      const createRes = await fetch("/api/beds24-create", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          checkin:     localCheckin,
+          checkout:    localCheckout,
+          firstName:   form.prenom.trim() || form.nom.trim(),
+          lastName:    form.nom.trim(),
+          email:       form.email.trim(),
+          phone:       form.tel.trim(),
+          numAdult:    parseInt(form.adultes) || 1,
+          numChild:    parseInt(form.enfants) || 0,
+          localAmount: amount,
+        }),
+      });
+      const cd = await createRes.json();
+      if (!cd.ok) throw new Error(cd.error || "Erreur lors de la création de la réservation.");
 
-      // ── 2. Validation du montant ──
-      if (!finalAmount || finalAmount < 50) {
-        // Tenter le calcul local à partir des dates Beds24 récupérées
-        if (finalCheckin && finalCheckout) {
-          const n = dateDiff(finalCheckin, finalCheckout);
-          if (n > 0) {
-            const raw = n * bien.prix;
-            const disc = Math.round(raw * getDiscount(n));
-            finalAmount = raw - disc + (FRAIS_MENAGE[bien.id] ?? 0);
-            setAmount(finalAmount);
-          }
-        }
-        if (!finalAmount || finalAmount < 50) {
-          throw new Error("Impossible de déterminer le montant. Vérifiez que votre réservation Beds24 est bien confirmée, puis réessayez.");
-        }
-      }
+      setBookingId(cd.bookingId);
+      bookingIdRef.current = cd.bookingId;
 
-      // ── 3. Créer le PaymentIntent Stripe ──
-      const res = await fetch("/api/create-payment-intent", {
-        method: "POST",
+      // 2. Prix : Beds24 si > 0, sinon notre calcul local
+      const finalAmount = cd.price > 0 ? Math.ceil(cd.price) : amount;
+      if (finalAmount !== amount) setAmount(finalAmount);
+
+      // 3. Créer le PaymentIntent Stripe
+      const piRes = await fetch("/api/create-payment-intent", {
+        method:  "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           amount:   finalAmount * 100,
           currency: "eur",
           metadata: {
             bienId:   bien.id,
-            checkin:  finalCheckin,
-            checkout: finalCheckout,
+            checkin:  localCheckin,
+            checkout: localCheckout,
             voyageur: `${form.prenom} ${form.nom}`.trim(),
-            email:    form.email,
-            beds24Id: bookingIdRef.current || "",
+            email:    form.email.trim(),
+            beds24Id: cd.bookingId,
           },
         }),
       });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      const piData = await piRes.json();
+      if (piData.error) throw new Error(piData.error);
 
-      const el = stripe.elements({ clientSecret: data.clientSecret, appearance: stripeAppearance });
+      // 4. Préparer Stripe Elements et passer à la phase paiement
+      const el = stripe.elements({ clientSecret: piData.clientSecret, appearance: stripeAppearance });
       el.create("payment");
       setElements(el);
-      setPhase(3);
+      setPhase(2);
 
     } catch (e) {
-      setPayError(e.message);
+      setCreateErr(e.message);
     } finally {
-      setPaying(false);
-      setFindingBooking(false);
+      setCreating(false);
     }
   }
 
+  // ── Étape 2 : confirmer le paiement Stripe ────────────────────────────────
   async function handlePay() {
     if (!stripe || !elements) return;
     setPaying(true); setPayError("");
@@ -1206,20 +1158,20 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
       redirect: "if_required",
     });
     if (error) {
-      // Paiement échoué : annuler la réservation Beds24
-      setPayError(error.message);
       if (bookingIdRef.current) {
-        await cancelBeds24Booking(bookingIdRef.current);
+        await cancelBeds24(bookingIdRef.current);
         bookingIdRef.current = null;
         setBookingId(null);
-        setPayError(error.message + " — Votre réservation Beds24 a été annulée. Vous pouvez recommencer.");
+        setPayError(error.message + " — Votre réservation a été annulée. Vous pouvez recommencer.");
+      } else {
+        setPayError(error.message);
       }
       setPaying(false);
       return;
     }
     if (paymentIntent?.status === "succeeded") {
-      paymentDoneRef.current = true;                        // empêche l'annulation au démontage
-      await confirmBeds24Booking(bookingIdRef.current);    // confirmer côté Beds24
+      paymentDoneRef.current = true;
+      await confirmBeds24(bookingIdRef.current);
       if (window.gtag) window.gtag("event", "purchase", {
         transaction_id: paymentIntent.id, currency: "EUR", value: amount,
         items: [{ item_id: bien.id, item_name: bien.nom, price: bien.prix, quantity: nights || 1 }],
@@ -1229,21 +1181,31 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
     setPaying(false);
   }
 
-  // amount n'est pas requis ici : il sera récupéré/validé dans goToStripe()
-  const formOk = form.email.includes("@") && form.nom.trim().length > 0;
+  // ── Validation formulaire ────────────────────────────────────────────────
+  const datesOk = localCheckin && localCheckout && nights > 0;
+  const formOk  = form.nom.trim().length > 1 && form.email.includes("@") && datesOk && stripe;
+
+  // ── Formatage date ────────────────────────────────────────────────────────
+  const fmtDate = (iso) => iso
+    ? new Date(iso + "T12:00:00").toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })
+    : "—";
+
+  const inputStyle = {
+    width: "100%", padding: "10px 13px", borderRadius: 8,
+    border: `1px solid ${SAND}`, background: IVORY, color: NAVY,
+    fontSize: 14, outline: "none", boxSizing: "border-box",
+  };
+  const labelStyle = { fontSize: 11, color: MUTED, display: "block", marginBottom: 5, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" };
 
   return (
-    <div
-      style={{ position: "fixed", inset: 0, zIndex: 1200, background: "rgba(6,22,22,0.72)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px 16px" }}
-    >
-      <div
-        style={{ background: IVORY, borderRadius: 12, overflow: "hidden", width: "100%", maxWidth: phase === 1 ? 860 : 500, maxHeight: "calc(92vh - env(safe-area-inset-bottom))", display: "flex", flexDirection: "column", boxShadow: "0 32px 80px rgba(0,0,0,0.45)", transition: "max-width 0.3s ease" }}
-      >
-        {/* Header */}
+    <div style={{ position: "fixed", inset: 0, zIndex: 1200, background: "rgba(6,22,22,0.72)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px 16px" }}>
+      <div style={{ background: IVORY, borderRadius: 14, overflow: "hidden", width: "100%", maxWidth: 520, maxHeight: "calc(94vh - env(safe-area-inset-bottom))", display: "flex", flexDirection: "column", boxShadow: "0 32px 80px rgba(0,0,0,0.45)" }}>
+
+        {/* ── Header ── */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 24px", borderBottom: `1px solid ${SAND}`, flexShrink: 0 }}>
           <div>
-            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.3em", textTransform: "uppercase", color: CORAL, marginBottom: 4 }}>
-              {phase === 1 ? "Réservation" : phase === 2 ? "Paiement — étape 1/2" : "Paiement — étape 2/2"}
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.3em", textTransform: "uppercase", color: CORAL, marginBottom: 4 }}>
+              {phase === 1 ? "Réservation directe" : "Paiement sécurisé"}
             </div>
             <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 22, letterSpacing: "0.1em", textTransform: "uppercase", color: NAVY }}>
               {bien.nom}
@@ -1252,188 +1214,152 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 22, color: NAVY, opacity: 0.5, lineHeight: 1, padding: 4 }}>✕</button>
         </div>
 
-        {/* Phase 1 — Beds24 iframe */}
+        {/* ── Phase 1 : formulaire de réservation ── */}
         {phase === 1 && (
-          <>
-            {/* Instruction étape 1 */}
-            <div style={{ padding: "10px 24px", background: "rgba(196,114,84,0.07)", borderBottom: `1px solid ${SAND}`, display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-              <span style={{ background: CORAL, color: "#fff", borderRadius: "50%", width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, flexShrink: 0 }}>1</span>
-              <span style={{ fontSize: 12, color: NAVY, fontWeight: 600 }}>Remplissez et validez le formulaire de réservation ci-dessous</span>
-            </div>
-
-            <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
-              <iframe
-                src={bien.beds24Url}
-                width="100%"
-                height="100%"
-                style={{ border: "none", display: "block", minHeight: "600px" }}
-                title="Réservation Beds24"
-              />
-            </div>
-
-            {/* Étape 2 — visible seulement après confirmation par checkbox */}
-            <div style={{ padding: "14px 24px", borderTop: `1px solid ${SAND}`, background: IVORY, flexShrink: 0 }}>
-              {!beds24Submitted && (
-                <div style={{ marginBottom: 12 }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 5 }}>
-                    <span style={{ fontSize: 12, color: MUTED }}>⏳ Remplissez le formulaire ci-dessus, puis attendez…</span>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: CORAL, minWidth: 30, textAlign: "right" }}>{countdown}s</span>
-                  </div>
-                  <div style={{ height: 4, borderRadius: 4, background: SAND, overflow: "hidden" }}>
-                    <div style={{ height: "100%", borderRadius: 4, background: CORAL, width: `${((LOCK_DURATION - countdown) / LOCK_DURATION) * 100}%`, transition: "width 1s linear" }} />
-                  </div>
-                </div>
-              )}
-              <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: beds24Submitted ? "pointer" : "not-allowed", marginBottom: 12, opacity: beds24Submitted ? 1 : 0.45 }}>
-                <input
-                  type="checkbox"
-                  checked={!!phase1Confirmed}
-                  disabled={!beds24Submitted}
-                  onChange={e => beds24Submitted && setPhase1Confirmed(e.target.checked)}
-                  style={{ marginTop: 2, width: 16, height: 16, accentColor: CORAL, cursor: beds24Submitted ? "pointer" : "not-allowed", flexShrink: 0 }}
-                />
-                <span style={{ fontSize: 13, color: NAVY, lineHeight: 1.4 }}>
-                  <strong>Ma réservation est confirmée</strong> — j'ai cliqué sur le bouton de réservation dans le formulaire ci-dessus et reçu une confirmation
-                </span>
-              </label>
-              <button
-                onClick={() => setPhase(2)}
-                disabled={!phase1Confirmed}
-                style={{ width: "100%", padding: "13px", borderRadius: 9, border: "none", background: phase1Confirmed ? CORAL : SAND, color: phase1Confirmed ? "#fff" : MUTED, fontWeight: 700, fontSize: 14, cursor: phase1Confirmed ? "pointer" : "not-allowed", letterSpacing: "0.02em", transition: "background 0.2s, color 0.2s" }}
-              >
-                Procéder au paiement →
-              </button>
-            </div>
-          </>
-        )}
-
-        {/* Phase 2 — Coordonnées + montant */}
-        {phase === 2 && (
           <div style={{ flex: 1, overflowY: "auto", padding: "24px" }}>
 
-            {/* Instruction claire */}
-            <div style={{ background: "rgba(196,114,84,0.08)", border: `1px solid rgba(196,114,84,0.25)`, borderRadius: 10, padding: "12px 16px", marginBottom: 20, display: "flex", gap: 10, alignItems: "flex-start" }}>
-              <span style={{ fontSize: 18, flexShrink: 0 }}>📋</span>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 3 }}>Saisissez vos coordonnées</div>
-                <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.5 }}>Utilisez le <strong>même nom et email</strong> que lors de votre réservation Beds24. Le montant exact sera récupéré automatiquement.</div>
-              </div>
-            </div>
-
-            {/* Dates du séjour — lecture seule */}
-            <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
-              {[["Arrivée", localCheckin], ["Départ", localCheckout]].map(([label, val]) => (
-                <div key={label} style={{ flex: 1, background: val ? "rgba(196,114,84,0.06)" : "rgba(255,255,255,0.04)", borderRadius: 8, border: `1px solid ${val ? "rgba(196,114,84,0.25)" : SAND}`, padding: "9px 12px" }}>
-                  <div style={{ fontSize: 10, color: MUTED, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 3 }}>{label}</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: val ? NAVY : MUTED }}>
-                    {val ? new Date(val + "T12:00:00").toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
-                  </div>
+            {/* Récapitulatif tarif */}
+            {datesOk ? (
+              <div style={{ background: "rgba(196,114,84,0.07)", border: `1px solid rgba(196,114,84,0.22)`, borderRadius: 11, padding: "14px 16px", marginBottom: 22 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: CORAL, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Votre séjour</div>
+                <div style={{ display: "flex", gap: 16, marginBottom: 10 }}>
+                  {[["Arrivée", localCheckin], ["Départ", localCheckout]].map(([l, v]) => (
+                    <div key={l} style={{ flex: 1 }}>
+                      <div style={{ fontSize: 10, color: MUTED, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 2 }}>{l}</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>{fmtDate(v)}</div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-            {!localCheckin && !localCheckout && (
-              <div style={{ fontSize: 11, color: MUTED, marginBottom: 12, padding: "8px 12px", background: "rgba(245,158,11,0.08)", borderRadius: 7, border: "1px solid rgba(245,158,11,0.2)" }}>
-                ℹ️ Les dates seront récupérées automatiquement depuis votre réservation Beds24 lors de la validation
-              </div>
-            )}
-
-            {/* Récapitulatif séjour — affiché dès que les dates sont connues */}
-            {nights > 0 && (
-              <div style={{ background: "rgba(196,114,84,0.07)", border: `1px solid rgba(196,114,84,0.22)`, borderRadius: 10, padding: "14px 16px", marginBottom: 20 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: CORAL, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Récapitulatif</div>
-                <div style={{ fontSize: 12, color: NAVY, fontWeight: 600, marginBottom: 8 }}>
-                  {bien.nom} · {localCheckin} → {localCheckout} ({nights} nuit{nights > 1 ? "s" : ""})
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4, borderTop: `1px solid ${SAND}`, paddingTop: 10 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: MUTED }}>
-                    <span>Hébergement ({nights} × {bien.prix} €)</span><span>{rawTotal} €</span>
+                    <span>Hébergement ({nights} nuit{nights > 1 ? "s" : ""} × {bien.prix} €)</span>
+                    <span>{rawTotal} €</span>
                   </div>
                   {discountAmt > 0 && (
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#10b981" }}>
-                      <span>Remise séjour (−{Math.round(discountRate * 100)}%)</span><span>−{discountAmt} €</span>
+                      <span>Remise séjour (−{Math.round(discountRate * 100)}%)</span>
+                      <span>−{discountAmt} €</span>
                     </div>
                   )}
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: MUTED }}>
-                    <span>Frais de ménage</span><span>{fraisMenage} €</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 700, color: NAVY, borderTop: `1px solid ${SAND}`, paddingTop: 6, marginTop: 2 }}>
-                    <span>Total calculé</span><span>{computedTotal} €</span>
+                  {fraisMenage > 0 && (
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: MUTED }}>
+                      <span>Frais de ménage</span><span>{fraisMenage} €</span>
+                    </div>
+                  )}
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 800, color: NAVY, borderTop: `1px solid ${SAND}`, paddingTop: 8, marginTop: 4 }}>
+                    <span>Total</span><span>{computedTotal} €</span>
                   </div>
                 </div>
+              </div>
+            ) : (
+              /* Sélection des dates si non pré-remplies */
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={labelStyle}>Arrivée *</label>
+                    <input type="date" value={localCheckin} onChange={e => setLocalCheckin(e.target.value)}
+                      min={new Date().toISOString().slice(0,10)}
+                      style={inputStyle} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={labelStyle}>Départ *</label>
+                    <input type="date" value={localCheckout} onChange={e => setLocalCheckout(e.target.value)}
+                      min={localCheckin || new Date().toISOString().slice(0,10)}
+                      style={inputStyle} />
+                  </div>
+                </div>
+                {localCheckin && localCheckout && nights <= 0 && (
+                  <div style={{ fontSize: 11, color: "#e53e3e", marginTop: 6 }}>La date de départ doit être après l'arrivée.</div>
+                )}
               </div>
             )}
 
             {/* Coordonnées */}
-            <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
+            <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
               <div style={{ flex: 1 }}>
-                <label style={{ fontSize: 11, color: MUTED, display: "block", marginBottom: 4 }}>Prénom</label>
-                <input value={form.prenom} onChange={e => setForm(f => ({ ...f, prenom: e.target.value }))} placeholder="Jean" style={{ width: "100%", padding: "9px 12px", borderRadius: 7, border: `1px solid ${SAND}`, background: IVORY, color: NAVY, fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+                <label style={labelStyle}>Prénom</label>
+                <input value={form.prenom} onChange={e => setF("prenom", e.target.value)} placeholder="Jean" style={inputStyle} />
               </div>
               <div style={{ flex: 1 }}>
-                <label style={{ fontSize: 11, color: MUTED, display: "block", marginBottom: 4 }}>Nom *</label>
-                <input value={form.nom} onChange={e => setForm(f => ({ ...f, nom: e.target.value }))} placeholder="Dupont" style={{ width: "100%", padding: "9px 12px", borderRadius: 7, border: `1px solid ${SAND}`, background: IVORY, color: NAVY, fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+                <label style={labelStyle}>Nom *</label>
+                <input value={form.nom} onChange={e => setF("nom", e.target.value)} placeholder="Dupont" style={inputStyle} />
               </div>
             </div>
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 11, color: MUTED, display: "block", marginBottom: 4 }}>E-mail *</label>
-              <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="jean.dupont@email.com" style={{ width: "100%", padding: "9px 12px", borderRadius: 7, border: `1px solid ${SAND}`, background: IVORY, color: NAVY, fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+            <div style={{ marginBottom: 14 }}>
+              <label style={labelStyle}>E-mail *</label>
+              <input type="email" value={form.email} onChange={e => setF("email", e.target.value)} placeholder="jean.dupont@email.com" style={inputStyle} />
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <label style={labelStyle}>Téléphone</label>
+              <input type="tel" value={form.tel} onChange={e => setF("tel", e.target.value)} placeholder="+33 6 12 34 56 78" style={inputStyle} />
+            </div>
+            <div style={{ display: "flex", gap: 10, marginBottom: 22 }}>
+              <div style={{ flex: 1 }}>
+                <label style={labelStyle}>Adultes *</label>
+                <input type="number" min="1" max="6" value={form.adultes} onChange={e => setF("adultes", e.target.value)} style={inputStyle} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={labelStyle}>Enfants</label>
+                <input type="number" min="0" max="6" value={form.enfants} onChange={e => setF("enfants", e.target.value)} style={inputStyle} />
+              </div>
             </div>
 
-            {/* Montant — récupéré depuis Beds24 au clic sur Continuer */}
-            <div style={{ marginBottom: 20 }}>
-              <label style={{ fontSize: 11, color: MUTED, display: "block", marginBottom: 4 }}>Montant à régler</label>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, background: amount > 0 ? "rgba(16,185,129,0.06)" : "rgba(255,255,255,0.04)", borderRadius: 9, border: `2px solid ${amount > 0 ? "rgba(16,185,129,0.3)" : SAND}`, padding: "12px 16px" }}>
-                <span style={{ flex: 1, fontSize: amount > 0 ? 22 : 14, fontWeight: amount > 0 ? 800 : 400, color: amount > 0 ? NAVY : MUTED }}>
-                  {amount > 0 ? `${amount} €` : "Confirmé depuis Beds24 au clic sur le bouton"}
-                </span>
-                {amount > 0 && <span style={{ fontSize: 11, color: MUTED }}>confirmé par Beds24</span>}
+            {createErr && (
+              <div style={{ color: "#e53e3e", fontSize: 12, marginBottom: 14, background: "rgba(229,62,62,0.08)", borderRadius: 8, padding: "10px 14px" }}>
+                {createErr}
               </div>
-            </div>
-
-            {payError && <div style={{ color: "#e53e3e", fontSize: 12, marginBottom: 12, background: "rgba(229,62,62,0.08)", borderRadius: 7, padding: "8px 12px" }}>{payError}</div>}
+            )}
 
             <button
-              onClick={goToStripe}
-              disabled={paying || !formOk || !stripe}
-              style={{ width: "100%", padding: "13px", borderRadius: 9, border: "none", background: formOk && !paying && stripe ? CORAL : SAND, color: formOk && !paying && stripe ? "#fff" : MUTED, fontWeight: 700, fontSize: 14, cursor: formOk && !paying ? "pointer" : "not-allowed", transition: "background 0.2s" }}
+              onClick={handleBook}
+              disabled={!formOk || creating}
+              style={{ width: "100%", padding: "14px", borderRadius: 10, border: "none", background: formOk && !creating ? CORAL : SAND, color: formOk && !creating ? "#fff" : MUTED, fontWeight: 700, fontSize: 15, cursor: formOk && !creating ? "pointer" : "not-allowed", letterSpacing: "0.02em", transition: "background 0.2s" }}
             >
-              {findingBooking ? "⏳ Vérification de votre réservation…" : paying ? "⏳ Préparation du paiement…" : "Vérifier ma réservation et payer →"}
+              {creating ? "⏳ Création de la réservation…" : datesOk ? `Réserver et payer ${computedTotal} € →` : "Réserver →"}
             </button>
-            <div style={{ textAlign: "center", marginTop: 10, fontSize: 11, color: MUTED }}>🔒 Paiement sécurisé par Stripe</div>
-            <button onClick={() => setPhase(1)} style={{ display: "block", margin: "14px auto 0", background: "none", border: "none", color: MUTED, fontSize: 11, cursor: "pointer", textDecoration: "underline" }}>
-              ← Retour au formulaire de réservation
-            </button>
+            <div style={{ textAlign: "center", marginTop: 10, fontSize: 11, color: MUTED }}>🔒 Paiement sécurisé par Stripe · Réservation confirmée après paiement</div>
           </div>
         )}
 
-        {/* Phase 3 — Stripe Elements */}
-        {phase === 3 && (
+        {/* ── Phase 2 : paiement Stripe ── */}
+        {phase === 2 && (
           <div style={{ flex: 1, overflowY: "auto", padding: "24px" }}>
-            <div style={{ background: "rgba(196,114,84,0.07)", border: `1px solid rgba(196,114,84,0.22)`, borderRadius: 10, padding: "12px 16px", marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            {/* Récap commande */}
+            <div style={{ background: "rgba(196,114,84,0.07)", border: `1px solid rgba(196,114,84,0.22)`, borderRadius: 11, padding: "14px 16px", marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: NAVY }}>{bien.nom}</div>
-                <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>{form.prenom} {form.nom} · {form.email}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>{bien.nom}</div>
+                <div style={{ fontSize: 11, color: MUTED, marginTop: 3 }}>
+                  {fmtDate(localCheckin)} → {fmtDate(localCheckout)} · {nights} nuit{nights > 1 ? "s" : ""}
+                </div>
+                <div style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>
+                  {form.prenom} {form.nom} · {form.email}
+                </div>
               </div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: CORAL }}>{amount} €</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: CORAL, flexShrink: 0, marginLeft: 12 }}>{amount} €</div>
             </div>
 
             <div id="b24-spe" ref={spRef} style={{ marginBottom: 16 }} />
 
-            {payError && <div style={{ color: "#e53e3e", fontSize: 12, marginBottom: 12, background: "rgba(229,62,62,0.08)", borderRadius: 7, padding: "8px 12px" }}>{payError}</div>}
+            {payError && (
+              <div style={{ color: "#e53e3e", fontSize: 12, marginBottom: 14, background: "rgba(229,62,62,0.08)", borderRadius: 8, padding: "10px 14px" }}>
+                {payError}
+              </div>
+            )}
 
             <button
               onClick={handlePay}
               disabled={paying || !stripe || !elements}
-              style={{ width: "100%", padding: "13px", borderRadius: 9, border: "none", background: paying ? SAND : CORAL, color: paying ? MUTED : "#fff", fontWeight: 700, fontSize: 14, cursor: paying ? "not-allowed" : "pointer" }}
+              style={{ width: "100%", padding: "14px", borderRadius: 10, border: "none", background: paying ? SAND : CORAL, color: paying ? MUTED : "#fff", fontWeight: 700, fontSize: 15, cursor: paying ? "not-allowed" : "pointer" }}
             >
-              {paying ? "Traitement en cours…" : `Confirmer le paiement · ${amount} €`}
+              {paying ? "Traitement en cours…" : `Confirmer et payer ${amount} €`}
             </button>
-            <div style={{ textAlign: "center", marginTop: 10, fontSize: 11, color: MUTED }}>🔒 Vos données bancaires sont chiffrées · Aucune donnée n'est stockée sur nos serveurs</div>
-            <button onClick={() => { setPhase(2); setElements(null); }} style={{ display: "block", margin: "14px auto 0", background: "none", border: "none", color: MUTED, fontSize: 11, cursor: "pointer", textDecoration: "underline" }}>
+            <div style={{ textAlign: "center", marginTop: 10, fontSize: 11, color: MUTED }}>🔒 Données bancaires chiffrées · Jamais stockées sur nos serveurs</div>
+            <button onClick={() => { setPhase(1); setElements(null); setPayError(""); }} style={{ display: "block", margin: "14px auto 0", background: "none", border: "none", color: MUTED, fontSize: 11, cursor: "pointer", textDecoration: "underline" }}>
               ← Modifier les informations
             </button>
           </div>
         )}
+
       </div>
     </div>
   );
