@@ -105,9 +105,7 @@ export async function onRequestPost(context) {
     // La réponse Beds24 V2 POST /bookings est un tableau [{success, new, info}]
     const firstResult = Array.isArray(createData) ? createData[0] : createData;
     if (!createRes.ok || !firstResult?.success) {
-      // Debug: include token metadata (never the full token)
-      const tokenMeta = token ? `len=${token.length},start=${token.substring(0,8)}` : "null";
-      return json({ error: "Création Beds24 échouée", raw: createData, tokenMeta }, 500);
+      return json({ error: "Création Beds24 échouée", raw: createData }, 500);
     }
 
     const bookingId = firstResult?.new?.id;
