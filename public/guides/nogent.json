@@ -1,0 +1,123 @@
+{
+  "property_id": "nogent",
+  "property_name": "Appartement Nogent",
+  "emoji": "🗼",
+  "tagline": "Appartement calme · Nogent-sur-Marne · Paris en 15 min",
+  "welcome_message": "Bienvenue à Nogent-sur-Marne !\n\nVous êtes dans une ville très agréable en bord de Marne, à 15 minutes de Paris mais avec l'impression d'être vraiment ailleurs. Les Parisiens en savent quelque chose — ils y viennent le week-end depuis des décennies.\n\nMes incontournables : le marché du samedi matin (arrivez à 9h, il est bondé à 11h), une balade sur les bords de Marne à vélo, et si vous êtes aventuriers, le Bois de Vincennes avec son lac est à 10 minutes à pied.\n\nBelle découverte !",
+  "host_signature": "Vincent",
+  "address": "•• rue ••••••••, Nogent-sur-Marne, 94130 Val-de-Marne",
+  "maps_url": "https://maps.google.com/?q=Nogent-sur-Marne+94130",
+  "checkin_time": "15h00",
+  "checkout_time": "11h00",
+  "wifi_ssid": "ApptNogent",
+  "wifi_password": "••••••••",
+  "sections": [
+    {
+      "id": "access",
+      "icon": "🔑",
+      "title": "Accès",
+      "type": "steps",
+      "items": [
+        { "label": "Digicode immeuble", "value": "Code ••••." },
+        { "label": "Appartement", "value": "Étage ••, porte ••. Clé dans le boîtier : code ••••." },
+        { "label": "Interphone", "value": "Bouton ••• si boîtier inaccessible (rare mais ça arrive)." },
+        { "label": "Parking", "value": "Non inclus. Parking public rue •••• (payant, 1,50€/h). Parking gratuit le dimanche." }
+      ]
+    },
+    {
+      "id": "kitchen",
+      "icon": "🍳",
+      "title": "Cuisine & équipements",
+      "type": "info",
+      "items": [
+        { "label": "Plaque induction", "value": "Bouton On/Off. Récipients fond plat uniquement (logo aimant)." },
+        { "label": "Lave-linge", "value": "Dans la salle de bain — lessive dans le placard, 40°C recommandé." },
+        { "label": "Cafetière Nespresso", "value": "Dosettes dans le tiroir de gauche." },
+        { "label": "Micro-ondes", "value": "Sur le plan de travail à droite." },
+        { "label": "Chaîne hi-fi", "value": "Bluetooth disponible — code: •••• sur le dessus." }
+      ]
+    },
+    {
+      "id": "climate",
+      "icon": "🌡️",
+      "title": "Chauffage & confort",
+      "type": "text",
+      "content": "Chauffage électrique avec thermostat dans chaque pièce — réglage recommandé : 19–21°C. La salle de bain dispose d'un sèche-serviettes (bouton rouge à gauche). En été, le ventilateur est dans le placard de l'entrée. En hiver, un plaid est disponible dans le placard de la chambre."
+    },
+    {
+      "id": "rules",
+      "icon": "🤝",
+      "title": "Règles & vie en copropriété",
+      "type": "list",
+      "items": [
+        "Silence absolu après 22h (règlement de copropriété strict)",
+        "Non-fumeur dans l'appartement et toutes les parties communes",
+        "Animaux non admis",
+        "Maximum 2 personnes",
+        "Poubelles dans le local RDC uniquement — jamais dans le couloir"
+      ]
+    },
+    {
+      "id": "transport",
+      "icon": "🚇",
+      "title": "Paris en 15 min",
+      "type": "picks",
+      "items": [
+        { "icon": "🚇", "name": "RER A — Nogent-sur-Marne", "distance": "10 min à pied", "note": "Direction Paris-Châtelet : 12 min. Nation : 10 min. Trains toutes les 5 min aux heures de pointe." },
+        { "icon": "🚇", "name": "Métro 1 — Vincennes", "distance": "15 min à pied", "note": "Paris direct ligne 1 (Champs-Élysées, Louvre, Châtelet). Évitez les heures de pointe 8h-9h30." },
+        { "icon": "🚌", "name": "Bus 114/116", "distance": "3 min à pied", "note": "Vers Vincennes et Joinville-le-Pont. Pratique pour le Bois de Vincennes." },
+        { "icon": "🚲", "name": "Vélib'", "distance": "5 min à pied", "note": "Station rue de Paris — parfait pour longer la Marne en vélo." },
+        { "icon": "🚕", "name": "Taxi / VTC", "distance": "depuis le bas de la rue", "note": "Aéroport CDG : ~45 min, Orly : ~40 min. G7 ou Uber recommandés." }
+      ]
+    },
+    {
+      "id": "picks",
+      "icon": "⭐",
+      "title": "Le quartier — mes adresses",
+      "type": "picks",
+      "items": [
+        { "icon": "🛒", "name": "Marché de Nogent", "distance": "10 min à pied", "note": "Samedi matin jusqu'à 13h — fruits, fromages, charcuterie. Le meilleur marché du Val-de-Marne." },
+        { "icon": "🌳", "name": "Bois de Vincennes", "distance": "10 min à pied", "note": "Lac, vélos, zoo, parc floral. Le plus grand parc de Paris — incontournable." },
+        { "icon": "🍽", "name": "Restaurants autour de la mairie", "distance": "8 min à pied", "note": "Une vingtaine de restaurants — La Grignote pour la cuisine traditionnelle française." },
+        { "icon": "🚣", "name": "Guinguette du bord de Marne", "distance": "12 min à pied", "note": "L'été, le bord de Marne reprend ses traditions guinguette — terrasses, bal, bonne humeur." },
+        { "icon": "☕", "name": "Brasseries de la mairie", "distance": "8 min à pied", "note": "Plusieurs cafés et brasseries — idéal pour prendre un café au soleil le matin." }
+      ]
+    },
+    {
+      "id": "trash",
+      "icon": "♻️",
+      "title": "Poubelles & tri",
+      "type": "info",
+      "items": [
+        { "label": "Local poubelles", "value": "RDC à droite de l'entrée principale" },
+        { "label": "Collecte ordures ménagères", "value": "Lundi, mercredi, vendredi matin" },
+        { "label": "Tri sélectif", "value": "Bac jaune dans le local — cartons aplatis, plastiques, papiers" },
+        { "label": "Verre", "value": "Conteneur vert rue ••••• (3 min à pied)" }
+      ]
+    },
+    {
+      "id": "checkout",
+      "icon": "✅",
+      "title": "Checklist de départ",
+      "type": "checklist",
+      "items": [
+        "Éteindre le chauffage (thermostat sur ❄ dans chaque pièce)",
+        "Éteindre toutes les lumières",
+        "Fermer toutes les fenêtres et les verrouiller",
+        "Vider le réfrigérateur de vos aliments",
+        "Sortir les poubelles dans le local RDC",
+        "Retirer les draps et les laisser en boule sur le lit",
+        "Remettre les clés dans le boîtier",
+        "Fermer la porte à double tour"
+      ]
+    }
+  ],
+  "contacts": [
+    { "label": "Vincent (propriétaire)", "phone": "+33 6 XX XX XX XX", "icon": "👤", "note": "SMS ou WhatsApp" },
+    { "label": "SAMU", "phone": "15", "icon": "🚑" },
+    { "label": "Police secours", "phone": "17", "icon": "🚓" },
+    { "label": "Pompiers", "phone": "18", "icon": "🚒" },
+    { "label": "Hôpital Chenevier-Mondor (Créteil)", "phone": "+33 1 49 81 21 11", "icon": "🏥" }
+  ],
+  "updated_at": "2026-05-21"
+}

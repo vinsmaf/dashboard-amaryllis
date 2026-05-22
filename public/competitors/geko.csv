@@ -1,10 +1,14 @@
-# Concurrents Airbnb — Géko (Sainte-Luce, 4 pers, standard)
-# Colonnes : listing_id, name, platform, capacity, bedrooms, bathrooms, has_pool, has_sea_view, area_km, standing, notes
-# has_pool / has_sea_view : 1 = oui, 0 = non | standing : premium | standard | budget
-listing_id,name,platform,capacity,bedrooms,bathrooms,has_pool,has_sea_view,area_km,standing,notes
-40105044,Villa Anolis 4* — piscine vue mer,airbnb,8,4,3,1,1,0.5,premium,Concurrent premium zone
-25290631,Le Mabouyas — Sainte-Luce,airbnb,4,2,1,0,0,0.6,standard,T2 central Sainte-Luce
-1210909428441845902,T2 chez Lulu — Sainte-Luce,airbnb,4,2,1,0,0,0.8,standard,T2 bien équipé proche commodités
-934091612012769600,Studio Sainte-Luce Martinique,airbnb,2,1,1,0,0,1.2,standard,Studio idéalement situé
-756725204473121621,The feet in water — pieds dans l'eau,airbnb,4,2,1,0,1,2.5,standard,Vue mer sans piscine
-1023823631029551112,Villa Carpe Diem,airbnb,8,4,2,1,1,1.0,premium,Villa premium référence zone
+# Concurrents Airbnb — Géko (Sainte-Luce, 3 pers, 2ch, piscine, vue mer, premium)
+# Référence : capacity=3, bedrooms=2, bathrooms=2, has_pool=1, has_sea_view=1, area_km=1.5, standing=premium
+# Colonnes : listing_id, name, platform, capacity, bedrooms, bathrooms, has_pool, has_sea_view, area_km, standing, notes, similarity_score, priority
+# has_pool / has_sea_view : 1 = oui, 0 = non | standing : luxury | premium | high | standard | budget
+# similarity_score : 0-100 (calculé selon formule weighted — pool/vue mer critiques)
+# priority : direct_premium (≥95) | direct (≥85) | secondary (≥70) | tertiary (≥50) | ignore (<50)
+# Modifiez librement ce fichier — rechargez depuis l'onglet Concurrents du Revenue Manager
+listing_id,name,platform,capacity,bedrooms,bathrooms,has_pool,has_sea_view,area_km,standing,notes,similarity_score,priority
+1023823631029551112,Villa Carpe Diem — hauteurs Sainte-Luce,airbnb,8,4,2,1,1,1.0,premium,Villa premium piscine vue mer — référence zone Sainte-Luce,75,secondary
+756725204473121621,The feet in water — pieds dans l'eau,airbnb,4,2,1,0,1,2.5,standard,Vue mer sans piscine — taille similaire Géko,68,secondary
+40105044,Villa Anolis 4* — piscine vue mer,airbnb,8,4,3,1,1,0.5,premium,Référence 4* zone — capacité supérieure,70,secondary
+25290631,Le Mabouyas — Sainte-Luce,airbnb,4,2,1,0,0,0.6,standard,T2 central sans piscine ni vue mer,53,tertiary
+1210909428441845902,T2 chez Lulu — Sainte-Luce,airbnb,4,2,1,0,0,0.8,standard,T2 bien équipé sans piscine ni vue mer,53,tertiary
+934091612012769600,Studio Sainte-Luce Martinique,airbnb,2,1,1,0,0,1.2,standard,Studio sans piscine ni vue mer — capacité réduite,51,tertiary

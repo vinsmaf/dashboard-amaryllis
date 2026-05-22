@@ -6,7 +6,9 @@ compatibility_flags = ["nodejs_compat"]
 [triggers]
 crons = [
   "0 * * * *",   # Sync iCal — toutes les heures
-  "0 9 * * *",   # Audit monitoring — chaque jour à 9h UTC (5h Martinique)
+  "0 9 * * *",   # Audit + rappels + alertes — chaque jour à 9h UTC (5h Martinique)
+  "0 6 * * 1",   # Rapport hebdomadaire — lundi 6h UTC (2h Martinique / 8h Paris)
+  "0 1 1 * *",   # Export comptable mensuel — 1er du mois à 1h UTC
 ]
 
 # KV namespace pour stocker les UIDs connus (anti-doublon notifications)

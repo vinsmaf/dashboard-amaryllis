@@ -1,9 +1,13 @@
-# Concurrents Airbnb — T2 Nogent (Nogent-sur-Marne, 4 pers, standard, Île-de-France)
-# Colonnes : listing_id, name, platform, capacity, bedrooms, bathrooms, has_pool, has_sea_view, area_km, standing, notes
-# has_pool / has_sea_view : 1 = oui, 0 = non | standing : premium | standard | budget
-listing_id,name,platform,capacity,bedrooms,bathrooms,has_pool,has_sea_view,area_km,standing,notes
-32334148,Bel appartement Nogent-sur-Marne 4 personnes,airbnb,4,2,1,0,0,0.5,standard,T2 4 personnes bien noté Nogent
-1164594851818756604,Duplex cosy 2 pièces — 10min RER 4 voyageurs,airbnb,4,2,1,0,0,0.8,standard,Duplex rénové centre Nogent RER A
-1444082105607186813,Location Nogent-sur-Marne — studio,airbnb,2,1,1,0,0,1.0,standard,Studio 1 chambre bien noté
-1107105311729568120,Appartement Nogent 1 chambre,airbnb,2,1,1,0,0,1.2,standard,1 chambre proche transports
+# Concurrents Airbnb — T2 Nogent (Nogent-sur-Marne, 2 pers, 1ch, sans piscine, sans vue mer, standard)
+# Référence : capacity=2, bedrooms=1, bathrooms=1, has_pool=0, has_sea_view=0, area_km=0.5, standing=standard
+# Colonnes : listing_id, name, platform, capacity, bedrooms, bathrooms, has_pool, has_sea_view, area_km, standing, notes, similarity_score, priority
+# has_pool / has_sea_view : 1 = oui, 0 = non | standing : luxury | premium | high | standard | budget
+# similarity_score : 0-100 (calculé selon formule weighted — critères : capacité, chambres, localisation)
+# priority : direct_premium (≥95) | direct (≥85) | secondary (≥70) | tertiary (≥50) | ignore (<50)
+# Modifiez librement ce fichier — rechargez depuis l'onglet Concurrents du Revenue Manager
+listing_id,name,platform,capacity,bedrooms,bathrooms,has_pool,has_sea_view,area_km,standing,notes,similarity_score,priority
+1444082105607186813,Location Nogent-sur-Marne — studio,airbnb,2,1,1,0,0,1.0,standard,Studio 1 chambre concurrent direct — même profil exact,100,direct_premium
+1107105311729568120,Appartement Nogent 1 chambre,airbnb,2,1,1,0,0,1.2,standard,1 chambre proche transports — profil très similaire,98,direct_premium
+32334148,Bel appartement Nogent-sur-Marne 4 personnes,airbnb,4,2,1,0,0,0.5,standard,T2 4 personnes bien noté — capacité supérieure même zone,91,direct_premium
+1164594851818756604,Duplex cosy 2 pièces — 10min RER 4 voyageurs,airbnb,4,2,1,0,0,0.8,standard,Duplex rénové centre Nogent RER A — capacité supérieure,91,direct_premium
 # Ajouter ici des concurrents Vincennes / Saint-Mandé / Joinville pour élargir le marché

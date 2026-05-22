@@ -1,0 +1,108 @@
+{
+  "property_id": "schoelcher",
+  "property_name": "Appartement Schœlcher",
+  "emoji": "🌊",
+  "tagline": "Appartement vue mer · Schœlcher, à 10 min de Fort-de-France",
+  "welcome_message": "Bienvenue à l'appartement Schœlcher !\n\nVous êtes à deux pas de Fort-de-France, avec une vue dégagée sur la mer des Caraïbes. L'appartement est idéal pour explorer le cœur de la Martinique.\n\nMon conseil : allez vous promener sur le bord de mer de Schœlcher le matin — c'est calme, les locaux font leur footing, et les couchers de soleil le soir depuis la terrasse sont spectaculaires.\n\nBon séjour !",
+  "host_signature": "Vincent",
+  "address": "Résidence ••••, Schœlcher, Martinique 97233",
+  "maps_url": "https://maps.google.com/?q=Schoelcher+Martinique",
+  "checkin_time": "15h00",
+  "checkout_time": "10h00",
+  "wifi_ssid": "ApptSchoelcher",
+  "wifi_password": "••••••••",
+  "sections": [
+    {
+      "id": "access",
+      "icon": "🔑",
+      "title": "Accès",
+      "type": "steps",
+      "items": [
+        { "label": "Digicode immeuble", "value": "Code ••••." },
+        { "label": "Appartement", "value": "Étage ••, numéro ••. Clé dans le boîtier : code ••••." },
+        { "label": "Parking", "value": "Place réservée n° ••, accès par la rampe à gauche de l'entrée." }
+      ]
+    },
+    {
+      "id": "climate",
+      "icon": "❄️",
+      "title": "Climatisation",
+      "type": "text",
+      "content": "Clim réversible dans le séjour et la chambre. Télécommandes sur les tables de nuit et le meuble TV. Réglage idéal : 24–26°C. La brise marine entre souvent par les fenêtres côté mer — n'hésitez pas à les ouvrir la nuit pour aérer naturellement."
+    },
+    {
+      "id": "kitchen",
+      "icon": "🍳",
+      "title": "Cuisine",
+      "type": "info",
+      "items": [
+        { "label": "Plaque induction", "value": "Bouton On/Off. Mode boost disponible pour l'eau." },
+        { "label": "Lave-vaisselle", "value": "Pastilles dans le meuble sous l'évier." },
+        { "label": "Lave-linge", "value": "Salle de bain — lessive dans le meuble." },
+        { "label": "Cafetière Nespresso", "value": "Capsules dans le placard à droite de la machine." }
+      ]
+    },
+    {
+      "id": "rules",
+      "icon": "🤝",
+      "title": "Règles de copropriété",
+      "type": "list",
+      "items": [
+        "Silence après 22h (immeuble en copropriété)",
+        "Non-fumeur dans l'appartement et les parties communes",
+        "Animaux non admis",
+        "Maximum 4 personnes",
+        "Poubelles uniquement dans le local prévu au RDC"
+      ]
+    },
+    {
+      "id": "picks",
+      "icon": "⭐",
+      "title": "Ma sélection autour de Schœlcher",
+      "type": "picks",
+      "items": [
+        { "icon": "🏖", "name": "Bord de mer de Schœlcher", "distance": "5 min à pied", "note": "Promenade calme le matin, baignade possible. Pas de vagues — parfait pour les enfants." },
+        { "icon": "🏙", "name": "Fort-de-France", "distance": "10 min en voiture", "note": "Marché de La Savane, cathédrale Saint-Louis, Bibliothèque Schoelcher (classée aux Monuments Historiques)." },
+        { "icon": "🍽", "name": "Restaurants du bord de mer FdF", "distance": "15 min", "note": "La Fontane, La Cave à Vins — vue sur la baie de Fort-de-France." },
+        { "icon": "🎓", "name": "Université des Antilles", "distance": "2 min à pied", "note": "Campus agréable avec vue mer, cafétéria ouverte au public." },
+        { "icon": "✈️", "name": "Aéroport Aimé Césaire", "distance": "20 min", "note": "Via la N1 ou la route des collines." }
+      ]
+    },
+    {
+      "id": "transport",
+      "icon": "🚌",
+      "title": "Transports",
+      "type": "info",
+      "items": [
+        { "label": "Bus vers Fort-de-France", "value": "Arrêt à 2 min à pied. Bus TC toutes les 20–30 min, 1,50€." },
+        { "label": "Voiture (recommandé)", "value": "Pour explorer l'île, une voiture est nécessaire. Location à l'aéroport." },
+        { "label": "Parking privatif", "value": "Place n°•• incluse — sécurisée, couverte." },
+        { "label": "Aéroport", "value": "20 min via la N1." }
+      ]
+    },
+    {
+      "id": "checkout",
+      "icon": "✅",
+      "title": "Checklist de départ",
+      "type": "checklist",
+      "items": [
+        "Éteindre toutes les climatisations",
+        "Éteindre les lumières",
+        "Fermer fenêtres et volets",
+        "Vider le réfrigérateur",
+        "Lancer le lave-vaisselle si besoin",
+        "Déposer les clés dans le boîtier",
+        "Sortir les poubelles dans le local RDC",
+        "Laisser draps et serviettes sur les lits"
+      ]
+    }
+  ],
+  "contacts": [
+    { "label": "Vincent (propriétaire)", "phone": "+33 6 XX XX XX XX", "icon": "👤", "note": "WhatsApp de préférence" },
+    { "label": "SAMU", "phone": "15", "icon": "🚑" },
+    { "label": "Pompiers", "phone": "18", "icon": "🚒" },
+    { "label": "Gendarmerie Schœlcher", "phone": "+596 596 61 11 17", "icon": "🚓" },
+    { "label": "Urgences européen", "phone": "112", "icon": "🆘" }
+  ],
+  "updated_at": "2026-05-21"
+}

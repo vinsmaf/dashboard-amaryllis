@@ -1,0 +1,113 @@
+{
+  "property_id": "geko",
+  "property_name": "Villa Géko",
+  "emoji": "🦎",
+  "tagline": "Villa vue mer avec piscine · Sainte-Luce, Martinique",
+  "welcome_message": "Bienvenue à la Villa Géko !\n\nVous avez choisi l'une de mes villas préférées — la vue depuis la terrasse le matin avec un café est quelque chose d'assez magique.\n\nConseils pour votre séjour : le snorkeling depuis l'Anse Meunier est exceptionnel (masques disponibles dans l'armoire de la buanderie). Et si vous voulez éviter les touristes, les plages du Nord de l'île valent largement le détour.\n\nBon séjour !",
+  "host_signature": "Vincent",
+  "address": "Résidence Amaryllis, Sainte-Luce, Martinique 97228",
+  "maps_url": "https://maps.google.com/?q=Sainte-Luce+Martinique",
+  "checkin_time": "15h00",
+  "checkout_time": "10h00",
+  "wifi_ssid": "VillaGeko",
+  "wifi_password": "••••••••",
+  "sections": [
+    {
+      "id": "access",
+      "icon": "🔑",
+      "title": "Accès — étape par étape",
+      "type": "steps",
+      "items": [
+        { "label": "Portail résidence", "value": "Code ••••, poussez le portail après le bip." },
+        { "label": "Boîtier à clé", "value": "Sur le mur gauche de la porte, code ••••." },
+        { "label": "Parking", "value": "Place privative devant la villa." },
+        { "label": "Piscine", "value": "Terrasse de plain-pied. Douche obligatoire avant de plonger." }
+      ]
+    },
+    {
+      "id": "pool",
+      "icon": "🏊",
+      "title": "Piscine",
+      "type": "info",
+      "items": [
+        { "label": "Horaires", "value": "8h00 – 22h00" },
+        { "label": "Matériel snorkeling", "value": "Masques et tubas dans l'armoire de la buanderie — à votre disposition !" },
+        { "label": "Entretien", "value": "Prestataire le jeudi matin — piscine inutilisable 1h" }
+      ]
+    },
+    {
+      "id": "climate",
+      "icon": "❄️",
+      "title": "Climatisation",
+      "type": "text",
+      "content": "Clim réversible dans le séjour et la chambre. Télécommande sur la table de nuit et le meuble TV. Réglage conseillé : 25°C. Le ventilateur de plafond suffit souvent la nuit avec les fenêtres entrouvertes — l'alizé martiniquais fait le reste."
+    },
+    {
+      "id": "kitchen",
+      "icon": "🍳",
+      "title": "Coin cuisine",
+      "type": "info",
+      "items": [
+        { "label": "Plaque vitrocéramique", "value": "3 feux — récipients standard." },
+        { "label": "Lave-linge", "value": "Dans la buanderie, lessive disponible." },
+        { "label": "Cafetière filtre", "value": "Café en grains + moulin sur le plan de travail." },
+        { "label": "Barbecue charbon", "value": "Sur la terrasse. Charbon dans le rangement extérieur, allume-feu fournis." }
+      ]
+    },
+    {
+      "id": "rules",
+      "icon": "🤝",
+      "title": "Règles",
+      "type": "list",
+      "items": [
+        "Silence après 22h",
+        "Non-fumeur à l'intérieur",
+        "Animaux non admis",
+        "Maximum 3 personnes"
+      ]
+    },
+    {
+      "id": "picks",
+      "icon": "⭐",
+      "title": "Mes recommandations",
+      "type": "picks",
+      "items": [
+        { "icon": "🏖", "name": "Anse Meunier", "distance": "5 min à pied", "note": "Snorkeling exceptionnel — poissons tropicaux garantis avec le masque." },
+        { "icon": "🌋", "name": "Montagne Pelée", "distance": "1h30", "note": "La randonnée incontournable de Martinique. Partez tôt le matin pour voir le sommet avant les nuages." },
+        { "icon": "🍽", "name": "Le Petibonum (Le Carbet)", "distance": "50 min", "note": "Table d'exception en bord de mer, cuisine créole gastronomique. Réservation obligatoire." },
+        { "icon": "🏄", "name": "Surf à la Caravelle", "distance": "45 min", "note": "Meilleur spot de surf de l'île — école de surf sur place." }
+      ]
+    },
+    {
+      "id": "transport",
+      "icon": "🚗",
+      "title": "Se déplacer",
+      "type": "text",
+      "content": "La voiture est indispensable. Fort-de-France à 30 min, l'aéroport Aimé Césaire à 25 min. Le Nord de l'île (Montagne Pelée, Saint-Pierre) vaut vraiment le détour mais comptez 1h30 de route."
+    },
+    {
+      "id": "checkout",
+      "icon": "✅",
+      "title": "Checklist de départ",
+      "type": "checklist",
+      "items": [
+        "Éteindre climatisation et lumières",
+        "Fermer fenêtres et volets",
+        "Vider le réfrigérateur",
+        "Ranger le matériel snorkeling dans la buanderie",
+        "Sortir les poubelles dans les bacs résidence",
+        "Laisser draps et serviettes sur le lit",
+        "Remettre les clés dans le boîtier",
+        "Fermer la porte à double tour"
+      ]
+    }
+  ],
+  "contacts": [
+    { "label": "Vincent (propriétaire)", "phone": "+33 6 XX XX XX XX", "icon": "👤", "note": "WhatsApp de préférence" },
+    { "label": "SAMU", "phone": "15", "icon": "🚑" },
+    { "label": "Police secours", "phone": "17", "icon": "🚓" },
+    { "label": "Pompiers", "phone": "18", "icon": "🚒" },
+    { "label": "Urgences européen", "phone": "112", "icon": "🆘" }
+  ],
+  "updated_at": "2026-05-21"
+}

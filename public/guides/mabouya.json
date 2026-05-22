@@ -1,0 +1,101 @@
+{
+  "property_id": "mabouya",
+  "property_name": "Studio Mabouya",
+  "emoji": "🌿",
+  "tagline": "Studio cosy avec piscine · Sainte-Luce, Martinique",
+  "welcome_message": "Bienvenue au Studio Mabouya !\n\nLe Mabouya, c'est le gecko local qui rôde la nuit — si vous en croisez un sur le mur, c'est bon signe, il chasse les moustiques !\n\nLe studio est compact mais tout y est. La plage est à 5 minutes à pied, les restaurants sont à portée de main. C'est l'endroit idéal pour décompresser.\n\nBon séjour sous le soleil de Martinique !",
+  "host_signature": "Vincent",
+  "address": "Résidence Amaryllis, Sainte-Luce, Martinique 97228",
+  "maps_url": "https://maps.google.com/?q=Sainte-Luce+Martinique",
+  "checkin_time": "15h00",
+  "checkout_time": "10h00",
+  "wifi_ssid": "VillaMabouya",
+  "wifi_password": "••••••••",
+  "sections": [
+    {
+      "id": "access",
+      "icon": "🔑",
+      "title": "Accès",
+      "type": "steps",
+      "items": [
+        { "label": "Portail résidence", "value": "Code ••••." },
+        { "label": "Boîtier à clé", "value": "Sur le mur à gauche de la porte. Code ••••." },
+        { "label": "Parking", "value": "Place visiteurs devant la résidence (non privatif)." }
+      ]
+    },
+    {
+      "id": "pool",
+      "icon": "🏊",
+      "title": "Piscine partagée",
+      "type": "info",
+      "items": [
+        { "label": "Accès", "value": "Piscine commune de la résidence — 5 studios y ont accès" },
+        { "label": "Horaires", "value": "8h00 – 22h00" },
+        { "label": "Douche", "value": "Obligatoire avant baignade (règlement de résidence)" }
+      ]
+    },
+    {
+      "id": "climate",
+      "icon": "❄️",
+      "title": "Climatisation",
+      "type": "text",
+      "content": "Clim réversible dans le studio — télécommande sur la table de nuit. Réglage recommandé : 25–26°C. Le studio est bien isolé, la clim descend vite. Pensez à l'éteindre quand vous sortez."
+    },
+    {
+      "id": "kitchen",
+      "icon": "🍳",
+      "title": "Coin cuisine",
+      "type": "info",
+      "items": [
+        { "label": "Plaque vitrocéramique", "value": "2 feux, récipients standards." },
+        { "label": "Micro-ondes", "value": "Sur le comptoir à droite." },
+        { "label": "Cafetière filtre", "value": "Café moulu dans le placard au-dessus." },
+        { "label": "Réfrigérateur", "value": "Eau filtrée en carafe — rechargez-la en partant." }
+      ]
+    },
+    {
+      "id": "rules",
+      "icon": "🤝",
+      "title": "Règles",
+      "type": "list",
+      "items": [
+        "Silence après 22h (studio mince avec voisins proches)",
+        "Non-fumeur à l'intérieur",
+        "Animaux non admis",
+        "Maximum 2 personnes"
+      ]
+    },
+    {
+      "id": "picks",
+      "icon": "⭐",
+      "title": "À 5 minutes de vous",
+      "type": "picks",
+      "items": [
+        { "icon": "🏖", "name": "Plage Sainte-Luce", "distance": "5 min à pied", "note": "Eaux calmes, parfaites pour la baignade. Filet de volley installé le week-end." },
+        { "icon": "🍽", "name": "Restaurants du bord de mer", "distance": "5 min à pied", "note": "Chatounou, Ti Sable — poissons frais du jour. Demandez le 'plat du jour' pour les meilleures affaires." },
+        { "icon": "🛒", "name": "Carrefour Market", "distance": "5 min en voiture", "note": "Fruits frais, légumes exotiques, rhum agricole local." },
+        { "icon": "🤿", "name": "Snorkeling Anse Meunier", "distance": "10 min à pied", "note": "Eaux peu profondes avec bancs de poissons colorés." }
+      ]
+    },
+    {
+      "id": "checkout",
+      "icon": "✅",
+      "title": "Checklist de départ",
+      "type": "checklist",
+      "items": [
+        "Éteindre climatisation et lumières",
+        "Fermer volets et fenêtre",
+        "Vider le réfrigérateur",
+        "Remettre les clés dans le boîtier",
+        "Laisser draps et serviettes sur le lit"
+      ]
+    }
+  ],
+  "contacts": [
+    { "label": "Vincent (propriétaire)", "phone": "+33 6 XX XX XX XX", "icon": "👤", "note": "WhatsApp" },
+    { "label": "SAMU", "phone": "15", "icon": "🚑" },
+    { "label": "Pompiers", "phone": "18", "icon": "🚒" },
+    { "label": "Urgences européen", "phone": "112", "icon": "🆘" }
+  ],
+  "updated_at": "2026-05-21"
+}

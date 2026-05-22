@@ -1,0 +1,137 @@
+{
+  "property_id": "amaryllis",
+  "property_name": "Villa Amaryllis",
+  "emoji": "🌺",
+  "tagline": "Villa avec piscine privée & vue mer · Sainte-Luce, Martinique",
+  "welcome_message": "Bienvenue dans ma villa !\n\nJe suis vraiment heureux de vous accueillir à Sainte-Luce. La villa est prête pour vous — installez-vous comme chez vous.\n\nQuelques conseils d'habitué : le coucher de soleil depuis la terrasse est magnifique vers 18h30. Le marché du bord de mer le dimanche matin vaut le détour. Et pour les bouchons martiniquais, évitez la route de Fort-de-France entre 7h et 9h.\n\nJe reste disponible par WhatsApp si vous avez le moindre besoin. Bon séjour !",
+  "host_signature": "Vincent",
+  "address": "Résidence Amaryllis, Sainte-Luce, Martinique 97228",
+  "maps_url": "https://maps.google.com/?q=Sainte-Luce+Martinique",
+  "checkin_time": "15h00",
+  "checkout_time": "10h00",
+  "wifi_ssid": "VillaAmaryllis",
+  "wifi_password": "••••••••",
+  "sections": [
+    {
+      "id": "access",
+      "icon": "🔑",
+      "title": "Accès — étape par étape",
+      "type": "steps",
+      "items": [
+        { "label": "Portail résidence", "value": "Code ••••, poussez le portail après le bip." },
+        { "label": "Boîtier à clé", "value": "Sur le mur gauche de l'entrée, code ••••. Tournez 2 fois pour déverrouiller." },
+        { "label": "Parking", "value": "Place privative n°•• devant la villa — stationnement inclus." },
+        { "label": "Piscine", "value": "Accessible depuis la terrasse. Douche obligatoire avant baignade." }
+      ]
+    },
+    {
+      "id": "pool",
+      "icon": "🏊",
+      "title": "Piscine & terrasse",
+      "type": "info",
+      "items": [
+        { "label": "Horaires piscine", "value": "8h00 – 22h00 (respectez le voisinage après 22h)" },
+        { "label": "Douche avant baignade", "value": "Obligatoire — robinet sur le côté gauche" },
+        { "label": "Transats & parasols", "value": "Disponibles sur la terrasse, rangez-les en cas de vent fort" },
+        { "label": "Entretien piscine", "value": "Prestataire le mardi matin — piscine inutilisable 1h environ" }
+      ]
+    },
+    {
+      "id": "climate",
+      "icon": "❄️",
+      "title": "Climatisation",
+      "type": "text",
+      "content": "Climatisation réversible dans le séjour et chaque chambre. Télécommandes posées sur les meubles. Réglage idéal : 24–26°C. La nuit, 26°C est suffisant avec le ventilateur au plafond. Pensez à éteindre la clim en sortant — ça fait une vraie différence sur la facture !"
+    },
+    {
+      "id": "kitchen",
+      "icon": "🍳",
+      "title": "Cuisine & équipements",
+      "type": "info",
+      "items": [
+        { "label": "Plaque induction", "value": "Bouton On/Off à gauche. Uniquement récipients fond plat." },
+        { "label": "Lave-vaisselle", "value": "Pastilles sous l'évier — programme Eco recommandé." },
+        { "label": "Lave-linge", "value": "Dans le cellier. Lessive dans le placard au-dessus. 40°C pour le linge de maison." },
+        { "label": "Cafetière Nespresso", "value": "Capsules dans le tiroir de droite. Prête en 30 secondes." },
+        { "label": "Barbecue", "value": "Sur la terrasse, gaz inclus. Grille de rechange dans le rangement extérieur." }
+      ]
+    },
+    {
+      "id": "rules",
+      "icon": "🤝",
+      "title": "Règles de vie",
+      "type": "list",
+      "items": [
+        "Silence et musique douce après 22h (résidence avec familles)",
+        "Non-fumeur à l'intérieur — terrasse et jardin autorisés",
+        "Animaux non admis",
+        "Maximum 4 personnes",
+        "Poubelles dans les bacs de la résidence (RDC, à gauche du portail)"
+      ]
+    },
+    {
+      "id": "picks",
+      "icon": "⭐",
+      "title": "Mes adresses coups de cœur",
+      "type": "picks",
+      "items": [
+        { "icon": "🏖", "name": "Plage de l'Anse Meunier", "distance": "5 min à pied", "note": "La plus belle plage de Sainte-Luce, peu fréquentée le matin. Idéale pour le snorkeling." },
+        { "icon": "🍽", "name": "Ti Sable", "distance": "7 min à pied", "note": "Poissons grillés et accras maison. Table en bord de mer, réservez le week-end." },
+        { "icon": "☕", "name": "Boulangerie du bourg", "distance": "3 min à pied", "note": "Pain chaud et croissants dès 6h30 — la queue en vaut la peine." },
+        { "icon": "🛒", "name": "Carrefour Market Sainte-Luce", "distance": "5 min en voiture", "note": "Produits locaux, rhum agricole, épices. Fermé dimanche après-midi." },
+        { "icon": "🌊", "name": "Grande Anse d'Arlet", "distance": "40 min en voiture", "note": "Tortues marines garanties le matin tôt. Allez-y avant 9h pour éviter la foule." },
+        { "icon": "🥃", "name": "Distillerie J.M (Macouba)", "distance": "1h30", "note": "La meilleure visite distillerie de l'île. Réservez en ligne." }
+      ]
+    },
+    {
+      "id": "transport",
+      "icon": "🚗",
+      "title": "Se déplacer en Martinique",
+      "type": "info",
+      "items": [
+        { "label": "Voiture indispensable", "value": "L'île se visite en voiture. GPS vivement recommandé — les routes de campagne sont peu fléchées." },
+        { "label": "Essence", "value": "Station Shell à 3 min. Attention : certaines stations ferment le dimanche." },
+        { "label": "Fort-de-France", "value": "30 min hors bouchons. Évitez 7h-9h et 16h30-18h30 en semaine." },
+        { "label": "Aéroport Aimé Césaire", "value": "25 min par l'A1. Comptez 45 min en heure de pointe." },
+        { "label": "Le Marin / Marina", "value": "15 min — excursions catamaran, restaurants." }
+      ]
+    },
+    {
+      "id": "trash",
+      "icon": "♻️",
+      "title": "Poubelles & tri",
+      "type": "info",
+      "items": [
+        { "label": "Local poubelles", "value": "RDC de la résidence, à gauche du portail principal" },
+        { "label": "Collecte", "value": "Lundi et jeudi matin — sortez les sacs la veille au soir" },
+        { "label": "Tri sélectif", "value": "Bac jaune : plastiques, cartons. Bac vert : verre uniquement." }
+      ]
+    },
+    {
+      "id": "checkout",
+      "icon": "✅",
+      "title": "Checklist de départ",
+      "type": "checklist",
+      "items": [
+        "Éteindre toutes les climatisations",
+        "Éteindre lumières et ventilateurs de plafond",
+        "Fermer fenêtres et volets",
+        "Couper le gaz barbecue (robinet rouge derrière la bouteille)",
+        "Vider le réfrigérateur de vos aliments",
+        "Lancer le lave-vaisselle si vaisselle sale",
+        "Sortir les poubelles dans les bacs de la résidence",
+        "Laisser draps et serviettes en boule sur les lits",
+        "Remettre les clés dans le boîtier et le refermer",
+        "Fermer la porte principale à double tour"
+      ]
+    }
+  ],
+  "contacts": [
+    { "label": "Vincent (propriétaire)", "phone": "+33 6 XX XX XX XX", "icon": "👤", "note": "WhatsApp de préférence — réponse sous 1h" },
+    { "label": "SAMU", "phone": "15", "icon": "🚑" },
+    { "label": "Police secours", "phone": "17", "icon": "🚓" },
+    { "label": "Pompiers", "phone": "18", "icon": "🚒" },
+    { "label": "Urgences européen", "phone": "112", "icon": "🆘" }
+  ],
+  "updated_at": "2026-05-21"
+}

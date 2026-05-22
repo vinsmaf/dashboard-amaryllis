@@ -1,11 +1,15 @@
-# Concurrents Airbnb — Zandoli (Sainte-Luce, 6 pers, piscine, premium)
-# Colonnes : listing_id, name, platform, capacity, bedrooms, bathrooms, has_pool, has_sea_view, area_km, standing, notes
-# has_pool / has_sea_view : 1 = oui, 0 = non | standing : premium | standard | budget
-listing_id,name,platform,capacity,bedrooms,bathrooms,has_pool,has_sea_view,area_km,standing,notes
-2373326,La Kalenda — villa piscine vue mer,airbnb,12,6,4,1,1,1.2,premium,Référence premium Sainte-Luce 6+ pers
-708799384172492585,Villa Caraïbes — spa piscine vue mer,airbnb,8,4,3,1,1,1.5,premium,Concurrent direct 6-8 personnes
-40105044,Villa Anolis 4* — piscine vue mer,airbnb,8,4,3,1,1,0.5,premium,Classé 4 étoiles très proche
-23109336,Luxury Villa Private Salt Pool,airbnb,6,3,3,1,0,2.1,premium,6 personnes piscine privée
-1023823631029551112,Villa Carpe Diem — hauteurs Sainte-Luce,airbnb,8,4,2,1,1,1.0,premium,Vue panoramique 4-8 personnes
-644142632524198672,Lana & Livia — grande piscine vue mer,airbnb,10,5,3,1,1,0.8,premium,Plus grand mais même zone
-26159360,Villa piscine sécurisée,airbnb,8,4,2,1,0,1.8,standard,Concurrent standard 6-8 pers
+# Concurrents Airbnb — Zandoli (Sainte-Luce, 4 pers, 2ch, piscine, vue mer, premium)
+# Référence : capacity=4, bedrooms=2, bathrooms=2, has_pool=1, has_sea_view=1, area_km=1.5, standing=premium
+# Colonnes : listing_id, name, platform, capacity, bedrooms, bathrooms, has_pool, has_sea_view, area_km, standing, notes, similarity_score, priority
+# has_pool / has_sea_view : 1 = oui, 0 = non | standing : luxury | premium | high | standard | budget
+# similarity_score : 0-100 (calculé selon formule weighted — pool/vue mer critiques)
+# priority : direct_premium (≥95) | direct (≥85) | secondary (≥70) | tertiary (≥50) | ignore (<50)
+# Modifiez librement ce fichier — rechargez depuis l'onglet Concurrents du Revenue Manager
+listing_id,name,platform,capacity,bedrooms,bathrooms,has_pool,has_sea_view,area_km,standing,notes,similarity_score,priority
+1023823631029551112,Villa Carpe Diem — hauteurs Sainte-Luce,airbnb,8,4,2,1,1,1.0,premium,Vue panoramique — 4 ch mais même standing et équipements,75,secondary
+23109336,Luxury Villa Private Salt Pool,airbnb,6,3,3,1,0,2.1,premium,6 pers piscine privée — pas de vue mer,71,secondary
+708799384172492585,Villa Caraïbes — spa piscine vue mer,airbnb,8,4,3,1,1,1.5,premium,Concurrent premium même zone — capacité supérieure,72,secondary
+40105044,Villa Anolis 4* — piscine vue mer,airbnb,8,4,3,1,1,0.5,premium,Classé 4 étoiles — 4 ch concurrent référence zone,70,secondary
+644142632524198672,Lana & Livia — grande piscine vue mer,airbnb,10,5,3,1,1,0.8,premium,Grande villa 5 ch — même zone proche centre,65,secondary
+2373326,La Kalenda — villa piscine vue mer,airbnb,12,6,4,1,1,1.2,premium,Grande villa 6 ch — concurrent premium éloigné,63,secondary
+26159360,Villa piscine sécurisée PMR,airbnb,8,4,2,1,0,1.8,standard,Piscine sans vue mer — standing inférieur,50,tertiary

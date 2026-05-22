@@ -1,9 +1,13 @@
-# Concurrents Airbnb — T2 Schœlcher (Schœlcher, 4 pers, standard)
-# Colonnes : listing_id, name, platform, capacity, bedrooms, bathrooms, has_pool, has_sea_view, area_km, standing, notes
-# has_pool / has_sea_view : 1 = oui, 0 = non | standing : premium | standard | budget
-listing_id,name,platform,capacity,bedrooms,bathrooms,has_pool,has_sea_view,area_km,standing,notes
-22623046,Appartement 4 pièces Schœlcher 3 ch vue mer,airbnb,6,3,2,0,1,0.5,standard,3 chambres vue mer Schœlcher
-38402320,FACE A MER — Schœlcher bord de mer,airbnb,4,2,1,0,1,0.8,standard,Accès direct plage vue mer
-965273608763611063,Appartement Schœlcher central,airbnb,4,2,1,0,0,1.0,standard,T2 central bien situé
-1293784106035766705,Oasis urban suite — Schœlcher,airbnb,4,2,1,0,0,1.5,standard,Suite urbaine climatisée
+# Concurrents Airbnb — T2 Schœlcher (Schœlcher, 4 pers, 2ch, sans piscine, vue mer, standard)
+# Référence : capacity=4, bedrooms=2, bathrooms=1, has_pool=0, has_sea_view=1, area_km=0.5, standing=standard
+# Colonnes : listing_id, name, platform, capacity, bedrooms, bathrooms, has_pool, has_sea_view, area_km, standing, notes, similarity_score, priority
+# has_pool / has_sea_view : 1 = oui, 0 = non | standing : luxury | premium | high | standard | budget
+# similarity_score : 0-100 (calculé selon formule weighted — vue mer critique ici)
+# priority : direct_premium (≥95) | direct (≥85) | secondary (≥70) | tertiary (≥50) | ignore (<50)
+# Modifiez librement ce fichier — rechargez depuis l'onglet Concurrents du Revenue Manager
+listing_id,name,platform,capacity,bedrooms,bathrooms,has_pool,has_sea_view,area_km,standing,notes,similarity_score,priority
+38402320,FACE A MER — Schœlcher bord de mer,airbnb,4,2,1,0,1,0.8,standard,Concurrent direct — même profil vue mer accès plage,100,direct_premium
+22623046,Appartement 4 pièces Schœlcher 3 ch vue mer,airbnb,6,3,2,0,1,0.5,standard,3 ch vue mer — capacité légèrement supérieure même zone,88,direct
+965273608763611063,Appartement Schœlcher central,airbnb,4,2,1,0,0,1.0,standard,T2 central bien situé — pas de vue mer,85,direct
+1293784106035766705,Oasis urban suite — Schœlcher,airbnb,4,2,1,0,0,1.5,standard,Suite urbaine climatisée — sans vue mer plus éloigné,83,secondary
 # Note : Schœlcher est proche de Fort-de-France — ajouter des concurrents Fort-de-France si nécessaire

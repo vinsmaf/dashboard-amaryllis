@@ -1,0 +1,122 @@
+{
+  "property_id": "zandoli",
+  "property_name": "Villa Zandoli",
+  "emoji": "🦎",
+  "tagline": "Villa avec piscine privée & vue mer · Sainte-Luce, Martinique",
+  "welcome_message": "Bienvenue à la Villa Zandoli !\n\nLe nom vient du petit lézard vert qui habite notre jardin — vous en croiserez sûrement un sur la terrasse au soleil du matin. Bonne nouvelle : ils mangent les moustiques !\n\nMa recommandation absolue : un matin en kayak depuis la plage de l'Anse Meunier, à 5 minutes à pied. Et le soir, les restaurants du bord de mer vous attendent. Bon séjour en Martinique !",
+  "host_signature": "Vincent",
+  "address": "Résidence Amaryllis, Sainte-Luce, Martinique 97228",
+  "maps_url": "https://maps.google.com/?q=Sainte-Luce+Martinique",
+  "checkin_time": "15h00",
+  "checkout_time": "10h00",
+  "wifi_ssid": "VillaZandoli",
+  "wifi_password": "••••••••",
+  "sections": [
+    {
+      "id": "access",
+      "icon": "🔑",
+      "title": "Accès — étape par étape",
+      "type": "steps",
+      "items": [
+        { "label": "Portail résidence", "value": "Code ••••, poussez le portail après le bip." },
+        { "label": "Boîtier à clé", "value": "Sur le mur gauche de l'entrée, code ••••." },
+        { "label": "Parking", "value": "Place privative devant la villa." },
+        { "label": "Piscine", "value": "Accessible depuis la terrasse couverte. Douche obligatoire avant baignade." }
+      ]
+    },
+    {
+      "id": "pool",
+      "icon": "🏊",
+      "title": "Piscine & terrasse",
+      "type": "info",
+      "items": [
+        { "label": "Horaires piscine", "value": "8h00 – 22h00" },
+        { "label": "Douche obligatoire", "value": "Robinet sur le côté — merci de respecter cette règle" },
+        { "label": "Transats", "value": "4 transats et 2 chaises longues sur la terrasse" },
+        { "label": "Entretien", "value": "Prestataire le mercredi matin — piscine hors service 1h" }
+      ]
+    },
+    {
+      "id": "climate",
+      "icon": "❄️",
+      "title": "Climatisation",
+      "type": "text",
+      "content": "Clim réversible dans le séjour et les 2 chambres. Télécommandes sur les tables de nuit et la console TV. Réglage recommandé : 25°C le jour, 26°C la nuit. Les fenêtres s'ouvrent sur jardin pour aérer naturellement le matin — bien plus agréable qu'une clim à fond !"
+    },
+    {
+      "id": "kitchen",
+      "icon": "🍳",
+      "title": "Cuisine",
+      "type": "info",
+      "items": [
+        { "label": "Plaque induction", "value": "Récipients fond plat uniquement. Mode boost pour l'eau bouillante." },
+        { "label": "Lave-vaisselle", "value": "Pastilles sous l'évier." },
+        { "label": "Lave-linge", "value": "Buanderie — lessive dans le placard, 40°C." },
+        { "label": "Cafetière Dolce Gusto", "value": "Capsules dans le placard à droite. Carafe d'eau filtrée au réfrigérateur." }
+      ]
+    },
+    {
+      "id": "rules",
+      "icon": "🤝",
+      "title": "Règles de vie",
+      "type": "list",
+      "items": [
+        "Silence après 22h — résidence familiale",
+        "Non-fumeur à l'intérieur",
+        "Animaux non admis",
+        "Maximum 4 personnes",
+        "Poubelles dans les bacs de la résidence"
+      ]
+    },
+    {
+      "id": "picks",
+      "icon": "⭐",
+      "title": "Mes coups de cœur",
+      "type": "picks",
+      "items": [
+        { "icon": "🏖", "name": "Plage de l'Anse Meunier", "distance": "5 min à pied", "note": "Calme le matin, eaux cristallines. Apportez masque et tuba." },
+        { "icon": "🍹", "name": "Le Grain d'Or", "distance": "10 min à pied", "note": "Meilleure dégustation de rhum agricole de la côte Sud. Terrasse vue mer." },
+        { "icon": "🍽", "name": "Ti Sable", "distance": "8 min à pied", "note": "Cuisine créole authentique, colombo de poulet à tomber." },
+        { "icon": "🌊", "name": "Plongée à Sainte-Luce", "distance": "5 min en voiture", "note": "Centre Plongée Caraïbe — coffre aux trésors sous-marin, bouteilles de plongée disponibles." },
+        { "icon": "🛍", "name": "Marché de Sainte-Luce", "distance": "10 min en voiture", "note": "Dimanche matin — fruits, légumes, épices et artisanat local." }
+      ]
+    },
+    {
+      "id": "transport",
+      "icon": "🚗",
+      "title": "Se déplacer",
+      "type": "info",
+      "items": [
+        { "label": "Voiture", "value": "Indispensable en Martinique. Location disponible à l'aéroport." },
+        { "label": "Fort-de-France", "value": "30 min hors bouchons. Évitez les heures de pointe (7h-9h, 16h30-18h30)." },
+        { "label": "Aéroport", "value": "Aimé Césaire — 25 min via l'A1." },
+        { "label": "Le Marin", "value": "15 min — marina, excursions en catamaran vers la Dominique." }
+      ]
+    },
+    {
+      "id": "checkout",
+      "icon": "✅",
+      "title": "Checklist de départ",
+      "type": "checklist",
+      "items": [
+        "Éteindre toutes les climatisations",
+        "Éteindre lumières et ventilateurs",
+        "Fermer fenêtres et volets",
+        "Vider le réfrigérateur",
+        "Lancer le lave-vaisselle",
+        "Sortir les poubelles dans les bacs résidence",
+        "Laisser draps et serviettes sur les lits",
+        "Remettre les clés dans le boîtier",
+        "Fermer la porte à double tour"
+      ]
+    }
+  ],
+  "contacts": [
+    { "label": "Vincent (propriétaire)", "phone": "+33 6 XX XX XX XX", "icon": "👤", "note": "WhatsApp de préférence" },
+    { "label": "SAMU", "phone": "15", "icon": "🚑" },
+    { "label": "Police secours", "phone": "17", "icon": "🚓" },
+    { "label": "Pompiers", "phone": "18", "icon": "🚒" },
+    { "label": "Urgences européen", "phone": "112", "icon": "🆘" }
+  ],
+  "updated_at": "2026-05-21"
+}

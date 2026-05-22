@@ -37,6 +37,44 @@ async function triggerApifyRun(apifyToken, actor, startUrls, maxItems = 365) {
   return res.json();
 }
 
+/**
+ * Auto-create rm_scraping_configs for any active listing that doesn't have one yet.
+ * Called automatically before each scrape run.
+ */
+async function ensureScrapingConfigs(db, property_id) {
+  const now = Date.now();
+  const { results: listings } = await db
+    .prepare(`
+      SELECT cl.id, cl.platform, cl.platform_listing_id, cl.url
+      FROM rm_competitor_listings cl
+      LEFT JOIN rm_scraping_configs sc ON sc.listing_id = cl.id
+      WHERE cl.property_id = ? AND cl.is_active = 1 AND sc.id IS NULL
+    `)
+    .bind(property_id)
+    .all();
+
+  let created = 0;
+  for (const l of listings || []) {
+    try {
+      await db
+        .prepare(`INSERT OR IGNORE INTO rm_scraping_configs
+                    (id, listing_id, platform, platform_listing_id, scrape_url,
+                     apify_actor_id, scrape_horizon_days,
+                     is_active, consecutive_errors, created_at, updated_at)
+                  VALUES (?, ?, ?, ?, ?, ?, 365, 1, 0, ?, ?)`)
+        .bind(
+          crypto.randomUUID(), l.id,
+          l.platform || "airbnb", l.platform_listing_id,
+          l.url || `https://www.airbnb.com/rooms/${l.platform_listing_id}`,
+          "dtrungtin~airbnb-scraper", now, now
+        )
+        .run();
+      created++;
+    } catch (_) { /* ignore individual errors */ }
+  }
+  return created;
+}
+
 async function handlePost(db, env, body) {
   const { property_id, listing_ids } = body;
 
@@ -48,6 +86,9 @@ async function handlePost(db, env, body) {
   // Verify property exists
   const prop = await db.prepare(`SELECT id FROM rm_properties WHERE id = ?`).bind(property_id).first();
   if (!prop) return json({ error: "Property not found" }, 404);
+
+  // Auto-create missing scraping configs for existing listings
+  const configsCreated = await ensureScrapingConfigs(db, property_id);
 
   // Get active scraping configs for this property's listings
   let q, binds;
@@ -132,6 +173,7 @@ async function handlePost(db, env, body) {
     runs,
     errors,
     configs_triggered: configs.length,
+    configs_created: configsCreated,
   });
 }
 

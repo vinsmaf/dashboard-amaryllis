@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import EmailSync from "./EmailSync.jsx";
 import RevenueManagerPro from "./RevenueManagerPro.jsx";
+import GuideEditor from "./GuideEditor.jsx";
 import { SEED_DAILY_PRICES, loadDailyPrices, saveDailyPrices, loadPriceOverrides, applyServerPriceOverrides } from "./seedPrices.js";
 import {
   BarChart, Bar, LineChart, Line, ComposedChart,
@@ -5883,6 +5884,7 @@ export default function App() {
   const [authed, setAuthed] = useState(() => localStorage.getItem(PWD_KEY) === "ok");
   const [tab, setTabRaw] = useState(() => { try { return localStorage.getItem("admin_tab") || "planning"; } catch { return "planning"; } });
   const setTab = useCallback((t) => { setTabRaw(t); try { localStorage.setItem("admin_tab", t); } catch {} }, []);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [biens, setBiens] = useState([...SEED_BIENS]);
   const [n, setN] = useState(N);
   const [sync, setSync] = useState({ status: "idle", msg: "Données locales" });
@@ -6090,75 +6092,170 @@ export default function App() {
   });
   const cockpitAlerts = biensByCf.length;
 
-  const TABS = [
-    { id: "planning", l: mob ? "📅" : `📅 Planning${planningAlerts > 0 ? ` (${planningAlerts})` : ""}`, alert: planningAlerts > 0, alertColor: "#f59e0b" },
-    { id: "cockpit", l: mob ? "🎯" : `🎯 Cockpit${cockpitAlerts > 0 ? ` ⚠` : ""}`, alert: cockpitAlerts > 0, alertColor: "#ef4444" },
-    { id: "revenue", l: mob ? "💡" : "💡 Revenue Mgr" },
-    { id: "tarifs", l: mob ? "🏷️" : "🏷️ Tarifs" },
-    { id: "previsionnel", l: mob ? "🔮" : "🔮 Prévisionnel" },
-    { id: "charges", l: mob ? "💰" : "💰 Charges" },
-    { id: "pilotage", l: mob ? "💼" : "💼 Pilotage" },
-    { id: "historique", l: mob ? "📈" : "📈 Historique" },
-    { id: "analytics", l: mob ? "📊" : "📊 Analytics" },
-    { id: "menage",   l: mob ? "🧹" : `🧹 Ménage${(() => { const today = new Date(); today.setHours(0,0,0,0); const t = reservations.filter(r => { const co = new Date(r.checkout + "T12:00:00"); co.setHours(0,0,0,0); return co >= today && co <= new Date(today.getTime()+21*86400000) && !r.menage_done; }).length; return t > 0 ? ` (${t})` : ""; })()}` },
-    { id: "messages", l: mob ? "💬" : "💬 Messages" },
-    { id: "emails",   l: mob ? "📧" : "📧 Emails" },
-    { id: "cautions", l: mob ? "🔒" : "🔒 Cautions" },
-    { id: "devis",    l: mob ? "📋" : "📋 Devis" },
+  const menageBadge = (() => { const today = new Date(); today.setHours(0,0,0,0); return reservations.filter(r => { const co = new Date(r.checkout + "T12:00:00"); co.setHours(0,0,0,0); return co >= today && co <= new Date(today.getTime()+21*86400000) && !r.menage_done; }).length; })();
+
+  const NAV_GROUPS = [
+    {
+      id: "ops", label: "Opérations",
+      items: [
+        { id: "planning",    icon: "📅", label: "Planning",    badge: planningAlerts > 0 ? planningAlerts : null, badgeColor: "#f59e0b" },
+        { id: "cockpit",     icon: "🎯", label: "Cockpit",     badge: cockpitAlerts > 0  ? "⚠" : null,           badgeColor: "#ef4444" },
+        { id: "menage",      icon: "🧹", label: "Ménage",      badge: menageBadge > 0    ? menageBadge : null,   badgeColor: "#f59e0b" },
+        { id: "messages",    icon: "💬", label: "Messages" },
+        { id: "emails",      icon: "📧", label: "Emails" },
+      ],
+    },
+    {
+      id: "revenue", label: "Revenus",
+      items: [
+        { id: "revenue",     icon: "💡", label: "Revenue Mgr" },
+        { id: "tarifs",      icon: "🏷️", label: "Tarifs" },
+        { id: "previsionnel",icon: "🔮", label: "Prévisionnel" },
+        { id: "historique",  icon: "📈", label: "Historique" },
+        { id: "analytics",   icon: "📊", label: "Analytics" },
+      ],
+    },
+    {
+      id: "finance", label: "Finance & Biens",
+      items: [
+        { id: "charges",     icon: "💰", label: "Charges" },
+        { id: "pilotage",    icon: "💼", label: "Pilotage" },
+        { id: "cautions",    icon: "🔒", label: "Cautions" },
+      ],
+    },
+    {
+      id: "tools", label: "Outils",
+      items: [
+        { id: "devis",       icon: "📋", label: "Devis" },
+        { id: "guides",      icon: "📖", label: "Guides" },
+      ],
+    },
   ];
 
+  const allNavItems = NAV_GROUPS.flatMap(g => g.items);
+  const currentNavItem = allNavItems.find(i => i.id === tab);
+
+  /* ── boutons d'action communs (sync, settings…) ── */
+  const ActionBtns = () => (
+    <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
+      <span style={{ fontSize: 9, color: sync.status === "error" ? "#ef4444" : sync.status === "ok" ? "#10b981" : "#475569" }}>{sync.msg}</span>
+      {lastSyncTs && (Date.now() - lastSyncTs) > 6 * 3600000 && (
+        <span title={`Dernière sync : ${new Date(lastSyncTs).toLocaleString("fr-FR")}`} style={{ fontSize: 9, color: "#f59e0b", cursor: "help" }}>⚠ {Math.floor((Date.now()-lastSyncTs)/3600000)}h</span>
+      )}
+      <span style={{ fontSize: 11, fontWeight: 700, color: "#0ea5e9", fontFamily: "monospace" }}>{fmtK(ytd)}</span>
+      <button onClick={doSync} disabled={sync.status === "loading"} style={{ padding: "4px 9px", borderRadius: 6, border: "1px solid #0ea5e9", background: "rgba(14,165,233,0.1)", color: "#0ea5e9", fontSize: 10, fontWeight: 600, cursor: "pointer" }}>{sync.status === "loading" ? "⟳…" : "⟳"}</button>
+      <button onClick={() => setShowScriptSetup(true)} title="Configurer Apps Script" style={{ padding: "4px 6px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: scriptUrl ? "#10b981" : "#64748b", fontSize: 10, cursor: "pointer" }}>{scriptUrl ? "⚙✓" : "⚙"}</button>
+      <button onClick={syncAllToSheets} disabled={globalSyncStatus === "syncing"} title="Sync Sheets" style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(16,185,129,0.4)", background: globalSyncStatus === "ok" ? "rgba(16,185,129,0.2)" : globalSyncStatus === "error" ? "rgba(239,68,68,0.15)" : "transparent", color: globalSyncStatus === "ok" ? "#10b981" : globalSyncStatus === "error" ? "#f87171" : "#64748b", fontSize: 10, cursor: "pointer", fontWeight: 600 }}>{globalSyncStatus === "syncing" ? "⟳…" : globalSyncStatus === "ok" ? "📊✓" : globalSyncStatus === "error" ? "📊✗" : "📊"}</button>
+      <button onClick={() => setShowPushSetup(true)} title="Notifications push" style={{ padding: "4px 6px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: ntfyTopic ? "#f59e0b" : "#64748b", fontSize: 10, cursor: "pointer" }}>{ntfyTopic ? "🔔" : "🔕"}</button>
+      <a href="/" target="_blank" rel="noopener noreferrer" title="Site public" style={{ padding: "4px 6px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "transparent", color: "#475569", fontSize: 10, cursor: "pointer", textDecoration: "none" }}>🌐</a>
+      <button onClick={() => { localStorage.removeItem(PWD_KEY); setAuthed(false); }} title="Déconnexion" style={{ padding: "4px 6px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "transparent", color: "#475569", fontSize: 10, cursor: "pointer" }}>🔒</button>
+    </div>
+  );
+
   return (
-    <div style={{ minHeight: "100vh", background: "#0a0f1e", fontFamily: "system-ui,sans-serif", color: "#e2e8f0" }}>
+    <div style={{ minHeight: "100vh", background: "#0a0f1e", fontFamily: "system-ui,sans-serif", color: "#e2e8f0", display: "flex", flexDirection: "column" }}>
 
       <TodayBanner biens={biens} n={n} reservations={reservations} onTab={setTab} mob={mob} />
 
-      <div style={{ background: "#0f172a", borderBottom: "1px solid rgba(255,255,255,0.06)", padding: `0 ${mob ? 6 : 14}px`, display: "flex", alignItems: "stretch", justifyContent: "space-between" }}>
-        <div style={{ display: "flex", gap: 1, overflowX: "auto" }}>
-          {TABS.map(t => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              style={{ padding: mob ? "10px 9px" : "10px 13px", background: "none", border: "none", cursor: "pointer", fontSize: mob ? 11 : 12, fontWeight: tab === t.id ? 600 : 400, color: tab === t.id ? "#0ea5e9" : (t.alert ? t.alertColor : "#64748b"), borderBottom: tab === t.id ? "2px solid #0ea5e9" : "2px solid transparent", whiteSpace: "nowrap" }}
-            >{t.l}</button>
-          ))}
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "0 6px", flexShrink: 0, borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
-          {!mob && <span style={{ fontSize: 9, color: sync.status === "error" ? "#ef4444" : sync.status === "ok" ? "#10b981" : "#64748b", marginRight: 2 }}>{sync.msg}</span>}
-          {!mob && lastSyncTs && (Date.now() - lastSyncTs) > 6 * 3600000 && (
-            <span title={`Dernière sync : ${new Date(lastSyncTs).toLocaleString("fr-FR")}`} style={{ fontSize: 9, color: "#f59e0b", marginRight: 4, cursor: "help" }}>⚠ données {Math.floor((Date.now()-lastSyncTs)/3600000)}h</span>
-          )}
-          {!mob && <span style={{ fontSize: 11, fontWeight: 700, color: "#0ea5e9", fontFamily: "monospace", marginRight: 4 }}>{fmtK(ytd)}</span>}
-          <button onClick={doSync} disabled={sync.status === "loading"} style={{ padding: "4px 9px", borderRadius: 6, border: "1px solid #0ea5e9", background: "rgba(14,165,233,0.1)", color: "#0ea5e9", fontSize: 10, fontWeight: 600, cursor: "pointer" }}>
-            {sync.status === "loading" ? "⟳…" : "⟳"}
-          </button>
-          <button onClick={() => setShowScriptSetup(true)} title="Configurer Apps Script" style={{ padding: "4px 6px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: scriptUrl ? "#10b981" : "#64748b", fontSize: 10, cursor: "pointer" }}>{scriptUrl ? "⚙✓" : "⚙"}</button>
-          <button
-            onClick={syncAllToSheets}
-            disabled={globalSyncStatus === "syncing"}
-            title="Exporter toutes les réservations (iCal + Beds24) vers Google Sheets"
-            style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(16,185,129,0.4)", background: globalSyncStatus === "ok" ? "rgba(16,185,129,0.2)" : globalSyncStatus === "error" ? "rgba(239,68,68,0.15)" : "transparent", color: globalSyncStatus === "ok" ? "#10b981" : globalSyncStatus === "error" ? "#f87171" : "#64748b", fontSize: 10, cursor: "pointer", fontWeight: 600 }}
-          >{globalSyncStatus === "syncing" ? "⟳…" : globalSyncStatus === "ok" ? "📊✓" : globalSyncStatus === "error" ? "📊✗" : "📊"}</button>
-          <button onClick={() => setShowPushSetup(true)} title="Notifications push" style={{ padding: "4px 6px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: ntfyTopic ? "#f59e0b" : "#64748b", fontSize: 10, cursor: "pointer" }}>{ntfyTopic ? "🔔" : "🔕"}</button>
-          <a href="/" target="_blank" rel="noopener noreferrer" title="Voir le site public" style={{ padding: "4px 6px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "transparent", color: "#475569", fontSize: 10, cursor: "pointer", textDecoration: "none" }}>🌐</a>
-          <button onClick={() => { localStorage.removeItem(PWD_KEY); setAuthed(false); }} title="Déconnexion" style={{ padding: "4px 6px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "transparent", color: "#475569", fontSize: 10, cursor: "pointer" }}>🔒</button>
-        </div>
-      </div>
+      <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
 
-      <div style={{ padding: mob ? "12px" : "18px 22px", maxWidth: 1200, paddingBottom: "calc(76px + env(safe-area-inset-bottom))" }}>
-        {tab === "planning" && <Planning biens={biens} mob={mob} reservations={reservations} saveRes={saveRes} icalUrls={icalUrls} saveUrls={saveUrls} icalUrlsBooking={icalUrlsBooking} saveUrlsBooking={saveUrlsBooking} scriptUrl={scriptUrl} onApplyRevenusFromResas={onApplyRevenusFromResas} pushReservationsToScript={pushReservationsToScript} />}
-        {tab === "cockpit" && <Cockpit biens={biens} n={n} mob={mob} onUpdateRevenu={onUpdateRevenu} reservations={reservations} />}
-        {tab === "previsionnel" && <Previsionnel biens={biens} n={n} mob={mob} hist={hist} />}
-        {tab === "charges" && <Charges biens={biens} n={n} mob={mob} />}
-        {tab === "pilotage" && <Pilotage biens={biens} n={n} mob={mob} reservations={reservations} />}
-        {tab === "historique" && <Historique biens={biens} n={n} mob={mob} hist={hist} />}
-        {tab === "revenue"  && <RevenueManagerPro biens={biens} reservations={reservations} mob={mob} />}
-        {tab === "tarifs" && <Tarifs reservations={reservations} />}
-        {tab === "analytics" && <AnalyticsTab mob={mob} />}
-        {tab === "menage"   && <MenageTab biens={biens} reservations={reservations} saveRes={saveRes} mob={mob} />}
-        {tab === "messages" && <MessageTemplates biens={biens} reservations={reservations} mob={mob} />}
-        {tab === "emails" && <EmailSync mob={mob} />}
-        {tab === "cautions" && <Cautions />}
-        {tab === "devis" && <DevisEditor />}
+        {/* ══ SIDEBAR ════════════════════════════════════════════ */}
+        {/* Overlay mobile */}
+        {mob && sidebarOpen && (
+          <div onClick={() => setSidebarOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 40 }} />
+        )}
+
+        <aside style={{
+          width: 220, flexShrink: 0,
+          background: "#080d1a",
+          borderRight: "1px solid rgba(255,255,255,0.06)",
+          display: "flex", flexDirection: "column",
+          ...(mob ? {
+            position: "fixed", top: 0, left: 0, bottom: 0, zIndex: 50,
+            transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)",
+            transition: "transform .22s ease",
+            overflowY: "auto",
+          } : {
+            position: "sticky", top: 0, height: "100vh", overflowY: "auto",
+          }),
+        }}>
+          {/* Logo */}
+          <div style={{ padding: "16px 16px 12px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: "#fff", letterSpacing: -.3 }}>🏠 Dashboard</div>
+            {mob && <button onClick={() => setSidebarOpen(false)} style={{ background: "none", border: "none", color: "#475569", fontSize: 18, cursor: "pointer", padding: "0 4px" }}>✕</button>}
+          </div>
+
+          {/* Groupes de navigation */}
+          <nav style={{ flex: 1, padding: "8px 0 16px" }}>
+            {NAV_GROUPS.map(group => (
+              <div key={group.id} style={{ marginTop: 16 }}>
+                <div style={{ padding: "0 14px 5px", fontSize: 9, fontWeight: 700, color: "#334155", letterSpacing: 1, textTransform: "uppercase" }}>{group.label}</div>
+                {group.items.map(item => {
+                  const active = tab === item.id;
+                  return (
+                    <button key={item.id} onClick={() => { setTab(item.id); if (mob) setSidebarOpen(false); }} style={{
+                      width: "100%", display: "flex", alignItems: "center", gap: 9,
+                      padding: "8px 14px",
+                      background: active ? "rgba(14,165,233,0.1)" : "none",
+                      border: "none", borderLeft: `3px solid ${active ? "#0ea5e9" : "transparent"}`,
+                      cursor: "pointer", textAlign: "left",
+                      color: active ? "#0ea5e9" : item.badgeColor && item.badge ? item.badgeColor : "#94a3b8",
+                      fontSize: 13, fontWeight: active ? 700 : 400,
+                      transition: "all .12s",
+                    }}>
+                      <span style={{ fontSize: 15, width: 20, textAlign: "center", flexShrink: 0 }}>{item.icon}</span>
+                      <span style={{ flex: 1 }}>{item.label}</span>
+                      {item.badge && (
+                        <span style={{ background: item.badgeColor, color: "#fff", fontSize: 9, fontWeight: 800, borderRadius: 10, padding: "1px 5px", minWidth: 16, textAlign: "center" }}>{item.badge}</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </nav>
+
+          {/* Actions en bas de la sidebar */}
+          {!mob && (
+            <div style={{ padding: "12px 14px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+              <ActionBtns />
+            </div>
+          )}
+        </aside>
+
+        {/* ══ CONTENU PRINCIPAL ═════════════════════════════════ */}
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+
+          {/* Topbar mobile */}
+          {mob && (
+            <div style={{ background: "#0f172a", borderBottom: "1px solid rgba(255,255,255,0.06)", padding: "10px 12px", display: "flex", alignItems: "center", gap: 10, position: "sticky", top: 0, zIndex: 20 }}>
+              <button onClick={() => setSidebarOpen(true)} style={{ background: "none", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 7, padding: "5px 9px", color: "#94a3b8", fontSize: 14, cursor: "pointer" }}>☰</button>
+              <span style={{ fontSize: 14, fontWeight: 700, color: "#fff", flex: 1 }}>
+                {currentNavItem ? `${currentNavItem.icon} ${currentNavItem.label}` : "Dashboard"}
+              </span>
+              <ActionBtns />
+            </div>
+          )}
+
+          {/* Contenu de l'onglet */}
+          <div style={{ padding: mob ? "12px" : "18px 24px", flex: 1, paddingBottom: "calc(76px + env(safe-area-inset-bottom))" }}>
+            {tab === "planning" && <Planning biens={biens} mob={mob} reservations={reservations} saveRes={saveRes} icalUrls={icalUrls} saveUrls={saveUrls} icalUrlsBooking={icalUrlsBooking} saveUrlsBooking={saveUrlsBooking} scriptUrl={scriptUrl} onApplyRevenusFromResas={onApplyRevenusFromResas} pushReservationsToScript={pushReservationsToScript} />}
+            {tab === "cockpit" && <Cockpit biens={biens} n={n} mob={mob} onUpdateRevenu={onUpdateRevenu} reservations={reservations} />}
+            {tab === "previsionnel" && <Previsionnel biens={biens} n={n} mob={mob} hist={hist} />}
+            {tab === "charges" && <Charges biens={biens} n={n} mob={mob} />}
+            {tab === "pilotage" && <Pilotage biens={biens} n={n} mob={mob} reservations={reservations} />}
+            {tab === "historique" && <Historique biens={biens} n={n} mob={mob} hist={hist} />}
+            {tab === "revenue"  && <RevenueManagerPro biens={biens} reservations={reservations} mob={mob} />}
+            {tab === "tarifs" && <Tarifs reservations={reservations} />}
+            {tab === "analytics" && <AnalyticsTab mob={mob} />}
+            {tab === "menage"   && <MenageTab biens={biens} reservations={reservations} saveRes={saveRes} mob={mob} />}
+            {tab === "messages" && <MessageTemplates biens={biens} reservations={reservations} mob={mob} />}
+            {tab === "emails" && <EmailSync mob={mob} />}
+            {tab === "cautions" && <Cautions />}
+            {tab === "devis" && <DevisEditor />}
+            {tab === "guides" && <GuideEditor mob={mob} />}
+          </div>
+        </div>
       </div>
 
       <FAB onTab={setTab} />
@@ -6267,6 +6364,16 @@ export default function App() {
 
 // ─── Cautions (dépôts de garantie pré-autorisés) ────────────────────────────
 
+const BIENS_CAUTION = [
+  { id: "amaryllis",  nom: "Villa Amaryllis",     depot: 1500 },
+  { id: "zandoli",    nom: "Zandoli",              depot: 700  },
+  { id: "iguana",     nom: "Villa Iguana",         depot: 500  },
+  { id: "geko",       nom: "Géko",                depot: 500  },
+  { id: "mabouya",    nom: "Mabouya",              depot: 500  },
+  { id: "schoelcher", nom: "Bellevue Schœlcher",   depot: 1000 },
+  { id: "nogent",     nom: "Appartement Nogent",   depot: 500  },
+];
+
 function Cautions() {
   const [deposits, setDeposits] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -6274,6 +6381,33 @@ function Cautions() {
   const [actionLoading, setActionLoading] = useState({});
   const [actionMsg, setActionMsg] = useState({});
   const [captureAmounts, setCaptureAmounts] = useState({});
+
+  // ── Formulaire création ──
+  const defaultBien = BIENS_CAUTION[0];
+  const [form, setForm] = useState({ bienId: defaultBien.id, voyageur: "", email: "", checkin: "", checkout: "", amount: String(defaultBien.depot) });
+  const [creating, setCreating] = useState(false);
+  const [createdLink, setCreatedLink] = useState(null);
+
+  const setF = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const createCaution = async () => {
+    if (!form.checkout || !form.amount) return;
+    setCreating(true);
+    setCreatedLink(null);
+    try {
+      const res = await fetch("/api/caution-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, amount: parseFloat(form.amount) }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "Erreur API");
+      setCreatedLink(data.url);
+    } catch (e) {
+      alert("Erreur : " + e.message);
+    }
+    setCreating(false);
+  };
 
   const load = async () => {
     setLoading(true);
@@ -6325,13 +6459,55 @@ function Cautions() {
     <div style={{ maxWidth: 900, margin: "0 auto" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: 18, color: "#f1f5f9" }}>🔒 Dépôts de garantie</h2>
-          <p style={{ margin: "4px 0 0", fontSize: 12, color: "#64748b" }}>Pré-autorisations Stripe en attente · Débiter = prélever · Libérer = annuler le blocage</p>
+          <h2 style={{ margin: 0, fontSize: 18, color: "#f1f5f9" }}>🔒 Cautions voyageurs</h2>
+          <p style={{ margin: "4px 0 0", fontSize: 12, color: "#64748b" }}>Pré-autorisation CB · Libération automatique J+3 après départ · Débiter en cas de dommage</p>
         </div>
         <button onClick={load} disabled={loading}
           style={{ padding: "7px 16px", borderRadius: 8, border: "none", background: loading ? "#334155" : "#0ea5e9", color: "#fff", cursor: loading ? "default" : "pointer", fontSize: 13, fontWeight: 600 }}>
           {loading ? "⏳…" : "🔄 Rafraîchir"}
         </button>
+      </div>
+
+      {/* ── Formulaire création caution ── */}
+      <div style={{ background: "#1e293b", borderRadius: 12, padding: "20px 24px", border: "1px solid rgba(255,255,255,0.08)", marginBottom: 24 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: "#e2e8f0", marginBottom: 14 }}>+ Nouvelle caution</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: 10, marginBottom: 14 }}>
+          <select value={form.bienId} onChange={e => { setF("bienId", e.target.value); const b = BIENS_CAUTION.find(x => x.id === e.target.value); if (b) setF("amount", String(b.depot)); }}
+            style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", background: "#0f172a", color: "#e2e8f0", fontSize: 12 }}>
+            {BIENS_CAUTION.map(b => <option key={b.id} value={b.id}>{b.nom}</option>)}
+          </select>
+          <input placeholder="Nom voyageur" value={form.voyageur} onChange={e => setF("voyageur", e.target.value)}
+            style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", background: "#0f172a", color: "#e2e8f0", fontSize: 12 }} />
+          <input type="email" placeholder="Email voyageur" value={form.email} onChange={e => setF("email", e.target.value)}
+            style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", background: "#0f172a", color: "#e2e8f0", fontSize: 12 }} />
+          <input type="date" placeholder="Arrivée" value={form.checkin} onChange={e => setF("checkin", e.target.value)}
+            style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", background: "#0f172a", color: "#e2e8f0", fontSize: 12 }} />
+          <input type="date" placeholder="Départ" value={form.checkout} onChange={e => setF("checkout", e.target.value)}
+            style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", background: "#0f172a", color: "#e2e8f0", fontSize: 12 }} />
+          <input type="number" placeholder="Montant (€)" value={form.amount} onChange={e => setF("amount", e.target.value)}
+            style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", background: "#0f172a", color: "#e2e8f0", fontSize: 12 }} />
+        </div>
+        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+          <button onClick={createCaution} disabled={creating || !form.checkout || !form.amount}
+            style={{ padding: "9px 20px", borderRadius: 8, border: "none", background: creating ? "#334155" : "#6366f1", color: "#fff", cursor: creating ? "default" : "pointer", fontSize: 13, fontWeight: 600 }}>
+            {creating ? "⏳ Génération…" : "🔗 Générer lien Stripe"}
+          </button>
+          {createdLink && (
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <a href={createdLink} target="_blank" rel="noopener noreferrer"
+                style={{ color: "#a78bfa", fontSize: 12, wordBreak: "break-all", maxWidth: 340 }}>{createdLink}</a>
+              <button onClick={() => { navigator.clipboard.writeText(createdLink); }}
+                style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid #6366f1", background: "transparent", color: "#a78bfa", cursor: "pointer", fontSize: 11, whiteSpace: "nowrap" }}>
+                📋 Copier
+              </button>
+            </div>
+          )}
+        </div>
+        {createdLink && (
+          <div style={{ marginTop: 10, fontSize: 11, color: "#64748b" }}>
+            ✉️ Envoyer ce lien au voyageur via Airbnb ou SMS · Expire dans 72h · Carte bloquée mais non débitée
+          </div>
+        )}
       </div>
 
       {error && (

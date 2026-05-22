@@ -309,7 +309,7 @@ async function handleGetSignals(db, url) {
 // ---------------------------------------------------------------------------
 // CSV import — charge competitors depuis /competitors/{property_id}.csv
 // Format attendu (lignes commençant par # ignorées) :
-// listing_id,name,platform,capacity,bedrooms,bathrooms,has_pool,has_sea_view,area_km,standing,notes
+// listing_id,name,platform,capacity,bedrooms,bathrooms,has_pool,has_sea_view,area_km,standing,notes,similarity_score,priority
 // ---------------------------------------------------------------------------
 
 function parseCSV(text) {
@@ -322,21 +322,35 @@ function parseCSV(text) {
     // Split on comma, respecting quoted fields
     const cols = line.split(",").map(c => c.trim());
     if (cols.length < 6) continue;
-    const [listing_id, name, platform, capacity, bedrooms, bathrooms,
-           has_pool, has_sea_view, area_km, standing, ...noteParts] = cols;
+    const listing_id  = cols[0] || "";
+    const name        = cols[1] || "";
+    const platform    = cols[2] || "airbnb";
+    const capacity    = cols[3] || "0";
+    const bedrooms    = cols[4] || "0";
+    const bathrooms   = cols[5] || "0";
+    const has_pool    = cols[6] || "0";
+    const has_sea_view = cols[7] || "0";
+    const area_km     = cols[8] || "0";
+    const standing    = cols[9] || "standard";
+    const notes       = cols[10] || "";
+    // New optional columns: similarity_score (col 11) and priority (col 12)
+    const similarity_score = cols[11] ? parseInt(cols[11]) : null;
+    const priority         = cols[12] || null;
     if (!listing_id || !name) continue;
     rows.push({
       listing_id: listing_id.trim(),
       name: name.trim(),
-      platform: (platform || "airbnb").trim(),
+      platform: platform.trim(),
       capacity: parseInt(capacity) || 0,
       bedrooms: parseInt(bedrooms) || 0,
       bathrooms: parseFloat(bathrooms) || 0,
       has_pool: parseInt(has_pool) || 0,
       has_sea_view: parseInt(has_sea_view) || 0,
       area_km: parseFloat(area_km) || 0,
-      standing: (standing || "standard").trim(),
-      notes: noteParts.join(",").trim(),
+      standing: standing.trim(),
+      notes: notes.trim(),
+      similarity_score,
+      priority,
     });
   }
   return rows;
@@ -373,24 +387,59 @@ async function handleImportListings(db, body) {
   let errors = [];
   for (const row of rows) {
     try {
-      // Similarity score simple basé sur standing (affiné par le scraping)
-      const simScore = row.standing === "premium" ? 75 : row.standing === "standard" ? 55 : 35;
+      // Similarity score : use CSV-provided value when available, fallback to standing-based estimate
+      const simScore = (row.similarity_score != null && row.similarity_score > 0)
+        ? row.similarity_score
+        : (row.standing === "premium" ? 75 : row.standing === "standard" ? 55 : 35);
       const listingUrl = `https://www.airbnb.com/rooms/${row.listing_id}`;
-      const id = crypto.randomUUID();
+      const listingId = crypto.randomUUID();
+
+      // Upsert listing (INSERT OR REPLACE to handle re-imports)
       await db
-        .prepare(`INSERT INTO rm_competitor_listings
+        .prepare(`INSERT OR REPLACE INTO rm_competitor_listings
                     (id, set_id, property_id, platform, platform_listing_id, url,
                      name, capacity, bedrooms, bathrooms, has_pool, has_sea_view,
                      distance_km, standing_estimated, similarity_score, is_active, notes, created_at, updated_at)
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)`)
+                  VALUES (
+                    COALESCE((SELECT id FROM rm_competitor_listings WHERE property_id=? AND platform_listing_id=?), ?),
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)`)
         .bind(
-          id, set_id, property_id,
+          property_id, row.listing_id, listingId,
+          set_id, property_id,
           row.platform, row.listing_id, listingUrl,
           row.name, row.capacity, row.bedrooms, row.bathrooms,
           row.has_pool, row.has_sea_view, row.area_km,
           row.standing, simScore, row.notes, now, now
         )
         .run();
+
+      // Retrieve the actual listing id (may be existing)
+      const savedListing = await db
+        .prepare(`SELECT id FROM rm_competitor_listings WHERE property_id = ? AND platform_listing_id = ?`)
+        .bind(property_id, row.listing_id)
+        .first();
+      const savedListingId = savedListing?.id || listingId;
+
+      // Auto-create scraping config if none exists (needed for Apify scraper)
+      const existingCfg = await db
+        .prepare(`SELECT id FROM rm_scraping_configs WHERE listing_id = ?`)
+        .bind(savedListingId)
+        .first();
+      if (!existingCfg) {
+        await db
+          .prepare(`INSERT OR IGNORE INTO rm_scraping_configs
+                      (id, listing_id, platform, platform_listing_id, scrape_url,
+                       apify_actor_id, scrape_horizon_days,
+                       is_active, consecutive_errors, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, 365, 1, 0, ?, ?)`)
+          .bind(
+            crypto.randomUUID(), savedListingId,
+            row.platform, row.listing_id, listingUrl,
+            "dtrungtin~airbnb-scraper", now, now
+          )
+          .run();
+      }
+
       imported++;
     } catch (e) {
       errors.push(`${row.listing_id}: ${e.message}`);
@@ -411,13 +460,21 @@ async function handleExportListings(db, url) {
 
   const lines = [
     `# Concurrents Airbnb — ${property_id}`,
-    `# listing_id,name,platform,capacity,bedrooms,bathrooms,has_pool,has_sea_view,area_km,standing,notes`,
-    `listing_id,name,platform,capacity,bedrooms,bathrooms,has_pool,has_sea_view,area_km,standing,notes`,
+    `# listing_id,name,platform,capacity,bedrooms,bathrooms,has_pool,has_sea_view,area_km,standing,notes,similarity_score,priority`,
+    `listing_id,name,platform,capacity,bedrooms,bathrooms,has_pool,has_sea_view,area_km,standing,notes,similarity_score,priority`,
   ];
+  const getPriority = (score) => {
+    if (score >= 95) return "direct_premium";
+    if (score >= 85) return "direct";
+    if (score >= 70) return "secondary";
+    if (score >= 50) return "tertiary";
+    return "ignore";
+  };
   for (const r of results || []) {
     lines.push([
       r.platform_listing_id, r.name, r.platform, r.capacity, r.bedrooms, r.bathrooms,
       r.has_pool, r.has_sea_view, r.distance_km, r.standing_estimated, r.notes || "",
+      r.similarity_score || 0, getPriority(r.similarity_score || 0),
     ].join(","));
   }
 
