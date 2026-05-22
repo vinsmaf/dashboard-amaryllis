@@ -1127,12 +1127,14 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
           }),
         });
         const fd = await fr.json();
+        console.log("[beds24-find] réponse complète:", fd);
+        if (fd.priceDebug) console.log("[beds24-find] champs prix:", fd.priceDebug);
         if (fd.ok && fd.bookingId) {
           setBookingId(fd.bookingId);
           bookingIdRef.current = fd.bookingId;
-          // Prix Beds24 — source de vérité
+          // Prix Beds24 — source de vérité (totalPrice inclut frais ménage + taxes)
           if (fd.price > 0) {
-            finalAmount = Math.round(fd.price);
+            finalAmount = Math.ceil(fd.price); // Math.ceil pour ne jamais sous-facturer
             setAmount(finalAmount);
           }
           // Dates Beds24 — source de vérité
