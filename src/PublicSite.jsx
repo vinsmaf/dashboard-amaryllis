@@ -1242,19 +1242,22 @@ function Beds24Modal({ bien, checkin, checkout, onClose }) {
         {phase === 2 && (
           <div style={{ flex: 1, overflowY: "auto", padding: "24px" }}>
 
-            {/* Dates du séjour (pré-remplies si sélectionnées avant, sinon saisie libre) */}
+            {/* Dates du séjour — lecture seule */}
             <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
-              <div style={{ flex: 1 }}>
-                <label style={{ fontSize: 11, color: MUTED, display: "block", marginBottom: 4 }}>Arrivée</label>
-                <input type="date" value={localCheckin} onChange={e => { setLocalCheckin(e.target.value); }}
-                  style={{ width: "100%", padding: "9px 10px", borderRadius: 7, border: `1px solid ${SAND}`, background: IVORY, color: NAVY, fontSize: 13, outline: "none", boxSizing: "border-box" }} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <label style={{ fontSize: 11, color: MUTED, display: "block", marginBottom: 4 }}>Départ</label>
-                <input type="date" value={localCheckout} onChange={e => { setLocalCheckout(e.target.value); }}
-                  style={{ width: "100%", padding: "9px 10px", borderRadius: 7, border: `1px solid ${SAND}`, background: IVORY, color: NAVY, fontSize: 13, outline: "none", boxSizing: "border-box" }} />
-              </div>
+              {[["Arrivée", localCheckin], ["Départ", localCheckout]].map(([label, val]) => (
+                <div key={label} style={{ flex: 1, background: val ? "rgba(196,114,84,0.06)" : "rgba(255,255,255,0.04)", borderRadius: 8, border: `1px solid ${val ? "rgba(196,114,84,0.25)" : SAND}`, padding: "9px 12px" }}>
+                  <div style={{ fontSize: 10, color: MUTED, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 3 }}>{label}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: val ? NAVY : MUTED }}>
+                    {val ? new Date(val + "T12:00:00").toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
+                  </div>
+                </div>
+              ))}
             </div>
+            {!localCheckin && !localCheckout && (
+              <div style={{ fontSize: 11, color: MUTED, marginBottom: 12, padding: "8px 12px", background: "rgba(245,158,11,0.08)", borderRadius: 7, border: "1px solid rgba(245,158,11,0.2)" }}>
+                ℹ️ Les dates seront récupérées automatiquement depuis votre réservation Beds24 lors de la validation
+              </div>
+            )}
 
             {/* Récapitulatif séjour — affiché dès que les dates sont connues */}
             {nights > 0 && (
