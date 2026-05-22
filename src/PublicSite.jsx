@@ -3139,7 +3139,117 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
         </div>
       </div>
       {showAlerte && <AlerteDispoModal bien={bien} checkin={calCheckin} checkout={calCheckout} onClose={() => setShowAlerte(false)} />}
+
+      {/* ── FAQ chatbot flottant ── */}
+      <FaqChatbot bien={bien} />
     </div>
+  );
+}
+
+// ── FAQ Chatbot flottant ─────────────────────────────────────────
+const FAQ_CHATBOT_ITEMS = [
+  { tags: ["réserver","réservation","book","comment"], q: "Comment réserver ?", a: "Choisissez vos dates dans le calendrier ci-dessus, puis cliquez « Réserver ». Paiement sécurisé par carte Stripe — sans intermédiaire ni frais de service." },
+  { tags: ["arrivée","check-in","checkin","heure","clé"], q: "À quelle heure est-il possible d'arriver ?", a: "L'arrivée est fixée à 16h. Un départ tardif ou une arrivée anticipée peuvent être arrangés selon les disponibilités — contactez directement l'hôte." },
+  { tags: ["départ","checkout","check-out","heure"], q: "À quelle heure faut-il quitter ?", a: "Le départ se fait avant 11h. Un late check-out est possible sur demande selon les disponibilités du jour." },
+  { tags: ["wifi","internet","connexion","réseau","password"], q: "Y a-t-il le WiFi ?", a: "Oui, toutes nos propriétés disposent du WiFi Starlink haut débit (ou fibre), inclus dans le tarif. Le code vous sera transmis à votre arrivée." },
+  { tags: ["animaux","chien","chat","pet","animal"], q: "Les animaux de compagnie sont-ils acceptés ?", a: "Les animaux de compagnie ne sont généralement pas acceptés dans nos propriétés. Si vous avez une situation particulière, contactez l'hôte directement pour en discuter." },
+  { tags: ["parking","voiture","garage","stationnement"], q: "Y a-t-il un parking ?", a: "Oui, toutes nos villas en Martinique disposent d'un stationnement privé et sécurisé. Pour l'appartement Nogent, un parking à proximité est disponible." },
+  { tags: ["remise","réduction","discount","semaine","long"], q: "Y a-t-il des remises pour les longs séjours ?", a: "Oui ! −5% pour 7 nuits ou plus, −10% pour 14 nuits, −15% pour 28 nuits. Ces remises s'appliquent automatiquement dans le calculateur." },
+  { tags: ["piscine","bain","baignade","jacuzzi"], q: "Quelle propriété a une piscine ou jacuzzi ?", a: "Villa Amaryllis (piscine débordement + jacuzzi), Géko, Zandoli et Mabouya (piscines privées). Consultez chaque fiche pour les équipements détaillés." },
+  { tags: ["annulation","rembours","annuler","cancel"], q: "Quelle est la politique d'annulation ?", a: "Annulation gratuite jusqu'à 14 jours avant l'arrivée. Au-delà, 50% de la somme est retenu. Pour les séjours réservés moins de 14j à l'avance, l'acompte est non remboursable." },
+  { tags: ["paiement","carte","caution","dépôt","stripe"], q: "Comment se passe le paiement et la caution ?", a: "Paiement par carte bancaire sécurisé via Stripe. Un dépôt de garantie (caution) en pré-autorisation est demandé séparément — votre carte n'est pas débitée, les fonds sont juste bloqués." },
+  { tags: ["ménage","nettoyage","propre","linge","serviette"], q: "Le ménage et le linge sont-ils inclus ?", a: "Le linge de lit et les serviettes sont fournis. Un ménage de fin de séjour est inclus. Un service de ménage en cours de séjour peut être arrangé en option." },
+  { tags: ["bébé","enfant","lit","chaise","famille"], q: "Avez-vous du matériel bébé ?", a: "Un lit bébé et une chaise haute peuvent être mis à disposition sur demande — mentionnez-le lors de votre réservation ou contactez l'hôte à l'avance." },
+];
+
+function FaqChatbot({ bien }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [expanded, setExpanded] = useState(null);
+  const inputRef = useRef(null);
+
+  useEffect(() => { if (open && inputRef.current) inputRef.current.focus(); }, [open]);
+
+  const filtered = query.trim().length < 2
+    ? FAQ_CHATBOT_ITEMS
+    : FAQ_CHATBOT_ITEMS.filter(item => {
+        const q = query.toLowerCase();
+        return item.q.toLowerCase().includes(q) || item.a.toLowerCase().includes(q) || item.tags.some(t => t.includes(q));
+      });
+
+  return (
+    <>
+      {/* Bouton flottant */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        aria-label="Questions fréquentes"
+        style={{
+          position: "fixed", bottom: 90, right: 20, zIndex: 200,
+          width: 52, height: 52, borderRadius: "50%",
+          background: open ? CORAL : NAVY,
+          border: `2px solid ${open ? CORAL : "rgba(250,245,233,0.3)"}`,
+          color: "#faf5e9", fontSize: 22, cursor: "pointer",
+          boxShadow: "0 4px 20px rgba(0,0,0,0.35)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          transition: "background 0.25s, transform 0.2s",
+          transform: open ? "rotate(45deg)" : "none",
+        }}
+      >{open ? "✕" : "?"}</button>
+
+      {/* Panneau FAQ */}
+      {open && (
+        <div style={{
+          position: "fixed", bottom: 155, right: 14, zIndex: 200,
+          width: Math.min(window.innerWidth - 28, 370),
+          maxHeight: "55vh", borderRadius: 16,
+          background: "rgba(14,24,35,0.97)",
+          border: "1px solid rgba(250,245,233,0.12)",
+          boxShadow: "0 12px 40px rgba(0,0,0,0.55)",
+          display: "flex", flexDirection: "column",
+          overflow: "hidden",
+          fontFamily: "system-ui,sans-serif",
+        }}>
+          <div style={{ padding: "14px 16px 10px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#f1f5f9", marginBottom: 8 }}>💬 Questions fréquentes</div>
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={e => { setQuery(e.target.value); setExpanded(null); }}
+              placeholder="Tapez votre question…"
+              style={{ width: "100%", padding: "8px 11px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)", color: "#e2e8f0", fontSize: 12, outline: "none", boxSizing: "border-box" }}
+            />
+          </div>
+          <div style={{ overflowY: "auto", flex: 1, padding: "6px 0" }}>
+            {filtered.length === 0 && (
+              <div style={{ padding: "16px 16px", fontSize: 12, color: "#64748b", textAlign: "center" }}>
+                Aucune réponse trouvée.<br />
+                <a href="https://wa.me/33610880772" target="_blank" rel="noopener noreferrer" style={{ color: "#25D366", fontWeight: 600 }}>📱 Contactez-nous sur WhatsApp</a>
+              </div>
+            )}
+            {filtered.map((item, i) => (
+              <div key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                <button
+                  onClick={() => setExpanded(expanded === i ? null : i)}
+                  style={{ width: "100%", textAlign: "left", padding: "11px 16px", background: "none", border: "none", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}
+                >
+                  <span style={{ fontSize: 12, fontWeight: 500, color: "#e2e8f0", lineHeight: 1.4 }}>{item.q}</span>
+                  <span style={{ color: CORAL, fontSize: 14, flexShrink: 0, transition: "transform 0.15s", transform: expanded === i ? "rotate(45deg)" : "none", display: "inline-block" }}>+</span>
+                </button>
+                {expanded === i && (
+                  <div style={{ padding: "0 16px 12px", fontSize: 12, color: "#94a3b8", lineHeight: 1.6 }}>{item.a}</div>
+                )}
+              </div>
+            ))}
+          </div>
+          <div style={{ padding: "8px 16px", borderTop: "1px solid rgba(255,255,255,0.07)", display: "flex", gap: 8, justifyContent: "center" }}>
+            <a href="https://wa.me/33610880772" target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, color: "#25D366", textDecoration: "none", fontWeight: 600 }}>💬 WhatsApp</a>
+            <span style={{ fontSize: 10, color: "#334155" }}>·</span>
+            <a href="mailto:contact@villamaryllis.com" style={{ fontSize: 10, color: "#0ea5e9", textDecoration: "none" }}>✉ Email</a>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 

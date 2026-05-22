@@ -5264,6 +5264,18 @@ function CalendrierTarifs({ reservations = [] }) {
   );
 }
 
+const SEASONAL_KEY = "amaryllis_seasonal_periods";
+const SEASON_COLORS = ["#6366f1","#f59e0b","#10b981","#ef4444","#0ea5e9","#a855f7","#ec4899","#14b8a6"];
+const SEASON_COLOR_LABELS = ["Indigo","Ambre","Émeraude","Rouge","Bleu","Violet","Rose","Teal"];
+
+const DEFAULT_SEASONS = [
+  { id: "noel25",   nom: "Noël / Jour de l'an", couleur: "#ef4444", debut: "2025-12-20", fin: "2026-01-05", mult: 1.40, biens: ["amaryllis","zandoli","iguana","geko","mabouya","schoelcher"] },
+  { id: "vac_fev",  nom: "Vacances Février",    couleur: "#f59e0b", debut: "2026-02-07", fin: "2026-02-22", mult: 1.20, biens: ["nogent"] },
+  { id: "paques26", nom: "Pâques 2026",          couleur: "#10b981", debut: "2026-04-02", fin: "2026-04-18", mult: 1.15, biens: ["amaryllis","zandoli","iguana","geko","mabouya","schoelcher","nogent"] },
+  { id: "ete26",    nom: "Été 2026",             couleur: "#6366f1", debut: "2026-07-01", fin: "2026-08-31", mult: 1.30, biens: ["amaryllis","zandoli","iguana","geko","mabouya","schoelcher"] },
+  { id: "noel26",   nom: "Noël / Jour de l'an", couleur: "#ef4444", debut: "2026-12-20", fin: "2027-01-05", mult: 1.40, biens: ["amaryllis","zandoli","iguana","geko","mabouya","schoelcher"] },
+];
+
 function Tarifs({ reservations = [] }) {
   const [prices, setPrices] = useState(() => {
     try {
@@ -5272,12 +5284,75 @@ function Tarifs({ reservations = [] }) {
     } catch { return { ...DEFAULT_PRIX }; }
   });
   const [saved, setSaved] = useState(false);
+
+  // ── Seasonal periods ──
+  const [seasons, setSeasons] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(SEASONAL_KEY) || "null") || DEFAULT_SEASONS; }
+    catch { return DEFAULT_SEASONS; }
+  });
+  const [showSeasonForm, setShowSeasonForm] = useState(false);
+  const [editSeason, setEditSeason]   = useState(null); // null = new
+  const [seasonForm, setSeasonForm] = useState({ nom: "", couleur: SEASON_COLORS[0], debut: "", fin: "", mult: 1.2, biens: Object.keys(DEFAULT_PRIX) });
+  const [seasonSaved, setSeasonSaved] = useState(false);
+
+  function saveSeasons(next) {
+    setSeasons(next);
+    localStorage.setItem(SEASONAL_KEY, JSON.stringify(next));
+    window.dispatchEvent(new CustomEvent("amaryllis_seasons_updated", { detail: next }));
+    setSeasonSaved(true);
+    setTimeout(() => setSeasonSaved(false), 2000);
+  }
+  function openNewSeason() {
+    setEditSeason(null);
+    setSeasonForm({ nom: "", couleur: SEASON_COLORS[0], debut: "", fin: "", mult: 1.2, biens: Object.keys(DEFAULT_PRIX) });
+    setShowSeasonForm(true);
+  }
+  function openEditSeason(s) {
+    setEditSeason(s.id);
+    setSeasonForm({ nom: s.nom, couleur: s.couleur, debut: s.debut, fin: s.fin, mult: s.mult, biens: [...s.biens] });
+    setShowSeasonForm(true);
+  }
+  function submitSeasonForm() {
+    if (!seasonForm.nom || !seasonForm.debut || !seasonForm.fin) return;
+    const entry = { ...seasonForm, id: editSeason || `s_${Date.now()}` };
+    const next = editSeason
+      ? seasons.map(s => s.id === editSeason ? entry : s)
+      : [...seasons, entry];
+    saveSeasons(next);
+    setShowSeasonForm(false);
+  }
+  function deleteSeason(id) {
+    saveSeasons(seasons.filter(s => s.id !== id));
+  }
+  function toggleSeasonBien(bienId) {
+    setSeasonForm(f => ({
+      ...f,
+      biens: f.biens.includes(bienId) ? f.biens.filter(b => b !== bienId) : [...f.biens, bienId],
+    }));
+  }
+
   function save() {
     localStorage.setItem("amaryllis_prices", JSON.stringify(prices));
     window.dispatchEvent(new Event("amaryllis_prices_updated"));
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   }
+
+  // helper: is a date within a season?
+  const dateInSeason = (dateStr, s) => dateStr >= s.debut && dateStr <= s.fin;
+  // effective price for a bien on a given date
+  const effectivePrice = (bienId, dateStr) => {
+    const base = prices[bienId] || 0;
+    const activeSeason = seasons.find(s => s.biens.includes(bienId) && dateInSeason(dateStr, s));
+    return activeSeason ? Math.round(base * activeSeason.mult) : base;
+  };
+
+  // Preview: next 7 days effective price for each bien
+  const today = new Date();
+  const nextDays = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today); d.setDate(today.getDate() + i);
+    return d.toISOString().slice(0, 10);
+  });
 
   return (
     <div style={{ padding: "16px 0" }}>
@@ -5307,7 +5382,7 @@ function Tarifs({ reservations = [] }) {
       </div>
 
       {/* ── Remises automatiques ── */}
-      <div style={{ background: "rgba(196,114,84,0.06)", border: "1px solid rgba(196,114,84,0.2)", borderRadius: 12, padding: "12px 18px", marginBottom: 20, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+      <div style={{ background: "rgba(196,114,84,0.06)", border: "1px solid rgba(196,114,84,0.2)", borderRadius: 12, padding: "12px 18px", marginBottom: 24, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
         <span style={{ fontSize: 18 }}>🎁</span>
         <div>
           <div style={{ fontSize: 12, fontWeight: 700, color: "#e2e8f0" }}>Remises automatiques sur le site direct</div>
@@ -5315,9 +5390,171 @@ function Tarifs({ reservations = [] }) {
         </div>
       </div>
 
+      {/* ── Pricing saisonnier ── */}
+      <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 12, padding: "16px 18px", marginBottom: 28 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+          <span style={{ fontSize: 16 }}>🌊</span>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#e2e8f0" }}>Périodes tarifaires saisonnières</div>
+          <div style={{ fontSize: 11, color: "#475569", flex: 1 }}>Multiplicateurs sur le prix de base</div>
+          {seasonSaved && <span style={{ fontSize: 11, color: "#10b981", fontWeight: 600 }}>✓ Sauvegardé</span>}
+          <button
+            onClick={openNewSeason}
+            style={{ padding: "6px 13px", borderRadius: 7, border: "none", background: "rgba(99,102,241,0.18)", color: "#818cf8", fontWeight: 700, fontSize: 11, cursor: "pointer" }}
+          >+ Ajouter</button>
+        </div>
+
+        {seasons.length === 0 && (
+          <div style={{ textAlign: "center", color: "#475569", fontSize: 12, padding: "20px 0" }}>Aucune période configurée — cliquez sur « Ajouter »</div>
+        )}
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {seasons.map(s => {
+            const nbBiens = s.biens.length;
+            const pct = Math.round((s.mult - 1) * 100);
+            const sign = pct >= 0 ? "+" : "";
+            return (
+              <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.03)", borderRadius: 9, padding: "10px 14px", border: `1px solid ${s.couleur}22`, flexWrap: "wrap" }}>
+                <div style={{ width: 10, height: 10, borderRadius: "50%", background: s.couleur, flexShrink: 0 }} />
+                <div style={{ flex: "1 1 200px" }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#e2e8f0" }}>{s.nom}</div>
+                  <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{s.debut} → {s.fin} · {nbBiens} bien{nbBiens > 1 ? "s" : ""}</div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: pct >= 0 ? "#10b981" : "#ef4444" }}>{sign}{pct}%</span>
+                  <span style={{ fontSize: 10, color: "#475569" }}>× {s.mult.toFixed(2)}</span>
+                </div>
+                {/* Mini preview: prix pour chaque bien concerné */}
+                <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                  {s.biens.slice(0, 4).map(bId => (
+                    <span key={bId} style={{ fontSize: 10, background: `${s.couleur}22`, color: s.couleur, borderRadius: 4, padding: "2px 6px", fontWeight: 600 }}>
+                      {BIEN_LABELS[bId]?.replace("Villa ","").replace("T2 ","").slice(0,8)} {Math.round((prices[bId]||0) * s.mult)}€
+                    </span>
+                  ))}
+                  {s.biens.length > 4 && <span style={{ fontSize: 10, color: "#475569" }}>+{s.biens.length - 4}</span>}
+                </div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button onClick={() => openEditSeason(s)} style={{ padding: "4px 9px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "transparent", color: "#94a3b8", fontSize: 11, cursor: "pointer" }}>✏️</button>
+                  <button onClick={() => deleteSeason(s.id)} style={{ padding: "4px 9px", borderRadius: 6, border: "1px solid rgba(239,68,68,0.2)", background: "transparent", color: "#ef4444", fontSize: 11, cursor: "pointer" }}>🗑</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* ── Aperçu 7 prochains jours ── */}
+        {Object.keys(DEFAULT_PRIX).length > 0 && (
+          <div style={{ marginTop: 18, paddingTop: 16, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", marginBottom: 10 }}>APERÇU — 7 prochains jours (€/nuit effectif)</div>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10 }}>
+                <thead>
+                  <tr>
+                    <td style={{ padding: "4px 8px", color: "#475569", fontWeight: 700 }}>Bien</td>
+                    {nextDays.map(d => {
+                      const activeSeason = seasons.find(s => s.biens.some(() => true) && dateInSeason(d, s));
+                      return (
+                        <td key={d} style={{ padding: "4px 6px", textAlign: "center", color: activeSeason ? activeSeason.couleur : "#475569", fontWeight: activeSeason ? 700 : 400 }}>
+                          {d.slice(5)}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.keys(DEFAULT_PRIX).map(bId => (
+                    <tr key={bId} style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                      <td style={{ padding: "4px 8px", color: "#94a3b8", whiteSpace: "nowrap" }}>{BIEN_LABELS[bId]?.replace("Villa ","").replace("T2 ","")}</td>
+                      {nextDays.map(d => {
+                        const ep = effectivePrice(bId, d);
+                        const base = prices[bId] || 0;
+                        const boosted = ep !== base;
+                        const activeSeason = seasons.find(s => s.biens.includes(bId) && dateInSeason(d, s));
+                        return (
+                          <td key={d} style={{ padding: "4px 6px", textAlign: "center", fontWeight: boosted ? 700 : 400, color: boosted ? (activeSeason?.couleur || "#10b981") : "#475569", background: boosted ? `${activeSeason?.couleur || "#10b981"}11` : "transparent", borderRadius: 4 }}>
+                            {ep}€
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* ── Calendrier des prix (toujours visible) ── */}
       <div style={{ fontSize: 14, fontWeight: 700, color: "#e2e8f0", marginBottom: 16 }}>Calendrier des prix</div>
       <CalendrierTarifs reservations={reservations} />
+
+      {/* ── Modal form période saisonnière ── */}
+      {showSeasonForm && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={() => setShowSeasonForm(false)}>
+          <div style={{ background: "#1e293b", borderRadius: 14, padding: 24, width: "100%", maxWidth: 480, boxShadow: "0 20px 60px rgba(0,0,0,0.5)" }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "#e2e8f0", marginBottom: 18 }}>{editSeason ? "✏️ Modifier la période" : "➕ Nouvelle période tarifaire"}</div>
+
+            {/* Nom */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 5 }}>Nom de la période</div>
+              <input value={seasonForm.nom} onChange={e => setSeasonForm(f => ({ ...f, nom: e.target.value }))} placeholder="ex: Été 2026, Noël 2026…" style={{ width: "100%", padding: "8px 12px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.12)", background: "#0f172a", color: "#e2e8f0", fontSize: 12, outline: "none", boxSizing: "border-box" }} />
+            </div>
+
+            {/* Dates */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+              <div>
+                <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 5 }}>Début</div>
+                <input type="date" value={seasonForm.debut} onChange={e => setSeasonForm(f => ({ ...f, debut: e.target.value }))} style={{ width: "100%", padding: "8px 10px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.12)", background: "#0f172a", color: "#e2e8f0", fontSize: 12, outline: "none", boxSizing: "border-box" }} />
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 5 }}>Fin</div>
+                <input type="date" value={seasonForm.fin} onChange={e => setSeasonForm(f => ({ ...f, fin: e.target.value }))} style={{ width: "100%", padding: "8px 10px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.12)", background: "#0f172a", color: "#e2e8f0", fontSize: 12, outline: "none", boxSizing: "border-box" }} />
+              </div>
+            </div>
+
+            {/* Multiplicateur */}
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 5 }}>Multiplicateur de prix — {Math.round((seasonForm.mult - 1) * 100) >= 0 ? "+" : ""}{Math.round((seasonForm.mult - 1) * 100)}% sur le prix de base</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <input type="range" min="0.5" max="3" step="0.05" value={seasonForm.mult} onChange={e => setSeasonForm(f => ({ ...f, mult: parseFloat(e.target.value) }))} style={{ flex: 1, accentColor: seasonForm.couleur }} />
+                <input type="number" min="0.5" max="3" step="0.05" value={seasonForm.mult} onChange={e => setSeasonForm(f => ({ ...f, mult: parseFloat(e.target.value) || 1 }))} style={{ width: 64, padding: "6px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)", background: "#0f172a", color: "#e2e8f0", fontSize: 12, outline: "none", textAlign: "center" }} />
+              </div>
+            </div>
+
+            {/* Couleur */}
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 8 }}>Couleur</div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {SEASON_COLORS.map((c, i) => (
+                  <button key={c} onClick={() => setSeasonForm(f => ({ ...f, couleur: c }))} style={{ width: 26, height: 26, borderRadius: "50%", border: `3px solid ${seasonForm.couleur === c ? "#fff" : "transparent"}`, background: c, cursor: "pointer", flexShrink: 0 }} title={SEASON_COLOR_LABELS[i]} />
+                ))}
+              </div>
+            </div>
+
+            {/* Biens concernés */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 8 }}>Biens concernés ({seasonForm.biens.length}/{Object.keys(DEFAULT_PRIX).length})</div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {Object.keys(DEFAULT_PRIX).map(bId => {
+                  const active = seasonForm.biens.includes(bId);
+                  return (
+                    <button key={bId} onClick={() => toggleSeasonBien(bId)} style={{ padding: "5px 10px", borderRadius: 6, border: `1px solid ${active ? seasonForm.couleur : "rgba(255,255,255,0.1)"}`, background: active ? `${seasonForm.couleur}22` : "transparent", color: active ? seasonForm.couleur : "#64748b", fontSize: 11, fontWeight: active ? 700 : 400, cursor: "pointer" }}>
+                      {BIEN_LABELS[bId]?.replace("Villa ","").replace("T2 ","") || bId}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button onClick={() => setShowSeasonForm(false)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "transparent", color: "#94a3b8", fontSize: 12, cursor: "pointer" }}>Annuler</button>
+              <button onClick={submitSeasonForm} disabled={!seasonForm.nom || !seasonForm.debut || !seasonForm.fin} style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: (!seasonForm.nom || !seasonForm.debut || !seasonForm.fin) ? "#334155" : seasonForm.couleur, color: "#fff", fontSize: 12, fontWeight: 700, cursor: (!seasonForm.nom || !seasonForm.debut || !seasonForm.fin) ? "not-allowed" : "pointer" }}>
+                {editSeason ? "Modifier" : "Créer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -5372,10 +5609,15 @@ function PasswordGate({ onAuth }) {
   const [val, setVal] = useState("");
   const [err, setErr] = useState(false);
   const check = () => {
-    // Password is stored as plain-check in localStorage for simplicity
-    const stored = localStorage.getItem(PWD_KEY + "_set") || "vibu5Ade";
-    if (val === stored) { localStorage.setItem(PWD_KEY, "ok"); onAuth(); }
-    else { setErr(true); setTimeout(() => setErr(false), 1200); }
+    const storedAdmin  = localStorage.getItem(PWD_KEY + "_set")    || "vibu5Ade";
+    const storedMenage = localStorage.getItem("ldb_menage_pwd")     || "menage2026";
+    if (val === storedAdmin) {
+      localStorage.setItem(PWD_KEY, "ok"); localStorage.setItem("admin_role", "admin");
+      onAuth("admin");
+    } else if (val === storedMenage) {
+      localStorage.setItem(PWD_KEY, "ok"); localStorage.setItem("admin_role", "menage");
+      onAuth("menage");
+    } else { setErr(true); setTimeout(() => setErr(false), 1200); }
   };
   return (
     <div style={{ minHeight: "100vh", background: "#0a0f1e", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "system-ui,sans-serif" }}>
@@ -6010,6 +6252,56 @@ function AnalyticsTab({ mob }) {
 }
 
 // ============================================================================
+// LIVRET QR CODES
+// ============================================================================
+function LivretQR({ biens, mob }) {
+  const [copied, setCopied] = useState(null);
+  const copyUrl = (id, url) => {
+    navigator.clipboard.writeText(url).then(() => { setCopied(id); setTimeout(() => setCopied(null), 2000); }).catch(() => {});
+  };
+
+  const LIVRET_ITEMS = biens.map(b => ({
+    ...b,
+    url: `https://villamaryllis.com/${b.id}`,
+    qrUrl: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`https://villamaryllis.com/${b.id}`)}&color=e2e8f0&bgcolor=0f172a&margin=10`,
+  }));
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#e2e8f0", marginBottom: 3 }}>📱 QR Codes — Pages de réservation directe</div>
+          <div style={{ fontSize: 11, color: "#64748b" }}>À imprimer et déposer dans chaque logement. Le voyageur scanne → réserve directement sans commission.</div>
+        </div>
+        <button onClick={() => window.print()} style={{ padding: "7px 14px", borderRadius: 8, border: "none", background: "#0ea5e9", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>🖨 Imprimer tous</button>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: mob ? "1fr 1fr" : "repeat(auto-fill,minmax(200px,1fr))", gap: 14 }}>
+        {LIVRET_ITEMS.map(b => (
+          <div key={b.id} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 14, padding: 16, textAlign: "center" }}>
+            <div style={{ fontSize: 22, marginBottom: 4 }}>{b.emoji}</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#e2e8f0", marginBottom: 12 }}>{b.nom}</div>
+            <img
+              src={b.qrUrl}
+              alt={`QR ${b.nom}`}
+              loading="lazy"
+              style={{ width: 160, height: 160, borderRadius: 10, display: "block", margin: "0 auto 10px", border: "1px solid rgba(255,255,255,0.06)" }}
+            />
+            <div style={{ fontSize: 9, color: "#475569", wordBreak: "break-all", marginBottom: 8, lineHeight: 1.4 }}>{b.url}</div>
+            <button
+              onClick={() => copyUrl(b.id, b.url)}
+              style={{ width: "100%", padding: "6px 8px", borderRadius: 7, border: `1px solid ${copied === b.id ? "#10b981" : "rgba(255,255,255,0.1)"}`, background: copied === b.id ? "rgba(16,185,129,0.12)" : "transparent", color: copied === b.id ? "#10b981" : "#0ea5e9", fontSize: 10, fontWeight: 600, cursor: "pointer" }}
+            >{copied === b.id ? "✓ Copié !" : "📋 Copier l'URL"}</button>
+          </div>
+        ))}
+      </div>
+      <div style={{ marginTop: 18, background: "rgba(14,165,233,0.06)", border: "1px solid rgba(14,165,233,0.15)", borderRadius: 10, padding: "10px 14px", fontSize: 11, color: "#94a3b8" }}>
+        💡 <strong>Astuce :</strong> Imprimez le QR sur une carte plastifiée A5 ou un cadre photo et posez-le sur la table basse. "Réservez directement ici — sans frais de service" = +15% de marge sur les réservations directes.
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
 // TRAVAUX
 // ============================================================================
 const TRAVAUX_KEY = "amaryllis_travaux";
@@ -6179,6 +6471,7 @@ function Travaux({ biens, mob }) {
 // ============================================================================
 export default function App() {
   const [authed, setAuthed] = useState(() => localStorage.getItem(PWD_KEY) === "ok");
+  const [role,   setRole]   = useState(() => localStorage.getItem("admin_role") || "admin");
   const [tab, setTabRaw] = useState(() => { try { return localStorage.getItem("admin_tab") || "planning"; } catch { return "planning"; } });
   const setTab = useCallback((t) => { setTabRaw(t); try { localStorage.setItem("admin_tab", t); } catch {} }, []);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -6205,6 +6498,8 @@ export default function App() {
   const [showPushSetup, setShowPushSetup] = useState(false);
   const [showRapport, setShowRapport] = useState(false);
   const [rapportMois, setRapportMois] = useState(() => new Date().getMonth());
+  const [menagePwd, setMenagePwd] = useState(() => localStorage.getItem("ldb_menage_pwd") || "menage2026");
+  const [menagePwdSaved, setMenagePwdSaved] = useState(false);
   const [ntfyTopic, setNtfyTopic] = useState(() => localStorage.getItem("ntfy_topic") || "");
   const [hist, setHist] = useState(HIST_SEED);
   const [globalSyncStatus, setGlobalSyncStatus] = useState("idle"); // idle | syncing | ok | error
@@ -6370,7 +6665,7 @@ export default function App() {
     fetch(`${scriptUrl}?${p}`, { redirect: "follow" }).catch(() => {});
   }, [scriptUrl]);
 
-  if (!authed) return <PasswordGate onAuth={() => setAuthed(true)} />;
+  if (!authed) return <PasswordGate onAuth={(r) => { setAuthed(true); setRole(r || "admin"); }} />;
 
   const ytd = biens.reduce((s, b) => s + sumN(b.revenus, n), 0);
   const cf = biens.reduce((s, b) => s + sumN(b.cashflow, n), 0);
@@ -6426,13 +6721,20 @@ export default function App() {
       id: "tools", label: "Outils",
       items: [
         { id: "travaux",     icon: "🔧", label: "Travaux",    badge: (() => { try { const n = JSON.parse(localStorage.getItem(TRAVAUX_KEY)||"[]").filter(t => t.status !== "done" && t.priorite === "urgent").length; return n > 0 ? n : null; } catch { return null; } })(), badgeColor: "#ef4444" },
+        { id: "livrets",     icon: "📱", label: "QR / Livrets" },
         { id: "devis",       icon: "📋", label: "Devis" },
         { id: "guides",      icon: "📖", label: "Guides" },
       ],
     },
   ];
 
-  const allNavItems = NAV_GROUPS.flatMap(g => g.items);
+  // Filtrer la nav selon le rôle (ménage = planning + ménage uniquement)
+  const MENAGE_TABS = new Set(["planning", "menage"]);
+  const visibleGroups = role === "menage"
+    ? [{ id: "ops", label: "Opérations", items: NAV_GROUPS[0].items.filter(i => MENAGE_TABS.has(i.id)) }]
+    : NAV_GROUPS;
+
+  const allNavItems = visibleGroups.flatMap(g => g.items);
   const currentNavItem = allNavItems.find(i => i.id === tab);
 
   /* ── boutons d'action communs (sync, settings…) ── */
@@ -6462,7 +6764,8 @@ export default function App() {
         const a = document.createElement("a"); a.href = url; a.download = `reservations_${year}.csv`; a.click(); URL.revokeObjectURL(url);
       }} title={`Exporter réservations ${new Date().getFullYear()} CSV`} style={{ padding: "4px 6px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "transparent", color: "#475569", fontSize: 10, cursor: "pointer" }}>📥</button>
       <a href="/" target="_blank" rel="noopener noreferrer" title="Site public" style={{ padding: "4px 6px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "transparent", color: "#475569", fontSize: 10, cursor: "pointer", textDecoration: "none" }}>🌐</a>
-      <button onClick={() => { localStorage.removeItem(PWD_KEY); setAuthed(false); }} title="Déconnexion" style={{ padding: "4px 6px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "transparent", color: "#475569", fontSize: 10, cursor: "pointer" }}>🔒</button>
+      {role === "menage" && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 8, background: "rgba(245,158,11,0.15)", color: "#f59e0b", fontWeight: 600 }}>🧹 Ménage</span>}
+      <button onClick={() => { localStorage.removeItem(PWD_KEY); localStorage.removeItem("admin_role"); setAuthed(false); setRole("admin"); }} title="Déconnexion" style={{ padding: "4px 6px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "transparent", color: "#475569", fontSize: 10, cursor: "pointer" }}>🔒</button>
     </div>
   );
 
@@ -6501,7 +6804,7 @@ export default function App() {
 
           {/* Groupes de navigation */}
           <nav style={{ flex: 1, padding: "8px 0 16px" }}>
-            {NAV_GROUPS.map(group => (
+            {visibleGroups.map(group => (
               <div key={group.id} style={{ marginTop: 16 }}>
                 <div style={{ padding: "0 14px 5px", fontSize: 9, fontWeight: 700, color: "#334155", letterSpacing: 1, textTransform: "uppercase" }}>{group.label}</div>
                 {group.items.map(item => {
@@ -6566,8 +6869,9 @@ export default function App() {
             {tab === "messages" && <MessageTemplates biens={biens} reservations={reservations} mob={mob} />}
             {tab === "emails" && <EmailSync mob={mob} />}
             {tab === "cautions" && <Cautions />}
-            {tab === "travaux" && <Travaux biens={biens} mob={mob} />}
-            {tab === "devis" && <DevisEditor />}
+            {tab === "travaux"  && <Travaux biens={biens} mob={mob} />}
+            {tab === "livrets"  && <LivretQR biens={biens} mob={mob} />}
+            {tab === "devis"    && <DevisEditor />}
             {tab === "guides" && <GuideEditor mob={mob} />}
           </div>
         </div>
@@ -6772,6 +7076,16 @@ export default function App() {
                 }}
                 style={{ padding: "7px 14px", borderRadius: 7, border: "none", background: "#0ea5e9", color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600 }}
               >Enregistrer</button>
+            </div>
+
+            {/* ── Accès Ménage ── */}
+            <div style={{ marginTop: 20, borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#f59e0b", marginBottom: 4 }}>🧹 Accès Ménage (prestataire)</div>
+              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 10 }}>Mot de passe donnant accès à Planning + Ménage uniquement — sans les données financières.</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input type="text" value={menagePwd} onChange={e => setMenagePwd(e.target.value)} placeholder="mot de passe ménage" style={{ flex: 1, padding: "7px 10px", background: "#0f172a", border: "1px solid #334155", borderRadius: 7, color: "#e2e8f0", fontSize: 12 }} />
+                <button onClick={() => { localStorage.setItem("ldb_menage_pwd", menagePwd); setMenagePwdSaved(true); setTimeout(() => setMenagePwdSaved(false), 2000); }} style={{ padding: "7px 12px", borderRadius: 7, border: "none", background: menagePwdSaved ? "#10b981" : "#f59e0b", color: "#000", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>{menagePwdSaved ? "✓ OK" : "Sauvegarder"}</button>
+              </div>
             </div>
           </div>
         </div>
