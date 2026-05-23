@@ -1,8 +1,27 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import MerciPage from "./Merci.jsx";
 import { loadDailyPrices, applyServerPriceOverrides } from "./seedPrices.js";
 import SEOMeta from "./SEOMeta.jsx";
 import { Reveal } from "./useReveal.jsx";
 import { useLang, LangToggle } from "./i18n.jsx";
+
+// ── Retry utility for availability fetch ────────────────────────
+async function fetchWithRetry(url, options = {}, retries = 3, delay = 800) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const res = await fetch(url, options);
+      if (res.ok) return res;
+      if (res.status >= 500 && i < retries - 1) {
+        await new Promise(r => setTimeout(r, delay * (i + 1)));
+        continue;
+      }
+      return res;
+    } catch (e) {
+      if (i < retries - 1) await new Promise(r => setTimeout(r, delay * (i + 1)));
+      else throw e;
+    }
+  }
+}
 
 // ── Brand palette (from logos.jsx) ──────────────────────────────
 // Remises par durée de séjour (appliquées sur le sous-total)
@@ -609,7 +628,7 @@ const BIENS = [
       "/photos/nogent/19.webp",
       "/photos/nogent/20.webp",
     ],
-    beds24Url: "https://beds24.com/booking2.php?propid=158192&referer=iframe",
+    useBeds24: true, // Réservation via notre API beds24-create (plus d'iframe)
     coords: { lat: 48.8374, lng: 2.4836 },
     mapsEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d463.17188664330297!2d2.4757244130102185!3d48.83615034492648!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x47e60d41b4fd90d1%3A0x4f6c2445f955ea44!2s21%20Gd%20Rue%20Charles%20de%20Gaulle%2C%2094130%20Nogent-sur-Marne!5e0!3m2!1sfr!2sfr!4v1779047281540!5m2!1sfr!2sfr",
     amenities: ["Bord Marne", "Jardin", "RER A (20 min Paris)", "Parking", "Wifi"],
@@ -705,6 +724,8 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
   const lastDate = new Date(year, month + 1, 0).getDate();
   const startDow = (firstDay.getDay() + 6) % 7;
 
+  const blockedSet = useMemo(() => new Set(blockedDates), [blockedDates]);
+
   const cells = [];
   for (let i = 0; i < startDow; i++) cells.push(null);
   for (let d = 1; d <= lastDate; d++) {
@@ -713,7 +734,7 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
 
   // ── Heatmap : calcul min/max sur les jours libres du mois ─────────
   const freePrices = cells
-    .filter(ds => ds && ds >= todayStr && !blockedDates.includes(ds))
+    .filter(ds => ds && ds >= todayStr && !blockedSet.has(ds))
     .map(ds => dailyPricesMap[ds] ?? basePrice)
     .filter(p => p > 0);
   const heatMin = freePrices.length ? Math.min(...freePrices) : 0;
@@ -721,7 +742,7 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
   const heatRange = heatMax - heatMin;
 
   function heatBg(ds) {
-    if (!ds || !heatRange || ds < todayStr || blockedDates.includes(ds)) return null;
+    if (!ds || !heatRange || ds < todayStr || blockedSet.has(ds)) return null;
     const p = dailyPricesMap[ds] ?? basePrice;
     if (!p) return null;
     const t = Math.max(0, Math.min(1, (p - heatMin) / heatRange));
@@ -741,7 +762,7 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
   function getState(ds) {
     if (!ds) return "empty";
     if (ds < todayStr) return "past";
-    if (blockedDates.includes(ds)) return "blocked";
+    if (blockedSet.has(ds)) return "blocked";
     if (isBelowMin(ds)) return "belowmin";
     if (ds === checkin) return "checkin";
     if (ds === checkout) return "checkout";
@@ -947,7 +968,7 @@ function ShaderBg({ style = {} }) {
     const c = ref.current;
     if (!c) return;
     const ctx = c.getContext("2d");
-    let rid, t = 0;
+    let rid = null, t = 0;
 
     function resize() {
       const r = Math.min(window.devicePixelRatio || 1, 2);
@@ -988,7 +1009,7 @@ function ShaderBg({ style = {} }) {
       rid = requestAnimationFrame(draw);
     }
     draw();
-    return () => { cancelAnimationFrame(rid); ro.disconnect(); };
+    return () => { if (rid) cancelAnimationFrame(rid); ro.disconnect(); };
   }, []);
 
   return (
@@ -1132,15 +1153,17 @@ function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) 
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amount:   finalAmount * 100,
-          currency: "eur",
+          amount:    finalAmount * 100,
+          currency:  "eur",
+          bookingId: cd.bookingId,
           metadata: {
-            bienId:   bien.id,
-            checkin:  localCheckin,
-            checkout: localCheckout,
-            voyageur: `${form.prenom} ${form.nom}`.trim(),
-            email:    form.email.trim(),
-            beds24Id: cd.bookingId,
+            bienId:    bien.id,
+            checkin:   localCheckin,
+            checkout:  localCheckout,
+            voyageur:  `${form.prenom} ${form.nom}`.trim(),
+            email:     form.email.trim(),
+            beds24Id:  cd.bookingId,
+            bookingId: cd.bookingId,
           },
         }),
       });
@@ -2085,8 +2108,8 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
             <div id="spe-deposit" style={{ marginBottom: 24 }} />
             <button
               onClick={handleDeposit}
-              disabled={depositPaying}
-              style={{ ...btnPrimary, width: "100%", background: depositPaying ? SAND : "#d97706", color: "#fff", opacity: depositPaying ? 0.6 : 1 }}
+              disabled={paying || depositPaying}
+              style={{ ...btnPrimary, width: "100%", background: depositPaying ? SAND : "#d97706", color: "#fff", opacity: (paying || depositPaying) ? 0.6 : 1 }}
             >
               {depositPaying ? "Traitement…" : `🔒 Valider le blocage de la caution — ${depositAmt.toLocaleString("fr-FR")} €`}
             </button>
@@ -2202,6 +2225,8 @@ function BienCard({ bien, onDetail, onBook, isFavorite = false, onToggleFavorite
             key={photoIdx}
             src={currentPhoto}
             alt={`${bien.nom} — ${bien.lieu} — photo ${photoIdx + 1}`}
+            width="400"
+            height="267"
             loading={photoIdx === 0 ? "eager" : "lazy"}
             decoding="async"
             fetchPriority={photoIdx === 0 ? "high" : "low"}
@@ -3107,7 +3132,8 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
               );
 
               /* On mobile, show full calendar + price summary in left column.
-                 On desktop, show ONLY the calendar section (price summary lives in sticky widget). */
+                 On desktop, the sticky widget already shows the calendar — hide left column duplicate. */
+              if (!isMobile) return null;
               return (
                 <>
                   <div style={{ height: 1, background: SAND, marginBottom: 26 }} />
@@ -4725,7 +4751,7 @@ function FaqSection() {
 }
 
 // ── Contact Section ──────────────────────────────────────────────
-const EMAIL = "vinsmaf@hotmail.com";
+const EMAIL = "contact@villamaryllis.com";
 
 function FooterSection() {
   const [form, setForm] = useState({ nom: "", email: "", message: "" });
@@ -4891,118 +4917,6 @@ function ContactField({ label, value, onChange, type = "text", multiline, requir
   );
 }
 
-// ── Thank you page ───────────────────────────────────────────────
-function MerciPage() {
-  const params = new URLSearchParams(window.location.search);
-  const depositDone = params.get("deposit") === "1";
-  const paymentRedirected = !!params.get("payment_intent");
-  const depositCs = sessionStorage.getItem("deposit_cs");
-  const depositAmt = Number(sessionStorage.getItem("deposit_amt") || 0);
-  const depositBien = sessionStorage.getItem("deposit_bien") || "";
-
-  const [stripe, setStripe] = useState(null);
-  const [elements, setElements] = useState(null);
-  const [paying, setPaying] = useState(false);
-  const [error, setError] = useState("");
-
-  // Payment redirected via 3DS + deposit pending → mount deposit form
-  const showDepositForm = paymentRedirected && depositCs && !depositDone;
-
-  useEffect(() => {
-    if (window.Stripe) setStripe(window.Stripe(STRIPE_PK));
-  }, []);
-
-  useEffect(() => {
-    if (!showDepositForm || !stripe || !depositCs) return;
-    const appearance = { theme: "stripe", variables: { colorPrimary: CORAL, borderRadius: "8px", colorBackground: CREAM, colorText: NAVY } };
-    const el = stripe.elements({ clientSecret: depositCs, appearance });
-    el.create("payment").mount("#spe-merci-deposit");
-    setElements(el);
-  }, [showDepositForm, stripe, depositCs]);
-
-  async function handleDepositMerci() {
-    if (!stripe || !elements) return;
-    setPaying(true); setError("");
-    const { error: err } = await stripe.confirmPayment({
-      elements,
-      confirmParams: { return_url: window.location.origin + "/merci?deposit=1" },
-      redirect: "if_required",
-    });
-    if (err) setError(err.message);
-    setPaying(false);
-  }
-
-  // Deposit completed → clear sessionStorage
-  useEffect(() => {
-    if (depositDone) {
-      sessionStorage.removeItem("deposit_cs");
-      sessionStorage.removeItem("deposit_amt");
-      sessionStorage.removeItem("deposit_bien");
-      sessionStorage.removeItem("deposit_checkin");
-      sessionStorage.removeItem("deposit_checkout");
-    }
-  }, [depositDone]);
-
-  // Purchase event pour les paiements 3DS redirigés vers /merci
-  useEffect(() => {
-    if (paymentRedirected && !depositDone && window.gtag) {
-      const pi = params.get("payment_intent");
-      window.gtag("event", "purchase", {
-        transaction_id: pi,
-        currency: "EUR",
-        value: 0, // montant inconnu après redirect, GA4 compte quand même la conversion
-      });
-    }
-  }, []);
-
-  if (showDepositForm) {
-    return (
-      <div style={{ minHeight: "100vh", background: IVORY, display: "flex", alignItems: "center", justifyContent: "center", padding: 32 }}>
-        <div style={{ maxWidth: 480, width: "100%" }}>
-          <div style={{ textAlign: "center", marginBottom: 32 }}>
-            <div style={{ width: 70, height: 70, borderRadius: "50%", background: "rgba(200,85,61,0.1)", border: `2px solid ${CORAL}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, margin: "0 auto 20px" }}>✓</div>
-            <h1 style={{ fontSize: 26, fontWeight: 900, color: NAVY, marginBottom: 8 }}>Paiement confirmé !</h1>
-            <p style={{ color: MUTED, fontSize: 14, lineHeight: 1.6 }}>Une dernière étape : le dépôt de garantie pour <strong>{depositBien}</strong>.</p>
-          </div>
-          <div style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.3)", borderRadius: 12, padding: "16px 20px", marginBottom: 24 }}>
-            <div style={{ fontWeight: 700, color: "#92400e", fontSize: 14, marginBottom: 6 }}>🔒 Dépôt de garantie — {depositAmt.toLocaleString("fr-FR")} €</div>
-            <div style={{ color: "#78350f", fontSize: 13, lineHeight: 1.6 }}>
-              Montant <strong>bloqué</strong> mais <strong>non débité</strong>. Libéré automatiquement après votre départ sans dommages.
-            </div>
-          </div>
-          <div id="spe-merci-deposit" style={{ marginBottom: 24 }} />
-          <button
-            onClick={handleDepositMerci}
-            disabled={paying}
-            style={{ ...btnPrimary, width: "100%", background: paying ? SAND : "#d97706", color: "#fff", opacity: paying ? 0.6 : 1 }}
-          >
-            {paying ? "Traitement…" : `🔒 Valider le blocage — ${depositAmt.toLocaleString("fr-FR")} €`}
-          </button>
-          {error && <div style={{ ...errStyle, marginTop: 12 }}>⚠ {error}</div>}
-          <div style={{ marginTop: 16, textAlign: "center", color: MUTED, fontSize: 12 }}>🔒 Pré-autorisation sécurisée · Aucun débit sans dommage constaté</div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ minHeight: "100vh", background: IVORY, display: "flex", alignItems: "center", justifyContent: "center", color: NAVY, textAlign: "center", padding: 32 }}>
-      <div>
-        <div style={{ width: 80, height: 80, borderRadius: "50%", background: `rgba(200,85,61,0.1)`, border: `2px solid ${CORAL}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36, margin: "0 auto 28px" }}>✓</div>
-        <h1 style={{ fontSize: 34, fontWeight: 900, marginBottom: 12, color: NAVY }}>Réservation confirmée !</h1>
-        <p style={{ color: MUTED, fontSize: 16, maxWidth: 420, margin: "0 auto 32px", lineHeight: 1.6 }}>
-          Merci pour votre réservation. Un email de confirmation vous sera envoyé dans quelques minutes.
-        </p>
-        {depositDone && (
-          <p style={{ color: "#92400e", fontSize: 14, maxWidth: 380, margin: "-20px auto 28px", background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 10, padding: "12px 16px" }}>
-            🔒 Dépôt de garantie bloqué · Libéré automatiquement après votre séjour
-          </p>
-        )}
-        <a href="/" style={{ ...btnPrimary, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 8, background: CORAL, color: "#fff" }}>← Retour à l'accueil</a>
-      </div>
-    </div>
-  );
-}
 
 // ── Logo Nav Dropdown ─────────────────────────────────────────────
 function LogoDropdown() {
@@ -5675,6 +5589,8 @@ export default function PublicSite() {
   const [blockedDates, setBlockedDates] = useState([]);
   const [loadingAvail, setLoadingAvail] = useState(false);
   const fetchAbortRef = useRef(null);
+  // Ref pour éviter le double-déclenchement de fetchAvailability en mode _directBien
+  const directBienFetchedRef = useRef(false);
   const [priceOverrides, setPriceOverrides] = useState(loadPriceOverrides);
   const [curtainDone, setCurtainDone] = useState(false);
   const [showExitIntent, setShowExitIntent] = useState(false);
@@ -5760,7 +5676,6 @@ export default function PublicSite() {
     const ctrl = new AbortController();
     fetchAbortRef.current = ctrl;
 
-    setBlockedDates([]);
     setLoadingAvail(true);
     try {
       let apiUrl = `/api/get-availability?bienId=${bienId}`;
@@ -5768,7 +5683,7 @@ export default function PublicSite() {
         const bookingUrls = JSON.parse(localStorage.getItem("ical_urls_booking") || "{}");
         if (bookingUrls[bienId]) apiUrl += `&bookingUrl=${encodeURIComponent(bookingUrls[bienId])}`;
       } catch {}
-      const r = await fetch(apiUrl, { signal: ctrl.signal });
+      const r = await fetchWithRetry(apiUrl, { signal: ctrl.signal });
       if (r.ok) {
         const d = await r.json();
         setBlockedDates(d.blockedDates || []);
@@ -5955,7 +5870,7 @@ export default function PublicSite() {
 
   async function openBien(bien, initialCheckin = null, initialCheckout = null) {
     if (BOOKING_DISABLED.has(bien.id)) return;
-    if (bien.beds24Url) {
+    if (bien.useBeds24) {
       openDetail(null);
       // Fallback : lire les dates depuis l'URL si non fournies par le calendrier
       const _p = new URLSearchParams(window.location.search);
@@ -6018,6 +5933,9 @@ export default function PublicSite() {
   }, []);
 
   // Auto-open property detail if URL matches a bien ID (e.g. /amaryllis)
+  // Couvre aussi le mode page directe (_directBien) : si l'utilisateur accède directement à
+  // /nogent (ou tout autre bien), fetchAvailability est appelé ici au montage pour charger
+  // les blockedDates. directBienFetchedRef évite le double-déclenchement.
   useEffect(() => {
     const pathId = window.location.pathname.slice(1);
     if (pathId && pathId !== "merci" && pathId !== "devis") {
@@ -6025,9 +5943,13 @@ export default function PublicSite() {
       if (match) {
         const withPrice = { ...match, prix: loadPriceOverrides()[match.id] ?? match.prix };
         setDetailBien(withPrice);
-        if (!BOOKING_DISABLED.has(match.id)) fetchAvailability(match.id);
+        if (!BOOKING_DISABLED.has(match.id) && !directBienFetchedRef.current) {
+          directBienFetchedRef.current = true;
+          fetchAvailability(match.id);
+        }
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Back button — fermer la fiche / modale quand l'utilisateur appuie sur Retour

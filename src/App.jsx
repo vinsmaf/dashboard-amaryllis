@@ -5608,16 +5608,36 @@ const VALID_HASH = "8e4b1a3d9f2c6e7b0a5d3f8c2e1b9a4d"; // sha-lite placeholder
 function PasswordGate({ onAuth }) {
   const [val, setVal] = useState("");
   const [err, setErr] = useState(false);
-  const check = () => {
-    const storedAdmin  = localStorage.getItem(PWD_KEY + "_set")    || "vibu5Ade";
-    const storedMenage = localStorage.getItem("ldb_menage_pwd")     || "menage2026";
-    if (val === storedAdmin) {
-      localStorage.setItem(PWD_KEY, "ok"); localStorage.setItem("admin_role", "admin");
-      onAuth("admin");
-    } else if (val === storedMenage) {
-      localStorage.setItem(PWD_KEY, "ok"); localStorage.setItem("admin_role", "menage");
-      onAuth("menage");
-    } else { setErr(true); setTimeout(() => setErr(false), 1200); }
+  const [errMsg, setErrMsg] = useState("Mot de passe incorrect");
+  const [loading, setLoading] = useState(false);
+  const check = async () => {
+    if (!val || loading) return;
+    setLoading(true);
+    setErr(false);
+    try {
+      const res = await fetch("/api/admin-auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: val }),
+      });
+      let data;
+      try { data = await res.json(); } catch { data = {}; }
+      if (data.ok && data.role) {
+        sessionStorage.setItem(PWD_KEY, "ok");
+        sessionStorage.setItem("admin_role", data.role);
+        onAuth(data.role);
+      } else {
+        setErrMsg("Mot de passe incorrect");
+        setErr(true);
+        setTimeout(() => setErr(false), 1200);
+      }
+    } catch {
+      setErrMsg("Erreur réseau — réessaie");
+      setErr(true);
+      setTimeout(() => setErr(false), 2500);
+    } finally {
+      setLoading(false);
+    }
   };
   return (
     <div style={{ minHeight: "100vh", background: "#0a0f1e", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "system-ui,sans-serif" }}>
@@ -5634,12 +5654,13 @@ function PasswordGate({ onAuth }) {
           autoFocus
           style={{ width: "100%", padding: "11px 14px", borderRadius: 10, border: `1px solid ${err ? "#ef4444" : "rgba(255,255,255,0.15)"}`, background: "#0f172a", color: "#e2e8f0", fontSize: 14, boxSizing: "border-box", marginBottom: 10, outline: "none", transition: "border 0.2s" }}
         />
-        {err && <div style={{ color: "#ef4444", fontSize: 12, marginBottom: 8 }}>Mot de passe incorrect</div>}
+        {err && <div style={{ color: "#ef4444", fontSize: 12, marginBottom: 8 }}>{errMsg}</div>}
         <button
           onClick={check}
-          style={{ width: "100%", padding: "11px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#0ea5e9,#6366f1)", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer" }}
-        >Entrer</button>
-        <div style={{ fontSize: 10, color: "#334155", marginTop: 16 }}>dashboardamaryllis.netlify.app</div>
+          disabled={loading}
+          style={{ width: "100%", padding: "11px", borderRadius: 10, border: "none", background: loading ? "#334155" : "linear-gradient(135deg,#0ea5e9,#6366f1)", color: "#fff", fontSize: 14, fontWeight: 700, cursor: loading ? "default" : "pointer", transition: "background 0.2s" }}
+        >{loading ? "Connexion..." : "Entrer"}</button>
+        <div style={{ fontSize: 10, color: "#334155", marginTop: 16 }}>villamaryllis.com/admin</div>
       </div>
     </div>
   );
@@ -6470,8 +6491,8 @@ function Travaux({ biens, mob }) {
 // APP
 // ============================================================================
 export default function App() {
-  const [authed, setAuthed] = useState(() => localStorage.getItem(PWD_KEY) === "ok");
-  const [role,   setRole]   = useState(() => localStorage.getItem("admin_role") || "admin");
+  const [authed, setAuthed] = useState(() => sessionStorage.getItem(PWD_KEY) === "ok");
+  const [role,   setRole]   = useState(() => sessionStorage.getItem("admin_role") || "admin");
   const [tab, setTabRaw] = useState(() => { try { return localStorage.getItem("admin_tab") || "planning"; } catch { return "planning"; } });
   const setTab = useCallback((t) => { setTabRaw(t); try { localStorage.setItem("admin_tab", t); } catch {} }, []);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -6498,8 +6519,6 @@ export default function App() {
   const [showPushSetup, setShowPushSetup] = useState(false);
   const [showRapport, setShowRapport] = useState(false);
   const [rapportMois, setRapportMois] = useState(() => new Date().getMonth());
-  const [menagePwd, setMenagePwd] = useState(() => localStorage.getItem("ldb_menage_pwd") || "menage2026");
-  const [menagePwdSaved, setMenagePwdSaved] = useState(false);
   const [ntfyTopic, setNtfyTopic] = useState(() => localStorage.getItem("ntfy_topic") || "");
   const [hist, setHist] = useState(HIST_SEED);
   const [globalSyncStatus, setGlobalSyncStatus] = useState("idle"); // idle | syncing | ok | error
@@ -6562,7 +6581,19 @@ export default function App() {
       setN(f.moisActifs || N);
       setLastSync(f.lastSync);
       const ts = Date.now(); setLastSyncTs(ts); try { localStorage.setItem("last_sync_ts", String(ts)); } catch {}
+      // Mettre à jour hist depuis Sheets (années passées)
       if (f.hist && Object.keys(f.hist).length > 0) setHist(prev => ({ ...prev, ...f.hist }));
+      // Reconstruire l'entrée hist[année courante] depuis les données biens synchées
+      const currentYear = new Date().getFullYear();
+      setHist(prev => ({
+        ...prev,
+        [currentYear]: {
+          ...Object.fromEntries(f.biens.map(b => [b.id, b.revenus])),
+          total: Array.from({ length: 12 }, (_, m) =>
+            f.biens.reduce((s, b) => s + (b.revenus[m] || 0), 0)
+          ),
+        },
+      }));
       setSync({ status: "ok", msg: `✓ ${f.lastSync}` });
     } catch (e) {
       setSync({ status: "error", msg: `⚠ ${e.message}` });
@@ -6765,7 +6796,7 @@ export default function App() {
       }} title={`Exporter réservations ${new Date().getFullYear()} CSV`} style={{ padding: "4px 6px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "transparent", color: "#475569", fontSize: 10, cursor: "pointer" }}>📥</button>
       <a href="/" target="_blank" rel="noopener noreferrer" title="Site public" style={{ padding: "4px 6px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "transparent", color: "#475569", fontSize: 10, cursor: "pointer", textDecoration: "none" }}>🌐</a>
       {role === "menage" && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 8, background: "rgba(245,158,11,0.15)", color: "#f59e0b", fontWeight: 600 }}>🧹 Ménage</span>}
-      <button onClick={() => { localStorage.removeItem(PWD_KEY); localStorage.removeItem("admin_role"); setAuthed(false); setRole("admin"); }} title="Déconnexion" style={{ padding: "4px 6px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "transparent", color: "#475569", fontSize: 10, cursor: "pointer" }}>🔒</button>
+      <button onClick={() => { sessionStorage.removeItem(PWD_KEY); sessionStorage.removeItem("admin_role"); setAuthed(false); setRole("admin"); }} title="Déconnexion" style={{ padding: "4px 6px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "transparent", color: "#475569", fontSize: 10, cursor: "pointer" }}>🔒</button>
     </div>
   );
 
@@ -7081,11 +7112,8 @@ export default function App() {
             {/* ── Accès Ménage ── */}
             <div style={{ marginTop: 20, borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 16 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: "#f59e0b", marginBottom: 4 }}>🧹 Accès Ménage (prestataire)</div>
-              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 10 }}>Mot de passe donnant accès à Planning + Ménage uniquement — sans les données financières.</div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <input type="text" value={menagePwd} onChange={e => setMenagePwd(e.target.value)} placeholder="mot de passe ménage" style={{ flex: 1, padding: "7px 10px", background: "#0f172a", border: "1px solid #334155", borderRadius: 7, color: "#e2e8f0", fontSize: 12 }} />
-                <button onClick={() => { localStorage.setItem("ldb_menage_pwd", menagePwd); setMenagePwdSaved(true); setTimeout(() => setMenagePwdSaved(false), 2000); }} style={{ padding: "7px 12px", borderRadius: 7, border: "none", background: menagePwdSaved ? "#10b981" : "#f59e0b", color: "#000", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>{menagePwdSaved ? "✓ OK" : "Sauvegarder"}</button>
-              </div>
+              <div style={{ fontSize: 11, color: "#64748b" }}>Mot de passe donnant accès à Planning + Ménage uniquement — sans les données financières.</div>
+              <div style={{ fontSize: 11, color: "#475569", marginTop: 6 }}>Le mot de passe ménage est configuré côté serveur via la variable <code style={{ background: "#0f172a", padding: "1px 5px", borderRadius: 4, color: "#94a3b8" }}>ADMIN_PWD_MENAGE</code> dans Cloudflare Pages.</div>
             </div>
           </div>
         </div>

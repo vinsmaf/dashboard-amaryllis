@@ -1,7 +1,22 @@
 import { StrictMode, lazy, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
+import * as Sentry from "@sentry/react"
 import './index.css'
 import { LangProvider } from './i18n.jsx'
+
+Sentry.init({
+  dsn: import.meta.env.VITE_SENTRY_DSN || "",
+  environment: import.meta.env.MODE,
+  enabled: !!import.meta.env.VITE_SENTRY_DSN,
+  integrations: [
+    Sentry.browserTracingIntegration(),
+  ],
+  tracesSampleRate: 0.1,
+  ignoreErrors: [
+    "ResizeObserver loop limit exceeded",
+    "Non-Error promise rejection",
+  ],
+})
 
 // Code splitting — chaque composant est chargé uniquement si la route correspond
 const App        = lazy(() => import('./App.jsx'))
@@ -19,6 +34,7 @@ const GuideTroisIlets = lazy(() => import('./GuideTroisIlets.jsx'))
 const Avis            = lazy(() => import('./Avis.jsx'))
 const NotFound        = lazy(() => import('./NotFound.jsx'))
 const GuestGuide      = lazy(() => import('./GuestGuide.jsx'))
+const Merci           = lazy(() => import('./Merci.jsx'))
 
 const path = window.location.pathname;
 const params = new URLSearchParams(window.location.search);
@@ -60,6 +76,8 @@ if (!isKnown) {
   Component = GuideTroisIlets;
 } else if (path === "/avis") {
   Component = Avis;
+} else if (path === "/merci") {
+  Component = Merci;
 } else if (path.startsWith("/bienvenue")) {
   Component = GuestGuide;
 } else {
@@ -91,10 +109,12 @@ function CautionPage({ status }) {
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <LangProvider>
-      <Suspense fallback={<div style={{ minHeight: "100vh", background: "#0e3b3a" }} />}>
-        {cautionParam ? <CautionPage status={cautionParam} /> : <Component />}
-      </Suspense>
-    </LangProvider>
+    <Sentry.ErrorBoundary fallback={<p>Une erreur est survenue.</p>} showDialog>
+      <LangProvider>
+        <Suspense fallback={<div style={{ minHeight: "100vh", background: "#0e3b3a" }} />}>
+          {cautionParam ? <CautionPage status={cautionParam} /> : <Component />}
+        </Suspense>
+      </LangProvider>
+    </Sentry.ErrorBoundary>
   </StrictMode>,
 )

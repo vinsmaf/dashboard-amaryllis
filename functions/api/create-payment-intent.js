@@ -10,18 +10,23 @@ export async function onRequestPost(context) {
   try { body = await request.json(); }
   catch { return json({ error: "JSON invalide" }, 400); }
 
-  const { amount, currency = "eur", metadata = {} } = body;
+  const { amount, currency = "eur", metadata = {}, bookingId = "" } = body;
+  if (!currency || currency !== "eur")
+    return json({ error: "Devise non autorisée" }, 400);
   if (!amount || amount < 50) return json({ error: "Montant invalide" }, 400);
+  if (amount > 500000)
+    return json({ error: "Montant hors limites" }, 400);
 
   const payload = new URLSearchParams({
     amount: String(Math.round(amount)),
     currency,
     "automatic_payment_methods[enabled]": "true",
-    "metadata[bienId]":   metadata.bienId   || "",
-    "metadata[checkin]":  metadata.checkin  || "",
-    "metadata[checkout]": metadata.checkout || "",
-    "metadata[voyageur]": metadata.voyageur || "",
-    "metadata[email]":    metadata.email    || "",
+    "metadata[bienId]":    metadata.bienId   || "",
+    "metadata[checkin]":   metadata.checkin  || "",
+    "metadata[checkout]":  metadata.checkout || "",
+    "metadata[voyageur]":  metadata.voyageur || "",
+    "metadata[email]":     metadata.email    || "",
+    "metadata[bookingId]": bookingId || metadata.bookingId || metadata.beds24Id || "",
   });
 
   try {
@@ -34,9 +39,39 @@ export async function onRequestPost(context) {
       body: payload.toString(),
     });
     const parsed = await res.json();
-    if (parsed.error) return json({ error: parsed.error.message }, 400);
+    if (parsed.error) {
+      console.error(JSON.stringify({
+        level: "error",
+        fn: "create-payment-intent",
+        msg: parsed.error.message,
+        bienId:   metadata.bienId   || "",
+        checkin:  metadata.checkin  || "",
+        checkout: metadata.checkout || "",
+        amount,
+        ts: new Date().toISOString(),
+      }));
+      return json({ error: parsed.error.message }, 400);
+    }
+    console.log(JSON.stringify({
+      level: "info",
+      fn: "create-payment-intent",
+      msg: "payment intent créé",
+      paymentIntentId: parsed.id,
+      amount,
+      currency,
+      bienId:   metadata.bienId   || "",
+      checkin:  metadata.checkin  || "",
+      checkout: metadata.checkout || "",
+      ts: new Date().toISOString(),
+    }));
     return json({ clientSecret: parsed.client_secret });
   } catch (err) {
+    console.error(JSON.stringify({
+      level: "error",
+      fn: "create-payment-intent",
+      msg: err.message,
+      ts: new Date().toISOString(),
+    }));
     return json({ error: err.message }, 500);
   }
 }

@@ -2,10 +2,40 @@
 // Reçoit les événements Stripe et notifie l'hôte par email
 //
 // Événements gérés :
-//   checkout.session.completed → caution voyageur sécurisée
+//   payment_intent.succeeded    → confirme la réservation Beds24 correspondante
+//   checkout.session.completed  → caution voyageur sécurisée
 //
 // Secret à ajouter dans Cloudflare Pages :
 //   STRIPE_WEBHOOK_SECRET (obtenu dans Stripe Dashboard → Webhooks)
+
+const BEDS24_V2_BOOKINGS = "https://beds24.com/api/v2/bookings";
+const BEDS24_AUTH_TOKEN  = "https://beds24.com/api/v2/authentication/token";
+
+// Échange le refreshToken contre un access token Beds24 (valable 24h)
+async function getBeds24Token(env) {
+  if (env.BEDS24_REFRESH_TOKEN) {
+    const res  = await fetch(BEDS24_AUTH_TOKEN, { headers: { refreshToken: env.BEDS24_REFRESH_TOKEN } });
+    const data = await res.json();
+    if (!data.token) throw new Error("Beds24 refresh token invalide ou expiré");
+    return data.token;
+  }
+  if (env.BEDS24_TOKEN) return env.BEDS24_TOKEN;
+  throw new Error("BEDS24_TOKEN ou BEDS24_REFRESH_TOKEN manquant");
+}
+
+// Confirme une réservation Beds24 (passe le status à "confirmed")
+async function confirmBeds24Booking(bookingId, env) {
+  const token = await getBeds24Token(env);
+  const res = await fetch(BEDS24_V2_BOOKINGS, {
+    method:  "PATCH",
+    headers: { token, "Content-Type": "application/json" },
+    body:    JSON.stringify([{ id: bookingId, status: "confirmed" }]),
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(`Beds24 PATCH échoué (${res.status}): ${JSON.stringify(data)}`);
+  console.log(`[webhook] Beds24 booking ${bookingId} → confirmed`, JSON.stringify(data));
+  return data;
+}
 
 const json = (d, s = 200) => new Response(JSON.stringify(d), {
   status: s,
@@ -94,6 +124,27 @@ export async function onRequestPost(context) {
   let event;
   try { event = JSON.parse(rawBody); }
   catch { return json({ error: "Invalid JSON" }, 400); }
+
+  // ── payment_intent.succeeded → confirmer la réservation Beds24 ──────────────
+  if (event.type === "payment_intent.succeeded") {
+    const pi       = event.data?.object;
+    const meta     = pi?.metadata || {};
+    const bookingId = meta.bookingId || meta.beds24Id || "";
+
+    if (bookingId) {
+      try {
+        await confirmBeds24Booking(bookingId, env);
+        console.log(`[webhook] Réservation Beds24 ${bookingId} confirmée via webhook`);
+      } catch (e) {
+        // On logue l'erreur mais on retourne 200 pour éviter les retries Stripe infinis
+        console.error(`[webhook] Erreur confirmation Beds24 ${bookingId}:`, e.message);
+      }
+    } else {
+      console.log("[webhook] payment_intent.succeeded sans bookingId — ignoré");
+    }
+
+    return json({ ok: true, type: event.type });
+  }
 
   // ── checkout.session.completed → caution sécurisée ──────────────────────────
   if (event.type === "checkout.session.completed") {

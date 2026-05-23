@@ -109,24 +109,48 @@ export async function onRequest(context) {
   const bienId = url.searchParams.get("bienId");
 
   if (!bienId) return json({ error: "bienId requis" }, 400);
+  const VALID_BIENS = ["amaryllis","zandoli","iguana","geko","mabouya","schoelcher","nogent"];
+  if (!VALID_BIENS.includes(bienId))
+    return json({ error: "bienId invalide" }, 400);
+
+  // KV cache key for this property
+  const cacheKey = `avail_${bienId}`;
 
   // ── Cas Nogent : disponibilités depuis Beds24 API (pas d'iCal) ───────────
   if (bienId === "nogent") {
+    // Check KV cache first
+    const cached = env.AVAIL_CACHE ? await env.AVAIL_CACHE.get(cacheKey, "json") : null;
+    if (cached) return json({ ...cached, fromCache: true });
+
     const blocked = await fetchBeds24Blocked(env);
-    return json({
+    const result = {
       blockedDates: Array.from(blocked).sort(),
       sources: { beds24: { ok: blocked.size >= 0, count: blocked.size } },
-    });
+    };
+
+    // Store in KV cache (TTL 10 min)
+    if (env.AVAIL_CACHE) {
+      await env.AVAIL_CACHE.put(cacheKey, JSON.stringify(result), { expirationTtl: 600 });
+    }
+
+    return json(result);
   }
 
   // ── Autres propriétés : iCal Airbnb + Booking.com ────────────────────────
+
+  // Check KV cache first (only when no dynamic bookingUrl param, so cache stays safe)
+  const bookingUrlParam = url.searchParams.get("bookingUrl");
+  if (!bookingUrlParam) {
+    const cached = env.AVAIL_CACHE ? await env.AVAIL_CACHE.get(cacheKey, "json") : null;
+    if (cached) return json({ ...cached, fromCache: true });
+  }
+
   const maps = icalBienMap(env);
   const airbnbUrl = maps.airbnb[bienId];
 
   // Booking URL: env var first, then param passed from admin localStorage (same domain)
   // Restrict to known iCal hostnames to prevent SSRF
   const ICAL_HOSTS = ["ics.booking.com", "airbnb.com", "www.airbnb.com", "calendar.google.com"];
-  const bookingUrlParam = url.searchParams.get("bookingUrl");
   let bookingUrlSafe = null;
   if (bookingUrlParam) {
     try {
@@ -152,11 +176,18 @@ export async function onRequest(context) {
 
   const merged = new Set([...airbnbBlocked, ...bookingBlocked]);
 
-  return json({
+  const result = {
     blockedDates: Array.from(merged).sort(),
     sources: {
       airbnb:  { ok: !!airbnbText,  count: airbnbBlocked.size },
       booking: { ok: !!bookingText, count: bookingBlocked.size, fromParam: !maps.booking[bienId] && !!bookingUrl },
     },
-  });
+  };
+
+  // Store in KV cache only when using env-configured URLs (not dynamic param)
+  if (env.AVAIL_CACHE && !bookingUrlSafe) {
+    await env.AVAIL_CACHE.put(cacheKey, JSON.stringify(result), { expirationTtl: 600 });
+  }
+
+  return json(result);
 }

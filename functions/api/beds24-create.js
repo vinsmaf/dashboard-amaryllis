@@ -66,6 +66,10 @@ export async function onRequestPost(context) {
     return json({ error: "firstName, lastName et email requis" }, 400);
   if (!email.includes("@"))
     return json({ error: "email invalide" }, 400);
+  // Bloquer les emails de test pour éviter la pollution Beds24
+  const BLOCKED_EMAILS = ["test@test.com", "test@test.fr", "test@example.com"];
+  if (BLOCKED_EMAILS.includes(email.trim().toLowerCase()))
+    return json({ error: "Email non autorisé" }, 400);
 
   const arrivalDate   = new Date(checkin  + "T12:00:00Z");
   const departureDate = new Date(checkout + "T12:00:00Z");
@@ -73,6 +77,10 @@ export async function onRequestPost(context) {
     return json({ error: "Dates invalides" }, 400);
   if (departureDate <= arrivalDate)
     return json({ error: "La date de départ doit être après l'arrivée" }, 400);
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  if (arrivalDate < now)
+    return json({ error: "La date d'arrivée doit être dans le futur" }, 400);
 
   // ── Création de la réservation ────────────────────────────────────────────
   const bookingPayload = [{
@@ -124,22 +132,52 @@ export async function onRequestPost(context) {
       if (match) {
         // Essayer les champs prix dans l'ordre de fiabilité
         price = parseFloat(match.totalPrice ?? match.invoiceAmount ?? match.price) || 0;
-        console.log("[beds24-create] prix récupéré:", price, JSON.stringify({
-          id:           match.id,
-          totalPrice:   match.totalPrice,
-          invoiceAmount:match.invoiceAmount,
-          price:        match.price,
+        console.log(JSON.stringify({
+          level: "info",
+          fn: "beds24-create",
+          msg: "prix récupéré depuis Beds24",
+          bookingId,
+          price,
+          totalPrice:    match.totalPrice,
+          invoiceAmount: match.invoiceAmount,
+          rawPrice:      match.price,
+          ts: new Date().toISOString(),
         }));
       }
     } catch (fetchErr) {
-      console.warn("[beds24-create] GET prix échoué:", fetchErr.message);
+      console.error(JSON.stringify({
+        level: "error",
+        fn: "beds24-create",
+        msg: "GET prix échoué",
+        error: fetchErr.message,
+        bookingId,
+        ts: new Date().toISOString(),
+      }));
     }
 
     // Fallback : prix calculé côté front (notre formule tarifaire)
     if (!price && localAmount) {
       price = parseFloat(localAmount) || 0;
-      console.log("[beds24-create] prix fallback local:", price);
+      console.log(JSON.stringify({
+        level: "info",
+        fn: "beds24-create",
+        msg: "prix fallback local utilisé",
+        bookingId,
+        price,
+        ts: new Date().toISOString(),
+      }));
     }
+
+    console.log(JSON.stringify({
+      level: "info",
+      fn: "beds24-create",
+      msg: "réservation créée",
+      bookingId,
+      price,
+      checkin,
+      checkout,
+      ts: new Date().toISOString(),
+    }));
 
     return json({
       ok:        true,
@@ -150,6 +188,12 @@ export async function onRequestPost(context) {
     });
 
   } catch (e) {
+    console.error(JSON.stringify({
+      level: "error",
+      fn: "beds24-create",
+      msg: e.message,
+      ts: new Date().toISOString(),
+    }));
     return json({ error: e.message }, 500);
   }
 }
