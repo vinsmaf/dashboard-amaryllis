@@ -6520,7 +6520,17 @@ export default function App() {
   const [showRapport, setShowRapport] = useState(false);
   const [rapportMois, setRapportMois] = useState(() => new Date().getMonth());
   const [ntfyTopic, setNtfyTopic] = useState(() => localStorage.getItem("ntfy_topic") || "");
-  const [hist, setHist] = useState(HIST_SEED);
+  const [hist, setHist] = useState(() => {
+    try {
+      const cached = localStorage.getItem("hist_v1");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        // Fusionner avec HIST_SEED pour garantir toutes les années
+        return { ...HIST_SEED, ...parsed };
+      }
+    } catch {}
+    return HIST_SEED;
+  });
   const [globalSyncStatus, setGlobalSyncStatus] = useState("idle"); // idle | syncing | ok | error
   const [reservations, setReservations] = useState(() => {
     try { const r = localStorage.getItem("reservations_v2"); return r ? JSON.parse(r) : []; } catch { return []; }
@@ -6581,19 +6591,23 @@ export default function App() {
       setN(f.moisActifs || N);
       setLastSync(f.lastSync);
       const ts = Date.now(); setLastSyncTs(ts); try { localStorage.setItem("last_sync_ts", String(ts)); } catch {}
-      // Mettre à jour hist depuis Sheets (années passées)
-      if (f.hist && Object.keys(f.hist).length > 0) setHist(prev => ({ ...prev, ...f.hist }));
-      // Reconstruire l'entrée hist[année courante] depuis les données biens synchées
+      // Mettre à jour hist depuis Sheets (années passées) + reconstruire l'année courante
       const currentYear = new Date().getFullYear();
-      setHist(prev => ({
-        ...prev,
-        [currentYear]: {
-          ...Object.fromEntries(f.biens.map(b => [b.id, b.revenus])),
-          total: Array.from({ length: 12 }, (_, m) =>
-            f.biens.reduce((s, b) => s + (b.revenus[m] || 0), 0)
-          ),
-        },
-      }));
+      const currentYearData = {
+        ...Object.fromEntries(f.biens.map(b => [b.id, b.revenus])),
+        total: Array.from({ length: 12 }, (_, m) =>
+          f.biens.reduce((s, b) => s + (b.revenus[m] || 0), 0)
+        ),
+      };
+      setHist(prev => {
+        const next = {
+          ...prev,
+          ...(f.hist && Object.keys(f.hist).length > 0 ? f.hist : {}),
+          [currentYear]: currentYearData,
+        };
+        try { localStorage.setItem("hist_v1", JSON.stringify(next)); } catch {}
+        return next;
+      });
       setSync({ status: "ok", msg: `✓ ${f.lastSync}` });
     } catch (e) {
       setSync({ status: "error", msg: `⚠ ${e.message}` });
