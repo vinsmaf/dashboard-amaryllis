@@ -949,7 +949,8 @@ async function runCautionAutoRelease(env) {
   const todayStr = today();
 
   // Stripe Search API — tous les PI caution en attente de capture
-  const query = encodeURIComponent("status:'requires_capture' AND metadata['type']:'caution'");
+  // Le site crée les cautions avec type='deposit' (create-deposit-intent.js)
+  const query = encodeURIComponent("status:'requires_capture' AND metadata['type']:'deposit'");
   let released = 0;
 
   try {
