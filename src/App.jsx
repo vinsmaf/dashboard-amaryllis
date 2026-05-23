@@ -1996,7 +1996,7 @@ function Historique({ biens, n, mob, hist = HIST_SEED }) {
       </div>
 
       <div style={{ display: "flex", gap: 7, marginBottom: 14, flexWrap: "wrap" }}>
-        {[{ id: "annuel", l: "Annuel" }, { id: "mensuel", l: "Mensuel" }, { id: "cumul", l: "Cumul 25/26" }, { id: "heatmap", l: "🌡 Saisonnalité" }, { id: "semaine", l: "📅 Jour de semaine" }, { id: "vs2025", l: "📊 vs 2025" }].map(v => (
+        {[{ id: "annuel", l: "Annuel" }, { id: "mensuel", l: "Mensuel" }, { id: "cumul", l: `Cumul ${String(prevYear3).slice(-2)}/${String(cy2).slice(-2)}` }, { id: "heatmap", l: "🌡 Saisonnalité" }, { id: "semaine", l: "📅 Jour de semaine" }, { id: "vs2025", l: `📊 vs ${prevYear3}` }].map(v => (
           <button key={v.id} onClick={() => setSelView(v.id)} style={{ padding: "6px 13px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 11, fontWeight: 600, background: selView === v.id ? "#0ea5e9" : "rgba(255,255,255,0.06)", color: selView === v.id ? "#fff" : "#94a3b8" }}>{v.l}</button>
         ))}
         {selView === "mensuel" && (
@@ -2068,7 +2068,7 @@ function Historique({ biens, n, mob, hist = HIST_SEED }) {
 
       {selView === "cumul" && (
         <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 13, padding: 16 }}>
-          <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 10, fontWeight: 600 }}>Cumulés 2025 vs 2026</div>
+          <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 10, fontWeight: 600 }}>Cumulés {prevYear3} vs {cy2}</div>
           <ResponsiveContainer width="100%" height={mob ? 150 : 200}>
             <LineChart data={cumulData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
@@ -2076,14 +2076,14 @@ function Historique({ biens, n, mob, hist = HIST_SEED }) {
               <YAxis tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={fmtK} />
               <Tooltip contentStyle={TT} />
               <Legend wrapperStyle={{ fontSize: 10, color: "#94a3b8" }} />
-              <Line type="monotone" dataKey={2025} name="2025" stroke={ANNEE_COLORS[2025]} strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey={2026} name="2026" stroke={ANNEE_COLORS[2026]} strokeWidth={2.5} strokeDasharray="5 3" dot={{ fill: ANNEE_COLORS[2026], r: 3 }} />
+              <Line type="monotone" dataKey={prevYear3} name={String(prevYear3)} stroke={ANNEE_COLORS[prevYear3] || "#64748b"} strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey={cy2} name={String(cy2)} stroke={ANNEE_COLORS[cy2] || "#f59e0b"} strokeWidth={2.5} strokeDasharray="5 3" dot={{ fill: ANNEE_COLORS[cy2] || "#f59e0b", r: 3 }} />
             </LineChart>
           </ResponsiveContainer>
           <div style={{ marginTop: 12, display: "flex", gap: 6, flexWrap: "wrap" }}>
             {MOIS.slice(0, n).map((_, m) => {
               const d = cumulData[m];
-              const delta = d[2026] - d[2025];
+              const delta = d[cy2] - d[prevYear3];
               return (
                 <div key={m} style={{ flex: 1, minWidth: 50, background: "rgba(255,255,255,0.03)", borderRadius: 7, padding: "6px 7px", textAlign: "center" }}>
                   <div style={{ fontSize: 9, color: "#64748b", marginBottom: 2 }}>{MOIS[m]}</div>
@@ -2229,7 +2229,7 @@ function Historique({ biens, n, mob, hist = HIST_SEED }) {
         );
       })()}
 
-      {selView === "vs2025" && <ComparatifContent biens={biens} n={n} mob={mob} />}
+      {selView === "vs2025" && <ComparatifContent biens={biens} n={n} mob={mob} hist={hist} prevYear={prevYear3} />}
     </div>
   );
 }
@@ -3546,10 +3546,16 @@ function Charges({ biens, n, mob }) {
 // ============================================================================
 // COMPARATIF
 // ============================================================================
-function ComparatifContent({ biens, n, mob }) {
+function ComparatifContent({ biens, n, mob, hist = HIST_SEED, prevYear = new Date().getFullYear() - 1 }) {
+  const cy = new Date().getFullYear();
+  // Revenus annuels de l'année précédente : préfère hist (données réelles Sheets), fallback sur seed
+  const prevRevMap = Object.fromEntries(
+    biens.map(b => [b.id, hist[prevYear]?.[b.id]?.reduce((s, v) => s + v, 0) || b.rev2025 || 0])
+  );
+
   const rows = biens.map(b => {
     const ytd = sumN(b.revenus, n);
-    const pp = Math.round(b.rev2025 / 12 * n);
+    const pp = Math.round(prevRevMap[b.id] / 12 * n);
     return {
       nom: b.nom.replace("Villa ", "").replace("T2 ", ""),
       ytd, pp,
@@ -3564,7 +3570,7 @@ function ComparatifContent({ biens, n, mob }) {
   });
 
   const ytd26total = biens.reduce((s, b) => s + sumN(b.revenus, n), 0);
-  const prorata25total = biens.reduce((s, b) => s + Math.round(b.rev2025 / 12 * n), 0);
+  const prorata25total = biens.reduce((s, b) => s + Math.round(prevRevMap[b.id] / 12 * n), 0);
   const globalDeltaPct = prorata25total > 0 ? ((ytd26total - prorata25total) / prorata25total * 100).toFixed(1) : "0";
   const isAhead = parseFloat(globalDeltaPct) >= 0;
 
@@ -3574,7 +3580,7 @@ function ComparatifContent({ biens, n, mob }) {
       <div style={{ background: isAhead ? "linear-gradient(135deg,rgba(16,185,129,0.12),rgba(6,182,212,0.06))" : "linear-gradient(135deg,rgba(239,68,68,0.1),rgba(245,158,11,0.06))", border: `1px solid ${isAhead ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.3)"}`, borderRadius: 14, padding: mob ? 14 : 18, marginBottom: 16 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
           <div>
-            <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Performance globale Jan→{MOIS[n-1]} 2026 vs prorata 2025</div>
+            <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Performance globale Jan→{MOIS[n-1]} {cy} vs prorata {prevYear}</div>
             <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
               <span style={{ fontSize: mob ? 26 : 32, fontWeight: 800, color: isAhead ? "#10b981" : "#ef4444", fontFamily: "monospace" }}>
                 {isAhead ? "▲" : "▼"} {isAhead ? "+" : ""}{globalDeltaPct}%
@@ -3584,13 +3590,13 @@ function ComparatifContent({ biens, n, mob }) {
               </span>
             </div>
             <div style={{ fontSize: 11, color: "#64748b", marginTop: 3 }}>
-              {fmt(ytd26total)} réalisés · prorata 2025 : {fmt(prorata25total)}
+              {fmt(ytd26total)} réalisés · prorata {prevYear} : {fmt(prorata25total)}
             </div>
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {biens.map(b => {
               const y = sumN(b.revenus, n);
-              const p = Math.round(b.rev2025 / 12 * n);
+              const p = Math.round(prevRevMap[b.id] / 12 * n);
               const d = p > 0 ? ((y - p) / p * 100).toFixed(0) : "—";
               const up = parseFloat(d) >= 0;
               return (
@@ -3607,7 +3613,7 @@ function ComparatifContent({ biens, n, mob }) {
 
       <div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "1fr 1fr", gap: 14, marginBottom: 14 }}>
         <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 13, padding: 16 }}>
-          <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 10, fontWeight: 600 }}>YTD 2026 vs prorata 2025</div>
+          <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 10, fontWeight: 600 }}>YTD {cy} vs prorata {prevYear}</div>
           <ResponsiveContainer width="100%" height={190}>
             <BarChart data={rows} layout="vertical" barGap={3}>
               <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={false} />
@@ -3615,13 +3621,13 @@ function ComparatifContent({ biens, n, mob }) {
               <YAxis type="category" dataKey="nom" tick={{ fill: "#94a3b8", fontSize: 10 }} axisLine={false} tickLine={false} width={60} />
               <Tooltip contentStyle={TT} formatter={(v) => [fmt(v)]} />
               <Legend wrapperStyle={{ fontSize: 10, color: "#94a3b8" }} />
-              <Bar dataKey="ytd" name="2026 YTD" fill="#0ea5e9" radius={[0, 4, 4, 0]} />
-              <Bar dataKey="pp" name="Prorata 2025" fill="#334155" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="ytd" name={`${cy} YTD`} fill="#0ea5e9" radius={[0, 4, 4, 0]} />
+              <Bar dataKey="pp" name={`Prorata ${prevYear}`} fill="#334155" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
         <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 13, padding: 16 }}>
-          <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 10, fontWeight: 600 }}>ADR 2025 vs 2026</div>
+          <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 10, fontWeight: 600 }}>ADR {prevYear} vs {cy}</div>
           <ResponsiveContainer width="100%" height={190}>
             <BarChart data={rows} barGap={4}>
               <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
@@ -3629,8 +3635,8 @@ function ComparatifContent({ biens, n, mob }) {
               <YAxis tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={TT} formatter={(v) => [v + " €"]} />
               <Legend wrapperStyle={{ fontSize: 10, color: "#94a3b8" }} />
-              <Bar dataKey="adr25" name="ADR 2025" fill="#334155" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="adr26" name="ADR 2026" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="adr25" name={`ADR ${prevYear}`} fill="#334155" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="adr26" name={`ADR ${cy}`} fill="#f59e0b" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -3642,7 +3648,7 @@ function ComparatifContent({ biens, n, mob }) {
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 560 }}>
             <thead>
               <tr style={{ background: "rgba(255,255,255,0.03)" }}>
-                {["Bien", "Rev 2025", "YTD 2026", "Δ", "Occ 25", "Occ 26", "ADR 25", "ADR 26", "RPar 25", "RPar 26"].map(h => (
+                {["Bien", `Rev ${prevYear}`, `YTD ${cy}`, "Δ", `Occ ${String(prevYear).slice(-2)}`, `Occ ${String(cy).slice(-2)}`, `ADR ${String(prevYear).slice(-2)}`, `ADR ${String(cy).slice(-2)}`, `RPar ${String(prevYear).slice(-2)}`, `RPar ${String(cy).slice(-2)}`].map(h => (
                   <th key={h} style={{ padding: "8px 10px", textAlign: "left", fontSize: 9, color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>{h}</th>
                 ))}
               </tr>
@@ -3651,7 +3657,7 @@ function ComparatifContent({ biens, n, mob }) {
               {rows.map((r, i) => (
                 <tr key={i} style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
                   <td style={{ padding: "9px 10px", fontWeight: 600, color: "#e2e8f0", fontSize: 11 }}>{r.nom}</td>
-                  <td style={{ padding: "9px 10px", color: "#64748b", fontFamily: "monospace", fontSize: 10 }}>{fmt(biens[i].rev2025)}</td>
+                  <td style={{ padding: "9px 10px", color: "#64748b", fontFamily: "monospace", fontSize: 10 }}>{fmt(prevRevMap[biens[i].id])}</td>
                   <td style={{ padding: "9px 10px", color: "#0ea5e9", fontFamily: "monospace", fontSize: 10 }}>{fmt(r.ytd)}</td>
                   <td style={{ padding: "9px 10px", color: parseFloat(r.delta) >= 0 ? "#10b981" : "#ef4444", fontSize: 10, fontWeight: 600 }}>
                     {parseFloat(r.delta) >= 0 ? "+" : ""}{r.delta}%
