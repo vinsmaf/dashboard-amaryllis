@@ -1762,28 +1762,30 @@ function Previsionnel({ biens, n, mob, hist = HIST_SEED }) {
 
       {/* ── Projection N+1 (2027) ── */}
       {(() => {
-        // CAGR sur 2022-2026 projeté
-        const rev2022 = 107062, rev2025 = 161331;
-        const cagr4ans = Math.pow(rev2025 / rev2022, 1 / 3) - 1; // 3 ans 2022→2025
-        const proj26 = Math.round(projAnnuelle); // projection 2026 courante
-        // Tendance linéaire 2023-2025 → delta annuel moyen
-        const deltaLinRaw = (161331 - 107062) / 3;
+        // CAGR dynamique basé sur hist
+        const histYears = Object.keys(hist).map(Number).filter(y => (hist[y]?.total || []).some(v => v > 0)).sort();
+        const firstHistYear = histYears[0] || (cy - 4);
+        const revFirst = (hist[firstHistYear]?.total || []).reduce((s, v) => s + v, 0);
+        const nbAns = prevYear - firstHistYear;
+        const deltaLinRaw = nbAns > 0 && totalPrevYear > 0 ? (totalPrevYear - revFirst) / nbAns : 10000;
+        const proj26 = Math.round(projAnnuelle);
         const proj27_real = Math.round(proj26 + deltaLinRaw);
-        const proj27_pess = Math.round(proj26 * 1.03);   // +3%
-        const proj27_opt  = Math.round(proj26 * 1.18);   // +18%
+        const proj27_pess = Math.round(proj26 * 1.03);
+        const proj27_opt  = Math.round(proj26 * 1.18);
+        const nextYear = cy + 1;
         const chartData27 = MOIS.map((_, m) => ({
           mois: MOIS[m],
-          "2025": hist[2025]?.total[m] || 0,
-          "2026 proj.": Math.round(projAnnuelle * poidsNorm[m]),
-          "2027 réaliste": Math.round(proj27_real * poidsNorm[m]),
+          [String(prevYear)]: hist[prevYear]?.total[m] || 0,
+          [`${cy} proj.`]: Math.round(projAnnuelle * poidsNorm[m]),
+          [`${nextYear} réaliste`]: Math.round(proj27_real * poidsNorm[m]),
         }));
-        const chargesAnnuelles2027 = biens.reduce((s, b) => s + b.charges * 12, 0) * 1.03; // +3% inflation
+        const chargesAnnuelles2027 = biens.reduce((s, b) => s + b.charges * 12, 0) * 1.03;
         const cf27 = proj27_real - chargesAnnuelles2027;
         return (
           <div style={{ marginTop: 24, background: "rgba(168,85,247,0.05)", border: "1px solid rgba(168,85,247,0.2)", borderRadius: 14, padding: mob ? 14 : 20 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#a855f7", marginBottom: 4 }}>🔮 Projection 2027 — N+1</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#a855f7", marginBottom: 4 }}>🔮 Projection {nextYear} — N+1</div>
             <div style={{ fontSize: 11, color: "#64748b", marginBottom: 14 }}>
-              Basée sur la tendance 2022-2026 (+{(deltaLinRaw/1000).toFixed(0)}k€/an en moyenne) et la saisonnalité historique.
+              Basée sur la tendance {firstHistYear}–{cy} (+{(deltaLinRaw/1000).toFixed(0)}k€/an en moyenne) et la saisonnalité historique.
             </div>
             <div style={{ display: "grid", gridTemplateColumns: mob ? "1fr 1fr" : "repeat(3,1fr)", gap: 10, marginBottom: 16 }}>
               {[
@@ -1837,13 +1839,12 @@ function Historique({ biens, n, mob, hist = HIST_SEED }) {
   const [selBien, setSelBien] = useState("all");
   const [selView, setSelView] = useState("annuel");
 
+  const cy2 = new Date().getFullYear();
   const ytd26 = biens.reduce((s, b) => s + sumN(b.revenus, n), 0);
+  const histYearsAll = Object.keys(hist).map(Number).filter(y => y < cy2 && (hist[y]?.total || []).some(v => v > 0)).sort();
   const annualTotals = [
-    { year: 2022, rev: 107062 },
-    { year: 2023, rev: 121730 },
-    { year: 2024, rev: 143341 },
-    { year: 2025, rev: 161331 },
-    { year: 2026, rev: ytd26, ytd: true },
+    ...histYearsAll.map(y => ({ year: y, rev: (hist[y]?.total || []).reduce((s, v) => s + v, 0) })),
+    { year: cy2, rev: ytd26, ytd: true },
   ];
   annualTotals.forEach((a, i) => {
     if (i > 0) a.evo = ((a.rev - annualTotals[i - 1].rev) / annualTotals[i - 1].rev * 100).toFixed(1);
@@ -1851,45 +1852,37 @@ function Historique({ biens, n, mob, hist = HIST_SEED }) {
 
   const getMonthly = (id) => MOIS.map((_, m) => ({
     mois: MOIS[m],
-    2022: (id === "all" ? hist[2022]?.total : hist[2022]?.[id] || [])[m] || 0,
-    2023: (id === "all" ? hist[2023]?.total : hist[2023]?.[id] || [])[m] || 0,
-    2024: (id === "all" ? hist[2024]?.total : hist[2024]?.[id] || [])[m] || 0,
-    2025: (id === "all" ? hist[2025]?.total : hist[2025]?.[id] || [])[m] || 0,
-    2026: id === "all" ? biens.reduce((s, b) => s + (b.revenus[m] || 0), 0) : (biens.find(b => b.id === id)?.revenus[m] || 0),
+    ...Object.fromEntries(histYearsAll.map(y => [y, (id === "all" ? hist[y]?.total : hist[y]?.[id] || [])[m] || 0])),
+    [cy2]: id === "all" ? biens.reduce((s, b) => s + (b.revenus[m] || 0), 0) : (biens.find(b => b.id === id)?.revenus[m] || 0),
   }));
 
   const bienEvol = biens.map(b => ({
     nom: b.nom.replace("Villa ", "").replace("T2 ", ""),
     emoji: b.emoji,
-    2022: hist[2022]?.[b.id]?.reduce((s, v) => s + v, 0) || 0,
-    2023: hist[2023]?.[b.id]?.reduce((s, v) => s + v, 0) || 0,
-    2024: hist[2024]?.[b.id]?.reduce((s, v) => s + v, 0) || 0,
-    2025: hist[2025]?.[b.id]?.reduce((s, v) => s + v, 0) || 0,
-    2026: sumN(b.revenus, n),
+    ...Object.fromEntries(histYearsAll.map(y => [y, hist[y]?.[b.id]?.reduce((s, v) => s + v, 0) || 0])),
+    [cy2]: sumN(b.revenus, n),
   }));
 
+  const prevYear3 = cy2 - 1;
   const cumulData = MOIS.map((_, m) => ({
     mois: MOIS[m],
-    2025: (hist[2025]?.total || []).slice(0, m + 1).reduce((s, v) => s + v, 0),
-    2026: biens.reduce((s, b) => s + b.revenus.slice(0, m + 1).reduce((ss, v) => ss + (v || 0), 0), 0),
+    [prevYear3]: (hist[prevYear3]?.total || []).slice(0, m + 1).reduce((s, v) => s + v, 0),
+    [cy2]: biens.reduce((s, b) => s + b.revenus.slice(0, m + 1).reduce((ss, v) => ss + (v || 0), 0), 0),
   }));
 
-  // Cumul depuis 2022
-  const totalParAnnee = {
-    2022: 107062,
-    2023: 121730,
-    2024: 143341,
-    2025: 161331,
-    2026: ytd26,
-  };
+  // Cumul depuis première année connue
+  const totalParAnnee = Object.fromEntries([
+    ...histYearsAll.map(y => [y, (hist[y]?.total || []).reduce((s, v) => s + v, 0)]),
+    [cy2, ytd26],
+  ]);
   const totalDepuis2022 = Object.values(totalParAnnee).reduce((s, v) => s + v, 0);
   const cumulHistorique = [];
   let running = 0;
-  [2022, 2023, 2024, 2025, 2026].forEach(y => {
-    running += totalParAnnee[y];
-    cumulHistorique.push({ annee: String(y) + (y === 2026 ? " YTD" : ""), annuel: totalParAnnee[y], cumul: running });
+  [...histYearsAll, cy2].forEach(y => {
+    running += totalParAnnee[y] || 0;
+    cumulHistorique.push({ annee: String(y) + (y === cy2 ? " YTD" : ""), annuel: totalParAnnee[y] || 0, cumul: running });
   });
-  const moyenneAnnuelle = (totalParAnnee[2022] + totalParAnnee[2023] + totalParAnnee[2024] + totalParAnnee[2025]) / 4;
+  const moyenneAnnuelle = histYearsAll.length > 0 ? histYearsAll.reduce((s, y) => s + (totalParAnnee[y] || 0), 0) / histYearsAll.length : ytd26;
 
   // Cashflow cumulé depuis 2022 — données réelles extraites du Google Sheets (revenus locatif YYYY)
   const cf26 = biens.reduce((s, b) => s + sumN(b.cashflow, n), 0);
