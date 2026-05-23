@@ -1566,8 +1566,14 @@ function Previsionnel({ biens, n, mob, hist = HIST_SEED }) {
   const [objectif, setObjectif] = useState(200000);
   const [scenario, setScenario] = useState("realiste");
 
+  const cy = new Date().getFullYear();
+  const prevYear = cy - 1;
+  const prevYear2 = cy - 2;
+  const totalPrevYear  = (hist[prevYear]?.total  || []).reduce((s, v) => s + v, 0);
+  const totalPrevYear2 = (hist[prevYear2]?.total || []).reduce((s, v) => s + v, 0);
+
   const poidsAnnuels = MOIS.map((_, m) =>
-    [2023, 2024, 2025].map(y => hist[y]?.total[m] || 0).reduce((s, v) => s + v, 0) / 3
+    [cy - 3, cy - 2, cy - 1].map(y => hist[y]?.total[m] || 0).reduce((s, v) => s + v, 0) / 3
   );
   const totalPoids = poidsAnnuels.reduce((s, v) => s + v, 0);
   const poidsNorm = poidsAnnuels.map(v => v / totalPoids);
@@ -1586,12 +1592,12 @@ function Previsionnel({ biens, n, mob, hist = HIST_SEED }) {
     reel: m < n ? projMensuelle[m] : null,
     proj: m >= n ? projMensuelle[m] : null,
     obj: Math.round(objectif * poidsNorm[m]),
-    h25: hist[2025]?.total[m] || 0,
+    hPrev: hist[prevYear]?.total[m] || 0,
   }));
 
   const recoBiens = biens.filter(b => b.type !== "long").map(b => {
-    const tot25 = hist[2025]?.[b.id]?.reduce((s, v) => s + v, 0) || 0;
-    const tot25all = biens.reduce((s, bb) => s + (hist[2025]?.[bb.id]?.reduce((ss, v) => ss + v, 0) || 0), 0);
+    const tot25 = hist[prevYear]?.[b.id]?.reduce((s, v) => s + v, 0) || 0;
+    const tot25all = biens.reduce((s, bb) => s + (hist[prevYear]?.[bb.id]?.reduce((ss, v) => ss + v, 0) || 0), 0);
     const part = tot25all > 0 ? tot25 / tot25all : 0;
     const ytdBien = sumN(b.revenus, n);
     const adrActuel = avgN(b.adr, n) || 0;
@@ -1617,8 +1623,8 @@ function Previsionnel({ biens, n, mob, hist = HIST_SEED }) {
             <span style={{ color: "#64748b", fontSize: 12 }}>€</span>
           </div>
           <div style={{ display: "flex", gap: 10, fontSize: 10, color: "#64748b" }}>
-            <span>+{((objectif / 161331 - 1) * 100).toFixed(0)}% vs 2025</span>
-            <span>+{((objectif / 143341 - 1) * 100).toFixed(0)}% vs 2024</span>
+            {totalPrevYear  > 0 && <span>+{((objectif / totalPrevYear  - 1) * 100).toFixed(0)}% vs {prevYear}</span>}
+            {totalPrevYear2 > 0 && <span>+{((objectif / totalPrevYear2 - 1) * 100).toFixed(0)}% vs {prevYear2}</span>}
           </div>
         </div>
         <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 13, padding: 16 }}>
@@ -1657,7 +1663,7 @@ function Previsionnel({ biens, n, mob, hist = HIST_SEED }) {
       </div>
 
       <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 13, padding: 16, marginBottom: 14 }}>
-        <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 12, fontWeight: 600 }}>Projection mensuelle vs objectif vs 2025</div>
+        <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 12, fontWeight: 600 }}>Projection mensuelle vs objectif vs {prevYear}</div>
         <ResponsiveContainer width="100%" height={mob ? 150 : 200}>
           <ComposedChart data={chartData} barGap={3}>
             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
@@ -1667,7 +1673,7 @@ function Previsionnel({ biens, n, mob, hist = HIST_SEED }) {
             <Legend wrapperStyle={{ fontSize: 10, color: "#94a3b8" }} />
             <Bar dataKey="reel" name="Réalisé" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
             <Bar dataKey="proj" name="Projeté" fill="#0ea5e9" fillOpacity={0.3} radius={[4, 4, 0, 0]} />
-            <Bar dataKey="h25" name="2025" fill="#334155" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="hPrev" name={String(prevYear)} fill="#334155" radius={[4, 4, 0, 0]} />
             <Line type="monotone" dataKey="obj" name="Objectif" stroke="#f59e0b" strokeWidth={2} strokeDasharray="4 3" dot={false} />
           </ComposedChart>
         </ResponsiveContainer>
