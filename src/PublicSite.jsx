@@ -1837,9 +1837,11 @@ function generateDevis({ bien, checkin, checkout, nights, rawTotal, discountRate
 const UPSELL_CATALOG = {
   _martinique: [
     { id: "courses", label: "Service courses", desc: "Courses livrées à votre arrivée — liste envoyée à votre hôte", price: "+30€ service", icon: "🛒" },
+    { id: "menage",  label: "Ménage supplémentaire", desc: "Ménage intermédiaire durant votre séjour", price: "+60€", icon: "🧹" },
   ],
   nogent: [
     { id: "courses", label: "Service courses", desc: "Courses livrées avant votre arrivée — liste envoyée à votre hôte", price: "+25€ service", icon: "🛒" },
+    { id: "menage",  label: "Ménage supplémentaire", desc: "Ménage intermédiaire durant votre séjour", price: "+60€", icon: "🧹" },
   ],
 };
 const MARTINIQUE_IDS = new Set(["amaryllis", "geko", "mabouya", "zandoli", "schoelcher", "iguana"]);
