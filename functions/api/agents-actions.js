@@ -30,6 +30,31 @@ CREATE TABLE IF NOT EXISTS agent_actions (
 CREATE INDEX IF NOT EXISTS idx_agent_actions_agent  ON agent_actions(agent);
 CREATE INDEX IF NOT EXISTS idx_agent_actions_status ON agent_actions(status);
 CREATE INDEX IF NOT EXISTS idx_agent_actions_prio   ON agent_actions(priority);
+
+CREATE TABLE IF NOT EXISTS agent_memory (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  agent      TEXT NOT NULL,
+  key        TEXT NOT NULL,
+  value      TEXT NOT NULL,
+  created_at INTEGER DEFAULT (unixepoch()),
+  expires_at INTEGER,
+  UNIQUE(agent, key)
+);
+CREATE INDEX IF NOT EXISTS idx_memory_agent ON agent_memory(agent);
+CREATE INDEX IF NOT EXISTS idx_memory_key   ON agent_memory(key);
+
+CREATE TABLE IF NOT EXISTS orchestrator_runs (
+  id               INTEGER PRIMARY KEY AUTOINCREMENT,
+  trigger          TEXT NOT NULL,
+  event_data       TEXT,
+  status           TEXT DEFAULT 'running',
+  summary          TEXT,
+  decisions        TEXT,
+  agents_consulted TEXT,
+  duration_ms      INTEGER,
+  created_at       INTEGER DEFAULT (unixepoch()),
+  completed_at     INTEGER
+);
 `;
 
 // Migration : supprime le CHECK constraint sur status (pour supporter 'a-planifier')
@@ -180,9 +205,25 @@ export async function onRequest(context) {
   const url = new URL(request.url);
   const method = request.method;
 
-  // ── GET — liste des actions (filtrable) ─────────────────────────────────
+  // ── GET — liste des actions (filtrable) ou mémoires ─────────────────────
   if (method === "GET") {
+    const table    = url.searchParams.get("table");
     const agent    = url.searchParams.get("agent");
+
+    // GET ?table=memory — lecture des mémoires agents
+    if (table === "memory") {
+      try {
+        let q = "SELECT * FROM agent_memory WHERE 1=1";
+        const params = [];
+        if (agent) { q += " AND agent = ?"; params.push(agent); }
+        q += " ORDER BY created_at DESC";
+        const { results } = await db.prepare(q).bind(...params).all();
+        return json({ memories: results, total: results.length });
+      } catch (e) {
+        return json({ memories: [], total: 0, error: e.message });
+      }
+    }
+
     const status   = url.searchParams.get("status");
     const priority = url.searchParams.get("priority");
     const category = url.searchParams.get("category");

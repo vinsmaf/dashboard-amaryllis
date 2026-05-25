@@ -166,7 +166,7 @@ async function fetchAgentHistory(db, agentId) {
 }
 
 // ── Prompt template pour chaque agent ────────────────────────────────────────
-function buildPrompt(agent, history = []) {
+function buildPrompt(agent, history = [], memories = []) {
   // Sépare l'historique par statut pour donner du contexte à l'agent
   const done    = history.filter(h => h.status === "fait");
   const blocked = history.filter(h => h.status === "bloqué");
@@ -197,12 +197,20 @@ Les IDs déjà utilisés vont jusqu'à ${agent.prefix}-${String(maxNum).padStart
 Commence tes nouveaux IDs à ${agent.prefix}-${String(nextId).padStart(3, "0")}.
 `;
 
+  const memorySection = memories.length > 0 ? `
+MÉMOIRE DE TES RUNS PRÉCÉDENTS :
+${memories.map(m => `  • ${m.key}: ${m.value}`).join('\n')}
+` : `
+MÉMOIRE DE TES RUNS PRÉCÉDENTS :
+  (première analyse)
+`;
+
   return `Tu es l'agent "${agent.label}" (${agent.emoji}) d'Amaryllis Locations, plateforme de location de 7 propriétés premium en Martinique et Île-de-France (villamaryllis.com).
 
 TON DOMAINE D'EXPERTISE : ${agent.focus}
 
 FICHIERS CLÉS à analyser : ${agent.files_hint}
-${historySection}
+${memorySection}${historySection}
 MISSION : Identifie les actions concrètes NOUVELLES à réaliser dans ton domaine. Tiens compte de ce qui a déjà été fait ou identifié pour approfondir ton analyse et aller plus loin.
 
 Propriétés : Villa Amaryllis (280€/nuit, 8 pers, 4.94★), Zandoli (220€, 5 pers, 4.5★), Villa Iguana (180€, 6 pers, 4.75★), Géko (150€, 4 pers, 4.83★), Mabouya (110€, 2 pers, 4.55★), Bellevue/Schœlcher (100€, 2 pers, 4.8★), Nogent-sur-Marne (85€, 2 pers, 4.95★).
@@ -261,6 +269,15 @@ export async function onRequest(context) {
       // Récupère l'historique D1 de cet agent pour enrichir le prompt
       const history = await fetchAgentHistory(db, agent.id);
 
+      // Lire les mémoires de cet agent
+      let memories = [];
+      try {
+        const { results: mems } = await db.prepare(
+          "SELECT key, value FROM agent_memory WHERE agent = ? ORDER BY created_at DESC LIMIT 10"
+        ).bind(agent.id).all();
+        memories = mems || [];
+      } catch {}
+
       // Appel API Anthropic (claude-haiku-4-5 pour économiser les tokens)
       const res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
@@ -272,7 +289,7 @@ export async function onRequest(context) {
         body: JSON.stringify({
           model: "claude-haiku-4-5",
           max_tokens: 1024,
-          messages: [{ role: "user", content: buildPrompt(agent, history) }],
+          messages: [{ role: "user", content: buildPrompt(agent, history, memories) }],
         }),
       });
 
@@ -321,6 +338,33 @@ export async function onRequest(context) {
                  now, now, now).run();
           inserted++;
         }
+      }
+
+      // Stocker les observations en mémoire agent
+      if (actions.length > 0) {
+        const topAction = [...actions].sort((a, b) => {
+          const prio = { critique: 0, haute: 1, moyenne: 2, basse: 3 };
+          return (prio[a.priority] ?? 3) - (prio[b.priority] ?? 3);
+        })[0];
+
+        // Mémoire : dernière priorité critique ou haute identifiée
+        if (topAction.priority === 'critique' || topAction.priority === 'haute') {
+          await db.prepare(`
+            INSERT INTO agent_memory (agent, key, value) VALUES (?,?,?)
+            ON CONFLICT(agent, key) DO UPDATE SET value=excluded.value, created_at=unixepoch()
+          `).bind(agent.id, 'last_top_action', JSON.stringify({
+            action: topAction.action,
+            priority: topAction.priority,
+            category: topAction.category,
+            ts: now,
+          })).run().catch(() => {});
+        }
+
+        // Mémoire : nombre d'actions générées lors du dernier run
+        await db.prepare(`
+          INSERT INTO agent_memory (agent, key, value) VALUES (?,?,?)
+          ON CONFLICT(agent, key) DO UPDATE SET value=excluded.value, created_at=unixepoch()
+        `).bind(agent.id, 'last_run_count', String(actions.length)).run().catch(() => {});
       }
 
       results.push({ agent: agent.id, ok: true, inserted, updated, actions: actions.length, context_size: history.length });
