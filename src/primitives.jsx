@@ -330,16 +330,41 @@ export function cfImg(src, w, quality = 85) {
   return `/cdn-cgi/image/width=${w},format=auto,quality=${quality}${src}`;
 }
 
+// ── Shimmer keyframes injection (once, lazy) ─────────────────────
+let _shimmerInjected = false;
+function injectShimmerOnce() {
+  if (_shimmerInjected || typeof document === "undefined") return;
+  _shimmerInjected = true;
+  const s = document.createElement("style");
+  s.textContent = `@keyframes rimgShimmer{from{background-position:200% 0}to{background-position:-200% 0}}`;
+  document.head.appendChild(s);
+}
+
 // ── <RImg> — Responsive Image avec srcset Cloudflare ─────────────
 // Génère automatiquement srcset + sizes pour les images /photos/...
 // Les URLs externes sont rendues avec un <img> simple (pas de transformation).
 // quality: 90 pour hero (1600w), 75 pour thumbnails (480w), 85 pour le reste
+// media-007 : blur-up shimmer pendant le chargement (sauf images hero fetchPriority="high")
 export function RImg({ src, alt, sizes = "100vw", className, style, loading = "lazy", fetchPriority }) {
+  // Pour les images hero (fetchPriority="high"), pas de shimmer — elles chargent immédiatement
+  const isHero = fetchPriority === "high";
+  const [loaded, setLoaded] = useState(isHero);
+
   if (!src || src.startsWith("http")) {
     return <img src={src} alt={alt} className={className} style={style} loading={loading} fetchPriority={fetchPriority} />;
   }
+
+  if (!isHero) injectShimmerOnce();
+
   const qualityMap = { 480: 75, 800: 85, 1200: 85, 1600: 90 };
   const srcset = [480, 800, 1200, 1600].map(w => `${cfImg(src, w, qualityMap[w])} ${w}w`).join(", ");
+
+  const shimmerStyle = loaded ? {} : {
+    background: "linear-gradient(90deg,var(--c-sand,#e0d4bc) 25%,var(--c-cream,#f4ecdc) 50%,var(--c-sand,#e0d4bc) 75%)",
+    backgroundSize: "400% 100%",
+    animation: "rimgShimmer 1.4s ease-in-out infinite",
+  };
+
   return (
     <img
       src={cfImg(src, 800)}
@@ -347,7 +372,13 @@ export function RImg({ src, alt, sizes = "100vw", className, style, loading = "l
       sizes={sizes}
       alt={alt}
       className={className}
-      style={style}
+      onLoad={() => setLoaded(true)}
+      style={{
+        ...shimmerStyle,
+        ...style,
+        opacity: loaded ? (style?.opacity ?? 1) : 0,
+        transition: `opacity 0.45s ease`,
+      }}
       loading={loading}
       fetchPriority={fetchPriority}
     />

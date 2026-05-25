@@ -21,8 +21,8 @@ export async function onRequestGet(context) {
   try {
     const token = await getAccessToken(clientEmail, privateKey);
 
-    // Exécuter 4 rapports en parallèle
-    const [overview, pages, countries, sources, devices] = await Promise.all([
+    // Exécuter 5 rapports en parallèle (data-006 : ajout conversions par bien)
+    const [overview, pages, countries, sources, devices, bienConversions] = await Promise.all([
       runReport(token, propertyId, {
         dimensions:  [{ name: "date" }],
         metrics:     [{ name: "sessions" }, { name: "totalUsers" }, { name: "screenPageViews" }, { name: "bounceRate" }, { name: "averageSessionDuration" }],
@@ -56,16 +56,30 @@ export async function onRequestGet(context) {
         dateRanges:  [{ startDate: "30daysAgo", endDate: "today" }],
         orderBys:    [{ metric: { metricName: "sessions" }, desc: true }],
       }),
+      // data-006 : trafic + events par page bien (/amaryllis, /zandoli, etc.)
+      runReport(token, propertyId, {
+        dimensions:  [{ name: "pagePath" }],
+        metrics:     [{ name: "sessions" }, { name: "totalUsers" }, { name: "screenPageViews" }, { name: "averageSessionDuration" }],
+        dateRanges:  [{ startDate: "30daysAgo", endDate: "today" }],
+        dimensionFilter: {
+          filter: {
+            fieldName: "pagePath",
+            inListFilter: { values: ["/amaryllis","/zandoli","/iguana","/geko","/mabouya","/schoelcher","/nogent"] },
+          },
+        },
+        orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
+      }),
     ]);
 
     // traf-011 : stale-while-revalidate — sert le cache pendant le refresh background
     return new Response(JSON.stringify({
       ok: true,
-      overview:  parseReport(overview),
-      pages:     parseReport(pages),
-      countries: parseReport(countries),
-      sources:   parseReport(sources),
-      devices:   parseReport(devices),
+      overview:         parseReport(overview),
+      pages:            parseReport(pages),
+      countries:        parseReport(countries),
+      sources:          parseReport(sources),
+      devices:          parseReport(devices),
+      bienConversions:  parseReport(bienConversions), // data-006
     }), {
       headers: {
         "Content-Type": "application/json",

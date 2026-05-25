@@ -190,7 +190,9 @@ if (typeof document !== "undefined" && !document.getElementById("__site_styles")
   document.head.appendChild(s);
 }
 
-const STRIPE_PK = "pk_live_51QAsyQDstT3IRAj26eVHpBuMZI8UllaKGCCJUNAW5O9BfC3NqzVJwhrgfF0VndNMWPph0vijKomm24OwrTXCG58N00Co6GOWh1";
+// cpw-006 : clé chargée depuis /api/get-config (hors bundle) — fallback si fetch échoue
+let STRIPE_PK = "";
+fetch("/api/get-config").then(r => r.json()).then(d => { if (d.stripePk) STRIPE_PK = d.stripePk; }).catch(() => {});
 const WA_NUMBER = "33610880772";
 const WA_MSG_DEFAULT = encodeURIComponent("Bonjour, je souhaite obtenir des informations sur une location Amaryllis.");
 

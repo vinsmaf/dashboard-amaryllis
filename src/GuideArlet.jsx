@@ -203,6 +203,53 @@ export default function GuideArlet() {
         "author": { "@id": `${BASE}/#organization` },
         "publisher": { "@id": `${BASE}/#organization` },
       })}} />
+      {/* seo-002 : FAQPage JSON-LD — rich snippets Google */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Peut-on vraiment voir des tortues marines à Arlet ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Oui. Grande Anse d'Arlet est l'un des seuls spots de Martinique où les tortues marines viennent se nourrir régulièrement dans les herbiers juste sous la plage. Arrivez entre 7h et 9h du matin, entrez dans l'eau côté gauche de la plage (vers la pointe rocheuse) avec un simple masque et un tuba — aucune bouteille ni guide nécessaires."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "À quelle heure aller à Arlet pour voir les tortues ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Le meilleur créneau est entre 7h et 9h du matin. Les tortues remontent régulièrement respirer (toutes les 5 à 10 minutes). Restez immobile à la surface sans tenter de les toucher."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "C'est loin d'Arlet depuis Sainte-Luce ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Non, seulement 25 minutes en voiture via la N6 vers Le Diamant puis la côte caraïbe. Nos villas à Sainte-Luce sont donc une base idéale pour visiter Arlet, Le Diamant (15 min) ou Les Salines (20 min)."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Faut-il un équipement de plongée pour voir les tortues à Arlet ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Non, un simple masque et un tuba suffisent — l'eau est peu profonde (1 à 4 m) et la visibilité excellente. Vous pouvez louer le matériel sur la plage pour 5 à 8 € par personne. Utilisez de préférence une crème solaire minérale pour protéger les coraux."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Où se garer à Grande Anse d'Arlet ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Un parking se trouve à l'entrée du village. Il est payant en haute saison (2 à 3 €). Arrivez tôt le matin pour trouver facilement une place et profiter des meilleures conditions pour les tortues."
+            }
+          }
+        ]
+      })}} />
 
       <div style={{ minHeight: "100vh", background: IVORY, color: TEXT, fontFamily: "'Jost', system-ui, sans-serif" }}>
 

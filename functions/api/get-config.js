@@ -24,6 +24,8 @@ export async function onRequestGet(context) {
     ok: true,
     scriptUrl:   env.APPS_SCRIPT_URL || "",
     icalAirbnb:  Object.keys(icalAirbnb).length > 0 ? icalAirbnb : null,
+    // cpw-006 : clé Stripe publique servie depuis env, hors bundle JS
+    stripePk:    env.STRIPE_PUBLIC_KEY || "",
   };
   return new Response(JSON.stringify(data), {
     status: 200,

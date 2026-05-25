@@ -29,6 +29,23 @@ async function ensureContactsTable(db) {
   `).run();
 }
 
+// web-007 : ntfy push — alerte hôte si Resend échoue silencieusement
+async function sendNtfyLead(env, { nom, email, bien, reason = "Resend KO" }) {
+  const topic = env.NTFY_TOPIC;
+  if (!topic) return;
+  const bienStr = bien ? ` — ${bien}` : "";
+  await fetch(`https://ntfy.sh/${topic}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Title": `📩 Lead Amaryllis${bienStr}`,
+      "Priority": "high",
+      "Tags": "email,warning",
+    },
+    body: `${nom} (${email})${bienStr}\n⚠️ ${reason} — lead sauvé en D1`,
+  });
+}
+
 export async function onRequestPost(context) {
   try {
     // ── Rate limiting : 3 soumissions / IP / heure ───────────────────────────
@@ -106,6 +123,8 @@ export async function onRequestPost(context) {
     if (!res.ok) {
       const errBody = await res.json().catch(() => ({}));
       console.error("Resend error:", errBody);
+      // web-007 : ntfy push quand Resend échoue — le lead est sauvé en D1
+      await sendNtfyLead(context.env, { nom, email, bien, reason: "Resend KO" }).catch(() => {});
       // D1 a fonctionné, email échoué — pas de 500 pour l'UX (lead sauvé)
       return Response.json({ ok: true, warning: "Email non envoyé" });
     }
