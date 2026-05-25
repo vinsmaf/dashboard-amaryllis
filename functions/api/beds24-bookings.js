@@ -1,5 +1,8 @@
 // Cloudflare Pages Function — GET /api/beds24-bookings
 // Proxy sécurisé vers l'API Beds24 V2 — token jamais exposé au navigateur
+// arch-009 : lit le token depuis D1 en priorité (rotation auto via /api/beds24-refresh)
+
+import { getActiveBeds24Token } from "./beds24-refresh.js";
 
 const BEDS24_V2_URL = "https://beds24.com/api/v2/bookings";
 const PROP_ID = "158192";
@@ -8,7 +11,8 @@ const PAGE_SIZE = 100; // max raisonnable pour V2
 export async function onRequestGet(context) {
   const { request, env } = context;
 
-  const token = env.BEDS24_TOKEN;
+  // arch-009 : token D1 en priorité, env var en fallback
+  const token = await getActiveBeds24Token(env, env.revenue_manager);
   if (!token) {
     return json({ error: "BEDS24_TOKEN manquant dans les variables Cloudflare" }, 500);
   }
