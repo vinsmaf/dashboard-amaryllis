@@ -5427,6 +5427,27 @@ function TestimonialsSection({ onDetail }) {
             </Reveal>
           ))}
         </div>
+
+        {/* CTA vers la page avis complète */}
+        <div style={{ textAlign: "center", marginTop: 44 }}>
+          <a
+            href="/avis"
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 8,
+              padding: "13px 28px",
+              border: `1.5px solid ${NAVY}`,
+              borderRadius: 40,
+              fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 13,
+              color: NAVY, textDecoration: "none",
+              letterSpacing: "0.06em", textTransform: "uppercase",
+              transition: "all 0.2s",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = NAVY; e.currentTarget.style.color = IVORY; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = NAVY; }}
+          >
+            Lire tous les avis voyageurs →
+          </a>
+        </div>
       </div>
     </div>
   );
