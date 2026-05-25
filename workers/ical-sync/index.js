@@ -924,6 +924,7 @@ async function runMonthlyExport(env, allEvents) {
   const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const lastMonthStr = lastMonth.toISOString().slice(0, 7); // "2025-05"
   const label = lastMonth.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+  const daysInMonth = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0).getDate();
 
   const events = allEvents.filter(e => e.checkin.startsWith(lastMonthStr) || e.checkout.startsWith(lastMonthStr));
 
@@ -932,7 +933,7 @@ async function runMonthlyExport(env, allEvents) {
     return;
   }
 
-  // CSV
+  // ── CSV (inchangé, pour le comptable) ──────────────────────────────────────
   const csvLines = [
     "Logement,Voyageur,Canal,Arrivée,Départ,Nuits,Montant€",
     ...events.map(e => {
@@ -940,14 +941,176 @@ async function runMonthlyExport(env, allEvents) {
       return `"${e.nom}","${e.voyageur}","${e.canal || ""}","${e.checkin}","${e.checkout}",${nights},${e.montant || ""}`;
     }),
   ];
-
   const totalCA = events.reduce((s, e) => s + (e.montant || 0), 0);
   csvLines.push(`,,,,TOTAL,${events.length} réservations,${totalCA}`);
-
   const csv = csvLines.join("\n");
-
-  // Email avec CSV en pièce jointe (base64)
   const csvB64 = btoa(unescape(encodeURIComponent(csv)));
+
+  // ── KPIs globaux ───────────────────────────────────────────────────────────
+  const totalNuits = events.reduce((s, e) => s + diffDays(e.checkin, e.checkout), 0);
+  const prixMoyenNuit = totalNuits > 0 ? Math.round(totalCA / totalNuits) : 0;
+  const nbBiensActifs = Object.keys(NOMS).length; // 7 logements
+  const tauxOcc = Math.round((totalNuits / (daysInMonth * nbBiensActifs)) * 100);
+
+  // ── Stats par logement ─────────────────────────────────────────────────────
+  const byBien = {};
+  for (const e of events) {
+    if (!byBien[e.bienId]) byBien[e.bienId] = { nom: e.nom, ca: 0, nuits: 0, nb: 0, airbnb: 0, booking: 0 };
+    const b = byBien[e.bienId];
+    const n = diffDays(e.checkin, e.checkout);
+    b.ca += (e.montant || 0);
+    b.nuits += n;
+    b.nb += 1;
+    if (e.canal === "airbnb") b.airbnb += 1;
+    else if (e.canal === "booking") b.booking += 1;
+  }
+
+  // ── Canal mix global ───────────────────────────────────────────────────────
+  const nbAirbnb   = events.filter(e => e.canal === "airbnb").length;
+  const nbBooking  = events.filter(e => e.canal === "booking").length;
+  const nbDirect   = events.length - nbAirbnb - nbBooking;
+  const pctAirbnb  = Math.round((nbAirbnb / events.length) * 100);
+  const pctBooking = Math.round((nbBooking / events.length) * 100);
+  const pctDirect  = 100 - pctAirbnb - pctBooking;
+
+  // ── Couleur de performance ─────────────────────────────────────────────────
+  const kpiColor = (val, good, warn) => val >= good ? "#16a34a" : val >= warn ? "#d97706" : "#dc2626";
+
+  // ── HTML riche ─────────────────────────────────────────────────────────────
+  const bienRows = Object.values(byBien)
+    .sort((a, b) => b.ca - a.ca)
+    .map(b => {
+      const pMoyNuit = b.nuits > 0 ? Math.round(b.ca / b.nuits) : 0;
+      const occPct = Math.round((b.nuits / daysInMonth) * 100);
+      const canalTag = b.airbnb > 0 && b.booking === 0 ? "Airbnb" :
+                       b.booking > 0 && b.airbnb === 0 ? "Booking" : "Mix";
+      return `
+      <tr>
+        <td style="padding:10px 12px;border-bottom:1px solid #e8dcc8;font-weight:500;color:#0e3b3a;font-size:13px;">${b.nom}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e8dcc8;text-align:right;font-weight:700;color:#0e3b3a;font-size:14px;">${b.ca.toLocaleString("fr-FR")}€</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e8dcc8;text-align:center;color:#7a6b5a;font-size:13px;">${b.nuits}n</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e8dcc8;text-align:center;font-size:12px;color:${kpiColor(occPct, 60, 40)};">${occPct}%</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e8dcc8;text-align:center;color:#7a6b5a;font-size:13px;">${pMoyNuit}€/n</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e8dcc8;text-align:center;font-size:11px;color:#7a6b5a;">${canalTag}</td>
+      </tr>`;
+    }).join("");
+
+  // Barres canal mix (proportionnelles, 200px de large)
+  const barAirbnb  = Math.round(200 * pctAirbnb / 100);
+  const barBooking = Math.round(200 * pctBooking / 100);
+  const barDirect  = 200 - barAirbnb - barBooking;
+
+  const resa20 = events.slice(0, 20); // max 20 lignes
+  const resaRows = resa20.map(e => {
+    const n = diffDays(e.checkin, e.checkout);
+    const cIcon = e.canal === "airbnb" ? "🏠" : e.canal === "booking" ? "🔵" : "🌐";
+    return `
+    <tr>
+      <td style="padding:7px 10px;border-bottom:1px solid #f0e8d8;font-size:12px;color:#0e3b3a;">${e.nom}</td>
+      <td style="padding:7px 10px;border-bottom:1px solid #f0e8d8;font-size:12px;color:#7a6b5a;">${e.checkin} → ${e.checkout}</td>
+      <td style="padding:7px 10px;border-bottom:1px solid #f0e8d8;font-size:12px;text-align:center;">${n}n</td>
+      <td style="padding:7px 10px;border-bottom:1px solid #f0e8d8;font-size:12px;text-align:right;font-weight:600;color:#0e3b3a;">${e.montant ? e.montant.toLocaleString("fr-FR") + "€" : "—"}</td>
+      <td style="padding:7px 10px;border-bottom:1px solid #f0e8d8;font-size:12px;text-align:center;">${cIcon}</td>
+    </tr>`;
+  }).join("");
+
+  const html = `
+  <div style="font-family:sans-serif;max-width:600px;margin:auto;background:#f4ecdc;">
+
+    <!-- HEADER -->
+    <div style="background:#0e3b3a;padding:32px 28px;border-radius:12px 12px 0 0;text-align:center;">
+      <p style="color:#c47254;font-size:11px;letter-spacing:0.25em;text-transform:uppercase;margin:0 0 8px;">Rapport mensuel</p>
+      <h1 style="color:#faf5e9;font-size:26px;font-weight:300;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 6px;">${label}</h1>
+      <p style="color:rgba(250,245,233,0.6);font-size:13px;margin:0;">${events.length} réservation${events.length > 1 ? "s" : ""} · CSV en pièce jointe</p>
+    </div>
+
+    <!-- KPI ROW -->
+    <div style="display:flex;gap:0;background:#fff;border-left:1px solid #e8dcc8;border-right:1px solid #e8dcc8;">
+      ${[
+        { label: "CA Total", value: totalCA.toLocaleString("fr-FR") + "€", color: kpiColor(totalCA, 8000, 4000) },
+        { label: "Nuits vendues", value: totalNuits + "n", color: "#0e3b3a" },
+        { label: "Taux occ.", value: tauxOcc + "%", color: kpiColor(tauxOcc, 55, 35) },
+        { label: "Prix moy./nuit", value: prixMoyenNuit + "€", color: "#0e3b3a" },
+      ].map(k => `
+        <div style="flex:1;padding:18px 12px;text-align:center;border-right:1px solid #e8dcc8;">
+          <div style="font-size:22px;font-weight:700;color:${k.color};margin-bottom:4px;">${k.value}</div>
+          <div style="font-size:10px;color:#7a6b5a;letter-spacing:0.08em;text-transform:uppercase;">${k.label}</div>
+        </div>`).join("")}
+    </div>
+
+    <!-- PAR LOGEMENT -->
+    <div style="background:#fff;border:1px solid #e8dcc8;border-top:none;padding:0;">
+      <div style="padding:16px 16px 8px;border-bottom:1px solid #f0e8d8;">
+        <span style="font-size:11px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:#c47254;">Par logement</span>
+      </div>
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="background:#f4ecdc;">
+            <th style="padding:8px 12px;text-align:left;font-size:10px;color:#7a6b5a;letter-spacing:0.08em;font-weight:600;text-transform:uppercase;">Logement</th>
+            <th style="padding:8px 12px;text-align:right;font-size:10px;color:#7a6b5a;letter-spacing:0.08em;font-weight:600;text-transform:uppercase;">CA</th>
+            <th style="padding:8px 12px;text-align:center;font-size:10px;color:#7a6b5a;letter-spacing:0.08em;font-weight:600;text-transform:uppercase;">Nuits</th>
+            <th style="padding:8px 12px;text-align:center;font-size:10px;color:#7a6b5a;letter-spacing:0.08em;font-weight:600;text-transform:uppercase;">Occ.</th>
+            <th style="padding:8px 12px;text-align:center;font-size:10px;color:#7a6b5a;letter-spacing:0.08em;font-weight:600;text-transform:uppercase;">Moy./n</th>
+            <th style="padding:8px 12px;text-align:center;font-size:10px;color:#7a6b5a;letter-spacing:0.08em;font-weight:600;text-transform:uppercase;">Canal</th>
+          </tr>
+        </thead>
+        <tbody>${bienRows}</tbody>
+        <tfoot>
+          <tr style="background:#f4ecdc;">
+            <td style="padding:10px 12px;font-weight:700;color:#0e3b3a;font-size:13px;">TOTAL</td>
+            <td style="padding:10px 12px;text-align:right;font-weight:700;color:#c47254;font-size:14px;">${totalCA.toLocaleString("fr-FR")}€</td>
+            <td style="padding:10px 12px;text-align:center;font-weight:600;color:#0e3b3a;font-size:13px;">${totalNuits}n</td>
+            <td style="padding:10px 12px;text-align:center;font-weight:600;font-size:13px;color:${kpiColor(tauxOcc, 55, 35)};">${tauxOcc}%</td>
+            <td style="padding:10px 12px;text-align:center;color:#7a6b5a;font-size:13px;">${prixMoyenNuit}€/n</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <!-- CANAL MIX -->
+    <div style="background:#fff;border:1px solid #e8dcc8;border-top:none;padding:16px;">
+      <span style="font-size:11px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:#c47254;display:block;margin-bottom:14px;">Mix canal (nb réservations)</span>
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
+        ${barAirbnb > 0 ? `<div style="width:${barAirbnb}px;height:18px;background:#ff5a5f;border-radius:4px 0 0 4px;"></div>` : ""}
+        ${barBooking > 0 ? `<div style="width:${barBooking}px;height:18px;background:#003580;"></div>` : ""}
+        ${barDirect > 0 ? `<div style="width:${barDirect}px;height:18px;background:#16a34a;border-radius:0 4px 4px 0;"></div>` : ""}
+      </div>
+      <div style="display:flex;gap:16px;font-size:11px;color:#7a6b5a;">
+        ${nbAirbnb > 0 ? `<span>🏠 Airbnb ${pctAirbnb}% (${nbAirbnb})</span>` : ""}
+        ${nbBooking > 0 ? `<span>🔵 Booking ${pctBooking}% (${nbBooking})</span>` : ""}
+        ${nbDirect > 0 ? `<span>🌐 Direct ${pctDirect}% (${nbDirect})</span>` : ""}
+      </div>
+      ${pctBooking > 70 ? `<p style="margin:10px 0 0;font-size:12px;color:#dc2626;font-weight:600;">⚠️ Booking.com > 70% — forte dépendance à surveiller</p>` : ""}
+    </div>
+
+    <!-- DETAIL RÉSERVATIONS -->
+    <div style="background:#fff;border:1px solid #e8dcc8;border-top:none;padding:0;">
+      <div style="padding:16px 16px 8px;border-bottom:1px solid #f0e8d8;">
+        <span style="font-size:11px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:#c47254;">Détail des réservations</span>
+      </div>
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="background:#f4ecdc;">
+            <th style="padding:7px 10px;text-align:left;font-size:10px;color:#7a6b5a;font-weight:600;text-transform:uppercase;">Logement</th>
+            <th style="padding:7px 10px;text-align:left;font-size:10px;color:#7a6b5a;font-weight:600;text-transform:uppercase;">Dates</th>
+            <th style="padding:7px 10px;text-align:center;font-size:10px;color:#7a6b5a;font-weight:600;text-transform:uppercase;">N</th>
+            <th style="padding:7px 10px;text-align:right;font-size:10px;color:#7a6b5a;font-weight:600;text-transform:uppercase;">Montant</th>
+            <th style="padding:7px 10px;text-align:center;font-size:10px;color:#7a6b5a;font-weight:600;text-transform:uppercase;">Canal</th>
+          </tr>
+        </thead>
+        <tbody>${resaRows}</tbody>
+      </table>
+      ${events.length > 20 ? `<p style="padding:10px 12px;font-size:11px;color:#7a6b5a;margin:0;">… et ${events.length - 20} autres réservations dans le CSV ci-joint.</p>` : ""}
+    </div>
+
+    <!-- CTA -->
+    <div style="background:#fff;border:1px solid #e8dcc8;border-top:none;border-radius:0 0 12px 12px;padding:24px;text-align:center;">
+      <a href="${env.SITE_URL || "https://villamaryllis.com"}/admin" style="display:inline-block;background:#0e3b3a;color:#faf5e9;text-decoration:none;padding:12px 28px;border-radius:9px;font-size:13px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;margin-right:10px;">Dashboard admin →</a>
+      <p style="margin:16px 0 0;font-size:10px;color:#b0a898;">Le fichier CSV joint contient toutes les réservations pour votre comptable · Amaryllis automatique</p>
+    </div>
+
+  </div>`;
 
   const r = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -955,12 +1118,8 @@ async function runMonthlyExport(env, allEvents) {
     body: JSON.stringify({
       from: env.RESEND_FROM || "Amaryllis <notifications@mail.villamaryllis.com>",
       to: [env.NOTIFICATION_EMAIL || "contact@villamaryllis.com"],
-      subject: `📊 Export comptable — ${label}`,
-      html: emailWrapper(`
-        <h2 style="color:#0e3b3a;margin:0 0 8px">📊 Export comptable</h2>
-        <p style="color:#7a6b5a;font-size:13px;margin:0 0 20px">${label} · ${events.length} réservation${events.length > 1 ? "s" : ""} · ${totalCA.toLocaleString("fr-FR")}€ CA</p>
-        <p style="font-size:13px;color:#0e3b3a;">Le fichier CSV ci-joint contient toutes les réservations du mois pour transmission à votre comptable.</p>
-      `),
+      subject: `📊 Rapport ${label} — ${totalCA.toLocaleString("fr-FR")}€ · ${totalNuits}n · ${tauxOcc}% occ.`,
+      html,
       attachments: [{
         filename: `reservations-${lastMonthStr}.csv`,
         content: csvB64,
@@ -969,7 +1128,7 @@ async function runMonthlyExport(env, allEvents) {
   });
 
   if (!r.ok) console.error("[monthly] Resend error:", await r.text());
-  else console.log(`[monthly] Export ${label} envoyé — ${events.length} réservations, ${totalCA}€`);
+  else console.log(`[monthly] Rapport ${label} envoyé — ${events.length} réservations, ${totalCA}€, ${tauxOcc}% occ.`);
 }
 
 // ── Push vers Google Sheets ──────────────────────────────────────────────────
