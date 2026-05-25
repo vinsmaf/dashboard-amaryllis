@@ -307,6 +307,32 @@
       }
     }
   ],
+  "guide_arlet": {
+    "titre": "Grande Anse d'Arlet — les tortues marines",
+    "distance": "25 min de Sainte-Luce",
+    "accroche": "Le spot le plus émouvant de Martinique : nager avec des tortues marines à 2 mètres du bord, sans bouteille, sans guide.",
+    "sections": [
+      {
+        "titre": "Comment y aller",
+        "contenu": "Prenez la N5 direction Le Diamant puis la D7 vers Arlet. Comptez 25 min depuis Sainte-Luce. Parking payant à l'entrée du bourg (2€/h). Arrivez avant 8h pour avoir une place facilement en haute saison."
+      },
+      {
+        "titre": "Trouver les tortues",
+        "contenu": "Entrez dans l'eau côté gauche de la plage, vers la pointe rocheuse. Les tortues sont présentes toute l'année mais quasi-certaines entre 7h et 9h. Restez immobile à la surface, ne les touchez pas, elles remontent respirer toutes les 5-10 min. Un masque et un tuba suffisent (location sur la plage, 5-8€)."
+      },
+      {
+        "titre": "Conseils pratiques",
+        "contenu": "Crème solaire minérale uniquement (les filtres chimiques abîment les coraux). Apportez de l'eau — peu de commerces à l'ouverture. Après la baignade, le village mérite une heure de flânerie : église créole, bœufs sur la plage, restaurant de poisson. Évitez les week-ends de juillet-août, très fréquentés."
+      }
+    ],
+    "infos": {
+      "distance_km": 18,
+      "duree_trajet": "25 min",
+      "parking": "Payant, 2€/h",
+      "meilleur_moment": "7h-9h du matin",
+      "materiel": "Masque + tuba (location 5-8€ sur place)"
+    }
+  },
   "contacts": [
     {
       "label": "Vincent (propriétaire)",

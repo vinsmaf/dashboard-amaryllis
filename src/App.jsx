@@ -7400,6 +7400,9 @@ export default function App() {
       items: [
         { id: "planning",      icon: "📅", label: "Planning",    badge: planningAlerts > 0 ? planningAlerts : null, badgeColor: "#f59e0b" },
         { id: "menage",        icon: "🧹", label: "Ménage",      badge: menageBadge > 0    ? menageBadge : null,   badgeColor: "#f59e0b" },
+        { id: "interventions", icon: "🔨", label: "Interventions" },
+        { id: "stocks",        icon: "📦", label: "Stocks" },
+        { id: "linge",         icon: "🛏️",  label: "Linge" },
         { id: "prestataires",  icon: "👷", label: "Prestataires" },
         { id: "messages",      icon: "💬", label: "Messages" },
         { id: "emails",        icon: "📧", label: "Emails" },
@@ -7419,6 +7422,7 @@ export default function App() {
         { id: "previsionnel",icon: "🔮", label: "Prévisionnel" },
         { id: "historique",  icon: "📈", label: "Historique" },
         { id: "analytics",   icon: "📊", label: "Analytics" },
+        { id: "conversion",  icon: "💳", label: "Conversion" },
       ],
     },
     {
@@ -7647,6 +7651,10 @@ export default function App() {
             {tab === "guides" && <GuideEditor mob={mob} />}
             {tab === "agents" && <AgentsKanban mob={mob} />}
             {tab === "chat-admin" && <LocalErrorBoundary><AdminChatTab biens={biens} reservations={reservations} addToast={addToast} /></LocalErrorBoundary>}
+            {tab === "interventions" && <InterventionsTab biens={biens} mob={mob} />}
+            {tab === "stocks"        && <StockTrackerTab  biens={biens} mob={mob} />}
+            {tab === "linge"         && <LingeTab         biens={biens} mob={mob} />}
+            {tab === "conversion"    && <ConversionTab    biens={biens} reservations={reservations} mob={mob} />}
           </div>
         </div>
       </div>
@@ -8845,6 +8853,530 @@ function DevisEditor() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   log-003 — INTERVENTIONS TAB
+   Suivi des interventions / travaux prestataires, stocké en localStorage
+═══════════════════════════════════════════════════════════════════ */
+const INTER_KEY = "ldb_interventions_v1";
+const INTER_TYPES = ["Ménage", "Plomberie", "Électricité", "Jardinage", "Piscine", "Climatisation", "Serrurerie", "Peinture", "Électroménager", "Autre"];
+const INTER_STATUS = [
+  { v: "todo",       label: "À planifier", color: "#f59e0b" },
+  { v: "scheduled",  label: "Planifiée",   color: "#0ea5e9" },
+  { v: "done",       label: "Terminée",    color: "#10b981" },
+  { v: "cancelled",  label: "Annulée",     color: "#64748b" },
+];
+function InterventionsTab({ biens, mob }) {
+  const [items, setItems] = React.useState(() => { try { return JSON.parse(localStorage.getItem(INTER_KEY) || "[]"); } catch { return []; } });
+  const [form, setForm] = React.useState({ bienId: biens[0]?.id || "", type: "Ménage", date: "", prestataire: "", cost: "", notes: "", status: "todo" });
+  const [show, setShow] = React.useState(false);
+  const [filter, setFilter] = React.useState("all");
+
+  function save(arr) { setItems(arr); try { localStorage.setItem(INTER_KEY, JSON.stringify(arr)); } catch {} }
+  function add() {
+    if (!form.date || !form.bienId) return;
+    save([{ id: Date.now(), ...form }, ...items]);
+    setForm(f => ({ ...f, date: "", prestataire: "", cost: "", notes: "", status: "todo" }));
+    setShow(false);
+  }
+  function toggle(id, field, val) { save(items.map(i => i.id === id ? { ...i, [field]: val } : i)); }
+  function del(id) { if (window.confirm("Supprimer cette intervention ?")) save(items.filter(i => i.id !== id)); }
+
+  const filtered = filter === "all" ? items : items.filter(i => i.status === filter);
+  const stats = INTER_STATUS.map(s => ({ ...s, count: items.filter(i => i.status === s.v).length }));
+
+  const card = { background: "#1e293b", borderRadius: 12, padding: "14px 16px", border: "1px solid rgba(255,255,255,0.06)", marginBottom: 8 };
+  const inp  = { width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#0f172a", color: "#e2e8f0", fontSize: 12, boxSizing: "border-box" };
+  const lbl  = { fontSize: 10, color: "#64748b", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 3, display: "block" };
+
+  return (
+    <div style={{ maxWidth: 760, margin: "0 auto" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: 17, color: "#f1f5f9" }}>🔨 Suivi des interventions</h2>
+          <p style={{ margin: "3px 0 0", fontSize: 11, color: "#64748b" }}>{items.length} intervention{items.length !== 1 ? "s" : ""} enregistrée{items.length !== 1 ? "s" : ""}</p>
+        </div>
+        <button onClick={() => setShow(s => !s)} style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: "#0ea5e9", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+          + Nouvelle
+        </button>
+      </div>
+
+      {/* Stats */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 16 }}>
+        {stats.map(s => (
+          <div key={s.v} onClick={() => setFilter(filter === s.v ? "all" : s.v)} style={{ ...card, marginBottom: 0, textAlign: "center", cursor: "pointer", borderColor: filter === s.v ? s.color : "rgba(255,255,255,0.06)", padding: "12px 8px" }}>
+            <div style={{ fontSize: 20, fontWeight: 700, color: s.color }}>{s.count}</div>
+            <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Formulaire ajout */}
+      {show && (
+        <div style={{ ...card, borderColor: "rgba(14,165,233,0.3)", marginBottom: 16 }}>
+          <div style={{ fontSize: 12, color: "#0ea5e9", fontWeight: 700, marginBottom: 12 }}>Nouvelle intervention</div>
+          <div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "1fr 1fr", gap: 10 }}>
+            <div>
+              <label style={lbl}>Logement</label>
+              <select value={form.bienId} onChange={e => setForm(f => ({ ...f, bienId: e.target.value }))} style={inp}>
+                {biens.map(b => <option key={b.id} value={b.id}>{b.emoji || "🏠"} {b.nom}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={lbl}>Type</label>
+              <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))} style={inp}>
+                {INTER_TYPES.map(t => <option key={t}>{t}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={lbl}>Date</label>
+              <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} style={inp} />
+            </div>
+            <div>
+              <label style={lbl}>Prestataire</label>
+              <input type="text" placeholder="Nom / contact" value={form.prestataire} onChange={e => setForm(f => ({ ...f, prestataire: e.target.value }))} style={inp} />
+            </div>
+            <div>
+              <label style={lbl}>Coût (€)</label>
+              <input type="number" placeholder="0" value={form.cost} onChange={e => setForm(f => ({ ...f, cost: e.target.value }))} style={inp} />
+            </div>
+            <div>
+              <label style={lbl}>Statut</label>
+              <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} style={inp}>
+                {INTER_STATUS.map(s => <option key={s.v} value={s.v}>{s.label}</option>)}
+              </select>
+            </div>
+            <div style={{ gridColumn: mob ? "1" : "1/-1" }}>
+              <label style={lbl}>Notes</label>
+              <input type="text" placeholder="Détails, références, …" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} style={inp} />
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+            <button onClick={add} style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: "#10b981", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>✓ Enregistrer</button>
+            <button onClick={() => setShow(false)} style={{ padding: "8px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "transparent", color: "#94a3b8", fontSize: 12, cursor: "pointer" }}>Annuler</button>
+          </div>
+        </div>
+      )}
+
+      {/* Liste */}
+      {filtered.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "40px 24px", color: "#475569" }}>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>🔨</div>
+          <div style={{ fontSize: 13 }}>{filter === "all" ? "Aucune intervention enregistrée" : "Aucune intervention dans cette catégorie"}</div>
+        </div>
+      ) : filtered.map(item => {
+        const b = biens.find(x => x.id === item.bienId);
+        const st = INTER_STATUS.find(s => s.v === item.status) || INTER_STATUS[0];
+        return (
+          <div key={item.id} style={card}>
+            <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#f1f5f9" }}>{item.type}</span>
+                  <span style={{ fontSize: 10, color: "#94a3b8" }}>{b?.emoji || "🏠"} {b?.nom || item.bienId}</span>
+                  <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 99, background: `${st.color}22`, color: st.color, fontWeight: 600 }}>{st.label}</span>
+                  {item.cost > 0 && <span style={{ fontSize: 10, color: "#f59e0b", fontWeight: 700 }}>{Number(item.cost).toLocaleString("fr-FR")} €</span>}
+                </div>
+                <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>
+                  📅 {item.date}{item.prestataire && ` · 👷 ${item.prestataire}`}
+                </div>
+                {item.notes && <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 3, fontStyle: "italic" }}>{item.notes}</div>}
+              </div>
+              <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                <select value={item.status} onChange={e => toggle(item.id, "status", e.target.value)}
+                  style={{ padding: "4px 6px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)", background: "#0f172a", color: "#e2e8f0", fontSize: 10, cursor: "pointer" }}>
+                  {INTER_STATUS.map(s => <option key={s.v} value={s.v}>{s.label}</option>)}
+                </select>
+                <button onClick={() => del(item.id)} style={{ padding: "4px 8px", borderRadius: 6, border: "none", background: "rgba(239,68,68,0.12)", color: "#f87171", fontSize: 11, cursor: "pointer" }}>✕</button>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   log-004 — STOCK TRACKER TAB
+   Niveaux min/max par propriété, alertes sous le seuil
+═══════════════════════════════════════════════════════════════════ */
+const STOCK_KEY = "ldb_stocks_v1";
+const STOCK_DEFAULTS = [
+  { cat: "Linge", items: ["Draps 2p", "Draps 1p", "Taies d'oreiller", "Serviettes bain", "Serviettes main", "Peignoirs"] },
+  { cat: "Cuisine", items: ["Éponges", "Liquide vaisselle", "Sacs poubelle", "Papier essuie-tout", "Café capsules", "Thé sachets"] },
+  { cat: "Salle de bain", items: ["Gel douche", "Shampoing", "Savon", "PQ rouleaux", "Coton-tiges"] },
+  { cat: "Piscine / Jardin", items: ["Chlore tablettes", "Anticalcaire", "Crème solaire (stock)", "Brassards enfants"] },
+];
+function StockTrackerTab({ biens, mob }) {
+  const [stocks, setStocks] = React.useState(() => {
+    try { return JSON.parse(localStorage.getItem(STOCK_KEY) || "{}"); } catch { return {}; }
+  });
+  const [selBien, setSelBien] = React.useState(biens[0]?.id || "");
+
+  function getStock(bienId, cat, item) { return stocks[bienId]?.[cat]?.[item] || { qty: 0, min: 2, max: 10 }; }
+  function setField(bienId, cat, item, field, val) {
+    setStocks(prev => {
+      const next = JSON.parse(JSON.stringify(prev));
+      if (!next[bienId]) next[bienId] = {};
+      if (!next[bienId][cat]) next[bienId][cat] = {};
+      if (!next[bienId][cat][item]) next[bienId][cat][item] = { qty: 0, min: 2, max: 10 };
+      next[bienId][cat][item][field] = Number(val);
+      try { localStorage.setItem(STOCK_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }
+
+  const allAlerts = biens.flatMap(b => STOCK_DEFAULTS.flatMap(c => c.items.map(item => {
+    const s = getStock(b.id, c.cat, item);
+    return s.qty < s.min ? { bienId: b.id, bienNom: b.nom, cat: c.cat, item, qty: s.qty, min: s.min } : null;
+  }))).filter(Boolean);
+
+  const cardBase = { background: "#1e293b", borderRadius: 12, border: "1px solid rgba(255,255,255,0.06)", marginBottom: 16, overflow: "hidden" };
+
+  return (
+    <div style={{ maxWidth: 800, margin: "0 auto" }}>
+      <div style={{ marginBottom: 16 }}>
+        <h2 style={{ margin: 0, fontSize: 17, color: "#f1f5f9" }}>📦 Stock tracker</h2>
+        <p style={{ margin: "3px 0 0", fontSize: 11, color: "#64748b" }}>Niveaux de stock par logement · alertes sous le seuil minimum</p>
+      </div>
+
+      {allAlerts.length > 0 && (
+        <div style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 10, padding: "12px 14px", marginBottom: 16 }}>
+          <div style={{ fontSize: 12, color: "#f87171", fontWeight: 700, marginBottom: 6 }}>⚠️ {allAlerts.length} article{allAlerts.length > 1 ? "s" : ""} sous le seuil minimum</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {allAlerts.map((a, i) => (
+              <span key={i} style={{ fontSize: 10, padding: "2px 8px", borderRadius: 99, background: "rgba(239,68,68,0.15)", color: "#f87171" }}>
+                {a.bienNom} · {a.item} ({a.qty}/{a.min})
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16 }}>
+        {biens.map(b => (
+          <button key={b.id} onClick={() => setSelBien(b.id)}
+            style={{ padding: "6px 14px", borderRadius: 20, border: "none", background: selBien === b.id ? "#0ea5e9" : "rgba(255,255,255,0.06)", color: selBien === b.id ? "#fff" : "#94a3b8", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+            {b.emoji || "🏠"} {b.nom}
+          </button>
+        ))}
+      </div>
+
+      {STOCK_DEFAULTS.map(cat => (
+        <div key={cat.cat} style={cardBase}>
+          <div style={{ padding: "10px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)", fontSize: 11, color: "#94a3b8", fontWeight: 600 }}>{cat.cat}</div>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 400 }}>
+              <thead>
+                <tr>
+                  <th style={{ padding: "8px 12px", textAlign: "left", fontSize: 10, color: "#475569", fontWeight: 600 }}>Article</th>
+                  <th style={{ padding: "8px 8px", textAlign: "center", fontSize: 10, color: "#475569", fontWeight: 600, width: 70 }}>Qté</th>
+                  <th style={{ padding: "8px 8px", textAlign: "center", fontSize: 10, color: "#475569", fontWeight: 600, width: 60 }}>Min</th>
+                  <th style={{ padding: "8px 8px", textAlign: "center", fontSize: 10, color: "#475569", fontWeight: 600, width: 60 }}>Max</th>
+                  <th style={{ padding: "8px 12px", textAlign: "left", fontSize: 10, color: "#475569", fontWeight: 600, width: 100 }}>État</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cat.items.map(item => {
+                  const s = getStock(selBien, cat.cat, item);
+                  const pct = s.max > 0 ? Math.min(100, Math.round(s.qty / s.max * 100)) : 0;
+                  const color = s.qty < s.min ? "#ef4444" : s.qty < s.min * 1.5 ? "#f59e0b" : "#10b981";
+                  return (
+                    <tr key={item} style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                      <td style={{ padding: "8px 12px", fontSize: 12, color: "#e2e8f0" }}>{item}</td>
+                      <td style={{ padding: "6px 8px", textAlign: "center" }}>
+                        <input type="number" min="0" value={s.qty}
+                          onChange={e => setField(selBien, cat.cat, item, "qty", e.target.value)}
+                          style={{ width: 52, padding: "4px 6px", borderRadius: 6, border: `1px solid ${color}44`, background: "#0f172a", color, fontSize: 12, textAlign: "center" }} />
+                      </td>
+                      <td style={{ padding: "6px 8px", textAlign: "center" }}>
+                        <input type="number" min="0" value={s.min}
+                          onChange={e => setField(selBien, cat.cat, item, "min", e.target.value)}
+                          style={{ width: 44, padding: "4px 4px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)", background: "#0f172a", color: "#94a3b8", fontSize: 11, textAlign: "center" }} />
+                      </td>
+                      <td style={{ padding: "6px 8px", textAlign: "center" }}>
+                        <input type="number" min="0" value={s.max}
+                          onChange={e => setField(selBien, cat.cat, item, "max", e.target.value)}
+                          style={{ width: 44, padding: "4px 4px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)", background: "#0f172a", color: "#94a3b8", fontSize: 11, textAlign: "center" }} />
+                      </td>
+                      <td style={{ padding: "8px 12px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <div style={{ flex: 1, height: 5, background: "rgba(255,255,255,0.08)", borderRadius: 3, overflow: "hidden" }}>
+                            <div style={{ width: `${pct}%`, height: "100%", background: color, borderRadius: 3, transition: "width 0.3s" }} />
+                          </div>
+                          <span style={{ fontSize: 10, color, fontWeight: 600, minWidth: 28 }}>{pct}%</span>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   log-006 — LINGE TAB
+   Dashboard rotation linge : stock draps/serviettes par logement
+═══════════════════════════════════════════════════════════════════ */
+const LINGE_KEY   = "ldb_linge_v1";
+const LINGE_SETS  = ["Draps 2 personnes", "Draps 1 personne", "Serviettes bain", "Serviettes main", "Housses de couette", "Oreillers housses", "Tapis de bain"];
+const LINGE_STATES = [
+  { v: "propre",   label: "Propre",    color: "#10b981", icon: "✓" },
+  { v: "utilise",  label: "Utilisé",   color: "#f59e0b", icon: "≈" },
+  { v: "lavage",   label: "Au lavage", color: "#0ea5e9", icon: "↺" },
+  { v: "manque",   label: "Manquant",  color: "#ef4444", icon: "!" },
+];
+function LingeTab({ biens, mob }) {
+  const [data, setData] = React.useState(() => { try { return JSON.parse(localStorage.getItem(LINGE_KEY) || "{}"); } catch { return {}; } });
+  const [sel, setSel] = React.useState(biens[0]?.id || "");
+  const [log, setLog] = React.useState([]);
+
+  function getEntry(bienId, set) { return data[bienId]?.[set] || { qty: 0, state: "propre" }; }
+  function setField(bienId, set, field, val) {
+    setData(prev => {
+      const next = JSON.parse(JSON.stringify(prev));
+      if (!next[bienId]) next[bienId] = {};
+      if (!next[bienId][set]) next[bienId][set] = { qty: 0, state: "propre" };
+      next[bienId][set][field] = val;
+      try { localStorage.setItem(LINGE_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+    if (field === "state") {
+      const b = biens.find(x => x.id === bienId);
+      setLog(prev => [{ ts: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }), msg: `${b?.nom || bienId} · ${set} → ${val}` }, ...prev.slice(0, 9)]);
+    }
+  }
+
+  const totalPropre = biens.reduce((acc, b) => acc + LINGE_SETS.filter(s => getEntry(b.id, s).state === "propre").length, 0);
+  const totalLavage = biens.reduce((acc, b) => acc + LINGE_SETS.filter(s => getEntry(b.id, s).state === "lavage").length, 0);
+  const totalManque = biens.reduce((acc, b) => acc + LINGE_SETS.filter(s => getEntry(b.id, s).state === "manque").length, 0);
+
+  const lingeCard = { background: "#1e293b", borderRadius: 12, border: "1px solid rgba(255,255,255,0.06)", marginBottom: 12 };
+
+  return (
+    <div style={{ maxWidth: 800, margin: "0 auto" }}>
+      <div style={{ marginBottom: 16 }}>
+        <h2 style={{ margin: 0, fontSize: 17, color: "#f1f5f9" }}>🛏️ Rotation linge</h2>
+        <p style={{ margin: "3px 0 0", fontSize: 11, color: "#64748b" }}>Suivi du stock de linge par logement · état en temps réel</p>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 16 }}>
+        {[
+          { label: "Sets propres", val: totalPropre, color: "#10b981" },
+          { label: "Au lavage",    val: totalLavage, color: "#0ea5e9" },
+          { label: "Manquants",    val: totalManque, color: "#ef4444" },
+        ].map(k => (
+          <div key={k.label} style={{ ...lingeCard, marginBottom: 0, padding: "12px 14px", textAlign: "center" }}>
+            <div style={{ fontSize: 22, fontWeight: 700, color: k.color }}>{k.val}</div>
+            <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>{k.label}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+        {biens.map(b => {
+          const manque = LINGE_SETS.filter(s => getEntry(b.id, s).state === "manque").length;
+          return (
+            <button key={b.id} onClick={() => setSel(b.id)}
+              style={{ position: "relative", padding: "6px 14px", borderRadius: 20, border: "none", background: sel === b.id ? "#0ea5e9" : "rgba(255,255,255,0.06)", color: sel === b.id ? "#fff" : "#94a3b8", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+              {b.emoji || "🏠"} {b.nom}
+              {manque > 0 && <span style={{ position: "absolute", top: -4, right: -4, background: "#ef4444", color: "#fff", fontSize: 9, fontWeight: 700, borderRadius: 99, width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>{manque}</span>}
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={lingeCard}>
+        <div style={{ padding: "10px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)", fontSize: 12, color: "#f1f5f9", fontWeight: 600 }}>
+          {biens.find(b => b.id === sel)?.emoji || "🏠"} {biens.find(b => b.id === sel)?.nom}
+        </div>
+        {LINGE_SETS.map(set => {
+          const e = getEntry(sel, set);
+          const st = LINGE_STATES.find(s => s.v === e.state) || LINGE_STATES[0];
+          return (
+            <div key={set} style={{ padding: "10px 16px", borderBottom: "1px solid rgba(255,255,255,0.04)", display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ flex: 1, fontSize: 12, color: "#e2e8f0" }}>{set}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <input type="number" min="0" value={e.qty} onChange={ev => setField(sel, set, "qty", Number(ev.target.value))}
+                  style={{ width: 48, padding: "4px 6px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)", background: "#0f172a", color: "#e2e8f0", fontSize: 12, textAlign: "center" }} />
+                <span style={{ fontSize: 10, color: "#64748b" }}>sets</span>
+              </div>
+              <div style={{ display: "flex", gap: 4 }}>
+                {LINGE_STATES.map(s => (
+                  <button key={s.v} onClick={() => setField(sel, set, "state", s.v)}
+                    title={s.label}
+                    style={{ width: 28, height: 28, borderRadius: 6, border: `1px solid ${e.state === s.v ? s.color : "rgba(255,255,255,0.08)"}`, background: e.state === s.v ? `${s.color}22` : "transparent", color: e.state === s.v ? s.color : "#475569", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>
+                    {s.icon}
+                  </button>
+                ))}
+              </div>
+              <span style={{ fontSize: 10, minWidth: 64, color: st.color, fontWeight: 600 }}>{st.label}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      {log.length > 0 && (
+        <div style={{ ...lingeCard, padding: "12px 14px" }}>
+          <div style={{ fontSize: 10, color: "#64748b", fontWeight: 600, marginBottom: 6 }}>Journal de la session</div>
+          {log.map((l, i) => <div key={i} style={{ fontSize: 10, color: "#94a3b8", padding: "2px 0" }}><span style={{ color: "#475569" }}>{l.ts}</span> {l.msg}</div>)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   data-008 — CONVERSION TAB
+   Taux de conversion par canal de réservation
+═══════════════════════════════════════════════════════════════════ */
+function ConversionTab({ biens, reservations, mob }) {
+  const [period, setPeriod] = React.useState("12");
+
+  const cutoff = (() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - parseInt(period, 10));
+    return d.toISOString().slice(0, 10);
+  })();
+
+  const filtered = reservations.filter(r => r.checkin >= cutoff);
+
+  const CANAL_COLORS = { direct: "#10b981", airbnb: "#f59e0b", booking: "#0ea5e9", autre: "#a855f7" };
+  const CANAL_LABELS = { direct: "Réservation directe", airbnb: "Airbnb", booking: "Booking.com", autre: "Autre" };
+
+  const statsMap = {};
+  filtered.forEach(r => {
+    const raw = (r.canal || "autre").toLowerCase();
+    const canal = ["direct", "airbnb", "booking"].find(c => raw.includes(c)) || "autre";
+    if (!statsMap[canal]) statsMap[canal] = { canal, count: 0, rev: 0, nights: 0 };
+    statsMap[canal].count++;
+    statsMap[canal].rev += Number(r.montant) || 0;
+    if (r.checkin && r.checkout) {
+      statsMap[canal].nights += Math.max(0, Math.round((new Date(r.checkout) - new Date(r.checkin)) / 86400000));
+    }
+  });
+
+  const stats = Object.values(statsMap).map(s => ({
+    ...s,
+    label: CANAL_LABELS[s.canal] || s.canal,
+    color: CANAL_COLORS[s.canal] || "#64748b",
+    avgRev: s.count ? Math.round(s.rev / s.count) : 0,
+    avgNights: s.count ? (s.nights / s.count).toFixed(1) : 0,
+  })).sort((a, b) => b.rev - a.rev);
+
+  const bienStats = biens.map(b => {
+    const resas = filtered.filter(r => r.bienId === b.id);
+    const rev = resas.reduce((s, r) => s + (Number(r.montant) || 0), 0);
+    const directCount = resas.filter(r => (r.canal || "").toLowerCase() === "direct").length;
+    return { ...b, count: resas.length, rev, pctDirect: resas.length ? Math.round(directCount / resas.length * 100) : 0 };
+  }).filter(b => b.count > 0).sort((a, z) => z.rev - a.rev);
+
+  const totalRev   = stats.reduce((s, c) => s + c.rev, 0);
+  const totalResas = filtered.length;
+  const directResas = filtered.filter(r => (r.canal || "").toLowerCase() === "direct").length;
+
+  const convCard = { background: "#1e293b", borderRadius: 12, border: "1px solid rgba(255,255,255,0.06)", marginBottom: 16 };
+  const selInp   = { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#0f172a", color: "#e2e8f0", fontSize: 12, cursor: "pointer" };
+
+  return (
+    <div style={{ maxWidth: 800, margin: "0 auto" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: 17, color: "#f1f5f9" }}>💳 Conversion par canal</h2>
+          <p style={{ margin: "3px 0 0", fontSize: 11, color: "#64748b" }}>Répartition des réservations et revenus par source</p>
+        </div>
+        <select value={period} onChange={e => setPeriod(e.target.value)} style={selInp}>
+          <option value="3">3 derniers mois</option>
+          <option value="6">6 derniers mois</option>
+          <option value="12">12 derniers mois</option>
+          <option value="24">24 derniers mois</option>
+        </select>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: mob ? "1fr 1fr" : "repeat(4, 1fr)", gap: 8, marginBottom: 16 }}>
+        {[
+          { label: "Réservations",   val: totalResas,   color: "#f1f5f9", fmt: v => v },
+          { label: "Revenus totaux", val: totalRev,     color: "#10b981", fmt: v => `${v.toLocaleString("fr-FR")} €` },
+          { label: "Panier moyen",   val: totalResas ? Math.round(totalRev / totalResas) : 0, color: "#0ea5e9", fmt: v => `${v.toLocaleString("fr-FR")} €` },
+          { label: "% direct",       val: totalResas ? Math.round(directResas / totalResas * 100) : 0, color: "#10b981", fmt: v => `${v}%` },
+        ].map(k => (
+          <div key={k.label} style={{ ...convCard, marginBottom: 0, padding: "12px 14px", textAlign: "center" }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: k.color }}>{k.fmt(k.val)}</div>
+            <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>{k.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {stats.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "40px", color: "#475569" }}>Aucune réservation sur la période</div>
+      ) : (
+        <div style={convCard}>
+          <div style={{ padding: "10px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)", fontSize: 11, color: "#94a3b8", fontWeight: 600 }}>Revenus par canal</div>
+          <div style={{ padding: "12px 16px" }}>
+            {stats.map(s => {
+              const pct = totalRev > 0 ? Math.round(s.rev / totalRev * 100) : 0;
+              return (
+                <div key={s.canal} style={{ marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                    <span style={{ fontSize: 12, color: "#e2e8f0", fontWeight: 600 }}>{s.label}</span>
+                    <span style={{ fontSize: 11, color: s.color, fontWeight: 700 }}>{s.rev.toLocaleString("fr-FR")} € · {pct}%</span>
+                  </div>
+                  <div style={{ height: 8, background: "rgba(255,255,255,0.06)", borderRadius: 4, overflow: "hidden", marginBottom: 4 }}>
+                    <div style={{ width: `${pct}%`, height: "100%", background: s.color, borderRadius: 4, transition: "width 0.4s" }} />
+                  </div>
+                  <div style={{ display: "flex", gap: 16, fontSize: 10, color: "#64748b" }}>
+                    <span>{s.count} réservation{s.count > 1 ? "s" : ""}</span>
+                    <span>Moy. {s.avgRev.toLocaleString("fr-FR")} €/séjour</span>
+                    <span>Moy. {s.avgNights} nuit{Number(s.avgNights) > 1 ? "s" : ""}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {bienStats.length > 0 && (
+        <div style={convCard}>
+          <div style={{ padding: "10px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)", fontSize: 11, color: "#94a3b8", fontWeight: 600 }}>Réservations par logement</div>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 420 }}>
+              <thead>
+                <tr>
+                  {["Logement", "Réservations", "Revenus", "% Direct"].map(h => (
+                    <th key={h} style={{ padding: "8px 12px", textAlign: h === "Logement" ? "left" : "right", fontSize: 10, color: "#475569", fontWeight: 600 }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {bienStats.map(b => (
+                  <tr key={b.id} style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                    <td style={{ padding: "8px 12px", fontSize: 12, color: "#e2e8f0" }}>{b.emoji || "🏠"} {b.nom}</td>
+                    <td style={{ padding: "8px 12px", textAlign: "right", fontSize: 12, color: "#94a3b8" }}>{b.count}</td>
+                    <td style={{ padding: "8px 12px", textAlign: "right", fontSize: 12, color: "#10b981", fontWeight: 600 }}>{b.rev.toLocaleString("fr-FR")} €</td>
+                    <td style={{ padding: "8px 12px", textAlign: "right" }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: b.pctDirect >= 30 ? "#10b981" : b.pctDirect > 0 ? "#f59e0b" : "#64748b" }}>{b.pctDirect}%</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      <div style={{ fontSize: 10, color: "#334155", textAlign: "center", marginTop: 8 }}>
+        Données issues du planning · Pour intégrer les paiements Stripe, enrichir le champ "canal" des réservations avec les metadata PaymentIntent
+      </div>
     </div>
   );
 }
