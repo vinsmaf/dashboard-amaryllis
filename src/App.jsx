@@ -688,6 +688,8 @@ function Cockpit({ biens, n, mob, onUpdateRevenu, reservations = [] }) {
     <div>
       {/* <AISummary biens={biens} n={n} /> — désactivé (nécessite crédit API Anthropic) */}
       <YieldAlerts biens={biens} reservations={reservations} mob={mob} />
+      <NogentCashflowAlert biens={biens} mob={mob} />
+      <AmaryllisBaseSaisonAlert biens={biens} mob={mob} />
 
       {/* ── KPIs temps réel ── */}
       <div style={{ display: "grid", gridTemplateColumns: mob ? "repeat(2,1fr)" : "repeat(4,1fr)", gap: 10, marginBottom: 16 }}>
@@ -4424,6 +4426,157 @@ function YieldAlerts({ biens, reservations, mob }) {
 }
 
 // ============================================================================
+// NOGENT — ALERTE CASHFLOW & ANALYSE CONCIERGERIE
+// ============================================================================
+function NogentCashflowAlert({ biens, mob }) {
+  const nogent = biens.find(b => b.id === "nogent");
+  if (!nogent) return null;
+
+  const CONCIERGERIE_MENSUEL = 714; // ~8 575 € / 12 mois estimés
+  const moisActuel = new Date().getMonth();
+  const cfSlice  = nogent.cashflow.slice(0, moisActuel + 1);
+  const revSlice = nogent.revenus.slice(0, moisActuel + 1);
+
+  const cfYTD  = cfSlice.reduce((s, v) => s + (v || 0), 0);
+  const revYTD = revSlice.reduce((s, v) => s + (v || 0), 0);
+  const chargesYTD = (nogent.charges || 1330) * (moisActuel + 1);
+  const conciergerieYTD = CONCIERGERIE_MENSUEL * (moisActuel + 1);
+
+  // Compter les mois négatifs
+  let consecutiveNeg = 0;
+  for (let i = cfSlice.length - 1; i >= 0; i--) {
+    if ((cfSlice[i] || 0) < 0) consecutiveNeg++;
+    else break;
+  }
+  const totalNegMonths = cfSlice.filter(v => (v || 0) < 0).length;
+  if (totalNegMonths === 0) return null;
+
+  const revMoyen = revYTD / (moisActuel + 1);
+  const breakeven = nogent.charges || 1330;
+  const cfSimAuto = cfYTD + Math.round(conciergerieYTD * 0.7);
+
+  return (
+    <div style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: "#ef4444", letterSpacing: 2, textTransform: "uppercase", marginBottom: 10 }}>
+        🏙️ Alerte Nogent — {consecutiveNeg >= 2 ? `Cashflow négatif ${consecutiveNeg} mois consécutifs` : `${totalNegMonths} mois en cashflow négatif YTD`}
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: mob ? "repeat(2,1fr)" : "repeat(4,1fr)", gap: 8, marginBottom: 12 }}>
+        {[
+          { l: "CF YTD",          v: `${cfYTD >= 0 ? "+" : ""}${cfYTD.toLocaleString("fr-FR")} €`,               c: cfYTD >= 0 ? "#10b981" : "#ef4444" },
+          { l: "Revenus YTD",     v: `${revYTD.toLocaleString("fr-FR")} €`,                                        c: "#0ea5e9" },
+          { l: "Charges YTD",     v: `−${chargesYTD.toLocaleString("fr-FR")} €`,                                   c: "#f59e0b" },
+          { l: "Conciergerie est.",v: `−${conciergerieYTD.toLocaleString("fr-FR")} €`,                              c: "#f87171" },
+        ].map(k => (
+          <div key={k.l} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 8, padding: "8px 10px" }}>
+            <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 3 }}>{k.l}</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: k.c, fontFamily: "var(--font-mono)" }}>{k.v}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 10, lineHeight: 1.7 }}>
+        <strong style={{ color: "#e2e8f0" }}>Breakeven :</strong> {breakeven.toLocaleString("fr-FR")} €/mois de revenus pour couvrir les charges.
+        {" "}Revenu moyen actuel : <strong style={{ color: revMoyen >= breakeven ? "#10b981" : "#ef4444" }}>{Math.round(revMoyen).toLocaleString("fr-FR")} €/mois</strong>
+        {revMoyen < breakeven ? ` — déficit moyen de ${Math.round(breakeven - revMoyen).toLocaleString("fr-FR")} €/mois.` : "."}
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "1fr 1fr", gap: 8 }}>
+        <div style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 8, padding: "10px 12px" }}>
+          <div style={{ fontWeight: 700, color: "#10b981", fontSize: 11, marginBottom: 4 }}>💡 Simulation : réduire conciergerie de 70%</div>
+          <div style={{ fontSize: 11, color: "#94a3b8" }}>
+            CF simulé YTD : <strong style={{ color: cfSimAuto >= 0 ? "#10b981" : "#f59e0b", fontFamily: "var(--font-mono)" }}>{cfSimAuto >= 0 ? "+" : ""}{cfSimAuto.toLocaleString("fr-FR")} €</strong>
+            {" · "}gain annuel : <strong style={{ color: "#10b981" }}>+{Math.round(CONCIERGERIE_MENSUEL * 0.7 * 12).toLocaleString("fr-FR")} €</strong>
+          </div>
+          <div style={{ fontSize: 10, color: "#475569", marginTop: 4 }}>→ Renégocier le contrat ou passer en ménages uniquement (self check-in)</div>
+        </div>
+        <div style={{ background: "rgba(14,165,233,0.08)", border: "1px solid rgba(14,165,233,0.2)", borderRadius: 8, padding: "10px 12px" }}>
+          <div style={{ fontWeight: 700, color: "#0ea5e9", fontSize: 11, marginBottom: 4 }}>📊 Dépendance Booking.com estimée : ~79%</div>
+          <div style={{ fontSize: 11, color: "#94a3b8" }}>Concentration sur un seul canal → risque algorithmique et commission 15%.</div>
+          <div style={{ fontSize: 10, color: "#475569", marginTop: 4 }}>→ Activer Airbnb + réservations directes pour diversifier (objectif : Booking &lt; 50%)</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// AMARYLLIS — ALERTE BASSE SAISON & TEMPLATE EMAIL LAST-MINUTE
+// ============================================================================
+function AmaryllisBaseSaisonAlert({ biens, mob }) {
+  const amaryllis = biens.find(b => b.id === "amaryllis");
+  if (!amaryllis) return null;
+
+  const moisActuel = new Date().getMonth();
+  const MOIS_COURTS = ["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc"];
+
+  const alertsMois = [];
+  for (let i = moisActuel; i < 12; i++) {
+    const occ = amaryllis.occ[i] || 0;
+    const adr = amaryllis.adr[i] || 0;
+    if (occ > 0 && occ < 35) {
+      const reduction = occ < 15 ? 35 : 20;
+      alertsMois.push({ mois: MOIS_COURTS[i], idx: i, occ, adr, reduction });
+    }
+  }
+
+  if (alertsMois.length === 0) return null;
+
+  const emailTemplate = `Objet : Offre exclusive — Villa Amaryllis disponible en ${alertsMois.map(m => m.mois).join(" / ")}
+
+Bonjour,
+
+Nous avons des disponibilités à la Villa Amaryllis en ${alertsMois.map(m => m.mois).join(" et ")}.
+
+En tant que voyageur fidèle, nous vous réservons un tarif préférentiel −20 % sur ces périodes.
+
+✅ Piscine privée chauffée  · Vue mer Caraïbes
+🌿 Jardin tropical 2 000 m² · Accès direct plage
+📍 Sainte-Luce, Martinique
+
+Réservation directe (sans commission) :
+→ villamaryllis.com/amaryllis
+
+Répondez à ce message pour un devis personnalisé.
+
+Belle journée,
+L'équipe Amaryllis Locations`;
+
+  return (
+    <div style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.25)", borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: "#f59e0b", letterSpacing: 2, textTransform: "uppercase", marginBottom: 10 }}>
+        🌴 Basse saison Amaryllis — {alertsMois.length} mois à risque (occ &lt; 35%)
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "repeat(auto-fill, minmax(170px, 1fr))", gap: 8, marginBottom: 12 }}>
+        {alertsMois.map(({ mois, occ, adr, reduction }) => (
+          <div key={mois} style={{ background: "rgba(245,158,11,0.08)", border: `1px solid ${occ < 15 ? "rgba(239,68,68,0.35)" : "rgba(245,158,11,0.25)"}`, borderRadius: 8, padding: "10px 12px" }}>
+            <div style={{ fontWeight: 700, color: "#e2e8f0", fontSize: 12, marginBottom: 3 }}>{mois}</div>
+            <div style={{ fontSize: 11, color: occ < 15 ? "#ef4444" : "#f59e0b" }}>
+              {occ < 15 ? "🔴" : "🟡"} {occ.toFixed(0)}% occ{adr > 0 ? ` · ${adr}€/nuit` : ""}
+            </div>
+            {adr > 0 && (
+              <div style={{ fontSize: 10, color: "#64748b", marginTop: 4 }}>
+                Prix suggéré −{reduction}% : <strong style={{ color: "#10b981" }}>{Math.round(adr * (1 - reduction / 100))}€/nuit</strong>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <details>
+        <summary style={{ fontSize: 11, color: "#f59e0b", fontWeight: 600, cursor: "pointer", userSelect: "none", marginBottom: 6 }}>
+          📧 Template email last-minute — voyageurs fidèles
+        </summary>
+        <div style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 8, padding: "12px 14px", marginTop: 8, fontFamily: "var(--font-mono)", fontSize: 11, color: "#94a3b8", lineHeight: 1.8, whiteSpace: "pre-wrap", userSelect: "all" }}>
+          {emailTemplate}
+        </div>
+      </details>
+    </div>
+  );
+}
+
+// ============================================================================
 // CANAL LIVE PERFORMANCE — depuis les réservations iCal/Beds24 réelles
 // ============================================================================
 function CanalLivePerf({ biens, reservations, mob }) {
@@ -6204,6 +6357,57 @@ function Beds24Admin({ scriptUrl, reservations = [], saveRes, addToast = () => {
           style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid #334155", background: "transparent", color: "#64748b", fontSize: 11, cursor: "pointer", alignSelf: "flex-end" }}
         >Réinitialiser</button>
       </div>
+
+      {/* ── Mix de canaux ── */}
+      {bookings.length > 0 && (() => {
+        const normalize = (c) => {
+          if (!c) return "autre";
+          const l = String(c).toLowerCase();
+          if (l.includes("booking")) return "booking";
+          if (l.includes("airbnb"))  return "airbnb";
+          if (l.includes("direct"))  return "direct";
+          return "autre";
+        };
+        const canalStats = {};
+        bookings.forEach(b => {
+          const key = normalize(b.channelLabel || b.channel || "");
+          if (!canalStats[key]) canalStats[key] = { count: 0, montant: 0 };
+          canalStats[key].count++;
+          canalStats[key].montant += b.price || 0;
+        });
+        const total = bookings.length;
+        const canalConf = {
+          booking: { label: "Booking.com", color: "#0ea5e9", comm: 15 },
+          airbnb:  { label: "Airbnb",      color: "#FF5A5F", comm: 3  },
+          direct:  { label: "Direct",      color: "#10b981", comm: 0  },
+          autre:   { label: "Autre",       color: "#64748b", comm: 0  },
+        };
+        const rows = Object.entries(canalStats)
+          .map(([k, s]) => ({ key: k, ...canalConf[k], pct: Math.round(s.count / total * 100), ...s }))
+          .sort((a, b) => b.count - a.count);
+        const bookingPct = canalStats.booking ? Math.round(canalStats.booking.count / total * 100) : 0;
+        return (
+          <div style={{ background: "#0f172a", border: `1px solid ${bookingPct > 70 ? "rgba(239,68,68,0.3)" : "#1e293b"}`, borderRadius: 10, padding: "14px 18px", marginBottom: 18 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: bookingPct > 70 ? "#ef4444" : "#64748b", letterSpacing: 2, textTransform: "uppercase", marginBottom: 10 }}>
+              📊 Mix de canaux {bookingPct > 70 ? "⚠ Concentration excessive" : ""}
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {rows.map(r => (
+                <div key={r.key} style={{ background: `${r.color}15`, border: `1px solid ${r.color}40`, borderRadius: 8, padding: "8px 14px", minWidth: 110 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: r.color }}>{r.label}</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: "#e2e8f0", fontFamily: "var(--font-mono)", marginTop: 2 }}>{r.pct}%</div>
+                  <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>{r.count} rés. · comm. {r.comm}%</div>
+                </div>
+              ))}
+            </div>
+            {bookingPct > 70 && (
+              <div style={{ fontSize: 10, color: "#f87171", marginTop: 10 }}>
+                ⚠ Dépendance Booking.com trop élevée ({bookingPct}%). Objectif cible : &lt; 50% — activer Airbnb et réservations directes.
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ── Erreur ── */}
       {error && (
