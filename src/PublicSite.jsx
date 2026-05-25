@@ -916,6 +916,172 @@ function DateRangePicker({ checkin, checkout, blockedDates = [], onChange, daily
   );
 }
 
+// ── PricingCalendar — Tarifs journaliers colorés (design-007) ─────────────
+// Affiché avant le widget réservation sur les pages propriété.
+// Sources : /api/beds24-prices (Nogent) ou /api/rm-recommendations (Martinique).
+const PC_TIERS = {
+  low:  { bg: "rgba(148,163,184,0.13)", text: "#64748b", border: "#94a3b820", label: "Basse saison" },
+  mid:  { bg: "rgba(20,184,166,0.11)",  text: "#0d9488", border: "#14b8a620", label: "Moyenne saison" },
+  high: { bg: "rgba(245,158,11,0.15)",  text: "#b45309", border: "#f59e0b25", label: "Haute saison" },
+  peak: { bg: "rgba(196,114,84,0.20)",  text: "#c47254", border: "#c4725430", label: "Pic de saison" },
+};
+
+function PricingCalendar({ bien, isMobile = false }) {
+  const isNogent = bien.id === "nogent";
+  const [pricesMap, setPricesMap] = useState({}); // { "YYYY-MM-DD": { price, tier } }
+  const [loading, setLoading] = useState(true);
+  const [mOff, setMOff] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const toStr = new Date(Date.now() + 120 * 86400000).toISOString().slice(0, 10);
+
+    if (isNogent) {
+      fetch("/api/beds24-prices")
+        .then(r => r.json())
+        .then(data => {
+          if (cancelled) return;
+          if (data.ok && data.nogent && Object.keys(data.nogent).length > 0) {
+            const base = Math.max(bien.prix || 85, 50);
+            const map = {};
+            for (const [date, price] of Object.entries(data.nogent)) {
+              if (date < todayStr) continue;
+              const r = price / base;
+              const tier = r >= 1.55 ? "peak" : r >= 1.2 ? "high" : r >= 0.82 ? "mid" : "low";
+              map[date] = { price: Math.round(price), tier };
+            }
+            setPricesMap(map);
+          }
+          setLoading(false);
+        })
+        .catch(() => { if (!cancelled) setLoading(false); });
+    } else {
+      fetch(`/api/rm-recommendations?property_id=${bien.id}&from=${todayStr}&to=${toStr}`)
+        .then(r => r.json())
+        .then(data => {
+          if (cancelled) return;
+          const map = {};
+          for (const rec of (data.recommendations || [])) {
+            if (rec.date && rec.suggested_price) {
+              const tier = ["low","mid","high","peak"].includes(rec.season_type) ? rec.season_type : "mid";
+              map[rec.date] = { price: Math.round(rec.suggested_price), tier };
+            }
+          }
+          if (Object.keys(map).length > 0) setPricesMap(map);
+          setLoading(false);
+        })
+        .catch(() => { if (!cancelled) setLoading(false); });
+    }
+    return () => { cancelled = true; };
+  }, [bien.id, isNogent, bien.prix]);
+
+  const hasPrices = Object.keys(pricesMap).length > 0;
+  if (!loading && !hasPrices) return null; // pas de données — section masquée
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const baseY = now.getFullYear(), baseM = now.getMonth();
+
+  function renderPricingMonth(year, month) {
+    const firstDay = new Date(year, month, 1);
+    const lastDate = new Date(year, month + 1, 0).getDate();
+    const startDow = (firstDay.getDay() + 6) % 7;
+    const cells = [];
+    for (let i = 0; i < startDow; i++) cells.push(null);
+    for (let d = 1; d <= lastDate; d++) {
+      cells.push(`${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`);
+    }
+    return (
+      <div key={`${year}-${month}`} style={{ flex: "1 1 220px" }}>
+        <div style={{ textAlign: "center", fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 12, letterSpacing: "0.16em", textTransform: "uppercase", marginBottom: 10, color: NAVY }}>
+          {MONTHS_FR[month]} {year}
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
+          {WEEKDAYS.map(w => (
+            <div key={w} style={{ textAlign: "center", fontSize: 8, color: MUTED, padding: "3px 0", fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase" }}>{w}</div>
+          ))}
+          {cells.map((ds, i) => {
+            if (!ds) return <div key={`e-${i}`} />;
+            const isPast = ds < todayStr;
+            const data = pricesMap[ds];
+            const tc = data ? PC_TIERS[data.tier] : null;
+            return (
+              <div key={ds} title={data && !isPast ? `${data.price}€/nuit` : undefined} style={{
+                height: 38,
+                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1,
+                borderRadius: 6,
+                background: isPast ? "transparent" : (tc?.bg ?? "transparent"),
+                border: isPast ? "none" : tc ? `1px solid ${tc.border}` : "none",
+                opacity: isPast ? 0.3 : 1,
+              }}>
+                <span style={{ fontSize: 11, color: isPast ? MUTED : (tc ? tc.text : NAVY), fontWeight: tc && !isPast ? 600 : 400, lineHeight: 1.1 }}>
+                  {parseInt(ds.split("-")[2])}
+                </span>
+                {data && !isPast && (
+                  <span style={{ fontSize: 8, color: tc?.text ?? MUTED, fontWeight: 500, lineHeight: 1, letterSpacing: "0.02em" }}>
+                    {data.price}€
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  const y1 = baseY + Math.floor((baseM + mOff) / 12);
+  const m1 = (baseM + mOff) % 12;
+  const y2 = baseY + Math.floor((baseM + mOff + 1) / 12);
+  const m2 = (baseM + mOff + 1) % 12;
+
+  return (
+    <div style={{ marginBottom: 32 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+        <Eyebrow color="muted">Tarifs prévisionnels</Eyebrow>
+        <div style={{ display: "flex", gap: 5 }}>
+          <button onClick={() => setMOff(o => Math.max(0, o - 1))} disabled={mOff === 0}
+            aria-label="Mois précédent"
+            style={{ background: "none", border: `1px solid ${SAND}`, borderRadius: 6, width: 26, height: 26, cursor: mOff > 0 ? "pointer" : "not-allowed", opacity: mOff > 0 ? 1 : 0.3, fontSize: 14, color: NAVY, display: "flex", alignItems: "center", justifyContent: "center" }}>‹</button>
+          <button onClick={() => setMOff(o => Math.min(o + 1, 10))} aria-label="Mois suivant"
+            style={{ background: "none", border: `1px solid ${SAND}`, borderRadius: 6, width: 26, height: 26, cursor: "pointer", fontSize: 14, color: NAVY, display: "flex", alignItems: "center", justifyContent: "center" }}>›</button>
+        </div>
+      </div>
+      {loading ? (
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+          {[0, 1].map(col => (
+            <div key={col} style={{ flex: "1 1 220px" }}>
+              <div className="skeleton" style={{ height: 12, width: 110, margin: "0 auto 10px", borderRadius: 4 }} />
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 2 }}>
+                {Array.from({ length: 35 }, (_, i) => <div key={i} className="skeleton" style={{ height: 38, borderRadius: 6, opacity: 0.25 + (i % 5) * 0.06 }} />)}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <>
+          <div style={{ display: "flex", gap: isMobile ? 0 : 20, flexDirection: isMobile ? "column" : "row", flexWrap: "wrap" }}>
+            {renderPricingMonth(y1, m1)}
+            {!isMobile && renderPricingMonth(y2, m2)}
+          </div>
+          <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+            {Object.entries(PC_TIERS).map(([tier, tc]) => (
+              <span key={tier} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: MUTED, fontFamily: "'Jost', sans-serif" }}>
+                <span style={{ width: 12, height: 12, background: tc.bg, border: `1px solid ${tc.border}`, borderRadius: 3, display: "inline-block" }} />
+                {tc.label}
+              </span>
+            ))}
+            <span style={{ fontSize: 10, color: MUTED, fontFamily: "'Jost', sans-serif", marginLeft: "auto", fontStyle: "italic" }}>
+              Tarifs indicatifs, sujets à révision
+            </span>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 const iconBtn = {
   background: "var(--c-cream, #f4ecdc)",
   border: `1px solid ${SAND}`,
@@ -3637,6 +3803,14 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                 ))}
               </div>
             </div>
+
+            {/* Tarifs prévisionnels — design-007 : PricingCalendar inline */}
+            {!PRICE_HIDDEN.has(bien.id) && !BOOKING_DISABLED.has(bien.id) && (
+              <>
+                <div style={{ height: 1, background: SAND, marginBottom: 26 }} />
+                <PricingCalendar bien={bien} isMobile={isMobile} />
+              </>
+            )}
 
             {/* Disponibilités — always in left column (mobile: always; desktop: if booking enabled) */}
             {!BOOKING_DISABLED.has(bien.id) && (() => {
