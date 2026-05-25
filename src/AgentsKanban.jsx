@@ -171,29 +171,66 @@ export default function AgentsKanban({ mob }) {
   const [filterCat, setFilterCat]     = useState("all");
   const [search, setSearch]           = useState("");
   const [lastRun, setLastRun]         = useState(null);
-  const runTimeout = useRef(null);
+  const [lastRefresh, setLastRefresh] = useState(null);
+  const [liveActive, setLiveActive]   = useState(false);
+  const runTimeout  = useRef(null);
+  const pollRef     = useRef(null);
+  const actionsRef  = useRef([]);
 
   // ── Charger les actions ──────────────────────────────────────────────────
-  const load = useCallback(async () => {
+  const load = useCallback(async (silent = false) => {
     try {
       const r = await fetch("/api/agents-actions");
       const d = await r.json();
       if (d.hint?.includes("init")) {
         setInitNeeded(true);
-        setLoading(false);
+        if (!silent) setLoading(false);
         return;
       }
-      setActions(d.actions || []);
-      setStats(d.stats || {});
+      const incoming = d.actions || [];
+      // Détecter si le contenu a changé (comparaison rapide par updated_at max)
+      const prevMax = actionsRef.current.reduce((m, a) => Math.max(m, a.updated_at || 0), 0);
+      const nextMax = incoming.reduce((m, a) => Math.max(m, a.updated_at || 0), 0);
+      if (nextMax > prevMax || incoming.length !== actionsRef.current.length) {
+        actionsRef.current = incoming;
+        setActions(incoming);
+        setStats(d.stats || {});
+      }
       setInitNeeded(false);
+      setLastRefresh(new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
     } catch {
       // silencieux
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  // ── Polling auto (10s si en-cours, 60s sinon) ────────────────────────────
+  const schedulePoll = useCallback(() => {
+    if (pollRef.current) clearTimeout(pollRef.current);
+    const hasRunning = actionsRef.current.some(a => a.status === "en-cours");
+    const delay = hasRunning ? 10_000 : 60_000;
+    setLiveActive(hasRunning);
+    pollRef.current = setTimeout(async () => {
+      if (document.visibilityState !== "hidden") await load(true);
+      schedulePoll();
+    }, delay);
+  }, [load]);
+
+  useEffect(() => {
+    load();
+    schedulePoll();
+    const onVisible = () => { if (document.visibilityState === "visible") { load(true); schedulePoll(); } };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearTimeout(pollRef.current);
+      clearTimeout(runTimeout.current);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [load, schedulePoll]);
+
+  // Re-schedule poll chaque fois que les actions changent (adapte la fréquence)
+  useEffect(() => { schedulePoll(); }, [actions, schedulePoll]);
 
   // ── Initialiser la table D1 ──────────────────────────────────────────────
   const handleInit = async () => {
@@ -207,8 +244,10 @@ export default function AgentsKanban({ mob }) {
 
   // ── Changer le statut d'une action ───────────────────────────────────────
   const handleStatusChange = async (id, newStatus) => {
-    // Optimistic update
-    setActions(prev => prev.map(a => a.id === id ? { ...a, status: newStatus, updated_at: Math.floor(Date.now() / 1000) } : a));
+    const now = Math.floor(Date.now() / 1000);
+    // Optimistic update (local + ref)
+    actionsRef.current = actionsRef.current.map(a => a.id === id ? { ...a, status: newStatus, updated_at: now } : a);
+    setActions(prev => prev.map(a => a.id === id ? { ...a, status: newStatus, updated_at: now } : a));
     await fetch(`/api/agents-actions?id=${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -216,7 +255,7 @@ export default function AgentsKanban({ mob }) {
     });
     // Recalc stats local
     setStats(prev => {
-      const action = actions.find(a => a.id === id);
+      const action = actionsRef.current.find(a => a.id === id);
       if (!action) return prev;
       return {
         ...prev,
@@ -224,6 +263,8 @@ export default function AgentsKanban({ mob }) {
         [newStatus]: (prev[newStatus] || 0) + 1,
       };
     });
+    // Adapter la fréquence de polling selon le nouveau statut
+    schedulePoll();
   };
 
   // ── Relancer l'analyse (tous les agents) ─────────────────────────────────
@@ -311,10 +352,24 @@ export default function AgentsKanban({ mob }) {
           <h2 style={{ margin: 0, fontSize: 18, color: "#e2e8f0", fontWeight: 700 }}>
             🤖 Agents — Plan d'action
           </h2>
-          <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 12 }}>
-            17 agents · {total} actions · Analyse autonome quotidienne à 9h UTC
-            {lastRun && <span style={{ color: "#10b981", marginLeft: 8 }}>· Dernière relance {lastRun}</span>}
+          <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 12, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span>17 agents · {total} actions · Analyse autonome quotidienne à 9h UTC</span>
+            {lastRun && <span style={{ color: "#10b981" }}>· Dernière relance {lastRun}</span>}
+            {lastRefresh && (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <span style={{
+                  display: "inline-block", width: 6, height: 6, borderRadius: "50%",
+                  background: liveActive ? "#f59e0b" : "#10b981",
+                  boxShadow: liveActive ? "0 0 0 2px rgba(245,158,11,0.3)" : "0 0 0 2px rgba(16,185,129,0.25)",
+                  animation: liveActive ? "pulse 1.2s ease-in-out infinite" : "none",
+                }} />
+                <span style={{ color: liveActive ? "#f59e0b" : "#475569", fontSize: 11 }}>
+                  {liveActive ? `live 10s · ${lastRefresh}` : `sync 60s · ${lastRefresh}`}
+                </span>
+              </span>
+            )}
           </p>
+          <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }`}</style>
         </div>
 
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
