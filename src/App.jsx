@@ -655,7 +655,7 @@ function Cockpit({ biens, n, mob, onUpdateRevenu, reservations = [] }) {
   }), [biens, n]);
 
   // ── Métriques temps réel ─────────────────────────────────────────────────
-  const { occ30j, cumulData, ytdTotal, revparActuel } = useMemo(() => {
+  const { occ30j, cumulData, ytdTotal, revparActuel, bookedNights30, avail30, curMonth } = useMemo(() => {
     const todayTs = new Date();
     const d30Ts = new Date(todayTs - 30 * 86400000);
     const shortTermBiens = biens.filter(b => b.type !== "long");
@@ -681,7 +681,7 @@ function Cockpit({ biens, n, mob, onUpdateRevenu, reservations = [] }) {
       cum += mensuel;
       return { m, mensuel, cumul: cum };
     });
-    return { occ30j, cumulData, ytdTotal: cum, revparActuel };
+    return { occ30j, cumulData, ytdTotal: cum, revparActuel, bookedNights30, avail30, curMonth };
   }, [biens, n, reservations]);
 
   return (
