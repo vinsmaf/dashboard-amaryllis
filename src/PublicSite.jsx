@@ -4352,6 +4352,72 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
       </div>
       {showAlerte && <AlerteDispoModal bien={bien} checkin={calCheckin} checkout={calCheckout} onClose={() => setShowAlerte(false)} />}
 
+      {/* ── Conditions & Garanties — jur-005 + jur-006 ─────────────────────── */}
+      {!BOOKING_DISABLED.has(bien.id) && (
+        <div style={{ borderTop: `1px solid ${SAND}`, marginTop: 48, paddingTop: 40, paddingBottom: 48, maxWidth: 900, marginLeft: "auto", marginRight: "auto" }}>
+          <Eyebrow color="muted" style={{ marginBottom: 20 }}>Conditions &amp; Garanties</Eyebrow>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
+
+            {/* Politique d'annulation */}
+            <div style={{ background: IVORY, border: `1px solid ${SAND}`, borderRadius: 12, padding: "20px 24px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                <span style={{ fontSize: 18 }}>📋</span>
+                <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 14, color: NAVY, letterSpacing: "0.02em" }}>Politique d'annulation</span>
+              </div>
+              <ul style={{ listStyle: "none", margin: 0, padding: 0, fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13, color: NAVY, lineHeight: 1.75 }}>
+                <li style={{ display: "flex", gap: 8, marginBottom: 7 }}>
+                  <span style={{ color: "#14b8a6", flexShrink: 0, marginTop: 1 }}>✓</span>
+                  <span><strong>Annulation gratuite</strong> jusqu'à 14 jours avant l'arrivée — remboursement intégral sous 5–10 jours ouvrés.</span>
+                </li>
+                <li style={{ display: "flex", gap: 8, marginBottom: 7 }}>
+                  <span style={{ color: CORAL, flexShrink: 0, marginTop: 1 }}>◗</span>
+                  <span><strong>Entre 7 et 14 jours avant</strong> — 50 % du montant total retenu.</span>
+                </li>
+                <li style={{ display: "flex", gap: 8, marginBottom: 7 }}>
+                  <span style={{ color: CORAL, flexShrink: 0, marginTop: 1 }}>◗</span>
+                  <span><strong>Moins de 7 jours</strong> ou réservation de dernière minute — acompte non remboursable.</span>
+                </li>
+                <li style={{ display: "flex", gap: 8 }}>
+                  <span style={{ color: MUTED, flexShrink: 0, marginTop: 1 }}>ℹ</span>
+                  <span style={{ color: MUTED }}>Force majeure (catastrophe naturelle, cyclone) : remboursement intégral sur justificatif officiel.</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Dépôt de garantie */}
+            <div style={{ background: IVORY, border: `1px solid ${SAND}`, borderRadius: 12, padding: "20px 24px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                <span style={{ fontSize: 18 }}>🔒</span>
+                <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 14, color: NAVY, letterSpacing: "0.02em" }}>Dépôt de garantie</span>
+              </div>
+              <ul style={{ listStyle: "none", margin: 0, padding: 0, fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13, color: NAVY, lineHeight: 1.75 }}>
+                <li style={{ display: "flex", gap: 8, marginBottom: 7 }}>
+                  <span style={{ color: "#14b8a6", flexShrink: 0, marginTop: 1 }}>✓</span>
+                  <span>La caution est demandée en <strong>pré-autorisation Stripe</strong> — votre carte est enregistrée, <em>aucun montant n'est débité</em>.</span>
+                </li>
+                <li style={{ display: "flex", gap: 8, marginBottom: 7 }}>
+                  <span style={{ color: "#14b8a6", flexShrink: 0, marginTop: 1 }}>✓</span>
+                  <span>La pré-autorisation est <strong>libérée automatiquement 3 jours</strong> après votre départ, sans intervention de votre part.</span>
+                </li>
+                <li style={{ display: "flex", gap: 8, marginBottom: 7 }}>
+                  <span style={{ color: CORAL, flexShrink: 0, marginTop: 1 }}>◗</span>
+                  <span>En cas de dommages constatés à l'état des lieux, le montant correspondant peut être capturé dans un délai de 48 h après le départ.</span>
+                </li>
+                <li style={{ display: "flex", gap: 8 }}>
+                  <span style={{ color: MUTED, flexShrink: 0, marginTop: 1 }}>ℹ</span>
+                  <span style={{ color: MUTED }}>Conforme au droit français (art. L 324-2 Code du tourisme) et à la réglementation Stripe / PSD2.</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <p style={{ marginTop: 14, fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11, color: MUTED, textAlign: "center" }}>
+            Questions ? <a href="mailto:contact@villamaryllis.com" style={{ color: CORAL, textDecoration: "none" }}>contact@villamaryllis.com</a>
+            {" · "}
+            <a href="/conditions-generales" style={{ color: CORAL, textDecoration: "none" }}>Conditions générales</a>
+          </p>
+        </div>
+      )}
+
       {/* ── FAQ chatbot flottant ── */}
       <FaqChatbot bien={bien} />
     </div>
