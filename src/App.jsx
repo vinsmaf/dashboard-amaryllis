@@ -1018,7 +1018,9 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
   const syncBeds24InPlanning = useCallback(async (currentResas) => {
     setBeds24SyncStatus("loading");
     try {
-      const res = await fetch("/api/beds24-bookings");
+      const res = await fetch("/api/beds24-bookings", {
+        headers: { Authorization: "Bearer " + (sessionStorage.getItem("ldb_tok") || "") },
+      });
       if (!res.ok) { setBeds24SyncStatus("error"); return currentResas; }
       const data = await res.json();
       if (data.error || !data.bookings) { setBeds24SyncStatus("error"); return currentResas; }
@@ -6056,6 +6058,7 @@ function PasswordGate({ onAuth }) {
       try { data = await res.json(); } catch { data = {}; }
       if (data.ok && data.role) {
         sessionStorage.setItem(PWD_KEY, "ok");
+        sessionStorage.setItem("ldb_tok", val); // arch-008 : token pour Bearer auth
         sessionStorage.setItem("admin_role", data.role);
         onAuth(data.role);
       } else {
@@ -6142,7 +6145,9 @@ function Beds24Admin({ scriptUrl, reservations = [], saveRes, addToast = () => {
     try {
       const params = new URLSearchParams();
       Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v); });
-      const res = await fetch(`/api/beds24-bookings?${params}`);
+      const res = await fetch(`/api/beds24-bookings?${params}`, {
+        headers: { Authorization: "Bearer " + (sessionStorage.getItem("ldb_tok") || "") },
+      });
       let data;
       try { data = await res.json(); }
       catch { throw new Error(res.ok ? "Réponse non-JSON du serveur" : `Fonction /api/beds24-bookings introuvable (HTTP ${res.status}) — utilise npm run dev:cf`); }
@@ -6161,7 +6166,9 @@ function Beds24Admin({ scriptUrl, reservations = [], saveRes, addToast = () => {
   async function testConnection() {
     setTestStatus(null);
     try {
-      const res = await fetch("/api/beds24-bookings?test=1");
+      const res = await fetch("/api/beds24-bookings?test=1", {
+        headers: { Authorization: "Bearer " + (sessionStorage.getItem("ldb_tok") || "") },
+      });
       let data;
       try { data = await res.json(); } catch { setTestStatus("error"); return; }
       setTestStatus(data.ok ? "ok" : "error");
@@ -7213,7 +7220,9 @@ export default function App() {
       // 2. Beds24 Nogent (fetch frais depuis l'API)
       let beds24Resas = [];
       try {
-        const b24 = await fetch("/api/beds24-bookings");
+        const b24 = await fetch("/api/beds24-bookings", {
+          headers: { Authorization: "Bearer " + (sessionStorage.getItem("ldb_tok") || "") },
+        });
         if (b24.ok) {
           const b24data = await b24.json();
           beds24Resas = (b24data.bookings || []).map(b => ({
