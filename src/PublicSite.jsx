@@ -1836,13 +1836,10 @@ function generateDevis({ bien, checkin, checkout, nights, rawTotal, discountRate
 // ── Upsells par propriété ──────────────────────────────────────────────────
 const UPSELL_CATALOG = {
   _martinique: [
-    { id: "chef",       label: "Chef à domicile",    desc: "Repas gastronomique préparé dans la villa",  price: "+150€/repas",  icon: "🍽️" },
-    { id: "transfert",  label: "Transfert aéroport",  desc: "Prise en charge à l'aéroport Aimé Césaire", price: "+80€/trajet",  icon: "🚗" },
-    { id: "courses",    label: "Service courses",     desc: "Courses livrées à votre arrivée",            price: "+30€ service", icon: "🛒" },
+    { id: "courses", label: "Service courses", desc: "Courses livrées à votre arrivée — liste envoyée à votre hôte", price: "+30€ service", icon: "🛒" },
   ],
   nogent: [
-    { id: "courses",    label: "Service courses",     desc: "Courses livrées avant votre arrivée",        price: "+25€ service", icon: "🛒" },
-    { id: "menage",     label: "Ménage supplémentaire", desc: "Ménage intermédiaire pendant le séjour",   price: "+60€",         icon: "🧹" },
+    { id: "courses", label: "Service courses", desc: "Courses livrées avant votre arrivée — liste envoyée à votre hôte", price: "+25€ service", icon: "🛒" },
   ],
 };
 const MARTINIQUE_IDS = new Set(["amaryllis", "geko", "mabouya", "zandoli", "schoelcher", "iguana"]);
