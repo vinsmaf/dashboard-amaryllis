@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from "react";
 import MerciPage from "./Merci.jsx";
 import { loadDailyPrices, applyServerPriceOverrides } from "./seedPrices.js";
 import SEOMeta from "./SEOMeta.jsx";
@@ -6,9 +6,7 @@ import { Reveal } from "./useReveal.jsx";
 import { useLang, LangToggle } from "./i18n.jsx";
 import { Eyebrow, Display, Editorial, Button, RatingBadge, Icon, ThemeToggle, Chip, StateTile } from "./primitives.jsx";
 import { Curtain } from "./Curtain.jsx";
-import { MapContainer, TileLayer, Marker } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
-import L from "leaflet";
+const PropertyMap = lazy(() => import("./PropertyMap.jsx"));
 
 // ── Retry utility for availability fetch ────────────────────────
 async function fetchWithRetry(url, options = {}, retries = 3, delay = 800) {
@@ -672,55 +670,6 @@ function formatDateShort(ds) {
   if (!ds) return "";
   const [y, m, d] = ds.split("-").map(Number);
   return new Date(y, m - 1, d).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
-}
-
-// ── PropertyMap (Leaflet, remplace iframe Google Maps) ────────────
-function PropertyMap({ bien, height = 280 }) {
-  const { coords, nom, couleur } = bien;
-  if (!coords) return null;
-
-  const pinIcon = L.divIcon({
-    className: "",
-    html: `<div style="
-      background:${couleur || "#c47254"};
-      color:#fff;
-      font-family:'Jost',sans-serif;
-      font-size:11px;
-      font-weight:600;
-      padding:5px 9px;
-      border-radius:20px;
-      white-space:nowrap;
-      box-shadow:0 2px 8px rgba(0,0,0,0.25);
-      display:flex;align-items:center;gap:5px;
-      position:relative;
-    ">📍 ${nom}<div style="
-      position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);
-      width:0;height:0;
-      border-left:6px solid transparent;
-      border-right:6px solid transparent;
-      border-top:7px solid ${couleur || "#c47254"};
-    "></div></div>`,
-    iconSize: [null, 34],
-    iconAnchor: [50, 40],
-  });
-
-  return (
-    <MapContainer
-      center={[coords.lat, coords.lng]}
-      zoom={15}
-      scrollWheelZoom={false}
-      zoomControl={true}
-      style={{ width: "100%", height, borderRadius: 10, display: "block" }}
-      attributionControl={false}
-    >
-      <TileLayer
-        url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-        attribution="&copy; OpenStreetMap &copy; CartoDB"
-        maxZoom={19}
-      />
-      <Marker position={[coords.lat, coords.lng]} icon={pinIcon} />
-    </MapContainer>
-  );
 }
 
 // ── Calendar ─────────────────────────────────────────────────────
@@ -3800,7 +3749,9 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                     <span style={{ color: SAND, fontSize: 11, marginLeft: 4 }}>· Position approximative</span>
                   </div>
                   <div style={{ borderRadius: 10, overflow: "hidden", border: `1px solid ${SAND}` }}>
-                    <PropertyMap bien={bien} height={isMobile ? 220 : 280} />
+                    <Suspense fallback={<div style={{ height: isMobile ? 220 : 280, background: "#f0ebe0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: "#9a8f82" }}>Chargement de la carte…</div>}>
+                      <PropertyMap bien={bien} height={isMobile ? 220 : 280} />
+                    </Suspense>
                   </div>
                   <a
                     href={`https://www.google.com/maps/search/?api=1&query=${bien.coords.lat},${bien.coords.lng}`}
