@@ -64,12 +64,22 @@ export async function onRequestPost(context) {
 }
 
 // ── Envoi paginé en GET (contourne le bug redirect Apps Script POST) ──────────
+// Limite URL Apps Script : ~2000 chars. On chunk dynamiquement pour ne jamais dépasser.
+const APPS_SCRIPT_URL_LIMIT = 1800; // marge de sécurité
+
 async function forwardChunked(scriptUrl, action, items) {
-  const CHUNK_SIZE = 15; // ~15 réservations × ~250 chars URL-encoded ≈ 3.5 KB par requête
+  // Découpe les items en chunks dont l'URL encodée reste sous la limite Apps Script
   const chunks = [];
-  for (let i = 0; i < items.length; i += CHUNK_SIZE) {
-    chunks.push(items.slice(i, i + CHUNK_SIZE));
+  let current = [];
+  for (const item of items) {
+    current.push(item);
+    const testUrl = `${scriptUrl}?action=${action}&data=${encodeURIComponent(JSON.stringify(current))}`;
+    if (testUrl.length > APPS_SCRIPT_URL_LIMIT && current.length > 1) {
+      chunks.push(current.slice(0, -1));
+      current = [item];
+    }
   }
+  if (current.length > 0) chunks.push(current);
 
   let totalAdded = 0, totalUpdated = 0, errors = [];
 

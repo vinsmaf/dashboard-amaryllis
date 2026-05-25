@@ -74,11 +74,12 @@ export async function onRequestPost(context) {
   const payload = new URLSearchParams({
     mode: "payment",
     "payment_intent_data[capture_method]": "manual",
-    "payment_intent_data[metadata][type]": "caution",
+    "payment_intent_data[metadata][type]": "deposit",
     "payment_intent_data[metadata][bienId]": bienId,
     "payment_intent_data[metadata][checkin]": checkin,
     "payment_intent_data[metadata][checkout]": checkout,
     "payment_intent_data[metadata][voyageur]": voyageur,
+    "payment_intent_data[metadata][email]": email,
     "line_items[0][price_data][currency]": "eur",
     "line_items[0][price_data][unit_amount]": String(amountCents),
     "line_items[0][price_data][product_data][name]": `Caution — ${bienNom}`,

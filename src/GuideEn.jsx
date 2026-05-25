@@ -38,7 +38,7 @@ const faqs = [
 export default function GuideEn() {
   return (
     <>
-      <SEOMeta title="Villa Rental Martinique — Direct booking, no service fees | Amaryllis" description="Book our Martinique villas directly in Sainte-Luce. Infinity pool, sea view, private jacuzzi. From €110/night. No Airbnb fees. 15 min from Les Salines beach." canonical="/villa-rental-martinique" image="https://villamaryllis.com/photos/amaryllis/01.webp" type="website" />
+      <SEOMeta title="Villa Rental Martinique — Direct booking | Amaryllis" description="Book our Martinique villas directly in Sainte-Luce. Infinity pool, sea view, private jacuzzi. From €110/night. No Airbnb fees. 15 min from Les Salines beach." canonical="/villa-rental-martinique" image="https://villamaryllis.com/photos/amaryllis/01.webp" type="website" />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         "@context": "https://schema.org",
         "@graph": [

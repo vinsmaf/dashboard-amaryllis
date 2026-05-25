@@ -13,7 +13,7 @@ const SAND  = "#e8dcc8";
 const MUTED = "#7a6b5a";
 const BASE  = "https://villamaryllis.com";
 
-const HERO_IMG = "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2d/Grande_Anse_d%27_Arlet_%2847001622912%29.jpg/960px-Grande_Anse_d%27_Arlet_%2847001622912%29.jpg";
+const HERO_IMG = "https://villamaryllis.com/photos/arlet-tortue.webp";
 
 const badges = [
   { icon: "🐢", label: "Tortues garanties" },
@@ -192,7 +192,7 @@ export default function GuideArlet() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: cssStyles }} />
-<SEOMeta title="Guide Anses d'Arlet Martinique — Nager avec les tortues marines | Amaryllis" description="Les Anses d'Arlet (25 min de Sainte-Luce) : le seul spot de Martinique où nager avec des tortues marines garanties tôt le matin. Village de pêcheurs, snorkeling, restaurants." canonical="/guide-arlet" image="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2d/Grande_Anse_d%27_Arlet_%2847001622912%29.jpg/960px-Grande_Anse_d%27_Arlet_%2847001622912%29.jpg" type="article" />
+<SEOMeta title="Anses d'Arlet Martinique — Tortues marines | Amaryllis" description="Les Anses d'Arlet (25 min de Sainte-Luce) : le seul spot de Martinique où nager avec des tortues marines garanties tôt le matin. Village de pêcheurs, snorkeling, restaurants." canonical="/guide-arlet" image="https://villamaryllis.com/photos/arlet-tortue.webp" type="article" />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         "@context": "https://schema.org",
         "@type": "Article",

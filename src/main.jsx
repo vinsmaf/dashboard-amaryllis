@@ -2,6 +2,7 @@ import { StrictMode, lazy, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import * as Sentry from "@sentry/react"
 import './index.css'
+import './tokens.css'
 import { LangProvider } from './i18n.jsx'
 
 Sentry.init({
@@ -31,17 +32,41 @@ const GuideProximite = lazy(() => import('./GuideProximite.jsx'))
 const GuideArlet     = lazy(() => import('./GuideArlet.jsx'))
 const GuideExplorer  = lazy(() => import('./GuideExplorer.jsx'))
 const GuideTroisIlets = lazy(() => import('./GuideTroisIlets.jsx'))
-const Avis            = lazy(() => import('./Avis.jsx'))
-const NotFound        = lazy(() => import('./NotFound.jsx'))
+const GuideSainteLuce          = lazy(() => import('./GuideSainteLuce.jsx'))
+const GuideReservationDirecte  = lazy(() => import('./GuideReservationDirecte.jsx'))
+const GuideMeilleureSaison     = lazy(() => import('./GuideMeilleureSaison.jsx'))
+const GuideSeminaires          = lazy(() => import('./GuideSeminaires.jsx'))
+const Avis             = lazy(() => import('./Avis.jsx'))
+const Faq              = lazy(() => import('./Faq.jsx'))
+const MentionsLegales          = lazy(() => import('./MentionsLegales.jsx'))
+const PolitiqueConfidentialite = lazy(() => import('./PolitiqueConfidentialite.jsx'))
+const ConditionsGenerales      = lazy(() => import('./ConditionsGenerales.jsx'))
+const NotFound                 = lazy(() => import('./NotFound.jsx'))
+import CookieBanner from './CookieBanner.jsx'
+import ChatWidget from './ChatWidget.jsx'
 const GuestGuide      = lazy(() => import('./GuestGuide.jsx'))
 const Merci           = lazy(() => import('./Merci.jsx'))
 
-const path = window.location.pathname;
+// Normalise les chemins avec trailing slash (/amaryllis/ → /amaryllis)
+const path = window.location.pathname.replace(/\/$/, "") || "/";
+
+// Attacher la surface au <body> pour que les tokens CSS s'activent
+document.body.dataset.surface = path.startsWith("/admin") ? "admin" : "site";
+
+// Appliquer le thème persisté (mode sombre site)
+// On pose data-theme sur <body> (qui porte data-surface) ET <html> (pour l'OS scrollbar)
+try {
+  const savedTheme = localStorage.getItem("amaryllis-theme");
+  if (savedTheme) {
+    document.body.dataset.theme = savedTheme;
+    document.documentElement.dataset.theme = savedTheme;
+  }
+} catch {}
 const params = new URLSearchParams(window.location.search);
 const cautionParam = params.get("caution"); // "ok" | "cancelled"
 
 const BIEN_IDS = ["amaryllis", "zandoli", "iguana", "geko", "mabouya", "schoelcher", "nogent"];
-const KNOWN = ["/", "/merci", "/devis", "/guide", "/explorer", "/guide-le-diamant", "/guide-sainte-anne", "/villa-rental-martinique", "/activites-sainte-luce", "/guide-proximite", "/guide-arlet", "/guide-trois-ilets", "/avis"];
+const KNOWN = ["/", "/merci", "/devis", "/guide", "/explorer", "/guide-le-diamant", "/guide-sainte-anne", "/villa-rental-martinique", "/activites-sainte-luce", "/guide-proximite", "/guide-arlet", "/guide-trois-ilets", "/avis", "/faq", "/mentions-legales", "/politique-confidentialite", "/conditions-generales", "/sainte-luce-martinique", "/reservation-directe-martinique", "/meilleure-saison-martinique", "/seminaires"];
 const isKnown = KNOWN.includes(path)
   || path.startsWith("/admin")
   || path.startsWith("/landing")
@@ -74,8 +99,24 @@ if (!isKnown) {
   Component = GuideExplorer;
 } else if (path === "/guide-trois-ilets") {
   Component = GuideTroisIlets;
+} else if (path === "/sainte-luce-martinique") {
+  Component = GuideSainteLuce;
+} else if (path === "/reservation-directe-martinique") {
+  Component = GuideReservationDirecte;
+} else if (path === "/meilleure-saison-martinique") {
+  Component = GuideMeilleureSaison;
+} else if (path === "/seminaires") {
+  Component = GuideSeminaires;
 } else if (path === "/avis") {
   Component = Avis;
+} else if (path === "/faq") {
+  Component = Faq;
+} else if (path === "/mentions-legales") {
+  Component = MentionsLegales;
+} else if (path === "/politique-confidentialite") {
+  Component = PolitiqueConfidentialite;
+} else if (path === "/conditions-generales") {
+  Component = ConditionsGenerales;
 } else if (path === "/merci") {
   Component = Merci;
 } else if (path.startsWith("/bienvenue")) {
@@ -113,6 +154,8 @@ createRoot(document.getElementById('root')).render(
       <LangProvider>
         <Suspense fallback={<div style={{ minHeight: "100vh", background: "#0e3b3a" }} />}>
           {cautionParam ? <CautionPage status={cautionParam} /> : <Component />}
+          {!cautionParam && !path.startsWith("/admin") && <CookieBanner />}
+          {!cautionParam && !path.startsWith("/admin") && !path.startsWith("/landing") && !path.startsWith("/bienvenue") && <ChatWidget />}
         </Suspense>
       </LangProvider>
     </Sentry.ErrorBoundary>

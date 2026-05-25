@@ -22,6 +22,12 @@ export const TR = {
     sectionSub:     "Toutes nos villas avec piscine à Sainte-Luce se réservent en direct, sans frais de service. Location vacances Martinique vue mer, jacuzzi privatif, piscine à débordement — réservez en direct et économisez jusqu'à 20% par rapport aux plateformes.",
     nResults:       (n) => `${n} villa${n !== 1 ? "s" : ""} disponible${n !== 1 ? "s" : ""}`,
 
+    // État vide — grille sans résultats
+    noResultEyebrow: "Aucune disponibilité",
+    noResultTitle:   "Aucun bien trouvé",
+    noResultBody:    "Ajustez vos filtres ou contactez-nous — nous trouverons la meilleure option pour vous.",
+    noResultCta:     "Nous contacter",
+
     // Card villa
     guests:         "pers.",
     rooms:          "ch.",
@@ -112,6 +118,12 @@ export const TR = {
     sectionSub:     "All our pool villas in Sainte-Luce are booked directly, with no service fees. Sea-view vacation rentals, private jacuzzi, infinity pool — book direct and save up to 20% vs. platforms.",
     nResults:       (n) => `${n} villa${n !== 1 ? "s" : ""} available`,
 
+    // Empty state — no results grid
+    noResultEyebrow: "No availability",
+    noResultTitle:   "No properties found",
+    noResultBody:    "Adjust your filters or contact us — we'll find the best option for you.",
+    noResultCta:     "Contact us",
+
     // Card villa
     guests:         "guests",
     rooms:          "bd.",
@@ -193,15 +205,30 @@ export function LangProvider({ children }) {
     try {
       const saved = localStorage.getItem("amaryllis_lang");
       if (saved && LANGS.includes(saved)) return saved;
-      // Détection navigateur
+      // Détection navigateur — fallback avant la réponse geo
       const nav = navigator.language?.slice(0, 2).toLowerCase();
       return nav === "en" ? "en" : "fr";
     } catch { return "fr"; }
   });
 
+  // Détection géo via Cloudflare CF-IPCountry — seulement si l'user n'a pas de préférence sauvée
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("amaryllis_lang")) return; // préférence explicite → respecter
+    } catch {}
+    fetch("/api/geo")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (!d?.suggestedLang) return;
+        setLangState(d.suggestedLang);
+        // On ne sauvegarde PAS en localStorage — laisse la détection se refaire à chaque visite
+      })
+      .catch(() => {});
+  }, []);
+
   function setLang(l) {
     setLangState(l);
-    try { localStorage.setItem("amaryllis_lang", l); } catch {}
+    try { localStorage.setItem("amaryllis_lang", l); } catch {} // choix manuel → persisté
   }
 
   // t(key, ...args) — args passés aux fonctions de traduction

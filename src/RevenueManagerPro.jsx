@@ -195,7 +195,7 @@ function RevenueManagerPro({ biens = [], reservations = [], mob = false }) {
   }, [selProp, calMonth, calYear, apiCall]);
 
   const loadRules = useCallback(async () => {
-    const data = await apiCall(`/api/rm-dashboard?property_id=${selProp}`);
+    const data = await apiCall(`/api/rm-rules?property_id=${selProp}`);
     if (data?.rules) setRules(data.rules);
   }, [selProp, apiCall]);
 

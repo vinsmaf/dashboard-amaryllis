@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import EmailSync from "./EmailSync.jsx";
 import RevenueManagerPro from "./RevenueManagerPro.jsx";
 import GuideEditor from "./GuideEditor.jsx";
+import LivretEditor from "./LivretEditor.jsx";
+import AgentsKanban from "./AgentsKanban.jsx";
 import { SEED_DAILY_PRICES, loadDailyPrices, saveDailyPrices, loadPriceOverrides, applyServerPriceOverrides } from "./seedPrices.js";
 import {
   BarChart, Bar, LineChart, Line, ComposedChart,
@@ -57,13 +59,10 @@ const SEED_BIENS = [
     revpar: [60,110,76,81,42,43,52,0,0,0,0,0] },
 ];
 
-const ICAL_DEFAULTS = {
-  amaryllis: "https://www.airbnb.fr/calendar/ical/54269844.ics?t=681e7d55c76a4845839d24c0bc18ca94",
-  schoelcher: "https://www.airbnb.fr/calendar/ical/24242415.ics?t=400f2712fa95485692d5911972f5533d",
-  geko: "https://www.airbnb.fr/calendar/ical/1263155865459755724.ics?t=1c95f057feda4b2fa08519aad1001ca9",
-  mabouya: "https://www.airbnb.fr/calendar/ical/1046596752160926069.ics?t=05c0e5dbdd9542878d58aa760416cf4f",
-  zandoli: "https://www.airbnb.fr/calendar/ical/792768220924504884.ics?t=cfc774d9c7fa40bfbe5f0757ba06b090",
-};
+// URLs iCal Airbnb : chargées depuis /api/get-config (Cloudflare env vars)
+// Plus de tokens dans le bundle JS public.
+// Fallback : objet vide → l'utilisateur saisit les URLs manuellement dans Planning.
+const ICAL_DEFAULTS = {};
 
 const FILE_ID = "1xuhU0KraEMxF9NAWO5MKEt23JI_V8mnNnWktzHy6q2U";
 const MOIS = ["Jan","Fév","Mar","Avr","Mai","Juin","Juil","Août","Sep","Oct","Nov","Déc"];
@@ -222,6 +221,50 @@ function PBar({ pct, label, color }) {
   );
 }
 
+// ── AlertCard — alerte admin (warn / danger / info) ──────────────────────────
+function AlertCard({ severity = "warn", title, body, action, onAction }) {
+  const colors = {
+    warn:   { bg: "rgba(245,158,11,0.08)",  border: "rgba(245,158,11,0.25)",  fg: "#fbbf24", icon: "⚠" },
+    danger: { bg: "rgba(239,68,68,0.08)",   border: "rgba(239,68,68,0.25)",   fg: "#fca5a5", icon: "⚠" },
+    info:   { bg: "rgba(14,165,233,0.08)",  border: "rgba(14,165,233,0.25)",  fg: "#7dd3fc", icon: "ℹ" },
+  };
+  const c = colors[severity] || colors.warn;
+  return (
+    <div style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+      <span style={{ color: c.fg, fontSize: 14, flexShrink: 0 }}>{c.icon}</span>
+      <div style={{ flex: 1, fontFamily: "'Jost', sans-serif", fontSize: 12, lineHeight: 1.4, color: c.fg }}>
+        <strong style={{ color: "#f1f5f9", fontWeight: 600 }}>{title}</strong>
+        {body && <> · {body}</>}
+      </div>
+      {action && (
+        <button onClick={onAction} style={{ background: "transparent", border: `1px solid ${c.border}`, color: c.fg, borderRadius: 6, padding: "5px 12px", fontFamily: "'Jost', sans-serif", fontSize: 11, fontWeight: 500, cursor: "pointer" }}>
+          {action}
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ── ChannelChip — pill coloré par canal de réservation ───────────────────────
+function _hexToRgb(hex) {
+  if (!hex || hex[0] !== "#") return "100,116,139";
+  let h = hex.slice(1);
+  if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+  const r = parseInt(h.slice(0,2),16), g = parseInt(h.slice(2,4),16), b = parseInt(h.slice(4,6),16);
+  if (isNaN(r)||isNaN(g)||isNaN(b)) return "100,116,139";
+  return `${r},${g},${b}`;
+}
+function ChannelChip({ channel, value }) {
+  const CHIP_COLORS = { airbnb: "#FF5A5F", "Airbnb": "#FF5A5F", booking: "#0ea5e9", "Booking.com": "#003580", direct: "#10b981", "Direct": "#10b981", "Beds24 Direct": "#0ea5e9", autre: "#a855f7" };
+  const color = CHIP_COLORS[channel] || "#64748b";
+  const rgb = _hexToRgb(color);
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, background: `rgba(${rgb},0.15)`, border: `1px solid rgba(${rgb},0.3)`, color, borderRadius: 4, padding: "3px 9px", fontFamily: "'Jost', sans-serif", fontSize: 11, fontWeight: 600 }}>
+      {channel}{value !== undefined && <span style={{ color: "#94a3b8", fontWeight: 400 }}>· {value}</span>}
+    </span>
+  );
+}
+
 // ============================================================================
 // SYNC GOOGLE SHEETS via Apps Script web app
 // ============================================================================
@@ -290,6 +333,7 @@ async function syncFromSheets(biens, scriptUrl) {
     moisActifs: data.moisActifs || N,
     lastSync: new Date().toLocaleString("fr-FR"),
     hist: data.hist || null,
+    reservations: data.reservations || [],
   };
 }
 
@@ -396,7 +440,7 @@ function parseICS(text, bienId, canal = "airbnb") {
 // ============================================================================
 // COMPUTE REVENUS FROM RESERVATIONS
 // ============================================================================
-function computeRevenusFromResas(reservations, year = 2026) {
+function computeRevenusFromResas(reservations, year = new Date().getFullYear()) {
   const map = {};
   reservations.forEach(r => {
     if (!r.montant || r.montant <= 0) return;
@@ -446,7 +490,7 @@ function TodayBanner({ biens, n, reservations, onTab, mob }) {
             <div style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em" }}>
               {MOIS_FULL[moisCourant]} — objectif
             </div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: "#0ea5e9", fontFamily: "monospace" }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "#0ea5e9", fontFamily: "var(--font-mono)" }}>
               {fmtK(revMois)}
               <span style={{ fontSize: 10, color: "#64748b", fontWeight: 400 }}> / {fmtK(objMois)}</span>
             </div>
@@ -494,8 +538,8 @@ function TodayBanner({ biens, n, reservations, onTab, mob }) {
         {!mob && (
           <div style={{ padding: "8px 14px", background: "rgba(255,255,255,0.03)", borderRadius: 10, border: "1px solid rgba(255,255,255,0.06)", textAlign: "right" }}>
             <div style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em" }}>YTD · Cashflow</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: "#f1f5f9", fontFamily: "monospace" }}>{fmtK(ytdTotal)}</div>
-            <div style={{ fontSize: 12, color: cfTotal >= 0 ? "#10b981" : "#ef4444", fontFamily: "monospace" }}>{fmtK(cfTotal)} CF</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "#f1f5f9", fontFamily: "var(--font-mono)" }}>{fmtK(ytdTotal)}</div>
+            <div style={{ fontSize: 12, color: cfTotal >= 0 ? "#10b981" : "#ef4444", fontFamily: "var(--font-mono)" }}>{fmtK(cfTotal)} CF</div>
           </div>
         )}
       </div>
@@ -514,29 +558,31 @@ function AISummary({ biens, n }) {
   const generate = async () => {
     setLoading(true);
     try {
+      const year = new Date().getFullYear();
+      const MOIS_NOMS = ["Jan","Fév","Mar","Avr","Mai","Juin","Juil","Août","Sep","Oct","Nov","Déc"];
+      const periodeLabel = n >= 2 ? `${MOIS_NOMS[0]}–${MOIS_NOMS[n-1]} ${year}` : `${MOIS_NOMS[0]} ${year}`;
+      const prochainLabel = n < 11 ? `${MOIS_NOMS[n]}–${MOIS_NOMS[Math.min(n+1,11)]}` : "fin d'année";
       const ctx = biens.map(b =>
         `${b.nom}: ${fmt(sumN(b.revenus, n))} revenus, cashflow ${fmt(sumN(b.cashflow, n))}, occupation moyenne ${avgN(b.occ, n).toFixed(0)}%, ADR ${avgN(b.adr, n).toFixed(0)}€`
       ).join("\n");
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch("/api/ai-summary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 500,
-          messages: [{
-            role: "user",
-            content: `Expert gestion locative à la Martinique. Rédige un bilan court et actionnable (3 paragraphes max) en français, basé sur ces données Jan-Mai 2026:\n\n${ctx}\n\nFormat: 1) Ce qui performe 2) Ce qui décroche 3) 3 actions concrètes pour juin-juillet. Direct et chiffré.`
-          }],
+          prompt: `Expert gestion locative. Rédige un bilan court et actionnable (3 paragraphes max) en français, basé sur ces données ${periodeLabel}:\n\n${ctx}\n\nFormat: 1) Ce qui performe 2) Ce qui décroche 3) 3 actions concrètes pour ${prochainLabel}. Direct et chiffré.`,
+          maxTokens: 500,
         }),
       });
       const data = await res.json();
-      setTxt(data.content?.[0]?.text || "Pas de réponse.");
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      setTxt(data.text || "Pas de réponse.");
       setDone(true);
     } catch (e) {
       setTxt("Erreur : " + e.message);
       setDone(true);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -586,12 +632,12 @@ function RevCell({ bienId, month, value, onSave }) {
         onChange={e => setDraft(e.target.value)}
         onBlur={commit}
         onKeyDown={e => { if (e.key === "Enter") commit(); if (e.key === "Escape") setEditing(false); }}
-        style={{ width: 52, padding: "1px 4px", background: "#0f172a", border: "1px solid #0ea5e9", borderRadius: 4, color: "#e2e8f0", fontSize: 10, fontFamily: "monospace", textAlign: "right" }}
+        style={{ width: 52, padding: "1px 4px", background: "#0f172a", border: "1px solid #0ea5e9", borderRadius: 4, color: "#e2e8f0", fontSize: 10, fontFamily: "var(--font-mono)", textAlign: "right" }}
       />
     );
   }
   return (
-    <span onClick={start} title="Cliquer pour modifier" style={{ cursor: "text", color: value > 0 ? "#94a3b8" : "#334155", fontSize: 10, fontFamily: "monospace" }}>
+    <span onClick={start} title="Cliquer pour modifier" style={{ cursor: "text", color: value > 0 ? "#94a3b8" : "#334155", fontSize: 10, fontFamily: "var(--font-mono)" }}>
       {value > 0 ? fmt(value) : "–"}
     </span>
   );
@@ -599,48 +645,48 @@ function RevCell({ bienId, month, value, onSave }) {
 
 function Cockpit({ biens, n, mob, onUpdateRevenu, reservations = [] }) {
   const BIEN_COLORS = { nogent: "#0ea5e9", amaryllis: "#10b981", iguana: "#6366f1", geko: "#f59e0b", zandoli: "#3b82f6", mabouya: "#ec4899", schoelcher: "#8b5cf6" };
-  const monthly = MOIS.slice(0, Math.min(n + 2, 8)).map((_, i) => {
-    const row = { m: MOIS[i] };
-    biens.forEach(b => { row[b.id] = i < n ? (b.revenus[i] || 0) : 0; });
-    return row;
-  });
   const tc = { court: "#0ea5e9", long: "#10b981", moyen: "#f59e0b" };
   const tl = { court: "Court", long: "Long", moyen: "Moyen" };
 
+  const monthly = useMemo(() => MOIS.slice(0, Math.min(n + 2, 8)).map((_, i) => {
+    const row = { m: MOIS[i] };
+    biens.forEach(b => { row[b.id] = i < n ? (b.revenus[i] || 0) : 0; });
+    return row;
+  }), [biens, n]);
+
   // ── Métriques temps réel ─────────────────────────────────────────────────
-  const todayTs = new Date();
-  const d30Ts = new Date(todayTs - 30 * 86400000);
-  let bookedNights30 = 0;
-  const shortTermBiens = biens.filter(b => b.type !== "long");
-  shortTermBiens.forEach(b => {
-    reservations.filter(r => r.bienId === b.id).forEach(r => {
-      if (!r.checkin || !r.checkout) return;
-      const ci = new Date(r.checkin + "T12:00:00Z");
-      const co = new Date(r.checkout + "T12:00:00Z");
-      const s = ci < d30Ts ? d30Ts : ci;
-      const e = co > todayTs ? todayTs : co;
-      if (e > s) bookedNights30 += (e - s) / 86400000;
+  const { occ30j, cumulData, ytdTotal, revparActuel } = useMemo(() => {
+    const todayTs = new Date();
+    const d30Ts = new Date(todayTs - 30 * 86400000);
+    const shortTermBiens = biens.filter(b => b.type !== "long");
+    let bookedNights30 = 0;
+    shortTermBiens.forEach(b => {
+      reservations.filter(r => r.bienId === b.id).forEach(r => {
+        if (!r.checkin || !r.checkout) return;
+        const ci = new Date(r.checkin + "T12:00:00Z");
+        const co = new Date(r.checkout + "T12:00:00Z");
+        const s = ci < d30Ts ? d30Ts : ci;
+        const e = co > todayTs ? todayTs : co;
+        if (e > s) bookedNights30 += (e - s) / 86400000;
+      });
     });
-  });
-  const avail30 = shortTermBiens.length * 30;
-  const occ30j = avail30 > 0 ? Math.min(Math.round(bookedNights30 / avail30 * 100), 100) : 0;
-
-  const curMonth = todayTs.getMonth(); // 0-based
-  const revparActuel = biens.filter(b => b.type !== "long").reduce((s, b) => s + (b.revpar[curMonth] || 0), 0)
-    / Math.max(biens.filter(b => b.type !== "long").length, 1);
-
-  // CA cumulé YTD
-  let cum = 0;
-  const cumulData = MOIS.slice(0, n).map((m, i) => {
-    const monthly = biens.reduce((s, b) => s + (b.revenus[i] || 0), 0);
-    cum += monthly;
-    return { m, mensuel: monthly, cumul: cum };
-  });
-  const ytdTotal = cum;
+    const avail30 = shortTermBiens.length * 30;
+    const occ30j = avail30 > 0 ? Math.min(Math.round(bookedNights30 / avail30 * 100), 100) : 0;
+    const curMonth = todayTs.getMonth();
+    const revparActuel = shortTermBiens.reduce((s, b) => s + (b.revpar[curMonth] || 0), 0)
+      / Math.max(shortTermBiens.length, 1);
+    let cum = 0;
+    const cumulData = MOIS.slice(0, n).map((m, i) => {
+      const mensuel = biens.reduce((s, b) => s + (b.revenus[i] || 0), 0);
+      cum += mensuel;
+      return { m, mensuel, cumul: cum };
+    });
+    return { occ30j, cumulData, ytdTotal: cum, revparActuel };
+  }, [biens, n, reservations]);
 
   return (
     <div>
-      <AISummary biens={biens} n={n} />
+      {/* <AISummary biens={biens} n={n} /> — désactivé (nécessite crédit API Anthropic) */}
       <YieldAlerts biens={biens} reservations={reservations} mob={mob} />
 
       {/* ── KPIs temps réel ── */}
@@ -653,7 +699,7 @@ function Cockpit({ biens, n, mob, onUpdateRevenu, reservations = [] }) {
         ].map(k => (
           <div key={k.label} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "12px 14px" }}>
             <div style={{ fontSize: 10, color: "#64748b", marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>{k.label}</div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: k.color, fontFamily: "monospace" }}>{k.value}</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: k.color, fontFamily: "var(--font-mono)" }}>{k.value}</div>
             <div style={{ fontSize: 10, color: "#475569", marginTop: 2 }}>{k.sub}</div>
           </div>
         ))}
@@ -662,8 +708,8 @@ function Cockpit({ biens, n, mob, onUpdateRevenu, reservations = [] }) {
       {/* ── CA cumulé YTD ── */}
       <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 14, padding: mob ? 12 : 18, marginBottom: 18 }}>
         <div style={{ fontSize: 13, color: "#94a3b8", marginBottom: 12, fontWeight: 600, display: "flex", justifyContent: "space-between" }}>
-          <span>CA cumulé 2026</span>
-          <span style={{ fontSize: 12, color: "#0ea5e9", fontFamily: "monospace" }}>{fmtK(ytdTotal)} total</span>
+          <span>CA cumulé {new Date().getFullYear()}</span>
+          <span style={{ fontSize: 12, color: "#0ea5e9", fontFamily: "var(--font-mono)" }}>{fmtK(ytdTotal)} total</span>
         </div>
         <ResponsiveContainer width="100%" height={mob ? 100 : 130}>
           <ComposedChart data={cumulData}>
@@ -678,7 +724,7 @@ function Cockpit({ biens, n, mob, onUpdateRevenu, reservations = [] }) {
       </div>
 
       <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 14, padding: mob ? 12 : 18, marginBottom: 18 }}>
-        <div style={{ fontSize: 13, color: "#94a3b8", marginBottom: 12, fontWeight: 600 }}>Revenus mensuels 2026</div>
+        <div style={{ fontSize: 13, color: "#94a3b8", marginBottom: 12, fontWeight: 600 }}>Revenus mensuels {new Date().getFullYear()}</div>
         <ResponsiveContainer width="100%" height={mob ? 130 : 165}>
           <BarChart data={monthly} barSize={mob ? 22 : 28}>
             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
@@ -724,8 +770,8 @@ function Cockpit({ biens, n, mob, onUpdateRevenu, reservations = [] }) {
 
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 11 }}>
                 <div>
-                  <div style={{ fontSize: 19, fontWeight: 700, color: "#f1f5f9", fontFamily: "monospace" }}>{fmtK(ytdB)}</div>
-                  <div style={{ fontSize: 11, color: cfB >= 0 ? "#10b981" : "#ef4444", fontFamily: "monospace" }}>
+                  <div style={{ fontSize: 19, fontWeight: 700, color: "#f1f5f9", fontFamily: "var(--font-mono)" }}>{fmtK(ytdB)}</div>
+                  <div style={{ fontSize: 11, color: cfB >= 0 ? "#10b981" : "#ef4444", fontFamily: "var(--font-mono)" }}>
                     {cfB >= 0 ? "+" : ""}{fmtK(cfB)} CF
                   </div>
                   {(() => {
@@ -742,9 +788,9 @@ function Cockpit({ biens, n, mob, onUpdateRevenu, reservations = [] }) {
                     <div style={{ fontSize: 9, color: "#64748b", marginTop: 1 }}>Occ.</div>
                   </div>
                   <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: "#f59e0b", fontFamily: "monospace" }}>{adr.toFixed(0)}€</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: "#f59e0b", fontFamily: "var(--font-mono)" }}>{adr.toFixed(0)}€</div>
                     <div style={{ fontSize: 9, color: "#64748b" }}>ADR</div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: "#94a3b8", fontFamily: "monospace" }}>{rvp.toFixed(0)}€</div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "#94a3b8", fontFamily: "var(--font-mono)" }}>{rvp.toFixed(0)}€</div>
                     <div style={{ fontSize: 9, color: "#64748b" }}>RevPAR</div>
                   </div>
                 </div>
@@ -803,7 +849,7 @@ function Cockpit({ biens, n, mob, onUpdateRevenu, reservations = [] }) {
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                     <span style={{ fontSize: 10, color: scoreColor, fontWeight: 700 }}>{scoreLabel}</span>
-                    <span style={{ fontSize: 20, fontWeight: 800, color: scoreColor, fontFamily: "monospace" }}>{total}</span>
+                    <span style={{ fontSize: 20, fontWeight: 800, color: scoreColor, fontFamily: "var(--font-mono)" }}>{total}</span>
                     <span style={{ fontSize: 9, color: "#64748b" }}>/100</span>
                   </div>
                 </div>
@@ -822,7 +868,7 @@ function Cockpit({ biens, n, mob, onUpdateRevenu, reservations = [] }) {
                         <div style={{ height: "100%", width: `${(s.value / s.max) * 100}%`, background: s.color, borderRadius: 2 }} />
                       </div>
                       <div style={{ fontSize: 8, color: "#64748b" }}>{s.label}</div>
-                      <div style={{ fontSize: 10, color: s.color, fontWeight: 600, fontFamily: "monospace" }}>{s.value}/{s.max}</div>
+                      <div style={{ fontSize: 10, color: s.color, fontWeight: 600, fontFamily: "var(--font-mono)" }}>{s.value}/{s.max}</div>
                     </div>
                   ))}
                 </div>
@@ -849,7 +895,7 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
   const [viewMonth, setViewMonth] = useState(new Date().getMonth());
-  const [viewYear] = useState(new Date().getFullYear());
+  const [viewYear, setViewYear] = useState(new Date().getFullYear());
   const [icalStatus, setIcalStatus] = useState({});
   const [lastIcalSync, setLastIcalSync] = useState(null);
   const [view, setView] = useState("todo");
@@ -863,12 +909,14 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
     return () => window.removeEventListener("amaryllis_prices_updated", handler);
   }, []);
 
-  // Toast notifications pour nouvelles réservations
+  // ── Toast system global ──────────────────────────────────────────────────
+  // type: "info" | "success" | "error"  (défaut: "info")
   const [resaToasts, setResaToasts] = useState([]);
-  const addToast = useCallback((msg) => {
-    const id = Date.now();
-    setResaToasts(t => [...t, { id, msg }]);
-    setTimeout(() => setResaToasts(t => t.filter(x => x.id !== id)), 8000);
+  const addToast = useCallback((msg, type = "info") => {
+    const id = Date.now() + Math.random();
+    setResaToasts(t => [...t, { id, msg, type }]);
+    const delay = type === "error" ? 10000 : 6000;
+    setTimeout(() => setResaToasts(t => t.filter(x => x.id !== id)), delay);
   }, []);
 
   const importIcal = useCallback(async (bienId, canal, url, currentResas) => {
@@ -916,20 +964,45 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
     }
   }, [saveRes, scriptUrl, addToast]);
 
+  // Refs qui suivent les valeurs courantes des URLs iCal — permet à l'effet avec
+  // deps [] de toujours lire les URLs à jour, même si elles arrivent après le montage
+  // (ex: chargées depuis /api/get-config quelques ms plus tard).
+  const icalUrlsRef        = useRef(icalUrls);
+  const icalUrlsBookingRef = useRef(icalUrlsBooking);
+  const importIcalRef      = useRef(importIcal);
+  useEffect(() => { icalUrlsRef.current = icalUrls; },               [icalUrls]);
+  useEffect(() => { icalUrlsBookingRef.current = icalUrlsBooking; }, [icalUrlsBooking]);
+  useEffect(() => { importIcalRef.current = importIcal; },           [importIcal]);
+
   // ── Auto-sync au chargement + toutes les heures ──────────────────────────
   useEffect(() => {
-    const sources = [];
-    Object.keys(icalUrls).forEach(k => { if (icalUrls[k]?.length > 10) sources.push({ bienId: k, canal: "airbnb", url: icalUrls[k] }); });
-    Object.keys(icalUrlsBooking).forEach(k => { if (icalUrlsBooking[k]?.length > 10) sources.push({ bienId: k, canal: "booking", url: icalUrlsBooking[k] }); });
+    const getSources = () => {
+      const srcs = [];
+      Object.keys(icalUrlsRef.current).forEach(k => { if (icalUrlsRef.current[k]?.length > 10) srcs.push({ bienId: k, canal: "airbnb", url: icalUrlsRef.current[k] }); });
+      Object.keys(icalUrlsBookingRef.current).forEach(k => { if (icalUrlsBookingRef.current[k]?.length > 10) srcs.push({ bienId: k, canal: "booking", url: icalUrlsBookingRef.current[k] }); });
+      return srcs;
+    };
+    const sources = getSources();
     if (sources.length === 0) return;
 
+    // Verrou pour éviter les syncs concurrentes (ex: sync horaire qui démarre
+    // pendant que la précédente tourne encore → race condition sur reservationsRef)
+    let syncing = false;
     const doSync = async () => {
-      let current = reservationsRef.current;
-      for (const s of sources) {
-        current = await importIcal(s.bienId, s.canal, s.url, current) || current;
+      if (syncing) return;
+      syncing = true;
+      try {
+        // Relit les sources à chaque tick pour capturer les URLs chargées après le montage
+        const currentSources = getSources();
+        let current = reservationsRef.current;
+        for (const s of currentSources) {
+          current = await importIcalRef.current(s.bienId, s.canal, s.url, current) || current;
+        }
+        if (onApplyRevenusFromResas) onApplyRevenusFromResas(computeRevenusFromResas(current));
+        pushReservationsToScript(current);
+      } finally {
+        syncing = false;
       }
-      if (onApplyRevenusFromResas) onApplyRevenusFromResas(computeRevenusFromResas(current));
-      pushReservationsToScript(current);
     };
 
     doSync(); // sync immédiate au chargement
@@ -1072,23 +1145,32 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
 
   return (
     <div>
-      {/* ── Toasts nouvelles réservations ── */}
+      {/* ── Toast stack global (bas à droite) ── */}
       {resaToasts.length > 0 && (
-        <div style={{ position: "fixed", top: 16, right: 16, zIndex: 9999, display: "flex", flexDirection: "column", gap: 8 }}>
-          {resaToasts.map(t => (
-            <div key={t.id} style={{
-              background: "#0f172a", border: "1px solid #22c55e", borderRadius: 10,
-              padding: "12px 16px", color: "#fff", fontSize: 13, fontWeight: 600,
-              boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
-              animation: "fadeIn 0.3s ease",
-              display: "flex", alignItems: "center", gap: 10, maxWidth: 340,
-            }}>
-              <span style={{ fontSize: 18 }}>🔔</span>
-              <span style={{ flex: 1 }}>{t.msg}</span>
-              <button onClick={() => setResaToasts(x => x.filter(r => r.id !== t.id))}
-                style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 16, padding: 0 }}>×</button>
-            </div>
-          ))}
+        <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 9999, display: "flex", flexDirection: "column-reverse", gap: 8, maxWidth: 360 }}>
+          {resaToasts.map(t => {
+            const colors = {
+              success: { border: "#22c55e", icon: "✓", accent: "#22c55e" },
+              error:   { border: "#ef4444", icon: "✕", accent: "#f87171" },
+              info:    { border: "#0ea5e9", icon: "🔔", accent: "#38bdf8" },
+            }[t.type] || { border: "#0ea5e9", icon: "🔔", accent: "#38bdf8" };
+            return (
+              <div key={t.id} style={{
+                background: "#0f172a", border: `1px solid ${colors.border}44`,
+                borderLeft: `3px solid ${colors.border}`,
+                borderRadius: 10, padding: "11px 14px",
+                color: "#e2e8f0", fontSize: 12.5, fontWeight: 500,
+                boxShadow: "0 8px 24px rgba(0,0,0,0.45)",
+                animation: "fadeIn 0.25s ease",
+                display: "flex", alignItems: "flex-start", gap: 10,
+              }}>
+                <span style={{ fontSize: 14, color: colors.accent, flexShrink: 0, marginTop: 1 }}>{colors.icon}</span>
+                <span style={{ flex: 1, lineHeight: 1.5 }}>{t.msg}</span>
+                <button onClick={() => setResaToasts(x => x.filter(r => r.id !== t.id))}
+                  style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: 16, padding: 0, lineHeight: 1, flexShrink: 0 }}>×</button>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -1164,7 +1246,7 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
                     </div>
                   );
                 })}
-                <div style={{ fontSize: 10, color: "#003580", fontWeight: 600, letterSpacing: 1, textTransform: "uppercase", marginTop: 4, color: "#60a5fa" }}>Booking.com</div>
+                <div style={{ fontSize: 10, color: "#60a5fa", fontWeight: 600, letterSpacing: 1, textTransform: "uppercase", marginTop: 4 }}>Booking.com</div>
                 {biens.filter(b => b.type !== "long").map(b => {
                   const sk = `${b.id}_booking`;
                   return (
@@ -1249,8 +1331,8 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             <span style={{ fontSize: 13, color: "#94a3b8", fontWeight: 600 }}>{MOIS_FULL[viewMonth]} {viewYear}</span>
             <div style={{ display: "flex", gap: 5 }}>
-              <button onClick={() => setViewMonth(m => (m - 1 + 12) % 12)} style={{ padding: "3px 9px", borderRadius: 6, border: "1px solid #334155", background: "none", color: "#94a3b8", cursor: "pointer", fontSize: 12 }}>‹</button>
-              <button onClick={() => setViewMonth(m => (m + 1) % 12)} style={{ padding: "3px 9px", borderRadius: 6, border: "1px solid #334155", background: "none", color: "#94a3b8", cursor: "pointer", fontSize: 12 }}>›</button>
+              <button onClick={() => { if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); } else setViewMonth(m => m - 1); }} style={{ padding: "3px 9px", borderRadius: 6, border: "1px solid #334155", background: "none", color: "#94a3b8", cursor: "pointer", fontSize: 12 }}>‹</button>
+              <button onClick={() => { if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); } else setViewMonth(m => m + 1); }} style={{ padding: "3px 9px", borderRadius: 6, border: "1px solid #334155", background: "none", color: "#94a3b8", cursor: "pointer", fontSize: 12 }}>›</button>
             </div>
           </div>
           <div style={{ minWidth: 480 }}>
@@ -1362,17 +1444,17 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
             <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
               <div style={{ flex: 1, minWidth: 140, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 11, padding: "12px 14px" }}>
                 <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>Jours libres / 60</div>
-                <div style={{ fontSize: 22, fontWeight: 700, color: "#ef4444", fontFamily: "monospace" }}>{totalDaysVides}</div>
+                <div style={{ fontSize: 22, fontWeight: 700, color: "#ef4444", fontFamily: "var(--font-mono)" }}>{totalDaysVides}</div>
                 <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>Sur les 60 prochains jours</div>
               </div>
               <div style={{ flex: 1, minWidth: 140, background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)", borderRadius: 11, padding: "12px 14px" }}>
                 <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>Trous détectés</div>
-                <div style={{ fontSize: 22, fontWeight: 700, color: "#f59e0b", fontFamily: "monospace" }}>{totalTrous}</div>
+                <div style={{ fontSize: 22, fontWeight: 700, color: "#f59e0b", fontFamily: "var(--font-mono)" }}>{totalTrous}</div>
                 <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>Périodes vides &gt; 3 jours</div>
               </div>
               <div style={{ flex: 1, minWidth: 140, background: "rgba(14,165,233,0.08)", border: "1px solid rgba(14,165,233,0.25)", borderRadius: 11, padding: "12px 14px" }}>
                 <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>Revenu potentiel</div>
-                <div style={{ fontSize: 22, fontWeight: 700, color: "#0ea5e9", fontFamily: "monospace" }}>{fmtK(revenuPotentielPerdu)}</div>
+                <div style={{ fontSize: 22, fontWeight: 700, color: "#0ea5e9", fontFamily: "var(--font-mono)" }}>{fmtK(revenuPotentielPerdu)}</div>
                 <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>Si 50% remplis à l'ADR moyen</div>
               </div>
             </div>
@@ -1485,10 +1567,10 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
                         <td style={{ padding: "8px 10px" }}>
                           <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 8, background: CB[r.canal], color: CC[r.canal], fontWeight: 600 }}>{r.canal}</span>
                         </td>
-                        <td style={{ padding: "8px 10px", color: "#94a3b8", fontSize: 10, fontFamily: "monospace" }}>{r.checkin}</td>
-                        <td style={{ padding: "8px 10px", color: "#0ea5e9", fontSize: 10, fontFamily: "monospace" }}>{r.checkin_time || "—"}</td>
-                        <td style={{ padding: "8px 10px", color: "#94a3b8", fontSize: 10, fontFamily: "monospace" }}>{r.checkout}</td>
-                        <td style={{ padding: "8px 10px", color: "#f59e0b", fontSize: 10, fontFamily: "monospace" }}>{r.checkout_time || "—"}</td>
+                        <td style={{ padding: "8px 10px", color: "#94a3b8", fontSize: 10, fontFamily: "var(--font-mono)" }}>{r.checkin}</td>
+                        <td style={{ padding: "8px 10px", color: "#0ea5e9", fontSize: 10, fontFamily: "var(--font-mono)" }}>{r.checkin_time || "—"}</td>
+                        <td style={{ padding: "8px 10px", color: "#94a3b8", fontSize: 10, fontFamily: "var(--font-mono)" }}>{r.checkout}</td>
+                        <td style={{ padding: "8px 10px", color: "#f59e0b", fontSize: 10, fontFamily: "var(--font-mono)" }}>{r.checkout_time || "—"}</td>
                         <td style={{ padding: "8px 10px", color: "#64748b", fontSize: 10, textAlign: "center" }}>{r.nb_guests || "—"}</td>
                         <td style={{ padding: "8px 10px", color: "#64748b", fontSize: 11 }}>{diffDays(r.checkin, r.checkout)}j</td>
                         <td style={{ padding: "8px 10px", textAlign: "center" }}>
@@ -1552,7 +1634,7 @@ function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalU
       )}
 
       {view === "beds24" && (
-        <Beds24Admin scriptUrl={scriptUrl} reservations={reservations} saveRes={saveRes} />
+        <Beds24Admin scriptUrl={scriptUrl} reservations={reservations} saveRes={saveRes} addToast={addToast} />
       )}
       {view === "minnights" && <MinNightsConfig />}
     </div>
@@ -1619,7 +1701,7 @@ function Previsionnel({ biens, n, mob, hist = HIST_SEED }) {
           <div style={{ fontSize: 13, color: "#94a3b8", fontWeight: 600, marginBottom: 10 }}>🎯 Objectif annuel 2026</div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
             <input type="range" min={150000} max={300000} step={5000} value={objectif} onChange={(e) => setObjectif(Number(e.target.value))} style={{ flex: 1, accentColor: "#0ea5e9" }} />
-            <input type="number" value={objectif} onChange={(e) => setObjectif(Number(e.target.value))} style={{ width: 95, padding: "5px 7px", background: "#1e293b", border: "1px solid #334155", borderRadius: 7, color: "#0ea5e9", fontSize: 14, fontWeight: 700, fontFamily: "monospace", textAlign: "right" }} />
+            <input type="number" value={objectif} onChange={(e) => setObjectif(Number(e.target.value))} style={{ width: 95, padding: "5px 7px", background: "#1e293b", border: "1px solid #334155", borderRadius: 7, color: "#0ea5e9", fontSize: 14, fontWeight: 700, fontFamily: "var(--font-mono)", textAlign: "right" }} />
             <span style={{ color: "#64748b", fontSize: 12 }}>€</span>
           </div>
           <div style={{ display: "flex", gap: 10, fontSize: 10, color: "#64748b" }}>
@@ -1643,12 +1725,12 @@ function Previsionnel({ biens, n, mob, hist = HIST_SEED }) {
       <div style={{ display: "flex", gap: 9, marginBottom: 18, flexWrap: "wrap" }}>
         <div style={{ flex: 1, minWidth: 110, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 11, padding: "12px 14px" }}>
           <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>YTD réel</div>
-          <div style={{ fontSize: 17, fontWeight: 700, color: "#f1f5f9", fontFamily: "monospace" }}>{fmt(ytd)}</div>
+          <div style={{ fontSize: 17, fontWeight: 700, color: "#f1f5f9", fontFamily: "var(--font-mono)" }}>{fmt(ytd)}</div>
           <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{(ytd / objectif * 100).toFixed(1)}% de l'objectif</div>
         </div>
         <div style={{ flex: 1, minWidth: 110, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 11, padding: "12px 14px" }}>
           <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>Projection {scenario}</div>
-          <div style={{ fontSize: 17, fontWeight: 700, color: "#f1f5f9", fontFamily: "monospace" }}>{fmt(Math.round(projAnnuelle))}</div>
+          <div style={{ fontSize: 17, fontWeight: 700, color: "#f1f5f9", fontFamily: "var(--font-mono)" }}>{fmt(Math.round(projAnnuelle))}</div>
           <div style={{ fontSize: 11, color: gap <= 0 ? "#10b981" : "#ef4444", marginTop: 2 }}>
             {gap > 0 ? `Manque ${fmt(Math.round(gap))}` : `+${fmt(Math.round(-gap))} au-dessus`}
           </div>
@@ -1658,7 +1740,7 @@ function Previsionnel({ biens, n, mob, hist = HIST_SEED }) {
           <div style={{ height: 6, background: "#1e293b", borderRadius: 3, overflow: "hidden", marginBottom: 5 }}>
             <div style={{ height: "100%", width: `${progressPct}%`, background: parseFloat(progressPct) >= 100 ? "#10b981" : parseFloat(progressPct) >= 80 ? "#f59e0b" : "#0ea5e9", borderRadius: 3, transition: "width 0.5s" }} />
           </div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: "#f1f5f9", fontFamily: "monospace" }}>{progressPct}%</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: "#f1f5f9", fontFamily: "var(--font-mono)" }}>{progressPct}%</div>
         </div>
       </div>
 
@@ -1694,15 +1776,15 @@ function Previsionnel({ biens, n, mob, hist = HIST_SEED }) {
               </div>
               <div style={{ textAlign: "center" }}>
                 <div style={{ fontSize: 9, color: "#64748b", marginBottom: 1 }}>ADR actuel</div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#94a3b8", fontFamily: "monospace" }}>{Math.round(b.adrActuel)}€</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#94a3b8", fontFamily: "var(--font-mono)" }}>{Math.round(b.adrActuel)}€</div>
               </div>
               <div style={{ textAlign: "center" }}>
                 <div style={{ fontSize: 9, color: "#64748b", marginBottom: 1 }}>ADR cible</div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: c, fontFamily: "monospace" }}>{b.adrNecessaire > 0 ? b.adrNecessaire + "€" : "OK"}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: c, fontFamily: "var(--font-mono)" }}>{b.adrNecessaire > 0 ? b.adrNecessaire + "€" : "OK"}</div>
               </div>
               <div style={{ textAlign: "center" }}>
                 <div style={{ fontSize: 9, color: "#64748b", marginBottom: 1 }}>Hausse</div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: c, fontFamily: "monospace" }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: c, fontFamily: "var(--font-mono)" }}>
                   {ok ? "✓ OK" : b.hausseNecessaire > 0 ? `+${b.hausseNecessaire}%` : "—"}
                 </div>
               </div>
@@ -1733,15 +1815,15 @@ function Previsionnel({ biens, n, mob, hist = HIST_SEED }) {
               return (
                 <tr key={b.id} style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
                   <td style={{ padding: "9px 10px", fontSize: 11 }}>{b.emoji} {b.nom.replace("Villa ", "").replace("T2 ", "")}</td>
-                  <td style={{ padding: "9px 10px", color: "#0ea5e9", fontFamily: "monospace", fontSize: 11, fontWeight: 600 }}>{fmt(projBien)}</td>
-                  <td style={{ padding: "9px 10px", color: "#ef4444", fontFamily: "monospace", fontSize: 11 }}>{fmt(chargesFixes)}</td>
-                  <td style={{ padding: "9px 10px", color: c, fontFamily: "monospace", fontSize: 12, fontWeight: 700 }}>{net >= 0 ? "+" : ""}{fmt(net)}</td>
+                  <td style={{ padding: "9px 10px", color: "#0ea5e9", fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 600 }}>{fmt(projBien)}</td>
+                  <td style={{ padding: "9px 10px", color: "#ef4444", fontFamily: "var(--font-mono)", fontSize: 11 }}>{fmt(chargesFixes)}</td>
+                  <td style={{ padding: "9px 10px", color: c, fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 700 }}>{net >= 0 ? "+" : ""}{fmt(net)}</td>
                   <td style={{ padding: "9px 10px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <div style={{ flex: 1, height: 4, background: "#1e293b", borderRadius: 2, overflow: "hidden" }}>
                         <div style={{ height: "100%", width: `${Math.min(parseInt(ratio), 100)}%`, background: parseInt(ratio) > 80 ? "#ef4444" : parseInt(ratio) > 50 ? "#f59e0b" : "#10b981" }} />
                       </div>
-                      <span style={{ fontSize: 9, color: "#64748b", fontFamily: "monospace" }}>{ratio}%</span>
+                      <span style={{ fontSize: 9, color: "#64748b", fontFamily: "var(--font-mono)" }}>{ratio}%</span>
                     </div>
                   </td>
                 </tr>
@@ -1749,9 +1831,9 @@ function Previsionnel({ biens, n, mob, hist = HIST_SEED }) {
             })}
             <tr style={{ borderTop: "2px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.03)" }}>
               <td style={{ padding: "10px", fontWeight: 700, color: "#e2e8f0", fontSize: 11 }}>TOTAL</td>
-              <td style={{ padding: "10px", color: "#0ea5e9", fontFamily: "monospace", fontSize: 12, fontWeight: 700 }}>{fmt(Math.round(projAnnuelle))}</td>
-              <td style={{ padding: "10px", color: "#ef4444", fontFamily: "monospace", fontSize: 12, fontWeight: 700 }}>{fmt(biens.reduce((s, b) => s + b.charges * 12, 0))}</td>
-              <td style={{ padding: "10px", color: "#10b981", fontFamily: "monospace", fontSize: 13, fontWeight: 800 }}>
+              <td style={{ padding: "10px", color: "#0ea5e9", fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 700 }}>{fmt(Math.round(projAnnuelle))}</td>
+              <td style={{ padding: "10px", color: "#ef4444", fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 700 }}>{fmt(biens.reduce((s, b) => s + b.charges * 12, 0))}</td>
+              <td style={{ padding: "10px", color: "#10b981", fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 800 }}>
                 {(() => { const t = Math.round(projAnnuelle) - biens.reduce((s, b) => s + b.charges * 12, 0); return (t >= 0 ? "+" : "") + fmt(t); })()}
               </td>
               <td />
@@ -1795,22 +1877,28 @@ function Previsionnel({ biens, n, mob, hist = HIST_SEED }) {
               ].map(s => (
                 <div key={s.label} style={{ background: `${s.color}11`, border: `1px solid ${s.color}33`, borderRadius: 10, padding: "12px 14px", textAlign: "center" }}>
                   <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{s.label}</div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: s.color, fontFamily: "monospace" }}>{fmtK(s.value)}</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: s.color, fontFamily: "var(--font-mono)" }}>{fmtK(s.value)}</div>
                 </div>
               ))}
             </div>
             <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
               <div style={{ flex: 1, minWidth: 120, background: "rgba(255,255,255,0.03)", borderRadius: 9, padding: "10px 12px" }}>
                 <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 3 }}>CF projeté 2027</div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: cf27 >= 0 ? "#10b981" : "#ef4444", fontFamily: "monospace" }}>{cf27 >= 0 ? "+" : ""}{fmtK(cf27)}</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: cf27 >= 0 ? "#10b981" : "#ef4444", fontFamily: "var(--font-mono)" }}>{cf27 >= 0 ? "+" : ""}{fmtK(cf27)}</div>
               </div>
               <div style={{ flex: 1, minWidth: 120, background: "rgba(255,255,255,0.03)", borderRadius: 9, padding: "10px 12px" }}>
-                <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 3 }}>CAGR 2022→2027</div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: "#a855f7", fontFamily: "monospace" }}>{(Math.pow(proj27_real / rev2022, 1 / 5) - 1).toFixed(1).replace(".", ",")}{" "}%/an</div>
+                <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 3 }}>CAGR {firstHistYear}→{nextYear}</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: "#a855f7", fontFamily: "var(--font-mono)" }}>
+                  {revFirst > 0 && nextYear > firstHistYear
+                    ? (Math.pow(proj27_real / revFirst, 1 / (nextYear - firstHistYear)) - 1).toFixed(1).replace(".", ",") + " %/an"
+                    : "—"}
+                </div>
               </div>
               <div style={{ flex: 1, minWidth: 120, background: "rgba(255,255,255,0.03)", borderRadius: 9, padding: "10px 12px" }}>
-                <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 3 }}>Revenus cumulés 2022-2027</div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: "#f59e0b", fontFamily: "monospace" }}>{fmtK(107062 + 121730 + 143341 + 161331 + proj26 + proj27_real)}</div>
+                <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 3 }}>Revenus cumulés {firstHistYear}-{nextYear}</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: "#f59e0b", fontFamily: "var(--font-mono)" }}>
+                  {fmtK(histYears.reduce((s, y) => s + (hist[y]?.total || []).reduce((a, v) => a + v, 0), 0) + proj26 + proj27_real)}
+                </div>
               </div>
             </div>
             <ResponsiveContainer width="100%" height={mob ? 130 : 165}>
@@ -1820,9 +1908,9 @@ function Previsionnel({ biens, n, mob, hist = HIST_SEED }) {
                 <YAxis tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={fmtK} />
                 <Tooltip contentStyle={TT} formatter={(v) => [fmt(v)]} />
                 <Legend wrapperStyle={{ fontSize: 9, color: "#94a3b8" }} />
-                <Bar dataKey="2025" fill="rgba(14,165,233,0.25)" name="2025 réel" radius={[2,2,0,0]} />
-                <Line type="monotone" dataKey="2026 proj." stroke="#0ea5e9" strokeWidth={2} dot={false} strokeDasharray="4 2" />
-                <Line type="monotone" dataKey="2027 réaliste" stroke="#a855f7" strokeWidth={2} dot={false} />
+                <Bar dataKey={String(prevYear)} fill="rgba(14,165,233,0.25)" name={`${prevYear} réel`} radius={[2,2,0,0]} />
+                <Line type="monotone" dataKey={`${cy} proj.`} stroke="#0ea5e9" strokeWidth={2} dot={false} strokeDasharray="4 2" />
+                <Line type="monotone" dataKey={`${nextYear} réaliste`} stroke="#a855f7" strokeWidth={2} dot={false} />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -1911,7 +1999,7 @@ function Historique({ biens, n, mob, hist = HIST_SEED }) {
             <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>
               Revenus totaux depuis 2022
             </div>
-            <div style={{ fontSize: mob ? 26 : 32, fontWeight: 800, color: "#0ea5e9", fontFamily: "monospace", letterSpacing: "-0.02em" }}>
+            <div style={{ fontSize: mob ? 26 : 32, fontWeight: 800, color: "#0ea5e9", fontFamily: "var(--font-mono)", letterSpacing: "-0.02em" }}>
               {fmt(totalDepuis2022)}
             </div>
             <div style={{ fontSize: 11, color: "#64748b", marginTop: 3 }}>
@@ -1937,7 +2025,7 @@ function Historique({ biens, n, mob, hist = HIST_SEED }) {
           {cumulHistorique.map((c, i) => (
             <div key={i} style={{ flex: 1, minWidth: 90, background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "8px 10px" }}>
               <div style={{ fontSize: 9, color: "#64748b", marginBottom: 2 }}>Fin {c.annee}</div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#f1f5f9", fontFamily: "monospace" }}>{fmtK(c.cumul)}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#f1f5f9", fontFamily: "var(--font-mono)" }}>{fmtK(c.cumul)}</div>
             </div>
           ))}
         </div>
@@ -1950,7 +2038,7 @@ function Historique({ biens, n, mob, hist = HIST_SEED }) {
             <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>
               Cashflow cumulé depuis 2022
             </div>
-            <div style={{ fontSize: mob ? 26 : 32, fontWeight: 800, color: cashflowDepuis2022 >= 0 ? "#10b981" : "#ef4444", fontFamily: "monospace", letterSpacing: "-0.02em" }}>
+            <div style={{ fontSize: mob ? 26 : 32, fontWeight: 800, color: cashflowDepuis2022 >= 0 ? "#10b981" : "#ef4444", fontFamily: "var(--font-mono)", letterSpacing: "-0.02em" }}>
               {cashflowDepuis2022 >= 0 ? "+" : ""}{fmt(cashflowDepuis2022)}
             </div>
             <div style={{ fontSize: 11, color: "#64748b", marginTop: 3 }}>
@@ -1976,7 +2064,7 @@ function Historique({ biens, n, mob, hist = HIST_SEED }) {
           {cashflowCumul.map((c, i) => (
             <div key={i} style={{ flex: 1, minWidth: 90, background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "8px 10px" }}>
               <div style={{ fontSize: 9, color: "#64748b", marginBottom: 2 }}>Fin {c.annee}</div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: c.cumul >= 0 ? "#10b981" : "#ef4444", fontFamily: "monospace" }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: c.cumul >= 0 ? "#10b981" : "#ef4444", fontFamily: "var(--font-mono)" }}>
                 {c.cumul >= 0 ? "+" : ""}{fmtK(c.cumul)}
               </div>
             </div>
@@ -1989,7 +2077,7 @@ function Historique({ biens, n, mob, hist = HIST_SEED }) {
         {annualTotals.map(a => (
           <div key={a.year} style={{ flex: 1, minWidth: 80, background: "rgba(255,255,255,0.04)", border: `1px solid ${ANNEE_COLORS[a.year]}44`, borderTop: `3px solid ${ANNEE_COLORS[a.year]}`, borderRadius: 11, padding: "11px 12px" }}>
             <div style={{ fontSize: 10, color: "#64748b", marginBottom: 2 }}>{a.year}{a.ytd ? " YTD" : ""}</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: "#f1f5f9", fontFamily: "monospace" }}>{fmtK(a.rev)}</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "#f1f5f9", fontFamily: "var(--font-mono)" }}>{fmtK(a.rev)}</div>
             {a.evo && <div style={{ fontSize: 10, color: parseFloat(a.evo) >= 0 ? "#10b981" : "#ef4444", marginTop: 2 }}>{parseFloat(a.evo) >= 0 ? "+" : ""}{a.evo}%</div>}
           </div>
         ))}
@@ -2087,7 +2175,7 @@ function Historique({ biens, n, mob, hist = HIST_SEED }) {
               return (
                 <div key={m} style={{ flex: 1, minWidth: 50, background: "rgba(255,255,255,0.03)", borderRadius: 7, padding: "6px 7px", textAlign: "center" }}>
                   <div style={{ fontSize: 9, color: "#64748b", marginBottom: 2 }}>{MOIS[m]}</div>
-                  <div style={{ fontSize: 10, fontFamily: "monospace", color: delta >= 0 ? "#10b981" : "#ef4444", fontWeight: 600 }}>
+                  <div style={{ fontSize: 10, fontFamily: "var(--font-mono)", color: delta >= 0 ? "#10b981" : "#ef4444", fontWeight: 600 }}>
                     {delta >= 0 ? "+" : ""}{fmtK(delta)}
                   </div>
                 </div>
@@ -2267,6 +2355,10 @@ function MinNightsConfig() {
   const localTimer    = useRef(null);
   const serverTimer   = useRef(null);
 
+  // Flag dédié pour ignorer les saves déclenchés par le chargement serveur
+  // (distinct de isFirstRender pour éviter le conflit de flags)
+  const skipNextSave = useRef(false);
+
   // ── Charger depuis le serveur au montage (useEffect, pas useState!) ──
   useEffect(() => {
     fetch("/api/site-config")
@@ -2274,7 +2366,7 @@ function MinNightsConfig() {
       .then(d => {
         if (d.ok && d.config && Object.keys(d.config).length) {
           const full = buildFull(d.config);
-          isFirstRender.current = true;      // skip auto-save for server-loaded data
+          skipNextSave.current = true;  // ce setConfig ne doit pas déclencher un re-save
           setConfig(full);
           localStorage.setItem("amaryllis_min_nights_v2", JSON.stringify(full));
           window.dispatchEvent(new Event("amaryllis_config_updated"));
@@ -2287,6 +2379,7 @@ function MinNightsConfig() {
   // ── Auto-save : localStorage immédiat + serveur différé ────────
   useEffect(() => {
     if (isFirstRender.current) { isFirstRender.current = false; return; }
+    if (skipNextSave.current) { skipNextSave.current = false; return; }
 
     // 1. Enregistrement local immédiat (300 ms debounce anti-keystroke)
     clearTimeout(localTimer.current);
@@ -2335,6 +2428,61 @@ function MinNightsConfig() {
     setConfig(p => ({ ...p, [bienId]: { ...p[bienId], periods: p[bienId].periods.filter(pr => pr.id !== pid) } }));
   }
 
+  // ── Recommandations saisonnières ─────────────────────────────
+  // Martinique : haute saison = jul-août + déc 15-jan 5 → 7 nuits
+  //              intermédiaire = fév-juin + sept-nov → 4 nuits
+  //              Nogent : pas de saisonnalité forte → défaut 1 nuit
+  const RECO_PERIODS = {
+    amaryllis: [
+      { label: "Été (jul–août)",    from: `${new Date().getFullYear()}-07-01`, to: `${new Date().getFullYear()}-08-31`,  min: 7 },
+      { label: "Fêtes (déc–jan)",   from: `${new Date().getFullYear()}-12-15`, to: `${new Date().getFullYear() + 1}-01-05`, min: 7 },
+      { label: "Saison interm.",    from: `${new Date().getFullYear()}-02-01`, to: `${new Date().getFullYear()}-06-30`,  min: 4 },
+    ],
+    geko:     [
+      { label: "Été (jul–août)",    from: `${new Date().getFullYear()}-07-01`, to: `${new Date().getFullYear()}-08-31`,  min: 7 },
+      { label: "Fêtes (déc–jan)",   from: `${new Date().getFullYear()}-12-15`, to: `${new Date().getFullYear() + 1}-01-05`, min: 7 },
+      { label: "Saison interm.",    from: `${new Date().getFullYear()}-02-01`, to: `${new Date().getFullYear()}-06-30`,  min: 3 },
+    ],
+    zandoli:  [
+      { label: "Été (jul–août)",    from: `${new Date().getFullYear()}-07-01`, to: `${new Date().getFullYear()}-08-31`,  min: 5 },
+      { label: "Fêtes (déc–jan)",   from: `${new Date().getFullYear()}-12-15`, to: `${new Date().getFullYear() + 1}-01-05`, min: 5 },
+    ],
+    schoelcher: [
+      { label: "Été (jul–août)",    from: `${new Date().getFullYear()}-07-01`, to: `${new Date().getFullYear()}-08-31`,  min: 5 },
+      { label: "Fêtes (déc–jan)",   from: `${new Date().getFullYear()}-12-15`, to: `${new Date().getFullYear() + 1}-01-05`, min: 5 },
+    ],
+    mabouya: [
+      { label: "Été (jul–août)",    from: `${new Date().getFullYear()}-07-01`, to: `${new Date().getFullYear()}-08-31`,  min: 4 },
+      { label: "Fêtes (déc–jan)",   from: `${new Date().getFullYear()}-12-15`, to: `${new Date().getFullYear() + 1}-01-05`, min: 4 },
+    ],
+    nogent:   [], // Urbain : 1 nuit minimum uniforme, pas de saisonnalité
+    iguana:   [],
+  };
+
+  const [showReco, setShowReco] = useState(false);
+
+  function applyReco(bienId) {
+    const recos = RECO_PERIODS[bienId] || [];
+    if (!recos.length) return;
+    const newPeriods = recos.map(r => ({ ...r, id: `reco-${Date.now()}-${Math.random().toString(36).slice(2)}` }));
+    setConfig(p => ({
+      ...p,
+      [bienId]: { ...p[bienId], periods: newPeriods },
+    }));
+  }
+
+  function applyAllReco() {
+    setConfig(p => {
+      const next = { ...p };
+      for (const [bienId, recos] of Object.entries(RECO_PERIODS)) {
+        if (!recos.length) continue;
+        const newPeriods = recos.map(r => ({ ...r, id: `reco-${Date.now()}-${Math.random().toString(36).slice(2)}` }));
+        next[bienId] = { ...next[bienId], periods: newPeriods };
+      }
+      return next;
+    });
+  }
+
   // ── Indicateur de synchronisation ───────────────────────────
   const statusBadge = {
     idle:    null,
@@ -2355,6 +2503,57 @@ function MinNightsConfig() {
           et appliquées instantanément dans le widget de réservation.
         </div>
         {statusBadge && <div style={{ flexShrink: 0 }}>{statusBadge}</div>}
+      </div>
+
+      {/* ── Panneau recommandations saisonnières ── */}
+      <div style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 12, padding: "14px 16px", marginBottom: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#fbbf24", marginBottom: 4 }}>💡 Recommandations saisonnières</div>
+            <div style={{ fontSize: 11, color: "#94a3b8", lineHeight: 1.55 }}>
+              Haute saison <strong style={{ color: "#e2e8f0" }}>juil–août + déc 15–jan 5</strong> → 7 nuits min sur les grandes villas · saison intermédiaire → 4 nuits · basse saison → défaut.
+              <br />Évite les "trous orphelins" non louables entre deux réservations. À appliquer également dans Beds24 pour la synchronisation.
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8, flexShrink: 0, flexWrap: "wrap" }}>
+            <button
+              onClick={() => setShowReco(r => !r)}
+              style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid rgba(245,158,11,0.35)", background: "rgba(245,158,11,0.1)", color: "#fbbf24", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
+            >{showReco ? "▲ Masquer" : "▼ Voir le détail"}</button>
+            <button
+              onClick={applyAllReco}
+              style={{ padding: "6px 14px", borderRadius: 6, border: "1px solid rgba(245,158,11,0.5)", background: "rgba(245,158,11,0.18)", color: "#f59e0b", fontSize: 11, fontWeight: 700, cursor: "pointer" }}
+            >⚡ Appliquer à tous</button>
+          </div>
+        </div>
+
+        {showReco && (
+          <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 10 }}>
+            {Object.entries(RECO_PERIODS).map(([bienId, recos]) => (
+              <div key={bienId} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 8, padding: "10px 12px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#e2e8f0" }}>{BIEN_NAMES_ADMIN[bienId]}</span>
+                  {recos.length > 0 && (
+                    <button onClick={() => applyReco(bienId)}
+                      style={{ fontSize: 10, padding: "3px 8px", borderRadius: 5, border: "1px solid rgba(245,158,11,0.4)", background: "none", color: "#fbbf24", cursor: "pointer", fontWeight: 600 }}>
+                      Appliquer
+                    </button>
+                  )}
+                </div>
+                {recos.length === 0 ? (
+                  <div style={{ fontSize: 10, color: "#475569", fontStyle: "italic" }}>Pas de saisonnalité — défaut 1 nuit</div>
+                ) : (
+                  recos.map((r, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 10, color: "#94a3b8", padding: "2px 0" }}>
+                      <span>{r.label}</span>
+                      <span style={{ fontWeight: 700, color: r.min >= 7 ? "#f59e0b" : r.min >= 4 ? "#38bdf8" : "#94a3b8" }}>{r.min} nuits</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {Object.keys(MIN_NIGHTS_DEFAULTS_ADMIN).map(bienId => {
@@ -2397,10 +2596,18 @@ function MinNightsConfig() {
               </div>
             ))}
 
-            <button onClick={() => addPeriod(bienId)}
-              style={{ background: "rgba(14,165,233,0.08)", border: "1px solid rgba(14,165,233,0.22)", borderRadius: 6, color: "#38bdf8", cursor: "pointer", fontSize: 11, padding: "5px 12px", fontWeight: 600, marginTop: periods.length ? 4 : 0 }}>
-              + Ajouter une période
-            </button>
+            <div style={{ display: "flex", gap: 6, marginTop: periods.length ? 4 : 0 }}>
+              <button onClick={() => addPeriod(bienId)}
+                style={{ background: "rgba(14,165,233,0.08)", border: "1px solid rgba(14,165,233,0.22)", borderRadius: 6, color: "#38bdf8", cursor: "pointer", fontSize: 11, padding: "5px 12px", fontWeight: 600 }}>
+                + Ajouter une période
+              </button>
+              {(RECO_PERIODS[bienId]?.length > 0) && (
+                <button onClick={() => applyReco(bienId)}
+                  style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)", borderRadius: 6, color: "#f59e0b", cursor: "pointer", fontSize: 11, padding: "5px 12px", fontWeight: 600 }}>
+                  ⚡ Reco. saison
+                </button>
+              )}
+            </div>
           </div>
         );
       })}
@@ -2528,7 +2735,7 @@ function Pilotage({ biens, n, mob, reservations = [] }) {
             {canalData.map(c => (
               <div key={c.name} style={{ flex: 1, minWidth: 120, background: c.color + "11", border: `1px solid ${c.color}44`, borderRadius: 11, padding: "12px 14px" }}>
                 <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>{c.name}</div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: c.color, fontFamily: "monospace" }}>{fmtK(c.brut)}</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: c.color, fontFamily: "var(--font-mono)" }}>{fmtK(c.brut)}</div>
                 <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>
                   {((c.brut / totalCanal) * 100).toFixed(0)}% du total
                   {c.commission > 0 && <span> · -{fmtK(c.commission)} commission</span>}
@@ -2573,7 +2780,7 @@ function Pilotage({ biens, n, mob, reservations = [] }) {
           {/* Insight commissions */}
           <div style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 11, padding: "12px 16px", marginBottom: 12 }}>
             <div style={{ fontSize: 11, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Commissions plateformes estimées 2025</div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: "#ef4444", fontFamily: "monospace" }}>{fmt(Math.round(totalCommissions))}</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: "#ef4444", fontFamily: "var(--font-mono)" }}>{fmt(Math.round(totalCommissions))}</div>
             <div style={{ fontSize: 11, color: "#64748b", marginTop: 3 }}>
               Airbnb ~15% sur {fmtK(canalTotaux.airbnb)} + Booking ~17% sur {fmtK(canalTotaux.booking)}
             </div>
@@ -2749,15 +2956,15 @@ function Pilotage({ biens, n, mob, reservations = [] }) {
                   <div style={{ display: "flex", gap: 12, fontSize: 11, alignItems: "center", flexWrap: "wrap", marginBottom: 7 }}>
                     <div>
                       <span style={{ color: "#64748b" }}>Ton ADR moyen : </span>
-                      <span style={{ color: "#f59e0b", fontWeight: 700, fontFamily: "monospace" }}>{Math.round(b.adrActuel)}€</span>
+                      <span style={{ color: "#f59e0b", fontWeight: 700, fontFamily: "var(--font-mono)" }}>{Math.round(b.adrActuel)}€</span>
                     </div>
                     <div>
                       <span style={{ color: "#64748b" }}>Médiane marché : </span>
-                      <span style={{ color: "#0ea5e9", fontWeight: 600, fontFamily: "monospace" }}>{b.bench.mediane}€</span>
+                      <span style={{ color: "#0ea5e9", fontWeight: 600, fontFamily: "var(--font-mono)" }}>{b.bench.mediane}€</span>
                     </div>
                     <div>
                       <span style={{ color: "#64748b" }}>Range : </span>
-                      <span style={{ color: "#94a3b8", fontFamily: "monospace" }}>{b.bench.min}-{b.bench.top}€</span>
+                      <span style={{ color: "#94a3b8", fontFamily: "var(--font-mono)" }}>{b.bench.min}-{b.bench.top}€</span>
                     </div>
                     <div>
                       <span style={{ color: "#64748b" }}>Écart : </span>
@@ -2851,8 +3058,8 @@ function Pilotage({ biens, n, mob, reservations = [] }) {
                               {c.mine && "⭐ "}{c.nom}
                             </td>
                             <td style={{ padding: "7px 8px", color: "#94a3b8", fontSize: 10 }}>{c.type}</td>
-                            <td style={{ padding: "7px 8px", color: "#0ea5e9", fontSize: 11, fontFamily: "monospace", fontWeight: 700 }}>{c.adr}€</td>
-                            <td style={{ padding: "7px 8px", color: c.score >= 9 ? "#10b981" : c.score >= 8 ? "#f59e0b" : "#94a3b8", fontSize: 11, fontFamily: "monospace" }}>{c.score || "—"}</td>
+                            <td style={{ padding: "7px 8px", color: "#0ea5e9", fontSize: 11, fontFamily: "var(--font-mono)", fontWeight: 700 }}>{c.adr}€</td>
+                            <td style={{ padding: "7px 8px", color: c.score >= 9 ? "#10b981" : c.score >= 8 ? "#f59e0b" : "#94a3b8", fontSize: 11, fontFamily: "var(--font-mono)" }}>{c.score || "—"}</td>
                             <td style={{ padding: "7px 8px", color: "#64748b", fontSize: 10 }}>{c.reviews || "—"}</td>
                             <td style={{ padding: "7px 8px", color: "#94a3b8", fontSize: 10 }}>{c.atout}</td>
                           </tr>
@@ -2904,22 +3111,22 @@ function Pilotage({ biens, n, mob, reservations = [] }) {
           <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
             <div style={{ flex: 1, minWidth: 140, background: "rgba(14,165,233,0.08)", border: "1px solid rgba(14,165,233,0.25)", borderRadius: 11, padding: "12px 14px" }}>
               <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>Projection annuelle 2026</div>
-              <div style={{ fontSize: 19, fontWeight: 700, color: "#0ea5e9", fontFamily: "monospace" }}>{fmt(projAnnuelle)}</div>
+              <div style={{ fontSize: 19, fontWeight: 700, color: "#0ea5e9", fontFamily: "var(--font-mono)" }}>{fmt(projAnnuelle)}</div>
               <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>YTD {fmt(ytd)} extrapolé</div>
             </div>
             <div style={{ flex: 1, minWidth: 140, background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)", borderRadius: 11, padding: "12px 14px" }}>
               <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>Court+moyen terme</div>
-              <div style={{ fontSize: 19, fontWeight: 700, color: "#f59e0b", fontFamily: "monospace" }}>{fmt(projCourt)}</div>
+              <div style={{ fontSize: 19, fontWeight: 700, color: "#f59e0b", fontFamily: "var(--font-mono)" }}>{fmt(projCourt)}</div>
               <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>Régime BIC meublé non classé</div>
             </div>
             <div style={{ flex: 1, minWidth: 140, background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.25)", borderRadius: 11, padding: "12px 14px" }}>
               <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>Location longue (Iguana)</div>
-              <div style={{ fontSize: 19, fontWeight: 700, color: "#10b981", fontFamily: "monospace" }}>{fmt(projLong)}</div>
+              <div style={{ fontSize: 19, fontWeight: 700, color: "#10b981", fontFamily: "var(--font-mono)" }}>{fmt(projLong)}</div>
               <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>Régime micro-foncier ou réel</div>
             </div>
             <div style={{ flex: 1, minWidth: 140, background: "rgba(168,85,247,0.08)", border: "1px solid rgba(168,85,247,0.25)", borderRadius: 11, padding: "12px 14px" }}>
               <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>Base imposable estimée</div>
-              <div style={{ fontSize: 19, fontWeight: 700, color: "#a855f7", fontFamily: "monospace" }}>{fmt(revenusImposables)}</div>
+              <div style={{ fontSize: 19, fontWeight: 700, color: "#a855f7", fontFamily: "var(--font-mono)" }}>{fmt(revenusImposables)}</div>
               <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>Après abattements</div>
             </div>
           </div>
@@ -2939,7 +3146,7 @@ function Pilotage({ biens, n, mob, reservations = [] }) {
                       <div style={{ fontSize: 10, color: "#64748b" }}>{s.info}</div>
                     </div>
                     <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: alert ? "#ef4444" : warn ? "#f59e0b" : "#10b981", fontFamily: "monospace" }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: alert ? "#ef4444" : warn ? "#f59e0b" : "#10b981", fontFamily: "var(--font-mono)" }}>
                         {fmt(s.current)} / {fmt(s.plafond)}
                       </div>
                       <div style={{ fontSize: 10, color: "#64748b" }}>{pct.toFixed(0)}%</div>
@@ -3032,8 +3239,8 @@ function Pilotage({ biens, n, mob, reservations = [] }) {
                         <div style={{ fontWeight: 600, color: "#e2e8f0" }}>Micro-BIC</div>
                         <div style={{ fontSize: 9, color: "#64748b" }}>Meublé non classé</div>
                       </td>
-                      <td style={{ padding: "10px 8px", fontSize: 11, fontFamily: "monospace", color: "#ef4444", fontWeight: 600 }}>15 000€</td>
-                      <td style={{ padding: "10px 8px", fontSize: 11, fontFamily: "monospace", color: "#ef4444" }}>30%</td>
+                      <td style={{ padding: "10px 8px", fontSize: 11, fontFamily: "var(--font-mono)", color: "#ef4444", fontWeight: 600 }}>15 000€</td>
+                      <td style={{ padding: "10px 8px", fontSize: 11, fontFamily: "var(--font-mono)", color: "#ef4444" }}>30%</td>
                       <td style={{ padding: "10px 8px", fontSize: 10, color: "#94a3b8" }}>Non</td>
                       <td style={{ padding: "10px 8px", fontSize: 10, color: "#94a3b8" }}>17.2% PS</td>
                       <td style={{ padding: "10px 8px", fontSize: 10, color: "#64748b" }}>Petits volumes, pas de charges</td>
@@ -3043,8 +3250,8 @@ function Pilotage({ biens, n, mob, reservations = [] }) {
                         <div style={{ fontWeight: 600, color: "#e2e8f0" }}>Micro-BIC</div>
                         <div style={{ fontSize: 9, color: "#10b981" }}>Meublé classé ⭐ (1-5⭐)</div>
                       </td>
-                      <td style={{ padding: "10px 8px", fontSize: 11, fontFamily: "monospace", color: "#0ea5e9", fontWeight: 600 }}>83 600€</td>
-                      <td style={{ padding: "10px 8px", fontSize: 11, fontFamily: "monospace", color: "#0ea5e9" }}>50%</td>
+                      <td style={{ padding: "10px 8px", fontSize: 11, fontFamily: "var(--font-mono)", color: "#0ea5e9", fontWeight: 600 }}>83 600€</td>
+                      <td style={{ padding: "10px 8px", fontSize: 11, fontFamily: "var(--font-mono)", color: "#0ea5e9" }}>50%</td>
                       <td style={{ padding: "10px 8px", fontSize: 10, color: "#94a3b8" }}>Non</td>
                       <td style={{ padding: "10px 8px", fontSize: 10, color: "#94a3b8" }}>17.2% PS</td>
                       <td style={{ padding: "10px 8px", fontSize: 10, color: "#64748b" }}>Bons biens, simplicité</td>
@@ -3054,8 +3261,8 @@ function Pilotage({ biens, n, mob, reservations = [] }) {
                         <div style={{ fontWeight: 600, color: "#10b981" }}>LMNP au RÉEL ⭐</div>
                         <div style={{ fontSize: 9, color: "#64748b" }}>Recommandé &gt;30k€</div>
                       </td>
-                      <td style={{ padding: "10px 8px", fontSize: 11, fontFamily: "monospace", color: "#10b981", fontWeight: 600 }}>Pas de plafond</td>
-                      <td style={{ padding: "10px 8px", fontSize: 11, fontFamily: "monospace", color: "#10b981" }}>—</td>
+                      <td style={{ padding: "10px 8px", fontSize: 11, fontFamily: "var(--font-mono)", color: "#10b981", fontWeight: 600 }}>Pas de plafond</td>
+                      <td style={{ padding: "10px 8px", fontSize: 11, fontFamily: "var(--font-mono)", color: "#10b981" }}>—</td>
                       <td style={{ padding: "10px 8px", fontSize: 10, color: "#10b981" }}>✓ Toutes + amortissement</td>
                       <td style={{ padding: "10px 8px", fontSize: 10, color: "#94a3b8" }}>17.2% PS</td>
                       <td style={{ padding: "10px 8px", fontSize: 10, color: "#64748b" }}>Crédit, charges, gros CA</td>
@@ -3065,8 +3272,8 @@ function Pilotage({ biens, n, mob, reservations = [] }) {
                         <div style={{ fontWeight: 600, color: "#f59e0b" }}>LMP (Pro)</div>
                         <div style={{ fontSize: 9, color: "#64748b" }}>&gt;23k€ ET &gt;50% revenus</div>
                       </td>
-                      <td style={{ padding: "10px 8px", fontSize: 11, fontFamily: "monospace", color: "#f59e0b", fontWeight: 600 }}>Pas de plafond</td>
-                      <td style={{ padding: "10px 8px", fontSize: 11, fontFamily: "monospace", color: "#f59e0b" }}>Réel obligatoire</td>
+                      <td style={{ padding: "10px 8px", fontSize: 11, fontFamily: "var(--font-mono)", color: "#f59e0b", fontWeight: 600 }}>Pas de plafond</td>
+                      <td style={{ padding: "10px 8px", fontSize: 11, fontFamily: "var(--font-mono)", color: "#f59e0b" }}>Réel obligatoire</td>
                       <td style={{ padding: "10px 8px", fontSize: 10, color: "#10b981" }}>✓ + déficit imputable</td>
                       <td style={{ padding: "10px 8px", fontSize: 10, color: "#ef4444" }}>URSSAF ~35-40%</td>
                       <td style={{ padding: "10px 8px", fontSize: 10, color: "#64748b" }}>Activité principale</td>
@@ -3076,8 +3283,8 @@ function Pilotage({ biens, n, mob, reservations = [] }) {
                         <div style={{ fontWeight: 600, color: "#e2e8f0" }}>Location nue</div>
                         <div style={{ fontSize: 9, color: "#64748b" }}>Micro-foncier</div>
                       </td>
-                      <td style={{ padding: "10px 8px", fontSize: 11, fontFamily: "monospace", color: "#94a3b8" }}>15 000€</td>
-                      <td style={{ padding: "10px 8px", fontSize: 11, fontFamily: "monospace", color: "#94a3b8" }}>30%</td>
+                      <td style={{ padding: "10px 8px", fontSize: 11, fontFamily: "var(--font-mono)", color: "#94a3b8" }}>15 000€</td>
+                      <td style={{ padding: "10px 8px", fontSize: 11, fontFamily: "var(--font-mono)", color: "#94a3b8" }}>30%</td>
                       <td style={{ padding: "10px 8px", fontSize: 10, color: "#94a3b8" }}>Non</td>
                       <td style={{ padding: "10px 8px", fontSize: 10, color: "#94a3b8" }}>17.2% PS</td>
                       <td style={{ padding: "10px 8px", fontSize: 10, color: "#64748b" }}>Iguana (long terme)</td>
@@ -3206,7 +3413,7 @@ function Pilotage({ biens, n, mob, reservations = [] }) {
           {/* KPI total charges */}
           <div style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
             <div style={{ fontSize: 11, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 4 }}>Total charges 2025 (annuel)</div>
-            <div style={{ fontSize: 24, fontWeight: 800, color: "#ef4444", fontFamily: "monospace" }}>{fmt(totalCharges2025)}</div>
+            <div style={{ fontSize: 24, fontWeight: 800, color: "#ef4444", fontFamily: "var(--font-mono)" }}>{fmt(totalCharges2025)}</div>
             <div style={{ fontSize: 11, color: "#64748b", marginTop: 3 }}>Soit {fmt(Math.round(totalCharges2025 / 12))}/mois</div>
           </div>
 
@@ -3229,7 +3436,7 @@ function Pilotage({ biens, n, mob, reservations = [] }) {
                       <span style={{ width: 8, height: 8, borderRadius: 2, background: d.c, display: "inline-block" }} />
                       {d.l}
                     </span>
-                    <span style={{ color: "#64748b", fontFamily: "monospace" }}>{fmtK(d.value)} ({((d.value / totalCharges2025) * 100).toFixed(0)}%)</span>
+                    <span style={{ color: "#64748b", fontFamily: "var(--font-mono)" }}>{fmtK(d.value)} ({((d.value / totalCharges2025) * 100).toFixed(0)}%)</span>
                   </div>
                 ))}
               </div>
@@ -3274,22 +3481,22 @@ function Pilotage({ biens, n, mob, reservations = [] }) {
                       <tr key={b.id} style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
                         <td style={{ padding: "9px 10px", fontWeight: 600, color: "#e2e8f0", fontSize: 11 }}>{b.emoji} {b.nom.replace("Villa ", "").replace("T2 ", "")}</td>
                         {POSTES_CHARGES.map(p => (
-                          <td key={p.k} style={{ padding: "9px 6px", textAlign: "right", fontFamily: "monospace", fontSize: 10, color: (c[p.k] || 0) > 0 ? "#94a3b8" : "#334155" }}>
+                          <td key={p.k} style={{ padding: "9px 6px", textAlign: "right", fontFamily: "var(--font-mono)", fontSize: 10, color: (c[p.k] || 0) > 0 ? "#94a3b8" : "#334155" }}>
                             {c[p.k] > 0 ? fmtK(c[p.k]) : "—"}
                           </td>
                         ))}
-                        <td style={{ padding: "9px 10px", textAlign: "right", fontFamily: "monospace", fontSize: 11, color: "#ef4444", fontWeight: 700 }}>{fmtK(tot)}</td>
+                        <td style={{ padding: "9px 10px", textAlign: "right", fontFamily: "var(--font-mono)", fontSize: 11, color: "#ef4444", fontWeight: 700 }}>{fmtK(tot)}</td>
                       </tr>
                     );
                   })}
                   <tr style={{ borderTop: "2px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.03)" }}>
                     <td style={{ padding: "10px 10px", fontWeight: 700, color: "#e2e8f0", fontSize: 11 }}>TOTAL</td>
                     {POSTES_CHARGES.map(p => (
-                      <td key={p.k} style={{ padding: "10px 6px", textAlign: "right", fontFamily: "monospace", fontSize: 11, color: p.c, fontWeight: 700 }}>
+                      <td key={p.k} style={{ padding: "10px 6px", textAlign: "right", fontFamily: "var(--font-mono)", fontSize: 11, color: p.c, fontWeight: 700 }}>
                         {chargeTotals[p.k] > 0 ? fmtK(chargeTotals[p.k]) : "—"}
                       </td>
                     ))}
-                    <td style={{ padding: "10px 10px", textAlign: "right", fontFamily: "monospace", fontSize: 12, color: "#ef4444", fontWeight: 800 }}>{fmtK(totalCharges2025)}</td>
+                    <td style={{ padding: "10px 10px", textAlign: "right", fontFamily: "var(--font-mono)", fontSize: 12, color: "#ef4444", fontWeight: 800 }}>{fmtK(totalCharges2025)}</td>
                   </tr>
                 </tbody>
               </table>
@@ -3382,22 +3589,22 @@ function Charges({ biens, n, mob }) {
       <div style={{ display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap" }}>
         <div style={{ flex: 1, minWidth: 130, background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 11, padding: "12px 14px" }}>
           <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>Charges YTD réelles</div>
-          <div style={{ fontSize: 19, fontWeight: 700, color: "#ef4444", fontFamily: "monospace" }}>{fmt(chargesYTDTotal)}</div>
+          <div style={{ fontSize: 19, fontWeight: 700, color: "#ef4444", fontFamily: "var(--font-mono)" }}>{fmt(chargesYTDTotal)}</div>
           <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{ratioGlobal.toFixed(1)}% des revenus</div>
         </div>
         <div style={{ flex: 1, minWidth: 130, background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 11, padding: "12px 14px" }}>
           <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>Charges fixes annuelles</div>
-          <div style={{ fontSize: 19, fontWeight: 700, color: "#f59e0b", fontFamily: "monospace" }}>{fmt(chargesFixesAnnuelTotal)}</div>
+          <div style={{ fontSize: 19, fontWeight: 700, color: "#f59e0b", fontFamily: "var(--font-mono)" }}>{fmt(chargesFixesAnnuelTotal)}</div>
           <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{fmt(totalFixeMensuel)}/mois théorique</div>
         </div>
         <div style={{ flex: 1, minWidth: 130, background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 11, padding: "12px 14px" }}>
           <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>Cashflow YTD</div>
-          <div style={{ fontSize: 19, fontWeight: 700, color: cashflowYTDTotal >= 0 ? "#10b981" : "#ef4444", fontFamily: "monospace" }}>{fmt(cashflowYTDTotal)}</div>
+          <div style={{ fontSize: 19, fontWeight: 700, color: cashflowYTDTotal >= 0 ? "#10b981" : "#ef4444", fontFamily: "var(--font-mono)" }}>{fmt(cashflowYTDTotal)}</div>
           <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>Disponible après charges</div>
         </div>
         <div style={{ flex: 1, minWidth: 130, background: "rgba(14,165,233,0.06)", border: "1px solid rgba(14,165,233,0.2)", borderRadius: 11, padding: "12px 14px" }}>
           <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>Revenus YTD</div>
-          <div style={{ fontSize: 19, fontWeight: 700, color: "#0ea5e9", fontFamily: "monospace" }}>{fmt(revenusYTDTotal)}</div>
+          <div style={{ fontSize: 19, fontWeight: 700, color: "#0ea5e9", fontFamily: "var(--font-mono)" }}>{fmt(revenusYTDTotal)}</div>
           <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>Sur {n} mois</div>
         </div>
       </div>
@@ -3449,7 +3656,7 @@ function Charges({ biens, n, mob }) {
                   <span style={{ width: 8, height: 8, borderRadius: 2, background: PIE_COLORS[i % PIE_COLORS.length], display: "inline-block" }} />
                   {d.emoji} {d.name}
                 </span>
-                <span style={{ color: "#64748b", fontFamily: "monospace" }}>{fmtK(d.value)}</span>
+                <span style={{ color: "#64748b", fontFamily: "var(--font-mono)" }}>{fmtK(d.value)}</span>
               </div>
             ))}
           </div>
@@ -3483,12 +3690,12 @@ function Charges({ biens, n, mob }) {
                         {b.emoji} {b.nom}
                       </td>
                       <td style={{ padding: "9px 10px", fontSize: 10, color: "#64748b" }}>{tl[b.type]}</td>
-                      <td style={{ padding: "9px 10px", color: "#0ea5e9", fontFamily: "monospace", fontSize: 11 }}>{fmt(b.revenusYTD)}</td>
-                      <td style={{ padding: "9px 10px", color: "#ef4444", fontFamily: "monospace", fontSize: 11 }}>{fmt(b.chargesYTD)}</td>
-                      <td style={{ padding: "9px 10px", color: b.cashflowYTD >= 0 ? "#10b981" : "#ef4444", fontFamily: "monospace", fontSize: 11, fontWeight: 600 }}>
+                      <td style={{ padding: "9px 10px", color: "#0ea5e9", fontFamily: "var(--font-mono)", fontSize: 11 }}>{fmt(b.revenusYTD)}</td>
+                      <td style={{ padding: "9px 10px", color: "#ef4444", fontFamily: "var(--font-mono)", fontSize: 11 }}>{fmt(b.chargesYTD)}</td>
+                      <td style={{ padding: "9px 10px", color: b.cashflowYTD >= 0 ? "#10b981" : "#ef4444", fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 600 }}>
                         {b.cashflowYTD >= 0 ? "+" : ""}{fmt(b.cashflowYTD)}
                       </td>
-                      <td style={{ padding: "9px 10px", color: ratioColor, fontFamily: "monospace", fontSize: 11, fontWeight: 700 }}>
+                      <td style={{ padding: "9px 10px", color: ratioColor, fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700 }}>
                         {b.ratio.toFixed(0)}%
                       </td>
                       <td style={{ padding: "9px 10px" }}>
@@ -3582,10 +3789,10 @@ function ComparatifContent({ biens, n, mob, hist = HIST_SEED, prevYear = new Dat
           <div>
             <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Performance globale Jan→{MOIS[n-1]} {cy} vs prorata {prevYear}</div>
             <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-              <span style={{ fontSize: mob ? 26 : 32, fontWeight: 800, color: isAhead ? "#10b981" : "#ef4444", fontFamily: "monospace" }}>
+              <span style={{ fontSize: mob ? 26 : 32, fontWeight: 800, color: isAhead ? "#10b981" : "#ef4444", fontFamily: "var(--font-mono)" }}>
                 {isAhead ? "▲" : "▼"} {isAhead ? "+" : ""}{globalDeltaPct}%
               </span>
-              <span style={{ fontSize: 14, color: "#94a3b8", fontFamily: "monospace" }}>
+              <span style={{ fontSize: 14, color: "#94a3b8", fontFamily: "var(--font-mono)" }}>
                 {isAhead ? "+" : ""}{fmt(Math.round(ytd26total - prorata25total))}
               </span>
             </div>
@@ -3602,7 +3809,7 @@ function ComparatifContent({ biens, n, mob, hist = HIST_SEED, prevYear = new Dat
               return (
                 <div key={b.id} style={{ background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "7px 10px", textAlign: "center", minWidth: 60 }}>
                   <div style={{ fontSize: 14 }}>{b.emoji}</div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: up ? "#10b981" : "#ef4444", fontFamily: "monospace" }}>{up ? "+" : ""}{d}%</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: up ? "#10b981" : "#ef4444", fontFamily: "var(--font-mono)" }}>{up ? "+" : ""}{d}%</div>
                   <div style={{ fontSize: 9, color: "#64748b" }}>{fmtK(y)}</div>
                 </div>
               );
@@ -3657,8 +3864,8 @@ function ComparatifContent({ biens, n, mob, hist = HIST_SEED, prevYear = new Dat
               {rows.map((r, i) => (
                 <tr key={i} style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
                   <td style={{ padding: "9px 10px", fontWeight: 600, color: "#e2e8f0", fontSize: 11 }}>{r.nom}</td>
-                  <td style={{ padding: "9px 10px", color: "#64748b", fontFamily: "monospace", fontSize: 10 }}>{fmt(prevRevMap[biens[i].id])}</td>
-                  <td style={{ padding: "9px 10px", color: "#0ea5e9", fontFamily: "monospace", fontSize: 10 }}>{fmt(r.ytd)}</td>
+                  <td style={{ padding: "9px 10px", color: "#64748b", fontFamily: "var(--font-mono)", fontSize: 10 }}>{fmt(prevRevMap[biens[i].id])}</td>
+                  <td style={{ padding: "9px 10px", color: "#0ea5e9", fontFamily: "var(--font-mono)", fontSize: 10 }}>{fmt(r.ytd)}</td>
                   <td style={{ padding: "9px 10px", color: parseFloat(r.delta) >= 0 ? "#10b981" : "#ef4444", fontSize: 10, fontWeight: 600 }}>
                     {parseFloat(r.delta) >= 0 ? "+" : ""}{r.delta}%
                   </td>
@@ -4048,12 +4255,12 @@ function RevenueManager({ biens, reservations, hist, mob }) {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                   <div>
                     <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>CA ce mois</div>
-                    <div style={{ fontSize: 16, fontWeight: 700, color: "#0ea5e9", fontFamily: "monospace" }}>{fmtK(caActuel)}</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: "#0ea5e9", fontFamily: "var(--font-mono)" }}>{fmtK(caActuel)}</div>
                   </div>
                   {caHist !== null && (
                     <div>
                       <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>Historique</div>
-                      <div style={{ fontSize: 16, fontWeight: 700, color: "#475569", fontFamily: "monospace" }}>{fmtK(caHist)}</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: "#475569", fontFamily: "var(--font-mono)" }}>{fmtK(caHist)}</div>
                     </div>
                   )}
                 </div>
@@ -4108,7 +4315,7 @@ function RevenueManager({ biens, reservations, hist, mob }) {
                 <div key={d.label} style={{ marginBottom: 8 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#94a3b8", marginBottom: 3 }}>
                     <span>{d.label}</span>
-                    <span style={{ color: "#e2e8f0", fontFamily: "monospace" }}>{d.adr}€</span>
+                    <span style={{ color: "#e2e8f0", fontFamily: "var(--font-mono)" }}>{d.adr}€</span>
                   </div>
                   <div style={{ height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 2 }}>
                     <div style={{ height: 4, width: `${Math.round(d.adr / tendances.maxAdr * 100)}%`, background: d.label === "Ven" || d.label === "Sam" ? "#f59e0b" : "#3b82f6", borderRadius: 2 }} />
@@ -4124,7 +4331,7 @@ function RevenueManager({ biens, reservations, hist, mob }) {
                 <div key={m.label} style={{ marginBottom: 8 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#94a3b8", marginBottom: 3 }}>
                     <span>{m.label}</span>
-                    <span style={{ color: "#e2e8f0", fontFamily: "monospace" }}>{fmtK(m.rev)} · {m.resas} résa</span>
+                    <span style={{ color: "#e2e8f0", fontFamily: "var(--font-mono)" }}>{fmtK(m.rev)} · {m.resas} résa</span>
                   </div>
                   <div style={{ height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 2 }}>
                     <div style={{ height: 4, width: `${Math.round(m.rev / tendances.maxRev * 100)}%`, background: "#a855f7", borderRadius: 2 }} />
@@ -4278,7 +4485,7 @@ function CanalLivePerf({ biens, reservations, mob }) {
         ].map(k => (
           <div key={k.label} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: "12px 14px" }}>
             <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{k.label}</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: k.color, fontFamily: "monospace" }}>{k.value}</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: k.color, fontFamily: "var(--font-mono)" }}>{k.value}</div>
           </div>
         ))}
       </div>
@@ -4301,7 +4508,7 @@ function CanalLivePerf({ biens, reservations, mob }) {
               ].map(k => (
                 <div key={k.l}>
                   <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>{k.l}</div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: k.c, fontFamily: "monospace" }}>{k.v}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: k.c, fontFamily: "var(--font-mono)" }}>{k.v}</div>
                 </div>
               ))}
             </div>
@@ -4422,7 +4629,7 @@ function MenageTab({ biens, reservations, saveRes, mob }) {
         ].map(k => (
           <div key={k.label} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: "12px 14px" }}>
             <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{k.label}</div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: k.color, fontFamily: "monospace" }}>{k.value}</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: k.color, fontFamily: "var(--font-mono)" }}>{k.value}</div>
           </div>
         ))}
       </div>
@@ -4702,6 +4909,9 @@ function CalendrierTarifs({ reservations = [] }) {
   const [history, setHistory] = useState([]); // stack of previous daily states (max 10)
   const serverTimer = useRef(null);
 
+  // Cleanup du timer serveur quand le composant Tarifs est démonté
+  useEffect(() => { return () => clearTimeout(serverTimer.current); }, []);
+
   useEffect(() => {
     const stop = () => setIsDragging(false);
     window.addEventListener("mouseup", stop);
@@ -4911,6 +5121,51 @@ function CalendrierTarifs({ reservations = [] }) {
   const syncBadge = { idle: null, local: "💾 local", syncing: "⟳ sync...", synced: "✓ serveur", error: "⚠ erreur serveur" }[syncStatus];
   const syncColor = { idle: null, local: "#94a3b8", syncing: "#f59e0b", synced: "#10b981", error: "#ef4444" }[syncStatus];
 
+  // ── Alertes prix sous seuil ───────────────────────────────────────────────
+  const belowMinDates = useMemo(() => {
+    const [pMin] = PRIX_LIMITS[bienId] || [25, 900];
+    const prices = daily[bienId] || {};
+    return Object.entries(prices)
+      .filter(([date, p]) => date.startsWith(String(calYear)) && typeof p === "number" && p < pMin)
+      .map(([date, p]) => ({ date, price: p }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }, [daily, bienId, calYear]);
+
+  const ntfyAlertSentRef = useRef(false);
+  useEffect(() => {
+    ntfyAlertSentRef.current = false; // reset quand le bien ou l'année change
+  }, [bienId, calYear]);
+
+  useEffect(() => {
+    if (ntfyAlertSentRef.current || belowMinDates.length === 0) return;
+    ntfyAlertSentRef.current = true;
+    const [pMin] = PRIX_LIMITS[bienId] || [25, 900];
+    // Appel serveur : email Resend + push ntfy (via NTFY_TOPIC secret)
+    fetch("/api/send-prix-alert", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bienId, dates: belowMinDates, minPrice: pMin, year: calYear }),
+    }).catch(() => {});
+    // Push direct depuis le navigateur si topic configuré localement
+    const topic = localStorage.getItem("ntfy_topic");
+    if (topic) {
+      const sample = belowMinDates.slice(0, 5)
+        .map(({ date, price }) => { const [, m, d] = date.split("-"); return `${d}/${m}(${price}€)`; })
+        .join(", ");
+      const body = `${belowMinDates.length} date${belowMinDates.length > 1 ? "s" : ""} sous ${pMin}€ · ${sample}${belowMinDates.length > 5 ? " …" : ""}`;
+      fetch(`https://ntfy.sh/${topic}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Title": `⚠️ Prix sous seuil — ${BIEN_LABELS[bienId]}`,
+          "Priority": "high",
+          "Tags": "warning,moneybag",
+        },
+        body,
+      }).catch(() => {});
+    }
+  }, [belowMinDates, bienId, calYear]);
+
   return (
     <div>
       {/* Tooltip custom */}
@@ -4959,6 +5214,25 @@ function CalendrierTarifs({ reservations = [] }) {
           ))}
         </div>
       </div>
+
+      {/* ── Bannière alerte prix sous seuil ── */}
+      {belowMinDates.length > 0 && (
+        <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 10, padding: "10px 14px", marginBottom: 14, display: "flex", alignItems: "flex-start", gap: 10 }}>
+          <span style={{ fontSize: 15 }}>⚠️</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#f87171", marginBottom: 4 }}>
+              {belowMinDates.length} date{belowMinDates.length > 1 ? "s" : ""} en dessous du minimum ({(PRIX_LIMITS[bienId] || [25])[0]}€) — {BIEN_LABELS[bienId]}
+            </div>
+            <div style={{ fontSize: 11, color: "#fca5a5", lineHeight: 1.8, display: "flex", flexWrap: "wrap", gap: "4px 12px" }}>
+              {belowMinDates.slice(0, 14).map(({ date, price }) => {
+                const [, m, d] = date.split("-");
+                return <span key={date} style={{ whiteSpace: "nowrap" }}>{d}/{m} <strong>{price}€</strong></span>;
+              })}
+              {belowMinDates.length > 14 && <span style={{ color: "#f87171" }}>+{belowMinDates.length - 14} autres</span>}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Multi-select panel */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "10px 14px", flexWrap: "wrap", minHeight: 44 }}>
@@ -5691,13 +5965,12 @@ const CHANNEL_COLORS = {
   "Beds24 Direct":"#0ea5e9",
 };
 
-function Beds24Admin({ scriptUrl, reservations = [], saveRes }) {
+function Beds24Admin({ scriptUrl, reservations = [], saveRes, addToast = () => {} }) {
   const [bookings,    setBookings]    = useState([]);
   const [loading,     setLoading]     = useState(false);
   const [error,       setError]       = useState("");
   const [testStatus,  setTestStatus]  = useState(null); // null | "ok" | "error"
   const [syncStatus,  setSyncStatus]  = useState(null); // null | "syncing" | "ok" | "error"
-  const [syncMsg,     setSyncMsg]     = useState("");
   const [filters,     setFilters]     = useState({
     arrivalFrom:   "",
     arrivalTo:     "",
@@ -5745,9 +6018,9 @@ function Beds24Admin({ scriptUrl, reservations = [], saveRes }) {
 
   // ── Sync vers Google Sheets ──────────────────────────────────────
   async function syncToSheets() {
-    if (!scriptUrl) { setSyncMsg("⚠ Configure d'abord l'URL Apps Script (bouton ⚙)"); setSyncStatus("error"); return; }
-    if (bookings.length === 0) { setSyncMsg("Charge d'abord les réservations"); setSyncStatus("error"); return; }
-    setSyncStatus("syncing"); setSyncMsg("");
+    if (!scriptUrl) { addToast("Configure d'abord l'URL Apps Script (bouton ⚙)", "error"); return; }
+    if (bookings.length === 0) { addToast("Charge d'abord les réservations", "error"); return; }
+    setSyncStatus("syncing");
     try {
       const res  = await fetch("/api/sheets-proxy", {
         method: "POST",
@@ -5757,14 +6030,14 @@ function Beds24Admin({ scriptUrl, reservations = [], saveRes }) {
       const data = await res.json();
       if (data.ok) {
         setSyncStatus("ok");
-        setSyncMsg(`✓ ${data.added || 0} ajoutée(s), ${data.updated || 0} mise(s) à jour`);
+        addToast(`📊 Sheets — ${data.added || 0} ajoutée(s), ${data.updated || 0} mise(s) à jour`, "success");
       } else {
         setSyncStatus("error");
-        setSyncMsg(data.error || "Erreur Apps Script");
+        addToast(`Sheets — ${data.error || "Erreur Apps Script"}`, "error");
       }
     } catch (e) {
       setSyncStatus("error");
-      setSyncMsg(e.message);
+      addToast(`Sheets — ${e.message}`, "error");
     }
   }
 
@@ -5798,7 +6071,35 @@ function Beds24Admin({ scriptUrl, reservations = [], saveRes }) {
     const autres = reservations.filter(r => !String(r.id).startsWith("beds24-"));
     saveRes([...autres, ...beds24Converted]);
     setPlanningStatus("ok");
+    addToast(`📅 ${beds24Converted.length} réservation(s) Beds24 injectée(s) dans le planning`, "success");
     setTimeout(() => setPlanningStatus(null), 3000);
+  }
+
+  // ── Sync tarifs depuis Beds24 inventory ─────────────────────────────────
+  const [pricesSyncStatus, setPricesSyncStatus] = useState(null); // null | "loading" | "ok" | "error"
+
+  async function syncPricesFromBeds24() {
+    setPricesSyncStatus("loading");
+    setPricesSyncMsg("");
+    try {
+      const res = await fetch("/api/beds24-prices");
+      let data;
+      try { data = await res.json(); }
+      catch { throw new Error(`HTTP ${res.status} — réponse non-JSON`); }
+      if (!res.ok || !data.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      if (!data.nogent || Object.keys(data.nogent).length === 0) {
+        throw new Error("Aucun tarif reçu de Beds24");
+      }
+      // Fusionner dans le localStorage local (overrides Beds24 > seed)
+      applyServerPriceOverrides({ nogent: data.nogent });
+      setPricesSyncStatus("ok");
+      const sourceLabel = data.source === "bookings" ? "depuis réservations confirmées" : "depuis inventaire Beds24";
+      addToast(`💰 ${Object.keys(data.nogent).length} nuits synced (${data.bookingCount || 0} rés. · ${sourceLabel})`, "success");
+      setTimeout(() => { setPricesSyncStatus(null); }, 5000);
+    } catch (e) {
+      setPricesSyncStatus("error");
+      addToast(`Tarifs Beds24 — ${e.message}`, "error");
+    }
   }
 
   // Chargement initial
@@ -5844,6 +6145,14 @@ function Beds24Admin({ scriptUrl, reservations = [], saveRes }) {
             {planningStatus === "ok" ? "✓ Ajouté au planning" : "📅 → Planning"}
           </button>
           <button
+            onClick={syncPricesFromBeds24}
+            disabled={pricesSyncStatus === "loading"}
+            title="Lire les tarifs journaliers Beds24 et les synchroniser dans le calendrier des prix"
+            style={{ padding: "6px 14px", borderRadius: 6, border: `1px solid ${pricesSyncStatus === "ok" ? "#10b981" : pricesSyncStatus === "error" ? "#ef4444" : "#f59e0b"}`, background: `rgba(${pricesSyncStatus === "ok" ? "16,185,129" : pricesSyncStatus === "error" ? "239,68,68" : "245,158,11"},0.1)`, color: pricesSyncStatus === "ok" ? "#10b981" : pricesSyncStatus === "error" ? "#ef4444" : "#f59e0b", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+          >
+            {pricesSyncStatus === "loading" ? "⟳ Sync tarifs…" : pricesSyncStatus === "ok" ? "✓ Tarifs synced" : pricesSyncStatus === "error" ? "✗ Échec tarifs" : "💰 Sync tarifs"}
+          </button>
+          <button
             onClick={syncToSheets}
             disabled={syncStatus === "syncing" || bookings.length === 0}
             title="Exporter toutes les réservations visibles vers Google Sheets"
@@ -5853,13 +6162,6 @@ function Beds24Admin({ scriptUrl, reservations = [], saveRes }) {
           </button>
         </div>
       </div>
-
-      {/* ── Statut sync Sheets ── */}
-      {syncMsg && (
-        <div style={{ background: syncStatus === "ok" ? "rgba(16,185,129,0.08)" : "rgba(239,68,68,0.08)", border: `1px solid ${syncStatus === "ok" ? "rgba(16,185,129,0.25)" : "rgba(239,68,68,0.25)"}`, borderRadius: 8, padding: "8px 14px", marginBottom: 12, fontSize: 12, color: syncStatus === "ok" ? "#6ee7b7" : "#fca5a5" }}>
-          {syncMsg}
-        </div>
-      )}
 
       {/* ── Filtres ── */}
       <div style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 10, padding: "14px 18px", marginBottom: 18, display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-end" }}>
@@ -5913,7 +6215,32 @@ function Beds24Admin({ scriptUrl, reservations = [], saveRes }) {
       {/* ── Tableau des réservations ── */}
       <div style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 10, overflow: "hidden" }}>
         {loading ? (
-          <div style={{ padding: 40, textAlign: "center", color: "#475569", fontSize: 13 }}>Chargement des réservations Beds24…</div>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 780 }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid #1e293b" }}>
+                  {["ID", "Client", "Arrivée", "Départ", "Nuits", "Canal", "Statut", "Montant", ""].map(h => (
+                    <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontSize: 10, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", whiteSpace: "nowrap" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {[60, 80, 45, 70, 55, 90, 40].map((w, i) => (
+                  <tr key={i} className="skeleton-row" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                    <td style={{ padding: "12px 14px" }}><span style={{ width: 40, height: 12 }} /></td>
+                    <td style={{ padding: "12px 14px" }}><span style={{ width: `${w}px`, height: 12 }} /></td>
+                    <td style={{ padding: "12px 14px" }}><span style={{ width: 68, height: 12 }} /></td>
+                    <td style={{ padding: "12px 14px" }}><span style={{ width: 68, height: 12 }} /></td>
+                    <td style={{ padding: "12px 14px" }}><span style={{ width: 20, height: 12 }} /></td>
+                    <td style={{ padding: "12px 14px" }}><span style={{ width: 50, height: 18, borderRadius: 20 }} /></td>
+                    <td style={{ padding: "12px 14px" }}><span style={{ width: 50, height: 18, borderRadius: 20 }} /></td>
+                    <td style={{ padding: "12px 14px" }}><span style={{ width: 48, height: 12 }} /></td>
+                    <td style={{ padding: "12px 14px" }}><span style={{ width: 10, height: 12 }} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : bookings.length === 0 ? (
           <div style={{ padding: 40, textAlign: "center", color: "#475569", fontSize: 13 }}>Aucune réservation trouvée</div>
         ) : (
@@ -5934,7 +6261,7 @@ function Beds24Admin({ scriptUrl, reservations = [], saveRes }) {
                       style={{ borderBottom: "1px solid rgba(255,255,255,0.04)", cursor: "pointer", background: expanded === b.bookingId ? "rgba(14,165,233,0.05)" : idx % 2 === 0 ? "transparent" : "rgba(255,255,255,0.01)" }}
                       onClick={() => setExpanded(expanded === b.bookingId ? null : b.bookingId)}
                     >
-                      <td style={{ padding: "10px 14px", fontSize: 11, color: "#64748b", fontFamily: "monospace" }}>#{b.bookingId}</td>
+                      <td style={{ padding: "10px 14px", fontSize: 11, color: "#64748b", fontFamily: "var(--font-mono)" }}>#{b.bookingId}</td>
                       <td style={{ padding: "10px 14px", fontSize: 12, color: "#e2e8f0", fontWeight: 500 }}>{b.guestName}</td>
                       <td style={{ padding: "10px 14px", fontSize: 12, color: "#cbd5e1", whiteSpace: "nowrap" }}>{fmtDate(b.arrival)}</td>
                       <td style={{ padding: "10px 14px", fontSize: 12, color: "#cbd5e1", whiteSpace: "nowrap" }}>{fmtDate(b.departure)}</td>
@@ -6049,7 +6376,7 @@ function AnalyticsTab({ mob }) {
   if (error) return (
     <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 12, padding: 20, marginTop: 12 }}>
       <div style={{ fontWeight: 700, color: "#f87171", marginBottom: 6 }}>⚠ Analytics non disponible</div>
-      <div style={{ fontSize: 11, color: "#94a3b8", fontFamily: "monospace" }}>{error}</div>
+      <div style={{ fontSize: 11, color: "#94a3b8", fontFamily: "var(--font-mono)" }}>{error}</div>
       {error.includes("non configuré") && (
         <div style={{ marginTop: 12, fontSize: 11, color: "#94a3b8", lineHeight: 1.8 }}>
           <b style={{ color: "#e2e8f0" }}>Configuration requise :</b><br />
@@ -6119,7 +6446,7 @@ function AnalyticsTab({ mob }) {
     return (
       <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "12px 14px" }}>
         <div style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{label}</div>
-        <div style={{ fontSize: 22, fontWeight: 700, color, fontFamily: "monospace" }}>{fmt2(value)}{suffix}</div>
+        <div style={{ fontSize: 22, fontWeight: 700, color, fontFamily: "var(--font-mono)" }}>{fmt2(value)}{suffix}</div>
         {d !== null && (
           <div style={{ fontSize: 10, color: d >= 0 ? "#10b981" : "#ef4444", marginTop: 3 }}>
             {d >= 0 ? "▲" : "▼"} {Math.abs(d)}% vs 30j préc.
@@ -6181,7 +6508,7 @@ function AnalyticsTab({ mob }) {
               <div key={cat} style={{ marginBottom: 8 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 3 }}>
                   <span style={{ color: "#e2e8f0", textTransform: "capitalize" }}>{cat === "desktop" ? "💻 Desktop" : cat === "mobile" ? "📱 Mobile" : "📟 Tablette"}</span>
-                  <span style={{ color, fontFamily: "monospace", fontWeight: 600 }}>{pct}% · {fmt2(d.sessions)}</span>
+                  <span style={{ color, fontFamily: "var(--font-mono)", fontWeight: 600 }}>{pct}% · {fmt2(d.sessions)}</span>
                 </div>
                 <div style={{ height: 5, background: "rgba(255,255,255,0.06)", borderRadius: 3 }}>
                   <div style={{ height: 5, width: pct + "%", background: color, borderRadius: 3, transition: "width 0.4s" }} />
@@ -6200,7 +6527,7 @@ function AnalyticsTab({ mob }) {
               <div key={c.country || i} style={{ marginBottom: 8 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 3 }}>
                   <span style={{ color: "#e2e8f0" }}>{c.country || "—"}</span>
-                  <span style={{ color: "#0ea5e9", fontFamily: "monospace", fontWeight: 600 }}>{fmt2(c.sessions || 0)}</span>
+                  <span style={{ color: "#0ea5e9", fontFamily: "var(--font-mono)", fontWeight: 600 }}>{fmt2(c.sessions || 0)}</span>
                 </div>
                 <div style={{ height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 2 }}>
                   <div style={{ height: 4, width: pct + "%", background: "#0ea5e9", borderRadius: 2, opacity: 0.6 + 0.4 * pct / 100 }} />
@@ -6223,7 +6550,7 @@ function AnalyticsTab({ mob }) {
               <div key={i}>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 2 }}>
                   <span style={{ color: "#e2e8f0" }}>{s.label} <span style={{ color: "#64748b", fontSize: 9 }}>/ {medLabel}</span></span>
-                  <span style={{ color, fontFamily: "monospace", fontWeight: 600 }}>{fmt2(s.sessions)}</span>
+                  <span style={{ color, fontFamily: "var(--font-mono)", fontWeight: 600 }}>{fmt2(s.sessions)}</span>
                 </div>
                 <div style={{ height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 2 }}>
                   <div style={{ height: 4, width: pct + "%", background: color, borderRadius: 2 }} />
@@ -6258,15 +6585,15 @@ function AnalyticsTab({ mob }) {
                   <td style={{ padding: "8px 14px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <span style={{ fontSize: 8, padding: "2px 5px", borderRadius: 4, background: badge.c + "22", color: badge.c, fontWeight: 700, whiteSpace: "nowrap" }}>{badge.l}</span>
-                      <span style={{ fontSize: 11, color: "#94a3b8", fontFamily: "monospace" }}>{p.path.length > 40 ? p.path.slice(0,38) + "…" : p.path}</span>
+                      <span style={{ fontSize: 11, color: "#94a3b8", fontFamily: "var(--font-mono)" }}>{p.path.length > 40 ? p.path.slice(0,38) + "…" : p.path}</span>
                     </div>
                     <div style={{ height: 3, marginTop: 3, background: "rgba(255,255,255,0.05)", borderRadius: 2 }}>
                       <div style={{ height: 3, width: pct + "%", background: badge.c, borderRadius: 2, opacity: 0.5 }} />
                     </div>
                   </td>
-                  <td style={{ padding: "8px 14px", fontFamily: "monospace", fontSize: 12, color: "#0ea5e9", fontWeight: 600 }}>{fmt2(p.sessions)}</td>
-                  <td style={{ padding: "8px 14px", fontFamily: "monospace", fontSize: 11, color: "#64748b" }}>{fmt2(p.users)}</td>
-                  <td style={{ padding: "8px 14px", fontFamily: "monospace", fontSize: 11, color: "#64748b" }}>{fmtDur(p.duration)}</td>
+                  <td style={{ padding: "8px 14px", fontFamily: "var(--font-mono)", fontSize: 12, color: "#0ea5e9", fontWeight: 600 }}>{fmt2(p.sessions)}</td>
+                  <td style={{ padding: "8px 14px", fontFamily: "var(--font-mono)", fontSize: 11, color: "#64748b" }}>{fmt2(p.users)}</td>
+                  <td style={{ padding: "8px 14px", fontFamily: "var(--font-mono)", fontSize: 11, color: "#64748b" }}>{fmtDur(p.duration)}</td>
                 </tr>
               );
             })}
@@ -6391,7 +6718,7 @@ function Travaux({ biens, mob }) {
         ].map(s => (
           <div key={s.label} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "12px 14px", textAlign: "center" }}>
             <div style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{s.label}</div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: s.color, fontFamily: "monospace" }}>{s.value}</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: s.color, fontFamily: "var(--font-mono)" }}>{s.value}</div>
           </div>
         ))}
       </div>
@@ -6508,7 +6835,9 @@ export default function App() {
   const [lastSyncTs, setLastSyncTs] = useState(() => { try { const v = localStorage.getItem("last_sync_ts"); return v ? Number(v) : null; } catch { return null; } });
   const [scriptUrl, setScriptUrl] = useState(() => localStorage.getItem("sheets_script_url") || "");
 
-  // Récupérer l'URL Apps Script depuis le serveur Cloudflare au démarrage
+  // Récupérer la config depuis Cloudflare au démarrage :
+  // - Apps Script URL
+  // - URLs iCal Airbnb (stockées en env var CF, jamais dans le bundle)
   useEffect(() => {
     fetch("/api/get-config")
       .then(r => r.json())
@@ -6516,6 +6845,14 @@ export default function App() {
         if (d.scriptUrl && !scriptUrl) {
           setScriptUrl(d.scriptUrl);
           try { localStorage.setItem("sheets_script_url", d.scriptUrl); } catch {}
+        }
+        // Charger les URLs iCal Airbnb depuis l'env CF si disponibles
+        if (d.icalAirbnb && Object.keys(d.icalAirbnb).length > 0) {
+          setIcalUrls(prev => {
+            // Les URLs saisies manuellement (localStorage) ont priorité sur les env vars
+            const merged = { ...d.icalAirbnb, ...prev };
+            return merged;
+          });
         }
       })
       .catch(() => {});
@@ -6575,7 +6912,11 @@ export default function App() {
 
   const saveRes = useCallback((list) => {
     setReservations(list);
-    try { localStorage.setItem("reservations_v2", JSON.stringify(list)); } catch (e) {}
+    try {
+      localStorage.setItem("reservations_v2", JSON.stringify(list));
+    } catch (e) {
+      console.warn("[saveRes] localStorage quota dépassé ou indisponible :", e.message);
+    }
   }, []);
 
   const saveUrls = useCallback((urls) => {
@@ -6613,6 +6954,21 @@ export default function App() {
         try { localStorage.setItem("hist_v1", JSON.stringify(next)); } catch {}
         return next;
       });
+      // ── Restaurer les réservations manquantes depuis Sheets ──────
+      // Si le localStorage a été vidé (autre appareil, cache effacé…),
+      // les réservations sauvegardées dans l'onglet "réservations" du Sheets
+      // sont fusionnées dans l'état local. Les réservations déjà présentes
+      // ne sont jamais écrasées (on ne rajoute que celles qui manquent).
+      if (f.reservations?.length > 0) {
+        setReservations(current => {
+          const currentIds = new Set(current.map(r => String(r.id)));
+          const toRestore = f.reservations.filter(r => r.checkin && r.checkout && !currentIds.has(String(r.id)));
+          if (toRestore.length === 0) return current;
+          const merged = [...current, ...toRestore];
+          try { localStorage.setItem("reservations_v2", JSON.stringify(merged)); } catch {}
+          return merged;
+        });
+      }
       setSync({ status: "ok", msg: `✓ ${f.lastSync}` });
     } catch (e) {
       setSync({ status: "error", msg: `⚠ ${e.message}` });
@@ -6664,7 +7020,6 @@ export default function App() {
       } catch (_) {}
 
       // 3. Fusionner (Beds24 remplace iCal pour Nogent)
-      const nogentIcalIds = new Set(icalResas.filter(r => r.bienId === "nogent").map(r => r.id));
       const allResas = [
         ...icalResas.filter(r => r.bienId !== "nogent"), // autres propriétés via iCal
         ...beds24Resas,                                   // Nogent via Beds24
@@ -6731,8 +7086,8 @@ export default function App() {
   }).length;
 
   const biensByCf = biens.filter(b => {
-    const cf = sumN(b.cashflow, n);
-    return cf < 0;
+    const cfVal = sumN(b.cashflow, n);
+    return cfVal < 0;
   });
   const cockpitAlerts = biensByCf.length;
 
@@ -6742,25 +7097,31 @@ export default function App() {
     {
       id: "ops", label: "Opérations",
       items: [
-        { id: "planning",    icon: "📅", label: "Planning",    badge: planningAlerts > 0 ? planningAlerts : null, badgeColor: "#f59e0b" },
-        { id: "cockpit",     icon: "🎯", label: "Cockpit",     badge: cockpitAlerts > 0  ? "⚠" : null,           badgeColor: "#ef4444" },
-        { id: "menage",      icon: "🧹", label: "Ménage",      badge: menageBadge > 0    ? menageBadge : null,   badgeColor: "#f59e0b" },
-        { id: "messages",    icon: "💬", label: "Messages" },
-        { id: "emails",      icon: "📧", label: "Emails" },
+        { id: "planning",      icon: "📅", label: "Planning",    badge: planningAlerts > 0 ? planningAlerts : null, badgeColor: "#f59e0b" },
+        { id: "menage",        icon: "🧹", label: "Ménage",      badge: menageBadge > 0    ? menageBadge : null,   badgeColor: "#f59e0b" },
+        { id: "prestataires",  icon: "👷", label: "Prestataires" },
+        { id: "messages",      icon: "💬", label: "Messages" },
+        { id: "emails",        icon: "📧", label: "Emails" },
       ],
     },
     {
-      id: "revenue", label: "Revenus",
+      id: "dashboard", label: "Tableau de bord",
       items: [
+        { id: "cockpit",     icon: "🎯", label: "Cockpit",     badge: cockpitAlerts > 0 ? "⚠" : null, badgeColor: "#ef4444" },
         { id: "revenue",     icon: "💡", label: "Revenue Mgr" },
         { id: "tarifs",      icon: "🏷️", label: "Tarifs" },
+      ],
+    },
+    {
+      id: "analyses", label: "Analyses",
+      items: [
         { id: "previsionnel",icon: "🔮", label: "Prévisionnel" },
         { id: "historique",  icon: "📈", label: "Historique" },
         { id: "analytics",   icon: "📊", label: "Analytics" },
       ],
     },
     {
-      id: "finance", label: "Finance & Biens",
+      id: "finance", label: "Finance",
       items: [
         { id: "charges",     icon: "💰", label: "Charges" },
         { id: "pilotage",    icon: "💼", label: "Pilotage" },
@@ -6771,9 +7132,22 @@ export default function App() {
       id: "tools", label: "Outils",
       items: [
         { id: "travaux",     icon: "🔧", label: "Travaux",    badge: (() => { try { const n = JSON.parse(localStorage.getItem(TRAVAUX_KEY)||"[]").filter(t => t.status !== "done" && t.priorite === "urgent").length; return n > 0 ? n : null; } catch { return null; } })(), badgeColor: "#ef4444" },
-        { id: "livrets",     icon: "📱", label: "QR / Livrets" },
         { id: "devis",       icon: "📋", label: "Devis" },
+        { id: "livrets",     icon: "📱", label: "QR / Livrets" },
         { id: "guides",      icon: "📖", label: "Guides" },
+        { id: "cartographie", icon: "🗺️", label: "Cartographie", href: "/cartographie.html" },
+      ],
+    },
+    {
+      id: "ia", label: "Intelligence Artificielle",
+      items: [
+        { id: "chat-admin", icon: "✨", label: "Assistant IA" },
+      ],
+    },
+    {
+      id: "equipe", label: "Équipe",
+      items: [
+        { id: "agents", icon: "🤖", label: "Agents", badge: null },
       ],
     },
   ];
@@ -6788,14 +7162,34 @@ export default function App() {
   const currentNavItem = allNavItems.find(i => i.id === tab);
 
   /* ── boutons d'action communs (sync, settings…) ── */
-  const ActionBtns = () => (
+  const ActionBtns = () => {
+    // Badge source de données
+    const srcConfig = {
+      idle:    { label: "💾 Seed local", bg: "rgba(100,116,139,0.18)", color: "#94a3b8", border: "rgba(100,116,139,0.3)" },
+      loading: { label: "⟳ Chargement…", bg: "rgba(14,165,233,0.12)", color: "#38bdf8", border: "rgba(14,165,233,0.35)" },
+      ok:      { label: "📊 Google Sheets", bg: "rgba(16,185,129,0.12)", color: "#10b981", border: "rgba(16,185,129,0.35)" },
+      error:   { label: "⚠ Seed local", bg: "rgba(239,68,68,0.12)", color: "#f87171", border: "rgba(239,68,68,0.35)" },
+    }[sync.status] || { label: "💾 Seed local", bg: "rgba(100,116,139,0.18)", color: "#94a3b8", border: "rgba(100,116,139,0.3)" };
+    const syncAge = lastSyncTs ? Math.floor((Date.now() - lastSyncTs) / 60000) : null; // minutes
+    const syncTooltip = lastSyncTs
+      ? `Dernière sync : ${new Date(lastSyncTs).toLocaleString("fr-FR")}${sync.status === "error" ? `\n⚠ ${sync.msg}` : ""}`
+      : "Jamais synchronisé — données issues du seed local";
+    return (
     <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
-      <span style={{ fontSize: 9, color: sync.status === "error" ? "#ef4444" : sync.status === "ok" ? "#10b981" : "#475569" }}>{sync.msg}</span>
-      {lastSyncTs && (Date.now() - lastSyncTs) > 6 * 3600000 && (
-        <span title={`Dernière sync : ${new Date(lastSyncTs).toLocaleString("fr-FR")}`} style={{ fontSize: 9, color: "#f59e0b", cursor: "help" }}>⚠ {Math.floor((Date.now()-lastSyncTs)/3600000)}h</span>
+      {/* Badge source */}
+      <span
+        title={syncTooltip}
+        style={{ fontSize: 10, fontWeight: 600, padding: "3px 8px", borderRadius: 20, background: srcConfig.bg, color: srcConfig.color, border: `1px solid ${srcConfig.border}`, cursor: "help", whiteSpace: "nowrap" }}
+      >
+        {srcConfig.label}
+        {sync.status === "ok" && syncAge !== null && <span style={{ opacity: 0.7, fontWeight: 400 }}> · {syncAge < 60 ? `${syncAge}min` : `${Math.floor(syncAge/60)}h`}</span>}
+      </span>
+      {/* Avertissement données vieilles */}
+      {sync.status === "ok" && lastSyncTs && (Date.now() - lastSyncTs) > 6 * 3600000 && (
+        <span title={syncTooltip} style={{ fontSize: 9, color: "#f59e0b", cursor: "help" }}>⚠ {Math.floor((Date.now()-lastSyncTs)/3600000)}h</span>
       )}
-      <span style={{ fontSize: 11, fontWeight: 700, color: "#0ea5e9", fontFamily: "monospace" }}>{fmtK(ytd)}</span>
-      <button onClick={doSync} disabled={sync.status === "loading"} style={{ padding: "4px 9px", borderRadius: 6, border: "1px solid #0ea5e9", background: "rgba(14,165,233,0.1)", color: "#0ea5e9", fontSize: 10, fontWeight: 600, cursor: "pointer" }}>{sync.status === "loading" ? "⟳…" : "⟳"}</button>
+      <span style={{ fontSize: 11, fontWeight: 700, color: "#0ea5e9", fontFamily: "var(--font-mono)" }}>{fmtK(ytd)}</span>
+      <button onClick={doSync} disabled={sync.status === "loading"} title="Recharger depuis Google Sheets" style={{ padding: "4px 9px", borderRadius: 6, border: "1px solid #0ea5e9", background: "rgba(14,165,233,0.1)", color: "#0ea5e9", fontSize: 10, fontWeight: 600, cursor: "pointer" }}>{sync.status === "loading" ? "⟳…" : "⟳ Actualiser"}</button>
       <button onClick={() => setShowScriptSetup(true)} title="Configurer Apps Script" style={{ padding: "4px 6px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: scriptUrl ? "#10b981" : "#64748b", fontSize: 10, cursor: "pointer" }}>{scriptUrl ? "⚙✓" : "⚙"}</button>
       <button onClick={syncAllToSheets} disabled={globalSyncStatus === "syncing"} title="Sync Sheets" style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(16,185,129,0.4)", background: globalSyncStatus === "ok" ? "rgba(16,185,129,0.2)" : globalSyncStatus === "error" ? "rgba(239,68,68,0.15)" : "transparent", color: globalSyncStatus === "ok" ? "#10b981" : globalSyncStatus === "error" ? "#f87171" : "#64748b", fontSize: 10, cursor: "pointer", fontWeight: 600 }}>{globalSyncStatus === "syncing" ? "⟳…" : globalSyncStatus === "ok" ? "📊✓" : globalSyncStatus === "error" ? "📊✗" : "📊"}</button>
       <button onClick={() => setShowPushSetup(true)} title="Notifications push" style={{ padding: "4px 6px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: ntfyTopic ? "#f59e0b" : "#64748b", fontSize: 10, cursor: "pointer" }}>{ntfyTopic ? "🔔" : "🔕"}</button>
@@ -6817,7 +7211,8 @@ export default function App() {
       {role === "menage" && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 8, background: "rgba(245,158,11,0.15)", color: "#f59e0b", fontWeight: 600 }}>🧹 Ménage</span>}
       <button onClick={() => { sessionStorage.removeItem(PWD_KEY); sessionStorage.removeItem("admin_role"); setAuthed(false); setRole("admin"); }} title="Déconnexion" style={{ padding: "4px 6px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "transparent", color: "#475569", fontSize: 10, cursor: "pointer" }}>🔒</button>
     </div>
-  );
+    );
+  };
 
   return (
     <div style={{ minHeight: "100vh", background: "#0a0f1e", fontFamily: "system-ui,sans-serif", color: "#e2e8f0", display: "flex", flexDirection: "column" }}>
@@ -6833,7 +7228,7 @@ export default function App() {
         )}
 
         <aside style={{
-          width: 220, flexShrink: 0,
+          width: 236, flexShrink: 0,
           background: "#080d1a",
           borderRight: "1px solid rgba(255,255,255,0.06)",
           display: "flex", flexDirection: "column",
@@ -6847,34 +7242,59 @@ export default function App() {
           }),
         }}>
           {/* Logo */}
-          <div style={{ padding: "16px 16px 12px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ fontSize: 13, fontWeight: 800, color: "#fff", letterSpacing: -.3 }}>🏠 Dashboard</div>
+          <div style={{ padding: "18px 16px 14px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: "#fff", letterSpacing: -.3 }}>🏠 Dashboard</div>
+              <div style={{ fontSize: 10, color: "#334155", marginTop: 2 }}>Amaryllis Locations</div>
+            </div>
             {mob && <button onClick={() => setSidebarOpen(false)} style={{ background: "none", border: "none", color: "#475569", fontSize: 18, cursor: "pointer", padding: "0 4px" }}>✕</button>}
           </div>
 
           {/* Groupes de navigation */}
-          <nav style={{ flex: 1, padding: "8px 0 16px" }}>
-            {visibleGroups.map(group => (
-              <div key={group.id} style={{ marginTop: 16 }}>
-                <div style={{ padding: "0 14px 5px", fontSize: 9, fontWeight: 700, color: "#334155", letterSpacing: 1, textTransform: "uppercase" }}>{group.label}</div>
+          <nav style={{ flex: 1, padding: "6px 0 16px" }}>
+            {visibleGroups.map((group, gi) => (
+              <div key={group.id} style={{ marginTop: gi === 0 ? 10 : 4 }}>
+                {/* Header de groupe */}
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 6,
+                  padding: "6px 16px 4px",
+                  margin: gi === 0 ? 0 : "8px 0 0",
+                }}>
+                  <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.05)" }} />
+                  <span style={{ fontSize: 10, fontWeight: 700, color: "#475569", letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{group.label}</span>
+                  <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.05)" }} />
+                </div>
+                {/* Items */}
                 {group.items.map(item => {
                   const active = tab === item.id;
-                  return (
-                    <button key={item.id} onClick={() => { setTab(item.id); if (mob) setSidebarOpen(false); }} style={{
-                      width: "100%", display: "flex", alignItems: "center", gap: 9,
-                      padding: "8px 14px",
-                      background: active ? "rgba(14,165,233,0.1)" : "none",
-                      border: "none", borderLeft: `3px solid ${active ? "#0ea5e9" : "transparent"}`,
-                      cursor: "pointer", textAlign: "left",
-                      color: active ? "#0ea5e9" : item.badgeColor && item.badge ? item.badgeColor : "#94a3b8",
-                      fontSize: 13, fontWeight: active ? 700 : 400,
-                      transition: "all .12s",
-                    }}>
-                      <span style={{ fontSize: 15, width: 20, textAlign: "center", flexShrink: 0 }}>{item.icon}</span>
-                      <span style={{ flex: 1 }}>{item.label}</span>
+                  const navStyle = {
+                    width: "100%", display: "flex", alignItems: "center", gap: 10,
+                    padding: "7px 16px",
+                    background: active ? "rgba(14,165,233,0.1)" : "none",
+                    border: "none", borderLeft: `3px solid ${active ? "#0ea5e9" : "transparent"}`,
+                    cursor: "pointer", textAlign: "left",
+                    color: active ? "#e0f2fe" : item.badgeColor && item.badge ? item.badgeColor : "#64748b",
+                    fontSize: 13, fontWeight: active ? 600 : 400,
+                    transition: "background .1s, color .1s",
+                    textDecoration: "none",
+                  };
+                  const navContent = (
+                    <>
+                      <span style={{ fontSize: 14, width: 18, textAlign: "center", flexShrink: 0, opacity: active ? 1 : 0.75 }}>{item.icon}</span>
+                      <span style={{ flex: 1, fontSize: 13 }}>{item.label}</span>
+                      {item.href && <span style={{ fontSize: 9, opacity: 0.35 }}>↗</span>}
                       {item.badge && (
                         <span style={{ background: item.badgeColor, color: "#fff", fontSize: 9, fontWeight: 800, borderRadius: 10, padding: "1px 5px", minWidth: 16, textAlign: "center" }}>{item.badge}</span>
                       )}
+                    </>
+                  );
+                  return item.href ? (
+                    <a key={item.id} href={item.href} target="_blank" rel="noopener noreferrer" style={navStyle}>
+                      {navContent}
+                    </a>
+                  ) : (
+                    <button key={item.id} onClick={() => { setTab(item.id); if (mob) setSidebarOpen(false); }} style={navStyle}>
+                      {navContent}
                     </button>
                   );
                 })}
@@ -6915,14 +7335,17 @@ export default function App() {
             {tab === "revenue"  && <RevenueManagerPro biens={biens} reservations={reservations} mob={mob} />}
             {tab === "tarifs" && <Tarifs reservations={reservations} />}
             {tab === "analytics" && <AnalyticsTab mob={mob} />}
-            {tab === "menage"   && <MenageTab biens={biens} reservations={reservations} saveRes={saveRes} mob={mob} />}
+            {tab === "menage"         && <MenageTab biens={biens} reservations={reservations} saveRes={saveRes} mob={mob} />}
+            {tab === "prestataires"   && <Prestataires biens={biens} mob={mob} />}
             {tab === "messages" && <MessageTemplates biens={biens} reservations={reservations} mob={mob} />}
             {tab === "emails" && <EmailSync mob={mob} />}
             {tab === "cautions" && <Cautions />}
             {tab === "travaux"  && <Travaux biens={biens} mob={mob} />}
-            {tab === "livrets"  && <LivretQR biens={biens} mob={mob} />}
+            {tab === "livrets"  && <LivretEditor />}
             {tab === "devis"    && <DevisEditor />}
             {tab === "guides" && <GuideEditor mob={mob} />}
+            {tab === "agents" && <AgentsKanban mob={mob} />}
+            {tab === "chat-admin" && <AdminChatTab biens={biens} reservations={reservations} addToast={addToast} />}
           </div>
         </div>
       </div>
@@ -6971,7 +7394,7 @@ export default function App() {
                 ].map(k => (
                   <div key={k.label} style={{ textAlign: "center" }}>
                     <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{k.label}</div>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: k.color, fontFamily: "monospace" }}>{k.value}</div>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: k.color, fontFamily: "var(--font-mono)" }}>{k.value}</div>
                   </div>
                 ))}
               </div>
@@ -6988,20 +7411,20 @@ export default function App() {
                     {rapportBiens.map(b => (
                       <tr key={b.id} style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
                         <td style={{ padding: "9px 10px", fontSize: 11, color: "#e2e8f0" }}>{b.emoji} {b.nom}</td>
-                        <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: "#0ea5e9", fontFamily: "monospace", fontWeight: 600 }}>{fmt(b.rev)}</td>
-                        <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: b.occ >= 60 ? "#10b981" : b.occ >= 30 ? "#f59e0b" : "#ef4444", fontFamily: "monospace" }}>{b.occ.toFixed(0)}%</td>
-                        <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: "#94a3b8", fontFamily: "monospace" }}>{b.adr.toFixed(0)} €</td>
-                        <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: b.cf >= 0 ? "#10b981" : "#ef4444", fontFamily: "monospace" }}>{b.cf >= 0 ? "+" : ""}{fmt(b.cf)}</td>
+                        <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: "#0ea5e9", fontFamily: "var(--font-mono)", fontWeight: 600 }}>{fmt(b.rev)}</td>
+                        <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: b.occ >= 60 ? "#10b981" : b.occ >= 30 ? "#f59e0b" : "#ef4444", fontFamily: "var(--font-mono)" }}>{b.occ.toFixed(0)}%</td>
+                        <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: "#94a3b8", fontFamily: "var(--font-mono)" }}>{b.adr.toFixed(0)} €</td>
+                        <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: b.cf >= 0 ? "#10b981" : "#ef4444", fontFamily: "var(--font-mono)" }}>{b.cf >= 0 ? "+" : ""}{fmt(b.cf)}</td>
                         <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: "#94a3b8" }}>{b.nbResas}</td>
                         <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: "#94a3b8" }}>{b.nbNuits}</td>
                       </tr>
                     ))}
                     <tr style={{ borderTop: "2px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.02)", fontWeight: 700 }}>
                       <td style={{ padding: "9px 10px", fontSize: 11, color: "#e2e8f0" }}>TOTAL</td>
-                      <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 12, color: "#0ea5e9", fontFamily: "monospace", fontWeight: 800 }}>{fmt(totalRev)}</td>
+                      <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 12, color: "#0ea5e9", fontFamily: "var(--font-mono)", fontWeight: 800 }}>{fmt(totalRev)}</td>
                       <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: "#94a3b8" }}>—</td>
                       <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: "#94a3b8" }}>—</td>
-                      <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 12, color: totalCf >= 0 ? "#10b981" : "#ef4444", fontFamily: "monospace", fontWeight: 800 }}>{totalCf >= 0 ? "+" : ""}{fmt(totalCf)}</td>
+                      <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 12, color: totalCf >= 0 ? "#10b981" : "#ef4444", fontFamily: "var(--font-mono)", fontWeight: 800 }}>{totalCf >= 0 ? "+" : ""}{fmt(totalCf)}</td>
                       <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: "#94a3b8" }}>{resas.length}</td>
                       <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: "#94a3b8" }}>{rapportBiens.reduce((s, b) => s + b.nbNuits, 0)}</td>
                     </tr>
@@ -7017,11 +7440,11 @@ export default function App() {
                       const nuits = r.checkin && r.checkout ? Math.round((new Date(r.checkout+"T12:00:00Z") - new Date(r.checkin+"T12:00:00Z")) / 86400000) : "?";
                       return (
                         <div key={r.id} style={{ display: "flex", gap: 10, alignItems: "center", padding: "6px 10px", background: "rgba(255,255,255,0.02)", borderRadius: 7, flexWrap: "wrap" }}>
-                          <span style={{ fontSize: 11, color: "#94a3b8", fontFamily: "monospace", whiteSpace: "nowrap" }}>{r.checkin} → {r.checkout}</span>
+                          <span style={{ fontSize: 11, color: "#94a3b8", fontFamily: "var(--font-mono)", whiteSpace: "nowrap" }}>{r.checkin} → {r.checkout}</span>
                           <span style={{ fontSize: 11, color: "#e2e8f0", fontWeight: 600 }}>{r.voyageur || "—"}</span>
                           <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 6, background: CB[r.canal] || "#334155", color: CC[r.canal] || "#94a3b8", fontWeight: 600 }}>{r.canal}</span>
                           <span style={{ fontSize: 10, color: "#64748b" }}>{b?.emoji} {b?.nom?.replace("Villa ", "")}</span>
-                          <span style={{ fontSize: 11, color: "#f59e0b", fontFamily: "monospace", marginLeft: "auto" }}>{nuits}n · {fmt(r.montant || 0)}</span>
+                          <span style={{ fontSize: 11, color: "#f59e0b", fontFamily: "var(--font-mono)", marginLeft: "auto" }}>{nuits}n · {fmt(r.montant || 0)}</span>
                         </div>
                       );
                     })}
@@ -7152,6 +7575,227 @@ const BIENS_CAUTION = [
   { id: "schoelcher", nom: "Bellevue Schœlcher",   depot: 1000 },
   { id: "nogent",     nom: "Appartement Nogent",   depot: 500  },
 ];
+
+// ── Carnet prestataires ───────────────────────────────────────────────────────
+const PRESTATAIRES_KEY = "amaryllis_prestataires_v1";
+const PREST_CATEGORIES = [
+  { id: "menage",      label: "Ménage",       icon: "🧹" },
+  { id: "plomberie",   label: "Plomberie",    icon: "🔧" },
+  { id: "electricite", label: "Électricité",  icon: "⚡" },
+  { id: "jardinage",   label: "Jardinage",    icon: "🌿" },
+  { id: "piscine",     label: "Piscine",      icon: "🏊" },
+  { id: "serrurerie",  label: "Serrurerie",   icon: "🔑" },
+  { id: "peinture",    label: "Peinture",     icon: "🎨" },
+  { id: "autre",       label: "Autre",        icon: "📌" },
+];
+const PREST_BIEN_LABELS = { amaryllis: "Villa Amaryllis", geko: "Géko", mabouya: "Mabouya", zandoli: "Zandoli", schoelcher: "Schœlcher", iguana: "Villa Iguana", nogent: "Nogent" };
+
+function Prestataires({ biens }) {
+  const [contacts, setContacts] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(PRESTATAIRES_KEY) || "[]"); } catch { return []; }
+  });
+  const [form, setForm] = useState({ nom: "", tel: "", email: "", categorie: "menage", biens: [], notes: "" });
+  const [editing, setEditing] = useState(null); // id en cours de modification
+  const [showForm, setShowForm] = useState(false);
+  const [search, setSearch] = useState("");
+  const [filterCat, setFilterCat] = useState("all");
+  const [filterBien, setFilterBien] = useState("all");
+
+  const save = (list) => {
+    setContacts(list);
+    try { localStorage.setItem(PRESTATAIRES_KEY, JSON.stringify(list)); } catch {}
+  };
+
+  const submit = () => {
+    if (!form.nom.trim()) return;
+    if (editing !== null) {
+      save(contacts.map(c => c.id === editing ? { ...c, ...form } : c));
+      setEditing(null);
+    } else {
+      save([...contacts, { ...form, id: Date.now(), createdAt: new Date().toISOString() }]);
+    }
+    setForm({ nom: "", tel: "", email: "", categorie: "menage", biens: [], notes: "" });
+    setShowForm(false);
+  };
+
+  const edit = (c) => {
+    setForm({ nom: c.nom, tel: c.tel || "", email: c.email || "", categorie: c.categorie, biens: c.biens || [], notes: c.notes || "" });
+    setEditing(c.id);
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const del = (id) => {
+    if (!confirm("Supprimer ce contact ?")) return;
+    save(contacts.filter(c => c.id !== id));
+  };
+
+  const toggleBien = (bienId) => {
+    setForm(f => ({
+      ...f,
+      biens: f.biens.includes(bienId) ? f.biens.filter(b => b !== bienId) : [...f.biens, bienId],
+    }));
+  };
+
+  const filtered = contacts.filter(c => {
+    const matchSearch = !search || c.nom.toLowerCase().includes(search.toLowerCase()) || (c.tel || "").includes(search) || (c.notes || "").toLowerCase().includes(search.toLowerCase());
+    const matchCat = filterCat === "all" || c.categorie === filterCat;
+    const matchBien = filterBien === "all" || (c.biens || []).includes(filterBien);
+    return matchSearch && matchCat && matchBien;
+  });
+
+  const MUTED = "var(--admin-muted)";
+  const CARD_BG = "var(--admin-card)";
+  const BORDER = "var(--admin-border)";
+
+  const inputS = {
+    background: "var(--admin-bg)", border: `1px solid ${BORDER}`, borderRadius: 8,
+    color: "var(--admin-fg)", padding: "9px 12px", fontSize: 13, width: "100%",
+    fontFamily: "var(--font-mono)", boxSizing: "border-box",
+  };
+
+  return (
+    <div style={{ padding: "24px 28px", maxWidth: 900, margin: "0 auto" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.25em", textTransform: "uppercase", color: MUTED, marginBottom: 4 }}>Logistique</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: "var(--admin-fg)" }}>Carnet de prestataires</div>
+        </div>
+        <button
+          onClick={() => { setEditing(null); setForm({ nom: "", tel: "", email: "", categorie: "menage", biens: [], notes: "" }); setShowForm(s => !s); }}
+          style={{ background: "#0e3b3a", color: "#fff", border: "none", borderRadius: 8, padding: "10px 18px", fontSize: 12, fontWeight: 600, cursor: "pointer", letterSpacing: "0.04em" }}
+        >
+          {showForm && editing === null ? "Annuler" : "+ Ajouter un contact"}
+        </button>
+      </div>
+
+      {/* ── Formulaire ajout/édition ── */}
+      {showForm && (
+        <div style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "20px 22px", marginBottom: 24 }}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: "var(--admin-fg)", marginBottom: 16 }}>
+            {editing !== null ? "Modifier le contact" : "Nouveau prestataire"}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+            <div>
+              <div style={{ fontSize: 11, color: MUTED, marginBottom: 4, fontWeight: 600, letterSpacing: "0.06em" }}>NOM *</div>
+              <input style={inputS} placeholder="Jean Dupont" value={form.nom} onChange={e => setForm(f => ({ ...f, nom: e.target.value }))} />
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: MUTED, marginBottom: 4, fontWeight: 600, letterSpacing: "0.06em" }}>CATÉGORIE</div>
+              <select style={inputS} value={form.categorie} onChange={e => setForm(f => ({ ...f, categorie: e.target.value }))}>
+                {PREST_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: MUTED, marginBottom: 4, fontWeight: 600, letterSpacing: "0.06em" }}>TÉLÉPHONE</div>
+              <input style={inputS} placeholder="+596 696 000 000" value={form.tel} onChange={e => setForm(f => ({ ...f, tel: e.target.value }))} />
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: MUTED, marginBottom: 4, fontWeight: 600, letterSpacing: "0.06em" }}>EMAIL</div>
+              <input style={inputS} placeholder="contact@prestataire.fr" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 11, color: MUTED, marginBottom: 8, fontWeight: 600, letterSpacing: "0.06em" }}>PROPRIÉTÉS CONCERNÉES</div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {Object.entries(PREST_BIEN_LABELS).map(([id, label]) => (
+                <button
+                  key={id}
+                  onClick={() => toggleBien(id)}
+                  style={{
+                    background: form.biens.includes(id) ? "#0e3b3a" : "transparent",
+                    border: `1px solid ${form.biens.includes(id) ? "#0e3b3a" : BORDER}`,
+                    color: form.biens.includes(id) ? "#fff" : MUTED,
+                    borderRadius: 20, padding: "5px 12px", fontSize: 11, cursor: "pointer", fontWeight: 600,
+                  }}
+                >{label}</button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 11, color: MUTED, marginBottom: 4, fontWeight: 600, letterSpacing: "0.06em" }}>NOTES</div>
+            <textarea style={{ ...inputS, height: 72, resize: "vertical" }} placeholder="Tarifs, jours disponibles, commentaires…" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
+          </div>
+
+          <div style={{ display: "flex", gap: 10 }}>
+            <button
+              onClick={submit}
+              style={{ background: "#0e3b3a", color: "#fff", border: "none", borderRadius: 8, padding: "10px 20px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+            >{editing !== null ? "Enregistrer" : "Ajouter"}</button>
+            <button onClick={() => { setShowForm(false); setEditing(null); }} style={{ background: "transparent", border: `1px solid ${BORDER}`, color: MUTED, borderRadius: 8, padding: "10px 20px", fontSize: 12, cursor: "pointer" }}>Annuler</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Filtres ── */}
+      <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap", alignItems: "center" }}>
+        <input style={{ ...inputS, maxWidth: 220 }} placeholder="🔍 Rechercher…" value={search} onChange={e => setSearch(e.target.value)} />
+        <select style={{ ...inputS, maxWidth: 160 }} value={filterCat} onChange={e => setFilterCat(e.target.value)}>
+          <option value="all">Toutes catégories</option>
+          {PREST_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
+        </select>
+        <select style={{ ...inputS, maxWidth: 160 }} value={filterBien} onChange={e => setFilterBien(e.target.value)}>
+          <option value="all">Toutes propriétés</option>
+          {Object.entries(PREST_BIEN_LABELS).map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+        </select>
+        <span style={{ fontSize: 11, color: MUTED, marginLeft: "auto" }}>{filtered.length} contact{filtered.length !== 1 ? "s" : ""}</span>
+      </div>
+
+      {/* ── Grille contacts ── */}
+      {filtered.length === 0 ? (
+        <div style={{ textAlign: "center", color: MUTED, padding: "60px 0", fontSize: 14 }}>
+          {contacts.length === 0 ? "Aucun prestataire enregistré. Commencez par ajouter un contact." : "Aucun résultat pour ces filtres."}
+        </div>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 14 }}>
+          {filtered.map(c => {
+            const cat = PREST_CATEGORIES.find(p => p.id === c.categorie);
+            return (
+              <div key={c.id} style={{ background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "16px 18px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                  <div>
+                    <div style={{ fontSize: 20, marginBottom: 4 }}>{cat?.icon || "📌"}</div>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: "var(--admin-fg)" }}>{c.nom}</div>
+                    <div style={{ fontSize: 11, color: MUTED }}>{cat?.label}</div>
+                  </div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button onClick={() => edit(c)} title="Modifier" style={{ background: "transparent", border: `1px solid ${BORDER}`, color: MUTED, borderRadius: 6, padding: "4px 8px", fontSize: 11, cursor: "pointer" }}>✏️</button>
+                    <button onClick={() => del(c.id)} title="Supprimer" style={{ background: "transparent", border: `1px solid ${BORDER}`, color: "#ef4444", borderRadius: 6, padding: "4px 8px", fontSize: 11, cursor: "pointer" }}>🗑</button>
+                  </div>
+                </div>
+
+                {c.tel && (
+                  <a href={`tel:${c.tel}`} style={{ display: "flex", alignItems: "center", gap: 8, color: "#0e3b3a", fontSize: 13, textDecoration: "none", marginBottom: 6 }}>
+                    <span>📞</span><span style={{ fontFamily: "var(--font-mono)" }}>{c.tel}</span>
+                  </a>
+                )}
+                {c.email && (
+                  <a href={`mailto:${c.email}`} style={{ display: "flex", alignItems: "center", gap: 8, color: "#0e3b3a", fontSize: 13, textDecoration: "none", marginBottom: 6 }}>
+                    <span>✉️</span><span style={{ fontSize: 12 }}>{c.email}</span>
+                  </a>
+                )}
+
+                {c.biens && c.biens.length > 0 && (
+                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 8 }}>
+                    {c.biens.map(b => (
+                      <span key={b} style={{ background: "rgba(14,59,58,0.08)", color: "#0e3b3a", borderRadius: 12, padding: "2px 8px", fontSize: 10, fontWeight: 600 }}>{PREST_BIEN_LABELS[b] || b}</span>
+                    ))}
+                  </div>
+                )}
+
+                {c.notes && (
+                  <div style={{ fontSize: 12, color: MUTED, marginTop: 8, lineHeight: 1.5, fontStyle: "italic" }}>{c.notes}</div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function Cautions() {
   const [deposits, setDeposits] = useState([]);
@@ -7369,6 +8013,187 @@ const BIENS_DEVIS = [
   { id: "schoelcher",nom: "T2 Schoelcher",   depot: 1000 },
   { id: "nogent",    nom: "T2 Nogent",       depot: 500  },
 ];
+
+// ── AdminChatTab — Assistant IA pour l'admin ─────────────────────────────
+const ADMIN_SHORTCUTS = [
+  { icon: "📊", label: "Résumé de la semaine",       prompt: "Fais-moi un résumé de la situation de mes locations cette semaine : réservations en cours, taux d'occupation global, points d'attention." },
+  { icon: "✉️", label: "Email de bienvenue",          prompt: "Rédige un email de bienvenue chaleureux pour un voyageur qui arrive demain à la Villa Amaryllis. Ton : professionnel et chaleureux." },
+  { icon: "📝", label: "Description Airbnb",          prompt: "Propose une description optimisée pour Airbnb de la Villa Amaryllis : accrocheuse, avec les mots-clés pertinents, max 500 mots." },
+  { icon: "💡", label: "Conseil revenue management",  prompt: "Donne-moi 3 conseils concrets pour améliorer le RevPAR de mes villas en Martinique ce trimestre." },
+  { icon: "📱", label: "Post Instagram",              prompt: "Rédige un post Instagram engageant pour promouvoir la Villa Amaryllis en été. Ton aspirationnel, 3 hashtags max." },
+  { icon: "🔍", label: "Analyse basse saison",        prompt: "Comment optimiser le remplissage de mes villas en basse saison (septembre-novembre) ? Stratégies tarifaires, canaux, offres." },
+];
+
+function AdminChatTab({ biens = [], reservations = [], addToast = () => {} }) {
+  const [messages,    setMessages]    = useState([{ role: "assistant", content: "Bonjour 👋 Je suis votre assistant IA Amaryllis. Je peux vous aider à rédiger des emails, analyser vos performances, créer du contenu marketing, ou répondre à toute question de gestion locative. Par quoi commençons-nous ?" }]);
+  const [suggestions, setSuggestions] = useState([]);
+  const [input,       setInput]       = useState("");
+  const [loading,     setLoading]     = useState(false);
+  const bottomRef = useRef(null);
+  const inputRef  = useRef(null);
+
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading]);
+
+  // Contexte admin injecté dans chaque message
+  const buildContext = useCallback(() => {
+    const totalResas = reservations.length;
+    const upcoming = reservations.filter(r => r.checkin >= new Date().toISOString().slice(0,10)).slice(0, 5);
+    return `\n\n[CONTEXTE ADMIN]\nBiens : ${biens.map(b => `${b.nom} (${b.id})`).join(", ")}\nTotal réservations : ${totalResas}\nProchaines arrivées : ${upcoming.map(r => `${r.voyageur} → ${r.bienId} le ${r.checkin}`).join(" | ") || "aucune"}`;
+  }, [biens, reservations]);
+
+  const sendMessage = useCallback(async (text) => {
+    const content = (text || input).trim();
+    if (!content || loading) return;
+    const userMsg = { role: "user", content };
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
+    setSuggestions([]);
+    setInput("");
+    setLoading(true);
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: newMessages.map((m, i) =>
+            i === 0 ? { ...m, content: m.content + buildContext() } : m
+          ).slice(-12),
+          mode: "admin",
+        }),
+      });
+      const data = await res.json();
+      if (data.reply) {
+        setMessages(prev => [...prev, { role: "assistant", content: data.reply }]);
+        setSuggestions(data.suggestions || []);
+      } else {
+        addToast(data.error || "Erreur assistant IA", "error");
+      }
+    } catch (e) {
+      addToast(`Erreur réseau : ${e.message}`, "error");
+    } finally {
+      setLoading(false);
+    }
+  }, [input, messages, loading, buildContext, addToast]);
+
+  const handleKeyDown = (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
+
+  // Rendu d'une ligne avec liens cliquables
+  const renderLine = (line, li, arr) => {
+    const linkRe = /(villamaryllis\.com\/[\w-]*)/g;
+    const parts = line.split(linkRe);
+    const isTotal = /total estimé|total :/i.test(line);
+    const isHr = line.startsWith("─") || line.trim() === "---";
+    if (isHr) return <span key={li} style={{ display: "block", borderTop: "1px solid rgba(255,255,255,0.08)", margin: "8px 0" }} />;
+    return (
+      <span key={li}>
+        {parts.map((p, pi) => linkRe.test(p)
+          ? <a key={pi} href={`https://${p}`} target="_blank" rel="noopener noreferrer" style={{ color: "#38bdf8", textDecoration: "none", borderBottom: "1px solid rgba(56,189,248,0.3)" }}>{p} →</a>
+          : <span key={pi} style={isTotal ? { fontWeight: 700, color: "#a3e635" } : {}}>{p}</span>
+        )}
+        {li < arr.length - 1 && "\n"}
+      </span>
+    );
+  };
+
+  return (
+    <div style={{ maxWidth: 900, margin: "0 auto", height: "calc(100vh - 140px)", display: "flex", flexDirection: "column", gap: 0 }}>
+
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 18 }}>
+        <div style={{ width: 44, height: 44, borderRadius: "50%", overflow: "hidden", border: "2px solid rgba(167,139,250,0.4)", flexShrink: 0 }}>
+          <img src="/photos/assistant.png" alt="Assistant IA" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "52% 10%", transform: "scale(2.0)", transformOrigin: "52% 10%" }} />
+        </div>
+        <div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: "#e2e8f0" }}>✨ Assistant IA — Mode Admin</div>
+          <div style={{ fontSize: 11, color: "#64748b" }}>Powered by Groq · Connait vos biens, vos réservations et votre activité</div>
+        </div>
+        <button onClick={() => { setMessages([{ role: "assistant", content: "Conversation réinitialisée. Comment puis-je vous aider ?" }]); setSuggestions([]); }}
+          style={{ marginLeft: "auto", padding: "5px 12px", borderRadius: 7, border: "1px solid #334155", background: "none", color: "#64748b", fontSize: 11, cursor: "pointer" }}>
+          🗑 Effacer
+        </button>
+      </div>
+
+      {/* Raccourcis */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
+        {ADMIN_SHORTCUTS.map(s => (
+          <button key={s.label} onClick={() => sendMessage(s.prompt)}
+            style={{ padding: "5px 11px", borderRadius: 20, border: "1px solid rgba(167,139,250,0.25)", background: "rgba(167,139,250,0.07)", color: "#a78bfa", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, transition: "all 0.15s" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(167,139,250,0.18)"; e.currentTarget.style.borderColor = "rgba(167,139,250,0.5)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "rgba(167,139,250,0.07)"; e.currentTarget.style.borderColor = "rgba(167,139,250,0.25)"; }}
+          >
+            <span>{s.icon}</span><span>{s.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Zone messages */}
+      <div style={{ flex: 1, overflowY: "auto", background: "#0f172a", border: "1px solid #1e293b", borderRadius: 12, padding: 16, display: "flex", flexDirection: "column", gap: 12, minHeight: 0 }}>
+        {messages.map((m, i) => (
+          <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", justifyContent: m.role === "user" ? "flex-end" : "flex-start" }}>
+            {m.role === "assistant" && (
+              <div style={{ width: 28, height: 28, borderRadius: "50%", overflow: "hidden", border: "1px solid rgba(167,139,250,0.3)", flexShrink: 0 }}>
+                <img src="/photos/assistant.png" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "52% 10%", transform: "scale(2.0)", transformOrigin: "52% 10%" }} />
+              </div>
+            )}
+            <div style={{
+              maxWidth: "78%", padding: "10px 14px", borderRadius: m.role === "user" ? "16px 16px 4px 16px" : "4px 16px 16px 16px",
+              background: m.role === "user" ? "linear-gradient(135deg,#6366f1,#4f46e5)" : "#1e293b",
+              color: "#e2e8f0", fontSize: 13, lineHeight: 1.65,
+              border: m.role === "assistant" ? "1px solid #334155" : "none",
+              whiteSpace: "pre-wrap",
+            }}>
+              {m.content.split("\n").map((line, li, arr) => renderLine(line, li, arr))}
+            </div>
+          </div>
+        ))}
+        {loading && (
+          <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+            <div style={{ width: 28, height: 28, borderRadius: "50%", overflow: "hidden", border: "1px solid rgba(167,139,250,0.3)", flexShrink: 0 }}>
+              <img src="/photos/assistant.png" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "52% 10%", transform: "scale(2.0)", transformOrigin: "52% 10%" }} />
+            </div>
+            <div style={{ background: "#1e293b", border: "1px solid #334155", borderRadius: "4px 16px 16px 16px", padding: "12px 16px" }}>
+              <div style={{ display: "flex", gap: 5 }}>
+                {[0, 0.2, 0.4].map((d, i) => <span key={i} style={{ width: 7, height: 7, borderRadius: "50%", background: "#a78bfa", display: "inline-block", animation: "skeletonPulse 1.2s ease-in-out infinite", animationDelay: `${d}s` }} />)}
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Suggestions IA */}
+        {!loading && suggestions.length > 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, paddingTop: 4 }}>
+            {suggestions.map(s => (
+              <button key={s} onClick={() => sendMessage(s)}
+                style={{ padding: "5px 11px", borderRadius: 20, border: "1px solid #334155", background: "#1e293b", color: "#94a3b8", fontSize: 11, cursor: "pointer", transition: "all 0.15s" }}
+                onMouseEnter={e => { e.currentTarget.style.background = "#334155"; e.currentTarget.style.color = "#e2e8f0"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "#1e293b"; e.currentTarget.style.color = "#94a3b8"; }}
+              >{s}</button>
+            ))}
+          </div>
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Input */}
+      <div style={{ display: "flex", gap: 8, alignItems: "flex-end", marginTop: 10 }}>
+        <textarea
+          ref={inputRef}
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Posez une question, demandez un email, une analyse… (Entrée pour envoyer)"
+          rows={2}
+          style={{ flex: 1, resize: "none", border: "1px solid #334155", borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#e2e8f0", background: "#0f172a", outline: "none", lineHeight: 1.5, maxHeight: 100, overflowY: "auto", fontFamily: "system-ui, sans-serif" }}
+          onFocus={e => e.target.style.borderColor = "#6366f1"}
+          onBlur={e => e.target.style.borderColor = "#334155"}
+        />
+        <button onClick={() => sendMessage()} disabled={!input.trim() || loading}
+          style={{ width: 42, height: 42, borderRadius: "50%", border: "none", background: (!input.trim() || loading) ? "#1e293b" : "linear-gradient(135deg,#6366f1,#4f46e5)", color: "#fff", cursor: (!input.trim() || loading) ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0, transition: "all 0.2s" }}>
+          ↑
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function DevisEditor() {
   const [form, setForm] = useState({

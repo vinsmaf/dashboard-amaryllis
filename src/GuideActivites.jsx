@@ -103,7 +103,7 @@ const conseils = [
 export default function GuideActivites() {
   return (
     <>
-      <SEOMeta title="10 activités incontournables à Sainte-Luce Martinique | Amaryllis" description="Les 10 meilleures activités depuis nos villas : snorkeling avec les tortues, randonnée Montravail, rhum Trois-Rivières, catamaran, cuisine créole. Sélection testée par vos hôtes." canonical="/activites-sainte-luce" image="https://villamaryllis.com/photos/amaryllis/01.webp" type="article" />
+      <SEOMeta title="Activités Sainte-Luce Martinique — Guide 2026 | Amaryllis" description="Les 10 meilleures activités depuis nos villas : snorkeling avec les tortues, randonnée Montravail, rhum Trois-Rivières, catamaran, cuisine créole. Sélection testée par vos hôtes." canonical="/activites-sainte-luce" image="https://villamaryllis.com/photos/amaryllis/01.webp" type="article" />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         "@context": "https://schema.org",
         "@graph": [

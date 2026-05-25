@@ -3,18 +3,19 @@
  *
  * Crons :
  *   "0 * * * *"   → sync iCal toutes les heures
- *   "0 9 * * *"   → audit + rappels J-3/J-1/J+1/J+2/J-7direct + alertes + gap pricing + yield pricing
+ *   "0 9 * * *"   → audit + rappels J-7conseils/J-3/J-1/J+1/J+2/J+3/J-7direct + alertes + gap pricing + yield pricing
  *   "0 6 * * 1"   → rapport hebdomadaire (lundi matin)
  *   "0 1 1 * *"   → export comptable mensuel (1er du mois)
  *
  * Fonctions principales :
  *   runSync            — Fetch iCal Airbnb + Booking, détecte nouvelles réservations
- *   runReminders       — Rappels J-3, J-1 (+ ntfy ménage), J+1, J+2 avis, J-7 direct
+ *   runReminders       — Rappels J-7conseils, J-3, J-1 (+ ntfy ménage), J+1, J+2 avis, J+3 Google, J-7 direct
  *   runOccupancyAlerts — Alertes sous-occupation 30j + urgence 0 résa 14j
  *   runGapPricing      — Remises automatiques sur trous de calendrier 1-4 nuits
  *   runYieldPricing    — Yield management : -20%/-15% si occ < 30% sur 14j
  *   runMonitor         — Audit HTTP + alerte expiration token Beds24
  *   runWeeklyReport    — Rapport hebdomadaire (occupation, revenus, arrivées)
+ *   runPrixRecap       — Rappel lundi : vérifier/synchroniser les prix Airbnb
  *   runMonthlyExport   — Export CSV comptable mensuel
  *   runCautionAutoRelease — Libération automatique des cautions Stripe J+3
  *
@@ -29,13 +30,27 @@
  */
 
 // ── iCal URLs Airbnb ─────────────────────────────────────────────────────────
-const ICAL_AIRBNB = {
+// URLs Airbnb — lues depuis les secrets wrangler (ICAL_AIRBNB_*)
+// Fallback sur les valeurs hardcodées pour la rétrocompatibilité
+// Pour migrer : wrangler secret put ICAL_AIRBNB_AMARYLLIS --name amaryllis-ical-sync
+const ICAL_AIRBNB_FALLBACK = {
   amaryllis:  "https://www.airbnb.fr/calendar/ical/54269844.ics?t=681e7d55c76a4845839d24c0bc18ca94",
   schoelcher: "https://www.airbnb.fr/calendar/ical/24242415.ics?t=400f2712fa95485692d5911972f5533d",
   geko:       "https://www.airbnb.fr/calendar/ical/1263155865459755724.ics?t=1c95f057feda4b2fa08519aad1001ca9",
   mabouya:    "https://www.airbnb.fr/calendar/ical/1046596752160926069.ics?t=05c0e5dbdd9542878d58aa760416cf4f",
   zandoli:    "https://www.airbnb.fr/calendar/ical/792768220924504884.ics?t=cfc774d9c7fa40bfbe5f0757ba06b090",
 };
+
+function getAirbnbUrls(env) {
+  const map = {};
+  const keys = { amaryllis: "ICAL_AIRBNB_AMARYLLIS", geko: "ICAL_AIRBNB_GEKO",
+                 mabouya: "ICAL_AIRBNB_MABOUYA", schoelcher: "ICAL_AIRBNB_SCHOELCHER",
+                 zandoli: "ICAL_AIRBNB_ZANDOLI" };
+  for (const [bienId, envKey] of Object.entries(keys)) {
+    map[bienId] = env[envKey] || ICAL_AIRBNB_FALLBACK[bienId];
+  }
+  return map;
+}
 
 function getBookingUrls(env) {
   const map = {};
@@ -123,15 +138,25 @@ function parseICS(text, bienId) {
   return events;
 }
 
-async function fetchICS(url) {
-  const res = await fetch(url, {
-    headers: { "User-Agent": "Mozilla/5.0 (compatible; AmaryllisSync/1.0)" },
-    redirect: "follow",
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const text = await res.text();
-  if (!text.includes("VCALENDAR")) throw new Error("Format ICS invalide");
-  return text;
+async function fetchICS(url, timeoutMs = 12000) {
+  const controller = new AbortController();
+  const tid = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; AmaryllisSync/1.0)" },
+      redirect: "follow",
+      signal: controller.signal,
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+    if (!text.includes("VCALENDAR")) throw new Error("Format ICS invalide");
+    return text;
+  } catch (err) {
+    if (err.name === "AbortError") throw new Error(`Timeout (>${timeoutMs}ms) : ${url}`);
+    throw err;
+  } finally {
+    clearTimeout(tid);
+  }
 }
 
 // ── WhatsApp via CallMeBot ───────────────────────────────────────────────────
@@ -162,11 +187,13 @@ async function sendWhatsApp(env, text) {
 async function sendEmail(env, { to, subject, html }) {
   if (!env.RESEND_API_KEY) return;
   const dest = to || env.NOTIFICATION_EMAIL || "contact@villamaryllis.com";
+  // RESEND_FROM = adresse expéditeur vérifiée dans Resend (ex: notifications@mail.villamaryllis.com)
+  const fromAddr = env.RESEND_FROM || "Amaryllis <notifications@mail.villamaryllis.com>";
   const r = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { "Authorization": `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      from: "Amaryllis Sync <sync@villamaryllis.com>",
+      from: fromAddr,
       to: [dest],
       subject,
       html,
@@ -328,6 +355,47 @@ N'hésitez pas si vous avez des questions. À très bientôt !
       console.log(`[reminders] J-3 envoyé — ${nom} · ${guest}`);
     }
 
+    // ── Mi-séjour : check satisfaction + upsells (J+3 après check-in) ─────────
+    // Ne déclenche que si le séjour fait 5+ nuits et que le voyageur est encore là
+    if (daysToCheckin === -3 && daysToCheckout >= 1 && nights >= 5) {
+      const kvKey = `reminder:midstay:${e.uid}`;
+      if (await env.ICAL_STORE.get(kvKey)) continue;
+
+      const canalNom = e.canal === "airbnb" ? "Airbnb" : e.canal === "booking" ? "Booking.com" : "messagerie directe";
+      const bookingLink = `https://villamaryllis.com/${e.bienId}`;
+
+      await sendEmail(env, {
+        subject: `🌟 Mi-séjour · ${guest} est chez vous depuis 3 jours — ${nom}`,
+        html: emailWrapper(`
+          <h2 style="color:#0e3b3a;margin:0 0 8px">🌟 Mi-séjour · Satisfaction + services</h2>
+          <p style="color:#7a6b5a;font-size:13px;margin:0 0 20px">${nom} · ${guest} · arrivée le ${formatDate(e.checkin)} · départ le ${formatDate(e.checkout)} (${daysToCheckout} nuit${daysToCheckout > 1 ? "s" : ""} restante${daysToCheckout > 1 ? "s" : ""})</p>
+          <div style="background:#fff;border-radius:8px;padding:20px 24px;font-size:14px;color:#0e3b3a;line-height:1.9;">
+            <p style="margin:0 0 12px;font-weight:700;">✅ 2 actions à faire maintenant :</p>
+            <ul style="margin:0 0 20px;padding-left:20px;font-size:13px;color:#3d2c1e;line-height:2.2;">
+              <li>
+                💬 <strong>Vérifier la satisfaction</strong> — envoyer ce message via ${canalNom} :<br/>
+                <div style="background:#f8f4ed;border-left:3px solid #c47254;border-radius:0 8px 8px 0;padding:12px 16px;font-size:12px;color:#3d2c1e;white-space:pre-line;margin-top:8px;">Bonjour ${guest}, j'espère que votre séjour à ${nom} se déroule pour le mieux ! Tout est à votre convenance ? N'hésitez pas si vous avez besoin de quoi que ce soit. Profitez bien de ces derniers jours 🌴</div>
+              </li>
+              <li style="margin-top:12px;">
+                🎁 <strong>Proposer des services supplémentaires</strong> :<br/>
+                <ul style="margin:8px 0 0 0;padding-left:16px;font-size:12px;line-height:2;">
+                  <li>🍽️ Chef à domicile (+150€/repas) — à proposer si séjour longue durée</li>
+                  <li>🚗 Transfert retour aéroport (+80€)</li>
+                  <li>🧹 Ménage intermédiaire (+60€) — si séjour >7 nuits</li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+          <div style="margin-top:16px;background:#e8f4f3;border-radius:8px;padding:14px 18px;font-size:12px;color:#0e3b3a;">
+            📌 Rappel : le départ est prévu le ${formatDate(e.checkout)} avant 11h. L'équipe ménage est planifiée pour après le départ.
+          </div>
+        `),
+      });
+
+      await env.ICAL_STORE.put(kvKey, "sent", { expirationTtl: 60 * 60 * 24 * 30 });
+      console.log(`[reminders] Mi-séjour envoyé — ${nom} · ${guest}`);
+    }
+
     // ── J-1 : rappel pré-départ + WhatsApp ménage ────────────────────────────
     if (daysToCheckout === 1) {
       const kvKey = `reminder:j1:${e.uid}`;
@@ -460,6 +528,64 @@ Merci encore, et à bientôt peut-être en Martinique !
       console.log(`[reminders] J+2 avis envoyé — ${nom} · ${guest}`);
     }
 
+    // ── J+3 : avis Google + fidélisation ─────────────────────────────────────
+    if (daysToCheckout === -3) {
+      const kvKey = `reminder:j3google:${e.uid}`;
+      if (await env.ICAL_STORE.get(kvKey)) continue;
+
+      const bookingLink = `https://villamaryllis.com/${e.bienId}`;
+      const directLink = `https://villamaryllis.com/reservation-directe-martinique`;
+      const googleReviewUrl = env.GOOGLE_REVIEW_URL || "https://search.google.com/local/writereview?placeid=ChIJWbdLR7ghDowRCpp037VX9Jk";
+      // Code promo unique par séjour — format mémorable
+      const promoCode = `AMARYLLIS-${e.bienId.toUpperCase().slice(0,4)}-DIRECT`;
+
+      await sendEmail(env, {
+        subject: `🌟 J+3 · Avis Google + fidélisation — ${guest} · ${nom}`,
+        html: emailWrapper(`
+          <h2 style="color:#0e3b3a;margin:0 0 8px">🌟 Rappel J+3 · Avis Google & fidélisation</h2>
+          <p style="color:#7a6b5a;font-size:13px;margin:0 0 20px">${nom} · ${guest} · séjour du ${formatDate(e.checkin)} au ${formatDate(e.checkout)}</p>
+          <div style="background:#fff;border-radius:8px;padding:20px 24px;font-size:14px;color:#0e3b3a;line-height:1.9;">
+            <p style="margin:0 0 12px;font-weight:700;">📌 2 actions post-séjour à faire :</p>
+            <ul style="margin:0 0 20px;padding-left:20px;font-size:13px;color:#3d2c1e;line-height:2.2;">
+              <li>
+                ⭐ <strong>Demander un avis Google</strong> — envoyer ce lien à ${guest} :<br/>
+                <a href="${googleReviewUrl}" style="color:#0e3b3a;word-break:break-all;">${googleReviewUrl}</a>
+              </li>
+              <li>
+                🎁 <strong>Offre fidélité −10%</strong> — réservation directe, sans frais Airbnb :<br/>
+                Code : <strong style="font-family:monospace;font-size:14px;color:#c47254;">${promoCode}</strong><br/>
+                Page directe : <a href="${directLink}" style="color:#0e3b3a;">${directLink}</a><br/>
+                <span style="font-size:12px;color:#7a6b5a;">Mentionner le code lors de la réservation — économie de 12–18% vs Airbnb/Booking</span>
+              </li>
+            </ul>
+            <p style="margin:0 0 12px;font-weight:700;">💬 Message à copier-coller pour ${guest} :</p>
+            <div style="background:#f8f4ed;border-left:3px solid #c47254;border-radius:0 8px 8px 0;padding:16px 20px;font-size:13px;color:#3d2c1e;white-space:pre-line;">Bonjour ${guest},
+
+J'espère que votre retour s'est bien passé et que votre séjour à ${nom} vous a laissé de beaux souvenirs !
+
+Un service comme le vôtre mérite un avis — si vous avez 2 minutes, cela nous aide énormément :
+⭐ ${googleReviewUrl}
+
+Et si l'envie de revenir en Martinique vous prend, sachez que vous pouvez réserver directement sur notre site (sans frais Airbnb ni Booking, soit 12–18% d'économie) :
+🌐 ${directLink}
+
+Mentionnez le code <strong>${promoCode}</strong> pour bénéficier de -10% supplémentaires sur votre prochain séjour.
+
+À très bientôt peut-être !
+— Vincent, Résidence Amaryllis</div>
+          </div>
+          <div style="margin-top:16px;text-align:center;">
+            <a href="${googleReviewUrl}" style="background:#0e3b3a;color:#fff;text-decoration:none;padding:10px 20px;border-radius:8px;font-weight:700;font-size:13px;margin-right:8px;">Avis Google →</a>
+            <a href="${directLink}" style="background:#c47254;color:#fff;text-decoration:none;padding:10px 20px;border-radius:8px;font-weight:700;font-size:13px;">Page réservation directe →</a>
+          </div>
+          <p style="font-size:11px;color:#888;margin-top:20px;">💡 La caution de ${CAUTION_AMOUNTS[e.bienId] || 500}€ est libérée automatiquement aujourd'hui (J+3).</p>
+        `),
+      });
+
+      await env.ICAL_STORE.put(kvKey, "sent", { expirationTtl: 60 * 60 * 24 * 30 });
+      console.log(`[reminders] J+3 Google + fidélisation envoyé — ${nom} · ${guest}`);
+    }
+
     // ── J-7 : réservation directe ────────────────────────────────────────────
     if (daysToCheckin === 7 && e.canal !== "airbnb" && e.canal !== "booking") {
       const kvKey = `reminder:j7direct:${e.uid}`;
@@ -491,6 +617,58 @@ Merci encore, et à bientôt peut-être en Martinique !
 
       await env.ICAL_STORE.put(kvKey, "sent", { expirationTtl: 60 * 60 * 24 * 14 });
       console.log(`[reminders] J-7 direct envoyé — ${nom} · ${guest}`);
+    }
+
+    // ── J-7 : conseils locaux (Airbnb / Booking) ──────────────────────────────
+    if (daysToCheckin === 7 && (e.canal === "airbnb" || e.canal === "booking")) {
+      const kvKey = `reminder:j7conseils:${e.uid}`;
+      if (await env.ICAL_STORE.get(kvKey)) continue;
+
+      const guide = GUIDE_URLS[e.bienId] || "https://villamaryllis.com";
+      const canalNom = e.canal === "airbnb" ? "Airbnb" : "Booking.com";
+      const canalIcon = e.canal === "airbnb" ? "🏠" : "📋";
+      const nights = diffDays(e.checkin, e.checkout);
+
+      await sendEmail(env, {
+        subject: `🌴 J-7 · Conseils locaux à partager — ${guest} · ${nom}`,
+        html: emailWrapper(`
+          <h2 style="color:#0e3b3a;margin:0 0 8px">🌴 Rappel J-7 · Conseils locaux à partager</h2>
+          <p style="color:#7a6b5a;font-size:13px;margin:0 0 20px">${nom} · ${guest} · arrivée le ${formatDate(e.checkin)} · ${nights} nuit${nights > 1 ? "s" : ""} · via ${canalNom}</p>
+          <div style="background:#fff;border-radius:8px;padding:20px 24px;font-size:14px;color:#0e3b3a;line-height:1.9;">
+            <p style="margin:0 0 12px;font-weight:700;">${canalIcon} Message à envoyer via ${canalNom} :</p>
+            <div style="background:#f8f4ed;border-left:3px solid #c47254;border-radius:0 8px 8px 0;padding:16px 20px;font-size:13px;color:#3d2c1e;white-space:pre-line;">Bonjour ${guest},
+
+Nous avons hâte de vous accueillir dans ${nom} dans une semaine !
+
+Voici notre guide voyageur avec nos adresses et bons plans pour votre séjour :
+👉 ${guide}
+
+Vous y trouverez :
+• Les meilleures plages à proximité
+• Nos restaurants préférés (avec les adresses que les guides ne mentionnent pas)
+• Les activités incontournables selon la saison
+• Les infos pratiques pour votre arrivée
+
+N'hésitez pas à nous contacter si vous avez des questions. À très bientôt !
+— Vincent & Amaryllis Locations</div>
+          </div>
+          <div style="background:#e8f4f3;border-radius:8px;padding:16px 20px;margin-top:16px;font-size:13px;color:#0e3b3a;">
+            <p style="margin:0 0 8px;font-weight:700;">✅ Checklist J-7 :</p>
+            <ul style="margin:0;padding-left:20px;line-height:2;">
+              <li>Copier-coller le message ci-dessus sur ${canalNom}</li>
+              <li>Vérifier les horaires d'arrivée avec ${guest}</li>
+              <li>Préparer les codes d'accès et plan de la maison</li>
+              <li>Linge de maison commandé / confirmé</li>
+            </ul>
+          </div>
+          <div style="margin-top:16px;text-align:center;">
+            <a href="${guide}" style="background:#0e3b3a;color:#fff;text-decoration:none;padding:10px 20px;border-radius:8px;font-weight:700;font-size:13px;">Voir le guide voyageur →</a>
+          </div>
+        `),
+      });
+
+      await env.ICAL_STORE.put(kvKey, "sent", { expirationTtl: 60 * 60 * 24 * 14 });
+      console.log(`[reminders] J-7 conseils locaux envoyé — ${nom} · ${guest}`);
     }
   }
 }
@@ -678,7 +856,7 @@ async function runOccupancyAlerts(env, allEvents) {
   }
 
   // Biens actifs (dans Airbnb ou Booking URLs)
-  const activeBiens = new Set(Object.keys(ICAL_AIRBNB));
+  const activeBiens = new Set(Object.keys(getAirbnbUrls(env)));
 
   // Alertes 0 résa dans 14j pour biens actifs
   const zeroAlerts = [];
@@ -775,7 +953,7 @@ async function runMonthlyExport(env, allEvents) {
     method: "POST",
     headers: { "Authorization": `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      from: "Amaryllis Sync <sync@villamaryllis.com>",
+      from: env.RESEND_FROM || "Amaryllis <notifications@mail.villamaryllis.com>",
       to: [env.NOTIFICATION_EMAIL || "contact@villamaryllis.com"],
       subject: `📊 Export comptable — ${label}`,
       html: emailWrapper(`
@@ -838,7 +1016,8 @@ async function runSync(env) {
 
   // Fetch tous les feeds en parallèle (5× plus rapide qu'en série)
   const bookingUrls = getBookingUrls(env);
-  const airbnbFeeds   = Object.entries(ICAL_AIRBNB).map(([id, url]) => syncFeed(env, id, url, "airbnb", allEvents, nouvelles));
+  const airbnbUrls  = getAirbnbUrls(env);
+  const airbnbFeeds   = Object.entries(airbnbUrls).map(([id, url]) => syncFeed(env, id, url, "airbnb", allEvents, nouvelles));
   const bookingFeeds  = Object.entries(bookingUrls).map(([id, url]) => syncFeed(env, id, url, "booking", allEvents, nouvelles));
   await Promise.all([...airbnbFeeds, ...bookingFeeds]);
 
@@ -1091,7 +1270,7 @@ async function runYieldPricing(env, allEvents) {
   }
 
   const allBienIds = new Set([
-    ...Object.keys(ICAL_AIRBNB),
+    ...Object.keys(getAirbnbUrls(env)),
     ...Object.keys(occ14),
   ]);
 
@@ -1178,15 +1357,102 @@ async function runYieldPricing(env, allEvents) {
   return yieldPrices;
 }
 
+// ── Rappel hebdomadaire : mise à jour des prix Airbnb ────────────────────────
+// Envoyé chaque lundi avec le rapport hebdomadaire (cron 0 6 * * 1)
+const AIRBNB_LISTINGS = [
+  { nom: "Villa Amaryllis", id: "54269844",             base: 280 },
+  { nom: "Zandoli",         id: "792768220924504884",   base: 220 },
+  { nom: "Géko",            id: "1263155865459755724",  base: 150 },
+  { nom: "Mabouya",         id: "1046596752160926069",  base: 110 },
+  { nom: "Bellevue",        id: "24242415",             base: 100 },
+];
+
+async function runPrixRecap(env) {
+  if (!env.RESEND_API_KEY) { console.log("[prix-recap] RESEND_API_KEY manquante — ignoré"); return; }
+  const dest = env.RECAP_EMAIL || env.NOTIFICATION_EMAIL || "contact@villamaryllis.com";
+  const dateStr = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+
+  const rows = AIRBNB_LISTINGS.map(l => `
+    <tr>
+      <td style="padding:12px 16px;border-bottom:1px solid #e8dcc8;font-weight:600;color:#0e3b3a;">${l.nom}</td>
+      <td style="padding:12px 16px;border-bottom:1px solid #e8dcc8;color:#555;">À partir de <strong>${l.base}€</strong>/nuit</td>
+      <td style="padding:12px 16px;border-bottom:1px solid #e8dcc8;">
+        <a href="https://www.airbnb.fr/hosting/listings/${l.id}/pricing"
+           style="background:#c47254;color:#fff;padding:6px 14px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600;">
+          Modifier →
+        </a>
+      </td>
+    </tr>`).join("");
+
+  const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+  const html = `<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#faf5e9;font-family:'Helvetica Neue',Arial,sans-serif;">
+  <div style="max-width:600px;margin:40px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+    <div style="background:#0e3b3a;padding:32px 32px 24px;">
+      <p style="color:#c47254;font-size:11px;letter-spacing:0.25em;text-transform:uppercase;margin:0 0 8px;">Rappel automatique · Lundi</p>
+      <h1 style="color:#faf5e9;font-weight:300;font-size:24px;margin:0;letter-spacing:0.05em;">Synchronisation des prix Airbnb</h1>
+      <p style="color:rgba(250,245,233,0.6);font-size:13px;margin:12px 0 0;">${dateStr}</p>
+    </div>
+    <div style="padding:28px 32px 8px;">
+      <p style="color:#555;font-size:15px;line-height:1.6;margin:0 0 20px;">
+        Pensez à vérifier et synchroniser vos tarifs sur Airbnb pour les 30 prochains jours.
+      </p>
+      <table style="width:100%;border-collapse:collapse;border:1px solid #e8dcc8;border-radius:8px;overflow:hidden;">
+        <thead>
+          <tr style="background:#f5efe0;">
+            <th style="padding:10px 16px;text-align:left;font-size:12px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;">Logement</th>
+            <th style="padding:10px 16px;text-align:left;font-size:12px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;">Prix de base</th>
+            <th style="padding:10px 16px;text-align:left;font-size:12px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;">Action</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div style="padding:24px 32px 32px;display:flex;gap:12px;flex-wrap:wrap;">
+      <a href="https://www.airbnb.fr/hosting/listings"
+         style="display:inline-block;background:#0e3b3a;color:#faf5e9;padding:12px 28px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;letter-spacing:0.06em;">
+        Ouvrir Airbnb Host →
+      </a>
+      <a href="${siteUrl}/admin"
+         style="display:inline-block;background:#c47254;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;">
+        Dashboard →
+      </a>
+    </div>
+    <div style="background:#f5efe0;padding:16px 32px;text-align:center;">
+      <p style="color:#aaa;font-size:12px;margin:0;">Message automatique · <a href="${siteUrl}" style="color:#aaa;">villamaryllis.com</a></p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  const r = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from: env.RESEND_FROM || "Amaryllis <notifications@mail.villamaryllis.com>",
+      to: [dest],
+      subject: `📅 Rappel prix Airbnb — ${new Date().toLocaleDateString("fr-FR")}`,
+      html,
+    }),
+  });
+  if (!r.ok) console.error("[prix-recap] Resend error:", await r.text());
+  else console.log(`[prix-recap] ✓ Rappel envoyé à ${dest}`);
+}
+
 // ── Exports Cloudflare Worker ────────────────────────────────────────────────
 export default {
   async scheduled(event, env, ctx) {
     const cron = event.cron;
 
     if (cron === "0 6 * * 1") {
-      // Lundi 6h UTC — rapport hebdomadaire
+      // Lundi 6h UTC — rapport hebdomadaire + rappel prix Airbnb
       const { allEvents } = await runSync(env);
-      ctx.waitUntil(runWeeklyReport(env, allEvents));
+      ctx.waitUntil(Promise.all([
+        runWeeklyReport(env, allEvents),
+        runPrixRecap(env),
+      ]));
 
     } else if (cron === "0 1 1 * *") {
       // 1er du mois — export comptable
@@ -1194,7 +1460,7 @@ export default {
       ctx.waitUntil(runMonthlyExport(env, allEvents));
 
     } else if (cron === "0 9 * * *") {
-      // 9h UTC chaque jour — audit + rappels + alertes + gap pricing
+      // 9h UTC chaque jour — audit + rappels + alertes + gap pricing + agents autonomes
       const { allEvents } = await runSync(env);
       ctx.waitUntil((async () => {
         await runMonitor(env);
@@ -1203,6 +1469,18 @@ export default {
         await runGapPricing(env, allEvents);
         await runYieldPricing(env, allEvents);
         await runCautionAutoRelease(env);
+        // Analyse autonome des 17 agents (nécessite ANTHROPIC_API_KEY dans les secrets CF Pages)
+        if (env.ANTHROPIC_API_KEY) {
+          try {
+            await fetch(`${env.SITE_URL || "https://villamaryllis.com"}/api/agents-run`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ agents: "all" }),
+            });
+          } catch (e) {
+            console.error("[agents-run] Cron error:", e.message);
+          }
+        }
       })());
 
     } else {
@@ -1236,6 +1514,10 @@ export default {
     }
     if (url.pathname === "/weekly") {
       const { allEvents } = await runSync(env); await runWeeklyReport(env, allEvents);
+      return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
+    }
+    if (url.pathname === "/prix-recap") {
+      await runPrixRecap(env);
       return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
     }
     if (url.pathname === "/monthly") {

@@ -143,3 +143,30 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+/* ── Animations globales ──────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(8px); }
+}
+
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 0.9; }
+}
+
+.skeleton-row td > span {
+  display: inline-block;
+  background: #1e293b;
+  border-radius: 4px;
+  animation: skeletonPulse 1.4s ease-in-out infinite;
+}
+
+.skeleton-row:nth-child(even) td > span {
+  animation-delay: 0.2s;
+}

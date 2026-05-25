@@ -1,0 +1,529 @@
+// AgentsKanban.jsx — Tableau Kanban des actions des 17 agents Amaryllis
+// Onglet "Agents" dans l'admin dashboard
+
+import { useState, useEffect, useCallback, useRef } from "react";
+
+// ── Constantes ───────────────────────────────────────────────────────────────
+const COLUMNS = [
+  { id: "backlog",   label: "Backlog",    color: "#64748b", bg: "rgba(100,116,139,0.10)", count_color: "#94a3b8" },
+  { id: "en-cours",  label: "En cours",   color: "#f59e0b", bg: "rgba(245,158,11,0.10)",  count_color: "#f59e0b" },
+  { id: "fait",      label: "Fait ✓",     color: "#10b981", bg: "rgba(16,185,129,0.10)",  count_color: "#10b981" },
+  { id: "bloqué",    label: "Bloqué",     color: "#ef4444", bg: "rgba(239,68,68,0.10)",   count_color: "#ef4444" },
+];
+
+const PRIORITY_COLORS = {
+  critique: { bg: "rgba(239,68,68,0.18)",   text: "#f87171", label: "🔴 Critique" },
+  haute:    { bg: "rgba(245,158,11,0.18)",  text: "#fbbf24", label: "🟠 Haute"    },
+  moyenne:  { bg: "rgba(99,102,241,0.18)",  text: "#818cf8", label: "🔵 Moyenne"  },
+  basse:    { bg: "rgba(100,116,139,0.15)", text: "#94a3b8", label: "⚪ Basse"    },
+};
+
+const CATEGORY_LABELS = {
+  securite:    "🔐 Sécurité",
+  legal:       "⚖️ Légal",
+  performance: "⚡ Perf.",
+  seo:         "🔍 SEO",
+  tracking:    "📡 Tracking",
+  business:    "💰 Business",
+  conversion:  "🎯 Conversion",
+  ux:          "✨ UX",
+  ops:         "🔧 Opérations",
+  crm:         "📧 CRM",
+  content:     "📝 Contenu",
+  ads:         "📣 Ads",
+  doc:         "📄 Doc",
+  technique:   "⚙️ Technique",
+  bug:         "🐛 Bug",
+};
+
+const ALL_AGENTS = [
+  { id: "juriste-compliance",        label: "Juriste",      emoji: "⚖️"  },
+  { id: "architecte-reseau",         label: "Archi. Réseau",emoji: "🔌"  },
+  { id: "webmaster",                 label: "Webmaster",    emoji: "🖥️" },
+  { id: "traffic-manager",           label: "Traffic Mgr",  emoji: "📈"  },
+  { id: "data-analyst",              label: "Data Analyst", emoji: "📊"  },
+  { id: "revenue-manager",           label: "Revenue Mgr",  emoji: "💡"  },
+  { id: "developpeur-multimedia",    label: "Dév. Média",   emoji: "🎬"  },
+  { id: "photographe-da",            label: "Photo DA",     emoji: "📸"  },
+  { id: "webdesigner",               label: "Webdesigner",  emoji: "🎨"  },
+  { id: "chef-produit-web",          label: "Chef Produit", emoji: "🏗️" },
+  { id: "community-manager",         label: "Community Mgr",emoji: "📱"  },
+  { id: "commercial-publicite",      label: "Commercial",   emoji: "💼"  },
+  { id: "crm-manager",               label: "CRM Manager",  emoji: "📧"  },
+  { id: "consultant-ebusiness",      label: "e-Business",   emoji: "🚀"  },
+  { id: "responsable-service-client",label: "Service Client",emoji: "🤝" },
+  { id: "responsable-logistique",    label: "Logistique",   emoji: "🏠"  },
+  { id: "seo-content-writer",        label: "SEO Writer",   emoji: "✍️" },
+];
+
+// ── Utils ────────────────────────────────────────────────────────────────────
+function timeAgo(ts) {
+  if (!ts) return null;
+  const diff = Math.floor(Date.now() / 1000) - ts;
+  if (diff < 3600)  return `${Math.floor(diff / 60)}min`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+  return `${Math.floor(diff / 86400)}j`;
+}
+
+// ── Composant Card ────────────────────────────────────────────────────────────
+function ActionCard({ action, onStatusChange, mob }) {
+  const [open, setOpen] = useState(false);
+  const prio = PRIORITY_COLORS[action.priority] || PRIORITY_COLORS.basse;
+  const cat  = CATEGORY_LABELS[action.category] || action.category;
+  const ago  = timeAgo(action.last_analyzed);
+
+  const NEXT_STATUS = {
+    "backlog":  ["en-cours", "fait", "bloqué"],
+    "en-cours": ["fait", "backlog", "bloqué"],
+    "fait":     ["backlog", "en-cours"],
+    "bloqué":   ["backlog", "en-cours"],
+  };
+
+  return (
+    <div style={{
+      background: "rgba(30,41,59,0.7)",
+      border: "1px solid rgba(255,255,255,0.07)",
+      borderRadius: 10,
+      padding: "10px 12px",
+      marginBottom: 8,
+      cursor: "pointer",
+      transition: "border-color 0.15s, transform 0.1s",
+    }}
+      onClick={() => setOpen(o => !o)}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.18)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)"; e.currentTarget.style.transform = "none"; }}
+    >
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 7, marginBottom: 6 }}>
+        <span style={{ fontSize: 14, flexShrink: 0 }}>{action.agent_emoji}</span>
+        <span style={{ fontSize: 11, color: "#94a3b8", flexShrink: 0, marginTop: 1 }}>{action.agent_label}</span>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 4, flexShrink: 0 }}>
+          <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 4, background: prio.bg, color: prio.text, fontWeight: 700 }}>
+            {action.priority.toUpperCase()}
+          </span>
+        </div>
+      </div>
+
+      {/* Texte action */}
+      <p style={{ margin: 0, fontSize: 12, color: "#e2e8f0", lineHeight: 1.4, fontWeight: 500 }}>
+        {action.action}
+      </p>
+
+      {/* Footer */}
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
+        <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 4, background: "rgba(255,255,255,0.06)", color: "#64748b" }}>
+          {cat}
+        </span>
+        <span style={{ fontSize: 9, color: "#475569" }}>⏱ {action.effort}</span>
+        {ago && <span style={{ fontSize: 9, color: "#334155" }}>🤖 analysé il y a {ago}</span>}
+        {action.notes && <span style={{ fontSize: 9, color: "#6366f1" }}>📝 note</span>}
+      </div>
+
+      {/* Détails dépliables */}
+      {open && (
+        <div
+          style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.07)" }}
+          onClick={e => e.stopPropagation()}
+        >
+          {action.notes && (
+            <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 8, fontStyle: "italic" }}>
+              📝 {action.notes}
+            </div>
+          )}
+          <div style={{ fontSize: 10, color: "#475569", marginBottom: 8 }}>
+            ID: {action.id} · {new Date(action.created_at * 1000).toLocaleDateString("fr-FR")}
+          </div>
+
+          {/* Boutons de changement de statut */}
+          <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+            {(NEXT_STATUS[action.status] || []).map(st => {
+              const col = COLUMNS.find(c => c.id === st);
+              return (
+                <button
+                  key={st}
+                  onClick={() => onStatusChange(action.id, st)}
+                  style={{
+                    padding: "4px 10px", borderRadius: 6, border: `1px solid ${col.color}40`,
+                    background: col.bg, color: col.color, fontSize: 10, cursor: "pointer", fontWeight: 600,
+                  }}
+                >
+                  → {col.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Composant principal ───────────────────────────────────────────────────────
+export default function AgentsKanban({ mob }) {
+  const [actions, setActions]         = useState([]);
+  const [stats, setStats]             = useState({});
+  const [loading, setLoading]         = useState(true);
+  const [initNeeded, setInitNeeded]   = useState(false);
+  const [running, setRunning]         = useState(false);
+  const [runResult, setRunResult]     = useState(null);
+  const [filterAgent, setFilterAgent] = useState("all");
+  const [filterPrio, setFilterPrio]   = useState("all");
+  const [filterCat, setFilterCat]     = useState("all");
+  const [search, setSearch]           = useState("");
+  const [lastRun, setLastRun]         = useState(null);
+  const runTimeout = useRef(null);
+
+  // ── Charger les actions ──────────────────────────────────────────────────
+  const load = useCallback(async () => {
+    try {
+      const r = await fetch("/api/agents-actions");
+      const d = await r.json();
+      if (d.hint?.includes("init")) {
+        setInitNeeded(true);
+        setLoading(false);
+        return;
+      }
+      setActions(d.actions || []);
+      setStats(d.stats || {});
+      setInitNeeded(false);
+    } catch {
+      // silencieux
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  // ── Initialiser la table D1 ──────────────────────────────────────────────
+  const handleInit = async () => {
+    setLoading(true);
+    try {
+      const r = await fetch("/api/agents-actions?action=init", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+      const d = await r.json();
+      if (d.ok) await load();
+    } catch { setLoading(false); }
+  };
+
+  // ── Changer le statut d'une action ───────────────────────────────────────
+  const handleStatusChange = async (id, newStatus) => {
+    // Optimistic update
+    setActions(prev => prev.map(a => a.id === id ? { ...a, status: newStatus, updated_at: Math.floor(Date.now() / 1000) } : a));
+    await fetch(`/api/agents-actions?id=${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: newStatus }),
+    });
+    // Recalc stats local
+    setStats(prev => {
+      const action = actions.find(a => a.id === id);
+      if (!action) return prev;
+      return {
+        ...prev,
+        [action.status]: Math.max(0, (prev[action.status] || 0) - 1),
+        [newStatus]: (prev[newStatus] || 0) + 1,
+      };
+    });
+  };
+
+  // ── Relancer l'analyse (tous les agents) ─────────────────────────────────
+  const handleRunAll = async () => {
+    if (running) return;
+    setRunning(true);
+    setRunResult(null);
+    try {
+      const r = await fetch("/api/agents-run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ agents: "all" }),
+      });
+      const d = await r.json();
+      if (d.error === "ANTHROPIC_API_KEY not configured in Cloudflare Pages env vars") {
+        setRunResult({ error: "Clé API Anthropic manquante — ajoutez ANTHROPIC_API_KEY dans Cloudflare Pages → Settings → Variables d'environnement" });
+      } else {
+        setRunResult(d);
+        setLastRun(new Date().toLocaleTimeString("fr-FR"));
+        await load();
+      }
+    } catch (e) {
+      setRunResult({ error: e.message });
+    } finally {
+      setRunning(false);
+      runTimeout.current = setTimeout(() => setRunResult(null), 8000);
+    }
+  };
+
+  // ── Filtres ──────────────────────────────────────────────────────────────
+  const filtered = actions.filter(a => {
+    if (filterAgent !== "all" && a.agent !== filterAgent) return false;
+    if (filterPrio  !== "all" && a.priority !== filterPrio) return false;
+    if (filterCat   !== "all" && a.category !== filterCat) return false;
+    if (search && !a.action.toLowerCase().includes(search.toLowerCase())
+                && !a.agent_label.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
+  const byCol = col => filtered.filter(a => a.status === col);
+
+  // ── Catégories uniques présentes ─────────────────────────────────────────
+  const cats = [...new Set(actions.map(a => a.category))].sort();
+
+  // ── Progress ─────────────────────────────────────────────────────────────
+  const total = Object.values(stats).reduce((s, v) => s + v, 0);
+  const done  = stats["fait"] || 0;
+  const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
+
+  // ── Render ───────────────────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 200, color: "#64748b" }}>
+        <span style={{ fontSize: 28, marginRight: 12, animation: "spin 1s linear infinite" }}>⚙️</span>
+        Chargement des actions agents…
+      </div>
+    );
+  }
+
+  if (initNeeded) {
+    return (
+      <div style={{ maxWidth: 540, margin: "60px auto", textAlign: "center" }}>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>🤖</div>
+        <h2 style={{ color: "#e2e8f0", fontSize: 18, marginBottom: 8 }}>Base de données non initialisée</h2>
+        <p style={{ color: "#64748b", fontSize: 13, marginBottom: 24, lineHeight: 1.6 }}>
+          La table <code style={{ background: "rgba(255,255,255,0.05)", padding: "1px 5px", borderRadius: 4 }}>agent_actions</code> n'existe pas encore dans D1.<br />
+          Cliquez pour créer la table et charger les <strong style={{ color: "#e2e8f0" }}>70 actions</strong> issues des rapports des 17 agents.
+        </p>
+        <button
+          onClick={handleInit}
+          style={{ padding: "12px 28px", borderRadius: 8, background: "#6366f1", color: "#fff", border: "none", fontSize: 14, cursor: "pointer", fontWeight: 700 }}
+        >
+          🚀 Initialiser la base agents
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ minHeight: "100%" }}>
+
+      {/* ── Header ── */}
+      <div style={{ display: "flex", alignItems: mob ? "flex-start" : "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 20 }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: 18, color: "#e2e8f0", fontWeight: 700 }}>
+            🤖 Agents — Plan d'action
+          </h2>
+          <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 12 }}>
+            17 agents · {total} actions · Analyse autonome quotidienne à 9h UTC
+            {lastRun && <span style={{ color: "#10b981", marginLeft: 8 }}>· Dernière relance {lastRun}</span>}
+          </p>
+        </div>
+
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          {/* Bouton relancer */}
+          <button
+            onClick={handleRunAll}
+            disabled={running}
+            style={{
+              padding: "8px 16px", borderRadius: 8, border: "1px solid rgba(99,102,241,0.4)",
+              background: running ? "rgba(99,102,241,0.08)" : "rgba(99,102,241,0.18)",
+              color: running ? "#64748b" : "#818cf8", fontSize: 12, cursor: running ? "not-allowed" : "pointer",
+              fontWeight: 600, display: "flex", alignItems: "center", gap: 6,
+            }}
+          >
+            {running ? (
+              <><span style={{ display: "inline-block", animation: "spin 1s linear infinite" }}>⚙️</span> Analyse en cours…</>
+            ) : (
+              <><span>🔄</span> Relancer l'analyse</>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* ── Feedback relance ── */}
+      {runResult && (
+        <div style={{
+          padding: "10px 14px", borderRadius: 8, marginBottom: 16, fontSize: 12,
+          background: runResult.error ? "rgba(239,68,68,0.1)" : "rgba(16,185,129,0.1)",
+          border: `1px solid ${runResult.error ? "rgba(239,68,68,0.3)" : "rgba(16,185,129,0.3)"}`,
+          color: runResult.error ? "#f87171" : "#6ee7b7",
+        }}>
+          {runResult.error
+            ? `⚠️ ${runResult.error}`
+            : `✅ Analyse terminée — ${runResult.ok_count}/${runResult.agents_run} agents mis à jour · +${runResult.results?.reduce((s, r) => s + (r.inserted || 0), 0) || 0} nouvelles actions`
+          }
+        </div>
+      )}
+
+      {/* ── Progress global ── */}
+      <div style={{ background: "rgba(15,23,42,0.6)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: "12px 16px", marginBottom: 20 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>Progression globale</span>
+          <span style={{ fontSize: 13, color: "#10b981", fontWeight: 700 }}>{pct}% — {done} / {total} actions</span>
+        </div>
+        <div style={{ height: 6, background: "rgba(255,255,255,0.06)", borderRadius: 3, overflow: "hidden" }}>
+          <div style={{ height: "100%", width: `${pct}%`, background: "linear-gradient(90deg, #10b981, #6ee7b7)", borderRadius: 3, transition: "width 0.5s ease" }} />
+        </div>
+        <div style={{ display: "flex", gap: 16, marginTop: 8, flexWrap: "wrap" }}>
+          {COLUMNS.map(col => (
+            <span key={col.id} style={{ fontSize: 11, color: col.count_color }}>
+              <span style={{ fontWeight: 700 }}>{stats[col.id] || 0}</span> {col.label}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Filtres ── */}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16, alignItems: "center" }}>
+        {/* Search */}
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="🔍 Rechercher…"
+          style={{
+            padding: "6px 12px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.1)",
+            background: "rgba(15,23,42,0.6)", color: "#e2e8f0", fontSize: 12, width: 180, outline: "none",
+          }}
+        />
+        {/* Agent */}
+        <select value={filterAgent} onChange={e => setFilterAgent(e.target.value)}
+          style={{ padding: "6px 10px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(15,23,42,0.8)", color: "#94a3b8", fontSize: 12, cursor: "pointer" }}>
+          <option value="all">Tous les agents</option>
+          {ALL_AGENTS.map(a => <option key={a.id} value={a.id}>{a.emoji} {a.label}</option>)}
+        </select>
+        {/* Priorité */}
+        <select value={filterPrio} onChange={e => setFilterPrio(e.target.value)}
+          style={{ padding: "6px 10px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(15,23,42,0.8)", color: "#94a3b8", fontSize: 12, cursor: "pointer" }}>
+          <option value="all">Toutes priorités</option>
+          <option value="critique">🔴 Critique</option>
+          <option value="haute">🟠 Haute</option>
+          <option value="moyenne">🔵 Moyenne</option>
+          <option value="basse">⚪ Basse</option>
+        </select>
+        {/* Catégorie */}
+        <select value={filterCat} onChange={e => setFilterCat(e.target.value)}
+          style={{ padding: "6px 10px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(15,23,42,0.8)", color: "#94a3b8", fontSize: 12, cursor: "pointer" }}>
+          <option value="all">Toutes catégories</option>
+          {cats.map(c => <option key={c} value={c}>{CATEGORY_LABELS[c] || c}</option>)}
+        </select>
+
+        {(filterAgent !== "all" || filterPrio !== "all" || filterCat !== "all" || search) && (
+          <button onClick={() => { setFilterAgent("all"); setFilterPrio("all"); setFilterCat("all"); setSearch(""); }}
+            style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "#64748b", fontSize: 11, cursor: "pointer" }}>
+            ✕ Reset filtres
+          </button>
+        )}
+
+        <span style={{ fontSize: 11, color: "#475569", marginLeft: "auto" }}>
+          {filtered.length} action{filtered.length > 1 ? "s" : ""}
+        </span>
+      </div>
+
+      {/* ── Kanban ── */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: mob ? "1fr" : "repeat(4, 1fr)",
+        gap: 12,
+        alignItems: "start",
+      }}>
+        {COLUMNS.map(col => {
+          const cards = byCol(col.id);
+          return (
+            <div key={col.id} style={{
+              background: col.bg,
+              border: `1px solid ${col.color}25`,
+              borderTop: `3px solid ${col.color}`,
+              borderRadius: 10,
+              padding: "12px 10px",
+              minHeight: 120,
+            }}>
+              {/* En-tête colonne */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: col.count_color }}>{col.label}</span>
+                <span style={{
+                  fontSize: 11, fontWeight: 800, padding: "1px 8px", borderRadius: 10,
+                  background: `${col.color}25`, color: col.color,
+                }}>
+                  {cards.length}
+                </span>
+              </div>
+
+              {/* Cards */}
+              {cards.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "20px 0", color: "#334155", fontSize: 11 }}>
+                  Aucune action
+                </div>
+              ) : (
+                cards.map(a => (
+                  <ActionCard key={a.id} action={a} onStatusChange={handleStatusChange} mob={mob} />
+                ))
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── Planning priorisé ── */}
+      {filtered.filter(a => a.status === "backlog").length > 0 && (
+        <div style={{ marginTop: 28 }}>
+          <h3 style={{ color: "#94a3b8", fontSize: 14, fontWeight: 700, marginBottom: 12 }}>
+            📋 Planning de traitement recommandé — Backlog par priorité
+          </h3>
+          <div style={{ background: "rgba(15,23,42,0.6)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, overflow: "hidden" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+              <thead>
+                <tr style={{ background: "rgba(255,255,255,0.04)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+                  <th style={{ padding: "10px 12px", textAlign: "left", color: "#64748b", fontWeight: 600, width: 30 }}>#</th>
+                  <th style={{ padding: "10px 12px", textAlign: "left", color: "#64748b", fontWeight: 600 }}>Agent</th>
+                  <th style={{ padding: "10px 12px", textAlign: "left", color: "#64748b", fontWeight: 600, width: "40%" }}>Action</th>
+                  <th style={{ padding: "10px 12px", textAlign: "left", color: "#64748b", fontWeight: 600 }}>Priorité</th>
+                  <th style={{ padding: "10px 12px", textAlign: "left", color: "#64748b", fontWeight: 600 }}>Effort</th>
+                  <th style={{ padding: "10px 12px", textAlign: "left", color: "#64748b", fontWeight: 600 }}>Catégorie</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered
+                  .filter(a => a.status === "backlog")
+                  .sort((a, b) => {
+                    const pOrder = { critique: 0, haute: 1, moyenne: 2, basse: 3 };
+                    return (pOrder[a.priority] ?? 4) - (pOrder[b.priority] ?? 4);
+                  })
+                  .map((a, i) => {
+                    const prio = PRIORITY_COLORS[a.priority] || PRIORITY_COLORS.basse;
+                    const cat  = CATEGORY_LABELS[a.category] || a.category;
+                    return (
+                      <tr key={a.id} style={{
+                        borderBottom: "1px solid rgba(255,255,255,0.04)",
+                        transition: "background 0.12s",
+                      }}
+                        onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.03)"}
+                        onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                      >
+                        <td style={{ padding: "8px 12px", color: "#475569" }}>{i + 1}</td>
+                        <td style={{ padding: "8px 12px" }}>
+                          <span style={{ fontSize: 13, marginRight: 5 }}>{a.agent_emoji}</span>
+                          <span style={{ color: "#94a3b8", fontSize: 11 }}>{a.agent_label}</span>
+                        </td>
+                        <td style={{ padding: "8px 12px", color: "#e2e8f0", lineHeight: 1.4 }}>{a.action}</td>
+                        <td style={{ padding: "8px 12px" }}>
+                          <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 4, background: prio.bg, color: prio.text, fontWeight: 700 }}>
+                            {a.priority.toUpperCase()}
+                          </span>
+                        </td>
+                        <td style={{ padding: "8px 12px", color: "#64748b", whiteSpace: "nowrap" }}>{a.effort}</td>
+                        <td style={{ padding: "8px 12px", color: "#475569", fontSize: 11 }}>{cat}</td>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── Note cron ── */}
+      <div style={{ marginTop: 20, padding: "10px 14px", borderRadius: 8, background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.15)", fontSize: 11, color: "#64748b" }}>
+        🤖 <strong style={{ color: "#818cf8" }}>Analyse autonome</strong> — Le Worker Cloudflare déclenche l'analyse de chaque agent quotidiennement à 9h UTC.<br/>
+        Prérequis : ajouter <code style={{ background: "rgba(255,255,255,0.06)", padding: "0 4px", borderRadius: 3 }}>ANTHROPIC_API_KEY</code> dans Cloudflare Pages → Settings → Variables d'environnement.
+      </div>
+    </div>
+  );
+}

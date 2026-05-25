@@ -2,6 +2,9 @@
 # Utilisé par wrangler pages dev (npm run dev:cf)
 # NE PAS committer .dev.vars (déjà dans .gitignore via *.local)
 
+ADMIN_PWD=your_admin_password_here
+ADMIN_PWD_MENAGE=your_menage_password_here
+
 BEDS24_API_KEY=votre_api_key_beds24
 BEDS24_PROP_KEY=votre_prop_key_beds24
 BEDS24_WEBHOOK_SECRET=optionnel
@@ -9,6 +12,7 @@ BEDS24_WEBHOOK_SECRET=optionnel
 APPS_SCRIPT_URL=https://script.google.com/macros/s/VOTRE_ID/exec
 
 STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_your_secret_here
 
 # iCal Airbnb
 ICAL_AMARYLLIS=
@@ -18,6 +22,9 @@ ICAL_MABOUYA=
 ICAL_IGUANA=
 ICAL_ZANDOLI=
 ICAL_NOGENT=
+
+# KV binding pour cache disponibilités (optionnel - configurer dans CF Pages dashboard)
+# AVAIL_CACHE=<KV namespace ID>
 
 # iCal Booking.com
 ICAL_BOOKING_AMARYLLIS=

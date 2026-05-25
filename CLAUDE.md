@@ -6,6 +6,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Rental property management dashboard for 7 properties in France (Martinique + Nogent-sur-Marne). Combined public website (villamaryllis.com) and private `/admin` dashboard. Stack: React 19 + Vite, deployed on Cloudflare Pages.
 
+## Design System
+
+`src/tokens.css` — CSS variables for both surfaces (site = warm ivory/navy/coral, admin = dark slate). Imported globally in `main.jsx`. Token names: `--c-navy`, `--c-coral`, `--c-ivory`, `--c-sand`, `--c-muted`, `--c-gold`, etc.
+
+`src/primitives.jsx` — reusable site components: `<Eyebrow>`, `<Display>`, `<Editorial>`, `<Button>`, `<Chip>`, `<RatingBadge>`, `<Icon>`, `<ThemeToggle>`.
+
+`public/icons.svg` — SVG sprite, 21 icons (bed, bath, wifi, pool, car, star, calendar…). Usage: `<svg><use href="/icons.svg#bed"/></svg>`.
+
+**For all French/English copy in `PublicSite.jsx` or emails, follow `docs/voice.md`.**
+- Always `vous` (formal), never `tu`
+- CTA canonical: RÉSERVER · DÉCOUVRIR · CONTACT
+- Caution copy: see voice.md §6
+- Property names canonical: see voice.md §12 (note: Schœlcher with œ ligature)
+
 ## Commands
 
 ```bash

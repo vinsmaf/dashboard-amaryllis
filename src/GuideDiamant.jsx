@@ -91,7 +91,7 @@ export default function GuideDiamant() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: css }} />
-<SEOMeta title="Guide Le Diamant Martinique — Rocher, plongée & plages | Amaryllis" description="Guide complet du Diamant depuis Sainte-Luce (15 min). Plonger autour du Rocher historique, HMS Diamond Rock, plages sauvages — le must absolu du Sud Martinique." canonical="/guide-le-diamant" image="https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/Diamond_Rock.jpg/960px-Diamond_Rock.jpg" type="article" />
+<SEOMeta title="Le Diamant Martinique — Rocher & plongée | Amaryllis" description="Guide complet du Diamant depuis Sainte-Luce (15 min). Plonger autour du Rocher historique, HMS Diamond Rock, plages sauvages — le must absolu du Sud Martinique." canonical="/guide-le-diamant" image="https://villamaryllis.com/photos/amaryllis/01.webp" type="article" />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         "@context": "https://schema.org",
         "@type": "Article",

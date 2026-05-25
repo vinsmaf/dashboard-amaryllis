@@ -57,9 +57,13 @@ export async function onRequestGet(context) {
       qp.set("pageNum", pageNum);
       qp.set("numId", PAGE_SIZE);
 
+      // Timeout par requête : 12s pour rester bien sous la limite Cloudflare Pages (30s total)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 12000);
       const res = await fetch(`${BEDS24_V2_URL}?${qp}`, {
         headers: { token },
-      });
+        signal: controller.signal,
+      }).finally(() => clearTimeout(timeoutId));
 
       if (!res.ok) {
         const txt = await res.text();

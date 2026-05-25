@@ -12,7 +12,7 @@ const SAND  = "#e8dcc8";
 const MUTED = "#7a6b5a";
 const BASE  = "https://villamaryllis.com";
 
-const HERO_IMG = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Salines_beach.jpg/960px-Salines_beach.jpg";
+const HERO_IMG = "https://villamaryllis.com/photos/amaryllis/01.webp";
 
 const badges = [
   { icon: "🏖️", label: "Plus belle plage des Caraïbes" },
@@ -89,7 +89,7 @@ export default function GuideSainteAnne() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: css }} />
-<SEOMeta title="Guide Sainte-Anne Martinique — Les Salines, la plus belle plage des Caraïbes | Amaryllis" description="Guide Sainte-Anne depuis Sainte-Luce (20 min) : Les Salines avant 9h, kitesurf, catamaran, restaurants créoles. La plage incontournable du Sud Martinique." canonical="/guide-sainte-anne" image="https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Salines_beach.jpg/960px-Salines_beach.jpg" type="article" />
+<SEOMeta title="Sainte-Anne Martinique — Les Salines | Amaryllis" description="Guide Sainte-Anne depuis Sainte-Luce (20 min) : Les Salines avant 9h, kitesurf, catamaran, restaurants créoles. La plage incontournable du Sud Martinique." canonical="/guide-sainte-anne" image="https://villamaryllis.com/photos/amaryllis/01.webp" type="article" />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         "@context": "https://schema.org",
         "@type": "Article",

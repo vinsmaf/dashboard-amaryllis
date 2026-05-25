@@ -114,7 +114,42 @@ function readAll_() {
       cashflow: getVals(sheet, b.cfRow,     2, 12),
     })),
     hist: readHist_(),
+    reservations: readReservations_(),
   });
+}
+
+// ── LECTURE RÉSERVATIONS (onglet "réservations") ─────────────────
+// Retourne les réservations sauvegardées manuellement pour les restaurer
+// côté admin si le localStorage a été vidé.
+function readReservations_() {
+  try {
+    const sheet = getSheet_("réservations");
+    if (!sheet || sheet.getLastRow() < 2) return [];
+    const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 8).getValues();
+    const fmtDate = function(v) {
+      if (!v) return "";
+      if (v instanceof Date) return Utilities.formatDate(v, "UTC", "yyyy-MM-dd");
+      return String(v).slice(0, 10); // garde YYYY-MM-DD si déjà string
+    };
+    return rows
+      .filter(function(r) { return r[0]; }) // ignorer lignes vides
+      .map(function(r) {
+        return {
+          id:       String(r[0]),
+          bienId:   r[1] || "",
+          voyageur: r[2] || "",
+          canal:    r[3] || "",
+          checkin:  fmtDate(r[4]),
+          checkout: fmtDate(r[5]),
+          montant:  parseFloat(r[6]) || 0,
+          notes:    r[7] || "",
+          menage_done:  false,
+          checkin_done: false,
+        };
+      });
+  } catch(e) {
+    return []; // ne jamais bloquer readAll_ pour ça
+  }
 }
 
 // ── LECTURE HISTORIQUE 2022-2025 ─────────────────────────────────
@@ -263,6 +298,14 @@ function sendCheckinAlerts_() {
 
   var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 9).getValues();
 
+  // Normalise une cellule checkin : Google Sheets peut stocker la date comme objet Date
+  // ou comme string selon le format de la colonne. On force toujours vers "yyyy-MM-dd".
+  var fmtCell = function(v) {
+    if (!v) return "";
+    if (v instanceof Date) return Utilities.formatDate(v, tz, "yyyy-MM-dd");
+    return String(v).slice(0, 10);
+  };
+
   var bienNames = {
     nogent: "T2 Nogent", amaryllis: "Villa Amaryllis", iguana: "Villa Iguana",
     geko: "Geko", zandoli: "Zandoli", mabouya: "Mabouya", schoelcher: "T2 Schœlcher"
@@ -278,9 +321,9 @@ function sendCheckinAlerts_() {
     return label + "\n" + lines.join("\n");
   }
 
-  var j2rows = data.filter(function(r) { return r[4] === j2str; });
-  var j1rows = data.filter(function(r) { return r[4] === j1str; });
-  var todayRows = data.filter(function(r) { return r[4] === todayStr; });
+  var j2rows    = data.filter(function(r) { return fmtCell(r[4]) === j2str; });
+  var j1rows    = data.filter(function(r) { return fmtCell(r[4]) === j1str; });
+  var todayRows = data.filter(function(r) { return fmtCell(r[4]) === todayStr; });
 
   if (j2rows.length === 0 && j1rows.length === 0 && todayRows.length === 0) return;
 

@@ -81,6 +81,10 @@ export default function MerciPage() {
   useEffect(() => {
     if (paymentRedirected && !depositDone && window.gtag) {
       const pi = params.get("payment_intent");
+      // Guard anti-doublon : on ne fire pas si déjà envoyé (cas non-3DS qui redirige sans params)
+      const guardKey = `ga_purchase_fired_${pi}`;
+      if (pi && sessionStorage.getItem(guardKey)) return;
+      if (pi) sessionStorage.setItem(guardKey, "1");
       // Récupère le montant stocké dans sessionStorage avant la redirection 3DS
       const storedAmt = Number(sessionStorage.getItem("deposit_amt") || 0);
       window.gtag("event", "purchase", {

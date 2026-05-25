@@ -212,7 +212,7 @@ export default function GuideTroisIlets() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: css }} />
-<SEOMeta title="Guide Les Trois-Îlets Martinique — Musée Pagerie & marina | Amaryllis" description="Guide Trois-Îlets depuis Sainte-Luce (35 min) : Musée de la Pagerie (naissance de Joséphine), village créole, marina face à Fort-de-France, plage Anse Mitan." canonical="/guide-trois-ilets" image="https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/Diamond_Rock.jpg/960px-Diamond_Rock.jpg" type="article" />
+<SEOMeta title="Les Trois-Îlets Martinique — Pagerie & marina | Amaryllis" description="Guide Trois-Îlets depuis Sainte-Luce (35 min) : Musée de la Pagerie (naissance de Joséphine), village créole, marina face à Fort-de-France, plage Anse Mitan." canonical="/guide-trois-ilets" image="https://villamaryllis.com/photos/trois-ilets.avif" type="article" />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         "@context": "https://schema.org",
         "@type": "Article",
