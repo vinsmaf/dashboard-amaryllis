@@ -3,7 +3,22 @@
 # NE PAS committer .dev.vars (déjà dans .gitignore via *.local)
 
 ADMIN_PWD=your_admin_password_here
+ADMIN_PASSWORD=your_admin_password_here
 ADMIN_PWD_MENAGE=your_menage_password_here
+
+# ── Crons automatiques ──────────────────────────────────────────────────────
+PRIX_RECAP_SECRET=un_secret_aleatoire_ici          # protège /api/send-prix-recap (cron lundi 8h)
+RECAP_EMAIL=votre@email.com                        # destinataire récap prix hebdo
+MENAGE_ALERT_SECRET=un_autre_secret_ici            # protège /api/send-menage-alert (cron quotidien 8h)
+MENAGE_EMAIL=prestataire-menage@email.com          # destinataire alerte ménage J-2
+POSTSTAY_SECRET=un_secret_ici                      # protège /api/send-poststay (cron quotidien 10h)
+TOKEN_WATCH_SECRET=un_secret_ici                   # protège /api/beds24-token-watch (cron quotidien 7h)
+VACANCY_ALERT_SECRET=un_secret_ici                 # protège /api/send-vacancy-alert (cron lundi 9h)
+
+# ── Notifications ────────────────────────────────────────────────────────────
+RESEND_API_KEY=re_xxxxxxxxxxxx
+RESEND_FROM=Amaryllis <notifications@mail.villamaryllis.com>
+NOTIFICATION_EMAIL=votre@email.com
 
 BEDS24_API_KEY=votre_api_key_beds24
 BEDS24_PROP_KEY=votre_prop_key_beds24
