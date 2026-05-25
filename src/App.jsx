@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, Component } from "react";
 import EmailSync from "./EmailSync.jsx";
 import RevenueManagerPro from "./RevenueManagerPro.jsx";
 import GuideEditor from "./GuideEditor.jsx";
@@ -7345,7 +7345,7 @@ export default function App() {
             {tab === "devis"    && <DevisEditor />}
             {tab === "guides" && <GuideEditor mob={mob} />}
             {tab === "agents" && <AgentsKanban mob={mob} />}
-            {tab === "chat-admin" && <AdminChatTab biens={biens} reservations={reservations} addToast={addToast} />}
+            {tab === "chat-admin" && <LocalErrorBoundary><AdminChatTab biens={biens} reservations={reservations} addToast={addToast} /></LocalErrorBoundary>}
           </div>
         </div>
       </div>
@@ -8013,6 +8013,31 @@ const BIENS_DEVIS = [
   { id: "schoelcher",nom: "T2 Schoelcher",   depot: 1000 },
   { id: "nogent",    nom: "T2 Nogent",       depot: 500  },
 ];
+
+// ── LocalErrorBoundary — protège l'admin si un onglet crashe ────────────
+class LocalErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(e) { return { error: e }; }
+  componentDidCatch(e, info) { console.error("[AdminTab crash]", e, info); }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ padding: 32, textAlign: "center" }}>
+          <div style={{ fontSize: 32, marginBottom: 12 }}>⚠️</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "#f87171", marginBottom: 8 }}>Une erreur est survenue dans cet onglet</div>
+          <div style={{ fontSize: 11, color: "#64748b", fontFamily: "monospace", background: "#0f172a", padding: "8px 14px", borderRadius: 8, maxWidth: 600, margin: "0 auto 16px", wordBreak: "break-all" }}>
+            {this.state.error?.message || String(this.state.error)}
+          </div>
+          <button onClick={() => this.setState({ error: null })}
+            style={{ padding: "8px 20px", borderRadius: 8, border: "1px solid #334155", background: "#1e293b", color: "#94a3b8", fontSize: 12, cursor: "pointer" }}>
+            ↺ Réessayer
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // ── AdminChatTab — Assistant IA pour l'admin ─────────────────────────────
 const ADMIN_SHORTCUTS = [
