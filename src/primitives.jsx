@@ -321,6 +321,36 @@ export function FlowMark({ size = 40, color = "var(--c-coral, #c47254)", gold = 
   );
 }
 
+// ── cfImg() — Cloudflare Image Resizing URL helper ───────────────
+// Transforme /photos/... en URL CDN redimensionnée.
+// Les URLs externes (http/https) sont retournées telles quelles.
+export function cfImg(src, w) {
+  if (!src || src.startsWith("http")) return src;
+  return `/cdn-cgi/image/width=${w},format=auto,quality=85${src}`;
+}
+
+// ── <RImg> — Responsive Image avec srcset Cloudflare ─────────────
+// Génère automatiquement srcset + sizes pour les images /photos/...
+// Les URLs externes sont rendues avec un <img> simple (pas de transformation).
+export function RImg({ src, alt, sizes = "100vw", className, style, loading = "lazy", fetchPriority }) {
+  if (!src || src.startsWith("http")) {
+    return <img src={src} alt={alt} className={className} style={style} loading={loading} fetchPriority={fetchPriority} />;
+  }
+  const srcset = [480, 800, 1200, 1600].map(w => `${cfImg(src, w)} ${w}w`).join(", ");
+  return (
+    <img
+      src={cfImg(src, 800)}
+      srcSet={srcset}
+      sizes={sizes}
+      alt={alt}
+      className={className}
+      style={style}
+      loading={loading}
+      fetchPriority={fetchPriority}
+    />
+  );
+}
+
 // ── <FAQAccordion> — item FAQ expandable au clic ─────────────────
 // Gestion d'état locale (chaque item s'ouvre indépendamment).
 // Pour un comportement radio (un seul ouvert à la fois), gérer `open`

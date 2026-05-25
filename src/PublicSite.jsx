@@ -4,7 +4,7 @@ import { loadDailyPrices, applyServerPriceOverrides } from "./seedPrices.js";
 import SEOMeta from "./SEOMeta.jsx";
 import { Reveal } from "./useReveal.jsx";
 import { useLang, LangToggle } from "./i18n.jsx";
-import { Eyebrow, Display, Editorial, Button, RatingBadge, Icon, ThemeToggle, Chip, StateTile } from "./primitives.jsx";
+import { Eyebrow, Display, Editorial, Button, RatingBadge, Icon, ThemeToggle, Chip, StateTile, RImg } from "./primitives.jsx";
 import { Curtain } from "./Curtain.jsx";
 const PropertyMap = lazy(() => import("./PropertyMap.jsx"));
 
@@ -3297,10 +3297,12 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
               style={{ position: "absolute", inset: 0, cursor: "zoom-in" }}
             >
               {photos[photoIdx] && (
-                <img
+                <RImg
                   key={photoIdx}
                   src={photos[photoIdx]}
                   alt={`${bien.nom} — ${bien.lieu} — photo ${photoIdx + 1}`}
+                  sizes="100vw"
+                  loading={photoIdx === 0 ? "eager" : "lazy"}
                   style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                 />
               )}
@@ -3325,9 +3327,12 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
               onClick={() => { setPhotoIdx(0); setLightboxOpen(true); }}
             >
               {photos[0] && (
-                <img
+                <RImg
                   src={photos[0]}
                   alt={`${bien.nom} — photo principale`}
+                  sizes="100vw"
+                  fetchPriority="high"
+                  loading="eager"
                   style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "transform 0.4s ease" }}
                   onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.02)"; }}
                   onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; }}
@@ -3360,9 +3365,10 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                     style={{ position: "relative", overflow: "hidden", cursor: "zoom-in" }}
                     onClick={() => { setPhotoIdx(idx); setLightboxOpen(true); }}
                   >
-                    <img
+                    <RImg
                       src={photos[idx]}
                       alt={`${bien.nom} — photo ${idx + 1}`}
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                       style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "transform 0.4s ease" }}
                       onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.04)"; }}
                       onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; }}
