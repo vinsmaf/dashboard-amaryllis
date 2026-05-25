@@ -233,6 +233,12 @@ const ROUTES = [
     desc:  "Louez la Villa Amaryllis pour votre séminaire en Martinique. Exclusivité totale, piscine débordement, terrasse 100m² vue mer, Wifi Starlink. Dès 1 960€ HT / 2 nuits.",
     image: `${BASE}/photos/amaryllis/01.webp`,
   },
+  {
+    path: "/location-villa-martinique-piscine",
+    title: "Location Villa Martinique avec Piscine — Réservation directe | Amaryllis",
+    desc:  "Louez une villa Martinique avec piscine privée à Sainte-Luce. Piscines à débordement, jacuzzi, vue mer. Amaryllis, Zandoli, Géko, Mabouya dès 110€/nuit — sans frais Airbnb.",
+    image: `${BASE}/photos/amaryllis/01.webp`,
+  },
 
   /* ── Page EN ── */
   {
@@ -455,6 +461,7 @@ const SITEMAP_META = {
   "/meilleure-saison-martinique":    { priority: "0.85", changefreq: "monthly" },
   "/reservation-directe-martinique": { priority: "0.8",  changefreq: "monthly" },
   "/seminaires":                     { priority: "0.75", changefreq: "monthly" },
+  "/location-villa-martinique-piscine": { priority: "0.95", changefreq: "monthly" },
 };
 
 const today = new Date().toISOString().slice(0, 10);

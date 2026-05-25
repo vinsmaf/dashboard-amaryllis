@@ -37,6 +37,7 @@ const GuideReservationDirecte  = lazy(() => import('./GuideReservationDirecte.js
 const GuideMeilleureSaison     = lazy(() => import('./GuideMeilleureSaison.jsx'))
 const GuideSeminaires          = lazy(() => import('./GuideSeminaires.jsx'))
 const GuideNogent              = lazy(() => import('./GuideNogent.jsx'))
+const GuideVillaPiscine        = lazy(() => import('./GuideVillaPiscine.jsx'))
 const Avis             = lazy(() => import('./Avis.jsx'))
 const Faq              = lazy(() => import('./Faq.jsx'))
 const MentionsLegales          = lazy(() => import('./MentionsLegales.jsx'))
@@ -67,7 +68,7 @@ const params = new URLSearchParams(window.location.search);
 const cautionParam = params.get("caution"); // "ok" | "cancelled"
 
 const BIEN_IDS = ["amaryllis", "zandoli", "iguana", "geko", "mabouya", "schoelcher", "nogent"];
-const KNOWN = ["/", "/merci", "/devis", "/guide", "/explorer", "/guide-le-diamant", "/guide-sainte-anne", "/villa-rental-martinique", "/activites-sainte-luce", "/guide-proximite", "/guide-arlet", "/guide-trois-ilets", "/avis", "/faq", "/mentions-legales", "/politique-confidentialite", "/conditions-generales", "/sainte-luce-martinique", "/reservation-directe-martinique", "/meilleure-saison-martinique", "/seminaires", "/guide-nogent-sur-marne"];
+const KNOWN = ["/", "/merci", "/devis", "/guide", "/explorer", "/guide-le-diamant", "/guide-sainte-anne", "/villa-rental-martinique", "/activites-sainte-luce", "/guide-proximite", "/guide-arlet", "/guide-trois-ilets", "/avis", "/faq", "/mentions-legales", "/politique-confidentialite", "/conditions-generales", "/sainte-luce-martinique", "/reservation-directe-martinique", "/meilleure-saison-martinique", "/seminaires", "/guide-nogent-sur-marne", "/location-villa-martinique-piscine"];
 const isKnown = KNOWN.includes(path)
   || path.startsWith("/admin")
   || path.startsWith("/landing")
@@ -110,6 +111,8 @@ if (!isKnown) {
   Component = GuideSeminaires;
 } else if (path === "/guide-nogent-sur-marne") {
   Component = GuideNogent;
+} else if (path === "/location-villa-martinique-piscine") {
+  Component = GuideVillaPiscine;
 } else if (path === "/avis") {
   Component = Avis;
 } else if (path === "/faq") {
