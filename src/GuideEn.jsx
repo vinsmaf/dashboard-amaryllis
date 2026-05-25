@@ -8,6 +8,7 @@ const CORAL = "#c47254";
 const TEXT  = "#2c2c2c";
 const CREAM = "#f5efe0";
 const SAND  = "#e8dcc8";
+const MUTED = "#7a6b5a";
 const BASE  = "https://villamaryllis.com";
 
 const propertiesMartinique = [
@@ -34,6 +35,88 @@ const faqs = [
   { q: "What is the best time to visit Martinique?", a: "The dry season (December–April) offers the best weather — sunny days, calm sea, constant trade winds. July–August is also popular despite occasional showers. Book 3–6 months in advance for high season." },
   { q: "Is there WiFi in your villas?", a: "Yes, all properties include Starlink high-speed WiFi at no extra charge." },
 ];
+
+// ── VillaCompare — tableau comparatif côte à côte ────────────────────────────
+const COMPARE_COLS = [
+  { id: "amaryllis", label: "Villa Amaryllis",  photo: "/photos/amaryllis/01.webp",  price: "€280",  guests: 8, pool: "∞ Salt water", jacuzzi: true,  view: "Ocean",      wifi: "Starlink", pets: true,  badge: "⭐ Premium" },
+  { id: "zandoli",   label: "Zandoli",          photo: "/photos/zandoli/01.webp",    price: "€220",  guests: 4, pool: "Private",     jacuzzi: false, view: "Sea",        wifi: "Starlink", pets: true,  badge: null },
+  { id: "geko",      label: "Géko",             photo: "/photos/geko/01.webp",       price: "€150",  guests: 2, pool: "Private",     jacuzzi: false, view: "Garden",     wifi: "Starlink", pets: true,  badge: null },
+  { id: "mabouya",   label: "Mabouya",          photo: "/photos/mabouya/01.webp",    price: "€110",  guests: 2, pool: null,          jacuzzi: true,  view: "Sea",        wifi: "Starlink", pets: false, badge: "💑 Romantic" },
+  { id: "nogent",    label: "Apt. Paris Gates", photo: "/photos/nogent/01.webp",     price: "€85",   guests: 4, pool: null,          jacuzzi: false, view: "Courtyard",  wifi: "Fiber",    pets: true,  badge: "🗼 Near Paris" },
+];
+
+const ROWS = [
+  { label: "Price / night",  render: v => <span style={{ fontWeight: 600, color: CORAL, fontSize: 17 }}>{v.price}</span> },
+  { label: "Guests",         render: v => `Up to ${v.guests}` },
+  { label: "Pool",           render: v => v.pool ? <span style={{ color: "#16a34a" }}>✓ {v.pool}</span> : <span style={{ color: "#9ca3af" }}>—</span> },
+  { label: "Jacuzzi",        render: v => v.jacuzzi ? <span style={{ color: "#16a34a" }}>✓</span> : <span style={{ color: "#9ca3af" }}>—</span> },
+  { label: "View",           render: v => v.view },
+  { label: "WiFi",           render: v => v.wifi },
+  { label: "Pets",           render: v => v.pets ? <span style={{ color: "#16a34a" }}>✓</span> : <span style={{ color: "#9ca3af" }}>—</span> },
+];
+
+function VillaCompare() {
+  const colW = 148;
+  return (
+    <div style={{ marginBottom: 64 }}>
+      <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 28, letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY, marginBottom: 8, textAlign: "center" }}>
+        Compare villas
+      </h2>
+      <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 16, color: TEXT, opacity: 0.7, textAlign: "center", marginBottom: 28, fontStyle: "italic" }}>
+        Find the property that fits your group
+      </p>
+      <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", borderRadius: 14, border: `1px solid ${SAND}`, background: "#fff" }}>
+        <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 640 }}>
+          <thead>
+            <tr>
+              {/* row label column */}
+              <th style={{ width: 130, background: CREAM, padding: "0 0 0 20px", borderBottom: `1px solid ${SAND}`, borderRight: `1px solid ${SAND}`, verticalAlign: "bottom", paddingBottom: 16 }} />
+              {COMPARE_COLS.map((col, i) => (
+                <th key={col.id} style={{ width: colW, padding: "0 8px 0", borderBottom: `1px solid ${SAND}`, borderRight: i < COMPARE_COLS.length - 1 ? `1px solid ${SAND}` : "none", verticalAlign: "top", background: "#fff" }}>
+                  <a href={`/${col.id}`} style={{ textDecoration: "none", display: "block" }}>
+                    <img src={col.photo} alt={col.label} loading="lazy"
+                      style={{ width: "100%", height: 90, objectFit: "cover", display: "block" }} />
+                    <div style={{ padding: "10px 8px 12px" }}>
+                      {col.badge && (
+                        <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 9, fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase", color: CORAL, marginBottom: 4 }}>{col.badge}</div>
+                      )}
+                      <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 13, color: NAVY, lineHeight: 1.2 }}>{col.label}</div>
+                    </div>
+                  </a>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {ROWS.map((row, ri) => (
+              <tr key={row.label} style={{ background: ri % 2 === 0 ? "#fff" : CREAM }}>
+                <td style={{ padding: "12px 16px 12px 20px", fontFamily: "'Jost', sans-serif", fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: MUTED, borderRight: `1px solid ${SAND}`, whiteSpace: "nowrap" }}>
+                  {row.label}
+                </td>
+                {COMPARE_COLS.map((col, i) => (
+                  <td key={col.id} style={{ padding: "12px 12px", textAlign: "center", fontFamily: "'Jost', sans-serif", fontSize: 13, color: TEXT, borderRight: i < COMPARE_COLS.length - 1 ? `1px solid ${SAND}` : "none" }}>
+                    {row.render(col)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+            {/* CTA row */}
+            <tr style={{ background: CREAM }}>
+              <td style={{ padding: "16px 16px 16px 20px", borderRight: `1px solid ${SAND}` }} />
+              {COMPARE_COLS.map((col, i) => (
+                <td key={col.id} style={{ padding: "16px 12px", textAlign: "center", borderRight: i < COMPARE_COLS.length - 1 ? `1px solid ${SAND}` : "none" }}>
+                  <a href={`/${col.id}`} style={{ display: "inline-block", background: CORAL, color: "#fff", textDecoration: "none", padding: "8px 16px", borderRadius: 6, fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                    Book
+                  </a>
+                </td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
 export default function GuideEn() {
   return (
@@ -91,9 +174,17 @@ export default function GuideEn() {
           <p style={{ color: "rgba(250,245,233,0.75)", fontSize: 18, maxWidth: 620, margin: "0 auto 32px", lineHeight: 1.7, fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
             Luxury villas and apartments in Martinique with private pools, ocean views and private jacuzzis. Book directly — save up to 14% vs. Airbnb.
           </p>
-          <a href="/" style={{ display: "inline-block", background: CORAL, color: "#fff", textDecoration: "none", padding: "16px 40px", borderRadius: 8, fontSize: 13, fontWeight: 400, letterSpacing: "0.15em", textTransform: "uppercase" }}>
+          <a href="#properties" style={{ display: "inline-block", background: CORAL, color: "#fff", textDecoration: "none", padding: "16px 40px", borderRadius: 8, fontSize: 13, fontWeight: 400, letterSpacing: "0.15em", textTransform: "uppercase" }}>
             See availability
           </a>
+          {/* Social proof */}
+          <div style={{ marginTop: 28, display: "flex", alignItems: "center", justifyContent: "center", gap: 20, flexWrap: "wrap" }}>
+            <span style={{ color: "rgba(250,245,233,0.6)", fontSize: 13, fontFamily: "'Jost', sans-serif" }}>⭐ 4.94 · 200+ stays</span>
+            <span style={{ color: "rgba(250,245,233,0.3)", fontSize: 13 }}>·</span>
+            <span style={{ color: "rgba(250,245,233,0.6)", fontSize: 13, fontFamily: "'Jost', sans-serif" }}>Verified on Airbnb & Booking.com</span>
+            <span style={{ color: "rgba(250,245,233,0.3)", fontSize: 13 }}>·</span>
+            <span style={{ color: "rgba(250,245,233,0.6)", fontSize: 13, fontFamily: "'Jost', sans-serif" }}>Response &lt; 1h</span>
+          </div>
         </div>
 
         <div style={{ maxWidth: 960, margin: "0 auto", padding: "64px 24px 80px" }}>
@@ -120,23 +211,36 @@ export default function GuideEn() {
           </div>
 
           {/* Properties */}
-          <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 28, letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY, marginBottom: 32, textAlign: "center" }}>
+          <h2 id="properties" style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 28, letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY, marginBottom: 32, textAlign: "center", scrollMarginTop: 24 }}>
             Our properties
           </h2>
           {/* Martinique villas */}
           <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 48 }}>
             {propertiesMartinique.map(p => (
-              <a key={p.id} href={`/${p.id}`} style={{ textDecoration: "none", background: "#fff", border: `1px solid ${SAND}`, borderRadius: 12, padding: "24px 28px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-                <div>
-                  <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 16, color: NAVY, marginBottom: 4 }}>{p.name}</div>
-                  <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 15, color: TEXT, opacity: 0.8 }}>{p.location}, Martinique · {p.highlight}</div>
+              <a key={p.id} href={`/${p.id}`} style={{ textDecoration: "none", background: "#fff", border: `1px solid ${SAND}`, borderRadius: 12, overflow: "hidden", display: "flex", alignItems: "stretch", gap: 0 }}>
+                {/* Photo vignette */}
+                <div style={{ width: 120, flexShrink: 0, background: SAND }}>
+                  <img
+                    src={`/photos/${p.id}/01.webp`}
+                    alt={p.name}
+                    loading="lazy"
+                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                  />
                 </div>
-                <div style={{ textAlign: "right", flexShrink: 0 }}>
-                  {p.price != null
-                    ? <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 18, color: CORAL }}>€{p.price}<span style={{ fontSize: 13, fontWeight: 300 }}>/night</span></div>
-                    : <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 13, color: CORAL, letterSpacing: "0.04em" }}>Long-term rental</div>
-                  }
-                  <div style={{ fontSize: 12, color: TEXT, opacity: 0.6 }}>up to {p.guests} guests</div>
+                {/* Infos */}
+                <div style={{ flex: 1, padding: "20px 22px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                  <div>
+                    <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 16, color: NAVY, marginBottom: 4 }}>{p.name}</div>
+                    <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 15, color: TEXT, opacity: 0.8 }}>{p.location}, Martinique</div>
+                    <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, color: CORAL, marginTop: 4, letterSpacing: "0.02em" }}>{p.highlight}</div>
+                  </div>
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    {p.price != null
+                      ? <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 18, color: CORAL }}>€{p.price}<span style={{ fontSize: 13, fontWeight: 300 }}>/night</span></div>
+                      : <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 13, color: CORAL, letterSpacing: "0.04em" }}>Long-term rental</div>
+                    }
+                    <div style={{ fontSize: 12, color: TEXT, opacity: 0.6 }}>up to {p.guests} guests</div>
+                  </div>
                 </div>
               </a>
             ))}
@@ -159,6 +263,9 @@ export default function GuideEn() {
               </a>
             ))}
           </div>
+
+          {/* ── VillaCompare ── */}
+          <VillaCompare />
 
           {/* Martinique intro */}
           <div style={{ marginBottom: 64 }}>
@@ -196,8 +303,14 @@ export default function GuideEn() {
           </div>
 
           <div style={{ textAlign: "center" }}>
-            <a href="/" style={{ display: "inline-block", background: NAVY, color: IVORY, textDecoration: "none", padding: "16px 40px", borderRadius: 8, fontSize: 13, fontWeight: 400, letterSpacing: "0.15em", textTransform: "uppercase" }}>
-              Book a villa →
+            <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 18, color: TEXT, opacity: 0.7, marginBottom: 24, fontStyle: "italic" }}>
+              Ready to book your dream villa in Martinique?
+            </p>
+            <a href="/amaryllis" style={{ display: "inline-block", background: NAVY, color: IVORY, textDecoration: "none", padding: "16px 40px", borderRadius: 8, fontSize: 13, fontWeight: 400, letterSpacing: "0.15em", textTransform: "uppercase", marginRight: 12 }}>
+              Villa Amaryllis →
+            </a>
+            <a href="#properties" style={{ display: "inline-block", background: "transparent", color: NAVY, textDecoration: "none", padding: "16px 32px", borderRadius: 8, fontSize: 13, fontWeight: 400, letterSpacing: "0.15em", textTransform: "uppercase", border: `1px solid ${SAND}` }}>
+              All villas
             </a>
           </div>
         </div>
