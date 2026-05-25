@@ -6885,6 +6885,15 @@ export default function App() {
   });
   const [mob, setMob] = useState(typeof window !== "undefined" && window.innerWidth < 640);
 
+  // ── Toast system (App level) ──────────────────────────────────────────────
+  const [resaToasts, setResaToasts] = useState([]);
+  const addToast = useCallback((msg, type = "info") => {
+    const id = Date.now() + Math.random();
+    setResaToasts(t => [...t, { id, msg, type }]);
+    const delay = type === "error" ? 10000 : 6000;
+    setTimeout(() => setResaToasts(t => t.filter(x => x.id !== id)), delay);
+  }, []);
+
   // Charger les URLs Booking.com depuis Cloudflare si localStorage vide
   useEffect(() => {
     const hasUrls = Object.values(icalUrlsBooking).some(v => v && v.length > 10);
@@ -7355,6 +7364,34 @@ export default function App() {
       <div style={{ padding: "8px 22px", borderTop: "1px solid rgba(255,255,255,0.04)", fontSize: 9, color: "#334155", textAlign: "center" }}>
         Locatif Dashboard · {lastSync ? "Synchro : " + lastSync : "Non synchronisé"}
       </div>
+
+      {/* ── Toast stack global App ── */}
+      {resaToasts.length > 0 && (
+        <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 9999, display: "flex", flexDirection: "column-reverse", gap: 8, maxWidth: 360 }}>
+          {resaToasts.map(t => {
+            const colors = {
+              success: { border: "#22c55e", icon: "✓", accent: "#22c55e" },
+              error:   { border: "#ef4444", icon: "✕", accent: "#f87171" },
+              info:    { border: "#0ea5e9", icon: "🔔", accent: "#38bdf8" },
+            }[t.type] || { border: "#0ea5e9", icon: "🔔", accent: "#38bdf8" };
+            return (
+              <div key={t.id} style={{
+                background: "#0f172a", border: `1px solid ${colors.border}44`,
+                borderLeft: `3px solid ${colors.border}`,
+                borderRadius: 10, padding: "11px 14px",
+                color: "#e2e8f0", fontSize: 12.5, fontWeight: 500,
+                boxShadow: "0 8px 24px rgba(0,0,0,0.45)",
+                display: "flex", alignItems: "flex-start", gap: 10,
+              }}>
+                <span style={{ fontSize: 14, color: colors.accent, flexShrink: 0, marginTop: 1 }}>{colors.icon}</span>
+                <span style={{ flex: 1, lineHeight: 1.5 }}>{t.msg}</span>
+                <button onClick={() => setResaToasts(x => x.filter(r => r.id !== t.id))}
+                  style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: 16, padding: 0, lineHeight: 1, flexShrink: 0 }}>×</button>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {showRapport && (() => {
         const moisLabel = MOIS[rapportMois] || "";
