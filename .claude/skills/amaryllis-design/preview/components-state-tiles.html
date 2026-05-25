@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="fr"><head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@200;300;400;500;600&family=Cormorant+Garamond:ital@1&display=swap">
+<link rel="stylesheet" href="_card.css">
+<style>
+body { padding: 18px 18px; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.tile {
+  background: #fff; border: 1px solid #e0d4bc; border-radius: 14px;
+  padding: 26px 22px; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+}
+.tile.cream { background: #f4ecdc; }
+.tile.success {
+  background: rgba(16,163,74,0.08); border-color: rgba(16,163,74,0.25);
+}
+.tile.warn {
+  background: rgba(245,158,11,0.06); border-color: rgba(245,158,11,0.25);
+}
+.tile.danger {
+  background: rgba(239,68,68,0.05); border-color: rgba(239,68,68,0.25);
+}
+.icon {
+  width: 44px; height: 44px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font: 200 22px/1 'Jost', sans-serif;
+}
+.icon.coral { background: #faf5e9; color: #c47254; border: 1px solid #e0d4bc; }
+.icon.green { background: #fff; color: #16a34a; border: 1px solid rgba(16,163,74,0.2); }
+.icon.amber { background: #fff; color: #d97706; border: 1px solid rgba(217,119,6,0.2); }
+.icon.red   { background: #fff; color: #ef4444; border: 1px solid rgba(239,68,68,0.2); }
+.eyebrow {
+  font: 600 9px/1 'Jost', sans-serif;
+  letter-spacing: 0.38em; text-transform: uppercase;
+}
+.eyebrow.coral { color: #c47254; }
+.eyebrow.green { color: #16a34a; }
+.eyebrow.amber { color: #d97706; }
+.eyebrow.red   { color: #ef4444; }
+.title {
+  font: 200 19px/1.15 'Jost', sans-serif;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: #0e3b3a;
+}
+.body {
+  font: italic 400 14px/1.5 'Cormorant Garamond', serif;
+  color: #0e3b3a; max-width: 240px;
+}
+.action {
+  margin-top: 6px;
+  background: #0e3b3a; color: #faf5e9; border: none;
+  padding: 10px 22px; border-radius: 6px;
+  font: 600 10px/1 'Jost', sans-serif;
+  letter-spacing: 0.12em; text-transform: uppercase;
+}
+.action.coral { background: #c47254; box-shadow: 0 4px 14px rgba(196,114,84,0.3); }
+.action.outline {
+  background: transparent; color: #0e3b3a; border: 1px solid #e0d4bc;
+}
+</style>
+</head>
+<body>
+<div class="grid">
+
+  <!-- Empty: no availability -->
+  <div class="tile cream">
+    <div class="icon coral">∅</div>
+    <div class="eyebrow coral">Aucune disponibilité</div>
+    <div class="title">Indisponible</div>
+    <div class="body">Aucun bien ne correspond à votre recherche — ajustez vos dates ou créez une alerte.</div>
+    <button class="action coral">Créer une alerte</button>
+  </div>
+
+  <!-- Confirmation: alert saved -->
+  <div class="tile success">
+    <div class="icon green">✓</div>
+    <div class="eyebrow green">Alerte enregistrée</div>
+    <div class="title">Bien noté</div>
+    <div class="body">Nous vous écrivons dès qu'une date se libère sur cette période.</div>
+    <button class="action outline">Fermer</button>
+  </div>
+
+  <!-- Confirmation: booking sent -->
+  <div class="tile success">
+    <div class="icon green">✓</div>
+    <div class="eyebrow green">Réservation confirmée</div>
+    <div class="title">À très bientôt</div>
+    <div class="body">Vous recevez un e-mail dans la minute, avec votre guide d'arrivée.</div>
+    <button class="action">Voir mon récap</button>
+  </div>
+
+  <!-- Warning: caution / deposit -->
+  <div class="tile warn">
+    <div class="icon amber">🔒</div>
+    <div class="eyebrow amber">Dépôt de garantie</div>
+    <div class="title">1 500 € bloqués</div>
+    <div class="body">Aucun montant n'est débité. Libération automatique 3 jours après votre départ.</div>
+    <button class="action coral">Valider le blocage</button>
+  </div>
+
+  <!-- Error: card declined -->
+  <div class="tile danger">
+    <div class="icon red">⚠</div>
+    <div class="eyebrow red">Erreur</div>
+    <div class="title">Carte refusée</div>
+    <div class="body">Essayez une autre carte ou contactez votre banque. Sinon, on s'arrange sur WhatsApp.</div>
+    <button class="action">Contacter WhatsApp</button>
+  </div>
+
+  <!-- Loading / sync -->
+  <div class="tile">
+    <div class="icon coral" style="animation: spin 1.2s linear infinite">
+      <span style="display:block; width:18px; height:18px; border-radius:50%; border: 2px solid #e0d4bc; border-top-color: #c47254"></span>
+    </div>
+    <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+    <div class="eyebrow coral">Synchronisation</div>
+    <div class="title">Un instant…</div>
+    <div class="body">Nous récupérons les disponibilités sur tous les calendriers.</div>
+  </div>
+
+</div>
+</body></html>

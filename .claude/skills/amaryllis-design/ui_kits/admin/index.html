@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<title>Amaryllis — Admin UI kit</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<link rel="icon" type="image/svg+xml" href="../../assets/logo.svg"/>
+<link rel="stylesheet" href="../../colors_and_type.css"/>
+<style>
+  body[data-surface="admin"] { background: #0a0f1e; margin: 0; min-height: 100vh; }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 16px 22px 60px; }
+  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; gap: 22px; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand img { width: 36px; height: 36px; border-radius: 50%; }
+  .brand-name {
+    font-family: 'Jost', sans-serif; font-weight: 200; font-size: 14px;
+    letter-spacing: 0.42em; text-transform: uppercase; color: #f1f5f9;
+  }
+  .brand-tag {
+    font-family: 'Cormorant Garamond', serif; font-style: italic;
+    font-size: 12px; color: #c9a673; margin-top: 2px; letter-spacing: 0.04em;
+  }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .section-label {
+    font-family: 'Jost', sans-serif; font-weight: 600; font-size: 9px;
+    letter-spacing: 0.32em; text-transform: uppercase; color: #64748b;
+    margin: 28px 0 12px;
+  }
+</style>
+</head>
+<body data-surface="admin">
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<div id="root"></div>
+
+<script type="text/babel" src="AdminPrimitives.jsx"></script>
+<script type="text/babel" src="Cockpit.jsx"></script>
+<script type="text/babel" src="Charts.jsx"></script>
+<script type="text/babel" src="Planning.jsx"></script>
+
+<script type="text/babel">
+const { useState } = React;
+
+const BIENS = [
+  { id: "amaryllis",  name: "Villa Amaryllis",  emoji: "🌴", ytd: 38001, occ: 33, adr: 312, cashflow: 13192,
+    revenus: [11984, 9266, 4938, 7474, 1149, 1575, 4800, 0, 0, 0, 0, 2805] },
+  { id: "zandoli",    name: "Zandoli",          emoji: "🌊", ytd: 32656, occ: 67, adr: 132, cashflow: 13222,
+    revenus: [2426, 3034, 3046, 3486, 887, 0, 900, 0, 0, 0, 0, 0] },
+  { id: "iguana",     name: "Villa Iguana",     emoji: "🦎", ytd: 23600, occ: 100, adr: 65,  cashflow: 17220,
+    revenus: [1800,1800,1800,1800,1800,1800,1800,1800,1800,1800,1800,1800] },
+  { id: "geko",       name: "Géko",             emoji: "🦗", ytd: 19937, occ: 39, adr: 139, cashflow: 8769,
+    revenus: [2586, 3498, 2736, 1662, 1154, 0, 950, 0, 0, 0, 0, 0] },
+  { id: "nogent",     name: "T2 Nogent",        emoji: "🏙️", ytd: 25281, occ: 70, adr: 98,  cashflow: -28,
+    revenus: [2329,1457,1373,2357,2280,472,660,0,0,0,0,0] },
+  { id: "schoelcher", name: "T2 Schoelcher",    emoji: "🏢", ytd: 12680, occ: 37, adr: 93,  cashflow: 5594,
+    revenus: [1871,3076,2370,2415,1300,1300,1600,0,0,0,0,0] },
+  { id: "mabouya",    name: "Mabouya",          emoji: "🏠", ytd:  8450, occ: 28, adr: 82,  cashflow: 3543,
+    revenus: [1116,3060,0,0,0,1500,1500,1800,1800,1500,1200,1200] },
+];
+
+const MONTHS = ["Jan","Fév","Mar","Avr","Mai","Juin","Juil","Août","Sep","Oct","Nov","Déc"];
+const CHART_DATA = MONTHS.slice(0, 7).map((m, i) => {
+  const row = { m };
+  BIENS.forEach(b => row[b.id] = b.revenus[i]);
+  return row;
+});
+
+const RESERVATIONS = [
+  { bienId: "amaryllis", bien: "Villa Amaryllis", guest: "Marie L.",        channel: "direct",  checkin: "14 août", checkout: "21 août", amount: 2240 },
+  { bienId: "zandoli",   bien: "Zandoli",         guest: "James K.",        channel: "airbnb",  checkin: "15 août", checkout: "22 août", amount: 1540 },
+  { bienId: "geko",      bien: "Géko",            guest: "Sophie M.",       channel: "booking", checkin: "16 août", checkout: "23 août", amount:  980 },
+  { bienId: "nogent",    bien: "T2 Nogent",       guest: "Oliver R.",       channel: "booking", checkin: "12 août", checkout: "15 août", amount:  360 },
+  { bienId: "mabouya",   bien: "Mabouya",         guest: "Anne D.",         channel: "direct",  checkin: "18 août", checkout: "24 août", amount:  680 },
+];
+
+const GANTT_RES = {
+  amaryllis: [{ startDay: 1, endDay: 6, guest: "Bernard F.", channel: "booking" }, { startDay: 14, endDay: 21, guest: "Marie L.", channel: "direct" }, { startDay: 25, endDay: 31, guest: "Wilson", channel: "airbnb" }],
+  zandoli:   [{ startDay: 5, endDay: 11, guest: "Klaus M.", channel: "airbnb" }, { startDay: 15, endDay: 22, guest: "James K.", channel: "airbnb" }],
+  geko:      [{ startDay: 8, endDay: 14, guest: "Anne", channel: "direct" }, { startDay: 16, endDay: 23, guest: "Sophie", channel: "booking" }],
+  iguana:    [{ startDay: 1, endDay: 31, guest: "M. Léon (location annuelle)", channel: "direct" }],
+  nogent:    [{ startDay: 3, endDay: 7, guest: "Ben", channel: "booking" }, { startDay: 12, endDay: 15, guest: "Oliver", channel: "booking" }, { startDay: 20, endDay: 26, guest: "Aurélie", channel: "direct" }],
+  schoelcher:[{ startDay: 1, endDay: 30, guest: "Contrat 3 mois — M. Tessier", channel: "direct" }],
+  mabouya:   [{ startDay: 10, endDay: 14, guest: "T. Wong", channel: "airbnb" }, { startDay: 18, endDay: 24, guest: "Anne D.", channel: "direct" }],
+};
+
+const CHECKINS = [
+  { bienId: "amaryllis", bien: "Villa Amaryllis", guest: "Marie L.", nights: 7, channel: "direct" },
+  { bienId: "geko",      bien: "Géko",            guest: "Sophie M.",nights: 7, channel: "booking" },
+];
+const CHECKOUTS = [
+  { bienId: "zandoli",   bien: "Zandoli",         guest: "K. Mueller",   menage: true },
+  { bienId: "nogent",    bien: "T2 Nogent",       guest: "Ben Carlton",  menage: false },
+];
+
+const TABS = [
+  { id: "planning",    emoji: "📅", label: "Planning" },
+  { id: "cockpit",     emoji: "🎯", label: "Cockpit" },
+  { id: "carto",       emoji: "🗺",  label: "Carte" },
+  { id: "previ",       emoji: "🔮", label: "Prévi." },
+  { id: "charges",     emoji: "💰", label: "Charges" },
+  { id: "pilotage",    emoji: "💼", label: "Pilotage" },
+  { id: "historique",  emoji: "📈", label: "Historique" },
+];
+
+function App() {
+  const [tab, setTab] = useState("cockpit");
+  const ytd = BIENS.reduce((s, b) => s + b.ytd, 0);
+  const totalCF = BIENS.reduce((s, b) => s + b.cashflow, 0);
+  const avgOcc = Math.round(BIENS.reduce((s, b) => s + b.occ, 0) / BIENS.length);
+
+  return (
+    <div className="wrap">
+      <div className="header">
+        <div className="brand">
+          <img src="../../assets/logo.svg" alt="Amaryllis"/>
+          <div>
+            <div className="brand-name">Amaryllis · Admin</div>
+            <div className="brand-tag">Cartographie de Flux</div>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 10, alignItems: "center", fontFamily: "'Jost'", fontSize: 12, color: "#94a3b8" }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#10b981" }}/>
+            Sheets sync · il y a 4 min
+          </span>
+          <button style={{
+            background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
+            color: "#cbd5e1", padding: "6px 14px", borderRadius: 8,
+            fontFamily: "'Jost'", fontSize: 11, cursor: "pointer", letterSpacing: 0.02,
+          }}>Sync ↻</button>
+        </div>
+      </div>
+
+      <Tabs tabs={TABS} active={tab} onSelect={setTab} />
+
+      {tab === "cockpit" && (
+        <>
+          <div className="section-label">À retenir</div>
+          <TodayBanner ytd={ytd} monthRev={11850} monthLabel="Juillet 2026" top="Zandoli +18%" flop="Géko −12%" />
+          <div className="grid-4">
+            <KpiCard label="CA YTD"        value={fmtK(ytd)}    sub="7 mois"        color="#0ea5e9"/>
+            <KpiCard label="CF YTD"        value={fmtK(totalCF)}sub="cashflow net"  color={totalCF >= 0 ? "#10b981" : "#ef4444"}/>
+            <KpiCard label="Occ. 30j"      value={`${avgOcc}%`} sub="moyenne pondérée" color={avgOcc >= 60 ? "#10b981" : "#f59e0b"}/>
+            <KpiCard label="RevPAR moyen"  value="87€"          sub="Juin"           color="#f59e0b"/>
+          </div>
+
+          <div className="section-label">Alertes</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <AlertCard severity="warn"   title="Mabouya" body="sous-coté de ~29% vs marché Sainte-Luce · potentiel +12-15k€/an" action="Voir"/>
+            <AlertCard severity="warn"   title="T2 Nogent" body="sous-coté de ~27% · potentiel +13k€/an" action="Voir"/>
+            <AlertCard severity="info"   title="iCal" body="3 nouvelles réservations Airbnb synchronisées il y a 4 min"/>
+          </div>
+
+          <div className="section-label">Revenus mensuels par bien · 2026</div>
+          <Panel padded style={{ padding: "16px 12px" }}>
+            <StackedBarChart data={CHART_DATA} biens={BIENS} width={1180} height={220}/>
+            <div style={{ display: "flex", gap: 14, flexWrap: "wrap", justifyContent: "center", marginTop: 8 }}>
+              {BIENS.map(b => (
+                <span key={b.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontFamily: "'Jost'", fontSize: 11, color: "#94a3b8" }}>
+                  <span style={{ width: 9, height: 9, borderRadius: 2, background: BIEN_COLORS[b.id] }}/>
+                  {b.name.replace("Villa ", "").replace("T2 ", "")}
+                </span>
+              ))}
+            </div>
+          </Panel>
+
+          <div className="section-label">Performance par bien</div>
+          <div className="grid-3">
+            {BIENS.slice(0, 6).map(b => <BienCard key={b.id} bien={b}/>)}
+          </div>
+        </>
+      )}
+
+      {tab === "planning" && (
+        <>
+          <div className="section-label">Aujourd'hui</div>
+          <DayBanner checkins={CHECKINS} checkouts={CHECKOUTS}/>
+          <div className="section-label">Calendrier · Août 2026</div>
+          <Panel padded style={{ padding: 16 }}>
+            {BIENS.map(b => (
+              <GanttRow key={b.id} bien={b} reservations={GANTT_RES[b.id] || []}/>
+            ))}
+          </Panel>
+          <div className="section-label">Réservations à venir</div>
+          <Panel padded={false} style={{ padding: "10px 0" }}>
+            <div style={{
+              display: "grid", gridTemplateColumns: "1fr 1.5fr 1fr 1fr auto",
+              gap: 14, padding: "10px 16px", color: "#64748b",
+              fontFamily: "'Jost'", fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600,
+              borderBottom: "1px solid rgba(255,255,255,0.07)",
+            }}>
+              <span>Bien</span><span>Voyageur</span><span>Canal</span><span>Dates</span><span style={{ textAlign: "right" }}>Montant</span>
+            </div>
+            {RESERVATIONS.map((r, i) => <ReservationRow key={i} r={r}/>)}
+          </Panel>
+        </>
+      )}
+
+      {tab === "carto" && (
+        <>
+          <div className="section-label">Cartographie de Flux</div>
+          <Panel padded={false} style={{ overflow: "hidden", padding: 0 }}>
+            <div style={{ position: "relative", paddingBottom: "60%", background: "#06101e" }}>
+              <iframe src="cartographie.html" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none" }} title="Cartographie"/>
+            </div>
+            <div style={{ padding: "14px 20px", borderTop: "1px solid rgba(255,255,255,0.07)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: 14, color: "#94a3b8" }}>
+                Chaque île gagne son rayon par ses revenus. Les arcs portent le pigment moyen.
+              </div>
+              <a href="cartographie.html" target="_blank" rel="noopener" style={{
+                color: "#c9a673", fontFamily: "'Jost', sans-serif",
+                fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase",
+                textDecoration: "none", borderBottom: "1px solid rgba(201,166,115,0.4)",
+                paddingBottom: 2,
+              }}>Plein écran ↗</a>
+            </div>
+          </Panel>
+        </>
+      )}
+
+      {tab !== "cockpit" && tab !== "planning" && tab !== "carto" && (
+        <>
+          <div className="section-label">{TABS.find(t => t.id === tab)?.label}</div>
+          <Panel padded style={{ padding: "60px 16px", textAlign: "center", color: "#64748b", fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: 18 }}>
+            « Cette section existe dans la vraie app (voir <span style={{ fontFamily: "'JetBrains Mono'", fontStyle: "normal" }}>src/App.jsx</span> · 7500 lignes) mais n'est pas reproduite dans ce UI kit. »
+          </Panel>
+
+          <div className="grid-2" style={{ marginTop: 16 }}>
+            <Panel padded style={{ padding: 18 }}>
+              <div style={{ fontFamily: "'Jost'", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "#64748b", marginBottom: 12 }}>Revenus par canal · YTD</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+                <ChannelDonut size={140} data={[
+                  { value: 12000, color: "#FF5A5F" }, // airbnb
+                  { value: 42000, color: "#0ea5e9" }, // booking
+                  { value: 31000, color: "#10b981" }, // direct
+                  { value:  1320, color: "#a855f7" }, // parking
+                ]}/>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <ChannelChip channel="airbnb" value="12,0k€"/>
+                  <ChannelChip channel="booking" value="42,0k€"/>
+                  <ChannelChip channel="direct" value="31,0k€"/>
+                  <ChannelChip channel="autre" value="1,3k€"/>
+                </div>
+              </div>
+            </Panel>
+            <Panel padded style={{ padding: 18 }}>
+              <div style={{ fontFamily: "'Jost'", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "#64748b", marginBottom: 12 }}>Saisonnalité · occupation</div>
+              <Heatmap rows={[
+                { name: "Amaryllis",  values: [82,80,65,75,40,30,45,60,30,45,30,55] },
+                { name: "Zandoli",    values: [60,80,55,70,40,30,50,60,30,50,45,55] },
+                { name: "Géko",       values: [40,75,55,50,45,35,50,50,30,45,55,40] },
+                { name: "Mabouya",    values: [55,75,40,50,15,25,40,50,30,40,40,45] },
+                { name: "Schoelcher", values: [55,65,75,55,40,40,40,55,30,40,50,55] },
+                { name: "Nogent",     values: [70,75,68,75,75,70,75,65,70,72,68,72] },
+              ]}/>
+            </Panel>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+
+</body>
+</html>

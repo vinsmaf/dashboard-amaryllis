@@ -1,0 +1,21 @@
+/* shared style for preview cards
+   These cards live in preview/ and are 700px wide design canvases. */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 700px;
+  font-family: 'Jost', system-ui, sans-serif;
+  background: #faf5e9;
+  color: #0e3b3a;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+body { padding: 22px 26px; }
+.card-meta {
+  font-size: 9px;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  font-weight: 500;
+  color: #c47254;
+}
+.row { display: flex; gap: 14px; align-items: stretch; }
+.row-wrap { display: flex; gap: 14px; flex-wrap: wrap; align-items: stretch; }

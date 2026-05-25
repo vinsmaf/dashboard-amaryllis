@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&display=swap">
+<link rel="stylesheet" href="_card.css">
+<style>
+body { padding: 26px; }
+.row-wrap { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+.row-wrap:last-child { margin-bottom: 0; }
+.label { font: 600 9px/1 'Jost'; letter-spacing: 0.32em; text-transform: uppercase; color: #7a6b5a; width: 100%; margin-bottom: 4px; }
+
+.amenity {
+  background: #f4ecdc; border: 1px solid #e0d4bc;
+  border-radius: 4px; padding: 6px 14px;
+  font: 300 12px/1 'Jost'; letter-spacing: 0.04em; color: #0e3b3a;
+}
+.rating-chip {
+  background: rgba(14,59,58,0.06);
+  border-radius: 999px; padding: 5px 14px;
+  font: 500 12px/1 'Jost'; color: #0e3b3a;
+}
+.rating-chip .star { color: #c9a673; margin-right: 4px; }
+.tag-favorite {
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(6px);
+  border-radius: 999px; padding: 5px 14px;
+  font: 500 12px/1 'Jost'; color: #0e3b3a;
+  border: 1px solid rgba(14,59,58,0.08);
+}
+.tag-direct {
+  background: rgba(16,163,74,0.12);
+  color: #16a34a; border: 1px solid rgba(16,163,74,0.3);
+  border-radius: 6px; padding: 4px 10px;
+  font: 700 10px/1 'Jost'; letter-spacing: 0.08em; text-transform: uppercase;
+}
+.tag-channel-airbnb { background: rgba(255,90,95,0.15); color: #FF5A5F; border: 1px solid rgba(255,90,95,0.3); border-radius: 4px; padding: 3px 8px; font: 700 10px/1 'Jost', sans-serif; }
+.tag-channel-booking { background: rgba(14,165,233,0.15); color: #0ea5e9; border: 1px solid rgba(14,165,233,0.3); border-radius: 4px; padding: 3px 8px; font: 700 10px/1 'Jost', sans-serif; }
+.tag-channel-direct  { background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); border-radius: 4px; padding: 3px 8px; font: 700 10px/1 'Jost', sans-serif; }
+.tag-status-green { background: #10b981; border-radius: 50%; width: 8px; height: 8px; display: inline-block; }
+.tag-status-yellow{ background: #f59e0b; border-radius: 50%; width: 8px; height: 8px; display: inline-block; }
+.tag-status-red   { background: #ef4444; border-radius: 50%; width: 8px; height: 8px; display: inline-block; }
+
+.eyebrow-coral {
+  font: 200 10px/1 'Jost'; letter-spacing: 0.55em; text-transform: uppercase;
+  color: #c47254;
+}
+.eyebrow-navy {
+  font: 600 9px/1 'Jost'; letter-spacing: 0.42em; text-transform: uppercase;
+  color: #0e3b3a;
+}
+</style>
+</head>
+<body>
+<div class="row-wrap"><span class="label">Amenity chips · cream / sand border</span>
+  <span class="amenity">Piscine à débordement</span>
+  <span class="amenity">Vue océan</span>
+  <span class="amenity">Wifi Starlink</span>
+  <span class="amenity">Animaux OK</span>
+</div>
+<div class="row-wrap"><span class="label">Rating · favorite · direct discount</span>
+  <span class="rating-chip"><span class="star">★</span>4,94 · 33 avis</span>
+  <span class="tag-favorite">⭐ Coup de cœur Airbnb</span>
+  <span class="tag-direct">✓ -15% Direct</span>
+</div>
+<div class="row-wrap"><span class="label">Channel · status dots</span>
+  <span class="tag-channel-airbnb">Airbnb</span>
+  <span class="tag-channel-booking">Booking</span>
+  <span class="tag-channel-direct">Direct</span>
+  <span style="display:inline-flex; gap:6px; align-items:center; font:400 11px/1 'Jost'; color:#7a6b5a; padding-left: 10px"><span class="tag-status-green"></span>OK<span class="tag-status-yellow" style="margin-left:6px"></span>Vigilance<span class="tag-status-red" style="margin-left:6px"></span>Alerte</span>
+</div>
+<div class="row-wrap"><span class="label">Eyebrows</span>
+  <span class="eyebrow-coral">Locations d'exception</span>
+  <span style="width: 16px"></span>
+  <span class="eyebrow-navy">Informations pratiques</span>
+</div>
+</body></html>

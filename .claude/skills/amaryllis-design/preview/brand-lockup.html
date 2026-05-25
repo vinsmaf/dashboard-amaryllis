@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@200;300;400&family=Cormorant+Garamond:ital,wght@1,400&display=swap">
+<link rel="stylesheet" href="_card.css">
+<style>
+body { padding: 0; margin: 0; }
+.split { display: grid; grid-template-columns: 1fr 1fr; }
+.l, .r {
+  height: 240px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 10px;
+}
+.l { background: #faf5e9; color: #0e3b3a; }
+.r { background: #0e3b3a; color: #faf5e9; }
+.logo-mark { width: 100px; height: 100px; border-radius: 50%; overflow: hidden; }
+.wordmark {
+  font: 200 22px/1 'Jost'; letter-spacing: 0.28em; text-transform: uppercase;
+}
+.tag { font: italic 400 13px/1 'Cormorant Garamond'; opacity: 0.7; letter-spacing: 0.04em; }
+.tag.gold { color: #c9a673; }
+</style>
+</head>
+<body>
+<div class="split">
+  <div class="l">
+    <img class="logo-mark" src="../assets/logo.svg" alt="Amaryllis">
+    <div class="wordmark">Amaryllis</div>
+    <div class="tag">Locations d'exception</div>
+  </div>
+  <div class="r">
+    <img class="logo-mark" src="../assets/logo.svg" alt="Amaryllis" style="background:#0e3b3a">
+    <div class="wordmark">Amaryllis</div>
+    <div class="tag gold">Locations d'exception</div>
+  </div>
+</div>
+</body></html>

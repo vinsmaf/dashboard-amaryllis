@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@200;300;400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="_card.css">
+<style>
+body { padding: 20px 22px; background: #0a0f1e; color: #f1f5f9; }
+.tabs {
+  display: flex; gap: 4px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px; padding: 6px;
+}
+.tab {
+  flex: 1; text-align: center;
+  padding: 8px 0;
+  font: 500 11px/1 'Jost'; color: #94a3b8;
+  border-radius: 8px;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+}
+.tab.active {
+  background: linear-gradient(135deg,#0ea5e9,#6366f1);
+  color: #fff;
+}
+.tab .emo { display: inline-block; margin-right: 4px; }
+
+.below {
+  margin-top: 14px;
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;
+}
+.tag-bien {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px; padding: 10px 12px;
+  display: flex; align-items: center; gap: 8px;
+  font: 500 12px/1 'Jost'; color: #f1f5f9;
+}
+.tag-bien .e { font-size: 18px; }
+.tag-bien .nm { font-weight: 500; }
+.tag-bien .sub { display: block; font: 400 10px/1.2 'Jost'; color: #94a3b8; margin-top: 2px; }
+</style>
+</head>
+<body>
+<div class="tabs">
+  <div class="tab"><span class="emo">📅</span>Planning</div>
+  <div class="tab active"><span class="emo">🎯</span>Cockpit</div>
+  <div class="tab"><span class="emo">🔮</span>Prévi.</div>
+  <div class="tab"><span class="emo">💰</span>Charges</div>
+  <div class="tab"><span class="emo">💼</span>Pilotage</div>
+  <div class="tab"><span class="emo">📈</span>Historique</div>
+  <div class="tab"><span class="emo">📊</span>vs 2025</div>
+</div>
+
+<div class="below">
+  <div class="tag-bien"><span class="e">🌴</span><div><span class="nm">Amaryllis</span><span class="sub">Sainte-Luce · court</span></div></div>
+  <div class="tag-bien"><span class="e">🦎</span><div><span class="nm">Iguana</span><span class="sub">Sainte-Luce · long</span></div></div>
+  <div class="tag-bien"><span class="e">🌊</span><div><span class="nm">Zandoli</span><span class="sub">Sainte-Luce · court</span></div></div>
+</div>
+</body></html>

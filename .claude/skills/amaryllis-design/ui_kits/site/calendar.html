@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<title>Calendar demo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<link rel="stylesheet" href="../../colors_and_type.css"/>
+<style>
+  body[data-surface="site"] {
+    margin: 0; min-height: 100vh; background: var(--c-ivory);
+    display: flex; justify-content: center; padding: 60px 24px;
+  }
+  .frame { max-width: 720px; width: 100%; }
+  .label-eyebrow {
+    font-family: 'Jost', sans-serif; font-weight: 200; font-size: 11px;
+    letter-spacing: 0.55em; text-transform: uppercase; color: var(--c-coral);
+    margin-bottom: 16px;
+  }
+  .title {
+    font-family: 'Jost', sans-serif; font-weight: 200; font-size: 32px;
+    letter-spacing: 0.12em; text-transform: uppercase; color: var(--c-navy);
+    margin: 0 0 12px;
+  }
+  .lede {
+    font-family: 'Cormorant Garamond', serif; font-style: italic;
+    color: var(--c-muted); font-size: 17px; line-height: 1.55;
+    margin: 0 0 28px;
+  }
+</style>
+</head>
+<body data-surface="site">
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<div id="root"></div>
+
+<script type="text/babel" src="Calendar.jsx"></script>
+
+<script type="text/babel">
+const { useState } = React;
+
+/* Some booked dates for demo (Villa Amaryllis Aug-Sep 2026) */
+function range(start, end) {
+  const out = [];
+  let d = new Date(start + "T12:00:00");
+  const e = new Date(end + "T12:00:00");
+  while (d <= e) {
+    out.push(d.toISOString().slice(0, 10));
+    d.setDate(d.getDate() + 1);
+  }
+  return out;
+}
+const BOOKED = [
+  ...range("2026-12-06", "2026-12-09"),
+  ...range("2026-12-23", "2027-01-03"),
+  ...range("2027-02-14", "2027-02-21"),
+];
+
+function Demo() {
+  const [range_, setRange] = useState({ from: null, to: null });
+  return (
+    <div className="frame">
+      <div className="label-eyebrow">Villa Amaryllis</div>
+      <h1 className="title">Vos dates de séjour</h1>
+      <p className="lede">
+        Cliquez l'arrivée, puis le départ. Les nuits déjà réservées sont rayées — vous pouvez survoler la fin pour visualiser la fourchette.
+      </p>
+      <DateRangePicker
+        value={range_}
+        onChange={setRange}
+        booked={BOOKED}
+        minNights={4}
+        initialMonth={new Date(2026, 11, 1)}
+      />
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<Demo/>);
+</script>
+
+</body>
+</html>

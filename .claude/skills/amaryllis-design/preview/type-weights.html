@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@200;300;400;500;600;700&display=swap">
+<link rel="stylesheet" href="_card.css">
+<style>
+body { padding: 24px 26px; }
+.scale { display: flex; flex-direction: column; gap: 8px; }
+.row-spec { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding: 6px 12px; border-radius: 8px; }
+.row-spec:nth-child(odd) { background: #f4ecdc; }
+.weight-label { font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: #7a6b5a; min-width: 110px; }
+.sample { font-family: 'Jost'; color: #0e3b3a; font-size: 26px; line-height: 1.1; letter-spacing: 0.06em; text-transform: uppercase; }
+.tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #7a6b5a; }
+</style>
+</head>
+<body>
+<div class="scale">
+  <div class="row-spec"><span class="weight-label">Thin · 200</span>      <span class="sample" style="font-weight:200">Amaryllis</span> <span class="tag">200 / 0.14em</span></div>
+  <div class="row-spec"><span class="weight-label">Light · 300</span>     <span class="sample" style="font-weight:300">Amaryllis</span> <span class="tag">300 / 0.12em</span></div>
+  <div class="row-spec"><span class="weight-label">Regular · 400</span>   <span class="sample" style="font-weight:400">Amaryllis</span> <span class="tag">400 / 0.10em</span></div>
+  <div class="row-spec"><span class="weight-label">Medium · 500</span>    <span class="sample" style="font-weight:500">Amaryllis</span> <span class="tag">500 / 0.05em</span></div>
+  <div class="row-spec"><span class="weight-label">Semibold · 600</span>  <span class="sample" style="font-weight:600">Amaryllis</span> <span class="tag">600 / 0.04em</span></div>
+  <div class="row-spec"><span class="weight-label">Bold · 700</span>      <span class="sample" style="font-weight:700">Amaryllis</span> <span class="tag">700 / 0.02em</span></div>
+</div>
+</body></html>

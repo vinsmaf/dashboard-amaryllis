@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="_card.css">
+<style>
+body { padding: 24px; }
+.grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; }
+.cell { text-align: center; }
+.tile { width: 70px; height: 70px; margin: 0 auto 8px; background: #c47254; border: 1px solid #a85a3f; }
+.name { font: 500 11px/1 'Jost'; color: #0e3b3a; }
+.val { font: 500 10px/1 'JetBrains Mono'; color: #7a6b5a; margin-top: 4px; }
+.use { font: 300 9px/1.3 'Jost'; color: #7a6b5a; margin-top: 6px; }
+</style>
+</head>
+<body>
+<div class="grid">
+  <div class="cell"><div class="tile" style="border-radius:4px"></div><div class="name">xs</div><div class="val">4px</div><div class="use">tags</div></div>
+  <div class="cell"><div class="tile" style="border-radius:6px"></div><div class="name">sm</div><div class="val">6px</div><div class="use">CTA · badges</div></div>
+  <div class="cell"><div class="tile" style="border-radius:8px"></div><div class="name">md</div><div class="val">8px</div><div class="use">inputs</div></div>
+  <div class="cell"><div class="tile" style="border-radius:12px"></div><div class="name">lg</div><div class="val">12px</div><div class="use">panels</div></div>
+  <div class="cell"><div class="tile" style="border-radius:16px"></div><div class="name">xl</div><div class="val">16px</div><div class="use">cards · modals</div></div>
+  <div class="cell"><div class="tile" style="border-radius:999px"></div><div class="name">pill</div><div class="val">999px</div><div class="use">chips · avatar</div></div>
+</div>
+</body></html>

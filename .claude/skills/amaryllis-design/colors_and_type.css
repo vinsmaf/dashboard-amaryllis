@@ -1,0 +1,363 @@
+/* ================================================================
+   AMARYLLIS DESIGN SYSTEM — colors_and_type.css
+   ================================================================
+   Two surfaces share the SAME typography (Jost + Cormorant Garamond)
+   but use TWO distinct color palettes:
+
+     [data-surface="site"]   → warm ivory/navy/coral (marketing site)
+     [data-surface="admin"]  → dark slate (admin dashboard)
+
+   Apply the surface attribute on <html> or any container; tokens
+   below are scoped accordingly. Default = "site".
+   ================================================================ */
+
+/* ────────────────────────────────────────────────────────────────
+   FONTS — loaded from Google Fonts (no .ttf shipped with codebase)
+   ──────────────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+/* ────────────────────────────────────────────────────────────────
+   PALETTE — site (default)
+   The marketing site (villamaryllis.com). Antillean teal "ink",
+   warm ivory paper, muted terracotta coral CTA, sand borders.
+
+   Note: all tokens are defined on BOTH :root (so they work without
+   a [data-surface] attribute) AND [data-surface="site"] (so an
+   embedded preview that explicitly opts into "site" gets them too).
+   Mounting <body data-surface="admin"> swaps the relevant ones.
+   ──────────────────────────────────────────────────────────────── */
+:root,
+[data-surface="site"] {
+  /* Base palette */
+  --c-ivory:  #faf5e9;   /* paper — main background */
+  --c-cream:  #f4ecdc;   /* card / modal background */
+  --c-sand:   #e0d4bc;   /* borders, dividers */
+  --c-navy:   #0e3b3a;   /* ink — deep antillean teal, primary text + header */
+  --c-coral:  #c47254;   /* muted terracotta — accent, primary CTA */
+  --c-coral-deep: #a85a3f;
+  --c-gold:   #c9a673;   /* star ratings, secondary accent */
+  --c-text:   #0e3b3a;   /* body text */
+  --c-muted:  #7a6b5a;   /* secondary text */
+
+  /* Functional / semantic */
+  --c-success: #16a34a;
+  --c-warning: #d97706;
+  --c-danger:  #ef4444;
+  --c-info:    #0ea5e9;
+
+  /* Foregrounds */
+  --fg-1: var(--c-navy);                /* primary text */
+  --fg-2: var(--c-text);                /* body */
+  --fg-3: var(--c-muted);               /* muted / captions */
+  --fg-on-ink: var(--c-ivory);          /* text over navy */
+
+  /* Backgrounds */
+  --bg-1: var(--c-ivory);               /* page background */
+  --bg-2: var(--c-cream);               /* recessed / card panel */
+  --bg-3: #ffffff;                      /* card surface (above page) */
+  --bg-ink: var(--c-navy);              /* dark/hero background */
+
+  /* Borders & dividers */
+  --border-1: var(--c-sand);
+  --border-2: rgba(14, 59, 58, 0.12);
+
+  /* ────────── TYPOGRAPHY ────────── */
+  --font-display: 'Jost', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans:    'Jost', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-serif:   'Cormorant Garamond', Georgia, serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, Consolas, monospace;
+
+  /* Type scale — site uses very long letter-spacing on uppercase display.
+     Body uses serif italic Cormorant for paragraphs; UI uses Jost. */
+  --type-eyebrow-size:    11px;
+  --type-eyebrow-tracking: 0.45em;
+  --type-eyebrow-weight:  300;
+
+  --type-h1-size:    clamp(28px, 6vw, 64px);
+  --type-h1-weight:  200;
+  --type-h1-tracking: 0.14em;
+  --type-h1-line:    1.1;
+
+  --type-h2-size:    clamp(22px, 3vw, 38px);
+  --type-h2-weight:  200;
+  --type-h2-tracking: 0.12em;
+  --type-h2-line:    1.15;
+
+  --type-h3-size:    clamp(17px, 2vw, 22px);
+  --type-h3-weight:  500;
+  --type-h3-tracking: 0.02em;
+
+  --type-body-size:  17px;        /* serif paragraph */
+  --type-body-line:  1.8;
+  --type-ui-size:    14px;        /* sans-serif UI */
+  --type-ui-line:    1.55;
+  --type-small-size: 12px;
+
+  /* ────────── SPACING / RADIUS / SHADOW ────────── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 48px;
+  --space-9: 64px;
+  --space-10: 96px;
+
+  /* Layout container */
+  --container-narrow: 720px;
+  --container-default: 1180px;
+  --container-wide: 1280px;
+  --gutter: 24px;
+
+  /* Breakpoints (used in @media — these vars exist for documentation only,
+     CSS @media doesn't read CSS variables) */
+  --bp-sm: 480px;     /* phone */
+  --bp-md: 768px;     /* tablet */
+  --bp-lg: 1024px;    /* desktop */
+  --bp-xl: 1280px;    /* wide desktop */
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;     /* CTAs, badges */
+  --radius-md: 8px;     /* inputs, secondary buttons */
+  --radius-lg: 12px;
+  --radius-xl: 16px;    /* cards */
+  --radius-2xl: 24px;
+  --radius-pill: 999px;
+
+  --shadow-1: 0 2px 16px rgba(14, 59, 58, 0.06);    /* card resting */
+  --shadow-2: 0 12px 32px rgba(14, 59, 58, 0.10);   /* card hover */
+  --shadow-3: 0 20px 48px rgba(14, 59, 58, 0.14);   /* modal / floating */
+  --shadow-cta: 0 4px 18px rgba(196, 114, 84, 0.30);
+
+  /* Easing — generous, never bouncy */
+  --ease-out:    cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast:    150ms;
+  --dur-base:    250ms;
+  --dur-slow:    400ms;
+}
+
+/* ────────────────────────────────────────────────────────────────
+   MOBILE — tightened spacing + container gutters on small viewports.
+   Applies to BOTH surfaces (the rules cascade below the palette
+   declarations). Add `<meta name="viewport" content="width=device-width, initial-scale=1">`
+   to your <head>.
+   ──────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  :root, [data-surface] {
+    --gutter: 16px;
+    --space-9: 40px;
+    --space-10: 56px;
+    --type-eyebrow-tracking: 0.32em;  /* shorter eyebrows on small screens */
+  }
+}
+@media (max-width: 480px) {
+  :root, [data-surface] {
+    --gutter: 14px;
+    --type-eyebrow-tracking: 0.28em;
+  }
+}
+
+/* Utility container — pair with class="container" */
+[data-surface] .container {
+  max-width: var(--container-default);
+  margin-left: auto; margin-right: auto;
+  padding-left: var(--gutter);
+  padding-right: var(--gutter);
+  width: 100%;
+  box-sizing: border-box;
+}
+[data-surface] .container--narrow { max-width: var(--container-narrow); }
+[data-surface] .container--wide   { max-width: var(--container-wide); }
+
+/* ────────────────────────────────────────────────────────────────
+   PALETTE — admin
+   Dashboard surface. Dark slate, monospace numerals, brighter
+   semantic accents tuned for charts (Recharts).
+   ──────────────────────────────────────────────────────────────── */
+[data-surface="admin"] {
+  --c-bg-ink:     #0a0f1e;
+  --c-bg-panel:   #0f172a;
+  --c-bg-elevated: #1e293b;
+  --c-bg-hover:   rgba(255, 255, 255, 0.06);
+  --c-border:     rgba(255, 255, 255, 0.08);
+  --c-border-2:   #334155;
+
+  --c-fg-1: #f1f5f9;   /* primary text */
+  --c-fg-2: #cbd5e1;   /* body */
+  --c-fg-3: #94a3b8;   /* secondary */
+  --c-fg-4: #64748b;   /* muted */
+  --c-fg-5: #475569;   /* dim labels */
+
+  /* Chart / channel colors */
+  --c-airbnb:  #FF5A5F;
+  --c-booking: #0ea5e9;
+  --c-direct:  #10b981;
+  --c-autre:   #a855f7;
+
+  --c-success: #10b981;
+  --c-warning: #f59e0b;
+  --c-danger:  #ef4444;
+  --c-info:    #0ea5e9;
+  --c-violet:  #8b5cf6;
+
+  /* Bien (property) brand colors used as identity tags */
+  --bien-nogent:     #0ea5e9;
+  --bien-amaryllis:  #10b981;
+  --bien-iguana:     #6366f1;
+  --bien-geko:       #f59e0b;
+  --bien-zandoli:    #3b82f6;
+  --bien-mabouya:    #ec4899;
+  --bien-schoelcher: #8b5cf6;
+
+  /* Map semantic tokens onto admin */
+  --fg-1: var(--c-fg-1);
+  --fg-2: var(--c-fg-2);
+  --fg-3: var(--c-fg-3);
+  --bg-1: var(--c-bg-ink);
+  --bg-2: var(--c-bg-panel);
+  --bg-3: var(--c-bg-elevated);
+  --border-1: var(--c-border);
+  --border-2: var(--c-border-2);
+
+  --shadow-1: 0 1px 3px rgba(0,0,0,0.4);
+  --shadow-2: 0 8px 24px rgba(0,0,0,0.5);
+  --shadow-3: 0 20px 48px rgba(0,0,0,0.6);
+}
+
+/* ────────────────────────────────────────────────────────────────
+   SITE — dark mode
+   Attached via `<html data-theme="dark">` or `<body data-theme="dark">`.
+   Ink and paper invert; coral and gold lift slightly for legibility
+   on a dark ground; shadows shift from teal-tinted to deep-black.
+   ──────────────────────────────────────────────────────────────── */
+[data-surface="site"][data-theme="dark"],
+[data-theme="dark"] {
+  --c-ivory:  #111c1b;        /* page paper → near-black teal */
+  --c-cream:  #1a2927;        /* recessed card */
+  --c-sand:   #2e4340;        /* borders */
+  --c-navy:   #e4f0ed;        /* ink inverts to cream */
+  --c-coral:  #d4835f;        /* lifted for contrast */
+  --c-gold:   #d4b787;
+  --c-text:   #e4f0ed;
+  --c-muted:  #7aaba2;
+
+  --bg-1: var(--c-ivory);
+  --bg-2: var(--c-cream);
+  --bg-3: #1a2927;
+  --border-1: var(--c-sand);
+  --border-2: rgba(228, 240, 237, 0.10);
+  --fg-on-ink: var(--c-text); /* navy IS the light text now */
+
+  /* Shadows: deeper, no longer teal-tinted (the surface is the teal) */
+  --shadow-1: 0 2px 16px rgba(0, 0, 0, 0.30);
+  --shadow-2: 0 12px 32px rgba(0, 0, 0, 0.45);
+  --shadow-3: 0 20px 48px rgba(0, 0, 0, 0.55);
+  --shadow-cta: 0 4px 18px rgba(212, 131, 95, 0.35);
+}
+
+/* ────────────────────────────────────────────────────────────────
+   SEMANTIC HTML — opt-in via [data-surface] container
+   ──────────────────────────────────────────────────────────────── */
+[data-surface] {
+  font-family: var(--font-sans);
+  font-size: var(--type-ui-size);
+  line-height: var(--type-ui-line);
+  color: var(--fg-2);
+  background: var(--bg-1);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+[data-surface="site"] h1,
+[data-surface="site"] .h1 {
+  font-family: var(--font-display);
+  font-size: var(--type-h1-size);
+  font-weight: var(--type-h1-weight);
+  letter-spacing: var(--type-h1-tracking);
+  line-height: var(--type-h1-line);
+  text-transform: uppercase;
+  color: var(--fg-1);
+  margin: 0;
+}
+
+[data-surface="site"] h2,
+[data-surface="site"] .h2 {
+  font-family: var(--font-display);
+  font-size: var(--type-h2-size);
+  font-weight: var(--type-h2-weight);
+  letter-spacing: var(--type-h2-tracking);
+  line-height: var(--type-h2-line);
+  text-transform: uppercase;
+  color: var(--fg-1);
+  margin: 0;
+}
+
+[data-surface="site"] h3,
+[data-surface="site"] .h3 {
+  font-family: var(--font-display);
+  font-size: var(--type-h3-size);
+  font-weight: var(--type-h3-weight);
+  letter-spacing: var(--type-h3-tracking);
+  color: var(--fg-1);
+  margin: 0;
+}
+
+[data-surface="site"] .eyebrow {
+  font-family: var(--font-display);
+  font-size: var(--type-eyebrow-size);
+  font-weight: var(--type-eyebrow-weight);
+  letter-spacing: var(--type-eyebrow-tracking);
+  text-transform: uppercase;
+  color: var(--c-coral);
+}
+
+/* Editorial paragraph — Cormorant italic — used in descriptions/quotes */
+[data-surface="site"] .editorial,
+[data-surface="site"] .lede {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  color: var(--fg-2);
+}
+
+[data-surface="site"] p,
+[data-surface="site"] .body {
+  font-family: var(--font-serif);   /* serif for long-form copy */
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  color: var(--fg-2);
+  margin: 0;
+}
+
+[data-surface="site"] .ui,
+[data-surface="site"] button,
+[data-surface="site"] input,
+[data-surface="site"] label,
+[data-surface="site"] nav {
+  font-family: var(--font-sans);
+}
+
+[data-surface="site"] code,
+[data-surface="site"] .mono {
+  font-family: var(--font-mono);
+  font-size: 0.94em;
+}
+
+/* ────────── Admin typography — UI-first, mono for numerals ────────── */
+[data-surface="admin"] {
+  font-family: var(--font-sans);
+}
+[data-surface="admin"] h1 { font-size: 24px; font-weight: 700; color: var(--fg-1); margin: 0; letter-spacing: -0.01em; }
+[data-surface="admin"] h2 { font-size: 18px; font-weight: 600; color: var(--fg-1); margin: 0; }
+[data-surface="admin"] h3 { font-size: 14px; font-weight: 600; color: var(--fg-2); margin: 0; }
+[data-surface="admin"] .kpi-value { font-family: var(--font-mono); font-weight: 700; font-size: 22px; }
+[data-surface="admin"] .label-tiny {
+  font-size: 10px; color: var(--fg-4);
+  text-transform: uppercase; letter-spacing: 0.1em;
+}
+[data-surface="admin"] code,
+[data-surface="admin"] .mono { font-family: var(--font-mono); }

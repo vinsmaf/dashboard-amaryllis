@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="fr"><head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@200;300;400;500;600&family=Cormorant+Garamond:ital,wght@1,400&display=swap">
+<link rel="stylesheet" href="_card.css">
+<style>
+  body { padding: 16px; background: #f4ecdc; margin: 0; width: 700px; }
+  .row { display: flex; gap: 16px; justify-content: center; align-items: flex-start; }
+  .phone {
+    width: 280px; height: 540px;
+    background: #faf5e9;
+    border: 6px solid #1a1a1a;
+    border-radius: 36px;
+    box-shadow: 0 18px 32px rgba(14,59,58,0.18);
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .phone::before {
+    content: ""; position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+    width: 90px; height: 22px; background: #1a1a1a; border-radius: 14px; z-index: 5;
+  }
+  .phone-content { width: 100%; height: 100%; overflow: hidden; position: relative; }
+
+  /* ── Phone A — Home / Hero ── */
+  .a-topbar {
+    background: #0e3b3a; color: #faf5e9;
+    height: 56px; padding-top: 36px; padding-bottom: 0; padding-inline: 16px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .a-topbar .logo {
+    font: 200 11px/1 'Jost'; letter-spacing: 0.4em; color: #faf5e9;
+  }
+  .a-topbar .menu {
+    font: 300 11px/1 'Jost'; letter-spacing: 0.1em; color: rgba(250,245,233,0.7);
+  }
+  .a-hero {
+    height: 250px; position: relative;
+    background: #0e2020 url('../assets/photos/amaryllis-02.webp') center/cover;
+  }
+  .a-hero::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(14,59,58,0) 40%, rgba(14,59,58,0.7) 100%);
+  }
+  .a-hero-content {
+    position: absolute; bottom: 14px; left: 14px; right: 14px; z-index: 2; color: #faf5e9;
+  }
+  .a-eyebrow {
+    font: 200 8px/1 'Jost'; letter-spacing: 0.45em; text-transform: uppercase;
+    color: #c47254; margin-bottom: 6px;
+  }
+  .a-title {
+    font: 200 22px/1.1 'Jost'; letter-spacing: 0.14em;
+    text-transform: uppercase; color: #faf5e9;
+  }
+  .a-sub {
+    font: italic 400 12px/1.5 'Cormorant Garamond';
+    color: rgba(250,245,233,0.85); margin-top: 4px;
+  }
+  .a-cards { padding: 14px 14px 0; }
+  .a-card {
+    background: #fff; border: 1px solid #e0d4bc;
+    border-radius: 12px; overflow: hidden; margin-bottom: 10px;
+    box-shadow: 0 2px 12px rgba(14,59,58,0.05);
+  }
+  .a-card .ph {
+    height: 110px;
+    background: #f4ecdc center/cover;
+  }
+  .a-card .info { padding: 10px 12px 12px; }
+  .a-card .nm { font: 500 12px/1 'Jost'; color: #0e3b3a; display: flex; justify-content: space-between; }
+  .a-card .nm .st { font: 500 10px/1 'Jost'; color: #0e3b3a; }
+  .a-card .nm .st span { color: #c9a673; }
+  .a-card .lc { font: 300 10px/1.3 'Jost'; color: #7a6b5a; margin-top: 2px; }
+  .a-card .pr {
+    margin-top: 8px; display: flex; align-items: baseline; gap: 3px;
+  }
+  .a-card .from { font: 300 8px/1 'Jost'; color: #7a6b5a; letter-spacing: 0.18em; text-transform: uppercase; }
+  .a-card .amt { font: 200 18px/1 'Jost'; color: #0e3b3a; margin-left: 4px; }
+  .a-card .per { font: 300 10px/1 'Jost'; color: #7a6b5a; }
+
+  /* ── Phone B — Property detail with sticky topbar ── */
+  .b-topbar {
+    background: #0e3b3a; color: #faf5e9;
+    padding: 36px 10px 6px 10px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .b-topbar .back { font: 300 11px/1 'Jost'; color: rgba(250,245,233,0.7); }
+  .b-topbar .nm {
+    flex: 1; text-align: center; font: 200 9px/1 'Jost'; letter-spacing: 0.22em;
+    text-transform: uppercase; color: #faf5e9;
+  }
+  .b-topbar .cta {
+    background: #c47254; color: #fff; border-radius: 5px; padding: 6px 9px;
+    font: 600 9px/1 'Jost'; letter-spacing: 0.04em;
+  }
+  .b-photo {
+    height: 220px; background: url('../assets/photos/amaryllis-08.webp') center/cover;
+  }
+  .b-body { padding: 16px 14px; }
+  .b-eyebrow { font: 200 8px/1 'Jost'; letter-spacing: 0.45em; text-transform: uppercase; color: #c47254; }
+  .b-title { font: 200 22px/1.1 'Jost'; letter-spacing: 0.12em; text-transform: uppercase; color: #0e3b3a; margin-top: 8px; }
+  .b-info { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+  .b-info .rate { font: 500 10px/1 'Jost'; color: #0e3b3a; background: rgba(14,59,58,0.05); padding: 3px 10px; border-radius: 999px; }
+  .b-info .rate span { color: #c9a673; }
+  .b-info .meta { font: 300 10px/1.3 'Jost'; color: #7a6b5a; }
+  .b-lead {
+    font: italic 400 14px/1.55 'Cormorant Garamond';
+    color: #0e3b3a; margin-top: 16px;
+  }
+  .b-amenities { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 14px; }
+  .b-amenities .chip {
+    background: #f4ecdc; border: 1px solid #e0d4bc; padding: 4px 10px; border-radius: 4px;
+    font: 300 10px/1 'Jost'; color: #0e3b3a;
+  }
+  .b-book {
+    margin: 16px -14px -16px;
+    padding: 12px 14px;
+    background: #fff; border-top: 1px solid #e0d4bc;
+    display: flex; justify-content: space-between; align-items: center;
+    position: sticky; bottom: 0;
+  }
+  .b-book .price { font: 200 22px/1 'Jost'; color: #0e3b3a; }
+  .b-book .per { font: 300 10px/1 'Jost'; color: #7a6b5a; }
+  .b-book .cta-lg {
+    background: #c47254; color: #fff; border-radius: 6px; padding: 11px 18px;
+    font: 600 11px/1 'Jost'; letter-spacing: 0.08em; text-transform: uppercase;
+  }
+
+  .caption {
+    text-align: center; color: #7a6b5a; font: 600 9px/1 'Jost';
+    letter-spacing: 0.32em; text-transform: uppercase; margin-top: 14px;
+  }
+</style>
+</head>
+<body>
+<div class="row">
+  <div>
+    <div class="phone"><div class="phone-content">
+      <div class="a-topbar">
+        <span class="logo">Amaryllis</span>
+        <span class="menu">FR · EN</span>
+      </div>
+      <div class="a-hero">
+        <div class="a-hero-content">
+          <div class="a-eyebrow">Locations d'exception</div>
+          <div class="a-title">Sept Villas</div>
+          <div class="a-sub">en Martinique et aux portes de Paris</div>
+        </div>
+      </div>
+      <div class="a-cards">
+        <div class="a-card">
+          <div class="ph" style="background-image:url('../assets/photos/amaryllis-01.webp')"></div>
+          <div class="info">
+            <div class="nm"><span>Villa Amaryllis</span><span class="st"><span>★</span>4,94</span></div>
+            <div class="lc">Sainte-Luce · 6 voyageurs</div>
+            <div class="pr"><span class="from">à partir de</span><span class="amt">280€</span><span class="per">/nuit</span></div>
+          </div>
+        </div>
+        <div class="a-card">
+          <div class="ph" style="background-image:url('../assets/photos/zandoli-01.webp')"></div>
+          <div class="info">
+            <div class="nm"><span>Zandoli</span><span class="st"><span>★</span>4,5</span></div>
+            <div class="lc">Sainte-Luce · 4 voyageurs</div>
+            <div class="pr"><span class="from">à partir de</span><span class="amt">220€</span><span class="per">/nuit</span></div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+    <div class="caption">Home · 375pt</div>
+  </div>
+
+  <div>
+    <div class="phone"><div class="phone-content">
+      <div class="b-topbar">
+        <span class="back">←</span>
+        <span class="nm">Villa Amaryllis</span>
+        <span class="cta">280€/n</span>
+      </div>
+      <div class="b-photo"></div>
+      <div class="b-body">
+        <div class="b-eyebrow">Sainte-Luce</div>
+        <div class="b-title">Amaryllis</div>
+        <div class="b-info"><span class="rate"><span>★</span> 4,94</span><span class="meta">6 voyageurs · 3 ch.</span></div>
+        <div class="b-lead">"Perchée sur les hauteurs, bercée par les alizés et le parfum des fleurs tropicales."</div>
+        <div class="b-amenities">
+          <span class="chip">Piscine</span>
+          <span class="chip">Vue océan</span>
+          <span class="chip">Wifi Starlink</span>
+        </div>
+        <div class="b-book">
+          <div><span class="price">280€</span><span class="per">/nuit</span></div>
+          <span class="cta-lg">Réserver</span>
+        </div>
+      </div>
+    </div></div>
+    <div class="caption">Detail · 375pt</div>
+  </div>
+</div>
+</body></html>

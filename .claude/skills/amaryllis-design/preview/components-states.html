@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="fr"><head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&family=Cormorant+Garamond:ital@1&display=swap">
+<link rel="stylesheet" href="_card.css">
+<style>
+body { padding: 22px 26px; }
+.section { font: 600 9px/1 'Jost'; letter-spacing: 0.32em; text-transform: uppercase; color: #7a6b5a; margin: 0 0 12px; }
+.row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 22px; }
+.row:last-child { margin-bottom: 0; }
+
+.btn {
+  font: 600 12px/1 'Jost', sans-serif;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  border: none; padding: 13px 26px; border-radius: 6px;
+  cursor: pointer; color: #fff;
+  display: inline-flex; align-items: center; gap: 8px;
+  transition: all 0.2s cubic-bezier(0.23,1,0.32,1);
+}
+.btn-rest    { background: #c47254; box-shadow: 0 4px 18px rgba(196,114,84,0.30); }
+.btn-hover   { background: #a85a3f; box-shadow: 0 6px 24px rgba(196,114,84,0.45); }
+.btn-active  { background: #944a30; box-shadow: 0 2px 10px rgba(196,114,84,0.25); transform: translateY(1px); }
+.btn-focus   { background: #c47254; box-shadow: 0 0 0 3px rgba(196,114,84,0.25), 0 4px 18px rgba(196,114,84,0.30); }
+.btn-disabled { background: #e0d4bc; color: #b39c8a; box-shadow: none; cursor: not-allowed; }
+.btn-loading { background: #c47254; opacity: 0.85; cursor: progress; }
+
+.spinner {
+  width: 12px; height: 12px; border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.4); border-top-color: #fff;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.label { font: 500 10px/1 'Jost'; color: #7a6b5a; min-width: 70px; text-align: right; }
+
+.input {
+  font: 400 13px/1.2 'Jost', sans-serif;
+  background: #faf5e9; color: #0e3b3a;
+  border: 1px solid #e0d4bc; border-radius: 10px;
+  padding: 10px 14px; min-width: 140px;
+  transition: border-color 0.15s;
+}
+.input-focus { border-color: rgba(196,114,84,0.55); box-shadow: 0 0 0 3px rgba(196,114,84,0.10); }
+.input-error { border-color: #ef4444; }
+.input-disabled { background: #f4ecdc; color: #b39c8a; cursor: not-allowed; }
+
+.err-msg { font: 500 10px/1.2 'Jost'; color: #ef4444; margin-left: 8px; }
+.ok-msg  { font: 500 10px/1.2 'Jost'; color: #16a34a; margin-left: 8px; }
+
+.skeleton {
+  background: linear-gradient(90deg, #e8e0d4 25%, #f4ecdc 50%, #e8e0d4 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+  border-radius: 6px;
+}
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.card-card {
+  background: #fff; border: 1px solid #e0d4bc; border-radius: 12px;
+  padding: 12px; display: flex; gap: 12px; align-items: center; width: 280px;
+}
+.card-card .ph { width: 80px; height: 60px; border-radius: 6px; flex-shrink: 0; }
+.card-card .body { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+
+.empty {
+  border: 1px dashed #c9bfa9; border-radius: 12px; padding: 18px 22px;
+  text-align: center; color: #7a6b5a;
+  font: italic 400 15px/1.4 'Cormorant Garamond', serif;
+}
+.empty .e { font-size: 22px; color: #c47254; display: block; margin-bottom: 6px; font-family: 'Jost', sans-serif; font-weight: 200; }
+</style>
+</head>
+<body>
+
+<div class="section">Buttons · états</div>
+<div class="row">
+  <span class="label">rest</span>     <button class="btn btn-rest">Réserver</button>
+  <span class="label">hover</span>    <button class="btn btn-hover">Réserver</button>
+  <span class="label">active</span>   <button class="btn btn-active">Réserver</button>
+</div>
+<div class="row">
+  <span class="label">focus</span>    <button class="btn btn-focus">Réserver</button>
+  <span class="label">loading</span>  <button class="btn btn-loading"><span class="spinner"></span>Traitement…</button>
+  <span class="label">disabled</span> <button class="btn btn-disabled">Indisponible</button>
+</div>
+
+<div class="section">Inputs · états</div>
+<div class="row">
+  <span class="label">default</span>  <input class="input" value="Marie">
+  <span class="label">focus</span>    <input class="input input-focus" value="Marie">
+</div>
+<div class="row">
+  <span class="label">error</span>    <input class="input input-error" value="invalid@"><span class="err-msg">⚠ Email invalide</span>
+  <span class="label">disabled</span> <input class="input input-disabled" value="—" disabled>
+</div>
+
+<div class="section">Loading · skeleton card</div>
+<div class="row">
+  <div class="card-card">
+    <div class="ph skeleton"></div>
+    <div class="body">
+      <div class="skeleton" style="height: 10px; width: 70%"></div>
+      <div class="skeleton" style="height: 8px; width: 50%"></div>
+      <div class="skeleton" style="height: 12px; width: 40%; margin-top: 4px"></div>
+    </div>
+  </div>
+  <div class="empty" style="flex: 1; min-width: 200px">
+    <span class="e">∅</span>
+    Aucun bien ne correspond à votre recherche — ajustez vos dates.
+  </div>
+</div>
+
+</body></html>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@200;300;400;500;600;700&family=Cormorant+Garamond:ital,wght@1,400&display=swap">
+<link rel="stylesheet" href="_card.css">
+<style>
+body { padding: 22px 26px; }
+.cal-wrap { background: #fff; border: 1px solid #e0d4bc; border-radius: 12px; padding: 16px 18px; }
+.cal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.cal-month { font: 200 14px/1 'Jost'; letter-spacing: 0.18em; text-transform: uppercase; color: #0e3b3a; }
+.cal-nav { background: none; border: none; color: #7a6b5a; font: 300 16px/1 'Jost'; cursor: pointer; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-dow { font: 600 9px/1 'Jost'; letter-spacing: 0.18em; text-transform: uppercase; color: #7a6b5a; text-align: center; padding-bottom: 6px; }
+.cal-day {
+  height: 36px; display: flex; align-items: center; justify-content: center;
+  font: 400 13px/1 'Jost'; color: #0e3b3a; border-radius: 6px;
+  background: #faf5e9; border: 1px solid transparent;
+}
+.cal-day.muted { color: #c9bfa9; }
+.cal-day.booked {
+  color: #b39c8a;
+  background: repeating-linear-gradient(135deg, #f4ecdc, #f4ecdc 4px, #e8dcc1 4px, #e8dcc1 8px);
+}
+.cal-day.range { background: #f4ecdc; color: #0e3b3a; }
+.cal-day.start, .cal-day.end {
+  background: #c47254; color: #fff;
+  box-shadow: 0 2px 8px rgba(196,114,84,0.4);
+}
+.legend { display: flex; gap: 18px; margin-top: 14px; align-items: center; }
+.legend-item { display: flex; align-items: center; gap: 7px; font: 300 11px/1 'Jost'; color: #7a6b5a; }
+.legend-sw { width: 14px; height: 14px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="cal-wrap">
+  <div class="cal-head">
+    <button class="cal-nav">←</button>
+    <span class="cal-month">Août 2026</span>
+    <button class="cal-nav">→</button>
+  </div>
+  <div class="cal-grid">
+    <span class="cal-dow">Lu</span><span class="cal-dow">Ma</span><span class="cal-dow">Me</span><span class="cal-dow">Je</span><span class="cal-dow">Ve</span><span class="cal-dow">Sa</span><span class="cal-dow">Di</span>
+
+    <span class="cal-day muted">28</span><span class="cal-day muted">29</span><span class="cal-day muted">30</span><span class="cal-day muted">31</span><span class="cal-day">1</span><span class="cal-day">2</span><span class="cal-day">3</span>
+    <span class="cal-day">4</span><span class="cal-day">5</span><span class="cal-day booked">6</span><span class="cal-day booked">7</span><span class="cal-day booked">8</span><span class="cal-day booked">9</span><span class="cal-day">10</span>
+    <span class="cal-day">11</span><span class="cal-day">12</span><span class="cal-day">13</span><span class="cal-day start">14</span><span class="cal-day range">15</span><span class="cal-day range">16</span><span class="cal-day range">17</span>
+    <span class="cal-day range">18</span><span class="cal-day range">19</span><span class="cal-day range">20</span><span class="cal-day end">21</span><span class="cal-day">22</span><span class="cal-day">23</span><span class="cal-day">24</span>
+    <span class="cal-day">25</span><span class="cal-day">26</span><span class="cal-day booked">27</span><span class="cal-day booked">28</span><span class="cal-day booked">29</span><span class="cal-day booked">30</span><span class="cal-day booked">31</span>
+  </div>
+  <div class="legend">
+    <span class="legend-item"><span class="legend-sw" style="background:#faf5e9; border:1px solid #e0d4bc"></span>Disponible</span>
+    <span class="legend-item"><span class="legend-sw" style="background:repeating-linear-gradient(135deg,#f4ecdc,#f4ecdc 3px,#e8dcc1 3px,#e8dcc1 6px)"></span>Réservé</span>
+    <span class="legend-item"><span class="legend-sw" style="background:#c47254"></span>Sélection</span>
+  </div>
+</div>
+</body></html>

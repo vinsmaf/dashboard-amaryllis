@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220">
+  <defs>
+    <clipPath id="cl">
+      <circle cx="110" cy="110" r="100"></circle>
+    </clipPath>
+  </defs>
+
+  
+  <circle cx="110" cy="110" r="100" fill="#f5e8c6"></circle>
+
+  
+  <rect x="10" y="118" width="200" height="92" fill="#0a2e54" opacity="0.08" clip-path="url(#cl)"></rect>
+
+  
+  <line x1="10" y1="118" x2="210" y2="118" stroke="#0a2e54" stroke-width="0.8"></line>
+  <line x1="22" y1="130" x2="198" y2="130" stroke="#0a2e54" stroke-width="0.5"></line>
+  <line x1="32" y1="142" x2="188" y2="142" stroke="#0a2e54" stroke-width="0.5"></line>
+  <line x1="42" y1="154" x2="178" y2="154" stroke="#0a2e54" stroke-width="0.4"></line>
+
+  
+  <g transform="translate(110,118) scale(0.7)">
+    <path fill="#0a2e54" d="&#xA;      M -46 80&#xA;      C -44 76, -42 70, -40 62&#xA;      C -38 52, -34 44, -28 38&#xA;      C -22 34, -16 32, -10 31&#xA;      C  -6 30,  -2 29,   2 28&#xA;      C   4 26,   6 25,   9 26&#xA;      C  12 27,  14 30,  16 32&#xA;      C  20 34,  26 38,  30 44&#xA;      C  34 52,  36 60,  38 68&#xA;      C  40 74,  42 78,  46 80&#xA;      Z"></path>
+  </g>
+
+  
+  <g transform="translate(110,50) scale(0.55)">
+    <g transform="rotate(0)">  <ellipse cx="0" cy="-22" rx="11" ry="22" fill="#e8694a"></ellipse></g>
+    <g transform="rotate(60)"> <ellipse cx="0" cy="-22" rx="11" ry="22" fill="#e8694a"></ellipse></g>
+    <g transform="rotate(120)"><ellipse cx="0" cy="-22" rx="11" ry="22" fill="#e8694a"></ellipse></g>
+    <g transform="rotate(180)"><ellipse cx="0" cy="-22" rx="11" ry="22" fill="#e8694a"></ellipse></g>
+    <g transform="rotate(240)"><ellipse cx="0" cy="-22" rx="11" ry="22" fill="#e8694a"></ellipse></g>
+    <g transform="rotate(300)"><ellipse cx="0" cy="-22" rx="11" ry="22" fill="#e8694a"></ellipse></g>
+    <circle r="7" fill="#f5e8c6"></circle>
+    <circle r="2" fill="#0a2e54"></circle>
+  </g>
+
+  
+  <circle cx="110" cy="18" r="7" fill="#e8694a"></circle>
+
+  
+  <circle cx="110" cy="110" r="92" fill="none" stroke="#e8694a" stroke-width="0.5" stroke-dasharray="1,8"></circle>
+
+  
+  <circle cx="110" cy="110" r="102" fill="none" stroke="#0a2e54" stroke-width="1.5"></circle>
+</svg>

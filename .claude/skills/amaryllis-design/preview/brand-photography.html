@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@200;300;400;600&display=swap">
+<link rel="stylesheet" href="_card.css">
+<style>
+body { padding: 22px 24px; }
+.grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.photo {
+  aspect-ratio: 4/3; border-radius: 10px; overflow: hidden;
+  background: #f4ecdc center/cover no-repeat;
+  position: relative;
+}
+.photo .lbl {
+  position: absolute; bottom: 8px; left: 10px;
+  font: 200 9px/1 'Jost'; letter-spacing: 0.32em; text-transform: uppercase;
+  color: #faf5e9;
+  background: rgba(14,59,58,0.65); backdrop-filter: blur(6px);
+  padding: 4px 10px; border-radius: 999px;
+}
+.eyebrow {
+  font: 200 10px/1 'Jost'; letter-spacing: 0.45em; text-transform: uppercase;
+  color: #c47254; margin-bottom: 12px;
+}
+</style>
+</head>
+<body>
+<div class="eyebrow">Photo library — warm, golden-hour</div>
+<div class="grid">
+  <div class="photo" style="background-image:url('../assets/photos/amaryllis-01.webp')"><span class="lbl">Amaryllis</span></div>
+  <div class="photo" style="background-image:url('../assets/photos/amaryllis-05.webp')"><span class="lbl">Amaryllis</span></div>
+  <div class="photo" style="background-image:url('../assets/photos/zandoli-01.webp')"><span class="lbl">Zandoli</span></div>
+  <div class="photo" style="background-image:url('../assets/photos/geko-01.webp')"><span class="lbl">Géko</span></div>
+  <div class="photo" style="background-image:url('../assets/photos/mabouya-01.webp')"><span class="lbl">Mabouya</span></div>
+  <div class="photo" style="background-image:url('../assets/photos/amaryllis-08.webp')"><span class="lbl">Amaryllis</span></div>
+  <div class="photo" style="background-image:url('../assets/photos/schoelcher-01.webp')"><span class="lbl">Bellevue</span></div>
+  <div class="photo" style="background-image:url('../assets/photos/nogent-01.webp')"><span class="lbl">Nogent</span></div>
+</div>
+</body></html>
