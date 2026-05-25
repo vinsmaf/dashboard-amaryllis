@@ -373,6 +373,14 @@ export function RImg({ src, alt, sizes = "100vw", className, style, loading = "l
       alt={alt}
       className={className}
       onLoad={() => setLoaded(true)}
+      onError={(e) => {
+        // Fallback : sort du shimmer et charge le chemin direct si cdn-cgi échoue (local dev ou CDN fail)
+        setLoaded(true);
+        if (e.currentTarget.src.includes("/cdn-cgi/")) {
+          e.currentTarget.removeAttribute("srcset");
+          e.currentTarget.src = src;
+        }
+      }}
       style={{
         ...shimmerStyle,
         ...style,
