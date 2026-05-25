@@ -1237,7 +1237,7 @@ function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) 
   const [paying,   setPaying]   = useState(false);
   const [payError, setPayError] = useState("");
   const spRef = useRef(null);
-  useEffect(() => { if (window.Stripe) setStripe(window.Stripe(STRIPE_PK)); }, []);
+  useEffect(() => { if (window.Stripe && STRIPE_PK) setStripe(window.Stripe(STRIPE_PK)); }, []);
   useEffect(() => {
     if (phase === 2 && elements) {
       const pe = elements.getElement("payment");
@@ -1941,7 +1941,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
   const formOk = form.prenom && form.nom && form.email && form.email.includes("@");
 
   useEffect(() => {
-    if (window.Stripe) setStripe(window.Stripe(STRIPE_PK));
+    if (window.Stripe && STRIPE_PK) setStripe(window.Stripe(STRIPE_PK));
   }, []);
 
   // Close on Escape
@@ -3569,9 +3569,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                         ? "Votre piscine privée. L'Atlantique en face. Rien d'autre."
                         : "Your private pool. The Atlantic ahead. Nothing else."}
                       ctaLabel={lang === "fr" ? "RÉSERVER EN DIRECT" : "BOOK DIRECTLY"}
-                      onCta={() => {
-                        document.getElementById("booking-section")?.scrollIntoView({ behavior: "smooth", block: "center" });
-                      }}
+                      onCta={() => onBook(bien)}
                       price={bien.prix ?? "280"}
                     />
                   </Suspense>
@@ -3747,7 +3745,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                   {/* CTA */}
                   <div style={{ display: "flex", flexDirection: "column", gap: 10, justifyContent: "center", minWidth: 180 }}>
                     <button
-                      onClick={() => { document.getElementById("booking-section")?.scrollIntoView({ behavior: "smooth" }); }}
+                      onClick={() => onBook(bien, calCheckin, calCheckout)}
                       style={{
                         fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13,
                         letterSpacing: "0.12em", textTransform: "uppercase",
@@ -6595,7 +6593,7 @@ function DevisPage() {
   const appearance = { theme: "stripe", variables: { colorPrimary: CORAL, borderRadius: "8px", colorBackground: CREAM, colorText: NAVY } };
 
   useEffect(() => {
-    if (window.Stripe) setStripe(window.Stripe(STRIPE_PK));
+    if (window.Stripe && STRIPE_PK) setStripe(window.Stripe(STRIPE_PK));
   }, []);
 
   useEffect(() => {

@@ -199,14 +199,16 @@ export default function VillaAmaryllisReel({
   const reducedMotion = useReducedMotion();
 
   // ── Refs pour mises à jour DOM directes (60fps sans React) ─────────────────
-  const imgRefs      = useRef([]);      // refs sur chaque <img>
-  const progressRef  = useRef(null);    // ref sur .rc-progress-fill
-  const dimRef       = useRef(null);    // ref sur .rc-video-dim
-  const tRef         = useRef(0);       // horloge exacte
-  const frameCount   = useRef(0);       // compteur frames pour throttle overlays
-  const playingRef   = useRef(true);    // état de lecture synchrone
-  const rafRef       = useRef(null);
-  const lastRef      = useRef(performance.now());
+  const imgRefs         = useRef([]);      // refs sur chaque <img>
+  const progressRef     = useRef(null);    // ref sur .rc-progress-fill
+  const dimRef          = useRef(null);    // ref sur .rc-video-dim
+  const tRef            = useRef(0);       // horloge exacte
+  const frameCount      = useRef(0);       // compteur frames pour throttle overlays
+  const playingRef      = useRef(true);    // état de lecture synchrone
+  const rafRef          = useRef(null);
+  const lastRef         = useRef(performance.now());
+  // Stocké en ref (utilise uniquement des refs → jamais en deps array, jamais de TDZ)
+  const applyFrameDOMRef = useRef(null);
 
   // ── State React (overlays, loading, playing pour UI) ───────────────────────
   const [tState, setTState]       = useState(0);    // ~20fps pour overlays
@@ -268,7 +270,9 @@ export default function VillaAmaryllisReel({
   }, []);
 
   // ── Fonction de mise à jour DOM directe ─────────────────────────────────────
-  const applyFrameDOM = useCallback((t) => {
+  // Réassignée à chaque render (sans coût : utilise uniquement des refs stables).
+  // Stockée dans un ref pour éviter tout TDZ et supprimer la dépendance des useEffect.
+  applyFrameDOMRef.current = (t) => {
     // Photos Ken-Burns
     SHOTS.forEach((shot, i) => {
       const el = imgRefs.current[i];
@@ -281,7 +285,6 @@ export default function VillaAmaryllisReel({
 
     // Dim overlay
     if (dimRef.current) {
-      // dim = valeur du shot actif
       let activeDim = SHOTS[0].dim;
       for (const s of SHOTS) {
         if (t >= s.start && t < s.end) { activeDim = s.dim; break; }
@@ -293,7 +296,7 @@ export default function VillaAmaryllisReel({
     if (progressRef.current) {
       progressRef.current.style.width = `${(t / DURATION) * 100}%`;
     }
-  }, []);
+  };
 
   // ── RAF clock ───────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -317,7 +320,7 @@ export default function VillaAmaryllisReel({
       tRef.current = next;
 
       // Mise à jour DOM directe (60fps)
-      applyFrameDOM(next);
+      applyFrameDOMRef.current(next);
 
       // Mise à jour React overlays (~20fps — 1 frame sur 3)
       frameCount.current++;
@@ -336,14 +339,14 @@ export default function VillaAmaryllisReel({
       tickRef.current = null;
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [ready, reducedMotion, applyFrameDOM]);
+  }, [ready, reducedMotion]);
 
   // ── Debug helpers (dev only) ─────────────────────────────────────────────────
   useEffect(() => {
     if (typeof window === "undefined") return;
     window.__reelSetT = (t) => {
       tRef.current = t;
-      applyFrameDOM(t);
+      applyFrameDOMRef.current(t);
       setTState(t);
     };
     window.__reelSetPlaying = (v) => {
@@ -353,17 +356,17 @@ export default function VillaAmaryllisReel({
       delete window.__reelSetT;
       delete window.__reelSetPlaying;
     };
-  }, [applyFrameDOM]);
+  }, []);
 
   // ── Replay depuis OutroCard ──────────────────────────────────────────────────
   const handleReplay = useCallback(() => {
     tRef.current = 0;
     frameCount.current = 0;
-    applyFrameDOM(0);
+    applyFrameDOMRef.current(0);
     setTState(0);
     setPlaying(true);
     setReplayKey(k => k + 1);
-  }, [applyFrameDOM]);
+  }, []);
 
   // ── Tap pour pause/lecture ──────────────────────────────────────────────────
   const onStageTap = useCallback((e) => {
