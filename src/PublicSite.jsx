@@ -7801,9 +7801,9 @@ export default function PublicSite() {
             <Reveal anim="fadeUp" delay={0} style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 14, padding: "28px 28px 24px", maxWidth: 560 }}>
               <Eyebrow style={{ marginBottom: 14 }}>{t("whyTitle")}</Eyebrow>
               {[
-                ["💰", t("why1t"), t("why1d")],
-                ["⚡", t("why2t"), t("why2d")],
-                ["🎯", t("why3t"), t("why3d")],
+                ["🏷️", t("why1t"), t("why1d")],
+                ["🎖️", t("why2t"), t("why2d")],
+                ["⭐", t("why3t"), t("why3d")],
                 ["🔒", t("why4t"), t("why4d")],
               ].map(([icon, title, text]) => (
                 <div key={title} style={{ display: "flex", gap: 12, marginBottom: 14 }}>
