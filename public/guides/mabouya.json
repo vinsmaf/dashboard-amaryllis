@@ -18,9 +18,18 @@
       "title": "Accès",
       "type": "steps",
       "items": [
-        { "label": "Portail résidence", "value": "Code ••••." },
-        { "label": "Boîtier à clé", "value": "Sur le mur à gauche de la porte. Code ••••." },
-        { "label": "Parking", "value": "Place visiteurs devant la résidence (non privatif)." }
+        {
+          "label": "Portail résidence",
+          "value": "Code ••••."
+        },
+        {
+          "label": "Boîtier à clé",
+          "value": "Sur le mur à gauche de la porte. Code ••••."
+        },
+        {
+          "label": "Parking",
+          "value": "Place visiteurs devant la résidence (non privatif)."
+        }
       ]
     },
     {
@@ -29,9 +38,18 @@
       "title": "Piscine partagée",
       "type": "info",
       "items": [
-        { "label": "Accès", "value": "Piscine commune de la résidence — 5 studios y ont accès" },
-        { "label": "Horaires", "value": "8h00 – 22h00" },
-        { "label": "Douche", "value": "Obligatoire avant baignade (règlement de résidence)" }
+        {
+          "label": "Accès",
+          "value": "Piscine commune de la résidence — 5 studios y ont accès"
+        },
+        {
+          "label": "Horaires",
+          "value": "8h00 – 22h00"
+        },
+        {
+          "label": "Douche",
+          "value": "Obligatoire avant baignade (règlement de résidence)"
+        }
       ]
     },
     {
@@ -47,10 +65,22 @@
       "title": "Coin cuisine",
       "type": "info",
       "items": [
-        { "label": "Plaque vitrocéramique", "value": "2 feux, récipients standards." },
-        { "label": "Micro-ondes", "value": "Sur le comptoir à droite." },
-        { "label": "Cafetière filtre", "value": "Café moulu dans le placard au-dessus." },
-        { "label": "Réfrigérateur", "value": "Eau filtrée en carafe — rechargez-la en partant." }
+        {
+          "label": "Plaque vitrocéramique",
+          "value": "2 feux, récipients standards."
+        },
+        {
+          "label": "Micro-ondes",
+          "value": "Sur le comptoir à droite."
+        },
+        {
+          "label": "Cafetière filtre",
+          "value": "Café moulu dans le placard au-dessus."
+        },
+        {
+          "label": "Réfrigérateur",
+          "value": "Eau filtrée en carafe — rechargez-la en partant."
+        }
       ]
     },
     {
@@ -71,10 +101,30 @@
       "title": "À 5 minutes de vous",
       "type": "picks",
       "items": [
-        { "icon": "🏖", "name": "Plage Sainte-Luce", "distance": "5 min à pied", "note": "Eaux calmes, parfaites pour la baignade. Filet de volley installé le week-end." },
-        { "icon": "🍽", "name": "Restaurants du bord de mer", "distance": "5 min à pied", "note": "Chatounou, Ti Sable — poissons frais du jour. Demandez le 'plat du jour' pour les meilleures affaires." },
-        { "icon": "🛒", "name": "Carrefour Market", "distance": "5 min en voiture", "note": "Fruits frais, légumes exotiques, rhum agricole local." },
-        { "icon": "🤿", "name": "Snorkeling Anse Meunier", "distance": "10 min à pied", "note": "Eaux peu profondes avec bancs de poissons colorés." }
+        {
+          "icon": "🏖",
+          "name": "Plage Sainte-Luce",
+          "distance": "5 min à pied",
+          "note": "Eaux calmes, parfaites pour la baignade. Filet de volley installé le week-end."
+        },
+        {
+          "icon": "🍽",
+          "name": "Restaurants du bord de mer",
+          "distance": "5 min à pied",
+          "note": "Chatounou, Ti Sable — poissons frais du jour. Demandez le 'plat du jour' pour les meilleures affaires."
+        },
+        {
+          "icon": "🛒",
+          "name": "Carrefour Market",
+          "distance": "5 min en voiture",
+          "note": "Fruits frais, légumes exotiques, rhum agricole local."
+        },
+        {
+          "icon": "🤿",
+          "name": "Snorkeling Anse Meunier",
+          "distance": "10 min à pied",
+          "note": "Eaux peu profondes avec bancs de poissons colorés."
+        }
       ]
     },
     {
@@ -89,13 +139,108 @@
         "Remettre les clés dans le boîtier",
         "Laisser draps et serviettes sur le lit"
       ]
+    },
+    {
+      "id": "bonnes_adresses",
+      "icon": "📍",
+      "title": "Bonnes adresses du quartier",
+      "type": "bonnes_adresses",
+      "data": {
+        "restaurants": [
+          {
+            "nom": "Le Coin des Pêcheurs",
+            "cuisine": "Créole / Fruits de mer",
+            "note": "Idéal pour un dîner romantique. Terrasse au bord de l'eau, plateau de fruits de mer."
+          },
+          {
+            "nom": "La Maison du Biguine",
+            "cuisine": "Créole traditionnel",
+            "note": "Parfait pour une table en tête-à-tête. Menu du marché, cuisiné avec soin."
+          },
+          {
+            "nom": "Le Routier",
+            "cuisine": "Snack créole",
+            "note": "Pour déjeuner vite et bien. Le boudin antillais en entrée est une merveille."
+          }
+        ],
+        "epiceries": [
+          {
+            "nom": "Super U Sainte-Luce",
+            "horaires": "Lun–Sam 7h30–20h, Dim 8h–12h",
+            "note": "5 min en voiture. Tout pour préparer un bon repas à deux."
+          },
+          {
+            "nom": "Marché de Sainte-Luce",
+            "horaires": "Ven–Sam 6h–13h",
+            "note": "Fruits tropicaux de saison, légumes pays."
+          }
+        ],
+        "plages": [
+          {
+            "nom": "Plage de Sainte-Luce",
+            "description": "Quelques minutes à pied. Eaux translucides, magnifique pour un lever de soleil."
+          },
+          {
+            "nom": "Anse Figuier",
+            "description": "10 min en voiture. Plage sauvage très romantique."
+          },
+          {
+            "nom": "Plage du Diamant",
+            "description": "25 min. Vue iconique sur le Rocher — allez-y en fin d'après-midi."
+          }
+        ],
+        "activites": [
+          {
+            "nom": "Coucher de soleil depuis la Pointe Borgnesse",
+            "type": "Nature / Romantique",
+            "note": "5 min en voiture. L'un des plus beaux points de vue de la côte sud."
+          },
+          {
+            "nom": "Distillerie La Mauny",
+            "type": "Gastronomie",
+            "note": "20 min. Visite + dégustation de rhum vieux en duo."
+          },
+          {
+            "nom": "Snorkeling au bord de l'anse",
+            "type": "Nautisme",
+            "note": "Masque et tuba disponibles. Les rochers abritent une belle vie sous-marine."
+          },
+          {
+            "nom": "Spa Caraïbes",
+            "type": "Bien-être",
+            "note": "Le Marin ou Trois-Ilets. Massages créoles aux huiles essentielles tropicales."
+          }
+        ],
+        "urgences": {
+          "pharmacie": "Pharmacie de Sainte-Luce — Bourg, tél. 0596 62 50 12. Lun–Sam 8h–19h.",
+          "hopital": "Clinique Sainte-Marie — Le Lamentin (30 min), urgences 24h/24 : 0596 57 37 37.",
+          "gendarmerie": "Gendarmerie de Rivière-Pilote — 0596 62 60 05. Urgences : 17."
+        }
+      }
     }
   ],
   "contacts": [
-    { "label": "Vincent (propriétaire)", "phone": "+33 6 XX XX XX XX", "icon": "👤", "note": "WhatsApp" },
-    { "label": "SAMU", "phone": "15", "icon": "🚑" },
-    { "label": "Pompiers", "phone": "18", "icon": "🚒" },
-    { "label": "Urgences européen", "phone": "112", "icon": "🆘" }
+    {
+      "label": "Vincent (propriétaire)",
+      "phone": "+33 6 XX XX XX XX",
+      "icon": "👤",
+      "note": "WhatsApp"
+    },
+    {
+      "label": "SAMU",
+      "phone": "15",
+      "icon": "🚑"
+    },
+    {
+      "label": "Pompiers",
+      "phone": "18",
+      "icon": "🚒"
+    },
+    {
+      "label": "Urgences européen",
+      "phone": "112",
+      "icon": "🆘"
+    }
   ],
   "updated_at": "2026-05-21"
 }

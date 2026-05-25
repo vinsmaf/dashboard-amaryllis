@@ -815,6 +815,84 @@ function Cockpit({ biens, n, mob, onUpdateRevenu, reservations = [] }) {
         })}
       </div>
 
+      {/* ── rev-008 : RevPAR cible vs réel ─────────────────────────────────── */}
+      {(() => {
+        // Cibles RevPAR 2025 définies par bien (basées sur le potentiel marché / historique)
+        const REVPAR_CIBLES = {
+          amaryllis:  160,  // villa premium vue mer, piscine
+          zandoli:    100,  // villa familiale résidence
+          geko:        80,  // villa compact résidence
+          mabouya:     70,  // studio résidence — actuellement sous-performant (23€ YTD)
+          iguana:      90,  // villa plage privée — longue durée, hors logique RevPAR court terme
+          schoelcher:  65,  // T2 moyen terme — sous-performant (35€ YTD)
+          nogent:      82,  // T2 Île-de-France
+        };
+        const courtBiens = biens.filter(b => b.type !== "long");
+        const rows = courtBiens.map(b => {
+          const rvpActuel = avgN(b.revpar, n);
+          const cible     = REVPAR_CIBLES[b.id] || b.revpar2025 || 80;
+          const ratio     = cible > 0 ? (rvpActuel / cible) : 0;
+          const pct       = Math.min(Math.round(ratio * 100), 120);
+          const color     = pct >= 90 ? "#10b981" : pct >= 65 ? "#f59e0b" : "#ef4444";
+          const gap       = cible - rvpActuel;
+          return { b, rvpActuel, cible, pct, color, gap };
+        });
+        return (
+          <div style={{ marginTop: 18, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: mob ? 12 : 18 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#94a3b8", marginBottom: 14 }}>📊 RevPAR — réel vs cible {new Date().getFullYear()}</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {rows.map(({ b, rvpActuel, cible, pct, color, gap }) => (
+                <div key={b.id} style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "140px 1fr 100px", gap: 8, alignItems: "center" }}>
+                  {/* Label bien */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: 15 }}>{b.emoji}</span>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: "#e2e8f0" }}>{b.nom.replace("Villa ", "").replace("T2 ", "")}</div>
+                      <div style={{ fontSize: 10, color: color, fontWeight: 700, fontFamily: "var(--font-mono)" }}>
+                        {rvpActuel.toFixed(0)}€ <span style={{ color: "#475569", fontWeight: 400 }}>/ {cible}€ cible</span>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Barre de progression */}
+                  <div style={{ position: "relative", height: 8, background: "rgba(255,255,255,0.06)", borderRadius: 4, overflow: "visible" }}>
+                    <div style={{
+                      height: "100%",
+                      width: `${Math.min(pct, 100)}%`,
+                      background: color,
+                      borderRadius: 4,
+                      transition: "width 0.6s ease",
+                    }} />
+                    {/* Marqueur cible à 100% */}
+                    <div style={{ position: "absolute", top: -3, left: "100%", width: 2, height: 14, background: "rgba(255,255,255,0.2)", borderRadius: 1 }} />
+                  </div>
+                  {/* Pct + gap */}
+                  <div style={{ textAlign: "right" }}>
+                    <span style={{ fontSize: 14, fontWeight: 800, color, fontFamily: "var(--font-mono)" }}>{pct}%</span>
+                    {gap > 0 && (
+                      <div style={{ fontSize: 10, color: "#ef4444", fontFamily: "var(--font-mono)" }}>−{gap.toFixed(0)}€/nuit</div>
+                    )}
+                    {gap <= 0 && (
+                      <div style={{ fontSize: 10, color: "#10b981" }}>✓ Cible atteinte</div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Alerte sous-performers */}
+            {rows.filter(r => r.pct < 65).length > 0 && (
+              <div style={{ marginTop: 14, padding: "10px 14px", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 8 }}>
+                <div style={{ fontSize: 11, color: "#ef4444", fontWeight: 700, marginBottom: 4 }}>⚠️ Sous-performances critiques (&lt;65% de la cible)</div>
+                {rows.filter(r => r.pct < 65).map(r => (
+                  <div key={r.b.id} style={{ fontSize: 11, color: "#fca5a5" }}>
+                    {r.b.emoji} <strong>{r.b.nom}</strong> : {r.rvpActuel.toFixed(0)}€ vs {r.cible}€ cible — manque {r.gap.toFixed(0)}€/nuit de RevPAR
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── Score de performance ── */}
       <div style={{ marginTop: 18, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: mob ? 12 : 18 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: "#94a3b8", marginBottom: 14 }}>🏅 Score de performance</div>
@@ -8502,6 +8580,7 @@ function DevisEditor() {
     checkout: "",
     voyageur: "",
     email: "",
+    phone: "",
     montantSejour: "",
     fraisMenage: "",
     avecDepot: true,
@@ -8509,6 +8588,11 @@ function DevisEditor() {
   });
   const [link, setLink] = useState("");
   const [copied, setCopied] = useState(false);
+  // ebiz-005 : Stripe Payment Link
+  const [stripeLink, setStripeLink]       = useState("");
+  const [stripeCopied, setStripeCopied]   = useState(false);
+  const [stripeLoading, setStripeLoading] = useState(false);
+  const [stripeError, setStripeError]     = useState("");
 
   const bien = BIENS_DEVIS.find(b => b.id === form.bienId);
   const montant = parseFloat(form.montantSejour) || 0;
@@ -8542,6 +8626,81 @@ function DevisEditor() {
     navigator.clipboard.writeText(link);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  // ebiz-005 : génère un vrai Stripe Payment Link
+  const generateStripeLink = async () => {
+    if (!total || !form.checkin || !form.checkout) return;
+    setStripeLoading(true);
+    setStripeError("");
+    setStripeLink("");
+    try {
+      const nights = form.checkin && form.checkout
+        ? Math.round((new Date(form.checkout) - new Date(form.checkin)) / 86400000)
+        : null;
+      const res = await fetch("/api/create-payment-link", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + (sessionStorage.getItem("ldb_tok") || ""),
+        },
+        body: JSON.stringify({
+          amount:    Math.round(total * 100), // centimes
+          bienId:    form.bienId,
+          bienNom:   bien?.nom || form.bienId,
+          checkin:   form.checkin,
+          checkout:  form.checkout,
+          voyageur:  form.voyageur,
+          email:     form.email,
+          nights,
+          type:      "total",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.url) throw new Error(data.error || "Erreur Stripe");
+      setStripeLink(data.url);
+    } catch (err) {
+      setStripeError(err.message);
+    } finally {
+      setStripeLoading(false);
+    }
+  };
+
+  const copyStripe = () => {
+    navigator.clipboard.writeText(stripeLink);
+    setStripeCopied(true);
+    setTimeout(() => setStripeCopied(false), 2000);
+  };
+
+  // Partage WhatsApp avec le lien Stripe
+  const shareWA = () => {
+    if (!stripeLink) return;
+    const fmtDate = (iso) => {
+      if (!iso) return "?";
+      const [y, m, d] = iso.split("-");
+      return `${d}/${m}/${y}`;
+    };
+    const nights = form.checkin && form.checkout
+      ? Math.round((new Date(form.checkout) - new Date(form.checkin)) / 86400000)
+      : null;
+    const msg = [
+      `Bonjour ${form.voyageur ? form.voyageur.split(" ")[0] : ""},`,
+      ``,
+      `Voici votre lien de paiement sécurisé pour votre séjour à ${bien?.nom || form.bienId} :`,
+      `📅 ${fmtDate(form.checkin)} → ${fmtDate(form.checkout)}${nights ? ` (${nights} nuit${nights > 1 ? "s" : ""})` : ""}`,
+      `💶 Total : ${total.toLocaleString("fr-FR")} €`,
+      ``,
+      `🔒 Paiement sécurisé Stripe :`,
+      stripeLink,
+      ``,
+      `En cas de question, n'hésitez pas à me contacter.`,
+      `Amaryllis Locations`,
+    ].join("\n");
+    const phone = form.phone.replace(/[^0-9+]/g, "");
+    const waUrl = phone
+      ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`
+      : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+    window.open(waUrl, "_blank");
   };
 
   const card = { background: "#1e293b", borderRadius: 12, padding: "20px 24px", border: "1px solid rgba(255,255,255,0.06)" };
@@ -8578,6 +8737,10 @@ function DevisEditor() {
           <div>
             <label style={label}>Email</label>
             <input type="email" placeholder="jean@email.com" value={form.email} onChange={e => set("email", e.target.value)} style={inp} />
+          </div>
+          <div style={{ gridColumn: "1/-1" }}>
+            <label style={label}>WhatsApp voyageur (optionnel)</label>
+            <input type="tel" placeholder="+596 696 00 00 00" value={form.phone} onChange={e => set("phone", e.target.value)} style={inp} />
           </div>
           <div>
             <label style={label}>Montant séjour (€)</label>
@@ -8617,22 +8780,67 @@ function DevisEditor() {
         </div>
       )}
 
-      <button onClick={generate} disabled={!total}
-        style={{ padding: "12px 24px", borderRadius: 10, border: "none", background: total ? "#0ea5e9" : "#334155", color: "#fff", fontSize: 14, fontWeight: 700, cursor: total ? "pointer" : "default", marginBottom: 16 }}>
-        🔗 Générer le lien de paiement
-      </button>
+      {/* Boutons de génération */}
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+        <button onClick={generate} disabled={!total}
+          style={{ padding: "12px 22px", borderRadius: 10, border: "none", background: total ? "#0ea5e9" : "#334155", color: "#fff", fontSize: 13, fontWeight: 700, cursor: total ? "pointer" : "default" }}>
+          🔗 Lien devis interne
+        </button>
 
+        {/* ebiz-005 : Stripe Payment Link */}
+        <button
+          onClick={generateStripeLink}
+          disabled={!total || !form.checkin || !form.checkout || stripeLoading}
+          style={{
+            padding: "12px 22px", borderRadius: 10, border: "none",
+            background: (!total || !form.checkin || !form.checkout) ? "#334155" : stripeLoading ? "#334155" : "#7c3aed",
+            color: "#fff", fontSize: 13, fontWeight: 700,
+            cursor: (!total || !form.checkin || !form.checkout || stripeLoading) ? "default" : "pointer",
+            display: "flex", alignItems: "center", gap: 6,
+          }}
+        >
+          {stripeLoading ? "⏳ Création…" : "💳 Lien paiement Stripe"}
+        </button>
+      </div>
+
+      {/* Devis interne */}
       {link && (
-        <div style={{ ...card, borderColor: "#10b981" }}>
-          <div style={{ fontSize: 12, color: "#10b981", fontWeight: 600, marginBottom: 10 }}>✓ Lien prêt</div>
-          <div style={{ background: "#0f172a", borderRadius: 8, padding: "10px 14px", fontSize: 11, color: "#7dd3fc", wordBreak: "break-all", marginBottom: 12 }}>{link}</div>
+        <div style={{ ...card, borderColor: "#10b981", marginBottom: 12 }}>
+          <div style={{ fontSize: 11, color: "#10b981", fontWeight: 600, marginBottom: 8 }}>✓ Devis interne (page Amaryllis)</div>
+          <div style={{ background: "#0f172a", borderRadius: 8, padding: "10px 14px", fontSize: 11, color: "#7dd3fc", wordBreak: "break-all", marginBottom: 10 }}>{link}</div>
           <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={copy} style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: copied ? "#10b981" : "#0ea5e9", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+            <button onClick={copy} style={{ padding: "7px 14px", borderRadius: 8, border: "none", background: copied ? "#10b981" : "#0ea5e9", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
               {copied ? "✓ Copié !" : "📋 Copier"}
             </button>
             <a href={link} target="_blank" rel="noopener noreferrer"
-              style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.15)", color: "#94a3b8", fontSize: 12, fontWeight: 600, textDecoration: "none" }}>
+              style={{ padding: "7px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.15)", color: "#94a3b8", fontSize: 12, fontWeight: 600, textDecoration: "none" }}>
               🔗 Ouvrir
+            </a>
+          </div>
+        </div>
+      )}
+
+      {/* ebiz-005 : Stripe Payment Link */}
+      {stripeError && (
+        <div style={{ ...card, borderColor: "#ef4444", marginBottom: 12 }}>
+          <div style={{ fontSize: 12, color: "#ef4444", fontWeight: 600 }}>⚠️ Erreur Stripe</div>
+          <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>{stripeError}</div>
+        </div>
+      )}
+      {stripeLink && (
+        <div style={{ ...card, borderColor: "#7c3aed", marginBottom: 12 }}>
+          <div style={{ fontSize: 11, color: "#a78bfa", fontWeight: 600, marginBottom: 8 }}>💳 Lien Stripe prêt — paiement direct en {(total).toLocaleString("fr-FR")} €</div>
+          <div style={{ background: "#0f172a", borderRadius: 8, padding: "10px 14px", fontSize: 11, color: "#c4b5fd", wordBreak: "break-all", marginBottom: 10 }}>{stripeLink}</div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button onClick={copyStripe} style={{ padding: "7px 14px", borderRadius: 8, border: "none", background: stripeCopied ? "#10b981" : "#7c3aed", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+              {stripeCopied ? "✓ Copié !" : "📋 Copier"}
+            </button>
+            <button onClick={shareWA} style={{ padding: "7px 14px", borderRadius: 8, border: "none", background: "#25d366", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+              <span>📱</span> Envoyer via WhatsApp
+            </button>
+            <a href={stripeLink} target="_blank" rel="noopener noreferrer"
+              style={{ padding: "7px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.15)", color: "#94a3b8", fontSize: 12, fontWeight: 600, textDecoration: "none" }}>
+              🔗 Tester
             </a>
           </div>
         </div>

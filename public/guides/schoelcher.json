@@ -18,9 +18,18 @@
       "title": "Accès",
       "type": "steps",
       "items": [
-        { "label": "Digicode immeuble", "value": "Code ••••." },
-        { "label": "Appartement", "value": "Étage ••, numéro ••. Clé dans le boîtier : code ••••." },
-        { "label": "Parking", "value": "Place réservée n° ••, accès par la rampe à gauche de l'entrée." }
+        {
+          "label": "Digicode immeuble",
+          "value": "Code ••••."
+        },
+        {
+          "label": "Appartement",
+          "value": "Étage ••, numéro ••. Clé dans le boîtier : code ••••."
+        },
+        {
+          "label": "Parking",
+          "value": "Place réservée n° ••, accès par la rampe à gauche de l'entrée."
+        }
       ]
     },
     {
@@ -36,10 +45,22 @@
       "title": "Cuisine",
       "type": "info",
       "items": [
-        { "label": "Plaque induction", "value": "Bouton On/Off. Mode boost disponible pour l'eau." },
-        { "label": "Lave-vaisselle", "value": "Pastilles dans le meuble sous l'évier." },
-        { "label": "Lave-linge", "value": "Salle de bain — lessive dans le meuble." },
-        { "label": "Cafetière Nespresso", "value": "Capsules dans le placard à droite de la machine." }
+        {
+          "label": "Plaque induction",
+          "value": "Bouton On/Off. Mode boost disponible pour l'eau."
+        },
+        {
+          "label": "Lave-vaisselle",
+          "value": "Pastilles dans le meuble sous l'évier."
+        },
+        {
+          "label": "Lave-linge",
+          "value": "Salle de bain — lessive dans le meuble."
+        },
+        {
+          "label": "Cafetière Nespresso",
+          "value": "Capsules dans le placard à droite de la machine."
+        }
       ]
     },
     {
@@ -61,11 +82,36 @@
       "title": "Ma sélection autour de Schœlcher",
       "type": "picks",
       "items": [
-        { "icon": "🏖", "name": "Bord de mer de Schœlcher", "distance": "5 min à pied", "note": "Promenade calme le matin, baignade possible. Pas de vagues — parfait pour les enfants." },
-        { "icon": "🏙", "name": "Fort-de-France", "distance": "10 min en voiture", "note": "Marché de La Savane, cathédrale Saint-Louis, Bibliothèque Schoelcher (classée aux Monuments Historiques)." },
-        { "icon": "🍽", "name": "Restaurants du bord de mer FdF", "distance": "15 min", "note": "La Fontane, La Cave à Vins — vue sur la baie de Fort-de-France." },
-        { "icon": "🎓", "name": "Université des Antilles", "distance": "2 min à pied", "note": "Campus agréable avec vue mer, cafétéria ouverte au public." },
-        { "icon": "✈️", "name": "Aéroport Aimé Césaire", "distance": "20 min", "note": "Via la N1 ou la route des collines." }
+        {
+          "icon": "🏖",
+          "name": "Bord de mer de Schœlcher",
+          "distance": "5 min à pied",
+          "note": "Promenade calme le matin, baignade possible. Pas de vagues — parfait pour les enfants."
+        },
+        {
+          "icon": "🏙",
+          "name": "Fort-de-France",
+          "distance": "10 min en voiture",
+          "note": "Marché de La Savane, cathédrale Saint-Louis, Bibliothèque Schoelcher (classée aux Monuments Historiques)."
+        },
+        {
+          "icon": "🍽",
+          "name": "Restaurants du bord de mer FdF",
+          "distance": "15 min",
+          "note": "La Fontane, La Cave à Vins — vue sur la baie de Fort-de-France."
+        },
+        {
+          "icon": "🎓",
+          "name": "Université des Antilles",
+          "distance": "2 min à pied",
+          "note": "Campus agréable avec vue mer, cafétéria ouverte au public."
+        },
+        {
+          "icon": "✈️",
+          "name": "Aéroport Aimé Césaire",
+          "distance": "20 min",
+          "note": "Via la N1 ou la route des collines."
+        }
       ]
     },
     {
@@ -74,10 +120,22 @@
       "title": "Transports",
       "type": "info",
       "items": [
-        { "label": "Bus vers Fort-de-France", "value": "Arrêt à 2 min à pied. Bus TC toutes les 20–30 min, 1,50€." },
-        { "label": "Voiture (recommandé)", "value": "Pour explorer l'île, une voiture est nécessaire. Location à l'aéroport." },
-        { "label": "Parking privatif", "value": "Place n°•• incluse — sécurisée, couverte." },
-        { "label": "Aéroport", "value": "20 min via la N1." }
+        {
+          "label": "Bus vers Fort-de-France",
+          "value": "Arrêt à 2 min à pied. Bus TC toutes les 20–30 min, 1,50€."
+        },
+        {
+          "label": "Voiture (recommandé)",
+          "value": "Pour explorer l'île, une voiture est nécessaire. Location à l'aéroport."
+        },
+        {
+          "label": "Parking privatif",
+          "value": "Place n°•• incluse — sécurisée, couverte."
+        },
+        {
+          "label": "Aéroport",
+          "value": "20 min via la N1."
+        }
       ]
     },
     {
@@ -95,14 +153,123 @@
         "Sortir les poubelles dans le local RDC",
         "Laisser draps et serviettes sur les lits"
       ]
+    },
+    {
+      "id": "bonnes_adresses",
+      "icon": "📍",
+      "title": "Bonnes adresses du quartier",
+      "type": "bonnes_adresses",
+      "data": {
+        "restaurants": [
+          {
+            "nom": "Le Fromager (Schœlcher)",
+            "cuisine": "Créole / Gastronomique",
+            "note": "L'adresse incontournable de Schœlcher. Cuisine créole raffinée, belle carte de rhums."
+          },
+          {
+            "nom": "La Canne à Sucre (Fort-de-France)",
+            "cuisine": "Créole / Traditionnel",
+            "note": "10 min. Une institution fort-de-francienne. Boudin, accras, court-bouillon."
+          },
+          {
+            "nom": "Le Chateaubriand (Fort-de-France)",
+            "cuisine": "Français / Créole fusion",
+            "note": "Terrasse animée, menu déjeuner très accessible, excellent rapport qualité-prix."
+          },
+          {
+            "nom": "Snack de la Plage de Schœlcher",
+            "cuisine": "Grillades / Créole rapide",
+            "note": "Les pieds dans le sable, pour un déjeuner sans chichis vue sur la baie."
+          }
+        ],
+        "epiceries": [
+          {
+            "nom": "Carrefour Market Schœlcher",
+            "horaires": "Lun–Sam 8h–20h, Dim 8h–13h",
+            "note": "5 min à pied. Tout ce qu'il faut, parking facile."
+          },
+          {
+            "nom": "Grand Marché de Fort-de-France",
+            "horaires": "Lun–Sam 6h–14h",
+            "note": "10 min. Le marché couvert le plus animé de Martinique. Épices, fleurs, fruits exotiques."
+          },
+          {
+            "nom": "Monoprix Fort-de-France",
+            "horaires": "Lun–Sam 8h–20h",
+            "note": "Pour les produits métropolitains ou les emplettes en ville."
+          }
+        ],
+        "plages": [
+          {
+            "nom": "Plage de Schœlcher",
+            "description": "10 min à pied. Plage urbaine bien entretenue, fréquentée par les habitants — authentique."
+          },
+          {
+            "nom": "Plage de Fond Lahaye",
+            "description": "5 min en voiture. Plus tranquille, cadre naturel, idéale pour le snorkeling."
+          },
+          {
+            "nom": "Plages des Trois-Ilets",
+            "description": "Bateau-taxi depuis Fort-de-France (15 min) + voiture. Sable blanc, eaux calmes — l'escapade parfaite."
+          }
+        ],
+        "activites": [
+          {
+            "nom": "Fort-de-France — Bibliothèque Schoelcher + marché",
+            "type": "Culture / Balade",
+            "note": "10 min. La Bibliothèque est un bijou architectural. Le marché couvert complète la visite."
+          },
+          {
+            "nom": "Bateau-taxi vers Les Trois-Ilets",
+            "type": "Nautisme / Excursion",
+            "note": "Depuis le quai de Fort-de-France, 15 min de traversée. Village colonial charmant, plages."
+          },
+          {
+            "nom": "Musée Départemental d'Archéologie",
+            "type": "Culture",
+            "note": "Fort-de-France, 10 min. Collections amérindiennes et précolombines."
+          },
+          {
+            "nom": "Shopping La Galleria (Le Lamentin)",
+            "type": "Shopping",
+            "note": "20 min. Le plus grand centre commercial de Martinique."
+          }
+        ],
+        "urgences": {
+          "pharmacie": "Pharmacie Principale de Schœlcher — av. Maurice Bishop, tél. 0596 61 35 47. Lun–Sam 8h–19h.",
+          "hopital": "CHU de Martinique (Fort-de-France) — urgences 24h/24 : 0596 55 20 00. À 15 min.",
+          "gendarmerie": "Police Nationale Fort-de-France — 0596 60 20 00. Urgences : 17."
+        }
+      }
     }
   ],
   "contacts": [
-    { "label": "Vincent (propriétaire)", "phone": "+33 6 XX XX XX XX", "icon": "👤", "note": "WhatsApp de préférence" },
-    { "label": "SAMU", "phone": "15", "icon": "🚑" },
-    { "label": "Pompiers", "phone": "18", "icon": "🚒" },
-    { "label": "Gendarmerie Schœlcher", "phone": "+596 596 61 11 17", "icon": "🚓" },
-    { "label": "Urgences européen", "phone": "112", "icon": "🆘" }
+    {
+      "label": "Vincent (propriétaire)",
+      "phone": "+33 6 XX XX XX XX",
+      "icon": "👤",
+      "note": "WhatsApp de préférence"
+    },
+    {
+      "label": "SAMU",
+      "phone": "15",
+      "icon": "🚑"
+    },
+    {
+      "label": "Pompiers",
+      "phone": "18",
+      "icon": "🚒"
+    },
+    {
+      "label": "Gendarmerie Schœlcher",
+      "phone": "+596 596 61 11 17",
+      "icon": "🚓"
+    },
+    {
+      "label": "Urgences européen",
+      "phone": "112",
+      "icon": "🆘"
+    }
   ],
   "updated_at": "2026-05-21"
 }

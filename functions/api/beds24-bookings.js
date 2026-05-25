@@ -8,8 +8,20 @@ const BEDS24_V2_URL = "https://beds24.com/api/v2/bookings";
 const PROP_ID = "158192";
 const PAGE_SIZE = 100; // max raisonnable pour V2
 
+// arch-008 : vérifie Bearer = ADMIN_PASSWORD (même mécanisme que contacts.js)
+function checkAuth(request, env) {
+  const pwd = env.ADMIN_PASSWORD;
+  if (!pwd) return true; // dev local sans secret configuré
+  const auth = request.headers.get("Authorization") || "";
+  return auth.replace("Bearer ", "").trim() === pwd;
+}
+
 export async function onRequestGet(context) {
   const { request, env } = context;
+
+  if (!checkAuth(request, env)) {
+    return json({ error: "Non autorisé" }, 401);
+  }
 
   // arch-009 : token D1 en priorité, env var en fallback
   const token = await getActiveBeds24Token(env, env.revenue_manager);

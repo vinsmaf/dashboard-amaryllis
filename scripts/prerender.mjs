@@ -99,6 +99,7 @@ const ROUTES = [
     title: "Villa Amaryllis — Location villa Martinique piscine débordement vue mer | Amaryllis",
     desc:  "Réservez directement la Villa Amaryllis à Sainte-Luce, Martinique. Piscine à débordement, jacuzzi privatif, vue Caraïbes 180°. 8 personnes. À partir de 350€/nuit sans frais Airbnb.",
     image: `${BASE}/photos/amaryllis/01.webp`,
+    lcpPreload: true,
     jsonld: buildVacationRentalLd({ id: "amaryllis", nom: "Villa Amaryllis", desc: "Villa Amaryllis à Sainte-Luce, Martinique. Piscine à débordement, jacuzzi privatif, vue Caraïbes 180°. 8 personnes.", prix: 350, capacite: 8, chambres: 4, rating: 5, reviews: 20, coords: { lat: 14.4728, lng: -60.9204 }, photos: ["/photos/amaryllis/01.webp","/photos/amaryllis/02.webp","/photos/amaryllis/03.webp","/photos/amaryllis/04.webp","/photos/amaryllis/05.webp","/photos/amaryllis/06.webp","/photos/amaryllis/07.webp","/photos/amaryllis/08.webp"] }),
   },
   {
@@ -311,9 +312,21 @@ function replaceByAttr(html, matchAttr, matchVal, targetAttr, newVal) {
   });
 }
 
-function patchHtml(tmpl, { path: routePath, title, desc, image, noindex = false, jsonld = null, lang = "fr" }) {
+function patchHtml(tmpl, { path: routePath, title, desc, image, noindex = false, jsonld = null, lang = "fr", lcpPreload = false }) {
   const url = `${BASE}${routePath}`;
   let html = tmpl;
+
+  /* LCP preload — injecté uniquement sur les pages avec image hero critique */
+  if (lcpPreload && image && image.startsWith(BASE + "/photos/")) {
+    const localSrc = image.replace(BASE, "");
+    // imagesrcset miroir exact du srcset généré par RImg (cfImg widths : 480, 800, 1200, 1600)
+    const qualityMap = { 480: 75, 800: 85, 1200: 85, 1600: 90 };
+    const srcset = [480, 800, 1200, 1600]
+      .map(w => `/cdn-cgi/image/width=${w},format=auto,quality=${qualityMap[w]}${localSrc} ${w}w`)
+      .join(", ");
+    const preloadTag = `<link rel="preload" as="image" href="/cdn-cgi/image/width=1200,format=auto,quality=85${localSrc}" imagesrcset="${srcset}" imagesizes="(max-width: 1200px) 72vw, 900px" fetchpriority="high" />`;
+    html = html.replace("</head>", `  ${preloadTag}\n  </head>`);
+  }
 
   /* hreflang — remplace les 3 balises génériques de index.html par des URLs spécifiques */
   const frUrl   = lang === "en" ? `${BASE}/` : url;

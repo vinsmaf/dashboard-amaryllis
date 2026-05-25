@@ -18,10 +18,22 @@
       "title": "Accès — étape par étape",
       "type": "steps",
       "items": [
-        { "label": "Portail résidence", "value": "Code ••••, poussez le portail après le bip." },
-        { "label": "Boîtier à clé", "value": "Sur le mur gauche de la porte d'entrée. Code ••••." },
-        { "label": "Parking", "value": "Place privative devant la villa." },
-        { "label": "Piscine", "value": "Terrasse directement accessible. Douche côté gauche — obligatoire." }
+        {
+          "label": "Portail résidence",
+          "value": "Code ••••, poussez le portail après le bip."
+        },
+        {
+          "label": "Boîtier à clé",
+          "value": "Sur le mur gauche de la porte d'entrée. Code ••••."
+        },
+        {
+          "label": "Parking",
+          "value": "Place privative devant la villa."
+        },
+        {
+          "label": "Piscine",
+          "value": "Terrasse directement accessible. Douche côté gauche — obligatoire."
+        }
       ]
     },
     {
@@ -30,10 +42,22 @@
       "title": "Piscine & terrasse",
       "type": "info",
       "items": [
-        { "label": "Horaires", "value": "8h00 – 22h00" },
-        { "label": "Douche obligatoire", "value": "Avant chaque baignade — règlement résidence" },
-        { "label": "Transats", "value": "6 transats et parasols disponibles" },
-        { "label": "Entretien piscine", "value": "Prestataire le mardi matin — piscine inutilisable 1h" }
+        {
+          "label": "Horaires",
+          "value": "8h00 – 22h00"
+        },
+        {
+          "label": "Douche obligatoire",
+          "value": "Avant chaque baignade — règlement résidence"
+        },
+        {
+          "label": "Transats",
+          "value": "6 transats et parasols disponibles"
+        },
+        {
+          "label": "Entretien piscine",
+          "value": "Prestataire le mardi matin — piscine inutilisable 1h"
+        }
       ]
     },
     {
@@ -49,11 +73,26 @@
       "title": "Cuisine & équipements",
       "type": "info",
       "items": [
-        { "label": "Plaque induction", "value": "4 feux — récipients fond plat uniquement." },
-        { "label": "Lave-vaisselle", "value": "Pastilles sous l'évier — programme Eco." },
-        { "label": "Lave-linge", "value": "Buanderie — lessive disponible." },
-        { "label": "Cafetière Nespresso", "value": "Capsules dans le tiroir de droite." },
-        { "label": "Barbecue gaz", "value": "Sur la terrasse — gaz inclus. Robinet bleu = ouverture." }
+        {
+          "label": "Plaque induction",
+          "value": "4 feux — récipients fond plat uniquement."
+        },
+        {
+          "label": "Lave-vaisselle",
+          "value": "Pastilles sous l'évier — programme Eco."
+        },
+        {
+          "label": "Lave-linge",
+          "value": "Buanderie — lessive disponible."
+        },
+        {
+          "label": "Cafetière Nespresso",
+          "value": "Capsules dans le tiroir de droite."
+        },
+        {
+          "label": "Barbecue gaz",
+          "value": "Sur la terrasse — gaz inclus. Robinet bleu = ouverture."
+        }
       ]
     },
     {
@@ -75,11 +114,36 @@
       "title": "Mes coups de cœur à Sainte-Luce",
       "type": "picks",
       "items": [
-        { "icon": "🏖", "name": "Plage de Sainte-Luce", "distance": "5 min à pied", "note": "Eau turquoise, cocotiers, restaurant de plage ouvert midi. Calme en semaine." },
-        { "icon": "🤿", "name": "Plongée sous-marine", "distance": "5 min en voiture", "note": "Centre Plongée Caraïbe — site réputé avec épaves et récifs coralliens. Tous niveaux." },
-        { "icon": "🍽", "name": "Chatounou Restaurant", "distance": "8 min à pied", "note": "Cuisine créole familiale, langouste grillée, boudin antillais. Ma table préférée." },
-        { "icon": "🛒", "name": "Leader Price Sainte-Luce", "distance": "5 min en voiture", "note": "Courses du quotidien. Marché de producteurs le dimanche matin sur le bord de mer." },
-        { "icon": "⛵", "name": "Excursion catamaran", "distance": "Le Marin, 15 min", "note": "Journée snorkeling à Sainte-Anne, déjeuner sur l'eau. Réservez sur place à la marina." }
+        {
+          "icon": "🏖",
+          "name": "Plage de Sainte-Luce",
+          "distance": "5 min à pied",
+          "note": "Eau turquoise, cocotiers, restaurant de plage ouvert midi. Calme en semaine."
+        },
+        {
+          "icon": "🤿",
+          "name": "Plongée sous-marine",
+          "distance": "5 min en voiture",
+          "note": "Centre Plongée Caraïbe — site réputé avec épaves et récifs coralliens. Tous niveaux."
+        },
+        {
+          "icon": "🍽",
+          "name": "Chatounou Restaurant",
+          "distance": "8 min à pied",
+          "note": "Cuisine créole familiale, langouste grillée, boudin antillais. Ma table préférée."
+        },
+        {
+          "icon": "🛒",
+          "name": "Leader Price Sainte-Luce",
+          "distance": "5 min en voiture",
+          "note": "Courses du quotidien. Marché de producteurs le dimanche matin sur le bord de mer."
+        },
+        {
+          "icon": "⛵",
+          "name": "Excursion catamaran",
+          "distance": "Le Marin, 15 min",
+          "note": "Journée snorkeling à Sainte-Anne, déjeuner sur l'eau. Réservez sur place à la marina."
+        }
       ]
     },
     {
@@ -88,11 +152,26 @@
       "title": "Se déplacer",
       "type": "info",
       "items": [
-        { "label": "Voiture indispensable", "value": "La Martinique se visite en voiture. GPS recommandé." },
-        { "label": "Essence", "value": "Station à 3 min. Fermée le dimanche après-midi." },
-        { "label": "Fort-de-France", "value": "30 min hors bouchons (7h-9h et 16h30-18h30 à éviter)." },
-        { "label": "Aéroport Aimé Césaire", "value": "25 min via l'A1." },
-        { "label": "Le Marin (marina)", "value": "15 min — excursions, restaurants, supermarchés." }
+        {
+          "label": "Voiture indispensable",
+          "value": "La Martinique se visite en voiture. GPS recommandé."
+        },
+        {
+          "label": "Essence",
+          "value": "Station à 3 min. Fermée le dimanche après-midi."
+        },
+        {
+          "label": "Fort-de-France",
+          "value": "30 min hors bouchons (7h-9h et 16h30-18h30 à éviter)."
+        },
+        {
+          "label": "Aéroport Aimé Césaire",
+          "value": "25 min via l'A1."
+        },
+        {
+          "label": "Le Marin (marina)",
+          "value": "15 min — excursions, restaurants, supermarchés."
+        }
       ]
     },
     {
@@ -101,9 +180,18 @@
       "title": "Poubelles",
       "type": "info",
       "items": [
-        { "label": "Bacs", "value": "À l'entrée de la résidence" },
-        { "label": "Collecte", "value": "Lundi et jeudi matin" },
-        { "label": "Tri", "value": "Bac jaune pour recyclables" }
+        {
+          "label": "Bacs",
+          "value": "À l'entrée de la résidence"
+        },
+        {
+          "label": "Collecte",
+          "value": "Lundi et jeudi matin"
+        },
+        {
+          "label": "Tri",
+          "value": "Bac jaune pour recyclables"
+        }
       ]
     },
     {
@@ -122,14 +210,123 @@
         "Laisser draps et serviettes sur les lits",
         "Fermer la porte à double tour"
       ]
+    },
+    {
+      "id": "bonnes_adresses",
+      "icon": "📍",
+      "title": "Bonnes adresses du quartier",
+      "type": "bonnes_adresses",
+      "data": {
+        "restaurants": [
+          {
+            "nom": "Le Coin des Pêcheurs",
+            "cuisine": "Créole / Fruits de mer",
+            "note": "Le rendez-vous des groupes. Grande tablée sur la terrasse, langouste et chatrou."
+          },
+          {
+            "nom": "La Maison du Biguine",
+            "cuisine": "Créole traditionnel",
+            "note": "Parfait pour emmener toute la villa. Plats à partager, ambiance conviviale."
+          },
+          {
+            "nom": "Le Routier",
+            "cuisine": "Snack rapide",
+            "note": "Pour les journées chargées entre plage et activités. Jus naturels maison."
+          },
+          {
+            "nom": "Restaurants marina du Marin",
+            "cuisine": "Créole / International",
+            "note": "20 min. Belle marina, vue sur les voiliers, carte variée — sortie de groupe festive."
+          }
+        ],
+        "epiceries": [
+          {
+            "nom": "Super U Sainte-Luce",
+            "horaires": "Lun–Sam 7h30–20h, Dim 8h–12h",
+            "note": "Indispensable pour ravitailler le groupe. Grand choix pour barbecue."
+          },
+          {
+            "nom": "Marché de Sainte-Luce",
+            "horaires": "Ven–Sam 6h–13h",
+            "note": "Fruits tropicaux, épices créoles. Une visite s'impose."
+          },
+          {
+            "nom": "Boulangerie locale (Bourg)",
+            "horaires": "Tlj 6h–13h",
+            "note": "Croissants chauds le matin — le petit déjeuner de la villa commence ici."
+          }
+        ],
+        "plages": [
+          {
+            "nom": "Plage privée de Villa Iguana",
+            "description": "Votre plage, accessible directement depuis la villa. Transat, ombre naturelle, eau cristalline."
+          },
+          {
+            "nom": "Plage de Sainte-Luce",
+            "description": "5 min en voiture. Pour varier les décors, avec accès restaurants."
+          },
+          {
+            "nom": "Anse Figuier",
+            "description": "10 min. Idéale pour le snorkeling en groupe — fonds riches en coraux."
+          }
+        ],
+        "activites": [
+          {
+            "nom": "Excursion catamaran depuis Le Marin",
+            "type": "Nautisme",
+            "note": "Le must pour un groupe. Journée en mer, snorkeling, déjeuner à bord."
+          },
+          {
+            "nom": "Écomusée de la Martinique",
+            "type": "Culture",
+            "note": "10 min. Idéal en début de séjour pour découvrir l'histoire martiniquaise."
+          },
+          {
+            "nom": "Quad / 4x4 dans les mornes",
+            "type": "Aventure",
+            "note": "Prestataires depuis Sainte-Luce. Balades à travers plantations et forêts tropicales."
+          },
+          {
+            "nom": "Soirée barbecue sur la terrasse",
+            "type": "Convivialité",
+            "note": "Barbecue disponible, épicerie à 5 min — votre meilleure soirée sera peut-être à la maison."
+          }
+        ],
+        "urgences": {
+          "pharmacie": "Pharmacie de Sainte-Luce — Bourg, tél. 0596 62 50 12. Lun–Sam 8h–19h.",
+          "hopital": "Clinique Sainte-Marie — Le Lamentin (30 min), urgences 24h/24 : 0596 57 37 37.",
+          "gendarmerie": "Gendarmerie de Rivière-Pilote — 0596 62 60 05. Urgences : 17."
+        }
+      }
     }
   ],
   "contacts": [
-    { "label": "Vincent (propriétaire)", "phone": "+33 6 XX XX XX XX", "icon": "👤", "note": "WhatsApp de préférence" },
-    { "label": "SAMU", "phone": "15", "icon": "🚑" },
-    { "label": "Pompiers", "phone": "18", "icon": "🚒" },
-    { "label": "Gendarmerie Sainte-Luce", "phone": "+596 596 62 43 17", "icon": "🚓" },
-    { "label": "Urgences européen", "phone": "112", "icon": "🆘" }
+    {
+      "label": "Vincent (propriétaire)",
+      "phone": "+33 6 XX XX XX XX",
+      "icon": "👤",
+      "note": "WhatsApp de préférence"
+    },
+    {
+      "label": "SAMU",
+      "phone": "15",
+      "icon": "🚑"
+    },
+    {
+      "label": "Pompiers",
+      "phone": "18",
+      "icon": "🚒"
+    },
+    {
+      "label": "Gendarmerie Sainte-Luce",
+      "phone": "+596 596 62 43 17",
+      "icon": "🚓"
+    },
+    {
+      "label": "Urgences européen",
+      "phone": "112",
+      "icon": "🆘"
+    }
   ],
   "updated_at": "2026-05-21"
 }

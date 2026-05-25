@@ -7,6 +7,7 @@ import { useLang, LangToggle } from "./i18n.jsx";
 import { Eyebrow, Display, Editorial, Button, RatingBadge, Icon, ThemeToggle, Chip, StateTile, RImg } from "./primitives.jsx";
 import { Curtain } from "./Curtain.jsx";
 const PropertyMap = lazy(() => import("./PropertyMap.jsx"));
+const VillaAmaryllisReel = lazy(() => import("./components/reel/VillaAmaryllisReel.jsx"));
 
 // ── Retry utility for availability fetch ────────────────────────
 async function fetchWithRetry(url, options = {}, retries = 3, delay = 800) {
@@ -245,6 +246,7 @@ const BIENS = [
     reviews: 33,
     couleur: "#e91e8c",
     photos: [
+      "/photos/amaryllis/10.webp",  // hero — vue grand angle villa+piscine (agent photographe)
       "/photos/amaryllis/01.webp",
       "/photos/amaryllis/02.webp",
       "/photos/amaryllis/03.webp",
@@ -254,7 +256,6 @@ const BIENS = [
       "/photos/amaryllis/07.webp",
       "/photos/amaryllis/08.webp",
       "/photos/amaryllis/09.webp",
-      "/photos/amaryllis/10.webp",
       "/photos/amaryllis/11.webp",
       "/photos/amaryllis/12.webp",
       "/photos/amaryllis/13.webp",
@@ -926,7 +927,7 @@ const PC_TIERS = {
   peak: { bg: "rgba(196,114,84,0.20)",  text: "#c47254", border: "#c4725430", label: "Pic de saison" },
 };
 
-function PricingCalendar({ bien, isMobile = false }) {
+function PricingCalendar({ bien, isMobile = false, large = false }) {
   const isNogent = bien.id === "nogent";
   const [pricesMap, setPricesMap] = useState({}); // { "YYYY-MM-DD": { price, tier } }
   const [loading, setLoading] = useState(true);
@@ -957,6 +958,25 @@ function PricingCalendar({ bien, isMobile = false }) {
         })
         .catch(() => { if (!cancelled) setLoading(false); });
     } else {
+      // Fallback statique saisonnier (Martinique) — utilisé si l'API RM ne répond pas
+      const buildSeasonalFallback = (base) => {
+        const map = {};
+        const now2 = new Date();
+        for (let d = 0; d < 180; d++) {
+          const dt = new Date(now2.getTime() + d * 86400000);
+          const ds2 = dt.toISOString().slice(0, 10);
+          const m = dt.getMonth();
+          let tier, price;
+          if (m >= 6 && m <= 8)       { tier = "peak"; price = Math.round(base * 1.55); }
+          else if (m === 11 || m === 0){ tier = "peak"; price = Math.round(base * 1.45); }
+          else if (m === 1 || m === 5) { tier = "high"; price = Math.round(base * 1.25); }
+          else if (m >= 2 && m <= 4)   { tier = "mid";  price = Math.round(base * 1.10); }
+          else                          { tier = "low";  price = base; }
+          map[ds2] = { price, tier };
+        }
+        return map;
+      };
+
       fetch(`/api/rm-recommendations?property_id=${bien.id}&from=${todayStr}&to=${toStr}`)
         .then(r => r.json())
         .then(data => {
@@ -968,20 +988,33 @@ function PricingCalendar({ bien, isMobile = false }) {
               map[rec.date] = { price: Math.round(rec.suggested_price), tier };
             }
           }
-          if (Object.keys(map).length > 0) setPricesMap(map);
+          // Si l'API retourne des données → les utiliser, sinon fallback saisonnier
+          setPricesMap(Object.keys(map).length > 0 ? map : buildSeasonalFallback(bien.prix || 280));
           setLoading(false);
         })
-        .catch(() => { if (!cancelled) setLoading(false); });
+        .catch(() => {
+          if (!cancelled) {
+            setPricesMap(buildSeasonalFallback(bien.prix || 280));
+            setLoading(false);
+          }
+        });
     }
     return () => { cancelled = true; };
   }, [bien.id, isNogent, bien.prix]);
 
   const hasPrices = Object.keys(pricesMap).length > 0;
-  if (!loading && !hasPrices) return null; // pas de données — section masquée
+  if (!loading && !hasPrices && isNogent) return null; // Nogent sans données → masqué (Martinique a toujours un fallback)
 
   const todayStr = new Date().toISOString().slice(0, 10);
   const now = new Date();
   const baseY = now.getFullYear(), baseM = now.getMonth();
+
+  const cellH = large && !isMobile ? 56 : 38;
+  const dayFs = large && !isMobile ? 14 : 11;
+  const priceFs = large && !isMobile ? 11 : 8;
+  const headerFs = large && !isMobile ? 14 : 12;
+  const weekFs = large && !isMobile ? 9 : 8;
+  const cellGap = large && !isMobile ? 4 : 2;
 
   function renderPricingMonth(year, month) {
     const firstDay = new Date(year, month, 1);
@@ -994,12 +1027,12 @@ function PricingCalendar({ bien, isMobile = false }) {
     }
     return (
       <div key={`${year}-${month}`} style={{ flex: "1 1 220px" }}>
-        <div style={{ textAlign: "center", fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 12, letterSpacing: "0.16em", textTransform: "uppercase", marginBottom: 10, color: NAVY }}>
+        <div style={{ textAlign: "center", fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: headerFs, letterSpacing: "0.16em", textTransform: "uppercase", marginBottom: large ? 14 : 10, color: NAVY }}>
           {MONTHS_FR[month]} {year}
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: cellGap }}>
           {WEEKDAYS.map(w => (
-            <div key={w} style={{ textAlign: "center", fontSize: 8, color: MUTED, padding: "3px 0", fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase" }}>{w}</div>
+            <div key={w} style={{ textAlign: "center", fontSize: weekFs, color: MUTED, padding: "4px 0", fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase" }}>{w}</div>
           ))}
           {cells.map((ds, i) => {
             if (!ds) return <div key={`e-${i}`} />;
@@ -1008,18 +1041,19 @@ function PricingCalendar({ bien, isMobile = false }) {
             const tc = data ? PC_TIERS[data.tier] : null;
             return (
               <div key={ds} title={data && !isPast ? `${data.price}€/nuit` : undefined} style={{
-                height: 38,
-                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1,
-                borderRadius: 6,
+                height: cellH,
+                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2,
+                borderRadius: large ? 8 : 6,
                 background: isPast ? "transparent" : (tc?.bg ?? "transparent"),
                 border: isPast ? "none" : tc ? `1px solid ${tc.border}` : "none",
                 opacity: isPast ? 0.3 : 1,
+                transition: "background 0.15s",
               }}>
-                <span style={{ fontSize: 11, color: isPast ? MUTED : (tc ? tc.text : NAVY), fontWeight: tc && !isPast ? 600 : 400, lineHeight: 1.1 }}>
+                <span style={{ fontSize: dayFs, color: isPast ? MUTED : (tc ? tc.text : NAVY), fontWeight: tc && !isPast ? 600 : 400, lineHeight: 1.1 }}>
                   {parseInt(ds.split("-")[2])}
                 </span>
                 {data && !isPast && (
-                  <span style={{ fontSize: 8, color: tc?.text ?? MUTED, fontWeight: 500, lineHeight: 1, letterSpacing: "0.02em" }}>
+                  <span style={{ fontSize: priceFs, color: tc?.text ?? MUTED, fontWeight: 500, lineHeight: 1, letterSpacing: "0.02em" }}>
                     {data.price}€
                   </span>
                 )}
@@ -1049,19 +1083,19 @@ function PricingCalendar({ bien, isMobile = false }) {
         </div>
       </div>
       {loading ? (
-        <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: large ? 32 : 16, flexWrap: "wrap" }}>
           {[0, 1].map(col => (
             <div key={col} style={{ flex: "1 1 220px" }}>
-              <div className="skeleton" style={{ height: 12, width: 110, margin: "0 auto 10px", borderRadius: 4 }} />
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 2 }}>
-                {Array.from({ length: 35 }, (_, i) => <div key={i} className="skeleton" style={{ height: 38, borderRadius: 6, opacity: 0.25 + (i % 5) * 0.06 }} />)}
+              <div className="skeleton" style={{ height: large ? 16 : 12, width: 130, margin: "0 auto 14px", borderRadius: 4 }} />
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: cellGap }}>
+                {Array.from({ length: 35 }, (_, i) => <div key={i} className="skeleton" style={{ height: cellH, borderRadius: large ? 8 : 6, opacity: 0.25 + (i % 5) * 0.06 }} />)}
               </div>
             </div>
           ))}
         </div>
       ) : (
         <>
-          <div style={{ display: "flex", gap: isMobile ? 0 : 20, flexDirection: isMobile ? "column" : "row", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: isMobile ? 0 : (large ? 32 : 20), flexDirection: isMobile ? "column" : "row", flexWrap: "wrap" }}>
             {renderPricingMonth(y1, m1)}
             {!isMobile && renderPricingMonth(y2, m2)}
           </div>
@@ -2963,71 +2997,14 @@ function BienCard({ bien, onDetail, onBook, isFavorite = false, onToggleFavorite
           <span>{bien.lits}</span>
         </div>
 
-        {/* Description */}
-        <p style={{
-          color: MUTED, fontSize: 13, lineHeight: 1.65,
-          margin: "0 0 14px",
-          flex: 1,
-          display: "-webkit-box",
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: "vertical",
-          overflow: "hidden",
-        }}>{lang === "fr" ? bien.desc : (bien.descEn || bien.desc)}</p>
-
-        {/* Amenities */}
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+        {/* Amenities — piscine en premier, max 4 */}
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16, marginTop: 4 }}>
           {(lang === "fr" ? bien.amenities : (bien.amenitiesEn || bien.amenities)).slice(0, 4).map(a => (
             <Chip key={a} style={{ fontSize: 11, padding: "3px 8px" }}>{a}</Chip>
           ))}
         </div>
 
-        {/* Remises durée — visible seulement si pas location longue durée */}
-        {!PRICE_HIDDEN.has(bien.id) && (
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
-            {[
-              { nights: 7, pct: 5, label: lang === "fr" ? "−5% · 7 nuits" : "−5% · 7 nights" },
-              { nights: 14, pct: 10, label: lang === "fr" ? "−10% · 14 nuits" : "−10% · 2 weeks" },
-              { nights: 28, pct: 15, label: lang === "fr" ? "−15% · 28 nuits" : "−15% · 4 weeks" },
-            ].map(d => (
-              <span key={d.nights} style={{
-                display: "inline-flex", alignItems: "center", gap: 4,
-                background: "rgba(22,163,74,0.08)",
-                border: "1px solid rgba(22,163,74,0.2)",
-                color: "#16a34a",
-                borderRadius: 20, padding: "3px 9px",
-                fontSize: 10, fontWeight: 600,
-                fontFamily: "'Jost', sans-serif", letterSpacing: "0.03em",
-              }}>
-                🏷 {d.label}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Testimonial — meilleur avis mis en avant (note max + texte le plus long) */}
-        {bien.avis && bien.avis.length > 0 && (() => {
-          // Trier : note desc, puis longueur texte desc — prend le plus percutant
-          const best = [...bien.avis].sort((a, b) => b.note - a.note || b.texte.length - a.texte.length)[0];
-          const shortText = best.texte.length > 90 ? best.texte.slice(0, 88) + "…" : best.texte;
-          return (
-            <div style={{
-              borderLeft: `2px solid ${CORAL}`,
-              background: "rgba(196,114,84,0.04)",
-              borderRadius: "0 6px 6px 0",
-              padding: "8px 10px 8px 12px",
-              marginBottom: 14,
-            }}>
-              <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontStyle: "italic", fontSize: 12.5, lineHeight: 1.55, color: MUTED, margin: "0 0 4px" }}>
-                "{shortText}"
-              </p>
-              <span style={{ fontFamily: "'Jost', sans-serif", fontSize: 10, color: CORAL, fontWeight: 600, letterSpacing: "0.06em" }}>
-                {best.pays} {best.nom} · {best.date}
-              </span>
-            </div>
-          );
-        })()}
-
-        {/* CTA row */}
+        {/* CTA row — 1 seul CTA principal */}
         <div style={{ display: "flex", gap: 8 }}>
           {onToggleCompare && (
             <button
@@ -3050,36 +3027,14 @@ function BienCard({ bien, onDetail, onBook, isFavorite = false, onToggleFavorite
               {isCompared ? "✓" : "⊕"}
             </button>
           )}
-          <button
-            onClick={e => { e.stopPropagation(); onDetail(bien); }}
-            style={{
-              flex: 1,
-              background: "transparent",
-              border: `1px solid ${SAND}`,
-              color: NAVY,
-              borderRadius: 6,
-              padding: "11px 14px",
-              fontFamily: "'Jost', sans-serif",
-              fontWeight: 300,
-              fontSize: 12,
-              letterSpacing: "0.08em",
-              cursor: "pointer",
-              transition: "border-color 0.2s",
-              textTransform: "uppercase",
-            }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = NAVY; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = SAND; }}
-          >
-            {t("viewMore")}
-          </button>
           {BOOKING_DISABLED.has(bien.id) ? (
             <a
               href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent("Bonjour, je suis intéressé(e) par Villa Iguana pour une location longue durée à Sainte-Luce, Martinique. Pouvez-vous m'indiquer vos conditions et disponibilités ? Merci.")}`}
               target="_blank" rel="noopener noreferrer"
               onClick={e => e.stopPropagation()}
               style={{
-                flex: 2, background: NAVY, border: "none", color: "var(--c-ivory)",
-                borderRadius: 6, padding: "11px 20px",
+                flex: 1, background: NAVY, border: "none", color: "var(--c-ivory)",
+                borderRadius: 6, padding: "12px 20px",
                 fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 12,
                 letterSpacing: "0.08em", cursor: "pointer",
                 textTransform: "uppercase", textAlign: "center", textDecoration: "none",
@@ -3090,18 +3045,22 @@ function BienCard({ bien, onDetail, onBook, isFavorite = false, onToggleFavorite
             </a>
           ) : (
             <button
-              onClick={e => { e.stopPropagation(); if (window.gtag) window.gtag("event", "select_item", { item_list_id: "villas", items: [{ item_id: bien.id, item_name: bien.nom, price: bien.prix || 0, currency: "EUR" }] }); onBook(bien); }}
+              onClick={e => {
+                e.stopPropagation();
+                if (window.gtag) window.gtag("event", "select_item", { item_list_id: "villas", items: [{ item_id: bien.id, item_name: bien.nom, price: bien.prix || 0, currency: "EUR" }] });
+                onDetail(bien);
+              }}
               style={{
-                flex: 2, background: CORAL, border: "none", color: "#fff",
-                borderRadius: 6, padding: "11px 20px",
-                fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 12,
-                letterSpacing: "0.08em", cursor: "pointer", transition: "opacity 0.2s",
+                flex: 1, background: NAVY, border: "none", color: "#fff",
+                borderRadius: 6, padding: "12px 20px",
+                fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 13,
+                letterSpacing: "0.06em", cursor: "pointer", transition: "opacity 0.2s",
                 textTransform: "uppercase",
               }}
               onMouseEnter={e => { e.currentTarget.style.opacity = "0.88"; }}
               onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
             >
-              {t("book")}
+              {lang === "fr" ? "Voir les disponibilités →" : "Check availability →"}
             </button>
           )}
         </div>
@@ -3511,81 +3470,314 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
           </div>
         ) : (
           /* Desktop: mosaic */
-          <div style={{ position: "relative", display: "flex", height: "clamp(380px, 52vh, 560px)", gap: 4, background: "#061616", flexShrink: 0 }}>
-            {/* Grande photo gauche */}
-            <div
-              style={{ flex: "0 0 60%", position: "relative", cursor: "zoom-in", overflow: "hidden" }}
-              onClick={() => { setPhotoIdx(0); setLightboxOpen(true); }}
-            >
-              {photos[0] && (
-                <RImg
-                  src={photos[0]}
-                  alt={`${bien.nom} — photo principale`}
-                  sizes="100vw"
-                  fetchPriority="high"
-                  loading="eager"
-                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "transform 0.4s ease" }}
-                  onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.02)"; }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; }}
-                />
-              )}
-              {/* Overlay gradient + titre sur la grande photo */}
-              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.15) 45%, transparent 70%)", pointerEvents: "none" }} />
-              <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "28px 32px", pointerEvents: "none" }}>
-                <Eyebrow style={{ color: "rgba(255,255,255,0.65)", marginBottom: 6 }}>{bien.lieu}</Eyebrow>
-                <Display as="h2" size="lg" color="#fff" style={{ marginBottom: 10 }}>{bien.nom}</Display>
-                {bien.rating && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                    <a href={`/avis?bien=${bien.id}`} style={{ textDecoration: "none" }}><RatingBadge rating={bien.rating} count={bien.reviews} dark /></a>
-                    <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "rgba(255,255,255,0.6)", fontFamily: "'Jost', sans-serif" }}>
-                      <Icon name="users" size={13} color="rgba(255,255,255,0.6)" />{bien.capacite}
-                      <span style={{ opacity: 0.4 }}>·</span>
-                      <Icon name="bed" size={13} color="rgba(255,255,255,0.6)" />{bien.chambres} ch.
-                    </span>
-                    {bien.tag && <Chip variant="onPhoto">{bien.tag}</Chip>}
+          <div style={{ display: "flex", flexDirection: "column", gap: 3, background: "#061616", flexShrink: 0 }}>
+
+            {/* ── Rangée héro : photo pleine hauteur gauche + reel/grille droite ── */}
+            <div style={{ position: "relative", display: "flex", height: "clamp(400px, 56vh, 620px)", gap: 3 }}>
+
+              {/* ── Photo principale — flex:1, prend tout l'espace restant ── */}
+              <div
+                style={{ flex: 1, position: "relative", cursor: "zoom-in", overflow: "hidden" }}
+                onClick={() => { setPhotoIdx(0); setLightboxOpen(true); }}
+              >
+                {photos[0] && (
+                  <RImg
+                    src={photos[0]}
+                    alt={`${bien.nom} — photo principale`}
+                    sizes="(max-width: 1200px) 72vw, 900px"
+                    fetchPriority="high"
+                    loading="eager"
+                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "transform 0.4s ease" }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.02)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; }}
+                  />
+                )}
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.15) 45%, transparent 70%)", pointerEvents: "none" }} />
+
+                {/* Prix visible dès le premier regard — pill top-right */}
+                {bien.prix && (
+                  <div style={{
+                    position: "absolute", top: 20, right: 20,
+                    background: "rgba(14,59,58,0.78)", backdropFilter: "blur(8px)",
+                    border: "1px solid rgba(255,255,255,0.18)",
+                    borderRadius: 999, padding: "7px 16px",
+                    display: "flex", alignItems: "baseline", gap: 4,
+                    pointerEvents: "none",
+                  }}>
+                    <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 20, color: "#faf5e9", letterSpacing: "-0.01em" }}>{bien.prix}€</span>
+                    <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11, color: "rgba(255,255,255,0.65)", letterSpacing: "0.05em" }}>/nuit</span>
+                  </div>
+                )}
+
+                {/* Overlay bas : titre + rating + capacité */}
+                <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "28px 32px", pointerEvents: "none" }}>
+                  <Eyebrow style={{ color: "rgba(255,255,255,0.65)", marginBottom: 6 }}>{bien.lieu}</Eyebrow>
+                  <Display as="h2" size="lg" color="#fff" style={{ marginBottom: 10 }}>{bien.nom}</Display>
+                  {bien.rating && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                      <a href={`/avis?bien=${bien.id}`} style={{ textDecoration: "none" }}><RatingBadge rating={bien.rating} count={bien.reviews} dark /></a>
+                      <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "rgba(255,255,255,0.6)", fontFamily: "'Jost', sans-serif" }}>
+                        <Icon name="users" size={13} color="rgba(255,255,255,0.6)" />{bien.capacite}
+                        <span style={{ opacity: 0.4 }}>·</span>
+                        <Icon name="bed" size={13} color="rgba(255,255,255,0.6)" />{bien.chambres} ch.
+                      </span>
+                      {bien.tag && <Chip variant="onPhoto">{bien.tag}</Chip>}
+                    </div>
+                  )}
+                </div>
+
+                {/* Bouton "Voir toutes les photos" — dans la photo, pas sur le reel */}
+                <button
+                  onClick={e => { e.stopPropagation(); setLightboxOpen(true); }}
+                  style={{
+                    position: "absolute", bottom: 16, right: 16,
+                    background: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)",
+                    border: "1px solid rgba(255,255,255,0.22)", borderRadius: 8,
+                    color: "#fff", padding: "8px 16px",
+                    fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11,
+                    letterSpacing: "0.1em", cursor: "pointer",
+                    display: "flex", alignItems: "center", gap: 6, zIndex: 4,
+                    pointerEvents: "auto",
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(0,0,0,0.78)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "rgba(0,0,0,0.55)"; }}
+                >
+                  <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+                  </svg>
+                  {photos.length} photos
+                </button>
+              </div>
+
+              {/* ── Colonne droite : largeur fixe 320px — reel prend toute la hauteur ── */}
+              <div style={{
+                flex: "0 0 320px",
+                height: "100%",
+                overflow: "hidden",
+                background: "#050e10",
+              }}>
+                {bien.id === "amaryllis" ? (
+                  /* Reel cinématique plein-hauteur */
+                  <Suspense fallback={
+                    <div style={{ width: "100%", height: "100%", background: "radial-gradient(ellipse at top, #0e3b3a 0%, #050608 100%)" }} />
+                  }>
+                    <VillaAmaryllisReel
+                      fillHeight={true}
+                      titleText={lang === "fr" ? "L'HORIZON POUR VOUS SEULS" : "YOUR OWN HORIZON"}
+                      titleSub={lang === "fr" ? "Vue océan · 3 suites · piscine privée" : "Ocean view · 3 suites · private pool"}
+                      hook={lang === "fr"
+                        ? "Votre piscine privée. L'Atlantique en face. Rien d'autre."
+                        : "Your private pool. The Atlantic ahead. Nothing else."}
+                      ctaLabel={lang === "fr" ? "RÉSERVER EN DIRECT" : "BOOK DIRECTLY"}
+                      onCta={() => {
+                        document.getElementById("booking-section")?.scrollIntoView({ behavior: "smooth", block: "center" });
+                      }}
+                      price={bien.prix ?? "280"}
+                    />
+                  </Suspense>
+                ) : (
+                  /* Grille 2×2 standard pour les autres villas */
+                  <div style={{ width: "100%", height: "100%", display: "grid", gridTemplateColumns: "1fr 1fr", gridTemplateRows: "1fr 1fr", gap: 3 }}>
+                    {[1, 2, 3, 4].map(idx => (
+                      photos[idx] ? (
+                        <div
+                          key={idx}
+                          style={{ position: "relative", overflow: "hidden", cursor: "zoom-in" }}
+                          onClick={() => { setPhotoIdx(idx); setLightboxOpen(true); }}
+                        >
+                          <RImg
+                            src={photos[idx]}
+                            alt={`${bien.nom} — photo ${idx + 1}`}
+                            sizes="(max-width: 1024px) 30vw, 240px"
+                            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "transform 0.4s ease" }}
+                            onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.04)"; }}
+                            onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; }}
+                          />
+                        </div>
+                      ) : (
+                        <div key={idx} style={{ background: "#0a2424" }} />
+                      )
+                    ))}
                   </div>
                 )}
               </div>
+
             </div>
-            {/* Grille 2×2 droite */}
-            <div style={{ flex: "0 0 40%", display: "grid", gridTemplateColumns: "1fr 1fr", gridTemplateRows: "1fr 1fr", gap: 4 }}>
-              {[1, 2, 3, 4].map(idx => (
-                photos[idx] ? (
+
+            {/* ── Filmstrip photos sous le héro (amaryllis desktop uniquement) ── */}
+            {bien.id === "amaryllis" && photos.length > 1 && (
+              <div style={{ display: "flex", height: 140, gap: 3, overflow: "hidden" }}>
+                {photos.slice(1, 5).map((src, i) => (
                   <div
-                    key={idx}
-                    style={{ position: "relative", overflow: "hidden", cursor: "zoom-in" }}
-                    onClick={() => { setPhotoIdx(idx); setLightboxOpen(true); }}
+                    key={src}
+                    style={{ flex: 1, position: "relative", overflow: "hidden", cursor: "zoom-in" }}
+                    onClick={() => { setPhotoIdx(i + 1); setLightboxOpen(true); }}
+                    onMouseEnter={e => { const img = e.currentTarget.querySelector("img"); if (img) img.style.filter = "brightness(1)"; }}
+                    onMouseLeave={e => { const img = e.currentTarget.querySelector("img"); if (img) img.style.filter = "brightness(0.82)"; }}
                   >
                     <RImg
-                      src={photos[idx]}
-                      alt={`${bien.nom} — photo ${idx + 1}`}
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "transform 0.4s ease" }}
-                      onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.04)"; }}
-                      onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; }}
+                      src={src}
+                      alt={`${bien.nom} — photo ${i + 2}`}
+                      sizes="25vw"
+                      loading="eager"
+                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: "brightness(0.82)", transition: "filter 0.25s" }}
                     />
+                    {/* "Voir toutes les photos" sur la dernière vignette */}
+                    {i === 3 && (
+                      <div style={{
+                        position: "absolute", inset: 0, background: "rgba(0,0,0,0.48)",
+                        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6,
+                        pointerEvents: "none",
+                      }}>
+                        <span style={{ fontSize: 20 }}>📷</span>
+                        <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11, letterSpacing: "0.10em", textTransform: "uppercase", color: "#fff", textAlign: "center", lineHeight: 1.4 }}>
+                          Voir toutes<br />les photos
+                        </span>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <div key={idx} style={{ background: "#0a2424" }} />
-                )
-              ))}
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Transition filmstrip → cream ── */}
+        {bien.id === "amaryllis" && !isMobile && photos.length > 1 && (
+          <div style={{ height: 32, background: "linear-gradient(to bottom, #061616, var(--c-cream, #f5ede0))" }} />
+        )}
+
+        {/* ── Breakout cream — Calendrier de réservation réel (design-008 v3) ── */}
+        {bien.id === "amaryllis" && !PRICE_HIDDEN.has(bien.id) && !BOOKING_DISABLED.has(bien.id) && (
+          <div
+            id="amaryllis-pricing"
+            style={{
+              background: "var(--c-cream, #f5ede0)",
+              padding: isMobile ? "36px 20px 44px" : "52px 48px 60px",
+              scrollMarginTop: 80,
+            }}
+          >
+            <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+              {/* Eyebrow */}
+              <div style={{
+                fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 10,
+                letterSpacing: "0.22em", textTransform: "uppercase",
+                color: "#9a8c7e", marginBottom: 12, textAlign: "center",
+              }}>
+                {lang === "fr" ? "TARIFS & DISPONIBILITÉS" : "RATES & AVAILABILITY"}
+              </div>
+              {/* Phrase éditoriale */}
+              <p style={{
+                fontFamily: "'Cormorant Garamond', Georgia, serif",
+                fontStyle: "italic", fontSize: isMobile ? 18 : 24,
+                color: "#5a5248", lineHeight: 1.5,
+                margin: "0 0 32px", textAlign: "center",
+              }}>
+                {lang === "fr"
+                  ? "Réservez en direct et économisez jusqu'à 300€ sur votre séjour."
+                  : "Book directly and save up to €300 on your stay."}
+              </p>
+
+              {/* ── Calendrier interactif réel ── */}
+              {loadingAvail ? (
+                <div style={{ textAlign: "center", padding: "48px 0", color: MUTED, fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13 }}>
+                  Chargement des disponibilités…
+                </div>
+              ) : (
+                <DateRangePicker
+                  checkin={calCheckin}
+                  checkout={calCheckout}
+                  blockedDates={blockedDates}
+                  onChange={(ci, co) => { setCalCheckin(ci); setCalCheckout(co); }}
+                  dailyPricesMap={dailyPricesMap}
+                  basePrice={bien.prix}
+                  minNights={getMinNights(bien.id, calCheckin)}
+                  gapDates={gapDates}
+                />
+              )}
+
+              {/* ── Récap complet après sélection des dates (identique au widget bas) ── */}
+              {calCheckin && calCheckout && calNights > 0 && !calBelowMin && (
+                <div style={{
+                  marginTop: 24,
+                  background: IVORY,
+                  border: `1px solid ${SAND}`,
+                  borderRadius: 14,
+                  padding: "20px 28px",
+                  display: "flex",
+                  gap: 32,
+                  flexWrap: "wrap",
+                  alignItems: "flex-start",
+                }}>
+                  {/* Détail lignes */}
+                  <div style={{ flex: 1, minWidth: 220 }}>
+                    <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 12, color: MUTED, letterSpacing: "0.10em", textTransform: "uppercase", marginBottom: 12 }}>
+                      {lang === "fr" ? "Détail du séjour" : "Stay breakdown"}
+                    </div>
+                    {/* Dates */}
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: NAVY, fontFamily: "'Jost', sans-serif", fontWeight: 300, marginBottom: 6 }}>
+                      <span>{formatDateShort(calCheckin)} → {formatDateShort(calCheckout)} · {calNights} nuit{calNights > 1 ? "s" : ""}</span>
+                      <span>{calRawTotal}€</span>
+                    </div>
+                    {/* Remise si applicable */}
+                    {calDiscountAmount > 0 && (
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#14b8a6", fontFamily: "'Jost', sans-serif", fontWeight: 400, marginBottom: 6 }}>
+                        <span>🎁 Remise {discountLabel(calNights)} (−{Math.round(calDiscountRate * 100)}%)</span>
+                        <span>−{calDiscountAmount}€</span>
+                      </div>
+                    )}
+                    {/* Frais de ménage */}
+                    {calFrais > 0 && (
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: MUTED, fontFamily: "'Jost', sans-serif", fontWeight: 300, marginBottom: 6 }}>
+                        <span>🧹 Frais de ménage</span>
+                        <span>{calFrais}€</span>
+                      </div>
+                    )}
+                    <div style={{ height: 1, background: SAND, margin: "10px 0" }} />
+                    {/* Total */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                      <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 13, color: NAVY, letterSpacing: "0.06em", textTransform: "uppercase" }}>Total TTC</span>
+                      <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 28, color: NAVY, lineHeight: 1 }}>{calTotal}€</span>
+                    </div>
+                    {/* Économie vs Airbnb */}
+                    <div style={{ marginTop: 6, fontSize: 11, color: "#14b8a6", fontFamily: "'Jost', sans-serif", fontWeight: 400 }}>
+                      💰 ~{Math.round(calTotal * 0.15 / 5) * 5}€ économisés vs Airbnb (pas de frais de service)
+                    </div>
+                  </div>
+                  {/* CTA */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10, justifyContent: "center", minWidth: 180 }}>
+                    <button
+                      onClick={() => { document.getElementById("booking-section")?.scrollIntoView({ behavior: "smooth" }); }}
+                      style={{
+                        fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13,
+                        letterSpacing: "0.12em", textTransform: "uppercase",
+                        color: "var(--c-ivory, #faf5e9)", background: CORAL,
+                        border: "none", borderRadius: 999,
+                        padding: "14px 28px", cursor: "pointer",
+                        whiteSpace: "nowrap",
+                        transition: "background 0.2s, transform 0.15s",
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = NAVY; e.currentTarget.style.transform = "translateY(-1px)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = CORAL; e.currentTarget.style.transform = "none"; }}
+                    >
+                      {lang === "fr" ? "Réserver maintenant" : "Book now"}
+                    </button>
+                    <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 10, color: MUTED, textAlign: "center", margin: 0, letterSpacing: "0.04em" }}>
+                      {lang === "fr" ? "Réponse sous 24h · 0 frais de service" : "Reply within 24h · No service fee"}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Sans dates sélectionnées : lien discret vers le bas */}
+              {!calCheckin && (
+                <div style={{ textAlign: "center", marginTop: 20 }}>
+                  <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11, color: "#9a8c7e", letterSpacing: "0.06em" }}>
+                    {lang === "fr" ? "Réponse garantie sous 24h · Pas de frais de service" : "Response within 24h · No service fee"}
+                  </p>
+                </div>
+              )}
             </div>
-            {/* Bouton "Voir toutes les photos" */}
-            <button
-              onClick={() => setLightboxOpen(true)}
-              style={{
-                position: "absolute", bottom: 16, right: 16,
-                background: "rgba(0,0,0,0.62)", backdropFilter: "blur(8px)",
-                border: "1px solid rgba(255,255,255,0.25)", borderRadius: 8,
-                color: "#fff", padding: "9px 18px",
-                fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 12,
-                letterSpacing: "0.08em", cursor: "pointer", display: "flex", alignItems: "center", gap: 7,
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = "rgba(0,0,0,0.82)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "rgba(0,0,0,0.62)"; }}
-            >
-              📷 Voir toutes les photos ({photos.length})
-            </button>
           </div>
         )}
 
@@ -3805,7 +3997,8 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
             </div>
 
             {/* Tarifs prévisionnels — design-007 : PricingCalendar inline */}
-            {!PRICE_HIDDEN.has(bien.id) && !BOOKING_DISABLED.has(bien.id) && (
+            {/* Sur desktop pour amaryllis : déjà affiché dans le breakout reel — ne pas dupliquer */}
+            {!PRICE_HIDDEN.has(bien.id) && !BOOKING_DISABLED.has(bien.id) && (isMobile || bien.id !== "amaryllis") && (
               <>
                 <div style={{ height: 1, background: SAND, marginBottom: 26 }} />
                 <PricingCalendar bien={bien} isMobile={isMobile} />
@@ -4106,37 +4299,41 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
               );
             })()}
 
-            {/* Bottom CTA */}
-            <div style={{ height: 1, background: SAND, margin: "28px 0 28px" }} />
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
-              <div>
-                {PRICE_HIDDEN.has(bien.id) ? (
-                  <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 16, color: NAVY }}>{t("longTermShort")}</div>
-                ) : (
-                  <>
-                    <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 10, color: MUTED, letterSpacing: "0.2em", textTransform: "uppercase", marginBottom: 4 }}>{t("from")}</div>
-                    <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 36, color: NAVY, lineHeight: 1 }}>
-                      {bien.prix}€<span style={{ fontSize: 14, fontWeight: 300, color: MUTED, marginLeft: 6 }}>{t("perNight")}</span>
-                    </div>
-                  </>
-                )}
-                {bien.rating && (
-                  <a href={`/avis?bien=${bien.id}`} style={{ display: "block", color: MUTED, fontSize: 12, marginTop: 4, fontFamily: "'Jost', sans-serif", fontWeight: 300, textDecoration: "none" }}
-                    onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"}
-                    onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}
-                  >★ {bien.rating} · {bien.reviews} {t("reviewsAirbnb")}</a>
-                )}
-              </div>
-              {!BOOKING_DISABLED.has(bien.id) ? (
-                <Button variant="primary" size="lg" onClick={() => onBook(bien)}>
-                  {t("book")} →
-                </Button>
-              ) : (
-                <Button variant="secondary" size="lg" href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(`Bonjour, je suis intéressé par ${bien.nom} pour un séjour longue durée.`)}`} target="_blank" rel="noopener noreferrer">
-                  Contacter →
-                </Button>
-              )}
-            </div>
+            {/* Bottom CTA — masqué pour Amaryllis (prix + réservation déjà dans le breakout cream) */}
+            {bien.id !== "amaryllis" && (
+              <>
+                <div style={{ height: 1, background: SAND, margin: "28px 0 28px" }} />
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
+                  <div>
+                    {PRICE_HIDDEN.has(bien.id) ? (
+                      <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 16, color: NAVY }}>{t("longTermShort")}</div>
+                    ) : (
+                      <>
+                        <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 10, color: MUTED, letterSpacing: "0.2em", textTransform: "uppercase", marginBottom: 4 }}>{t("from")}</div>
+                        <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 36, color: NAVY, lineHeight: 1 }}>
+                          {bien.prix}€<span style={{ fontSize: 14, fontWeight: 300, color: MUTED, marginLeft: 6 }}>{t("perNight")}</span>
+                        </div>
+                      </>
+                    )}
+                    {bien.rating && (
+                      <a href={`/avis?bien=${bien.id}`} style={{ display: "block", color: MUTED, fontSize: 12, marginTop: 4, fontFamily: "'Jost', sans-serif", fontWeight: 300, textDecoration: "none" }}
+                        onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"}
+                        onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}
+                      >★ {bien.rating} · {bien.reviews} {t("reviewsAirbnb")}</a>
+                    )}
+                  </div>
+                  {!BOOKING_DISABLED.has(bien.id) ? (
+                    <Button variant="primary" size="lg" onClick={() => onBook(bien)}>
+                      {t("book")} →
+                    </Button>
+                  ) : (
+                    <Button variant="secondary" size="lg" href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(`Bonjour, je suis intéressé par ${bien.nom} pour un séjour longue durée.`)}`} target="_blank" rel="noopener noreferrer">
+                      Contacter →
+                    </Button>
+                  )}
+                </div>
+              </>
+            )}
           </div>
 
           {/* ── Right column: sticky booking widget (desktop only) ── */}
@@ -4175,7 +4372,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
             </div>
           )}
           {!isMobile && !BOOKING_DISABLED.has(bien.id) && (
-            <div style={{ width: 380, flexShrink: 0, position: "sticky", top: 24, alignSelf: "flex-start", paddingTop: 40, paddingBottom: 40 }}>
+            <div id="booking-section" style={{ width: 380, flexShrink: 0, position: "sticky", top: 24, alignSelf: "flex-start", paddingTop: 40, paddingBottom: 40 }}>
               <div style={{
                 background: IVORY, border: `1px solid ${SAND}`, borderRadius: 16,
                 boxShadow: "0 8px 40px rgba(14,40,58,0.10), 0 2px 8px rgba(14,40,58,0.06)",
@@ -5097,86 +5294,141 @@ function WeatherPill() {
 }
 
 function QuickBook({ biens, onBook }) {
-  const amaryllis = biens.find(b => b.id === "amaryllis") || biens[0];
-  const [selectedId, setSelectedId] = useState(amaryllis?.id || biens[0]?.id);
-  const selected = biens.find(b => b.id === selectedId) || biens[0];
+  const { lang } = useLang();
+  // Biens réservables en direct (hors location longue durée)
+  const reservables = biens.filter(b => !BOOKING_DISABLED.has(b.id));
 
   return (
-    <div style={{
-      background: CREAM, borderBottom: `1px solid ${SAND}`,
-      padding: "0 32px",
-    }}>
-      <div style={{
-        maxWidth: 1280, margin: "0 auto",
-        display: "flex", alignItems: "center", gap: 16,
-        padding: "20px 0", flexWrap: "wrap",
-      }}>
-        {/* Label */}
-        <div style={{
-          fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 11,
-          letterSpacing: "0.35em", textTransform: "uppercase", color: MUTED,
-          flexShrink: 0, whiteSpace: "nowrap",
-        }}>Réserver</div>
+    <div style={{ background: NAVY, padding: "80px 28px" }}>
+      <div style={{ maxWidth: 1280, margin: "0 auto" }}>
 
-        {/* Property selector */}
-        <select
-          value={selectedId}
-          onChange={e => setSelectedId(e.target.value)}
-          style={{
-            fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 13,
-            color: NAVY, background: IVORY, border: `1px solid ${SAND}`,
-            borderRadius: 8, padding: "10px 14px", outline: "none",
-            cursor: "pointer", flexShrink: 0,
-            appearance: "none", WebkitAppearance: "none",
-            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7' viewBox='0 0 12 7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a6b5a' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,
-            backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center",
-            paddingRight: 36,
-          }}
-        >
-          {biens.map(b => (
-            <option key={b.id} value={b.id}>{b.nom} — {b.lieu}</option>
-          ))}
-        </select>
-
-        {/* Divider */}
-        <div style={{ width: 1, height: 32, background: SAND, flexShrink: 0 }} />
-
-        {/* Price + rating */}
-        <div style={{ display: "flex", gap: 16, alignItems: "center", flexShrink: 0 }}>
-          {selected && PRICE_HIDDEN.has(selected.id) ? (
-            <span style={{ fontFamily: "'Jost', sans-serif", fontSize: 13, color: MUTED, fontStyle: "italic" }}>Location longue durée</span>
-          ) : (
-            <span style={{ fontFamily: "'Jost', sans-serif", fontSize: 13, color: NAVY, fontWeight: 600 }}>
-              À partir de {selected?.prix}€<span style={{ fontWeight: 300, color: MUTED, fontSize: 11 }}> / nuit</span>
-            </span>
-          )}
-          {selected?.rating && (
-            <span style={{ fontFamily: "'Jost', sans-serif", fontSize: 12, color: MUTED }}>
-              <span style={{ color: GOLD }}>★</span> {selected.rating} · {selected.reviews} avis
-            </span>
-          )}
+        {/* En-tête émotionnel */}
+        <div style={{ textAlign: "center", marginBottom: 52 }}>
+          <p style={{
+            fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 10,
+            letterSpacing: "0.38em", textTransform: "uppercase",
+            color: "rgba(250,247,242,0.4)", margin: "0 0 18px",
+          }}>
+            {lang === "fr" ? "Réservation directe" : "Book direct"}
+          </p>
+          <h2 style={{
+            fontFamily: "'Cormorant Garamond', Georgia, serif",
+            fontWeight: 400, fontSize: "clamp(28px, 4vw, 44px)",
+            color: IVORY, margin: "0 0 14px", lineHeight: 1.12,
+          }}>
+            {lang === "fr" ? "Choisissez votre villa" : "Choose your villa"}
+          </h2>
+          <p style={{
+            fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13,
+            color: "rgba(250,247,242,0.48)", margin: 0, letterSpacing: "0.02em",
+          }}>
+            {lang === "fr"
+              ? "Sans frais de service — économisez jusqu'à 15 % vs Airbnb."
+              : "No service fees — save up to 15% vs Airbnb."}
+          </p>
         </div>
 
-        {/* Spacer */}
-        <div style={{ flex: 1 }} />
+        {/* Grille de cards compactes */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+          gap: 16,
+        }}>
+          {reservables.map(b => {
+            const photo = b.photos?.[0] || "";
+            const minP = (() => {
+              try {
+                const map = loadDailyPrices()[b.id] || {};
+                const now = new Date(); let min = Infinity;
+                for (let i = 0; i < 90; i++) {
+                  const d = new Date(now); d.setDate(now.getDate() + i);
+                  const p = map[d.toISOString().slice(0, 10)];
+                  if (p !== undefined && p < min) min = p;
+                }
+                return min === Infinity ? b.prix : min;
+              } catch { return b.prix; }
+            })();
 
-        {/* CTA */}
-        <button
-          onClick={() => onBook(selected)}
-          style={{
-            background: CORAL, border: "none", color: "#fff",
-            borderRadius: 8, padding: "13px 32px",
-            fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12,
-            letterSpacing: "0.12em", textTransform: "uppercase", cursor: "pointer",
-            flexShrink: 0, whiteSpace: "nowrap",
-            transition: "opacity 0.2s, transform 0.15s",
-            boxShadow: "0 4px 18px rgba(196,114,84,0.3)",
-          }}
-          onMouseEnter={e => { e.currentTarget.style.opacity = "0.88"; e.currentTarget.style.transform = "translateY(-1px)"; }}
-          onMouseLeave={e => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.transform = "translateY(0)"; }}
-        >
-          Vérifier les disponibilités →
-        </button>
+            return (
+              <button
+                key={b.id}
+                onClick={() => onBook(b)}
+                style={{
+                  background: "rgba(255,255,255,0.055)",
+                  border: "1px solid rgba(255,255,255,0.09)",
+                  borderRadius: 12, overflow: "hidden",
+                  cursor: "pointer", textAlign: "left", padding: 0,
+                  transition: "border-color 0.22s, transform 0.22s, background 0.22s",
+                  display: "flex", flexDirection: "column",
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = CORAL;
+                  e.currentTarget.style.background = "rgba(255,255,255,0.09)";
+                  e.currentTarget.style.transform = "translateY(-3px)";
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = "rgba(255,255,255,0.09)";
+                  e.currentTarget.style.background = "rgba(255,255,255,0.055)";
+                  e.currentTarget.style.transform = "translateY(0)";
+                }}
+              >
+                {/* Photo */}
+                <div style={{ position: "relative", paddingBottom: "62%", overflow: "hidden", background: "#07201f", flexShrink: 0 }}>
+                  {photo && (
+                    <img
+                      src={photo}
+                      alt={b.nom}
+                      loading="lazy"
+                      decoding="async"
+                      onLoad={e => { e.currentTarget.style.opacity = "1"; }}
+                      style={{
+                        position: "absolute", inset: 0,
+                        width: "100%", height: "100%", objectFit: "cover",
+                        opacity: 0, transition: "opacity 0.45s",
+                      }}
+                    />
+                  )}
+                  {/* Direct badge */}
+                  <div style={{
+                    position: "absolute", top: 8, right: 8,
+                    background: "rgba(22,163,74,0.9)", backdropFilter: "blur(4px)",
+                    color: "#fff", fontSize: 9, fontWeight: 700,
+                    padding: "3px 8px", borderRadius: 20,
+                    fontFamily: "'Jost', sans-serif", letterSpacing: "0.04em",
+                    textTransform: "uppercase",
+                  }}>✓ −15%</div>
+                </div>
+
+                {/* Infos */}
+                <div style={{ padding: "14px 15px 16px", flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
+                  <div style={{
+                    fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 13.5,
+                    color: IVORY, lineHeight: 1.25,
+                  }}>{b.nom}</div>
+                  <div style={{
+                    fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11,
+                    color: "rgba(250,247,242,0.42)", letterSpacing: "0.02em",
+                  }}>{b.lieu}</div>
+
+                  {/* Prix + CTA */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "auto", paddingTop: 10 }}>
+                    <span style={{
+                      fontFamily: "'Jost', sans-serif", fontWeight: 700, fontSize: 15, color: IVORY,
+                    }}>
+                      {minP}€
+                      <span style={{ fontWeight: 300, fontSize: 10, color: "rgba(250,247,242,0.38)", marginLeft: 2 }}>/nuit</span>
+                    </span>
+                    <span style={{
+                      fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 10,
+                      color: CORAL, letterSpacing: "0.07em", textTransform: "uppercase",
+                    }}>Voir →</span>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
       </div>
     </div>
   );
@@ -6027,6 +6279,14 @@ function FooterSection() {
       </div>
 
       {/* ── Bottom bar ── */}
+      <FooterBottomBar />
+    </footer>
+  );
+}
+
+function FooterBottomBar() {
+  return (
+    <div style={{ background: "#072626", borderTop: "1px solid rgba(250,245,233,0.06)" }}>
       <div style={{ maxWidth: 1280, margin: "0 auto", padding: "20px 32px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <svg width="16" height="16" viewBox="0 0 92 92">
@@ -6041,23 +6301,17 @@ function FooterSection() {
             © Amaryllis 2026 — Tous droits réservés
           </span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
           <span style={{ fontSize: 11, color: "rgba(250,245,233,0.35)", fontFamily: "'Jost', sans-serif", fontWeight: 300 }}>🔒 Réservation directe propriétaire · Paiement sécurisé Stripe</span>
-          <a href="/conditions-generales" style={{ fontSize: 11, color: "rgba(250,245,233,0.28)", fontFamily: "'Jost', sans-serif", fontWeight: 300, textDecoration: "none", letterSpacing: "0.05em", transition: "color 0.2s" }}
-            onMouseEnter={e => { e.currentTarget.style.color = "rgba(250,245,233,0.6)"; }}
-            onMouseLeave={e => { e.currentTarget.style.color = "rgba(250,245,233,0.28)"; }}
-          >CGV</a>
-          <a href="/mentions-legales" style={{ fontSize: 11, color: "rgba(250,245,233,0.28)", fontFamily: "'Jost', sans-serif", fontWeight: 300, textDecoration: "none", letterSpacing: "0.05em", transition: "color 0.2s" }}
-            onMouseEnter={e => { e.currentTarget.style.color = "rgba(250,245,233,0.6)"; }}
-            onMouseLeave={e => { e.currentTarget.style.color = "rgba(250,245,233,0.28)"; }}
-          >Mentions légales</a>
-          <a href="/politique-confidentialite" style={{ fontSize: 11, color: "rgba(250,245,233,0.28)", fontFamily: "'Jost', sans-serif", fontWeight: 300, textDecoration: "none", letterSpacing: "0.05em", transition: "color 0.2s" }}
-            onMouseEnter={e => { e.currentTarget.style.color = "rgba(250,245,233,0.6)"; }}
-            onMouseLeave={e => { e.currentTarget.style.color = "rgba(250,245,233,0.28)"; }}
-          >Confidentialité</a>
+          {[["CGV", "/conditions-generales"], ["Mentions légales", "/mentions-legales"], ["Confidentialité", "/politique-confidentialite"]].map(([label, href]) => (
+            <a key={href} href={href} style={{ fontSize: 11, color: "rgba(250,245,233,0.28)", fontFamily: "'Jost', sans-serif", fontWeight: 300, textDecoration: "none", letterSpacing: "0.05em", transition: "color 0.2s" }}
+              onMouseEnter={e => { e.currentTarget.style.color = "rgba(250,245,233,0.6)"; }}
+              onMouseLeave={e => { e.currentTarget.style.color = "rgba(250,245,233,0.28)"; }}
+            >{label}</a>
+          ))}
         </div>
       </div>
-    </footer>
+    </div>
   );
 }
 
@@ -7250,6 +7504,7 @@ export default function PublicSite() {
           />
         )}
         {beds24Bien && <Beds24Modal bien={beds24Bien} checkin={beds24Dates.checkin} checkout={beds24Dates.checkout} dailyPricesMap={beds24RatesMap} onClose={() => { setBeds24Bien(null); setBeds24Dates({ checkin: null, checkout: null }); }} />}
+        <FooterBottomBar />
       </div>
     );
   }

@@ -18,10 +18,22 @@
       "title": "Accès",
       "type": "steps",
       "items": [
-        { "label": "Digicode immeuble", "value": "Code ••••." },
-        { "label": "Appartement", "value": "Étage ••, porte ••. Clé dans le boîtier : code ••••." },
-        { "label": "Interphone", "value": "Bouton ••• si boîtier inaccessible (rare mais ça arrive)." },
-        { "label": "Parking", "value": "Non inclus. Parking public rue •••• (payant, 1,50€/h). Parking gratuit le dimanche." }
+        {
+          "label": "Digicode immeuble",
+          "value": "Code ••••."
+        },
+        {
+          "label": "Appartement",
+          "value": "Étage ••, porte ••. Clé dans le boîtier : code ••••."
+        },
+        {
+          "label": "Interphone",
+          "value": "Bouton ••• si boîtier inaccessible (rare mais ça arrive)."
+        },
+        {
+          "label": "Parking",
+          "value": "Non inclus. Parking public rue •••• (payant, 1,50€/h). Parking gratuit le dimanche."
+        }
       ]
     },
     {
@@ -30,11 +42,26 @@
       "title": "Cuisine & équipements",
       "type": "info",
       "items": [
-        { "label": "Plaque induction", "value": "Bouton On/Off. Récipients fond plat uniquement (logo aimant)." },
-        { "label": "Lave-linge", "value": "Dans la salle de bain — lessive dans le placard, 40°C recommandé." },
-        { "label": "Cafetière Nespresso", "value": "Dosettes dans le tiroir de gauche." },
-        { "label": "Micro-ondes", "value": "Sur le plan de travail à droite." },
-        { "label": "Chaîne hi-fi", "value": "Bluetooth disponible — code: •••• sur le dessus." }
+        {
+          "label": "Plaque induction",
+          "value": "Bouton On/Off. Récipients fond plat uniquement (logo aimant)."
+        },
+        {
+          "label": "Lave-linge",
+          "value": "Dans la salle de bain — lessive dans le placard, 40°C recommandé."
+        },
+        {
+          "label": "Cafetière Nespresso",
+          "value": "Dosettes dans le tiroir de gauche."
+        },
+        {
+          "label": "Micro-ondes",
+          "value": "Sur le plan de travail à droite."
+        },
+        {
+          "label": "Chaîne hi-fi",
+          "value": "Bluetooth disponible — code: •••• sur le dessus."
+        }
       ]
     },
     {
@@ -63,11 +90,36 @@
       "title": "Paris en 15 min",
       "type": "picks",
       "items": [
-        { "icon": "🚇", "name": "RER A — Nogent-sur-Marne", "distance": "10 min à pied", "note": "Direction Paris-Châtelet : 12 min. Nation : 10 min. Trains toutes les 5 min aux heures de pointe." },
-        { "icon": "🚇", "name": "Métro 1 — Vincennes", "distance": "15 min à pied", "note": "Paris direct ligne 1 (Champs-Élysées, Louvre, Châtelet). Évitez les heures de pointe 8h-9h30." },
-        { "icon": "🚌", "name": "Bus 114/116", "distance": "3 min à pied", "note": "Vers Vincennes et Joinville-le-Pont. Pratique pour le Bois de Vincennes." },
-        { "icon": "🚲", "name": "Vélib'", "distance": "5 min à pied", "note": "Station rue de Paris — parfait pour longer la Marne en vélo." },
-        { "icon": "🚕", "name": "Taxi / VTC", "distance": "depuis le bas de la rue", "note": "Aéroport CDG : ~45 min, Orly : ~40 min. G7 ou Uber recommandés." }
+        {
+          "icon": "🚇",
+          "name": "RER A — Nogent-sur-Marne",
+          "distance": "10 min à pied",
+          "note": "Direction Paris-Châtelet : 12 min. Nation : 10 min. Trains toutes les 5 min aux heures de pointe."
+        },
+        {
+          "icon": "🚇",
+          "name": "Métro 1 — Vincennes",
+          "distance": "15 min à pied",
+          "note": "Paris direct ligne 1 (Champs-Élysées, Louvre, Châtelet). Évitez les heures de pointe 8h-9h30."
+        },
+        {
+          "icon": "🚌",
+          "name": "Bus 114/116",
+          "distance": "3 min à pied",
+          "note": "Vers Vincennes et Joinville-le-Pont. Pratique pour le Bois de Vincennes."
+        },
+        {
+          "icon": "🚲",
+          "name": "Vélib'",
+          "distance": "5 min à pied",
+          "note": "Station rue de Paris — parfait pour longer la Marne en vélo."
+        },
+        {
+          "icon": "🚕",
+          "name": "Taxi / VTC",
+          "distance": "depuis le bas de la rue",
+          "note": "Aéroport CDG : ~45 min, Orly : ~40 min. G7 ou Uber recommandés."
+        }
       ]
     },
     {
@@ -76,11 +128,36 @@
       "title": "Le quartier — mes adresses",
       "type": "picks",
       "items": [
-        { "icon": "🛒", "name": "Marché de Nogent", "distance": "10 min à pied", "note": "Samedi matin jusqu'à 13h — fruits, fromages, charcuterie. Le meilleur marché du Val-de-Marne." },
-        { "icon": "🌳", "name": "Bois de Vincennes", "distance": "10 min à pied", "note": "Lac, vélos, zoo, parc floral. Le plus grand parc de Paris — incontournable." },
-        { "icon": "🍽", "name": "Restaurants autour de la mairie", "distance": "8 min à pied", "note": "Une vingtaine de restaurants — La Grignote pour la cuisine traditionnelle française." },
-        { "icon": "🚣", "name": "Guinguette du bord de Marne", "distance": "12 min à pied", "note": "L'été, le bord de Marne reprend ses traditions guinguette — terrasses, bal, bonne humeur." },
-        { "icon": "☕", "name": "Brasseries de la mairie", "distance": "8 min à pied", "note": "Plusieurs cafés et brasseries — idéal pour prendre un café au soleil le matin." }
+        {
+          "icon": "🛒",
+          "name": "Marché de Nogent",
+          "distance": "10 min à pied",
+          "note": "Samedi matin jusqu'à 13h — fruits, fromages, charcuterie. Le meilleur marché du Val-de-Marne."
+        },
+        {
+          "icon": "🌳",
+          "name": "Bois de Vincennes",
+          "distance": "10 min à pied",
+          "note": "Lac, vélos, zoo, parc floral. Le plus grand parc de Paris — incontournable."
+        },
+        {
+          "icon": "🍽",
+          "name": "Restaurants autour de la mairie",
+          "distance": "8 min à pied",
+          "note": "Une vingtaine de restaurants — La Grignote pour la cuisine traditionnelle française."
+        },
+        {
+          "icon": "🚣",
+          "name": "Guinguette du bord de Marne",
+          "distance": "12 min à pied",
+          "note": "L'été, le bord de Marne reprend ses traditions guinguette — terrasses, bal, bonne humeur."
+        },
+        {
+          "icon": "☕",
+          "name": "Brasseries de la mairie",
+          "distance": "8 min à pied",
+          "note": "Plusieurs cafés et brasseries — idéal pour prendre un café au soleil le matin."
+        }
       ]
     },
     {
@@ -89,10 +166,22 @@
       "title": "Poubelles & tri",
       "type": "info",
       "items": [
-        { "label": "Local poubelles", "value": "RDC à droite de l'entrée principale" },
-        { "label": "Collecte ordures ménagères", "value": "Lundi, mercredi, vendredi matin" },
-        { "label": "Tri sélectif", "value": "Bac jaune dans le local — cartons aplatis, plastiques, papiers" },
-        { "label": "Verre", "value": "Conteneur vert rue ••••• (3 min à pied)" }
+        {
+          "label": "Local poubelles",
+          "value": "RDC à droite de l'entrée principale"
+        },
+        {
+          "label": "Collecte ordures ménagères",
+          "value": "Lundi, mercredi, vendredi matin"
+        },
+        {
+          "label": "Tri sélectif",
+          "value": "Bac jaune dans le local — cartons aplatis, plastiques, papiers"
+        },
+        {
+          "label": "Verre",
+          "value": "Conteneur vert rue ••••• (3 min à pied)"
+        }
       ]
     },
     {
@@ -110,14 +199,109 @@
         "Remettre les clés dans le boîtier",
         "Fermer la porte à double tour"
       ]
+    },
+    {
+      "id": "bonnes_adresses",
+      "icon": "📍",
+      "title": "Bonnes adresses du quartier",
+      "type": "bonnes_adresses",
+      "data": {
+        "restaurants": [
+          {
+            "nom": "Le Petit Beaumont",
+            "cuisine": "Bistrot français",
+            "note": "Notre adresse de quartier préférée. Bonne ardoise du marché, terrasse en été."
+          },
+          {
+            "nom": "La Guinguette de l'Île",
+            "cuisine": "Brasserie bord de Marne",
+            "note": "L'âme de Nogent : terrasse sur la Marne, moules-frites, bal musette le dimanche."
+          },
+          {
+            "nom": "Le Comptoir des Saveurs",
+            "cuisine": "Bistronomie",
+            "note": "Beau travail sur les produits locaux. Formule déjeuner très bien ficelée."
+          },
+          {
+            "nom": "Pizzeria Bella Vita",
+            "cuisine": "Italien / Pizzas au feu de bois",
+            "note": "Pour une soirée décontractée en groupe. Service rapide et chaleureux."
+          }
+        ],
+        "epiceries": [
+          {
+            "nom": "Marché de Nogent-sur-Marne",
+            "horaires": "Mar, Jeu, Sam 8h–13h (place Gallieni)",
+            "note": "10 min à pied. Primeurs, fromagers, bouchers artisanaux — le samedi matin est une institution."
+          },
+          {
+            "nom": "Monoprix Nogent-sur-Marne",
+            "horaires": "Lun–Sam 8h30–21h, Dim 9h–13h",
+            "note": "5 min à pied. Le plus pratique pour le quotidien. Rayon traiteur bien fourni."
+          },
+          {
+            "nom": "Franprix Centre-ville",
+            "horaires": "Lun–Sam 8h–21h, Dim 9h–20h",
+            "note": "Dépannage 7j/7, idéal pour les arrivées tardives."
+          }
+        ],
+        "activites": [
+          {
+            "nom": "Promenade et vélo au bord de la Marne",
+            "type": "Nature / Balade",
+            "note": "Partez directement depuis l'appartement. La voie verte longe la Marne sur plusieurs kilomètres."
+          },
+          {
+            "nom": "Paris en RER A — 15 minutes",
+            "type": "Excursion / Culture",
+            "note": "Station Nogent-Le Perreux à 5 min. Musée d'Orsay, Marais, quais de Seine — Paris est à votre porte."
+          },
+          {
+            "nom": "Bois de Vincennes",
+            "type": "Nature",
+            "note": "10 min en vélo. Parc immense, lac, Château de Vincennes, zoo — la campagne sans quitter Paris."
+          },
+          {
+            "nom": "Guinguette du Perreux / Bal musette dominical",
+            "type": "Culture locale",
+            "note": "L'accordéon et la joie de vivre le dimanche — une expérience unique."
+          }
+        ],
+        "urgences": {
+          "pharmacie": "Pharmacie de la Marne — 8 rue du Bac, Nogent, tél. 01 48 73 00 23. Lun–Sam 8h30–20h.",
+          "hopital": "Hôpital Intercommunal de Créteil — 15 min, urgences 24h/24 : 01 45 17 54 00.",
+          "gendarmerie": "Police Municipale Nogent — 01 48 72 84 09. Commissariat de Vincennes à 10 min. Urgences : 17."
+        }
+      }
     }
   ],
   "contacts": [
-    { "label": "Vincent (propriétaire)", "phone": "+33 6 XX XX XX XX", "icon": "👤", "note": "SMS ou WhatsApp" },
-    { "label": "SAMU", "phone": "15", "icon": "🚑" },
-    { "label": "Police secours", "phone": "17", "icon": "🚓" },
-    { "label": "Pompiers", "phone": "18", "icon": "🚒" },
-    { "label": "Hôpital Chenevier-Mondor (Créteil)", "phone": "+33 1 49 81 21 11", "icon": "🏥" }
+    {
+      "label": "Vincent (propriétaire)",
+      "phone": "+33 6 XX XX XX XX",
+      "icon": "👤",
+      "note": "SMS ou WhatsApp"
+    },
+    {
+      "label": "SAMU",
+      "phone": "15",
+      "icon": "🚑"
+    },
+    {
+      "label": "Police secours",
+      "phone": "17",
+      "icon": "🚓"
+    },
+    {
+      "label": "Pompiers",
+      "phone": "18",
+      "icon": "🚒"
+    },
+    {
+      "label": "Hôpital Chenevier-Mondor (Créteil)",
+      "phone": "+33 1 49 81 21 11",
+      "icon": "🏥"
+    }
   ],
   "updated_at": "2026-05-21"
 }
