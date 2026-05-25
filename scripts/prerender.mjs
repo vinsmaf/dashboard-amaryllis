@@ -241,6 +241,44 @@ const ROUTES = [
     image: `${BASE}/photos/amaryllis/01.webp`,
   },
 
+  /* ── Nouveaux guides destinations ── */
+  {
+    path: "/guide-distilleries-martinique",
+    title: "Distilleries de Rhum Martinique — Rhum Agricole AOC | Amaryllis",
+    desc:  "Visitez les meilleures distilleries de rhum agricole en Martinique : JM, Clément, Saint-James, Depaz, Trois-Rivières. Guide complet depuis Sainte-Luce.",
+    image: `${BASE}/photos/amaryllis/01.webp`,
+  },
+  {
+    path: "/guide-francois-martinique",
+    title: "Le François Martinique — Fonds Blancs & Piscines Naturelles | Amaryllis",
+    desc:  "Découvrez les Fonds Blancs du François : piscines naturelles, sable blanc immergé, ti-punch en mer. Guide complet depuis Sainte-Luce (35 min).",
+    image: `${BASE}/photos/amaryllis/01.webp`,
+  },
+  {
+    path: "/guide-saint-pierre-martinique",
+    title: "Saint-Pierre Martinique — Pompéi des Caraïbes, Plongée & Histoire | Amaryllis",
+    desc:  "Visitez Saint-Pierre, la ville fantôme de Martinique : ruines de 1902, épaves de plongée uniques, musée Perret. Guide complet depuis Sainte-Luce (1h).",
+    image: `${BASE}/photos/amaryllis/01.webp`,
+  },
+  {
+    path: "/guide-randonnees-martinique",
+    title: "Randonnées Martinique — Montagne Pelée, Caravelle, Sentiers | Amaryllis",
+    desc:  "Meilleures randonnées en Martinique : Montagne Pelée (1397m), Presqu'île de la Caravelle, forêt tropicale. Niveaux débutant à expert. Depuis Sainte-Luce.",
+    image: `${BASE}/photos/amaryllis/01.webp`,
+  },
+  {
+    path: "/guide-gastronomie-martinique",
+    title: "Gastronomie Martinique — Cuisine Créole, Restaurants & Marchés | Amaryllis",
+    desc:  "Saveurs créoles martiniquaises : langouste, blaff, ti-punch, accras. Marchés locaux, restaurants à Sainte-Luce. Guide gastronomique complet.",
+    image: `${BASE}/photos/amaryllis/01.webp`,
+  },
+  {
+    path: "/guide-plongee-martinique",
+    title: "Plongée Martinique — Épaves, Snorkeling, Tortues | Amaryllis Sainte-Luce",
+    desc:  "Meilleurs spots de plongée et snorkeling en Martinique : épaves de Saint-Pierre, tortues d'Arlet, Rocher du Diamant. Guide complet depuis Sainte-Luce.",
+    image: `${BASE}/photos/amaryllis/01.webp`,
+  },
+
   /* ── Page EN ── */
   {
     path: "/villa-rental-martinique",
@@ -470,6 +508,12 @@ const SITEMAP_META = {
   "/guide-trois-ilets":              { priority: "0.8",  changefreq: "monthly" },
   "/activites-sainte-luce":          { priority: "0.8",  changefreq: "monthly" },
   "/guide-proximite":                { priority: "0.75", changefreq: "monthly" },
+  "/guide-distilleries-martinique":  { priority: "0.80", changefreq: "monthly" },
+  "/guide-francois-martinique":      { priority: "0.80", changefreq: "monthly" },
+  "/guide-saint-pierre-martinique":  { priority: "0.80", changefreq: "monthly" },
+  "/guide-randonnees-martinique":    { priority: "0.80", changefreq: "monthly" },
+  "/guide-gastronomie-martinique":   { priority: "0.80", changefreq: "monthly" },
+  "/guide-plongee-martinique":       { priority: "0.80", changefreq: "monthly" },
   "/sainte-luce-martinique":         { priority: "0.9",  changefreq: "monthly" },
   "/meilleure-saison-martinique":    { priority: "0.85", changefreq: "monthly" },
   "/reservation-directe-martinique": { priority: "0.8",  changefreq: "monthly" },

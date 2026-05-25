@@ -32,6 +32,12 @@ const GuideProximite = lazy(() => import('./GuideProximite.jsx'))
 const GuideArlet     = lazy(() => import('./GuideArlet.jsx'))
 const GuideExplorer  = lazy(() => import('./GuideExplorer.jsx'))
 const GuideTroisIlets = lazy(() => import('./GuideTroisIlets.jsx'))
+const GuidePlongee             = lazy(() => import('./GuidePlongee.jsx'))
+const GuideSaintPierre         = lazy(() => import('./GuideSaintPierre.jsx'))
+const GuideFrancois            = lazy(() => import('./GuideFrancois.jsx'))
+const GuideDistilleries        = lazy(() => import('./GuideDistilleries.jsx'))
+const GuideRandonnees          = lazy(() => import('./GuideRandonnees.jsx'))
+const GuideGastronomie         = lazy(() => import('./GuideGastronomie.jsx'))
 const GuideSainteLuce          = lazy(() => import('./GuideSainteLuce.jsx'))
 const GuideReservationDirecte  = lazy(() => import('./GuideReservationDirecte.jsx'))
 const GuideMeilleureSaison     = lazy(() => import('./GuideMeilleureSaison.jsx'))
@@ -68,7 +74,7 @@ const params = new URLSearchParams(window.location.search);
 const cautionParam = params.get("caution"); // "ok" | "cancelled"
 
 const BIEN_IDS = ["amaryllis", "zandoli", "iguana", "geko", "mabouya", "schoelcher", "nogent"];
-const KNOWN = ["/", "/merci", "/devis", "/guide", "/explorer", "/guide-le-diamant", "/guide-sainte-anne", "/villa-rental-martinique", "/activites-sainte-luce", "/guide-proximite", "/guide-arlet", "/guide-trois-ilets", "/avis", "/faq", "/mentions-legales", "/politique-confidentialite", "/conditions-generales", "/sainte-luce-martinique", "/reservation-directe-martinique", "/meilleure-saison-martinique", "/seminaires", "/guide-nogent-sur-marne", "/location-villa-martinique-piscine"];
+const KNOWN = ["/", "/merci", "/devis", "/guide", "/explorer", "/guide-le-diamant", "/guide-sainte-anne", "/villa-rental-martinique", "/activites-sainte-luce", "/guide-proximite", "/guide-arlet", "/guide-trois-ilets", "/guide-plongee-martinique", "/guide-saint-pierre-martinique", "/guide-francois-martinique", "/guide-distilleries-martinique", "/guide-randonnees-martinique", "/guide-gastronomie-martinique", "/avis", "/faq", "/mentions-legales", "/politique-confidentialite", "/conditions-generales", "/sainte-luce-martinique", "/reservation-directe-martinique", "/meilleure-saison-martinique", "/seminaires", "/guide-nogent-sur-marne", "/location-villa-martinique-piscine"];
 const isKnown = KNOWN.includes(path)
   || path.startsWith("/admin")
   || path.startsWith("/landing")
@@ -101,6 +107,18 @@ if (!isKnown) {
   Component = GuideExplorer;
 } else if (path === "/guide-trois-ilets") {
   Component = GuideTroisIlets;
+} else if (path === "/guide-plongee-martinique") {
+  Component = GuidePlongee;
+} else if (path === "/guide-saint-pierre-martinique") {
+  Component = GuideSaintPierre;
+} else if (path === "/guide-francois-martinique") {
+  Component = GuideFrancois;
+} else if (path === "/guide-distilleries-martinique") {
+  Component = GuideDistilleries;
+} else if (path === "/guide-randonnees-martinique") {
+  Component = GuideRandonnees;
+} else if (path === "/guide-gastronomie-martinique") {
+  Component = GuideGastronomie;
 } else if (path === "/sainte-luce-martinique") {
   Component = GuideSainteLuce;
 } else if (path === "/reservation-directe-martinique") {
