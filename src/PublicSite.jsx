@@ -2937,9 +2937,20 @@ function BienCard({ bien, onDetail, onBook, isFavorite = false, onToggleFavorite
             </button>
           )}
         </div>
+        {/* pub-010 : badge économies directes vs OTA */}
         {!BOOKING_DISABLED.has(bien.id) && (
-          <div style={{ marginTop: 8, fontSize: 11, color: MUTED, textAlign: "center", fontFamily: "'Jost', sans-serif", fontWeight: 300, letterSpacing: "0.02em" }}>
-            {t("banner1")}
+          <div style={{ marginTop: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+            <span style={{ fontSize: 11, color: MUTED, fontFamily: "'Jost', sans-serif", fontWeight: 300 }}>
+              {t("banner1")}
+            </span>
+            <span style={{
+              fontSize: 10, fontFamily: "'Jost', sans-serif", fontWeight: 600,
+              color: "#16a34a", background: "rgba(22,163,74,0.08)",
+              border: "1px solid rgba(22,163,74,0.2)",
+              borderRadius: 4, padding: "2px 6px", letterSpacing: "0.03em", whiteSpace: "nowrap",
+            }}>
+              −15% vs Airbnb
+            </span>
           </div>
         )}
         {BOOKING_DISABLED.has(bien.id) && (
@@ -3268,9 +3279,21 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
       {/* ── Scrollable body ── */}
       <div ref={infoPanelRef} style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
 
-        {/* ── Sticky mini-bar — appears after scrolling 200px ── */}
+        {/* ── Sticky mini-bar — top (desktop) / fixed bottom (mobile) ── */}
+        {/* design-008 : bottom bar fixe sur mobile, sticky top sur desktop */}
         {showStickyBar && !BOOKING_DISABLED.has(bien.id) && (
-          <div style={{ position: "sticky", top: 0, zIndex: 50, background: IVORY, borderBottom: `1px solid ${SAND}`, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 24px", animation: "fadeIn 0.2s ease" }}>
+          <div style={{
+            position: isMobile ? "fixed" : "sticky",
+            ...(isMobile ? { bottom: 0, left: 0, right: 0, paddingBottom: "max(12px, env(safe-area-inset-bottom))" } : { top: 0 }),
+            zIndex: isMobile ? 200 : 50,
+            background: IVORY,
+            borderTop: isMobile ? `1px solid ${SAND}` : "none",
+            borderBottom: isMobile ? "none" : `1px solid ${SAND}`,
+            boxShadow: isMobile ? "0 -4px 20px rgba(14,59,58,0.1)" : "none",
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: isMobile ? "12px 20px" : "10px 24px",
+            animation: "fadeIn 0.2s ease",
+          }}>
             <div>
               <span style={{ fontWeight: 700, color: NAVY, fontFamily: "'Jost', sans-serif", fontSize: 14 }}>{bien.nom}</span>
               {!PRICE_HIDDEN.has(bien.id) && (
@@ -3281,7 +3304,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
               )}
             </div>
             <button onClick={() => onBook(bien)} style={{ background: CORAL, border: "none", color: "#fff", borderRadius: 8, padding: "9px 20px", fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, cursor: "pointer", letterSpacing: "0.05em" }}>
-              Réserver →
+              RÉSERVER →
             </button>
           </div>
         )}

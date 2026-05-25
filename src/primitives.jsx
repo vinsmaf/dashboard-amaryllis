@@ -324,19 +324,22 @@ export function FlowMark({ size = 40, color = "var(--c-coral, #c47254)", gold = 
 // ── cfImg() — Cloudflare Image Resizing URL helper ───────────────
 // Transforme /photos/... en URL CDN redimensionnée.
 // Les URLs externes (http/https) sont retournées telles quelles.
-export function cfImg(src, w) {
+// media-008 : quality configurable (défaut 85, hero=90, thumbnail=75)
+export function cfImg(src, w, quality = 85) {
   if (!src || src.startsWith("http")) return src;
-  return `/cdn-cgi/image/width=${w},format=auto,quality=85${src}`;
+  return `/cdn-cgi/image/width=${w},format=auto,quality=${quality}${src}`;
 }
 
 // ── <RImg> — Responsive Image avec srcset Cloudflare ─────────────
 // Génère automatiquement srcset + sizes pour les images /photos/...
 // Les URLs externes sont rendues avec un <img> simple (pas de transformation).
+// quality: 90 pour hero (1600w), 75 pour thumbnails (480w), 85 pour le reste
 export function RImg({ src, alt, sizes = "100vw", className, style, loading = "lazy", fetchPriority }) {
   if (!src || src.startsWith("http")) {
     return <img src={src} alt={alt} className={className} style={style} loading={loading} fetchPriority={fetchPriority} />;
   }
-  const srcset = [480, 800, 1200, 1600].map(w => `${cfImg(src, w)} ${w}w`).join(", ");
+  const qualityMap = { 480: 75, 800: 85, 1200: 85, 1600: 90 };
+  const srcset = [480, 800, 1200, 1600].map(w => `${cfImg(src, w, qualityMap[w])} ${w}w`).join(", ");
   return (
     <img
       src={cfImg(src, 800)}

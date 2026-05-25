@@ -131,7 +131,7 @@ export async function onRequestGet(context) {
     propId:    PROP_ID,
     fetchedAt: new Date().toISOString(),
     pages:     pageNum,
-  });
+  }, 200, true); // cache=true pour s-maxage=300
 }
 
 export async function onRequest(context) {
@@ -139,14 +139,14 @@ export async function onRequest(context) {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────
-function json(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
-    },
-  });
+function json(data, status = 200, cache = false) {
+  const headers = {
+    "Content-Type": "application/json",
+    "Access-Control-Allow-Origin": "*",
+  };
+  // web-008 : cache 5min côté CDN pour les requêtes paginées lourdes
+  if (cache) headers["Cache-Control"] = "public, s-maxage=300, stale-while-revalidate=60";
+  return new Response(JSON.stringify(data), { status, headers });
 }
 
 function lastNightFrom(departure) {

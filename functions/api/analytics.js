@@ -58,13 +58,19 @@ export async function onRequestGet(context) {
       }),
     ]);
 
-    return json({
+    // traf-011 : stale-while-revalidate — sert le cache pendant le refresh background
+    return new Response(JSON.stringify({
       ok: true,
       overview:  parseReport(overview),
       pages:     parseReport(pages),
       countries: parseReport(countries),
       sources:   parseReport(sources),
       devices:   parseReport(devices),
+    }), {
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=3600",
+      },
     });
 
   } catch (err) {

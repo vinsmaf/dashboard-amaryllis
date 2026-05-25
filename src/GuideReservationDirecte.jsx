@@ -166,7 +166,8 @@ const faqs = [
 const WA_NUMBER = "33610880772";
 
 function ContactForm() {
-  const [form, setForm] = useState({ nom: "", email: "", bien: "", arrivee: "", depart: "", voyageurs: "2", message: "" });
+  // ebiz-007 : champ budget/nuit pour qualifier les leads avant rappel
+  const [form, setForm] = useState({ nom: "", email: "", bien: "", arrivee: "", depart: "", voyageurs: "2", budget: "", message: "" });
   const [status, setStatus] = useState("idle"); // idle | loading | success | error
   const [errMsg, setErrMsg] = useState("");
 
@@ -183,6 +184,7 @@ function ContactForm() {
     if (form.arrivee) parts.push(`Arrivée : ${form.arrivee}`);
     if (form.depart) parts.push(`Départ : ${form.depart}`);
     if (form.voyageurs) parts.push(`Voyageurs : ${form.voyageurs}`);
+    if (form.budget) parts.push(`Budget/nuit : ${form.budget}`);
     if (form.message.trim()) parts.push(`\nMessage :\n${form.message.trim()}`);
     const fullMessage = parts.join("\n");
 
@@ -278,6 +280,18 @@ function ContactForm() {
           <label className="rd-label" htmlFor="rd-voyageurs">Nombre de voyageurs</label>
           <select id="rd-voyageurs" className="rd-select" value={form.voyageurs} onChange={e => set("voyageurs", e.target.value)}>
             {["1","2","3","4","5","6","7","8+"].map(n => <option key={n} value={n}>{n} {n === "1" ? "voyageur" : "voyageurs"}</option>)}
+          </select>
+        </div>
+
+        <div className="rd-form-full">
+          <label className="rd-label" htmlFor="rd-budget">Budget par nuit (optionnel)</label>
+          <select id="rd-budget" className="rd-select" value={form.budget} onChange={e => set("budget", e.target.value)}>
+            <option value="">Non précisé</option>
+            <option value="Moins de 100€/nuit">Moins de 100€/nuit</option>
+            <option value="100–150€/nuit">100–150€/nuit</option>
+            <option value="150–200€/nuit">150–200€/nuit</option>
+            <option value="200–250€/nuit">200–250€/nuit</option>
+            <option value="Plus de 250€/nuit">Plus de 250€/nuit</option>
           </select>
         </div>
 
