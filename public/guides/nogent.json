@@ -303,5 +303,31 @@
       "icon": "🏥"
     }
   ],
+  "faq": [
+    {
+      "q": "Quels sont les horaires de check-in et de check-out ?",
+      "a": "L'arrivée est possible à partir de 15h00 et le départ doit se faire avant 11h00. Si vous arrivez en dehors de ces créneaux (vol tôt le matin ou tard le soir), contactez-nous par SMS ou WhatsApp — nous ferons notre possible pour vous faciliter l'accès."
+    },
+    {
+      "q": "Comment accéder à l'appartement à mon arrivée ?",
+      "a": "L'accès est entièrement autonome : un digicode ouvre la porte de l'immeuble, puis un boîtier à clé sécurisé donne accès à l'appartement (étage et numéro de porte fournis). Tous les codes vous seront transmis par SMS ou WhatsApp 48h avant votre arrivée. Si le boîtier était inaccessible (cas rare), l'interphone reste disponible."
+    },
+    {
+      "q": "Y a-t-il un parking sur place ?",
+      "a": "Le parking n'est pas inclus. Un parking public payant est disponible à proximité (environ 1,50€/h en semaine, gratuit le dimanche). Nogent est très bien desservie par les transports en commun — la voiture n'est pas nécessaire pour rejoindre Paris."
+    },
+    {
+      "q": "Comment rejoindre Paris facilement depuis l'appartement ?",
+      "a": "Le RER A (station Nogent-sur-Marne) est à 10 min à pied. Il relie directement Paris-Nation en 10 min et Châtelet-Les Halles en 12 min, avec des trains toutes les 5 min aux heures de pointe. Le métro ligne 1 (Vincennes) est à 15 min à pied. Des bus (114/116) s'arrêtent à 3 min de l'appartement. Pour l'aéroport, comptez 45 min pour CDG et 40 min pour Orly en VTC."
+    },
+    {
+      "q": "L'appartement dispose-t-il du Wi-Fi et d'un chauffage ?",
+      "a": "Oui, le Wi-Fi (réseau ApptNogent) est inclus — le mot de passe vous sera transmis avec les codes d'accès. Le chauffage est électrique avec thermostat individuel dans chaque pièce (réglage recommandé : 19-21°C). En été, un ventilateur est disponible dans le placard de l'entrée."
+    },
+    {
+      "q": "Comment joindre l'hôte en cas de besoin pendant le séjour ?",
+      "a": "Vincent est joignable par SMS ou WhatsApp au +33 6 10 88 07 72, avec une réponse sous 1 heure en journée. Pour les urgences médicales : SAMU au 15, pompiers au 18 ou numéro européen 112. L'Hôpital Intercommunal de Créteil est à 15 min en voiture (urgences : 01 45 17 54 00). Pharmacie de quartier : 01 48 73 00 23."
+    }
+  ],
   "updated_at": "2026-05-21"
 }

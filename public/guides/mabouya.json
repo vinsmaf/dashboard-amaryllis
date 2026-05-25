@@ -242,5 +242,31 @@
       "icon": "🆘"
     }
   ],
+  "faq": [
+    {
+      "q": "Quels sont les horaires de check-in et de check-out ?",
+      "a": "L'arrivée est possible à partir de 15h00 et le départ doit se faire avant 10h00. Tout aménagement de ces horaires se discute par WhatsApp selon les disponibilités — n'hésitez pas à nous écrire à l'avance."
+    },
+    {
+      "q": "Comment accéder au studio à mon arrivée ?",
+      "a": "L'accès est totalement autonome grâce à deux codes : le premier ouvre le portail de la résidence, le second déverrouille le boîtier à clé fixé sur le mur à gauche de la porte. Vous recevrez ces codes par message 48h avant votre arrivée."
+    },
+    {
+      "q": "Y a-t-il une piscine et est-elle accessible à tous les résidents ?",
+      "a": "Le Studio Mabouya donne accès à la piscine commune de la résidence, partagée avec 5 studios. Elle est disponible de 8h00 à 22h00. Une douche obligatoire avant de plonger est prévue sur le bord de bassin — c'est le règlement de la résidence."
+    },
+    {
+      "q": "Y a-t-il un parking à disposition ?",
+      "a": "Une place visiteurs est disponible devant la résidence, mais elle n'est pas privatisée — elle peut donc être occupée. En cas d'affluence, un stationnement public est accessible à quelques minutes. Si vous avez une voiture de location, nous vous conseillons de vous garer tôt le matin."
+    },
+    {
+      "q": "La plage est-elle accessible facilement depuis le studio ?",
+      "a": "Oui, la plage de Sainte-Luce est à 5 minutes à pied depuis la résidence. Les eaux sont calmes et peu profondes — idéales pour la baignade. L'Anse Meunier, parfaite pour le snorkeling, est à 10 minutes à pied. Plusieurs restaurants de bord de mer sont aussi à distance de marche."
+    },
+    {
+      "q": "Comment joindre l'hôte en cas de besoin ?",
+      "a": "Vincent est disponible par WhatsApp au +33 6 10 88 07 72, avec une réponse sous 1 heure. Pour toute urgence médicale : SAMU au 15, pompiers au 18 ou numéro européen 112. La pharmacie de Sainte-Luce est joignable au 0596 62 50 12, et la Clinique Sainte-Marie au Lamentin assure les urgences 24h/24 (0596 57 37 37)."
+    }
+  ],
   "updated_at": "2026-05-21"
 }

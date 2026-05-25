@@ -335,5 +335,31 @@
       "icon": "🆘"
     }
   ],
+  "faq": [
+    {
+      "q": "Quels sont les horaires de check-in et de check-out ?",
+      "a": "L'arrivée est possible à partir de 17h00 et le départ doit se faire avant 12h00. Si vous souhaitez déposer vos bagages en dehors de ces créneaux, contactez-nous par WhatsApp — nous ferons notre possible pour vous accommoder selon les disponibilités."
+    },
+    {
+      "q": "Comment accéder à la villa à mon arrivée ?",
+      "a": "Deux codes vous permettent d'accéder en toute autonomie : le premier ouvre le portail de la résidence (poussez après le bip), le second déverrouille le boîtier à clé fixé sur le mur gauche de l'entrée. Tournez la clé deux fois pour déverrouiller la porte principale. Les codes vous seront transmis par WhatsApp 48h avant votre arrivée."
+    },
+    {
+      "q": "Quelle est la capacité de la villa et y a-t-il un parking ?",
+      "a": "La Villa Amaryllis peut accueillir jusqu'à 8 personnes. Une place de parking privative est incluse directement devant la villa — pas besoin de chercher un stationnement."
+    },
+    {
+      "q": "La piscine et le jacuzzi sont-ils accessibles à toute heure ?",
+      "a": "La piscine infinity et le jacuzzi sont accessibles de 8h00 à 22h00. Nous vous demandons de respecter la tranquillité des voisins après 22h. Une douche est obligatoire avant de plonger — le robinet se trouve sur le côté gauche de la terrasse. Un prestataire intervient le mardi matin pour l'entretien : la piscine est alors inutilisable environ 1 heure."
+    },
+    {
+      "q": "La voiture est-elle indispensable pour visiter la Martinique ?",
+      "a": "Oui, une voiture est indispensable pour profiter pleinement de l'île. La villa se trouve à Sainte-Luce, à 25 min de l'aéroport Aimé Césaire et à 30 min de Fort-de-France (hors bouchons). Évitez la N1 entre 7h-9h et 16h30-18h30 en semaine. La plage de l'Anse Meunier est accessible à pied en 5 min, et plusieurs restaurants du bord de mer sont à distance de marche."
+    },
+    {
+      "q": "Comment joindre l'hôte en cas d'urgence pendant le séjour ?",
+      "a": "Vincent est joignable par WhatsApp au +33 6 10 88 07 72 — réponse garantie sous 1 heure en saison haute. Pour les urgences médicales, appelez le 15 (SAMU) ou le 112. La pharmacie de Sainte-Luce (0596 62 50 12) est ouverte du lundi au samedi, et la Clinique Sainte-Marie au Lamentin assure les urgences 24h/24 (0596 57 37 37)."
+    }
+  ],
   "updated_at": "2026-05-21"
 }

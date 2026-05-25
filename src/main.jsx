@@ -54,6 +54,8 @@ import CookieBanner from './CookieBanner.jsx'
 import ChatWidget from './ChatWidget.jsx'
 const GuestGuide      = lazy(() => import('./GuestGuide.jsx'))
 const Merci           = lazy(() => import('./Merci.jsx'))
+const StoriesTemplate = lazy(() => import('./StoriesTemplate.jsx'))
+const MenageGuide     = lazy(() => import('./MenageGuide.jsx'))
 
 // Normalise les chemins avec trailing slash (/amaryllis/ → /amaryllis)
 const path = window.location.pathname.replace(/\/$/, "") || "/";
@@ -80,6 +82,8 @@ const isKnown = KNOWN.includes(path)
   || path.startsWith("/landing")
   || path.startsWith("/bienvenue")
   || path.startsWith("/api/")
+  || path === "/stories-template"
+  || path === "/guide-menage"
   || BIEN_IDS.some(id => path === `/${id}`);
 
 let Component;
@@ -145,6 +149,10 @@ if (!isKnown) {
   Component = Merci;
 } else if (path.startsWith("/bienvenue")) {
   Component = GuestGuide;
+} else if (path === "/stories-template") {
+  Component = StoriesTemplate;
+} else if (path === "/guide-menage") {
+  Component = MenageGuide;
 } else {
   Component = PublicSite;
 }

@@ -271,5 +271,31 @@
       "icon": "🆘"
     }
   ],
+  "faq": [
+    {
+      "q": "Quels sont les horaires de check-in et de check-out ?",
+      "a": "L'arrivée est possible à partir de 15h00 et le départ doit se faire avant 10h00. Pour toute arrivée tardive ou demande de flexibilité, contactez-nous par WhatsApp — nous ferons notre possible en fonction de l'agenda."
+    },
+    {
+      "q": "Comment accéder à l'appartement à mon arrivée ?",
+      "a": "Un digicode ouvre la porte de l'immeuble. La clé de l'appartement se trouve dans un boîtier sécurisé (code fourni). Le logement est à l'étage indiqué dans les informations d'accès. Tout vous sera transmis par message 48h avant votre arrivée."
+    },
+    {
+      "q": "Y a-t-il un parking inclus ?",
+      "a": "Oui, une place de parking privative numérotée est incluse dans la location. Elle est sécurisée et couverte — l'accès se fait par la rampe à gauche de l'entrée de l'immeuble. Aucune démarche supplémentaire n'est nécessaire."
+    },
+    {
+      "q": "L'appartement a-t-il une vue mer ? La climatisation est-elle disponible ?",
+      "a": "Oui, l'Appartement Schœlcher offre une vue panoramique sur la mer des Caraïbes depuis le séjour et la terrasse — magnifique au coucher du soleil. La climatisation réversible couvre le séjour et la chambre (télécommandes à portée de main). La brise marine entre souvent par les fenêtres côté mer, ce qui permet d'aérer naturellement la nuit."
+    },
+    {
+      "q": "Comment rejoindre Fort-de-France et le reste de l'île sans voiture ?",
+      "a": "Fort-de-France est à 10 min en voiture ou à portée de bus : l'arrêt TC est à 2 min à pied, avec des passages toutes les 20-30 min pour 1,50€. Pour explorer l'île (plages du sud, Montagne Pelée, Le Marin), une voiture de location est néanmoins nécessaire. L'aéroport Aimé Césaire est à 20 min via la N1."
+    },
+    {
+      "q": "Comment contacter l'hôte en cas d'urgence pendant le séjour ?",
+      "a": "Vincent est disponible par WhatsApp au +33 6 10 88 07 72, avec une réponse sous 1 heure en journée. En cas d'urgence médicale : SAMU au 15 ou numéro européen 112. Le CHU de Martinique à Fort-de-France (urgences 24h/24 : 0596 55 20 00) est à 15 min. Pharmacie principale de Schœlcher : 0596 61 35 47."
+    }
+  ],
   "updated_at": "2026-05-21"
 }

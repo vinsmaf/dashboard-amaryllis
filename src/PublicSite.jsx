@@ -7826,6 +7826,63 @@ export default function PublicSite() {
       {/* ── QUICK BOOK ── */}
       <QuickBook biens={biensList} onBook={openBien} />
 
+      {/* ── OFFRE GROUPÉE RÉSIDENCE — pub-008 ── */}
+      <div style={{ background: IVORY, borderTop: `1px solid ${SAND}`, padding: "72px 28px" }}>
+        <div style={{ maxWidth: 960, margin: "0 auto" }}>
+          <div style={{ textAlign: "center", marginBottom: 40 }}>
+            <Eyebrow style={{ marginBottom: 12 }}>Résidence Clos de Bellevue · Sainte-Luce</Eyebrow>
+            <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontWeight: 400, fontSize: "clamp(26px, 3.5vw, 40px)", color: NAVY, margin: "0 0 14px", lineHeight: 1.15 }}>
+              Votre groupe au complet — jusqu'à 11 personnes
+            </h2>
+            <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 14, color: MUTED, maxWidth: 560, margin: "0 auto" }}>
+              Zandoli, Géko et Mabouya sont dans la même résidence. Réservez les 3 villas simultanément pour réunir famille ou amis — piscines privées, jacuzzi, jardin tropical.
+            </p>
+          </div>
+
+          {/* 3 villas côte à côte */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 20, marginBottom: 32 }}>
+            {[
+              { id: "zandoli",  nom: "Zandoli",  guests: 4, prix: 220, icon: "🏊", highlight: "Piscine privée · Vue jardin & mer" },
+              { id: "geko",     nom: "Géko",     guests: 2, prix: 150, icon: "🌿", highlight: "Piscine privée · Jardin tropical" },
+              { id: "mabouya", nom: "Mabouya", guests: 2, prix: 110, icon: "♨️", highlight: "Jacuzzi privatif · Vue mer" },
+            ].map(v => (
+              <a key={v.id} href={`/${v.id}`} style={{ textDecoration: "none", background: "#fff", border: `1px solid ${SAND}`, borderRadius: 14, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+                <img src={`/photos/${v.id}/01.webp`} alt={v.nom} loading="lazy" style={{ width: "100%", height: 160, objectFit: "cover", display: "block" }} />
+                <div style={{ padding: "18px 20px 20px", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 18 }}>{v.icon}</span>
+                    <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 15, color: NAVY }}>{v.nom}</span>
+                  </div>
+                  <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, color: CORAL, letterSpacing: "0.03em" }}>{v.highlight}</div>
+                  <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 12, color: MUTED, marginTop: 2 }}>jusqu'à {v.guests} personnes</div>
+                  <div style={{ marginTop: "auto", paddingTop: 12, fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 16, color: NAVY }}>
+                    {v.prix}€<span style={{ fontWeight: 300, fontSize: 12 }}>/nuit</span>
+                  </div>
+                </div>
+              </a>
+            ))}
+          </div>
+
+          {/* CTA contact groupé */}
+          <div style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 14, padding: "28px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 20 }}>
+            <div>
+              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 14, color: NAVY, marginBottom: 4 }}>
+                Formule 3 villas — à partir de 480€/nuit
+              </div>
+              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 12, color: MUTED }}>
+                Tarif préférentiel sur demande · Réponse sous 2h · Paiement sécurisé Stripe
+              </div>
+            </div>
+            <a
+              href={`mailto:contact@villamaryllis.com?subject=Demande%20offre%20groupée%20résidence%20(11%20personnes)&body=Bonjour%2C%0A%0AJe%20souhaite%20réserver%20les%203%20villas%20Zandoli%20%2B%20Géko%20%2B%20Mabouya%20pour%20un%20groupe.%0A%0ADates%20envisagées%20:%0ANombre%20de%20personnes%20:%0A%0AMerci`}
+              style={{ background: CORAL, color: "#fff", textDecoration: "none", padding: "13px 28px", borderRadius: 8, fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", whiteSpace: "nowrap" }}
+            >
+              Demander un devis groupé
+            </a>
+          </div>
+        </div>
+      </div>
+
       {/* ── TRUST STRIP ── */}
       <div style={{ background: CREAM, borderBottom: `1px solid ${SAND}`, padding: "10px 28px", textAlign: "center" }}>
         <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 10, color: MUTED, letterSpacing: "0.04em" }}>

@@ -300,5 +300,31 @@
       "icon": "🆘"
     }
   ],
+  "faq": [
+    {
+      "q": "Quels sont les horaires de check-in et de check-out ?",
+      "a": "L'accueil est possible à partir de 15h00 et le départ doit s'effectuer avant 10h00. Pour toute arrivée tardive ou demande de flexibilité, contactez-nous par WhatsApp — nous ferons notre possible en fonction de l'occupation."
+    },
+    {
+      "q": "Comment accéder à la villa à mon arrivée ?",
+      "a": "Deux codes suffisent pour entrer en toute autonomie : le premier ouvre le portail de la résidence (attendez le bip puis poussez), le second déverrouille le boîtier à clé fixé sur le mur gauche de l'entrée. Les codes vous seront transmis par message 48h avant votre arrivée."
+    },
+    {
+      "q": "La piscine est-elle privée et quand est-elle entretenue ?",
+      "a": "Oui, la piscine est entièrement privée et accessible depuis la terrasse couverte. Elle est utilisable de 8h00 à 22h00. Une douche est obligatoire avant de baigner (robinet sur le côté). Le prestataire d'entretien passe le mercredi matin — la piscine est hors service environ 1 heure."
+    },
+    {
+      "q": "Quel est le nom du réseau Wi-Fi et comment me connecter ?",
+      "a": "Le réseau Wi-Fi s'appelle VillaZandoli. Le mot de passe vous sera communiqué avec les codes d'accès, 48h avant votre arrivée. La box se trouve dans le séjour — en cas de problème, un simple redémarrage (débrancher 30 secondes) règle l'essentiel des coupures."
+    },
+    {
+      "q": "La voiture est-elle nécessaire ou peut-on se déplacer sans ?",
+      "a": "La voiture est indispensable pour explorer la Martinique. La villa est à Sainte-Luce, à 25 min de l'aéroport et 30 min de Fort-de-France hors bouchons. Cela dit, la plage de l'Anse Meunier est à 5 min à pied, et plusieurs restaurants sont facilement accessibles à pieds depuis la résidence."
+    },
+    {
+      "q": "Comment contacter l'hôte en cas de problème pendant le séjour ?",
+      "a": "Vincent est disponible par WhatsApp au +33 6 10 88 07 72, avec une réponse sous 1 heure en saison haute. En cas d'urgence médicale : SAMU au 15 ou 112. Pharmacie de Sainte-Luce : 0596 62 50 12. Urgences hospitalières 24h/24 à la Clinique Sainte-Marie (Le Lamentin) : 0596 57 37 37."
+    }
+  ],
   "updated_at": "2026-05-21"
 }

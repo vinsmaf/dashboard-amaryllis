@@ -266,5 +266,31 @@
       "icon": "🆘"
     }
   ],
+  "faq": [
+    {
+      "q": "Quels sont les horaires d'arrivée et de départ ?",
+      "a": "L'arrivée est possible à partir de 15h00, le départ doit se faire avant 10h00. Si vous avez un vol tôt le matin, vous pouvez laisser vos bagages la veille — prévenez-nous simplement par WhatsApp."
+    },
+    {
+      "q": "Comment accéder à la villa à mon arrivée ?",
+      "a": "L'accès est entièrement autonome : un premier code ouvre le portail de la résidence, un second déverrouille le boîtier à clé fixé sur le mur gauche de la porte d'entrée. Vous recevrez les deux codes par message 48h avant votre arrivée."
+    },
+    {
+      "q": "La piscine est-elle privée ? Y a-t-il du matériel de snorkeling ?",
+      "a": "Oui, la piscine est privée et accessible de plain-pied depuis la terrasse, de 8h00 à 22h00. Le prestataire passe le jeudi matin (indisponibilité d'environ 1h). En bonus : masques et tubas sont mis à votre disposition dans l'armoire de la buanderie pour le snorkeling en mer."
+    },
+    {
+      "q": "Y a-t-il un barbecue et comment fonctionne-t-il ?",
+      "a": "Oui, un barbecue à charbon est installé sur la terrasse. Le charbon et les allume-feu sont dans le rangement extérieur. Après utilisation, attendez que les braises soient entièrement éteintes avant de refermer le couvercle."
+    },
+    {
+      "q": "La climatisation fonctionne-t-elle dans toutes les pièces ?",
+      "a": "La climatisation réversible couvre le séjour et la chambre. Les télécommandes se trouvent sur la table de nuit et le meuble TV. Réglage conseillé : 25°C. Pour les nuits fraîches, le ventilateur de plafond suffit souvent — laissez une fenêtre entreouverte côté jardin pour profiter de l'alizé martiniquais."
+    },
+    {
+      "q": "Comment joindre l'hôte en cas d'urgence ?",
+      "a": "Vincent est joignable par WhatsApp au +33 6 10 88 07 72 — réponse sous 1 heure. Pour les urgences médicales : SAMU 15, pompiers 18 ou 112. La pharmacie de Sainte-Luce (0596 62 50 12) est ouverte du lundi au samedi. Urgences hospitalières : Clinique Sainte-Marie au Lamentin, 0596 57 37 37."
+    }
+  ],
   "updated_at": "2026-05-21"
 }
