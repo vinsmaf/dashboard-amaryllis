@@ -153,15 +153,57 @@ const AGENTS = [
   },
 ];
 
+// ── Récupère l'historique D1 d'un agent ──────────────────────────────────────
+async function fetchAgentHistory(db, agentId) {
+  try {
+    const { results } = await db.prepare(
+      "SELECT id, action, status, notes FROM agent_actions WHERE agent = ? ORDER BY id ASC"
+    ).bind(agentId).all();
+    return results || [];
+  } catch {
+    return [];
+  }
+}
+
 // ── Prompt template pour chaque agent ────────────────────────────────────────
-function buildPrompt(agent) {
+function buildPrompt(agent, history = []) {
+  // Sépare l'historique par statut pour donner du contexte à l'agent
+  const done    = history.filter(h => h.status === "fait");
+  const blocked = history.filter(h => h.status === "bloqué");
+  const planned = history.filter(h => h.status === "a-planifier");
+  const pending = history.filter(h => h.status === "backlog" || h.status === "en-cours");
+
+  // Calcule le prochain numéro d'ID disponible
+  const maxNum = history.reduce((max, h) => {
+    const n = parseInt(h.id.split("-").pop(), 10);
+    return isNaN(n) ? max : Math.max(max, n);
+  }, 0);
+  const nextId = maxNum + 1;
+
+  // Formate une section de l'historique
+  const fmt = (items) => items.map(h =>
+    `  • [${h.id}] ${h.action}${h.notes ? ` (note: ${h.notes})` : ""}`
+  ).join("\n") || "  (aucune)";
+
+  const historySection = history.length === 0 ? "" : `
+HISTORIQUE DE TES ANALYSES PRÉCÉDENTES :
+${done.length    ? `\n✅ DÉJÀ FAIT (${done.length}) — ne pas re-proposer :\n${fmt(done)}` : ""}
+${blocked.length ? `\n🚫 BLOQUÉ (${blocked.length}) — éviter ou proposer une alternative :\n${fmt(blocked)}` : ""}
+${planned.length ? `\n📅 À PLANIFIER (${planned.length}) — déjà identifié, ne pas dupliquer :\n${fmt(planned)}` : ""}
+${pending.length ? `\n⏳ EN ATTENTE (${pending.length}) — déjà dans le backlog, ne pas dupliquer :\n${fmt(pending)}` : ""}
+
+IMPORTANT : Tes nouvelles actions doivent compléter ce travail, pas le répéter.
+Les IDs déjà utilisés vont jusqu'à ${agent.prefix}-${String(maxNum).padStart(3, "0")}.
+Commence tes nouveaux IDs à ${agent.prefix}-${String(nextId).padStart(3, "0")}.
+`;
+
   return `Tu es l'agent "${agent.label}" (${agent.emoji}) d'Amaryllis Locations, plateforme de location de 7 propriétés premium en Martinique et Île-de-France (villamaryllis.com).
 
 TON DOMAINE D'EXPERTISE : ${agent.focus}
 
 FICHIERS CLÉS à analyser : ${agent.files_hint}
-
-MISSION : Identifie les actions concrètes à réaliser dans ton domaine pour améliorer le site et les opérations d'Amaryllis Locations.
+${historySection}
+MISSION : Identifie les actions concrètes NOUVELLES à réaliser dans ton domaine. Tiens compte de ce qui a déjà été fait ou identifié pour approfondir ton analyse et aller plus loin.
 
 Propriétés : Villa Amaryllis (280€/nuit, 8 pers, 4.94★), Zandoli (220€, 5 pers, 4.5★), Villa Iguana (180€, 6 pers, 4.75★), Géko (150€, 4 pers, 4.83★), Mabouya (110€, 2 pers, 4.55★), Bellevue/Schœlcher (100€, 2 pers, 4.8★), Nogent-sur-Marne (85€, 2 pers, 4.95★).
 
@@ -183,11 +225,11 @@ Retourne un JSON strict avec cette structure :
 }
 
 Règles :
-- Maximum 6 actions (les plus importantes seulement)
+- Maximum 6 actions NOUVELLES (les plus importantes non encore traitées)
 - Priorité "critique" = risque légal, sécurité, perte revenus significative
 - Priorité "haute" = impact business direct mesurable
 - "ext" pour effort = ressources externes nécessaires (photographe, agence, etc.)
-- IDs format: ${agent.prefix}-001, ${agent.prefix}-002, etc.
+- IDs format: ${agent.prefix}-${String(nextId).padStart(3, "0")}, ${agent.prefix}-${String(nextId + 1).padStart(3, "0")}, etc.
 - Retourne UNIQUEMENT le JSON, aucun texte avant ou après`;
 }
 
@@ -216,6 +258,9 @@ export async function onRequest(context) {
 
   for (const agent of targetAgents) {
     try {
+      // Récupère l'historique D1 de cet agent pour enrichir le prompt
+      const history = await fetchAgentHistory(db, agent.id);
+
       // Appel API Anthropic (claude-haiku-4-5 pour économiser les tokens)
       const res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
@@ -227,7 +272,7 @@ export async function onRequest(context) {
         body: JSON.stringify({
           model: "claude-haiku-4-5",
           max_tokens: 1024,
-          messages: [{ role: "user", content: buildPrompt(agent) }],
+          messages: [{ role: "user", content: buildPrompt(agent, history) }],
         }),
       });
 
@@ -278,7 +323,7 @@ export async function onRequest(context) {
         }
       }
 
-      results.push({ agent: agent.id, ok: true, inserted, updated, actions: actions.length });
+      results.push({ agent: agent.id, ok: true, inserted, updated, actions: actions.length, context_size: history.length });
 
     } catch (e) {
       results.push({ agent: agent.id, error: e.message });
