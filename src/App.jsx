@@ -7064,6 +7064,7 @@ export default function App() {
   const [showScriptSetup, setShowScriptSetup] = useState(false);
   const [showPushSetup, setShowPushSetup] = useState(false);
   const [showRapport, setShowRapport] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [rapportMois, setRapportMois] = useState(() => new Date().getMonth());
   const [ntfyTopic, setNtfyTopic] = useState(() => localStorage.getItem("ntfy_topic") || "");
   const [hist, setHist] = useState(() => {
@@ -7623,6 +7624,30 @@ export default function App() {
                   <select value={rapportMois} onChange={e => setRapportMois(Number(e.target.value))} style={{ padding: "5px 8px", background: "#1e293b", border: "1px solid #334155", borderRadius: 7, color: "#e2e8f0", fontSize: 11 }}>
                     {MOIS.map((m, i) => <option key={i} value={i}>{m} {yr}</option>)}
                   </select>
+                  <button
+  onClick={() => {
+    const lignes = rapportBiens.filter(b => b.rev > 0).map(b =>
+      `${b.emoji} ${b.nom.replace("Villa ","").replace("T2 ","")} : ${fmt(b.rev)} CA · ${b.occ.toFixed(0)}% occ · CF ${b.cf >= 0 ? "+" : ""}${fmt(b.cf)}`
+    );
+    const texte = [
+      `📊 Rapport ${moisLabel} ${yr} — Amaryllis Locations`,
+      ``,
+      `CA total : ${fmt(totalRev)}`,
+      `Cashflow net : ${totalCf >= 0 ? "+" : ""}${fmt(totalCf)}`,
+      `Réservations : ${resas.length}`,
+      ``,
+      ...lignes,
+      ``,
+      `Généré le ${new Date().toLocaleDateString("fr-FR")} · villamaryllis.com`,
+    ].join("\n");
+    navigator.clipboard.writeText(texte).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+  }}
+  style={{ padding: "6px 12px", borderRadius: 7, border: "1px solid #334155", background: copied ? "rgba(16,185,129,0.15)" : "transparent", color: copied ? "#10b981" : "#94a3b8", fontSize: 11, fontWeight: 600, cursor: "pointer", transition: "all 0.2s" }}
+>
+  {copied ? "✓ Copié !" : "📋 Copier"}
+</button>
                   <button onClick={() => { window.print(); }} style={{ padding: "6px 12px", borderRadius: 7, border: "none", background: "#0ea5e9", color: "#fff", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>🖨 Imprimer / PDF</button>
                   <button onClick={() => setShowRapport(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "#475569", fontSize: 18, lineHeight: 1 }}>✕</button>
                 </div>

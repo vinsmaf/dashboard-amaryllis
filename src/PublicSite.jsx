@@ -579,7 +579,8 @@ const BIENS = [
     nom: "Appartement aux Portes de Paris",
     airbnbTitle: "Appartement de standing avec jardin, proche Paris",
     lieu: "Nogent-sur-Marne, Île-de-France",
-    tag: null,
+    tag: "🗼 Aux portes de Paris",
+    tagEn: "🗼 At the Gates of Paris",
     desc: "Laissez-vous séduire par un appartement élégant, niché au sein d'une résidence luxueuse aux portes de Paris. Havre de paix alliant calme, confort et style — parfait pour des voyageurs en quête d'évasion urbaine sans sacrifier la quiétude. Ce T2 de 39 m² baigné de lumière naturelle à Nogent-sur-Marne, à seulement quelques minutes de Paris, a été pensé dans les moindres détails pour rendre votre séjour absolument magique.",
     descEn: "Be seduced by an elegant apartment nestled within a luxurious residence at the gates of Paris. A haven of peace combining calm, comfort and style — perfect for travellers seeking urban escape without sacrificing serenity. This sun-drenched 39 m² flat in Nogent-sur-Marne, just minutes from Paris, has been crafted to the last detail to make your stay absolutely magical.",
     descFull: [
@@ -605,9 +606,9 @@ const BIENS = [
     chambres: 1,
     lits: 1,
     sdb: "1",
-    rating: null,
-    reviews: null,
-    couleur: "#64748b",
+    rating: 4.8,
+    reviews: 18,
+    couleur: "#6366f1",
     photos: [
       "/photos/nogent/01.webp",
       "/photos/nogent/02.webp",
@@ -633,8 +634,8 @@ const BIENS = [
     useBeds24: true, // Réservation via notre API beds24-create (plus d'iframe)
     coords: { lat: 48.8374, lng: 2.4836 },
     mapsEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d463.17188664330297!2d2.4757244130102185!3d48.83615034492648!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x47e60d41b4fd90d1%3A0x4f6c2445f955ea44!2s21%20Gd%20Rue%20Charles%20de%20Gaulle%2C%2094130%20Nogent-sur-Marne!5e0!3m2!1sfr!2sfr!4v1779047281540!5m2!1sfr!2sfr",
-    amenities: ["Bord Marne", "Jardin", "RER A (20 min Paris)", "Parking", "Wifi"],
-    amenitiesEn: ["Riverside", "Garden", "RER A (20 min Paris)", "Parking", "WiFi"],
+    amenities: ["Bord de Marne 🚶", "Jardin privé 🌿", "RER A → Paris 20 min", "Home cinéma", "Climatisation", "Barbecue", "Parking sécurisé", "Wifi ultra-rapide"],
+    amenitiesEn: ["Riverside 🚶", "Private garden 🌿", "RER A → Paris 20 min", "Home cinema", "Air conditioning", "BBQ", "Secure parking", "Fast WiFi"],
     avis: [
       { nom: "Aurélie F.", pays: "🇫🇷", note: 5, texte: "Appartement lumineux et très bien décoré au bord de la Marne. Calme absolu tout en étant à 20 min de Paris. Le jardin est charmant. Parfait pour se ressourcer.", date: "Avr. 2025" },
       { nom: "Oliver M.", pays: "🇬🇧", note: 5, texte: "Lovely flat with a garden right by the river. Peaceful, well-decorated and only 20 minutes from central Paris. The host was very welcoming and helpful.", date: "Mars 2025" },
@@ -3427,6 +3428,27 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                     Nous répondons sous 24h.
                   </p>
                 </div>
+              </div>
+            )}
+
+            {/* ── Bandeau réservation directe ── */}
+            {!BOOKING_DISABLED.has(bien.id) && (
+              <div style={{
+                display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
+                background: "rgba(196,114,84,0.07)", border: "1px solid rgba(196,114,84,0.2)",
+                borderRadius: 9, padding: "10px 16px", marginBottom: 22,
+              }}>
+                <span style={{ fontSize: 15 }}>💰</span>
+                <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 12, color: NAVY, letterSpacing: "0.03em" }}>
+                  Réservation directe propriétaire — Économisez jusqu'à 15% vs Airbnb
+                </span>
+                <a
+                  href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(`Bonjour, je souhaite réserver ${bien.nom} en direct. Pouvez-vous me confirmer les disponibilités et le tarif ?`)}`}
+                  target="_blank" rel="noopener noreferrer"
+                  style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, color: CORAL, textDecoration: "none", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 5 }}
+                >
+                  💬 Nous contacter →
+                </a>
               </div>
             )}
 

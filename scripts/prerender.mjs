@@ -138,10 +138,10 @@ const ROUTES = [
   },
   {
     path: "/nogent",
-    title: "Appartement Nogent-sur-Marne — Location Île-de-France standing | Amaryllis",
-    desc:  "Appartement de standing à Nogent-sur-Marne (94). Proche Paris, RER A, bords de Marne. Longue durée, professionnels en déplacement.",
+    title: "Appartement Nogent-sur-Marne — Bord de Marne, Paris 20 min | 85€/nuit | Amaryllis",
+    desc:  "Appartement de standing à Nogent-sur-Marne — 85 €/nuit. Jardin privatif, home cinéma, bord de Marne. RER A : Paris en 20 min. Réservation directe sans commission Airbnb.",
     image: `${BASE}/photos/nogent/01.webp`,
-    jsonld: buildVacationRentalLd({ id: "nogent", nom: "Appartement Nogent", desc: "Appartement de standing à Nogent-sur-Marne (94). Proche Paris, RER A, bords de Marne.", capacite: 4, chambres: 2, coords: { lat: 48.8378, lng: 2.5062 }, photos: ["/photos/nogent/01.webp","/photos/nogent/02.webp","/photos/nogent/03.webp","/photos/nogent/04.webp"], isMartinique: false }),
+    jsonld: buildVacationRentalLd({ id: "nogent", nom: "Appartement Nogent-sur-Marne", desc: "Appartement de standing à Nogent-sur-Marne. Jardin privatif, home cinéma, bord de Marne. RER A : Paris en 20 min.", prix: 85, capacite: 2, chambres: 1, rating: 4.8, reviews: 18, coords: { lat: 48.8374, lng: 2.4836 }, photos: ["/photos/nogent/01.webp","/photos/nogent/02.webp","/photos/nogent/03.webp","/photos/nogent/04.webp","/photos/nogent/05.webp","/photos/nogent/06.webp"], isMartinique: false }),
   },
 
   /* ── Pages thématiques ── */
