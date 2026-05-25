@@ -1,7 +1,7 @@
 // Page /reservation-directe-martinique — SEO pilier conversion — traf-004
 
 import SEOMeta from "./SEOMeta.jsx";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 
 const NAVY  = "#0e3b3a";
 const IVORY = "#faf5e9";
@@ -68,6 +68,48 @@ const css = `
     line-height: 1.75; color: ${TEXT}; padding-bottom: 20px;
   }
 
+  .rd-form-wrap {
+    background: #fff; border: 1px solid ${SAND}; border-radius: 20px;
+    padding: 48px 40px; margin-bottom: 64px; box-shadow: 0 4px 24px rgba(14,59,58,0.06);
+  }
+  .rd-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .rd-form-full { margin-bottom: 16px; }
+  .rd-label {
+    display: block; font-family: 'Jost', sans-serif; font-size: 11px; font-weight: 600;
+    letter-spacing: 0.1em; text-transform: uppercase; color: ${NAVY}; margin-bottom: 7px;
+  }
+  .rd-input, .rd-select, .rd-textarea {
+    width: 100%; box-sizing: border-box;
+    font-family: 'Jost', sans-serif; font-size: 14px; color: ${TEXT};
+    background: ${CREAM}; border: 1px solid ${SAND}; border-radius: 9px;
+    padding: 12px 14px; outline: none; transition: border-color 0.2s;
+    appearance: none;
+  }
+  .rd-input:focus, .rd-select:focus, .rd-textarea:focus {
+    border-color: ${CORAL}; background: #fff;
+  }
+  .rd-textarea { resize: vertical; min-height: 100px; }
+  .rd-select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a6b5a' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; cursor: pointer; }
+  .rd-submit-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 15px 40px; background: ${CORAL}; color: ${IVORY};
+    border: none; border-radius: 10px; cursor: pointer;
+    font-family: 'Jost', sans-serif; font-size: 14px; font-weight: 500;
+    letter-spacing: 0.12em; text-transform: uppercase; transition: opacity 0.2s;
+    width: 100%; margin-top: 8px;
+  }
+  .rd-submit-btn:hover { opacity: 0.88; }
+  .rd-submit-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+  .rd-success {
+    text-align: center; padding: 48px 24px;
+  }
+  .rd-success-icon { font-size: 48px; margin-bottom: 16px; }
+  .rd-required { color: ${CORAL}; }
+  @media (max-width: 640px) {
+    .rd-form-wrap { padding: 28px 20px; }
+    .rd-form-grid { grid-template-columns: 1fr; }
+  }
+
   .rd-trust { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 48px; }
   .rd-trust-item {
     flex: 1; min-width: 160px; background: ${CREAM}; border: 1px solid ${SAND};
@@ -120,6 +162,149 @@ const faqs = [
     a: "Absolument. Des remises automatiques s'appliquent : −5% à partir de 7 nuits, −10% à partir de 14 nuits, −15% à partir de 28 nuits. Pour des séjours encore plus longs ou des demandes spécifiques (séminaires, événements familiaux), contactez-nous directement.",
   },
 ];
+
+const WA_NUMBER = "33610880772";
+
+function ContactForm() {
+  const [form, setForm] = useState({ nom: "", email: "", bien: "", arrivee: "", depart: "", voyageurs: "2", message: "" });
+  const [status, setStatus] = useState("idle"); // idle | loading | success | error
+  const [errMsg, setErrMsg] = useState("");
+
+  const set = useCallback((k, v) => setForm(f => ({ ...f, [k]: v })), []);
+
+  const handleSubmit = useCallback(async (e) => {
+    e.preventDefault();
+    if (!form.nom.trim() || !form.email.trim()) return;
+    setStatus("loading");
+
+    // Construire le message enrichi
+    const parts = [];
+    if (form.bien) parts.push(`Villa souhaitée : ${form.bien}`);
+    if (form.arrivee) parts.push(`Arrivée : ${form.arrivee}`);
+    if (form.depart) parts.push(`Départ : ${form.depart}`);
+    if (form.voyageurs) parts.push(`Voyageurs : ${form.voyageurs}`);
+    if (form.message.trim()) parts.push(`\nMessage :\n${form.message.trim()}`);
+    const fullMessage = parts.join("\n");
+
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nom: form.nom.trim(),
+          email: form.email.trim(),
+          bien: form.bien || null,
+          message: fullMessage,
+          source: "reservation-directe",
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok !== false) {
+        setStatus("success");
+      } else {
+        setErrMsg(data.error || "Une erreur est survenue. Veuillez réessayer.");
+        setStatus("error");
+      }
+    } catch {
+      setErrMsg("Impossible de joindre le serveur. Réessayez ou contactez-nous par WhatsApp.");
+      setStatus("error");
+    }
+  }, [form]);
+
+  if (status === "success") {
+    return (
+      <div className="rd-form-wrap">
+        <div className="rd-success">
+          <div className="rd-success-icon">✅</div>
+          <h3 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 24, letterSpacing: "0.06em", textTransform: "uppercase", color: NAVY, margin: "0 0 12px" }}>
+            Demande envoyée !
+          </h3>
+          <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 18, lineHeight: 1.8, color: MUTED, maxWidth: 440, margin: "0 auto 28px" }}>
+            Nous vous répondrons dans les 24 heures pour confirmer la disponibilité et vous communiquer le tarif direct.
+          </p>
+          <a href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent("Bonjour, je viens d'envoyer une demande de réservation directe sur votre site.")}`} target="_blank" rel="noopener noreferrer"
+            style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 28px", background: "#25D366", color: "#fff", borderRadius: 9, textDecoration: "none", fontFamily: "'Jost', sans-serif", fontSize: 13, fontWeight: 500, letterSpacing: "0.08em" }}>
+            💬 Nous contacter sur WhatsApp
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  return (
+    <div className="rd-form-wrap">
+      <p style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, letterSpacing: "0.35em", textTransform: "uppercase", color: CORAL, margin: "0 0 10px" }}>Demande directe</p>
+      <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: "clamp(22px, 3vw, 32px)", letterSpacing: "0.06em", textTransform: "uppercase", color: NAVY, margin: "0 0 8px", lineHeight: 1.1 }}>
+        Obtenir un devis<br />sans commission
+      </h2>
+      <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 17, lineHeight: 1.75, color: MUTED, margin: "0 0 32px" }}>
+        Réponse garantie sous 24 h · Tarif direct jusqu'à −18% vs Airbnb
+      </p>
+
+      <form onSubmit={handleSubmit} noValidate>
+        <div className="rd-form-grid">
+          <div>
+            <label className="rd-label" htmlFor="rd-nom">Prénom & Nom <span className="rd-required">*</span></label>
+            <input id="rd-nom" type="text" className="rd-input" required placeholder="Jean Dupont" value={form.nom} onChange={e => set("nom", e.target.value)} />
+          </div>
+          <div>
+            <label className="rd-label" htmlFor="rd-email">Email <span className="rd-required">*</span></label>
+            <input id="rd-email" type="email" className="rd-input" required placeholder="votre@email.com" value={form.email} onChange={e => set("email", e.target.value)} />
+          </div>
+        </div>
+
+        <div className="rd-form-full">
+          <label className="rd-label" htmlFor="rd-bien">Villa souhaitée</label>
+          <select id="rd-bien" className="rd-select" value={form.bien} onChange={e => set("bien", e.target.value)}>
+            <option value="">Je ne sais pas encore — surprenez-moi</option>
+            {villas.map(v => <option key={v.id} value={v.nom}>{v.nom} — {v.prix}</option>)}
+          </select>
+        </div>
+
+        <div className="rd-form-grid">
+          <div>
+            <label className="rd-label" htmlFor="rd-arrivee">Date d'arrivée</label>
+            <input id="rd-arrivee" type="date" className="rd-input" min={today} value={form.arrivee} onChange={e => { set("arrivee", e.target.value); if (form.depart && e.target.value >= form.depart) set("depart", ""); }} />
+          </div>
+          <div>
+            <label className="rd-label" htmlFor="rd-depart">Date de départ</label>
+            <input id="rd-depart" type="date" className="rd-input" min={form.arrivee || today} value={form.depart} onChange={e => set("depart", e.target.value)} />
+          </div>
+        </div>
+
+        <div className="rd-form-full">
+          <label className="rd-label" htmlFor="rd-voyageurs">Nombre de voyageurs</label>
+          <select id="rd-voyageurs" className="rd-select" value={form.voyageurs} onChange={e => set("voyageurs", e.target.value)}>
+            {["1","2","3","4","5","6","7","8+"].map(n => <option key={n} value={n}>{n} {n === "1" ? "voyageur" : "voyageurs"}</option>)}
+          </select>
+        </div>
+
+        <div className="rd-form-full">
+          <label className="rd-label" htmlFor="rd-msg">Message (questions, demandes spéciales…)</label>
+          <textarea id="rd-msg" className="rd-textarea" rows={4} placeholder="Ex : Nous célébrons notre anniversaire de mariage, avez-vous des attentions particulières ? Ou : Votre villa est-elle accessible aux personnes à mobilité réduite ?" value={form.message} onChange={e => set("message", e.target.value)} />
+        </div>
+
+        {status === "error" && (
+          <p style={{ fontFamily: "'Jost', sans-serif", fontSize: 13, color: "#dc2626", marginBottom: 12, padding: "10px 14px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8 }}>
+            ⚠️ {errMsg}
+          </p>
+        )}
+
+        <button type="submit" className="rd-submit-btn" disabled={status === "loading" || !form.nom || !form.email}>
+          {status === "loading" ? (
+            <><span style={{ display: "inline-block", width: 14, height: 14, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} /> Envoi en cours…</>
+          ) : "Envoyer ma demande →"}
+        </button>
+        <p style={{ textAlign: "center", fontFamily: "'Jost', sans-serif", fontSize: 11, color: MUTED, margin: "14px 0 0" }}>
+          🔒 Vos données ne sont jamais partagées · Réponse sous 24 h
+        </p>
+      </form>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
 
 function FAQ() {
   const [open, setOpen] = useState(null);
@@ -337,6 +522,9 @@ export default function GuideReservationDirecte() {
               ))}
             </div>
           </div>
+
+          {/* FORMULAIRE CONTACT DIRECT */}
+          <ContactForm />
 
           {/* FAQ */}
           <div style={{ marginBottom: 64 }}>
