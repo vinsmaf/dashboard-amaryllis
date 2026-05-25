@@ -21,13 +21,37 @@ CREATE TABLE IF NOT EXISTS agent_actions (
   action       TEXT NOT NULL,
   priority     TEXT NOT NULL CHECK(priority IN ('critique','haute','moyenne','basse')),
   effort       TEXT NOT NULL,
-  status       TEXT NOT NULL DEFAULT 'backlog'
-               CHECK(status IN ('backlog','en-cours','fait','bloqué')),
+  status       TEXT NOT NULL DEFAULT 'backlog',
   notes        TEXT,
   last_analyzed INTEGER,
   created_at   INTEGER NOT NULL DEFAULT (unixepoch()),
   updated_at   INTEGER NOT NULL DEFAULT (unixepoch())
 );
+CREATE INDEX IF NOT EXISTS idx_agent_actions_agent  ON agent_actions(agent);
+CREATE INDEX IF NOT EXISTS idx_agent_actions_status ON agent_actions(status);
+CREATE INDEX IF NOT EXISTS idx_agent_actions_prio   ON agent_actions(priority);
+`;
+
+// Migration : supprime le CHECK constraint sur status (pour supporter 'a-planifier')
+const MIGRATE_DDL = `
+CREATE TABLE IF NOT EXISTS agent_actions_v2 (
+  id           TEXT PRIMARY KEY,
+  agent        TEXT NOT NULL,
+  agent_label  TEXT NOT NULL,
+  agent_emoji  TEXT NOT NULL,
+  category     TEXT NOT NULL,
+  action       TEXT NOT NULL,
+  priority     TEXT NOT NULL CHECK(priority IN ('critique','haute','moyenne','basse')),
+  effort       TEXT NOT NULL,
+  status       TEXT NOT NULL DEFAULT 'backlog',
+  notes        TEXT,
+  last_analyzed INTEGER,
+  created_at   INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at   INTEGER NOT NULL DEFAULT (unixepoch())
+);
+INSERT OR IGNORE INTO agent_actions_v2 SELECT * FROM agent_actions;
+DROP TABLE agent_actions;
+ALTER TABLE agent_actions_v2 RENAME TO agent_actions;
 CREATE INDEX IF NOT EXISTS idx_agent_actions_agent  ON agent_actions(agent);
 CREATE INDEX IF NOT EXISTS idx_agent_actions_status ON agent_actions(status);
 CREATE INDEX IF NOT EXISTS idx_agent_actions_prio   ON agent_actions(priority);
@@ -174,13 +198,13 @@ export async function onRequest(context) {
     try {
       const { results } = await db.prepare(q).bind(...params).all();
       // Stats par colonne
-      const stats = { backlog: 0, "en-cours": 0, fait: 0, "bloqué": 0 };
-      results.forEach(r => { if (stats[r.status] !== undefined) stats[r.status]++; });
+      const stats = { backlog: 0, "en-cours": 0, fait: 0, "bloqué": 0, "a-planifier": 0 };
+      results.forEach(r => { if (r.status in stats) stats[r.status]++; else stats[r.status] = (stats[r.status] || 0) + 1; });
       return json({ actions: results, stats, total: results.length });
     } catch (e) {
       // Table inexistante → init automatique
       if (e.message?.includes("no such table")) {
-        return json({ actions: [], stats: { backlog: 0, "en-cours": 0, fait: 0, "bloqué": 0 }, total: 0, hint: "Run POST ?action=init to initialize" });
+        return json({ actions: [], stats: { backlog: 0, "en-cours": 0, fait: 0, "bloqué": 0, "a-planifier": 0 }, total: 0, hint: "Run POST ?action=init to initialize" });
       }
       return json({ error: e.message }, 500);
     }
@@ -196,7 +220,7 @@ export async function onRequest(context) {
     const params = [];
 
     if (body.status !== undefined) {
-      const valid = ["backlog","en-cours","fait","bloqué"];
+      const valid = ["backlog","en-cours","fait","bloqué","a-planifier"];
       if (!valid.includes(body.status)) return json({ error: "Invalid status" }, 400);
       fields.push("status = ?"); params.push(body.status);
     }
@@ -220,6 +244,18 @@ export async function onRequest(context) {
   if (method === "POST") {
     const action = url.searchParams.get("action") || "init";
     const body = await request.json().catch(() => ({}));
+
+    // ── POST ?action=migrate — supprimer CHECK constraint status ─────────
+    if (action === "migrate") {
+      try {
+        for (const stmt of MIGRATE_DDL.split(";").map(s => s.trim()).filter(Boolean)) {
+          await db.prepare(stmt).run();
+        }
+        return json({ ok: true, message: "Migration terminée — CHECK constraint sur status supprimé, 'a-planifier' supporté" });
+      } catch (e) {
+        return json({ ok: false, error: e.message }, 500);
+      }
+    }
 
     // ── POST ?action=init — créer la table + seeder ──────────────────────
     if (action === "init") {

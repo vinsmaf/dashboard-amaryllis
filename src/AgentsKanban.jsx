@@ -5,10 +5,11 @@ import { useState, useEffect, useCallback, useRef } from "react";
 
 // ── Constantes ───────────────────────────────────────────────────────────────
 const COLUMNS = [
-  { id: "backlog",   label: "Backlog",    color: "#64748b", bg: "rgba(100,116,139,0.10)", count_color: "#94a3b8" },
-  { id: "en-cours",  label: "En cours",   color: "#f59e0b", bg: "rgba(245,158,11,0.10)",  count_color: "#f59e0b" },
-  { id: "fait",      label: "Fait ✓",     color: "#10b981", bg: "rgba(16,185,129,0.10)",  count_color: "#10b981" },
-  { id: "bloqué",    label: "Bloqué",     color: "#ef4444", bg: "rgba(239,68,68,0.10)",   count_color: "#ef4444" },
+  { id: "backlog",      label: "Backlog",       color: "#64748b", bg: "rgba(100,116,139,0.10)", count_color: "#94a3b8" },
+  { id: "a-planifier",  label: "À planifier",   color: "#8b5cf6", bg: "rgba(139,92,246,0.10)",  count_color: "#a78bfa" },
+  { id: "en-cours",     label: "En cours",      color: "#f59e0b", bg: "rgba(245,158,11,0.10)",  count_color: "#f59e0b" },
+  { id: "fait",         label: "Fait ✓",        color: "#10b981", bg: "rgba(16,185,129,0.10)",  count_color: "#10b981" },
+  { id: "bloqué",       label: "Annulé",        color: "#ef4444", bg: "rgba(239,68,68,0.10)",   count_color: "#ef4444" },
 ];
 
 const PRIORITY_COLORS = {
@@ -73,10 +74,11 @@ function ActionCard({ action, onStatusChange, mob }) {
   const ago  = timeAgo(action.last_analyzed);
 
   const NEXT_STATUS = {
-    "backlog":  ["en-cours", "fait", "bloqué"],
-    "en-cours": ["fait", "backlog", "bloqué"],
-    "fait":     ["backlog", "en-cours"],
-    "bloqué":   ["backlog", "en-cours"],
+    "backlog":      ["a-planifier", "en-cours", "fait", "bloqué"],
+    "a-planifier":  ["en-cours", "backlog", "bloqué"],
+    "en-cours":     ["fait", "a-planifier", "backlog", "bloqué"],
+    "fait":         ["backlog"],
+    "bloqué":       ["backlog", "a-planifier"],
   };
 
   return (
@@ -310,9 +312,11 @@ export default function AgentsKanban({ mob }) {
   const cats = [...new Set(actions.map(a => a.category))].sort();
 
   // ── Progress ─────────────────────────────────────────────────────────────
-  const total = Object.values(stats).reduce((s, v) => s + v, 0);
-  const done  = stats["fait"] || 0;
-  const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
+  const total     = Object.values(stats).reduce((s, v) => s + v, 0);
+  const done      = stats["fait"] || 0;
+  const planned   = stats["a-planifier"] || 0;
+  const pct       = total > 0 ? Math.round((done / total) * 100) : 0;
+  const pctPlanned = total > 0 ? Math.round(((done + planned) / total) * 100) : 0;
 
   // ── Render ───────────────────────────────────────────────────────────────
   if (loading) {
@@ -412,10 +416,13 @@ export default function AgentsKanban({ mob }) {
       <div style={{ background: "rgba(15,23,42,0.6)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: "12px 16px", marginBottom: 20 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
           <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>Progression globale</span>
-          <span style={{ fontSize: 13, color: "#10b981", fontWeight: 700 }}>{pct}% — {done} / {total} actions</span>
+          <span style={{ fontSize: 13, color: "#10b981", fontWeight: 700 }}>
+            {pct}% fait · {pctPlanned}% traité — {done} / {total} actions
+          </span>
         </div>
-        <div style={{ height: 6, background: "rgba(255,255,255,0.06)", borderRadius: 3, overflow: "hidden" }}>
-          <div style={{ height: "100%", width: `${pct}%`, background: "linear-gradient(90deg, #10b981, #6ee7b7)", borderRadius: 3, transition: "width 0.5s ease" }} />
+        <div style={{ height: 6, background: "rgba(255,255,255,0.06)", borderRadius: 3, overflow: "hidden", display: "flex" }}>
+          <div style={{ height: "100%", width: `${pct}%`, background: "linear-gradient(90deg, #10b981, #6ee7b7)", transition: "width 0.5s ease" }} />
+          <div style={{ height: "100%", width: `${pctPlanned - pct}%`, background: "linear-gradient(90deg, #8b5cf6, #a78bfa)", transition: "width 0.5s ease" }} />
         </div>
         <div style={{ display: "flex", gap: 16, marginTop: 8, flexWrap: "wrap" }}>
           {COLUMNS.map(col => (
@@ -475,7 +482,7 @@ export default function AgentsKanban({ mob }) {
       {/* ── Kanban ── */}
       <div style={{
         display: "grid",
-        gridTemplateColumns: mob ? "1fr" : "repeat(4, 1fr)",
+        gridTemplateColumns: mob ? "1fr" : "repeat(5, 1fr)",
         gap: 12,
         alignItems: "start",
       }}>

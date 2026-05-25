@@ -258,8 +258,8 @@ export async function onRequest(context) {
         if (!row.id || !row.action) continue;
         const existing = await db.prepare("SELECT id, status FROM agent_actions WHERE id = ?").bind(row.id).first();
         if (existing) {
-          // Ne pas réinitialiser les actions déjà traitées (fait, bloqué)
-          const keepStatus = ["fait", "bloqué"].includes(existing.status);
+          // Préserver tous les statuts sauf backlog — ne jamais écraser fait/bloqué/a-planifier/en-cours
+          const keepStatus = ["fait", "bloqué", "a-planifier", "en-cours"].includes(existing.status);
           await db.prepare(`
             UPDATE agent_actions SET action=?, priority=?, effort=?, category=?,
             last_analyzed=?, updated_at=? ${keepStatus ? "" : ", status='backlog'"}
