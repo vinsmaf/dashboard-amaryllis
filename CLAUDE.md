@@ -53,13 +53,96 @@ The `LangProvider` from `src/i18n.jsx` wraps the entire app (FR/EN translations 
 
 All server-side logic lives in `functions/api/` (Cloudflare Pages Functions format, not Netlify). Each file exports `onRequest` or `onRequestGet`/`onRequestPost`:
 
-| Endpoint | File | Purpose |
-|---|---|---|
-| `GET /api/fetch-ical` | `fetch-ical.js` | CORS proxy for Airbnb/Booking.com iCal URLs |
-| `GET /api/get-availability` | `get-availability.js` | Merges iCal from both platforms per property |
-| `POST /api/sheets-proxy` | `sheets-proxy.js` | Proxy to Google Apps Script (works around CORS + Apps Script POST redirect bug using chunked GET for array payloads) |
-| `GET /api/beds24-bookings` | `beds24-bookings.js` | Proxy to Beds24 V2 API (token never exposed to browser) |
-| `POST /api/create-payment-intent` | `create-payment-intent.js` | Stripe payment intent |
+**Authentification & Sécurité**
+
+| Endpoint | Méthode | File | Purpose |
+|---|---|---|---|
+| `/api/admin-auth` | POST | `admin-auth.js` | Vérifie le mot de passe admin côté serveur — retourne `{ ok, role: "admin"\|"menage" }`. Rate-limited : 5 tentatives/IP/15min via D1. |
+| `/api/get-config` | GET | `get-config.js` | Retourne `APPS_SCRIPT_URL` + URLs iCal Airbnb par bien (secrets jamais exposés dans le bundle JS). |
+
+**Beds24**
+
+| Endpoint | Méthode | File | Purpose |
+|---|---|---|---|
+| `/api/beds24-bookings` | GET | `beds24-bookings.js` | Proxy sécurisé vers l'API Beds24 V2 — liste/filtre les réservations. Params : `test=1` pour vérifier le token, `arrivalFrom`, `arrivalTo`, `departureFrom`, `departureTo`. |
+| `/api/beds24-create` | POST | `beds24-create.js` | Crée une réservation Beds24 V2 directement via API (remplace l'iframe). Retourne `bookingId` + prix. |
+| `/api/beds24-manage` | POST | `beds24-manage.js` | Actions sur une réservation existante — body: `{ action: "find"\|"confirm"\|"cancel", ... }`. |
+| `/api/beds24-prices` | GET | `beds24-prices.js` | Dérive les tarifs journaliers Nogent (propId 158192) depuis les réservations Beds24 (l'endpoint inventory V2 renvoie 500 pour ce compte). |
+| `/api/beds24-rates` | GET | `beds24-rates.js` | Récupère les tarifs journaliers Beds24 pour Nogent via `/inventory/rooms/calendar?includePrices=true`. Cache CDN 1h. Retourne `{ "YYYY-MM-DD": price }`. |
+| `/api/beds24-webhook` | POST | `beds24-webhook.js` | Reçoit les notifications Beds24 en temps réel et transmet à Apps Script. |
+
+**iCal & Disponibilités**
+
+| Endpoint | Méthode | File | Purpose |
+|---|---|---|---|
+| `/api/fetch-ical` | GET | `fetch-ical.js` | CORS proxy serveur pour les URLs iCal Airbnb/Booking.com. Param : `url=<encoded-url>`. Whitelist de domaines autorisés. |
+| `/api/get-availability` | GET | `get-availability.js` | Fusionne les iCal Airbnb + Booking.com pour un bien donné. Param : `bienId`, `bookingUrl`. |
+| `/api/ical-config` | GET | `ical-config.js` | Retourne les URLs iCal Booking.com par bien depuis les secrets Cloudflare. |
+
+**Google & Analytics**
+
+| Endpoint | Méthode | File | Purpose |
+|---|---|---|---|
+| `/api/sheets-proxy` | POST | `sheets-proxy.js` | Proxy vers Google Apps Script — contourne CORS + bug redirect POST d'Apps Script (tableaux envoyés en GET paginé). Header optionnel `X-Script-Url` pour URL dynamique. |
+| `/api/site-config` | GET/POST | `site-config.js` | Proxy bidirectionnel vers Apps Script (PropertiesService) — lit/écrit la config du site (séjour minimum par bien et par période). |
+| `/api/analytics` | GET | `analytics.js` | Proxy vers Google Analytics Data API v1beta (GA4) — retourne 4 rapports en parallèle (overview, pages, pays, sources, devices) sur 30 jours. Auth Service Account. |
+| `/api/google-reviews` | GET | `google-reviews.js` | Proxy sécurisé vers Google Places API v1 — récupère les avis Google pour Amaryllis ou Résidence. Param : `place=amaryllis\|residence`. |
+
+**Paiement & Caution (Stripe)**
+
+| Endpoint | Méthode | File | Purpose |
+|---|---|---|---|
+| `/api/create-payment-intent` | POST | `create-payment-intent.js` | Crée un PaymentIntent Stripe (capture immédiate). Body : `{ amount, currency, metadata, bookingId }`. |
+| `/api/create-deposit-intent` | POST | `create-deposit-intent.js` | Crée un PaymentIntent Stripe en pré-autorisation (`capture_method: "manual"`) pour caution. Body : `{ amount, currency, metadata }`. |
+| `/api/caution-checkout` | POST | `caution-checkout.js` | Crée une Stripe Checkout Session en pré-autorisation — retourne une URL Stripe hébergée à envoyer au voyageur. |
+| `/api/manage-deposit` | POST | `manage-deposit.js` | Gère les cautions pré-autorisées. Body : `{ action: "capture"\|"cancel"\|"list", paymentIntentId, amount }`. |
+| `/api/stripe-webhook` | POST | `stripe-webhook.js` | Reçoit les événements Stripe (`payment_intent.succeeded`, `checkout.session.completed`) — confirme la réservation Beds24 correspondante et notifie l'hôte par email. |
+
+**Revenue Manager**
+
+| Endpoint | Méthode | File | Purpose |
+|---|---|---|---|
+| `/api/rm-init` | POST | `rm-init.js` | Initialise la base D1 Revenue Manager — crée toutes les tables et seed les données de départ. |
+| `/api/rm-dashboard` | GET | `rm-dashboard.js` | Données agrégées du Revenue Manager pour un bien (`property_id`) : recommandations, KPIs, signaux marché. |
+| `/api/rm-properties` | GET/POST/PUT | `rm-properties.js` | CRUD sur les propriétés RM — list, get (avec profils saisonniers), update des paramètres de prix. |
+| `/api/rm-overrides` | GET/POST/PUT/DELETE | `rm-overrides.js` | Overrides manuels de prix/séjour minimum/blocage pour des dates spécifiques. Params : `property_id`, `from`, `to`. |
+| `/api/rm-rules` | GET/POST/PUT/PATCH/DELETE | `rm-rules.js` | CRUD des règles de pricing (lead time, day-of-week, saison, etc.). Params : `property_id`. |
+| `/api/rm-recommendations` | GET/POST/PUT/DELETE | `rm-recommendations.js` | CRUD + moteur de pricing complet pour les recommandations RM — calcule le prix suggéré par jour selon profils saisonniers, règles et signaux. |
+| `/api/rm-competitors` | GET/POST/PUT/DELETE | `rm-competitors.js` | Gestion des concurrents, snapshots de prix et recalcul des signaux marché (médiane, moyenne, percentiles). |
+| `/api/rm-scrape` | GET/POST | `rm-scrape.js` | Déclenche un scraping Apify (acteur Airbnb) pour les listings concurrents. Requiert `APIFY_TOKEN`. |
+
+**Communication & Alertes**
+
+| Endpoint | Méthode | File | Purpose |
+|---|---|---|---|
+| `/api/contact` | POST | `contact.js` | Formulaire de contact public — stocke en D1 + envoie email via Resend. Rate-limited. CORS restreint aux domaines villamaryllis.com. |
+| `/api/contacts` | GET/PATCH | `contacts.js` | Liste des leads (admin uniquement, auth Bearer). PATCH pour mettre à jour `status`/`notes` d'un lead. |
+| `/api/chat` | POST | `chat.js` | Proxy Cloudflare → Groq API pour le ChatWidget public et l'assistant admin. Inclut le system prompt Amaryllis Locations. |
+| `/api/ai-summary` | POST | `ai-summary.js` | Proxy sécurisé vers l'API Anthropic (claude-haiku-4-5) pour les résumés IA du dashboard. Body : `{ prompt, maxTokens }`. |
+| `/api/send-prix-alert` | POST | `send-prix-alert.js` | Envoie email + push ntfy quand des prix sont sous le seuil minimum. Appelé depuis le CalendrierTarifs. |
+| `/api/send-prix-recap` | GET | `send-prix-recap.js` | Récap email hebdomadaire des prix + liens Airbnb (prévu pour cron-job.org chaque lundi). Auth : `?secret=PRIX_RECAP_SECRET`. |
+
+**Agents IA**
+
+| Endpoint | Méthode | File | Purpose |
+|---|---|---|---|
+| `/api/agents-actions` | GET/POST/PATCH | `agents-actions.js` | CRUD pour les actions des 17 agents Amaryllis — stockage D1 (`agent_actions`). |
+| `/api/agents-run` | POST | `agents-run.js` | Déclenche l'analyse autonome des 17 agents via l'API Anthropic (claude-haiku-4-5). Met à jour D1. |
+
+**Guides & Divers**
+
+| Endpoint | Méthode | File | Purpose |
+|---|---|---|---|
+| `/api/guides` | GET/POST | `guides/[[path]].js` | Guides par propriété — GET : lit depuis D1 avec fallback `/public/guides/{id}.json`. POST : sauvegarde en D1. Param : `property_id`. |
+| `/api/geo` | GET | `geo.js` | Retourne pays/ville du visiteur via headers Cloudflare — suggère la langue (FR/EN) et détecte contexte Caraïbes/métropole. |
+| `/api/weather` | GET | `weather.js` | Proxy sécurisé vers OpenWeatherMap. Param : `loc=martinique\|nogent`. Cache CDN 30min. |
+| `/api/airbnb-test` | GET | `airbnb-test.js` | Test READ-ONLY de l'authentification Airbnb + lecture des prix actuels (aucune modification). |
+
+**Utilitaire interne**
+
+| Fichier | Role |
+|---|---|
+| `_ratelimit.js` | Module partagé — rate limiter léger basé sur D1. Usage : `await rateLimit(db, { key, limit, windowSec })`. Non exposé comme endpoint HTTP. |
 
 The `netlify/functions/` directory is a duplicate/legacy copy — the active functions are in `functions/api/`.
 
