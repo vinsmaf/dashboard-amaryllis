@@ -9986,6 +9986,7 @@ function ApprobationsTab({ mob }) {
         approve: "✅ Approuvé",
         reject:  "🚫 Rejeté",
         publish: d.ok ? "🚀 Publié avec succès !" : `❌ Échec : ${d.result?.error || "erreur"}`,
+        improve: d.ok ? `🎯 Amélioré ! ${d.previous_score || 0}/100 → ${d.new_score || "?"}/100` : `❌ Échec amélioration: ${d.error || ""}`,
       };
       setToast({ message: msgs[action] || "OK", success: d.ok });
       loadDrafts();
@@ -9993,7 +9994,7 @@ function ApprobationsTab({ mob }) {
       setToast({ error: e.message });
     } finally {
       setActing(null);
-      setTimeout(() => setToast(null), 3500);
+      setTimeout(() => setToast(null), 5000);
     }
   }
 
@@ -10118,13 +10119,18 @@ function ApprobationsTab({ mob }) {
                   }[r.verdict] || { label: r.verdict, color: "#94a3b8" };
                   return (
                     <div style={{ padding: "10px 14px", background: "rgba(99,102,241,0.04)", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6 }}>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6, flexWrap: "wrap" }}>
                         <span style={{ fontSize: 10, fontWeight: 700, color: verdictBadge.color, padding: "2px 8px", borderRadius: 10, background: `${verdictBadge.color}15` }}>
                           {verdictBadge.label}
                         </span>
                         <span style={{ fontSize: 10, fontWeight: 700, color: scoreColor }}>
                           Score : {r.score}/100
                         </span>
+                        {r.score_after_improve && (
+                          <span style={{ fontSize: 10, fontWeight: 700, color: "#10b981" }}>
+                            🎯 Amélioré : {r.previous_score || r.score}/100 → {r.score_after_improve}/100
+                          </span>
+                        )}
                       </div>
                       {r.traffic_manager && (
                         <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 3 }}>
@@ -10134,6 +10140,11 @@ function ApprobationsTab({ mob }) {
                       {r.seo_writer && (
                         <div style={{ fontSize: 10, color: "#94a3b8" }}>
                           <span style={{ color: "#e2e8f0" }}>✍️ SEO Writer</span> ({r.seo_writer.note}/10) — {r.seo_writer.feedback}
+                        </div>
+                      )}
+                      {r.improvement_notes && (
+                        <div style={{ fontSize: 10, color: "#fbbf24", marginTop: 5, fontStyle: "italic" }}>
+                          🎯 Améliorations : {r.improvement_notes}
                         </div>
                       )}
                     </div>
@@ -10223,6 +10234,9 @@ function ApprobationsTab({ mob }) {
                           {acting === d.id ? "..." : "🚀 Publier maintenant"}
                         </button>
                         {d.status === "pending" && <button onClick={() => act(d.id, "approve")} style={btnStyle("#10b981", true)}>✅ Approuver</button>}
+                        <button disabled={acting === d.id} onClick={() => act(d.id, "improve")} style={btnStyle("#f59e0b", true, acting === d.id)} title="Régénérer en intégrant les retours des agents pour viser 100/100">
+                          {acting === d.id ? "..." : "🎯 Améliorer (viser 100/100)"}
+                        </button>
                         <button onClick={() => { setEditingId(d.id); setEditPayload(payload); }} style={btnStyle("#64748b", true)}>✏️ Modifier</button>
                         <button onClick={() => act(d.id, "reject")} style={btnStyle("#ef4444", true)}>🚫 Rejeter</button>
                       </>

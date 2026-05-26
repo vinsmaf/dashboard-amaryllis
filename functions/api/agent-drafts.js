@@ -194,6 +194,106 @@ export async function onRequest(context) {
       return json({ ok: true });
     }
 
+    // ── action=improve : régénère un caption amélioré en intégrant les
+    //    conseils des agents reviewers (traffic-manager + seo-writer)
+    if (action === "improve") {
+      if (draft.type !== "social_post") return json({ error: "Only social_post drafts can be improved" }, 400);
+
+      const payload = JSON.parse(draft.payload);
+      let reviews = {};
+      try { reviews = JSON.parse(draft.reviews || "{}"); } catch {}
+
+      const currentCaption = payload.caption || "";
+      const trafficFb = reviews.traffic_manager?.feedback || "";
+      const seoFb     = reviews.seo_writer?.feedback || "";
+      const currentScore = reviews.score || 0;
+
+      // Appel LLM avec prompt d'amélioration ciblée
+      const { callLLM } = await import("./_llm.js");
+      const improvePrompt = `Tu es un éditeur expert qui réécrit un caption Instagram/Facebook pour Amaryllis Locations en intégrant les retours d'experts.
+
+CAPTION ACTUELLE (score ${currentScore}/100) :
+"""
+${currentCaption}
+"""
+
+RETOURS DES EXPERTS :
+📈 Traffic Manager : ${trafficFb || "(aucun)"}
+✍️ SEO Writer : ${seoFb || "(aucun)"}
+
+🎯 MISSION : Réécris cette caption pour viser 100/100 en intégrant chaque retour.
+Conserve :
+  - La structure 5 blocs (hook, description sensorielle, bénéfice, CTA, hashtags)
+  - L'URL exacte du CTA : ${payload.imageUrl?.match(/photos\/([a-z]+)/)?.[1] ? `https://villamaryllis.com/${payload.imageUrl.match(/photos\/([a-z]+)/)[1]}` : "URL existante"}
+  - La voix Amaryllis : "vous" formel, sensoriel, jamais pub Meta Ads
+
+Améliore :
+  - Hook plus stop-scroll (sensoriel + court)
+  - Description plus immersive (vue/son/parfum/lumière)
+  - Bénéfice plus concret pour le voyageur
+  - 8-12 hashtags stratégiques (marque + lieu + audience)
+
+🚫 INTERDIT (les biens MQ sont sur les hauteurs, PAS bord de mer) :
+  - "clapotis des vagues", "bruit/chant des vagues", "pieds dans l'eau"
+  - "plage privée", "à Xm de la plage", "lagon devant"
+  - "vagues qui chantent/caressent", "écume", "ressac"
+
+Retourne UNIQUEMENT un JSON :
+{
+  "improved_blocks": {
+    "hook": "...",
+    "description": "...",
+    "benefice": "...",
+    "cta": "Réservez sur https://villamaryllis.com/{bienId} ⤴️",
+    "hashtags": "#... #... (8-12 hashtags séparés par espace)"
+  },
+  "score_estimated": 0-100,
+  "what_changed": "1-2 phrases sur les améliorations apportées"
+}`;
+
+      const llmResult = await callLLM(env, {
+        provider: "mistral",
+        tier: "smart",
+        max_tokens: 1500,
+        temperature: 0.4,
+        messages: [{ role: "user", content: improvePrompt }],
+      });
+
+      if (!llmResult.ok) return json({ error: "LLM amélioration échoué", details: llmResult.errors }, 500);
+
+      const match = llmResult.text.match(/\{[\s\S]*\}/);
+      if (!match) return json({ error: "Parse JSON échoué", raw: llmResult.text.slice(0, 200) }, 500);
+
+      let parsed;
+      try { parsed = JSON.parse(match[0]); } catch (e) { return json({ error: "JSON invalide" }, 500); }
+
+      const b = parsed.improved_blocks;
+      if (!b) return json({ error: "improved_blocks manquant" }, 500);
+
+      const newCaption = [b.hook, b.description, b.benefice, b.cta, b.hashtags]
+        .filter(x => x && typeof x === "string" && x.trim())
+        .map(x => x.trim())
+        .join("\n\n");
+
+      // Update payload
+      payload.caption = newCaption;
+      // Update reviews avec le nouveau score estimé
+      reviews.previous_score = currentScore;
+      reviews.score_after_improve = parsed.score_estimated || null;
+      reviews.improvement_notes = parsed.what_changed || null;
+
+      await db.prepare(`
+        UPDATE agent_drafts SET payload = ?, reviews = ?, updated_at = ? WHERE id = ?
+      `).bind(JSON.stringify(payload), JSON.stringify(reviews), now, id).run();
+
+      return json({
+        ok: true,
+        previous_score: currentScore,
+        new_score: parsed.score_estimated,
+        what_changed: parsed.what_changed,
+      });
+    }
+
     return json({ error: `action "${action}" inconnue` }, 400);
   }
 
