@@ -211,6 +211,35 @@ async function fetchAgentHistory(db, agentId) {
   }
 }
 
+// ── Récupère les drafts récents (anti-répétition 14j) ──────────────────────
+async function fetchRecentDrafts(db, agentId, days = 14) {
+  try {
+    const cutoff = Math.floor(Date.now() / 1000) - days * 86400;
+    const { results } = await db.prepare(
+      "SELECT id, type, payload, created_at FROM agent_drafts WHERE agent = ? AND created_at > ? ORDER BY created_at DESC LIMIT 20"
+    ).bind(agentId, cutoff).all();
+    return results || [];
+  } catch {
+    return [];
+  }
+}
+
+// Extrait les biens déjà mentionnés dans les drafts récents
+function extractDraftedProperties(drafts) {
+  const propIds = ["amaryllis", "zandoli", "iguana", "geko", "mabouya", "schoelcher", "nogent"];
+  const counts = Object.fromEntries(propIds.map(id => [id, 0]));
+  for (const d of drafts) {
+    try {
+      const p = typeof d.payload === "string" ? JSON.parse(d.payload) : d.payload;
+      const text = `${p.caption || ""} ${p.imageUrl || ""}`.toLowerCase();
+      for (const id of propIds) {
+        if (text.includes(`/${id}/`) || text.includes(id)) counts[id]++;
+      }
+    } catch {}
+  }
+  return counts;
+}
+
 // ── Agents capables de produire des drafts (contenu à publier) ───────────────
 // Ces agents génèrent en plus des actions, des brouillons à approuver et publier.
 const DRAFT_CAPABLE = {
@@ -266,7 +295,7 @@ Ces 3 points sont validés par les agents traffic-manager + seo-content-writer.`
 };
 
 // ── Prompt template pour chaque agent ────────────────────────────────────────
-function buildPrompt(agent, history = [], memories = []) {
+function buildPrompt(agent, history = [], memories = [], recentDrafts = []) {
   // Sépare l'historique par statut pour donner du contexte à l'agent
   const done    = history.filter(h => h.status === "fait");
   const blocked = history.filter(h => h.status === "bloqué");
@@ -323,8 +352,39 @@ FICHIERS CLÉS à analyser : ${agent.files_hint}
 ${skillSection}${memorySection}${historySection}
 MISSION : Identifie les actions concrètes NOUVELLES à réaliser dans ton domaine. Tiens compte de ce qui a déjà été fait ou identifié pour approfondir ton analyse et aller plus loin.
 
-Propriétés : Villa Amaryllis (280€/nuit, 8 pers, 4.94★), Zandoli (220€, 5 pers, 4.5★), Villa Iguana (180€, 6 pers, 4.75★), Géko (150€, 4 pers, 4.83★), Mabouya (110€, 2 pers, 4.55★), Bellevue/Schœlcher (100€, 2 pers, 4.8★), Nogent-sur-Marne (85€, 2 pers, 4.95★).
+📋 DONNÉES CANONIQUES PROPRIÉTÉS (NE JAMAIS INVENTER) :
+• Villa Amaryllis (Sainte-Luce) : 280€/nuit · 8 pers · 3 chambres · 3,5 SDB · 4,94★
+• Zandoli (Sainte-Luce) : 220€/nuit · 5 pers · 2 chambres · 1 SDB · 4,5★
+• Villa Iguana (Sainte-Luce) : 180€/nuit · 6 pers · 2 chambres · 1 SDB · 4,75★
+• Géko (Sainte-Luce) : 150€/nuit · 4 pers · 1 chambre · 1 SDB · 4,83★
+• Studio Mabouya (Sainte-Luce) : 110€/nuit · 2 pers · 1 chambre · 1 SDB · 4,55★
+• Bellevue (Schœlcher) : 100€/nuit · 2 pers · 1 chambre · 1 SDB · 4,8★
+• Appt Nogent-sur-Marne (IDF) : 85€/nuit · 2 pers · 1 chambre · 1 SDB
+⚠️ Si tu n'es pas sûr d'un chiffre, reste vague ("plusieurs chambres") plutôt que d'inventer.
 
+${DRAFT_CAPABLE[agent.id] && recentDrafts.length > 0 ? `
+🔁 ANTI-RÉPÉTITION (drafts des 14 derniers jours pour cet agent) :
+${(() => {
+  const counts = extractDraftedProperties(recentDrafts);
+  const sorted = Object.entries(counts).sort((a,b) => b[1] - a[1]);
+  const used = sorted.filter(([_,c]) => c > 0);
+  const unused = sorted.filter(([_,c]) => c === 0).map(([id]) => id);
+  let txt = used.length > 0
+    ? `  Biens déjà postés : ${used.map(([id,c]) => `${id} (${c}×)`).join(", ")}`
+    : "  (aucun bien posté récemment)";
+  if (unused.length > 0) txt += `\n  ⭐ PRIORITÉ : choisis un bien NON-POSTÉ → ${unused.join(", ")}`;
+  // Captions récentes pour éviter répétition d'angle
+  const recentCaptions = recentDrafts.slice(0, 5).map((d, i) => {
+    try {
+      const p = typeof d.payload === "string" ? JSON.parse(d.payload) : d.payload;
+      const hook = (p.caption || "").split("\n")[0].slice(0, 80);
+      return `  ${i+1}. "${hook}..."`;
+    } catch { return ""; }
+  }).filter(Boolean).join("\n");
+  if (recentCaptions) txt += `\n  📜 Hooks récents (NE PAS recopier le style) :\n${recentCaptions}`;
+  return txt;
+})()}
+` : ""}
 ${DRAFT_CAPABLE[agent.id] ? `\n🚀 CAPACITÉ SPÉCIALE : Tu peux générer des BROUILLONS de contenu publiable.
 ${DRAFT_CAPABLE[agent.id].instructions}
 
@@ -434,8 +494,9 @@ export async function onRequest(context) {
   // ── Fonction d'appel Groq pour un agent donné ─────────────────────────────
   async function runAgent(agent) {
     try {
-      // Historique D1 + mémoires de l'agent
+      // Historique D1 + mémoires de l'agent + drafts récents (anti-répétition)
       const history = await fetchAgentHistory(db, agent.id);
+      const recentDrafts = DRAFT_CAPABLE[agent.id] ? await fetchRecentDrafts(db, agent.id, 14) : [];
       let memories = [];
       try {
         const { results: mems } = await db.prepare(
@@ -451,7 +512,7 @@ export async function onRequest(context) {
         model,
         max_tokens: 2048,  // augmenté pour drafts détaillés + multi-réponses
         temperature: 0.3,
-        messages: [{ role: "user", content: buildPrompt(agent, history, memories) }],
+        messages: [{ role: "user", content: buildPrompt(agent, history, memories, recentDrafts) }],
       });
 
       // Retry auto sur 429 avec backoff + AbortController 22s (CF timeout = 30s)
