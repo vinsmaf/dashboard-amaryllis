@@ -855,7 +855,8 @@ Si verdict=reject : "improved_blocks": null`;
                 messages: [{ role: "user", content: validatorPrompt }],
               });
               if (valResult.ok) {
-                const valText = valResult.text;
+                let valText = valResult.text;
+                if (typeof valText !== "string") valText = String(valText ?? "");
                 const match = valText.match(/\{[\s\S]*\}/);
                 if (match) {
                   const parsed = JSON.parse(match[0]);
@@ -1049,7 +1050,11 @@ Si verdict=reject : "improved_blocks": null`;
 
       return { agent: agent.id, model: activeModel, ok: true, inserted, updated, skipped, drafts: draftsCreated, actions: actions.length, context_size: history.length };
     } catch (e) {
-      return { agent: agent.id, error: e.message };
+      return {
+        agent: agent.id,
+        error: e.message,
+        stack: e.stack ? e.stack.split("\n").slice(0, 3).join(" | ") : null
+      };
     }
   }
 

@@ -262,7 +262,7 @@ Retourne UNIQUEMENT un JSON :
       if (!llmResult.ok) return json({ error: "LLM amélioration échoué", details: llmResult.errors }, 500);
 
       const match = llmResult.text.match(/\{[\s\S]*\}/);
-      if (!match) return json({ error: "Parse JSON échoué", raw: llmResult.text.slice(0, 200) }, 500);
+      if (!match) return json({ error: "Parse JSON échoué", raw: String(llmResult.text ?? "").slice(0, 200) }, 500);
 
       let parsed;
       try { parsed = JSON.parse(match[0]); } catch (e) { return json({ error: "JSON invalide" }, 500); }
