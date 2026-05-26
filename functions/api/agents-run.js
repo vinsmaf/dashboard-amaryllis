@@ -241,34 +241,49 @@ async function fetchAgentHistory(db, agentId) {
 }
 
 // ── Dédup sémantique : un nouveau action est-il proche d'un existant ? ───
-// Compare les 60 premiers caractères de l'action en lowercase, sans ponctuation.
+// Normalise sans accents/ponctuation, lowercase, retire stopwords courants.
+const STOPWORDS = new Set([
+  "le","la","les","un","une","des","du","de","au","aux","pour","par","sur","dans","avec","sans","sous","plus","vers","mais","car",
+  "et","ou","ni","ne","pas","est","sont","ont","fait","faire","mettre","place","sites","site","pages","page"
+]);
+
 function normalizeForCompare(text) {
   return (text || "").toLowerCase()
-    .normalize("NFD").replace(/[̀-ͯ]/g, "")  // retire accents
-    .replace(/[^a-z0-9 ]/g, "")
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9 ]/g, " ")
     .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 60);
+    .trim();
+}
+
+function keywordsSet(text) {
+  const normalized = normalizeForCompare(text);
+  return new Set(normalized.split(" ").filter(w => w.length >= 4 && !STOPWORDS.has(w)));
 }
 
 async function findSimilarExistingAction(db, agentId, actionText) {
   try {
+    // Élargi : 500 entries, exclure seulement "fait"
     const { results } = await db.prepare(
-      "SELECT id, action, status FROM agent_actions WHERE agent = ? AND status != 'fait' LIMIT 200"
+      "SELECT id, action, status FROM agent_actions WHERE agent = ? AND status != 'fait' LIMIT 500"
     ).bind(agentId).all();
-    const newKey = normalizeForCompare(actionText);
-    if (!newKey || newKey.length < 20) return null;
+    const newKey      = normalizeForCompare(actionText);
+    const newPrefix50 = newKey.slice(0, 50);
+    const newKwSet    = keywordsSet(actionText);
+
+    if (!newKey || newKey.length < 15) return null;
+    if (newKwSet.size < 3) return null;
+
     for (const row of (results || [])) {
-      const existKey = normalizeForCompare(row.action);
-      if (!existKey) continue;
-      // Match exact des 60 premiers caractères normalisés OU 80% commun
-      if (existKey === newKey) return row;
-      // Jaccard simple sur mots
-      const w1 = new Set(newKey.split(" ").filter(w => w.length > 3));
-      const w2 = new Set(existKey.split(" ").filter(w => w.length > 3));
-      const inter = [...w1].filter(w => w2.has(w)).length;
-      const union = new Set([...w1, ...w2]).size;
-      if (union > 5 && inter / union >= 0.75) return row;
+      const existKey      = normalizeForCompare(row.action);
+      const existPrefix50 = existKey.slice(0, 50);
+      // Match 1 : 50 premiers chars identiques
+      if (existPrefix50 === newPrefix50) return row;
+      // Match 2 : Jaccard 55%+ sur mots-clés significatifs (sans stopwords)
+      const existKwSet = keywordsSet(row.action);
+      if (existKwSet.size < 3) continue;
+      const inter = [...newKwSet].filter(w => existKwSet.has(w)).length;
+      const union = new Set([...newKwSet, ...existKwSet]).size;
+      if (union > 4 && inter / union >= 0.55) return row;
     }
     return null;
   } catch { return null; }
