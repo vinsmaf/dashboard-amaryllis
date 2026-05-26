@@ -10455,29 +10455,58 @@ function EditorialCalendarTab({ mob }) {
                   const bien = e ? (BIENS.find(b => b.id === e.bien_id) || { color: "#94a3b8", label: e.bien_id }) : null;
                   const theme = e ? (THEMES[e.theme] || { color: "#94a3b8", emoji: "•" }) : null;
                   const status = e ? (STATUS_COLORS[e.status] || { c: "#94a3b8" }) : null;
+                  const isGen = e && generating === e.id;
                   return (
                     <div key={i} style={{
-                      minHeight: mob ? 60 : 90, padding: "6px 8px",
+                      minHeight: mob ? 80 : 110, padding: "6px 8px",
                       background: e ? `${bien.color}11` : "rgba(255,255,255,0.02)",
                       border: e ? `1px solid ${bien.color}44` : "1px solid rgba(255,255,255,0.04)",
                       borderRadius: 8, fontSize: 10, position: "relative",
-                      cursor: e && e.status === "planned" ? "pointer" : "default",
-                    }}
-                    onClick={() => { if (e && e.status === "planned") genDraftNow(e); }}>
-                      <div style={{ fontWeight: 700, color: e ? bien.color : "#475569", marginBottom: 3 }}>{c.day}</div>
+                      display: "flex", flexDirection: "column",
+                    }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
+                        <span style={{ fontWeight: 700, color: e ? bien.color : "#475569" }}>{c.day}</span>
+                        {e && <span style={{ width: 7, height: 7, borderRadius: "50%", background: status.c }} title={status.label} />}
+                      </div>
                       {e && (
                         <>
-                          <div style={{ fontSize: 9, color: "#94a3b8", marginBottom: 2 }}>{theme.emoji} {bien.label.replace("Villa ","").slice(0, 9)}</div>
-                          <div style={{ fontSize: 9, color: "#64748b" }}>{e.format}</div>
-                          <div style={{ position: "absolute", bottom: 4, right: 6, width: 6, height: 6, borderRadius: "50%", background: status.c }} title={status.label} />
+                          <div style={{ fontSize: 9, color: "#94a3b8", marginBottom: 2, lineHeight: 1.2 }}>
+                            {theme.emoji} {bien.label.replace("Villa ","").slice(0, 10)}
+                          </div>
+                          <div style={{ fontSize: 9, color: "#64748b", marginBottom: 4 }}>{e.format}</div>
+                          {/* Bouton Générer pour les entrées planifiées */}
+                          {e.status === "planned" && (
+                            <button
+                              onClick={(ev) => { ev.stopPropagation(); genDraftNow(e); }}
+                              disabled={isGen}
+                              style={{
+                                marginTop: "auto", padding: "3px 6px", borderRadius: 5, fontSize: 9, fontWeight: 700,
+                                border: `1px solid ${bien.color}66`, background: `${bien.color}22`, color: bien.color,
+                                cursor: isGen ? "wait" : "pointer", opacity: isGen ? 0.6 : 1,
+                                width: "100%",
+                              }}
+                            >{isGen ? "..." : "✏️ Générer"}</button>
+                          )}
+                          {/* Lien rapide vers Approbations pour les drafts prêts */}
+                          {e.status === "drafted" && (
+                            <a href="#"
+                              onClick={(ev) => { ev.preventDefault(); localStorage.setItem("admin_tab","approbations"); window.location.reload(); }}
+                              style={{
+                                marginTop: "auto", padding: "3px 6px", borderRadius: 5, fontSize: 9, fontWeight: 700,
+                                border: "1px solid rgba(99,102,241,0.4)", background: "rgba(99,102,241,0.15)", color: "#818cf8",
+                                textAlign: "center", textDecoration: "none", display: "block",
+                              }}
+                            >📥 Voir draft</a>
+                          )}
                         </>
                       )}
                     </div>
                   );
                 })}
               </div>
-              <div style={{ marginTop: 10, fontSize: 10, color: "#64748b" }}>
-                💡 Clique sur un jour <strong>📋 Planifié</strong> pour générer le draft immédiatement.
+              <div style={{ marginTop: 12, fontSize: 10, color: "#64748b", display: "flex", gap: 16, flexWrap: "wrap" }}>
+                <span>💡 Bouton <strong style={{ color: "#e2e8f0" }}>✏️ Générer</strong> visible sur chaque jour planifié → crée le draft via community-manager.</span>
+                <span>📥 Bouton <strong style={{ color: "#818cf8" }}>Voir draft</strong> sur jour "drafted" → ouvre Approbations.</span>
               </div>
             </div>
           );
