@@ -247,8 +247,8 @@ export async function onRequest(context) {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   if (request.method !== "POST") return json({ error: "POST only" }, 405);
 
-  const apiKey = env.ANTHROPIC_API_KEY;
-  if (!apiKey) return json({ error: "ANTHROPIC_API_KEY not configured in Cloudflare Pages env vars" }, 503);
+  const apiKey = env.GROQ_API_KEY;
+  if (!apiKey) return json({ error: "GROQ_API_KEY not configured in Cloudflare Pages env vars" }, 503);
 
   const db = env.revenue_manager;
   if (!db) return json({ error: "D1 binding 'revenue_manager' not found" }, 503);
@@ -278,28 +278,28 @@ export async function onRequest(context) {
         memories = mems || [];
       } catch {}
 
-      // Appel API Anthropic (claude-haiku-4-5 pour économiser les tokens)
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      // Appel API Groq (llama-3.1-8b-instant — rapide et économique pour 17 agents)
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
+          "Authorization": `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: "claude-haiku-4-5",
+          model: "llama-3.3-70b-versatile",
           max_tokens: 1024,
+          temperature: 0.3,
           messages: [{ role: "user", content: buildPrompt(agent, history, memories) }],
         }),
       });
 
       if (!res.ok) {
-        results.push({ agent: agent.id, error: `Anthropic API ${res.status}` });
+        results.push({ agent: agent.id, error: `Groq API ${res.status}` });
         continue;
       }
 
       const data = await res.json();
-      const text = data.content?.[0]?.text || "";
+      const text = data.choices?.[0]?.message?.content || "";
 
       // Parser le JSON retourné par Claude
       let parsed;

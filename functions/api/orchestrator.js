@@ -63,8 +63,8 @@ export async function onRequest(context) {
 
   // ── POST — déclenche une orchestration ────────────────────────────────────
   if (method === "POST") {
-    const apiKey = env.ANTHROPIC_API_KEY;
-    if (!apiKey) return json({ error: "ANTHROPIC_API_KEY not configured" }, 503);
+    const apiKey = env.GROQ_API_KEY;
+    if (!apiKey) return json({ error: "GROQ_API_KEY not configured" }, 503);
 
     const body = await request.json().catch(() => ({}));
     const trigger    = body.trigger    || "manual";
@@ -155,24 +155,26 @@ Retourne un JSON strict (aucun texte avant ou après) :
     let agentsConsulted = AGENT_IDS.join(",");
 
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
+          "Authorization": `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: "claude-sonnet-4-5",
+          model: "llama-3.3-70b-versatile",
           max_tokens: 2048,
-          system: SYSTEM_PROMPT,
-          messages: [{ role: "user", content: userMessage }],
+          temperature: 0.4,
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content: userMessage },
+          ],
         }),
       });
 
       if (res.ok) {
         const data = await res.json();
-        const text = data.content?.[0]?.text || "";
+        const text = data.choices?.[0]?.message?.content || "";
         try {
           const match = text.match(/\{[\s\S]*\}/);
           const parsed = JSON.parse(match ? match[0] : text);
