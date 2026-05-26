@@ -129,16 +129,28 @@ function unixToYMD(ts) {
 async function handleSeed30Days(env, db, body) {
   const startDate = body.start_date || new Date().toISOString().slice(0, 10);
   const startTs   = dateToUnix(startDate);
-  const startDay  = new Date(startTs * 1000).getUTCDay(); // 0=dim,1=lun..6=sam
+  const startDay  = new Date(startTs * 1000).getUTCDay();
+  const endTs     = startTs + 30 * 86400;
 
-  let inserted = 0;
+  // ── Anti-doublon : si une entrée existe déjà pour une date de la plage,
+  //    on la skip plutôt que de la dupliquer
+  let existingDates = new Set();
+  try {
+    const { results } = await db.prepare(
+      "SELECT scheduled_at FROM editorial_calendar WHERE scheduled_at >= ? AND scheduled_at < ?"
+    ).bind(startTs, endTs).all();
+    existingDates = new Set((results || []).map(r => unixToYMD(r.scheduled_at)));
+  } catch {}
+
+  let inserted = 0, skipped = 0;
   const entries = [];
 
   for (let i = 0; i < 30; i++) {
     const ts        = startTs + i * 86400;
     const date      = unixToYMD(ts);
+    if (existingDates.has(date)) { skipped++; continue; }
+
     const dow       = (startDay + i) % 7;
-    // Map dow JS (0=dim, 1=lun..6=sam) vers template day (1=lun..7=dim)
     const tplDay    = dow === 0 ? 7 : dow;
     const tpl       = WEEKLY_TEMPLATE.find(t => t.day === tplDay) || WEEKLY_TEMPLATE[0];
     const bienId    = pickBienForDay(i, tpl.theme);
@@ -146,8 +158,7 @@ async function handleSeed30Days(env, db, body) {
     const variante  = VARIANTES[tpl.theme][weekIdx % 4];
     const photoNum  = String((i % 12) + 1).padStart(2, "0");
     const photoUrl  = `https://villamaryllis.com/photos/${bienId}/${photoNum}.webp`;
-
-    const brief = `${tpl.theme} ${variante.split(" ")[0]} — ${bienId} — format ${tpl.format}`;
+    const brief     = `${tpl.theme} ${variante.split(" ")[0]} — ${bienId} — format ${tpl.format}`;
 
     try {
       await db.prepare(`
@@ -160,7 +171,7 @@ async function handleSeed30Days(env, db, body) {
     } catch (e) {}
   }
 
-  return json({ ok: true, inserted, entries });
+  return json({ ok: true, inserted, skipped, message: skipped > 0 ? `${skipped} jours déjà planifiés (skippés), ${inserted} ajoutés` : `${inserted} jours planifiés` });
 }
 
 export async function onRequest(context) {
