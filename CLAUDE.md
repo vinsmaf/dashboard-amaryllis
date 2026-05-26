@@ -23,16 +23,28 @@ Rental property management dashboard for 7 properties in France (Martinique + No
 ## Commands
 
 ```bash
-npm run dev          # Local dev server (Vite HMR)
-npm run dev:cf       # Local dev with Cloudflare Pages Functions (wrangler pages dev)
-npm run build        # Production build → dist/
-npm run lint         # ESLint
-npm run preview      # Serve the dist/ build locally
+npm run dev           # Local dev server (Vite HMR)
+npm run dev:cf        # Local dev with Cloudflare Pages Functions (wrangler pages dev)
+npm run build         # Production build → dist/
+npm run lint          # ESLint
+npm run preview       # Serve the dist/ build locally
+npm run deploy:pages  # Deploy to Cloudflare Pages → dashboard-amaryllis (villamaryllis.com)
+npm run deploy:worker # Deploy the iCal sync Worker (amaryllis-ical-sync)
 ```
 
 There are no tests. No single-test command exists.
 
 For local dev with backend functions (iCal proxy, Sheets proxy, Beds24), use `npm run dev:cf`. Copy `.dev.vars.example` to `.dev.vars` and fill in the secrets — wrangler reads this file automatically.
+
+### ⚠️ Deploy safety — never deploy to `patrimoine-dashboard`
+
+This account hosts **TWO** separate Cloudflare Pages projects :
+- **`dashboard-amaryllis`** ✅ → `villamaryllis.com` (this project — locatif-dashboard)
+- **`patrimoine-dashboard`** 🚫 → another Claude project (financial dashboard, do NOT touch)
+
+Always use `npm run deploy:pages` which forces the correct project name via `scripts/deploy-pages.sh`. **Never** run `wrangler pages deploy ... --project-name patrimoine-dashboard` from this repo — it would overwrite the other project.
+
+The script `scripts/deploy-pages.sh` has a hard guard that refuses `patrimoine-dashboard` as an argument.
 
 ## Architecture
 
