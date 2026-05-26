@@ -1628,16 +1628,34 @@ export default {
         await runGapPricing(env, allEvents);
         await runYieldPricing(env, allEvents);
         await runCautionAutoRelease(env);
-        // Analyse autonome des 17 agents (nécessite ANTHROPIC_API_KEY dans les secrets CF Pages)
-        if (env.ANTHROPIC_API_KEY) {
+        // ── Analyse autonome des 17 agents (GROQ_API_KEY requis dans les secrets CF Pages) ──
+        if (env.GROQ_API_KEY) {
+          const siteUrl = env.SITE_URL || "https://villamaryllis.com";
           try {
-            await fetch(`${env.SITE_URL || "https://villamaryllis.com"}/api/agents-run`, {
+            console.log("[agents-run] Démarrage analyse autonome 17 agents...");
+            const agentsRes = await fetch(`${siteUrl}/api/agents-run`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ agents: "all" }),
             });
+            const agentsData = await agentsRes.json().catch(() => ({}));
+            console.log(`[agents-run] ✓ ${agentsData.ok_count || 0} OK / ${agentsData.error_count || 0} erreurs`);
           } catch (e) {
             console.error("[agents-run] Cron error:", e.message);
+          }
+
+          // ── Orchestrateur : synthèse cross-agents ──────────────────────────
+          try {
+            console.log("[orchestrateur] Démarrage orchestration...");
+            const orchRes = await fetch(`${siteUrl}/api/orchestrator`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ trigger: "cron-daily", event_data: { cron: "0 9 * * *" } }),
+            });
+            const orchData = await orchRes.json().catch(() => ({}));
+            console.log(`[orchestrateur] ✓ Run #${orchData.run?.id || "?"} — ${orchData.run?.summary?.slice(0, 80) || "ok"}`);
+          } catch (e) {
+            console.error("[orchestrateur] Cron error:", e.message);
           }
         }
       })());
