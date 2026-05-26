@@ -426,7 +426,7 @@ Ces 3 points sont validés par les agents traffic-manager + seo-content-writer.`
 };
 
 // ── Prompt template pour chaque agent ────────────────────────────────────────
-function buildPrompt(agent, history = [], memories = [], recentDrafts = []) {
+function buildPrompt(agent, history = [], memories = [], recentDrafts = [], brief = "") {
   // Sépare l'historique par statut pour donner du contexte à l'agent
   const done    = history.filter(h => h.status === "fait");
   const blocked = history.filter(h => h.status === "bloqué");
@@ -475,7 +475,19 @@ ${skill}
 ═══════════════════════════════════════════════════════════════
 ` : "";
 
-  return `Tu es l'agent "${agent.label}" (${agent.emoji}) d'Amaryllis Locations, plateforme de location de 7 propriétés premium en Martinique et Île-de-France (villamaryllis.com).
+  // ── BRIEF PRIORITAIRE (si calendrier éditorial) ─────────────────────────
+  const briefSection = brief ? `
+🚨🚨🚨 CONSIGNE PRIORITAIRE — TU DOIS RESPECTER CE BRIEF À LA LETTRE 🚨🚨🚨
+${brief}
+
+⚠️ Le bien, le thème, la variante et le format spécifiés dans le brief sont
+   NON-NÉGOCIABLES. Tu ignores l'anti-répétition et l'historique pour cette
+   génération — tu produis UN seul draft pour le bien demandé.
+⚠️ Le draft doit utiliser EXACTEMENT le bien_id, photo_url et CTA du brief.
+═══════════════════════════════════════════════════════════════
+` : "";
+
+  return `${briefSection}Tu es l'agent "${agent.label}" (${agent.emoji}) d'Amaryllis Locations, plateforme de location de 7 propriétés premium en Martinique et Île-de-France (villamaryllis.com).
 
 TON DOMAINE D'EXPERTISE : ${agent.focus}
 
@@ -652,7 +664,7 @@ export async function onRequest(context) {
         tier,
         max_tokens: 2048,
         temperature: 0.3,
-        messages: [{ role: "user", content: buildPrompt(agent, history, memories, recentDrafts) }],
+        messages: [{ role: "user", content: buildPrompt(agent, history, memories, recentDrafts, body.brief || "") }],
       });
 
       if (!llmResult.ok) {
