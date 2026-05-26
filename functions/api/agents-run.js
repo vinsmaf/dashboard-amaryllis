@@ -168,25 +168,26 @@ const GROQ_MODELS = [
   { model: "llama-3.2-3b-preview",                      tier: "fast"   }, // mini
 ];
 
-// Attribution agent → modèle (modèles "high" pour les agents critiques)
+// Attribution agent → modèle (uniquement modèles RAPIDES < 10s sur Groq)
+// Règle : pas de modèles "thinking" (deepseek-r1, qwen-qwq) → trop lents pour CF 30s timeout
 const AGENT_MODELS = {
-  "juriste-compliance":        "llama-3.3-70b-versatile",                    // légal → top model
-  "architecte-reseau":         "meta-llama/llama-4-maverick-17b-128e-instruct", // sécurité → Llama 4
-  "webmaster":                 "deepseek-r1-distill-llama-70b",              // tech → DeepSeek
-  "traffic-manager":           "meta-llama/llama-4-scout-17b-16e-instruct",  // SEO → Llama 4 Scout
-  "data-analyst":              "qwen-qwq-32b",                               // data → QwQ
-  "revenue-manager":           "llama-3.3-70b-versatile",                    // revenus → top model
-  "developpeur-multimedia":    "mixtral-8x7b-32768",                         // media → Mixtral
-  "photographe-da":            "gemma2-9b-it",                               // DA → Gemma
-  "webdesigner":               "llama-3.1-8b-instant",                       // design → rapide
-  "chef-produit-web":          "meta-llama/llama-4-maverick-17b-128e-instruct", // produit → Llama 4
-  "community-manager":         "mistral-saba-24b",                           // CM → Mistral Saba
-  "commercial-publicite":      "meta-llama/llama-4-scout-17b-16e-instruct",  // pub → Llama 4 Scout
-  "crm-manager":               "deepseek-r1-distill-llama-70b",              // CRM → DeepSeek
-  "consultant-ebusiness":      "qwen-qwq-32b",                               // ebiz → QwQ
-  "responsable-service-client":"mixtral-8x7b-32768",                         // SC → Mixtral
-  "responsable-logistique":    "gemma2-9b-it",                               // logistique → Gemma
-  "seo-content-writer":        "llama-3.3-70b-versatile",                    // SEO content → top
+  "juriste-compliance":         "llama-3.3-70b-versatile",                    // légal → 70b
+  "architecte-reseau":          "meta-llama/llama-4-maverick-17b-128e-instruct", // sécurité → Llama 4
+  "webmaster":                  "mixtral-8x7b-32768",                         // tech → Mixtral
+  "traffic-manager":            "meta-llama/llama-4-scout-17b-16e-instruct",  // SEO → Llama 4 Scout
+  "data-analyst":               "gemma2-9b-it",                               // data → Gemma
+  "revenue-manager":            "llama-3.3-70b-versatile",                    // revenus → 70b
+  "developpeur-multimedia":     "mixtral-8x7b-32768",                         // media → Mixtral
+  "photographe-da":             "llama-3.1-8b-instant",                       // DA → 8b instant
+  "webdesigner":                "gemma2-9b-it",                               // design → Gemma
+  "chef-produit-web":           "meta-llama/llama-4-maverick-17b-128e-instruct", // produit → Llama 4
+  "community-manager":          "llama-3.1-8b-instant",                       // CM → 8b instant
+  "commercial-publicite":       "meta-llama/llama-4-scout-17b-16e-instruct",  // pub → Llama 4 Scout
+  "crm-manager":                "mixtral-8x7b-32768",                         // CRM → Mixtral
+  "consultant-ebusiness":       "llama-3.3-70b-versatile",                    // ebiz → 70b
+  "responsable-service-client": "gemma2-9b-it",                               // SC → Gemma
+  "responsable-logistique":     "llama-3.1-8b-instant",                       // logistique → 8b
+  "seo-content-writer":         "llama-3.3-70b-versatile",                    // SEO → 70b
 };
 
 // ── Récupère l'historique D1 d'un agent ──────────────────────────────────────
@@ -322,17 +323,24 @@ export async function onRequest(context) {
         messages: [{ role: "user", content: buildPrompt(agent, history, memories) }],
       });
 
-      // Retry auto sur 429 avec backoff exponentiel
+      // Retry auto sur 429 avec backoff + AbortController 22s (CF timeout = 30s)
       let res, attempt = 0;
-      while (attempt < 4) {
-        res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
-          body: groqBody,
-        });
+      while (attempt < 3) {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 22000);
+        try {
+          res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+            body: groqBody,
+            signal: ctrl.signal,
+          });
+        } finally {
+          clearTimeout(timer);
+        }
         if (res.status !== 429) break;
         attempt++;
-        await new Promise(r => setTimeout(r, 2000 * attempt)); // 2s, 4s, 6s, 8s
+        await new Promise(r => setTimeout(r, 1500 * attempt)); // 1.5s, 3s, 4.5s
       }
 
       if (!res.ok) {
