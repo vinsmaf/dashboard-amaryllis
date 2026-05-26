@@ -1600,6 +1600,102 @@ async function runPrixRecap(env) {
   else console.log(`[prix-recap] ✓ Rappel envoyé à ${dest}`);
 }
 
+// ── Editorial Calendar : génération drafts J+2 (cron quotidien 12h UTC) ────
+async function runEditorialDraftGen(env) {
+  const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+  try {
+    // Cible : entrées planifiées dont scheduled_at est dans 2 jours (±12h)
+    const now    = Math.floor(Date.now() / 1000);
+    const target = now + 2 * 86400;
+    const from   = new Date((target - 12 * 3600) * 1000).toISOString().slice(0, 10);
+    const to     = new Date((target + 12 * 3600) * 1000).toISOString().slice(0, 10);
+
+    const r = await fetch(`${siteUrl}/api/editorial-calendar?from=${from}&to=${to}&status=planned`);
+    const d = await r.json();
+    const entries = d.entries || [];
+    if (entries.length === 0) { console.log("[editorial-J-2] Aucune entrée planifiée à J+2"); return; }
+
+    console.log(`[editorial-J-2] ${entries.length} entrée(s) à générer`);
+    for (const e of entries) {
+      // Marque "generating"
+      await fetch(`${siteUrl}/api/editorial-calendar?id=${e.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "generating" }),
+      }).catch(() => {});
+
+      // Brief enrichi → community-manager
+      const brief = `BRIEF CALENDRIER ÉDITORIAL — date=${new Date(e.scheduled_at*1000).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})}, bien=${e.bien_id}, thème=${e.theme}, variante=${e.variante}, format=${e.format}, photo=${e.photo_url}, CTA="${e.cta}". Génère UN draft social_post selon ce brief précis.`;
+      try {
+        const runRes = await fetch(`${siteUrl}/api/agents-run`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ agents: ["community-manager"], brief, calendar_id: e.id }),
+        });
+        const runData = await runRes.json();
+        const drafts = runData.results?.[0]?.drafts || 0;
+        const newStatus = drafts > 0 ? "drafted" : "failed";
+        await fetch(`${siteUrl}/api/editorial-calendar?id=${e.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: newStatus }),
+        }).catch(() => {});
+      } catch (err) {
+        console.error(`[editorial-J-2] erreur entry ${e.id}:`, err.message);
+        await fetch(`${siteUrl}/api/editorial-calendar?id=${e.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "failed" }),
+        }).catch(() => {});
+      }
+    }
+  } catch (e) {
+    console.error("[editorial-J-2] error:", e.message);
+  }
+}
+
+// ── Editorial Calendar : publication auto des drafts approuvés (cron horaire)
+async function runEditorialAutoPublish(env) {
+  const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+  try {
+    // Cible : entrées dont status='approved' ET scheduled_at <= maintenant + 1h
+    const now    = Math.floor(Date.now() / 1000);
+    const upTo   = now + 3600;
+    const fromYMD = new Date((now - 86400) * 1000).toISOString().slice(0, 10);
+    const toYMD   = new Date(upTo * 1000).toISOString().slice(0, 10);
+
+    const r = await fetch(`${siteUrl}/api/editorial-calendar?from=${fromYMD}&to=${toYMD}&status=approved`);
+    const d = await r.json();
+    const dueEntries = (d.entries || []).filter(e => e.scheduled_at <= upTo);
+    if (dueEntries.length === 0) { console.log("[editorial-publish] Aucun draft à publier"); return; }
+
+    console.log(`[editorial-publish] ${dueEntries.length} draft(s) à publier`);
+    for (const e of dueEntries) {
+      if (!e.draft_id) {
+        console.warn(`[editorial-publish] entry ${e.id} sans draft_id`);
+        continue;
+      }
+      try {
+        const pubRes = await fetch(`${siteUrl}/api/agent-drafts?id=${e.draft_id}&action=publish`, {
+          method: "PATCH",
+        });
+        const pubData = await pubRes.json();
+        const newStatus = pubData.ok ? "published" : "failed";
+        await fetch(`${siteUrl}/api/editorial-calendar?id=${e.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: newStatus, result: JSON.stringify(pubData) }),
+        }).catch(() => {});
+        console.log(`[editorial-publish] entry ${e.id} → ${newStatus}`);
+      } catch (err) {
+        console.error(`[editorial-publish] erreur entry ${e.id}:`, err.message);
+      }
+    }
+  } catch (e) {
+    console.error("[editorial-publish] error:", e.message);
+  }
+}
+
 // ── Exports Cloudflare Worker ────────────────────────────────────────────────
 export default {
   async scheduled(event, env, ctx) {
@@ -1617,6 +1713,10 @@ export default {
       // 1er du mois — export comptable
       const { allEvents } = await runSync(env);
       ctx.waitUntil(runMonthlyExport(env, allEvents));
+
+    } else if (cron === "0 12 * * *") {
+      // 12h UTC chaque jour (8h Martinique) — génération drafts éditoriaux J+2
+      ctx.waitUntil(runEditorialDraftGen(env));
 
     } else if (cron === "0 9 * * *") {
       // 9h UTC chaque jour — audit + rappels + alertes + gap pricing + agents autonomes
@@ -1756,10 +1856,11 @@ export default {
       })());
 
     } else {
-      // Toutes les heures — sync iCal + annulation des réservations Beds24 non payées
+      // Toutes les heures — sync iCal + annulation Beds24 non payées + publication éditoriale due
       ctx.waitUntil((async () => {
         await runSync(env);
         await runCancelUnpaidBeds24Bookings(env);
+        await runEditorialAutoPublish(env);
       })());
     }
   },

@@ -10228,6 +10228,7 @@ function EditorialCalendarTab({ mob }) {
   const [generating, setGenerating] = useState(null);
   const [toast, setToast]         = useState(null);
   const [filterBien, setFilterBien] = useState("");
+  const [view, setView]           = useState("grid"); // "list" | "grid"
 
   async function load() {
     setLoading(true);
@@ -10384,6 +10385,20 @@ function EditorialCalendarTab({ mob }) {
         }}>{toast.message || toast.error}</div>
       )}
 
+      {/* Toggle vue Liste / Grille */}
+      {entries.length > 0 && (
+        <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+          {[{ id: "grid", l: "🗓 Grille mois" }, { id: "list", l: "📋 Liste" }].map(v => (
+            <button key={v.id} onClick={() => setView(v.id)} style={{
+              padding: "6px 14px", borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: "pointer", border: "none",
+              background: view === v.id ? "rgba(99,102,241,0.2)" : "transparent",
+              color: view === v.id ? "#818cf8" : "#64748b",
+              outline: view === v.id ? "1px solid rgba(99,102,241,0.3)" : "none",
+            }}>{v.l}</button>
+          ))}
+        </div>
+      )}
+
       {/* Liste */}
       {loading ? (
         <div style={{ textAlign: "center", padding: 60, color: "#64748b" }}>Chargement…</div>
@@ -10393,7 +10408,82 @@ function EditorialCalendarTab({ mob }) {
           <div style={{ fontSize: 14, fontWeight: 600 }}>Aucun planning</div>
           <div style={{ fontSize: 12, marginTop: 6 }}>Clique "🌱 Seed 30 jours" pour générer le calendrier canonique</div>
         </div>
+      ) : view === "grid" ? (
+        /* ── VUE GRILLE MOIS ── */
+        (() => {
+          // Construire une grille basée sur le premier jour du mois affiché (le mois du 1er entry)
+          const first = filtered[0];
+          const refDate = new Date(first.scheduled_at * 1000);
+          const monthStart = new Date(Date.UTC(refDate.getUTCFullYear(), refDate.getUTCMonth(), 1));
+          const monthEnd   = new Date(Date.UTC(refDate.getUTCFullYear(), refDate.getUTCMonth() + 1, 0));
+          const offset     = (monthStart.getUTCDay() + 6) % 7; // lundi=0
+          const daysInMonth = monthEnd.getUTCDate();
+
+          // Map "YYYY-MM-DD" → entry
+          const entryByDate = {};
+          for (const e of filtered) {
+            const dt = new Date(e.scheduled_at * 1000);
+            const key = dt.toISOString().slice(0, 10);
+            entryByDate[key] = e;
+          }
+
+          const cells = [];
+          for (let i = 0; i < offset; i++) cells.push(null);
+          for (let d = 1; d <= daysInMonth; d++) {
+            const dt = new Date(Date.UTC(refDate.getUTCFullYear(), refDate.getUTCMonth(), d));
+            const key = dt.toISOString().slice(0, 10);
+            cells.push({ day: d, date: key, entry: entryByDate[key] });
+          }
+
+          const monthLabel = refDate.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+          const dows = ["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"];
+
+          return (
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "#e2e8f0", marginBottom: 10, textTransform: "capitalize" }}>{monthLabel}</div>
+              {/* Header DOW */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 6 }}>
+                {dows.map(d => (
+                  <div key={d} style={{ fontSize: 10, fontWeight: 700, color: "#64748b", textAlign: "center", textTransform: "uppercase", padding: "4px 0" }}>{d}</div>
+                ))}
+              </div>
+              {/* Cells */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
+                {cells.map((c, i) => {
+                  if (!c) return <div key={i} style={{ minHeight: mob ? 60 : 90, background: "transparent" }} />;
+                  const e = c.entry;
+                  const bien = e ? (BIENS.find(b => b.id === e.bien_id) || { color: "#94a3b8", label: e.bien_id }) : null;
+                  const theme = e ? (THEMES[e.theme] || { color: "#94a3b8", emoji: "•" }) : null;
+                  const status = e ? (STATUS_COLORS[e.status] || { c: "#94a3b8" }) : null;
+                  return (
+                    <div key={i} style={{
+                      minHeight: mob ? 60 : 90, padding: "6px 8px",
+                      background: e ? `${bien.color}11` : "rgba(255,255,255,0.02)",
+                      border: e ? `1px solid ${bien.color}44` : "1px solid rgba(255,255,255,0.04)",
+                      borderRadius: 8, fontSize: 10, position: "relative",
+                      cursor: e && e.status === "planned" ? "pointer" : "default",
+                    }}
+                    onClick={() => { if (e && e.status === "planned") genDraftNow(e); }}>
+                      <div style={{ fontWeight: 700, color: e ? bien.color : "#475569", marginBottom: 3 }}>{c.day}</div>
+                      {e && (
+                        <>
+                          <div style={{ fontSize: 9, color: "#94a3b8", marginBottom: 2 }}>{theme.emoji} {bien.label.replace("Villa ","").slice(0, 9)}</div>
+                          <div style={{ fontSize: 9, color: "#64748b" }}>{e.format}</div>
+                          <div style={{ position: "absolute", bottom: 4, right: 6, width: 6, height: 6, borderRadius: "50%", background: status.c }} title={status.label} />
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ marginTop: 10, fontSize: 10, color: "#64748b" }}>
+                💡 Clique sur un jour <strong>📋 Planifié</strong> pour générer le draft immédiatement.
+              </div>
+            </div>
+          );
+        })()
       ) : (
+        /* ── VUE LISTE ── */
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {filtered.map(e => {
             const bien = BIENS.find(b => b.id === e.bien_id) || { color: "#94a3b8", label: e.bien_id };
