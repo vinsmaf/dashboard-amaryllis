@@ -388,13 +388,7 @@ Retourne un JSON strict avec cette structure :
       "preview": "Aperçu court pour l'admin (max 80 caractères)",
       "payload": ${agent.id === "community-manager"
         ? `{
-        "blocks": {
-          "hook": "Hook ≤ 12 mots, sensoriel/chiffre/question",
-          "description": "3-5 lignes sensorielles (vue/son/ambiance), max 150 mots",
-          "benefice": "1 ligne : ce que le voyageur gagne",
-          "cta": "Réservez sur https://villamaryllis.com/{bienId} ⤴️",
-          "hashtags": "#AmaryllisLocations #Martinique #... (5-9 hashtags séparés par espace)"
-        },
+        "caption": "Texte du post avec hook, description sensorielle, bénéfice, CTA villamaryllis.com/{bienId} et 5-9 hashtags. NE RECOPIE PAS l'exemple, invente un caption original pour le bien choisi.",
         "imageUrl": "https://villamaryllis.com/photos/{bienId}/01.webp à /12.webp",
         "channels": ["ig","fb"]
       }`
@@ -522,15 +516,6 @@ export async function onRequest(context) {
           if (!draft.type || !draft.payload) continue;
           if (!DRAFT_CAPABLE[agent.id].types.includes(draft.type)) continue;
 
-          // Si community-manager a renvoyé des blocs, reconstruire le caption
-          if (draft.type === "social_post" && draft.payload.blocks && !draft.payload.caption) {
-            const b = draft.payload.blocks;
-            const arr = [b.hook, b.description, b.benefice, b.cta, b.hashtags]
-              .filter(x => x && typeof x === "string" && x.trim())
-              .map(x => x.trim());
-            draft.payload.caption = arr.join("\n\n");
-          }
-
           // ── Validation par agents spécialisés (traffic-manager + seo) ──
           let reviews = null;
           if (draft.type === "social_post") {
@@ -623,6 +608,28 @@ Si verdict=reject : "improved_blocks": null`;
                 }
               }
             } catch (e) { /* validation optionnelle, on continue sans */ }
+
+            // ── Fallback heuristique : si caption toujours flat, on aère ──
+            // Insère des sauts de ligne aux points naturels : avant "Réservez", avant "#"
+            const cap = draft.payload.caption || "";
+            const hasNewlines = cap.includes("\n\n");
+            if (!hasNewlines && cap.length > 100) {
+              let formatted = cap;
+              // Espace double avant le CTA "Réservez sur"
+              formatted = formatted.replace(/\s*(Réservez sur\s+https?:\/\/)/i, "\n\n$1");
+              // Espace double avant le premier hashtag
+              formatted = formatted.replace(/\s+(#\w+)/, "\n\n$1");
+              // Espace double après les 2 premières phrases (hook + intro)
+              const sentences = formatted.split(/(?<=[.!?])\s+/);
+              if (sentences.length >= 4) {
+                // Insère un saut après la 1ère phrase (hook) si pas déjà fait
+                if (!sentences[0].includes("\n")) {
+                  sentences[0] = sentences[0] + "\n\n";
+                }
+                formatted = sentences.join(" ").replace(/\n\n\s+/g, "\n\n");
+              }
+              draft.payload.caption = formatted;
+            }
           }
 
           try {
