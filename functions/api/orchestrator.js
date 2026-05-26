@@ -185,9 +185,13 @@ Retourne un JSON strict (aucun texte avant ou après) :
         } catch {
           summary = text.slice(0, 500);
         }
+      } else {
+        // Erreur Groq (429, 503, etc.) — on expose le détail pour debug
+        const errText = await res.text().catch(() => "");
+        summary = `Groq ${res.status}: ${errText.slice(0, 300)}`;
       }
     } catch (e) {
-      summary = `Erreur API: ${e.message}`;
+      summary = `Erreur réseau: ${e.message}`;
     }
 
     // 4. Mettre à jour le run avec le résultat
