@@ -431,13 +431,18 @@ ${skillSection}${memorySection}${historySection}
 MISSION : Identifie les actions concrètes NOUVELLES à réaliser dans ton domaine. Tiens compte de ce qui a déjà été fait ou identifié pour approfondir ton analyse et aller plus loin.
 
 📋 DONNÉES CANONIQUES PROPRIÉTÉS (NE JAMAIS INVENTER) :
-• Villa Amaryllis (Sainte-Luce) : 280€/nuit · 8 pers · 3 chambres · 3,5 SDB · 4,94★
-• Zandoli (Sainte-Luce) : 220€/nuit · 5 pers · 2 chambres · 1 SDB · 4,5★
-• Villa Iguana (Sainte-Luce) : 180€/nuit · 6 pers · 2 chambres · 1 SDB · 4,75★
-• Géko (Sainte-Luce) : 150€/nuit · 4 pers · 1 chambre · 1 SDB · 4,83★
-• Studio Mabouya (Sainte-Luce) : 110€/nuit · 2 pers · 1 chambre · 1 SDB · 4,55★
-• Bellevue (Schœlcher) : 100€/nuit · 2 pers · 1 chambre · 1 SDB · 4,8★
-• Appt Nogent-sur-Marne (IDF) : 85€/nuit · 2 pers · 1 chambre · 1 SDB
+• Villa Amaryllis (Sainte-Luce, sur les hauteurs) : 280€/nuit · 8 pers · 3 chambres · 3,5 SDB · 4,94★ · vue mer 180° depuis les hauteurs (PAS bord de mer)
+• Zandoli (Sainte-Luce, résidence Amaryllis hauteurs) : 220€/nuit · 5 pers · 2 chambres · 1 SDB · 4,5★ · cocon tropical
+• Villa Iguana (Sainte-Luce, résidence hauteurs) : 180€/nuit · 6 pers · 2 chambres · 1 SDB · 4,75★ · vue Rocher du Diamant
+• Géko (Sainte-Luce, résidence Amaryllis hauteurs) : 150€/nuit · 4 pers · 1 chambre · 1 SDB · 4,83★ · jardin tropical
+• Studio Mabouya (Sainte-Luce, résidence hauteurs) : 110€/nuit · 2 pers · 1 chambre · 1 SDB · 4,55★ · jacuzzi privatif VUE mer
+• Bellevue (Schœlcher, hauteurs) : 100€/nuit · 2 pers · 1 chambre · 1 SDB · 4,8★ · vue baie Fort-de-France
+• Appt Nogent-sur-Marne (IDF) : 85€/nuit · 2 pers · 1 chambre · 1 SDB · bord de Marne
+
+🌊 GÉOGRAPHIE — TOUS LES BIENS MARTINIQUE SONT SUR LES HAUTEURS, PAS EN BORD DE MER :
+  ❌ INTERDIT : "mer entre dans la chambre", "pieds dans l'eau", "à 5m de la plage", "crique privée"
+  ✅ AUTORISÉ : "vue mer panoramique", "perché sur les hauteurs", "bercé par les alizés", "horizon caraïbe"
+
 ⚠️ Si tu n'es pas sûr d'un chiffre, reste vague ("plusieurs chambres") plutôt que d'inventer.
 
 ${DRAFT_CAPABLE[agent.id] && recentDrafts.length > 0 ? `
