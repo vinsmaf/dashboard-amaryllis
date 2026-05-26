@@ -169,43 +169,40 @@ const GROQ_MODELS = [
 ];
 
 // Attribution agent → modèle
-// Règle : max 2-3 agents par modèle pour éviter les 429 (buckets séparées par modèle)
-// Modèles supprimés : mixtral-8x7b, gemma2-9b, deepseek-r1, qwen-qwq, mistral-saba, llama-4-maverick
+// ⚠️ TOUS les modèles utilisés DOIVENT avoir 128K context window pour accueillir
+// le skill injecté (5-9 KB) + historique D1 + mémoires + anti-répétition.
+// Buckets distincts pour éviter rate limits 429.
 const AGENT_MODELS = {
-  // ─── bucket llama-3.3-70b-versatile (2 agents) ───────────────────────────
-  "juriste-compliance":         "llama-3.3-70b-versatile",                   // légal → meilleur raisonnement
-  "revenue-manager":            "llama-3.3-70b-versatile",                   // revenus → analyse profonde
-  // ─── bucket llama3-70b-8192 (3 agents) ───────────────────────────────────
-  "architecte-reseau":          "llama3-70b-8192",                           // sécurité → 70b classic
-  "consultant-ebusiness":       "llama3-70b-8192",                           // stratégie → 70b classic
-  "seo-content-writer":         "llama3-70b-8192",                           // SEO → 70b classic
-  // ─── bucket llama-4-scout (3 agents) ─────────────────────────────────────
-  "traffic-manager":            "meta-llama/llama-4-scout-17b-16e-instruct", // SEO → Llama 4
-  "chef-produit-web":           "meta-llama/llama-4-scout-17b-16e-instruct", // produit → Llama 4
-  "commercial-publicite":       "meta-llama/llama-4-scout-17b-16e-instruct", // pub → Llama 4
-  // ─── bucket llama-3.1-8b-instant (2 agents) ──────────────────────────────
-  "webdesigner":                "llama-3.1-8b-instant",                      // design → ultra-rapide
-  "responsable-logistique":     "llama-3.1-8b-instant",                      // logistique → rapide
-  // ─── community-manager : modèle plus puissant pour générer des drafts ────
-  "community-manager":          "llama-3.3-70b-versatile",                   // CM → drafts + actions
-  // ─── bucket llama3-8b-8192 (2 agents) ────────────────────────────────────
-  "webmaster":                  "llama3-8b-8192",                            // tech → 8b classic
-  "data-analyst":               "llama3-8b-8192",                            // data → 8b classic
-  // ─── bucket llama-3.2-11b-vision (2 agents) ──────────────────────────────
-  "developpeur-multimedia":     "llama-3.2-11b-vision-preview",              // media → vision
-  "photographe-da":             "llama-3.2-11b-vision-preview",              // photo → vision
-  // ─── bucket llama-3.2-3b (2 agents) ──────────────────────────────────────
-  "crm-manager":                "llama-3.2-3b-preview",                      // CRM → mini
-  "responsable-service-client": "llama-3.2-3b-preview",                      // SC → mini
+  // ─── bucket llama-3.3-70b-versatile (128K) — analyses profondes ──────────
+  "juriste-compliance":         "llama-3.3-70b-versatile",                   // légal → raisonnement
+  "revenue-manager":            "llama-3.3-70b-versatile",                   // pricing
+  "community-manager":          "llama-3.3-70b-versatile",                   // drafts sociaux
+  // ─── bucket llama-4-scout (128K) — analyses générales ────────────────────
+  "traffic-manager":            "meta-llama/llama-4-scout-17b-16e-instruct",
+  "chef-produit-web":           "meta-llama/llama-4-scout-17b-16e-instruct",
+  "commercial-publicite":       "meta-llama/llama-4-scout-17b-16e-instruct",
+  "consultant-ebusiness":       "meta-llama/llama-4-scout-17b-16e-instruct",
+  // ─── bucket llama-3.2-11b-vision (128K) — créatif/media ──────────────────
+  "developpeur-multimedia":     "llama-3.2-11b-vision-preview",
+  "photographe-da":             "llama-3.2-11b-vision-preview",
+  "webdesigner":                "llama-3.2-11b-vision-preview",
+  // ─── bucket llama-3.1-8b-instant (128K) — agents rapides ─────────────────
+  "webmaster":                  "llama-3.1-8b-instant",
+  "data-analyst":               "llama-3.1-8b-instant",
+  "architecte-reseau":          "llama-3.1-8b-instant",
+  "crm-manager":                "llama-3.1-8b-instant",
+  "responsable-service-client": "llama-3.1-8b-instant",
+  "responsable-logistique":     "llama-3.1-8b-instant",
+  "seo-content-writer":         "llama-3.1-8b-instant",
 };
 
-// ── Récupère l'historique D1 d'un agent ──────────────────────────────────────
+// ── Récupère l'historique D1 d'un agent (limite 40 derniers pour context) ─
 async function fetchAgentHistory(db, agentId) {
   try {
     const { results } = await db.prepare(
-      "SELECT id, action, status, notes FROM agent_actions WHERE agent = ? ORDER BY id ASC"
+      "SELECT id, action, status, notes FROM agent_actions WHERE agent = ? ORDER BY updated_at DESC LIMIT 40"
     ).bind(agentId).all();
-    return results || [];
+    return (results || []).reverse(); // ordre chronologique pour le prompt
   } catch {
     return [];
   }
