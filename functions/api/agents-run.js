@@ -181,10 +181,11 @@ const AGENT_MODELS = {
   "traffic-manager":            "meta-llama/llama-4-scout-17b-16e-instruct", // SEO → Llama 4
   "chef-produit-web":           "meta-llama/llama-4-scout-17b-16e-instruct", // produit → Llama 4
   "commercial-publicite":       "meta-llama/llama-4-scout-17b-16e-instruct", // pub → Llama 4
-  // ─── bucket llama-3.1-8b-instant (3 agents) ──────────────────────────────
+  // ─── bucket llama-3.1-8b-instant (2 agents) ──────────────────────────────
   "webdesigner":                "llama-3.1-8b-instant",                      // design → ultra-rapide
-  "community-manager":          "llama-3.1-8b-instant",                      // CM → rapide
   "responsable-logistique":     "llama-3.1-8b-instant",                      // logistique → rapide
+  // ─── community-manager : modèle plus puissant pour générer des drafts ────
+  "community-manager":          "llama-3.3-70b-versatile",                   // CM → drafts + actions
   // ─── bucket llama3-8b-8192 (2 agents) ────────────────────────────────────
   "webmaster":                  "llama3-8b-8192",                            // tech → 8b classic
   "data-analyst":               "llama3-8b-8192",                            // data → 8b classic
@@ -207,6 +208,33 @@ async function fetchAgentHistory(db, agentId) {
     return [];
   }
 }
+
+// ── Agents capables de produire des drafts (contenu à publier) ───────────────
+// Ces agents génèrent en plus des actions, des brouillons à approuver et publier.
+const DRAFT_CAPABLE = {
+  "community-manager": {
+    types: ["social_post"],
+    instructions: `Tu peux aussi générer des BROUILLONS de posts pour Instagram + Facebook.
+Le compte Instagram est un page-backed (PBIA), donc un seul post va sur les 2 plateformes.
+
+Pour CHAQUE bien, varie les angles : vue, équipements, expérience, saisonnalité, ambiance.
+Style : chaleureux, sensoriel, formel ("vous"), max 150-200 mots.
+Toujours inclure 3-5 hashtags pertinents en fin de caption.
+
+URLs d'images suggérées (les vraies photos publiques) :
+- Amaryllis  : https://villamaryllis.com/photos/amaryllis/hero.jpg
+- Zandoli    : https://villamaryllis.com/photos/zandoli/hero.jpg
+- Iguana     : https://villamaryllis.com/photos/iguana/hero.jpg
+- Géko       : https://villamaryllis.com/photos/geko/hero.jpg
+- Mabouya    : https://villamaryllis.com/photos/mabouya/hero.jpg
+- Schœlcher  : https://villamaryllis.com/photos/schoelcher/hero.jpg
+- Nogent     : https://villamaryllis.com/photos/nogent/hero.jpg`,
+  },
+  "crm-manager": {
+    types: ["email_campaign"],
+    instructions: `Tu peux générer des BROUILLONS d'emails (newsletter, retour voyageur, demande d'avis, offre).`,
+  },
+};
 
 // ── Prompt template pour chaque agent ────────────────────────────────────────
 function buildPrompt(agent, history = [], memories = []) {
@@ -258,6 +286,8 @@ MISSION : Identifie les actions concrètes NOUVELLES à réaliser dans ton domai
 
 Propriétés : Villa Amaryllis (280€/nuit, 8 pers, 4.94★), Zandoli (220€, 5 pers, 4.5★), Villa Iguana (180€, 6 pers, 4.75★), Géko (150€, 4 pers, 4.83★), Mabouya (110€, 2 pers, 4.55★), Bellevue/Schœlcher (100€, 2 pers, 4.8★), Nogent-sur-Marne (85€, 2 pers, 4.95★).
 
+${DRAFT_CAPABLE[agent.id] ? `\n🚀 CAPACITÉ SPÉCIALE : Tu peux générer des BROUILLONS de contenu publiable.
+${DRAFT_CAPABLE[agent.id].instructions}\n` : ""}
 Retourne un JSON strict avec cette structure :
 {
   "actions": [
@@ -272,7 +302,18 @@ Retourne un JSON strict avec cette structure :
       "effort": "durée estimée (30min|1h|2h|4h|8h|ext pour externe)",
       "status": "backlog"
     }
-  ]
+  ]${DRAFT_CAPABLE[agent.id] ? `,
+  "drafts": [
+    {
+      "type": "${DRAFT_CAPABLE[agent.id].types.join("|")}",
+      "rationale": "Pourquoi ce contenu, maintenant (max 200 caractères)",
+      "preview": "Aperçu court pour l'admin (max 80 caractères)",
+      "payload": ${agent.id === "community-manager"
+        ? '{ "caption": "Le texte complet du post avec emojis et hashtags", "imageUrl": "URL d\'une image publique", "channels": ["ig","fb"] }'
+        : '{ "to": "vinsmaf@hotmail.com", "subject": "Sujet", "html": "<html>contenu</html>" }'
+      }
+    }
+  ]` : ""}
 }
 
 Règles :
@@ -280,7 +321,9 @@ Règles :
 - Priorité "critique" = risque légal, sécurité, perte revenus significative
 - Priorité "haute" = impact business direct mesurable
 - "ext" pour effort = ressources externes nécessaires (photographe, agence, etc.)
-- IDs format: ${agent.prefix}-${String(nextId).padStart(3, "0")}, ${agent.prefix}-${String(nextId + 1).padStart(3, "0")}, etc.
+- IDs format: ${agent.prefix}-${String(nextId).padStart(3, "0")}, ${agent.prefix}-${String(nextId + 1).padStart(3, "0")}, etc.${DRAFT_CAPABLE[agent.id] ? `
+- Maximum 2 drafts par run (les plus pertinents pour cette semaine)
+- Les drafts seront approuvés par l'humain avant publication réelle` : ""}
 - Retourne UNIQUEMENT le JSON, aucun texte avant ou après`;
 }
 
@@ -367,7 +410,42 @@ export async function onRequest(context) {
       }
 
       const actions = parsed.actions || [];
-      let inserted = 0, updated = 0;
+      const drafts  = parsed.drafts || [];
+      let inserted = 0, updated = 0, draftsCreated = 0;
+
+      // ── Insertion des drafts (si l'agent en a généré) ────────────────────
+      if (drafts.length > 0 && DRAFT_CAPABLE[agent.id]) {
+        // S'assurer que la table existe (auto-init)
+        try {
+          await db.prepare(`CREATE TABLE IF NOT EXISTS agent_drafts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            agent TEXT NOT NULL, agent_label TEXT, agent_emoji TEXT,
+            type TEXT NOT NULL, payload TEXT NOT NULL, rationale TEXT, preview TEXT,
+            status TEXT NOT NULL DEFAULT 'pending', result TEXT,
+            created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+            updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+            approved_at INTEGER, published_at INTEGER
+          )`).run();
+        } catch {}
+
+        for (const draft of drafts.slice(0, 2)) {
+          if (!draft.type || !draft.payload) continue;
+          if (!DRAFT_CAPABLE[agent.id].types.includes(draft.type)) continue;
+          try {
+            await db.prepare(`
+              INSERT INTO agent_drafts
+                (agent, agent_label, agent_emoji, type, payload, rationale, preview, status, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
+            `).bind(
+              agent.id, agent.label, agent.emoji,
+              draft.type, JSON.stringify(draft.payload),
+              draft.rationale || null, draft.preview || null,
+              now, now
+            ).run();
+            draftsCreated++;
+          } catch (e) {}
+        }
+      }
 
       // Upsert dans D1
       for (const row of actions) {
@@ -420,7 +498,7 @@ export async function onRequest(context) {
         `).bind(agent.id, "model", model).run().catch(() => {});
       }
 
-      return { agent: agent.id, model, ok: true, inserted, updated, actions: actions.length, context_size: history.length };
+      return { agent: agent.id, model, ok: true, inserted, updated, drafts: draftsCreated, actions: actions.length, context_size: history.length };
     } catch (e) {
       return { agent: agent.id, error: e.message };
     }

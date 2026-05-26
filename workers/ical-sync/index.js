@@ -1631,6 +1631,9 @@ export default {
         // ── Analyse autonome des 17 agents (GROQ_API_KEY requis dans les secrets CF Pages) ──
         if (env.GROQ_API_KEY) {
           const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+          let agentsData = {};
+          let orchData   = {};
+
           try {
             console.log("[agents-run] Démarrage analyse autonome 17 agents...");
             const agentsRes = await fetch(`${siteUrl}/api/agents-run`, {
@@ -1638,7 +1641,7 @@ export default {
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ agents: "all" }),
             });
-            const agentsData = await agentsRes.json().catch(() => ({}));
+            agentsData = await agentsRes.json().catch(() => ({}));
             console.log(`[agents-run] ✓ ${agentsData.ok_count || 0} OK / ${agentsData.error_count || 0} erreurs`);
           } catch (e) {
             console.error("[agents-run] Cron error:", e.message);
@@ -1652,10 +1655,102 @@ export default {
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ trigger: "cron-daily", event_data: { cron: "0 9 * * *" } }),
             });
-            const orchData = await orchRes.json().catch(() => ({}));
+            orchData = await orchRes.json().catch(() => ({}));
             console.log(`[orchestrateur] ✓ Run #${orchData.run?.id || "?"} — ${orchData.run?.summary?.slice(0, 80) || "ok"}`);
           } catch (e) {
             console.error("[orchestrateur] Cron error:", e.message);
+          }
+
+          // ── Digest email quotidien ─────────────────────────────────────────
+          if (env.RESEND_API_KEY && orchData.run) {
+            try {
+              const run       = orchData.run;
+              const today     = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+              const okCount   = agentsData.ok_count    || 0;
+              const errCount  = agentsData.error_count || 0;
+              const durationS = run.duration_ms ? `${(run.duration_ms / 1000).toFixed(1)}s` : "?";
+
+              // Désérialiser urgences / synergies / decisions
+              let urgences  = [];
+              let synergies = [];
+              let decisions = [];
+              try { urgences  = JSON.parse(run.urgences  || "[]"); } catch {}
+              try { synergies = JSON.parse(run.synergies || "[]"); } catch {}
+              try { decisions = JSON.parse(run.decisions || "[]"); } catch {}
+
+              const urgencesHtml = urgences.length
+                ? urgences.map(u => `<li>🔴 <strong>[${u.action_id}]</strong> ${u.raison}</li>`).join("")
+                : "<li><em>Aucune urgence détectée</em></li>";
+
+              const synergiesHtml = synergies.length
+                ? synergies.map(s => `<li>🔗 <strong>${(s.agents || []).join(" + ")}</strong> — ${s.opportunite}</li>`).join("")
+                : "<li><em>Aucune synergie identifiée</em></li>";
+
+              const decisionsHtml = decisions.length
+                ? decisions.map(d => `<li>✅ <strong>${d.type}</strong> — ${d.details}</li>`).join("")
+                : "<li><em>Aucune décision</em></li>";
+
+              const html = `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#0f172a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <div style="max-width:600px;margin:32px auto;background:#1e293b;border-radius:12px;overflow:hidden;">
+
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#1d4ed8,#7c3aed);padding:28px 32px;">
+      <div style="font-size:11px;color:#93c5fd;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">Amaryllis Locations</div>
+      <h1 style="margin:0;color:#fff;font-size:22px;font-weight:700;">🧠 Digest IA — ${today}</h1>
+      <div style="margin-top:8px;color:#bfdbfe;font-size:13px;">${okCount} agents analysés · ${errCount} erreur${errCount > 1 ? "s" : ""} · ${durationS}</div>
+    </div>
+
+    <!-- Synthèse -->
+    <div style="padding:24px 32px;border-bottom:1px solid #334155;">
+      <div style="font-size:11px;color:#64748b;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Situation globale</div>
+      <p style="margin:0;color:#e2e8f0;font-size:15px;line-height:1.6;">${run.summary || "Analyse non disponible."}</p>
+    </div>
+
+    <!-- Urgences -->
+    <div style="padding:24px 32px;border-bottom:1px solid #334155;">
+      <div style="font-size:11px;color:#64748b;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">⚡ Urgences</div>
+      <ul style="margin:0;padding-left:20px;color:#fca5a5;font-size:14px;line-height:1.8;">${urgencesHtml}</ul>
+    </div>
+
+    <!-- Synergies -->
+    <div style="padding:24px 32px;border-bottom:1px solid #334155;">
+      <div style="font-size:11px;color:#64748b;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">🔗 Synergies détectées</div>
+      <ul style="margin:0;padding-left:20px;color:#93c5fd;font-size:14px;line-height:1.8;">${synergiesHtml}</ul>
+    </div>
+
+    <!-- Décisions -->
+    <div style="padding:24px 32px;border-bottom:1px solid #334155;">
+      <div style="font-size:11px;color:#64748b;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">✅ Décisions d'orchestration</div>
+      <ul style="margin:0;padding-left:20px;color:#86efac;font-size:14px;line-height:1.8;">${decisionsHtml}</ul>
+    </div>
+
+    <!-- Footer -->
+    <div style="padding:20px 32px;text-align:center;">
+      <a href="${siteUrl}/admin" style="display:inline-block;padding:10px 24px;background:#1d4ed8;color:#fff;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;">Ouvrir le dashboard →</a>
+      <p style="margin:16px 0 0;color:#475569;font-size:11px;">Amaryllis Locations · Généré automatiquement chaque matin à 9h UTC</p>
+    </div>
+
+  </div>
+</body>
+</html>`;
+
+              const toEmail = env.NOTIFICATION_EMAIL || "contact@villamaryllis.com";
+              const fromAddr = env.RESEND_FROM || "Amaryllis <notifications@mail.villamaryllis.com>";
+
+              const r = await fetch("https://api.resend.com/emails", {
+                method: "POST",
+                headers: { "Authorization": `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+                body: JSON.stringify({ from: fromAddr, to: toEmail, subject: `🧠 Digest IA Amaryllis — ${today}`, html }),
+              });
+              if (!r.ok) console.error("[digest] Erreur Resend:", await r.text());
+              else console.log(`[digest] ✓ Email envoyé à ${toEmail}`);
+            } catch (e) {
+              console.error("[digest] Erreur:", e.message);
+            }
           }
         }
       })());
