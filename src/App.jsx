@@ -10305,21 +10305,17 @@ function EditorialCalendarTab({ mob }) {
   async function genDraftNow(entry) {
     setGenerating(entry.id);
     try {
-      // Construire un brief enrichi pour community-manager
+      // Brief enrichi pour community-manager
       const brief = `BRIEF CALENDAR (date=${new Date(entry.scheduled_at*1000).toLocaleDateString("fr-FR")}, bien=${entry.bien_id}, thème=${entry.theme}, variante=${entry.variante}, format=${entry.format}, photo=${entry.photo_url}, cta=${entry.cta}). Génère UN draft social_post selon ce brief précis.`;
+      // ⚠️ calendar_id passé au serveur → il liera draft_id + status automatiquement
       const r = await fetch("/api/agents-run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ agents: ["community-manager"], brief }),
+        body: JSON.stringify({ agents: ["community-manager"], brief, calendar_id: entry.id }),
       });
       const d = await r.json();
       const drafts = d.results?.[0]?.drafts || 0;
-      // Mettre à jour le statut
-      await fetch(`/api/editorial-calendar?id=${entry.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: drafts > 0 ? "drafted" : "failed" }),
-      });
+      // Pas de PATCH manuel : agents-run.js gère le statut + draft_id côté serveur
       setToast({ message: drafts > 0 ? `Draft généré ✅ (voir Approbations)` : "Échec génération", success: drafts > 0 });
       load();
     } catch (e) { setToast({ error: e.message }); }
