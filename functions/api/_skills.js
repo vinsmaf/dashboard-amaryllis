@@ -28,3 +28,4 @@ export const AGENT_SKILLS = {
 export function getSkillForAgent(agentId) {
   return AGENT_SKILLS[agentId] || null;
 }
+// secrets refresh Tue May 26 19:33:54 AST 2026
