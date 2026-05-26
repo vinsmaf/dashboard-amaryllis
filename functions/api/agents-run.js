@@ -6,6 +6,7 @@
 //   - Le Worker cron quotidien (workers/ical-sync/index.js) à 9h UTC
 
 import { getSkillForAgent } from "./_skills.js";
+import { callLLM } from "./_llm.js";
 
 const CORS = {
   "Content-Type": "application/json",
@@ -168,36 +169,58 @@ const GROQ_MODELS = [
   { model: "llama-3.2-3b-preview",                      tier: "fast"   }, // mini rapide
 ];
 
-// Attribution agent → modèle (modèles ACTIFS Groq, vérifiés mai 2026)
-// llama-3.2-*-vision-preview est décommissionné → supprimé partout.
-// llama-3.3-70b a un TPM bas, réservé à community-manager (drafts).
-// Distribution équilibrée pour éviter rate limits 429.
-const AGENT_MODELS = {
-  // ─── llama-3.3-70b-versatile (slow but smart) : 1 agent seulement ────────
-  "community-manager":          "llama-3.3-70b-versatile",                   // drafts sociaux + reviews
-  // ─── llama-4-scout (8 agents) — analyses générales ──────────────────────
-  "juriste-compliance":         "meta-llama/llama-4-scout-17b-16e-instruct",
-  "revenue-manager":            "meta-llama/llama-4-scout-17b-16e-instruct",
-  "traffic-manager":            "meta-llama/llama-4-scout-17b-16e-instruct",
-  "chef-produit-web":           "meta-llama/llama-4-scout-17b-16e-instruct",
-  "commercial-publicite":       "meta-llama/llama-4-scout-17b-16e-instruct",
-  "consultant-ebusiness":       "meta-llama/llama-4-scout-17b-16e-instruct",
-  "developpeur-multimedia":     "meta-llama/llama-4-scout-17b-16e-instruct",
-  "photographe-da":             "meta-llama/llama-4-scout-17b-16e-instruct",
-  // ─── llama-3.1-8b-instant (8 agents) — agents rapides ───────────────────
-  "webdesigner":                "llama-3.1-8b-instant",
-  "webmaster":                  "llama-3.1-8b-instant",
-  "data-analyst":               "llama-3.1-8b-instant",
-  "architecte-reseau":          "llama-3.1-8b-instant",
-  "crm-manager":                "llama-3.1-8b-instant",
-  "responsable-service-client": "llama-3.1-8b-instant",
-  "responsable-logistique":     "llama-3.1-8b-instant",
-  "seo-content-writer":         "llama-3.1-8b-instant",
+// Tier de modèle par agent (multi-provider via callLLM)
+// fast   = llama-3.1-8b ou équivalent (analyses rapides, peu d'enjeu créatif)
+// medium = llama-4-scout / mistral-medium (équilibre qualité/vitesse)
+// smart  = llama-3.3-70b / mistral-large (raisonnement + créativité)
+const AGENT_TIERS = {
+  // smart — drafts à forte valeur créative
+  "community-manager":          "smart",
+  "crm-manager":                "smart",
+  // medium — analyses business avec contexte riche
+  "revenue-manager":            "medium",
+  "juriste-compliance":         "medium",
+  "traffic-manager":            "medium",
+  "chef-produit-web":           "medium",
+  "commercial-publicite":       "medium",
+  "consultant-ebusiness":       "medium",
+  "seo-content-writer":         "medium",
+  "developpeur-multimedia":     "medium",
+  "photographe-da":             "medium",
+  // fast — analyses techniques ou opérationnelles routinières
+  "webdesigner":                "fast",
+  "webmaster":                  "fast",
+  "data-analyst":               "fast",
+  "architecte-reseau":          "fast",
+  "responsable-service-client": "fast",
+  "responsable-logistique":     "fast",
 };
 
-// Fallback : si un modèle échoue avec rate limit persistant, on bascule sur
-// llama-4-scout (le plus robuste observé).
-const FALLBACK_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
+// Provider préféré par agent (cascade vers les autres si échec)
+// Distribution équilibrée pour éviter saturation d'un seul provider.
+const AGENT_PREFERRED_PROVIDER = {
+  // Groq (8 agents) — rapide, free tier généreux
+  "juriste-compliance":         "groq",
+  "revenue-manager":            "groq",
+  "traffic-manager":            "groq",
+  "chef-produit-web":           "groq",
+  "commercial-publicite":       "groq",
+  "consultant-ebusiness":       "groq",
+  "responsable-service-client": "groq",
+  "webdesigner":                "groq",
+  // Cloudflare AI (5 agents) — bucket séparé, latence faible
+  "community-manager":          "cloudflare",
+  "crm-manager":                "cloudflare",
+  "seo-content-writer":         "cloudflare",
+  "developpeur-multimedia":     "cloudflare",
+  "photographe-da":             "cloudflare",
+  // Cerebras (2 agents) — ultra-rapide pour analyses simples
+  "webmaster":                  "cerebras",
+  "data-analyst":               "cerebras",
+  // Mistral (2 agents) — FR-native pour contenu opérationnel
+  "architecte-reseau":          "mistral",
+  "responsable-logistique":     "mistral",
+};
 
 // ── Récupère l'historique D1 d'un agent ────────────────────────────────────
 // Stratégie : tout l'historique non-faits (max 80) + les 40 faits les plus récents.
@@ -515,8 +538,10 @@ export async function onRequest(context) {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   if (request.method !== "POST") return json({ error: "POST only" }, 405);
 
-  const apiKey = env.GROQ_API_KEY;
-  if (!apiKey) return json({ error: "GROQ_API_KEY not configured in Cloudflare Pages env vars" }, 503);
+  // Vérifie qu'au moins un provider LLM est configuré
+  if (!env.GROQ_API_KEY && !env.CF_AI_TOKEN && !env.MISTRAL_API_KEY && !env.CEREBRAS_API_KEY) {
+    return json({ error: "No LLM provider configured (GROQ_API_KEY, CF_AI_TOKEN, MISTRAL_API_KEY ou CEREBRAS_API_KEY)" }, 503);
+  }
 
   const db = env.revenue_manager;
   if (!db) return json({ error: "D1 binding 'revenue_manager' not found" }, 503);
@@ -545,66 +570,28 @@ export async function onRequest(context) {
         memories = mems || [];
       } catch {}
 
-      // Modèle assigné à cet agent (bucket de rate limit distinct)
-      const model = AGENT_MODELS[agent.id] || "llama-3.3-70b-versatile";
+      // ── Appel LLM multi-provider avec cascade automatique ──────────────
+      const tier      = AGENT_TIERS[agent.id] || "medium";
+      const preferred = AGENT_PREFERRED_PROVIDER[agent.id] || "groq";
 
-      const groqBody = JSON.stringify({
-        model,
-        max_tokens: 2048,  // augmenté pour drafts détaillés + multi-réponses
+      const llmResult = await callLLM(env, {
+        provider: preferred,
+        tier,
+        max_tokens: 2048,
         temperature: 0.3,
         messages: [{ role: "user", content: buildPrompt(agent, history, memories, recentDrafts) }],
       });
 
-      // Retry auto sur 429/400 + fallback model sur rate limit persistant
-      let res, attempt = 0;
-      let activeModel = model;
-      let activeBody = groqBody;
-      while (attempt < 5) {
-        const ctrl = new AbortController();
-        const timer = setTimeout(() => ctrl.abort(), 22000);
-        try {
-          res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
-            body: activeBody,
-            signal: ctrl.signal,
-          });
-        } finally {
-          clearTimeout(timer);
-        }
-        if (res.status === 200) break;
-        // 400 non-rate = vraie erreur, on stop
-        if (res.status === 400) {
-          const errText = await res.clone().text().catch(() => "");
-          const isRateOrDecommissioned = errText.includes("rate") || errText.includes("token")
-                                       || errText.includes("decommissioned");
-          if (!isRateOrDecommissioned) break;
-          // Si modèle décommissionné, basculer immédiatement sur fallback
-          if (errText.includes("decommissioned") && activeModel !== FALLBACK_MODEL) {
-            activeModel = FALLBACK_MODEL;
-            activeBody = JSON.stringify({ ...JSON.parse(groqBody), model: activeModel });
-            attempt++;
-            continue;
-          }
-        }
-        // 429 ou 400 rate : retry après backoff
-        if (res.status !== 429 && res.status !== 400) break;
-        attempt++;
-        // Après 3 retries échoués, bascule sur le modèle de fallback
-        if (attempt >= 3 && activeModel !== FALLBACK_MODEL) {
-          activeModel = FALLBACK_MODEL;
-          activeBody = JSON.stringify({ ...JSON.parse(groqBody), model: activeModel });
-        }
-        await new Promise(r => setTimeout(r, 2000 * attempt));
+      if (!llmResult.ok) {
+        return {
+          agent: agent.id,
+          error: "All providers failed",
+          attempts: llmResult.errors,
+        };
       }
 
-      if (!res.ok) {
-        const errBody = await res.text().catch(() => "");
-        return { agent: agent.id, model: activeModel, error: `Groq ${res.status}`, detail: errBody.slice(0, 100) };
-      }
-
-      const data = await res.json();
-      const text = data.choices?.[0]?.message?.content || "";
+      const activeModel = `${llmResult.provider}:${llmResult.model}`;
+      const text = llmResult.text;
 
       // Parser le JSON
       let parsed;
@@ -700,18 +687,17 @@ Retourne UNIQUEMENT un JSON :
 
 Si verdict=reject : "improved_blocks": null`;
 
-              const valRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
-                body: JSON.stringify({
-                  model: "llama-3.3-70b-versatile",  // modèle plus puissant pour réécrire
-                  max_tokens: 1500, temperature: 0.4,  // un peu de créativité pour la réécriture
-                  messages: [{ role: "user", content: validatorPrompt }],
-                }),
+              // Validator via callLLM multi-provider — tier=smart pour reformatage qualitatif
+              // Démarre sur Mistral (FR-native) si dispo, sinon cascade.
+              const valResult = await callLLM(env, {
+                provider: "mistral",
+                tier: "smart",
+                max_tokens: 1500,
+                temperature: 0.4,
+                messages: [{ role: "user", content: validatorPrompt }],
               });
-              if (valRes.ok) {
-                const valData = await valRes.json();
-                const valText = valData.choices?.[0]?.message?.content || "";
+              if (valResult.ok) {
+                const valText = valResult.text;
                 const match = valText.match(/\{[\s\S]*\}/);
                 if (match) {
                   const parsed = JSON.parse(match[0]);
