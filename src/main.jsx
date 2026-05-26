@@ -54,6 +54,7 @@ import CookieBanner from './CookieBanner.jsx'
 import ChatWidget from './ChatWidget.jsx'
 const GuestGuide      = lazy(() => import('./GuestGuide.jsx'))
 const Merci           = lazy(() => import('./Merci.jsx'))
+const Links           = lazy(() => import('./Links.jsx'))
 const StoriesTemplate = lazy(() => import('./StoriesTemplate.jsx'))
 const MenageGuide     = lazy(() => import('./MenageGuide.jsx'))
 
@@ -76,7 +77,7 @@ const params = new URLSearchParams(window.location.search);
 const cautionParam = params.get("caution"); // "ok" | "cancelled"
 
 const BIEN_IDS = ["amaryllis", "zandoli", "iguana", "geko", "mabouya", "schoelcher", "nogent"];
-const KNOWN = ["/", "/merci", "/devis", "/guide", "/explorer", "/guide-le-diamant", "/guide-sainte-anne", "/villa-rental-martinique", "/activites-sainte-luce", "/guide-proximite", "/guide-arlet", "/guide-trois-ilets", "/guide-plongee-martinique", "/guide-saint-pierre-martinique", "/guide-francois-martinique", "/guide-distilleries-martinique", "/guide-randonnees-martinique", "/guide-gastronomie-martinique", "/avis", "/faq", "/mentions-legales", "/politique-confidentialite", "/conditions-generales", "/sainte-luce-martinique", "/reservation-directe-martinique", "/meilleure-saison-martinique", "/seminaires", "/guide-nogent-sur-marne", "/location-villa-martinique-piscine"];
+const KNOWN = ["/", "/links", "/merci", "/devis", "/guide", "/explorer", "/guide-le-diamant", "/guide-sainte-anne", "/villa-rental-martinique", "/activites-sainte-luce", "/guide-proximite", "/guide-arlet", "/guide-trois-ilets", "/guide-plongee-martinique", "/guide-saint-pierre-martinique", "/guide-francois-martinique", "/guide-distilleries-martinique", "/guide-randonnees-martinique", "/guide-gastronomie-martinique", "/avis", "/faq", "/mentions-legales", "/politique-confidentialite", "/conditions-generales", "/sainte-luce-martinique", "/reservation-directe-martinique", "/meilleure-saison-martinique", "/seminaires", "/guide-nogent-sur-marne", "/location-villa-martinique-piscine"];
 const isKnown = KNOWN.includes(path)
   || path.startsWith("/admin")
   || path.startsWith("/landing")
@@ -93,6 +94,8 @@ if (!isKnown) {
   Component = App;
 } else if (path.startsWith("/landing")) {
   Component = Landing;
+} else if (path === "/links") {
+  Component = Links;
 } else if (path === "/guide") {
   Component = Guide;
 } else if (path === "/guide-le-diamant") {

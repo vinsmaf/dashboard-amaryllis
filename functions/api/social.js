@@ -84,11 +84,21 @@ async function handlePosts(env, limit = 12) {
   });
 }
 
+// Extrait l'URL Amaryllis du caption (1ère URL https://villamaryllis.com/X trouvée)
+function extractAmaryllisUrl(caption) {
+  if (!caption) return null;
+  const m = caption.match(/https?:\/\/villamaryllis\.com\/[a-z\-]+/i);
+  return m ? m[0] : null;
+}
+
 // POST /api/social — publish
 // Note: le compte Instagram est un PBIA (page-backed Instagram account).
 // Poster sur la Page Facebook publie automatiquement sur Instagram aussi.
 // Donc "ig" et "fb" envoient tous les deux vers la Page Facebook.
-async function handlePublish(env, { caption, imageUrl, channels = ["ig", "fb"] }) {
+//
+// Auto-comment : on poste le lien direct en 1er commentaire (cliquable sur FB,
+// au moins visible/copiable sur Instagram → contourne la limitation IG).
+async function handlePublish(env, { caption, imageUrl, channels = ["ig", "fb"], firstComment }) {
   const token  = env.META_PAGE_TOKEN;
   const pageId = env.META_PAGE_ID;
 
@@ -98,22 +108,44 @@ async function handlePublish(env, { caption, imageUrl, channels = ["ig", "fb"] }
 
   // Un seul post vers la Page Facebook publie sur FB + Instagram (PBIA)
   const shouldPost = channels.includes("fb") || channels.includes("ig");
+  let publishedPostId = null;
   if (shouldPost) {
     try {
       if (imageUrl) {
         const r = await graphPost(`${pageId}/photos`, token, { url: imageUrl, caption });
         const result = r.error ? { error: r.error.message } : { id: r.id, ok: true };
+        if (result.ok) publishedPostId = r.post_id || r.id;
         if (channels.includes("fb")) results.fb = result;
         if (channels.includes("ig")) results.ig = { ...result, note: "Via Page Facebook (PBIA)" };
       } else {
         const r = await graphPost(`${pageId}/feed`, token, { message: caption });
         const result = r.error ? { error: r.error.message } : { id: r.id, ok: true };
+        if (result.ok) publishedPostId = r.id;
         if (channels.includes("fb")) results.fb = result;
         if (channels.includes("ig")) results.ig = { error: "Instagram nécessite une image" };
       }
     } catch (e) {
       if (channels.includes("fb")) results.fb = { error: e.message };
       if (channels.includes("ig")) results.ig = { error: e.message };
+    }
+  }
+
+  // ── Premier commentaire automatique avec le lien direct ──────────────────
+  // Astuce : le 1er commentaire de la Page est cliquable sur FB. Sur Instagram,
+  // les commentaires ne sont pas cliquables non plus, mais au moins le lien est
+  // visible et copiable (vs caption où l'URL serait parsée différemment).
+  if (publishedPostId) {
+    const linkUrl = extractAmaryllisUrl(caption);
+    const commentText = firstComment || (linkUrl
+      ? `🔗 Réservez directement ici : ${linkUrl}\n\n👉 Ou retrouvez tous nos hébergements : https://villamaryllis.com/links`
+      : null);
+    if (commentText) {
+      try {
+        const cr = await graphPost(`${publishedPostId}/comments`, token, { message: commentText });
+        results.first_comment = cr.error ? { error: cr.error.message } : { id: cr.id, ok: true };
+      } catch (e) {
+        results.first_comment = { error: e.message };
+      }
     }
   }
 
