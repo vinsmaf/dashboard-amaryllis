@@ -10494,8 +10494,8 @@ function EditorialCalendarTab({ mob }) {
                             {theme.emoji} {bien.label.replace("Villa ","").slice(0, 10)}
                           </div>
                           <div style={{ fontSize: 9, color: "#64748b", marginBottom: 4 }}>{e.format}</div>
-                          {/* Bouton Générer pour les entrées planifiées */}
-                          {e.status === "planned" && (
+                          {/* Bouton Générer / Régénérer pour planned + failed */}
+                          {(e.status === "planned" || e.status === "failed") && (
                             <button
                               onClick={(ev) => { ev.stopPropagation(); genDraftNow(e); }}
                               disabled={isGen}
@@ -10505,7 +10505,7 @@ function EditorialCalendarTab({ mob }) {
                                 cursor: isGen ? "wait" : "pointer", opacity: isGen ? 0.6 : 1,
                                 width: "100%",
                               }}
-                            >{isGen ? "..." : "✏️ Générer"}</button>
+                            >{isGen ? "..." : (e.status === "failed" ? "🔄 Régénérer" : "✏️ Générer")}</button>
                           )}
                           {/* Lien rapide vers Approbations pour les drafts prêts */}
                           {e.status === "drafted" && (
@@ -10563,7 +10563,7 @@ function EditorialCalendarTab({ mob }) {
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-end" }}>
                   <span style={{ fontSize: 10, fontWeight: 700, color: status.c }}>{status.label}</span>
-                  {e.status === "planned" && (
+                  {(e.status === "planned" || e.status === "failed") && (
                     <button
                       onClick={() => genDraftNow(e)}
                       disabled={generating === e.id}
@@ -10573,7 +10573,7 @@ function EditorialCalendarTab({ mob }) {
                         opacity: generating === e.id ? 0.5 : 1,
                       }}
                     >
-                      {generating === e.id ? "..." : "✏️ Générer"}
+                      {generating === e.id ? "..." : (e.status === "failed" ? "🔄 Régénérer" : "✏️ Générer")}
                     </button>
                   )}
                 </div>

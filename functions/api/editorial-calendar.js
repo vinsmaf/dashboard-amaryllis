@@ -103,19 +103,54 @@ const VARIANTES = {
   ],
 };
 
-// Rotation des biens selon target occurrences
-function pickBienForDay(dayIndex, themeKey) {
-  // Séquence d'apparition équitable sur 30 jours
-  // amaryllis 5 / nogent 5 / iguana 5 / zandoli 4 / geko 4 / mabouya 4 / schoelcher 4
-  const SEQUENCE = [
-    "amaryllis", "mabouya", "zandoli", "iguana", "nogent",        // S1 j1-j5
-    "schoelcher", "geko", "iguana", "amaryllis", "mabouya",       // S1 j6-j10
-    "zandoli", "schoelcher", "nogent", "amaryllis", "geko",       // S2 j11-j15
-    "iguana", "amaryllis", "mabouya", "zandoli", "iguana",        // S2 j16-j20
-    "schoelcher", "mabouya", "geko", "nogent", "amaryllis",       // S3 j21-j25
-    "iguana", "zandoli", "nogent", "schoelcher", "amaryllis",     // S3 j26-j30
-  ];
-  return SEQUENCE[dayIndex % SEQUENCE.length];
+// Biens exclus du planning éditorial (loués à l'année, indisponibles, etc.)
+// Configurable via body.excluded_biens ou par défaut ci-dessous
+const DEFAULT_EXCLUDED_BIENS = ["iguana"]; // Villa Iguana : louée à l'année
+
+// Rotation des biens selon target occurrences — séquence sans les exclus
+const FULL_SEQUENCE = [
+  "amaryllis", "mabouya", "zandoli", "nogent",        // S1 j1-j4
+  "schoelcher", "geko", "amaryllis", "mabouya",       // S1 j5-j8
+  "zandoli", "schoelcher", "nogent", "amaryllis",     // S2 j9-j12
+  "geko", "amaryllis", "mabouya", "zandoli",          // S2 j13-j16
+  "schoelcher", "mabouya", "geko", "nogent",          // S3 j17-j20
+  "amaryllis", "zandoli", "nogent", "schoelcher",     // S3 j21-j24
+  "amaryllis", "geko", "mabouya", "zandoli",          // S4 j25-j28
+  "nogent", "amaryllis",                              // S4 j29-j30
+];
+
+function pickBienForDay(dayIndex, excludedSet) {
+  // Filtre la séquence pour skip les biens exclus
+  const available = FULL_SEQUENCE.filter(b => !excludedSet.has(b));
+  if (available.length === 0) return null;
+  return available[dayIndex % available.length];
+}
+
+// Récupère les biens occupés sur la période (depuis Beds24 via API interne)
+async function fetchOccupiedBiens(env, fromTs, toTs) {
+  const occupied = new Set();
+  try {
+    const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+    const fromYMD = new Date(fromTs * 1000).toISOString().slice(0, 10);
+    const toYMD   = new Date(toTs * 1000).toISOString().slice(0, 10);
+    // Si > 80% de la période est bloquée par des réservations, on skip ce bien
+    // Sources : Beds24 pour Nogent, iCal Airbnb/Booking pour les autres
+    const BIENS = ["amaryllis", "zandoli", "iguana", "geko", "mabouya", "schoelcher", "nogent"];
+    for (const bien of BIENS) {
+      try {
+        const r = await fetch(`${siteUrl}/api/get-availability?bienId=${bien}`, { headers: { "User-Agent": "editorial-cron" } });
+        if (!r.ok) continue;
+        const data = await r.json();
+        const busy = (data.busyDays || []).filter(d => {
+          const dt = new Date(d).getTime() / 1000;
+          return dt >= fromTs && dt <= toTs;
+        });
+        const periodDays = Math.max(1, Math.ceil((toTs - fromTs) / 86400));
+        if (busy.length / periodDays > 0.8) occupied.add(bien);
+      } catch {}
+    }
+  } catch {}
+  return occupied;
 }
 
 function dateToUnix(yyyymmdd) {
@@ -132,8 +167,16 @@ async function handleSeed30Days(env, db, body) {
   const startDay  = new Date(startTs * 1000).getUTCDay();
   const endTs     = startTs + 30 * 86400;
 
-  // ── Anti-doublon : si une entrée existe déjà pour une date de la plage,
-  //    on la skip plutôt que de la dupliquer
+  // ── Exclusions :
+  //   1. Defaults (Iguana loué à l'année)
+  //   2. Body.excluded_biens si fourni
+  //   3. Biens occupés > 80% sur la période (auto-detect via Beds24/iCal)
+  const excludedManual  = new Set([...DEFAULT_EXCLUDED_BIENS, ...(body.excluded_biens || [])]);
+  const skipOccupancy   = body.skip_occupancy_check === true;
+  const autoExcluded    = skipOccupancy ? new Set() : await fetchOccupiedBiens(env, startTs, endTs);
+  const excludedSet     = new Set([...excludedManual, ...autoExcluded]);
+
+  // Anti-doublon : skip dates déjà planifiées
   let existingDates = new Set();
   try {
     const { results } = await db.prepare(
@@ -142,18 +185,21 @@ async function handleSeed30Days(env, db, body) {
     existingDates = new Set((results || []).map(r => unixToYMD(r.scheduled_at)));
   } catch {}
 
-  let inserted = 0, skipped = 0;
+  let inserted = 0, skipped = 0, dayCursor = 0;
   const entries = [];
 
   for (let i = 0; i < 30; i++) {
-    const ts        = startTs + i * 86400;
-    const date      = unixToYMD(ts);
+    const ts   = startTs + i * 86400;
+    const date = unixToYMD(ts);
     if (existingDates.has(date)) { skipped++; continue; }
+
+    const bienId = pickBienForDay(dayCursor, excludedSet);
+    if (!bienId) { skipped++; continue; } // tous les biens exclus
+    dayCursor++;
 
     const dow       = (startDay + i) % 7;
     const tplDay    = dow === 0 ? 7 : dow;
     const tpl       = WEEKLY_TEMPLATE.find(t => t.day === tplDay) || WEEKLY_TEMPLATE[0];
-    const bienId    = pickBienForDay(i, tpl.theme);
     const weekIdx   = Math.floor(i / 7);
     const variante  = VARIANTES[tpl.theme][weekIdx % 4];
     const photoNum  = String((i % 12) + 1).padStart(2, "0");
@@ -171,7 +217,15 @@ async function handleSeed30Days(env, db, body) {
     } catch (e) {}
   }
 
-  return json({ ok: true, inserted, skipped, message: skipped > 0 ? `${skipped} jours déjà planifiés (skippés), ${inserted} ajoutés` : `${inserted} jours planifiés` });
+  return json({
+    ok: true, inserted, skipped,
+    excluded_biens: [...excludedSet],
+    excluded_reason: {
+      manual: [...excludedManual],
+      auto_occupied: [...autoExcluded],
+    },
+    message: `${inserted} jours planifiés${skipped ? ` (${skipped} skippés)` : ""}${excludedSet.size ? ` · biens exclus: ${[...excludedSet].join(", ")}` : ""}`,
+  });
 }
 
 export async function onRequest(context) {
