@@ -278,20 +278,26 @@ export async function onRequest(context) {
         memories = mems || [];
       } catch {}
 
-      // Appel API Groq (llama-3.1-8b-instant — rapide et économique pour 17 agents)
-      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: "llama-3.3-70b-versatile",
-          max_tokens: 1024,
-          temperature: 0.3,
-          messages: [{ role: "user", content: buildPrompt(agent, history, memories) }],
-        }),
+      // Appel API Groq avec retry auto sur 429 (rate limit)
+      const groqBody = JSON.stringify({
+        model: "llama-3.3-70b-versatile",
+        max_tokens: 1024,
+        temperature: 0.3,
+        messages: [{ role: "user", content: buildPrompt(agent, history, memories) }],
       });
+
+      let res, attempt = 0;
+      while (attempt < 3) {
+        res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+          body: groqBody,
+        });
+        if (res.status !== 429) break;
+        attempt++;
+        // Backoff exponentiel : 3s, 6s, 12s
+        await new Promise(r => setTimeout(r, 3000 * attempt));
+      }
 
       if (!res.ok) {
         results.push({ agent: agent.id, error: `Groq API ${res.status}` });
@@ -300,6 +306,9 @@ export async function onRequest(context) {
 
       const data = await res.json();
       const text = data.choices?.[0]?.message?.content || "";
+
+      // Délai 2s entre agents pour respecter le rate limit Groq
+      await new Promise(r => setTimeout(r, 2000));
 
       // Parser le JSON retourné par Claude
       let parsed;
