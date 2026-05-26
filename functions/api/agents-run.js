@@ -168,25 +168,24 @@ const GROQ_MODELS = [
   { model: "llama-3.2-3b-preview",                      tier: "fast"   }, // mini rapide
 ];
 
-// Attribution agent → modèle
-// ⚠️ TOUS les modèles utilisés DOIVENT avoir 128K context window pour accueillir
-// le skill injecté (5-9 KB) + historique D1 + mémoires + anti-répétition.
-// Buckets distincts pour éviter rate limits 429.
+// Attribution agent → modèle (modèles ACTIFS Groq, vérifiés mai 2026)
+// llama-3.2-*-vision-preview est décommissionné → supprimé partout.
+// llama-3.3-70b a un TPM bas, réservé à community-manager (drafts).
+// Distribution équilibrée pour éviter rate limits 429.
 const AGENT_MODELS = {
-  // ─── bucket llama-3.3-70b-versatile (128K) — analyses profondes ──────────
-  "juriste-compliance":         "llama-3.3-70b-versatile",                   // légal → raisonnement
-  "revenue-manager":            "llama-3.3-70b-versatile",                   // pricing
-  "community-manager":          "llama-3.3-70b-versatile",                   // drafts sociaux
-  // ─── bucket llama-4-scout (128K) — analyses générales ────────────────────
+  // ─── llama-3.3-70b-versatile (slow but smart) : 1 agent seulement ────────
+  "community-manager":          "llama-3.3-70b-versatile",                   // drafts sociaux + reviews
+  // ─── llama-4-scout (8 agents) — analyses générales ──────────────────────
+  "juriste-compliance":         "meta-llama/llama-4-scout-17b-16e-instruct",
+  "revenue-manager":            "meta-llama/llama-4-scout-17b-16e-instruct",
   "traffic-manager":            "meta-llama/llama-4-scout-17b-16e-instruct",
   "chef-produit-web":           "meta-llama/llama-4-scout-17b-16e-instruct",
   "commercial-publicite":       "meta-llama/llama-4-scout-17b-16e-instruct",
   "consultant-ebusiness":       "meta-llama/llama-4-scout-17b-16e-instruct",
-  // ─── bucket llama-3.2-11b-vision (128K) — créatif/media ──────────────────
-  "developpeur-multimedia":     "llama-3.2-11b-vision-preview",
-  "photographe-da":             "llama-3.2-11b-vision-preview",
-  "webdesigner":                "llama-3.2-11b-vision-preview",
-  // ─── bucket llama-3.1-8b-instant (128K) — agents rapides ─────────────────
+  "developpeur-multimedia":     "meta-llama/llama-4-scout-17b-16e-instruct",
+  "photographe-da":             "meta-llama/llama-4-scout-17b-16e-instruct",
+  // ─── llama-3.1-8b-instant (8 agents) — agents rapides ───────────────────
+  "webdesigner":                "llama-3.1-8b-instant",
   "webmaster":                  "llama-3.1-8b-instant",
   "data-analyst":               "llama-3.1-8b-instant",
   "architecte-reseau":          "llama-3.1-8b-instant",
@@ -195,6 +194,10 @@ const AGENT_MODELS = {
   "responsable-logistique":     "llama-3.1-8b-instant",
   "seo-content-writer":         "llama-3.1-8b-instant",
 };
+
+// Fallback : si un modèle échoue avec rate limit persistant, on bascule sur
+// llama-4-scout (le plus robuste observé).
+const FALLBACK_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 
 // ── Récupère l'historique D1 d'un agent (limite 40 derniers pour context) ─
 async function fetchAgentHistory(db, agentId) {
@@ -512,34 +515,52 @@ export async function onRequest(context) {
         messages: [{ role: "user", content: buildPrompt(agent, history, memories, recentDrafts) }],
       });
 
-      // Retry auto sur 429 ET 400 (Groq retourne parfois 400 = TPM exceeded en burst)
+      // Retry auto sur 429/400 + fallback model sur rate limit persistant
       let res, attempt = 0;
-      while (attempt < 4) {
+      let activeModel = model;
+      let activeBody = groqBody;
+      while (attempt < 5) {
         const ctrl = new AbortController();
         const timer = setTimeout(() => ctrl.abort(), 22000);
         try {
           res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
-            body: groqBody,
+            body: activeBody,
             signal: ctrl.signal,
           });
         } finally {
           clearTimeout(timer);
         }
-        if (res.status !== 429 && res.status !== 400) break;
-        // Sur 400, vérifier le body pour rate_limit
+        if (res.status === 200) break;
+        // 400 non-rate = vraie erreur, on stop
         if (res.status === 400) {
           const errText = await res.clone().text().catch(() => "");
-          if (!errText.includes("rate") && !errText.includes("token")) break; // 400 réel, pas rate limit
+          const isRateOrDecommissioned = errText.includes("rate") || errText.includes("token")
+                                       || errText.includes("decommissioned");
+          if (!isRateOrDecommissioned) break;
+          // Si modèle décommissionné, basculer immédiatement sur fallback
+          if (errText.includes("decommissioned") && activeModel !== FALLBACK_MODEL) {
+            activeModel = FALLBACK_MODEL;
+            activeBody = JSON.stringify({ ...JSON.parse(groqBody), model: activeModel });
+            attempt++;
+            continue;
+          }
         }
+        // 429 ou 400 rate : retry après backoff
+        if (res.status !== 429 && res.status !== 400) break;
         attempt++;
-        await new Promise(r => setTimeout(r, 2000 * attempt)); // 2s, 4s, 6s, 8s
+        // Après 3 retries échoués, bascule sur le modèle de fallback
+        if (attempt >= 3 && activeModel !== FALLBACK_MODEL) {
+          activeModel = FALLBACK_MODEL;
+          activeBody = JSON.stringify({ ...JSON.parse(groqBody), model: activeModel });
+        }
+        await new Promise(r => setTimeout(r, 2000 * attempt));
       }
 
       if (!res.ok) {
         const errBody = await res.text().catch(() => "");
-        return { agent: agent.id, model, error: `Groq ${res.status}`, detail: errBody.slice(0, 100) };
+        return { agent: agent.id, model: activeModel, error: `Groq ${res.status}`, detail: errBody.slice(0, 100) };
       }
 
       const data = await res.json();
@@ -551,7 +572,7 @@ export async function onRequest(context) {
         const match = text.match(/\{[\s\S]*\}/);
         parsed = JSON.parse(match ? match[0] : text);
       } catch {
-        return { agent: agent.id, model, error: "JSON parse failed", raw: text.slice(0, 200) };
+        return { agent: agent.id, model: activeModel, error: "JSON parse failed", raw: text.slice(0, 200) };
       }
 
       const actions = parsed.actions || [];
@@ -762,7 +783,7 @@ Si verdict=reject : "improved_blocks": null`;
         `).bind(agent.id, "model", model).run().catch(() => {});
       }
 
-      return { agent: agent.id, model, ok: true, inserted, updated, drafts: draftsCreated, actions: actions.length, context_size: history.length };
+      return { agent: agent.id, model: activeModel, ok: true, inserted, updated, drafts: draftsCreated, actions: actions.length, context_size: history.length };
     } catch (e) {
       return { agent: agent.id, error: e.message };
     }
