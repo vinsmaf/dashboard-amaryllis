@@ -10190,6 +10190,26 @@ function ApprobationsTab({ mob }) {
                   </div>
                 )}
 
+                {/* Affichage erreurs fact-check si présentes */}
+                {(() => {
+                  try {
+                    const r = JSON.parse(d.reviews || "{}");
+                    if (r.fact_check && !r.fact_check.passed) {
+                      return (
+                        <div style={{ padding: "10px 14px", background: "rgba(239,68,68,0.08)", borderTop: "1px solid rgba(239,68,68,0.2)" }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: "#ef4444", marginBottom: 6 }}>🚫 Fact-check échec — phrases interdites détectées :</div>
+                          {r.fact_check.errors.map((err, i) => (
+                            <div key={i} style={{ fontSize: 10, color: "#fca5a5", marginBottom: 3 }}>
+                              <strong>"{err.phrase}"</strong> — {err.reason}
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    }
+                  } catch {}
+                  return null;
+                })()}
+
                 {(d.status === "pending" || d.status === "approved") && (
                   <div style={{ display: "flex", gap: 8, padding: "10px 14px", background: "rgba(0,0,0,0.15)", flexWrap: "wrap" }}>
                     {isEditing ? (
