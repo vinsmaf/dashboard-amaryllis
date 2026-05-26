@@ -326,17 +326,31 @@ async function findSimilarExistingAction(db, agentId, actionText) {
     if (!newKey || newKey.length < 15) return null;
     if (newKwSet.size < 3) return null;
 
+    const newPrefix70 = newKey.slice(0, 70); // plus précis : inclut le bien
     for (const row of (results || [])) {
       const existKey      = normalizeForCompare(row.action);
       const existPrefix50 = existKey.slice(0, 50);
-      // Match 1 : 50 premiers chars identiques
-      if (existPrefix50 === newPrefix50) return row;
-      // Match 2 : Jaccard 55%+ sur mots-clés significatifs (sans stopwords)
+      const existPrefix70 = existKey.slice(0, 70);
+      // Match 1 : 70 premiers chars identiques (inclut le bien dans la plupart des cas)
+      if (existPrefix70 === newPrefix70 && newPrefix70.length >= 50) return row;
+      // Match 2 : 50 premiers chars identiques (verbe + objet généraux) + Jaccard fort sur le reste
+      if (existPrefix50 === newPrefix50) {
+        // On vérifie que le SUFFIXE (après les 50 premiers chars) est aussi similaire
+        const newSuffix    = newKey.slice(50);
+        const existSuffix  = existKey.slice(50);
+        const newSuffWords = new Set(newSuffix.split(" ").filter(w => w.length >= 4 && !STOPWORDS.has(w)));
+        const exiSuffWords = new Set(existSuffix.split(" ").filter(w => w.length >= 4 && !STOPWORDS.has(w)));
+        if (newSuffWords.size === 0 && exiSuffWords.size === 0) return row; // mêmes 50 chars + suffixes vides
+        const sufInter = [...newSuffWords].filter(w => exiSuffWords.has(w)).length;
+        const sufUnion = new Set([...newSuffWords, ...exiSuffWords]).size;
+        if (sufUnion >= 2 && sufInter / sufUnion >= 0.6) return row; // suffixe partagé à 60%+
+      }
+      // Match 3 : Jaccard 70%+ sur tous les mots significatifs (sécurité)
       const existKwSet = keywordsSet(row.action);
       if (existKwSet.size < 3) continue;
       const inter = [...newKwSet].filter(w => existKwSet.has(w)).length;
       const union = new Set([...newKwSet, ...existKwSet]).size;
-      if (union > 4 && inter / union >= 0.55) return row;
+      if (union > 5 && inter / union >= 0.70) return row;
     }
     return null;
   } catch { return null; }
@@ -662,7 +676,7 @@ Retourne un JSON strict avec cette structure :
 }
 
 Règles :
-- Maximum 6 actions NOUVELLES (les plus importantes non encore traitées)
+- Maximum 4 actions NOUVELLES (les plus importantes non encore traitées). PRIVILÉGIE LA QUALITÉ sur la quantité — mieux vaut 2 actions hyper-pertinentes que 6 vagues.
 - Priorité "critique" = risque légal, sécurité, perte revenus significative
 - Priorité "haute" = impact business direct mesurable
 - "ext" pour effort = ressources externes nécessaires (photographe, agence, etc.)
