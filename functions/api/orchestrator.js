@@ -154,44 +154,70 @@ Retourne un JSON strict (aucun texte avant ou après) :
     let synergies  = null;
     let agentsConsulted = AGENT_IDS.join(",");
 
-    try {
-      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: "llama-3.3-70b-versatile",
-          max_tokens: 2048,
-          temperature: 0.4,
-          messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            { role: "user", content: userMessage },
-          ],
-        }),
-      });
+    // Modèle dédié orchestrateur — bucket SÉPARÉ des agents (évite 429 post-run)
+    // llama3-70b-8192 = bucket différent de llama-3.3-70b-versatile utilisé par juriste/revenue-manager
+    const ORCH_MODELS = [
+      "llama3-70b-8192",                           // bucket propre à l'orchestrateur
+      "meta-llama/llama-4-scout-17b-16e-instruct", // fallback Llama 4
+      "llama3-8b-8192",                            // fallback rapide
+    ];
 
-      if (res.ok) {
-        const data = await res.json();
-        const text = data.choices?.[0]?.message?.content || "";
+    const groqBody = JSON.stringify({
+      max_tokens: 2048,
+      temperature: 0.4,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: userMessage },
+      ],
+    });
+
+    // Essaye chaque modèle jusqu'à succès (rotation si 429/400)
+    for (const model of ORCH_MODELS) {
+      try {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 25000); // 25s timeout
+        let res;
         try {
-          const match = text.match(/\{[\s\S]*\}/);
-          const parsed = JSON.parse(match ? match[0] : text);
-          summary   = parsed.summary   || null;
-          urgences  = parsed.urgences  ? JSON.stringify(parsed.urgences)  : null;
-          synergies = parsed.synergies ? JSON.stringify(parsed.synergies) : null;
-          decisions = parsed.decisions ? JSON.stringify(parsed.decisions) : null;
-        } catch {
-          summary = text.slice(0, 500);
+          res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+            body: JSON.stringify({ ...JSON.parse(groqBody), model }),
+            signal: ctrl.signal,
+          });
+        } finally { clearTimeout(timer); }
+
+        if (res.status === 429 || res.status === 400) {
+          const errText = await res.text().catch(() => "");
+          // Modèle rate-limité ou décommissionné → essayer le suivant
+          if (errText.includes("DECOMMISSIONED") || res.status === 429) continue;
+          summary = `Groq ${res.status} (${model}): ${errText.slice(0, 200)}`;
+          break;
         }
-      } else {
-        // Erreur Groq (429, 503, etc.) — on expose le détail pour debug
-        const errText = await res.text().catch(() => "");
-        summary = `Groq ${res.status}: ${errText.slice(0, 300)}`;
+
+        if (res.ok) {
+          const data = await res.json();
+          const text = data.choices?.[0]?.message?.content || "";
+          try {
+            const match = text.match(/\{[\s\S]*\}/);
+            const parsed = JSON.parse(match ? match[0] : text);
+            summary   = parsed.summary   || null;
+            urgences  = parsed.urgences  ? JSON.stringify(parsed.urgences)  : null;
+            synergies = parsed.synergies ? JSON.stringify(parsed.synergies) : null;
+            decisions = parsed.decisions ? JSON.stringify(parsed.decisions) : null;
+          } catch {
+            summary = text.slice(0, 500);
+          }
+          break; // succès → on arrête
+        } else {
+          const errText = await res.text().catch(() => "");
+          summary = `Groq ${res.status} (${model}): ${errText.slice(0, 200)}`;
+          break;
+        }
+      } catch (e) {
+        if (e.name === "AbortError") { summary = `Timeout 25s (${model})`; break; }
+        summary = `Erreur réseau (${model}): ${e.message}`;
+        break;
       }
-    } catch (e) {
-      summary = `Erreur réseau: ${e.message}`;
     }
 
     // 4. Mettre à jour le run avec le résultat
