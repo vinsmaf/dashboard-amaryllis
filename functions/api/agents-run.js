@@ -476,18 +476,73 @@ ${skill}
 ` : "";
 
   // ── BRIEF PRIORITAIRE (si calendrier éditorial) ─────────────────────────
-  const briefSection = brief ? `
-🚨🚨🚨 CONSIGNE PRIORITAIRE — TU DOIS RESPECTER CE BRIEF À LA LETTRE 🚨🚨🚨
+  // Quand un brief est présent, on court-circuite history+memories+recentDrafts
+  // pour que le modèle ne soit pas distrait. Le bien demandé est martelé.
+  if (brief) {
+    // Extraction du bien_id pour répétition forcée
+    const bienMatch  = brief.match(/bien[=:\s]+([a-z]+)/i);
+    const photoMatch = brief.match(/photo[=:\s]+(https?:\/\/[^\s,)]+)/i);
+    const ctaMatch   = brief.match(/cta[=:\s"]+([^",)]+)/i);
+    const themeMatch = brief.match(/th[èe]me[=:\s]+([a-z]+)/i);
+    const bienId    = bienMatch ? bienMatch[1] : "?";
+    const photoUrl  = photoMatch ? photoMatch[1] : "?";
+
+    return `🚨🚨🚨 CONSIGNE ABSOLUE 🚨🚨🚨
+
+Tu es l'agent community-manager d'Amaryllis Locations.
+TU DOIS générer EXACTEMENT 1 draft social_post pour le bien : **${bienId.toUpperCase()}**
+
+❌ INTERDIT de générer pour un autre bien. ❌
+❌ Ignore TOUT historique d'agent : tu te concentres sur CE bien uniquement. ❌
+
+Brief complet du calendrier éditorial :
 ${brief}
 
-⚠️ Le bien, le thème, la variante et le format spécifiés dans le brief sont
-   NON-NÉGOCIABLES. Tu ignores l'anti-répétition et l'historique pour cette
-   génération — tu produis UN seul draft pour le bien demandé.
-⚠️ Le draft doit utiliser EXACTEMENT le bien_id, photo_url et CTA du brief.
 ═══════════════════════════════════════════════════════════════
-` : "";
+📋 DONNÉES CANONIQUES pour ${bienId.toUpperCase()} (utilise-les) :
+${bienId === "amaryllis"  ? "  Villa Amaryllis, Sainte-Luce — 8 pers · 3 chambres · 4,94★ · sur les HAUTEURS, vue mer 180°, alizés, piscine à débordement" : ""}
+${bienId === "zandoli"    ? "  Zandoli, Sainte-Luce (résidence Amaryllis) — 5 pers · 2 chambres · 4,5★ · cocon tropical, mezzanine, jardin" : ""}
+${bienId === "iguana"     ? "  Villa Iguana, Sainte-Luce — 6 pers · 2 chambres · 4,75★ · vue Rocher du Diamant" : ""}
+${bienId === "geko"       ? "  Géko, Sainte-Luce (résidence Amaryllis hauteurs) — 4 pers · 1 chambre · 4,83★ · jardin tropical luxuriant" : ""}
+${bienId === "mabouya"    ? "  Studio Mabouya (résidence Amaryllis hauteurs) — 2 pers · 1 chambre · 4,55★ · JACUZZI privatif terrasse avec VUE mer (pas pieds dans l'eau)" : ""}
+${bienId === "schoelcher" ? "  Bellevue, Schœlcher (hauteurs) — 2 pers · 1 chambre · 4,8★ · vue baie Fort-de-France + Trois-Îlets" : ""}
+${bienId === "nogent"     ? "  Appt Nogent-sur-Marne — 2 pers · 1 chambre · bord de Marne, RER A 20min Paris" : ""}
 
-  return `${briefSection}Tu es l'agent "${agent.label}" (${agent.emoji}) d'Amaryllis Locations, plateforme de location de 7 propriétés premium en Martinique et Île-de-France (villamaryllis.com).
+🚫 GÉOGRAPHIE — INTERDIT :
+  - "mer entre dans la chambre", "pieds dans l'eau", "à Xm de la plage"
+  - "clapotis des vagues", "bruit/chant/murmure/rugissement/écume des vagues"
+  - "vagues qui chantent/caressent/bercent/murmurent"
+  - "sable chaud sous les pieds", "réveillé par les vagues", "lagon devant"
+  - "plage privée", "crique privée", "ponton devant"
+
+✅ AUTORISÉ pour les biens hauteurs :
+  - "vue mer panoramique", "perché sur les hauteurs", "bercé par les alizés"
+  - "horizon caraïbe", "vue 180° sur la baie", "bruissement des palmiers"
+  - "parfum des fleurs tropicales", "chant des oiseaux"
+
+═══════════════════════════════════════════════════════════════
+Image à utiliser : ${photoUrl}
+
+Retourne UN SEUL JSON :
+{
+  "actions": [],
+  "drafts": [{
+    "type": "social_post",
+    "rationale": "Pourquoi ce post pour ${bienId} maintenant (max 200 caractères)",
+    "preview": "Aperçu court (max 80 caractères)",
+    "payload": {
+      "caption": "Texte du post 150-200 mots, structure : hook → description sensorielle → bénéfice → CTA https://villamaryllis.com/${bienId} → 6-9 hashtags. NE MENTIONNE QUE ${bienId.toUpperCase()}, jamais un autre bien.",
+      "imageUrl": "${photoUrl}",
+      "channels": ["ig","fb"]
+    }
+  }]
+}
+
+⚠️ Si tu génères pour un autre bien que ${bienId}, ta réponse sera rejetée.
+⚠️ Retourne UNIQUEMENT le JSON, aucun texte avant ou après.`;
+  }
+
+  return `Tu es l'agent "${agent.label}" (${agent.emoji}) d'Amaryllis Locations, plateforme de location de 7 propriétés premium en Martinique et Île-de-France (villamaryllis.com).
 
 TON DOMAINE D'EXPERTISE : ${agent.focus}
 
@@ -827,11 +882,46 @@ Si verdict=reject : "improved_blocks": null`;
             }
           }
 
+          // ── Si brief calendrier : force le bien_id et l'imageUrl ────────
+          // Au cas où le LLM aurait ignoré la consigne et généré pour un autre bien
+          if (body.brief && draft.type === "social_post") {
+            const bienMatch  = body.brief.match(/bien[=:\s]+([a-z]+)/i);
+            const photoMatch = body.brief.match(/photo[=:\s]+(https?:\/\/[^\s,)]+)/i);
+            if (bienMatch && photoMatch) {
+              const expectedBien = bienMatch[1];
+              const expectedPhoto = photoMatch[1];
+              // Force l'imageUrl (le serveur sait mieux que le LLM)
+              draft.payload.imageUrl = expectedPhoto;
+              // Force la channels par défaut
+              if (!draft.payload.channels?.length) draft.payload.channels = ["ig", "fb"];
+              // Vérifie que le caption mentionne bien le bien attendu
+              const cap = (draft.payload.caption || "").toLowerCase();
+              const BIEN_NAMES = {
+                amaryllis: ["amaryllis","villa amaryllis"],
+                zandoli: ["zandoli"],
+                iguana: ["iguana"],
+                geko: ["géko","geko"],
+                mabouya: ["mabouya","studio mabouya"],
+                schoelcher: ["schœlcher","schoelcher","bellevue"],
+                nogent: ["nogent"],
+              };
+              const expected = BIEN_NAMES[expectedBien] || [expectedBien];
+              const mentionsExpected = expected.some(n => cap.includes(n));
+              if (!mentionsExpected) {
+                // Le LLM a généré pour un autre bien → on rejette
+                draft._wrong_bien = `Caption ne mentionne pas ${expectedBien} — LLM a ignoré le brief`;
+              }
+            }
+          }
+
           // ── FACT-CHECK : scanne le caption final contre la liste noire ──
           const learnedRules = await loadLearnedLessons(db);
-          const factErrors = draft.type === "social_post"
+          let factErrors = draft.type === "social_post"
             ? factCheckCaption(draft.payload.caption, learnedRules)
             : [];
+          if (draft._wrong_bien) {
+            factErrors.push({ phrase: "bien incorrect", reason: draft._wrong_bien });
+          }
           const insertStatus = factErrors.length > 0 ? "failed" : "pending";
           const factCheckResult = factErrors.length > 0
             ? { fact_check: { passed: false, errors: factErrors } }
