@@ -155,39 +155,45 @@ const AGENTS = [
 
 // ── Modèles Groq — rotation pour maximiser les appels parallèles ─────────────
 // Chaque modèle a sa propre bucket de rate limit → on peut les appeler simultanément
+// UNIQUEMENT modèles ACTIFS vérifiés (pas de modèles décommissionnés)
 const GROQ_MODELS = [
-  { model: "llama-3.3-70b-versatile",                   tier: "high"   }, // meilleur raisonnement
-  { model: "llama-3.1-8b-instant",                      tier: "fast"   }, // ultra-rapide
-  { model: "gemma2-9b-it",                              tier: "mid"    }, // Google Gemma
-  { model: "mixtral-8x7b-32768",                        tier: "mid"    }, // Mistral MoE
-  { model: "meta-llama/llama-4-scout-17b-16e-instruct", tier: "high"   }, // Llama 4 Scout
-  { model: "meta-llama/llama-4-maverick-17b-128e-instruct", tier:"high"}, // Llama 4 Maverick
-  { model: "deepseek-r1-distill-llama-70b",             tier: "high"   }, // DeepSeek R1
-  { model: "qwen-qwq-32b",                              tier: "high"   }, // Qwen QwQ
-  { model: "mistral-saba-24b",                          tier: "mid"    }, // Mistral Saba
-  { model: "llama-3.2-3b-preview",                      tier: "fast"   }, // mini
+  { model: "llama-3.3-70b-versatile",                   tier: "high"   }, // ✅ confirmé actif
+  { model: "llama-3.1-8b-instant",                      tier: "fast"   }, // ✅ confirmé actif
+  { model: "meta-llama/llama-4-scout-17b-16e-instruct", tier: "high"   }, // ✅ confirmé actif
+  { model: "llama3-70b-8192",                           tier: "high"   }, // llama3 classic 70b
+  { model: "llama3-8b-8192",                            tier: "mid"    }, // llama3 classic 8b
+  { model: "llama-3.2-11b-vision-preview",              tier: "mid"    }, // vision + text
+  { model: "llama-3.2-3b-preview",                      tier: "fast"   }, // mini rapide
 ];
 
-// Attribution agent → modèle (uniquement modèles RAPIDES < 10s sur Groq)
-// Règle : pas de modèles "thinking" (deepseek-r1, qwen-qwq) → trop lents pour CF 30s timeout
+// Attribution agent → modèle
+// Règle : max 2-3 agents par modèle pour éviter les 429 (buckets séparées par modèle)
+// Modèles supprimés : mixtral-8x7b, gemma2-9b, deepseek-r1, qwen-qwq, mistral-saba, llama-4-maverick
 const AGENT_MODELS = {
-  "juriste-compliance":         "llama-3.3-70b-versatile",                    // légal → 70b
-  "architecte-reseau":          "meta-llama/llama-4-maverick-17b-128e-instruct", // sécurité → Llama 4
-  "webmaster":                  "mixtral-8x7b-32768",                         // tech → Mixtral
-  "traffic-manager":            "meta-llama/llama-4-scout-17b-16e-instruct",  // SEO → Llama 4 Scout
-  "data-analyst":               "gemma2-9b-it",                               // data → Gemma
-  "revenue-manager":            "llama-3.3-70b-versatile",                    // revenus → 70b
-  "developpeur-multimedia":     "mixtral-8x7b-32768",                         // media → Mixtral
-  "photographe-da":             "llama-3.1-8b-instant",                       // DA → 8b instant
-  "webdesigner":                "gemma2-9b-it",                               // design → Gemma
-  "chef-produit-web":           "meta-llama/llama-4-maverick-17b-128e-instruct", // produit → Llama 4
-  "community-manager":          "llama-3.1-8b-instant",                       // CM → 8b instant
-  "commercial-publicite":       "meta-llama/llama-4-scout-17b-16e-instruct",  // pub → Llama 4 Scout
-  "crm-manager":                "mixtral-8x7b-32768",                         // CRM → Mixtral
-  "consultant-ebusiness":       "llama-3.3-70b-versatile",                    // ebiz → 70b
-  "responsable-service-client": "gemma2-9b-it",                               // SC → Gemma
-  "responsable-logistique":     "llama-3.1-8b-instant",                       // logistique → 8b
-  "seo-content-writer":         "llama-3.3-70b-versatile",                    // SEO → 70b
+  // ─── bucket llama-3.3-70b-versatile (2 agents) ───────────────────────────
+  "juriste-compliance":         "llama-3.3-70b-versatile",                   // légal → meilleur raisonnement
+  "revenue-manager":            "llama-3.3-70b-versatile",                   // revenus → analyse profonde
+  // ─── bucket llama3-70b-8192 (3 agents) ───────────────────────────────────
+  "architecte-reseau":          "llama3-70b-8192",                           // sécurité → 70b classic
+  "consultant-ebusiness":       "llama3-70b-8192",                           // stratégie → 70b classic
+  "seo-content-writer":         "llama3-70b-8192",                           // SEO → 70b classic
+  // ─── bucket llama-4-scout (3 agents) ─────────────────────────────────────
+  "traffic-manager":            "meta-llama/llama-4-scout-17b-16e-instruct", // SEO → Llama 4
+  "chef-produit-web":           "meta-llama/llama-4-scout-17b-16e-instruct", // produit → Llama 4
+  "commercial-publicite":       "meta-llama/llama-4-scout-17b-16e-instruct", // pub → Llama 4
+  // ─── bucket llama-3.1-8b-instant (3 agents) ──────────────────────────────
+  "webdesigner":                "llama-3.1-8b-instant",                      // design → ultra-rapide
+  "community-manager":          "llama-3.1-8b-instant",                      // CM → rapide
+  "responsable-logistique":     "llama-3.1-8b-instant",                      // logistique → rapide
+  // ─── bucket llama3-8b-8192 (2 agents) ────────────────────────────────────
+  "webmaster":                  "llama3-8b-8192",                            // tech → 8b classic
+  "data-analyst":               "llama3-8b-8192",                            // data → 8b classic
+  // ─── bucket llama-3.2-11b-vision (2 agents) ──────────────────────────────
+  "developpeur-multimedia":     "llama-3.2-11b-vision-preview",              // media → vision
+  "photographe-da":             "llama-3.2-11b-vision-preview",              // photo → vision
+  // ─── bucket llama-3.2-3b (2 agents) ──────────────────────────────────────
+  "crm-manager":                "llama-3.2-3b-preview",                      // CRM → mini
+  "responsable-service-client": "llama-3.2-3b-preview",                      // SC → mini
 };
 
 // ── Récupère l'historique D1 d'un agent ──────────────────────────────────────
