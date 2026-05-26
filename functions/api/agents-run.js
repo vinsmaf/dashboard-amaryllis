@@ -807,7 +807,7 @@ Si verdict=reject : "improved_blocks": null`;
             ON CONFLICT(agent, key) DO UPDATE SET value=excluded.value, created_at=unixepoch()
           `).bind(agent.id, "last_top_action", JSON.stringify({
             action: topAction.action, priority: topAction.priority,
-            category: topAction.category, model, ts: now,
+            category: topAction.category, model: activeModel, ts: now,
           })).run().catch(() => {});
         }
         await db.prepare(`
@@ -819,7 +819,7 @@ Si verdict=reject : "improved_blocks": null`;
         await db.prepare(`
           INSERT INTO agent_memory (agent, key, value) VALUES (?,?,?)
           ON CONFLICT(agent, key) DO UPDATE SET value=excluded.value, created_at=unixepoch()
-        `).bind(agent.id, "model", model).run().catch(() => {});
+        `).bind(agent.id, "model", activeModel).run().catch(() => {});
       }
 
       return { agent: agent.id, model: activeModel, ok: true, inserted, updated, skipped, drafts: draftsCreated, actions: actions.length, context_size: history.length };
