@@ -199,16 +199,56 @@ const AGENT_MODELS = {
 // llama-4-scout (le plus robuste observé).
 const FALLBACK_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 
-// ── Récupère l'historique D1 d'un agent (limite 40 derniers pour context) ─
+// ── Récupère l'historique D1 d'un agent ────────────────────────────────────
+// Stratégie : tout l'historique non-faits (max 80) + les 40 faits les plus récents.
+// L'agent voit toujours les bloqué/a-planifier/backlog ; les "fait" sont
+// trimés pour économiser des tokens.
 async function fetchAgentHistory(db, agentId) {
   try {
-    const { results } = await db.prepare(
-      "SELECT id, action, status, notes FROM agent_actions WHERE agent = ? ORDER BY updated_at DESC LIMIT 40"
+    const { results: nonDone } = await db.prepare(
+      "SELECT id, action, status, notes FROM agent_actions WHERE agent = ? AND status != 'fait' ORDER BY updated_at DESC LIMIT 80"
     ).bind(agentId).all();
-    return (results || []).reverse(); // ordre chronologique pour le prompt
+    const { results: done } = await db.prepare(
+      "SELECT id, action, status, notes FROM agent_actions WHERE agent = ? AND status = 'fait' ORDER BY updated_at DESC LIMIT 40"
+    ).bind(agentId).all();
+    return [...(nonDone || []), ...(done || [])].reverse();
   } catch {
     return [];
   }
+}
+
+// ── Dédup sémantique : un nouveau action est-il proche d'un existant ? ───
+// Compare les 60 premiers caractères de l'action en lowercase, sans ponctuation.
+function normalizeForCompare(text) {
+  return (text || "").toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")  // retire accents
+    .replace(/[^a-z0-9 ]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 60);
+}
+
+async function findSimilarExistingAction(db, agentId, actionText) {
+  try {
+    const { results } = await db.prepare(
+      "SELECT id, action, status FROM agent_actions WHERE agent = ? AND status != 'fait' LIMIT 200"
+    ).bind(agentId).all();
+    const newKey = normalizeForCompare(actionText);
+    if (!newKey || newKey.length < 20) return null;
+    for (const row of (results || [])) {
+      const existKey = normalizeForCompare(row.action);
+      if (!existKey) continue;
+      // Match exact des 60 premiers caractères normalisés OU 80% commun
+      if (existKey === newKey) return row;
+      // Jaccard simple sur mots
+      const w1 = new Set(newKey.split(" ").filter(w => w.length > 3));
+      const w2 = new Set(existKey.split(" ").filter(w => w.length > 3));
+      const inter = [...w1].filter(w => w2.has(w)).length;
+      const union = new Set([...w1, ...w2]).size;
+      if (union > 5 && inter / union >= 0.75) return row;
+    }
+    return null;
+  } catch { return null; }
 }
 
 // ── Récupère les drafts récents (anti-répétition 14j) ──────────────────────
@@ -732,7 +772,8 @@ Si verdict=reject : "improved_blocks": null`;
         }
       }
 
-      // Upsert dans D1
+      // Upsert dans D1 — avec dédup sémantique
+      let skipped = 0;
       for (const row of actions) {
         if (!row.id || !row.action) continue;
         const existing = await db.prepare("SELECT id, status FROM agent_actions WHERE id = ?").bind(row.id).first();
@@ -745,6 +786,16 @@ Si verdict=reject : "improved_blocks": null`;
           `).bind(row.action, row.priority || "moyenne", row.effort || "?", row.category || "autre", now, now, row.id).run();
           updated++;
         } else {
+          // Dédup sémantique : skip si action très similaire existe déjà (active)
+          const similar = await findSimilarExistingAction(db, agent.id, row.action);
+          if (similar) {
+            // L'agent re-propose la même chose — on touch updated_at pour montrer
+            // qu'il reste pertinent, mais on n'insère pas un doublon
+            await db.prepare("UPDATE agent_actions SET last_analyzed=?, updated_at=? WHERE id=?")
+              .bind(now, now, similar.id).run();
+            skipped++;
+            continue;
+          }
           await db.prepare(`
             INSERT OR IGNORE INTO agent_actions
               (id, agent, agent_label, agent_emoji, category, action, priority, effort, status, last_analyzed, created_at, updated_at)
@@ -755,6 +806,8 @@ Si verdict=reject : "improved_blocks": null`;
           inserted++;
         }
       }
+      // log skipped pour debug
+      if (skipped > 0) console.log(`[${agent.id}] ${skipped} actions skippées (déjà dans backlog)`);
 
       // Mémoire : stocker les observations clés
       if (actions.length > 0) {
@@ -783,7 +836,7 @@ Si verdict=reject : "improved_blocks": null`;
         `).bind(agent.id, "model", model).run().catch(() => {});
       }
 
-      return { agent: agent.id, model: activeModel, ok: true, inserted, updated, drafts: draftsCreated, actions: actions.length, context_size: history.length };
+      return { agent: agent.id, model: activeModel, ok: true, inserted, updated, skipped, drafts: draftsCreated, actions: actions.length, context_size: history.length };
     } catch (e) {
       return { agent: agent.id, error: e.message };
     }
