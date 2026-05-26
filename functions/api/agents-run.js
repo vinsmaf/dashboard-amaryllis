@@ -5,6 +5,8 @@
 //   - Le bouton "Relancer l'analyse" dans l'admin
 //   - Le Worker cron quotidien (workers/ical-sync/index.js) à 9h UTC
 
+import { getSkillForAgent } from "./_skills.js";
+
 const CORS = {
   "Content-Type": "application/json",
   "Access-Control-Allow-Origin": "*",
@@ -303,12 +305,22 @@ MÉMOIRE DE TES RUNS PRÉCÉDENTS :
   (première analyse)
 `;
 
+  // ── Skill métier injecté (manuel d'opération de l'agent) ────────────────
+  const skill = getSkillForAgent(agent.id);
+  const skillSection = skill ? `
+═══════════════════════════════════════════════════════════════
+📖 TON MANUEL D'OPÉRATION (à respecter strictement)
+═══════════════════════════════════════════════════════════════
+${skill}
+═══════════════════════════════════════════════════════════════
+` : "";
+
   return `Tu es l'agent "${agent.label}" (${agent.emoji}) d'Amaryllis Locations, plateforme de location de 7 propriétés premium en Martinique et Île-de-France (villamaryllis.com).
 
 TON DOMAINE D'EXPERTISE : ${agent.focus}
 
 FICHIERS CLÉS à analyser : ${agent.files_hint}
-${memorySection}${historySection}
+${skillSection}${memorySection}${historySection}
 MISSION : Identifie les actions concrètes NOUVELLES à réaliser dans ton domaine. Tiens compte de ce qui a déjà été fait ou identifié pour approfondir ton analyse et aller plus loin.
 
 Propriétés : Villa Amaryllis (280€/nuit, 8 pers, 4.94★), Zandoli (220€, 5 pers, 4.5★), Villa Iguana (180€, 6 pers, 4.75★), Géko (150€, 4 pers, 4.83★), Mabouya (110€, 2 pers, 4.55★), Bellevue/Schœlcher (100€, 2 pers, 4.8★), Nogent-sur-Marne (85€, 2 pers, 4.95★).
@@ -394,7 +406,7 @@ export async function onRequest(context) {
 
       const groqBody = JSON.stringify({
         model,
-        max_tokens: 1024,
+        max_tokens: 2048,  // augmenté pour drafts détaillés + multi-réponses
         temperature: 0.3,
         messages: [{ role: "user", content: buildPrompt(agent, history, memories) }],
       });
