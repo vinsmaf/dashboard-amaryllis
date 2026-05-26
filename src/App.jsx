@@ -8872,10 +8872,10 @@ const INTER_STATUS = [
   { v: "cancelled",  label: "Annulée",     color: "#64748b" },
 ];
 function InterventionsTab({ biens, mob }) {
-  const [items, setItems] = React.useState(() => { try { return JSON.parse(localStorage.getItem(INTER_KEY) || "[]"); } catch { return []; } });
-  const [form, setForm] = React.useState({ bienId: biens[0]?.id || "", type: "Ménage", date: "", prestataire: "", cost: "", notes: "", status: "todo" });
-  const [show, setShow] = React.useState(false);
-  const [filter, setFilter] = React.useState("all");
+  const [items, setItems] = useState(() => { try { return JSON.parse(localStorage.getItem(INTER_KEY) || "[]"); } catch { return []; } });
+  const [form, setForm] = useState({ bienId: biens[0]?.id || "", type: "Ménage", date: "", prestataire: "", cost: "", notes: "", status: "todo" });
+  const [show, setShow] = useState(false);
+  const [filter, setFilter] = useState("all");
 
   function save(arr) { setItems(arr); try { localStorage.setItem(INTER_KEY, JSON.stringify(arr)); } catch {} }
   function add() {
@@ -9014,10 +9014,10 @@ const STOCK_DEFAULTS = [
   { cat: "Piscine / Jardin", items: ["Chlore tablettes", "Anticalcaire", "Crème solaire (stock)", "Brassards enfants"] },
 ];
 function StockTrackerTab({ biens, mob }) {
-  const [stocks, setStocks] = React.useState(() => {
+  const [stocks, setStocks] = useState(() => {
     try { return JSON.parse(localStorage.getItem(STOCK_KEY) || "{}"); } catch { return {}; }
   });
-  const [selBien, setSelBien] = React.useState(biens[0]?.id || "");
+  const [selBien, setSelBien] = useState(biens[0]?.id || "");
 
   function getStock(bienId, cat, item) { return stocks[bienId]?.[cat]?.[item] || { qty: 0, min: 2, max: 10 }; }
   function setField(bienId, cat, item, field, val) {
@@ -9138,9 +9138,9 @@ const LINGE_STATES = [
   { v: "manque",   label: "Manquant",  color: "#ef4444", icon: "!" },
 ];
 function LingeTab({ biens, mob }) {
-  const [data, setData] = React.useState(() => { try { return JSON.parse(localStorage.getItem(LINGE_KEY) || "{}"); } catch { return {}; } });
-  const [sel, setSel] = React.useState(biens[0]?.id || "");
-  const [log, setLog] = React.useState([]);
+  const [data, setData] = useState(() => { try { return JSON.parse(localStorage.getItem(LINGE_KEY) || "{}"); } catch { return {}; } });
+  const [sel, setSel] = useState(biens[0]?.id || "");
+  const [log, setLog] = useState([]);
 
   function getEntry(bienId, set) { return data[bienId]?.[set] || { qty: 0, state: "propre" }; }
   function setField(bienId, set, field, val) {
@@ -9242,7 +9242,7 @@ function LingeTab({ biens, mob }) {
    Taux de conversion par canal de réservation
 ═══════════════════════════════════════════════════════════════════ */
 function ConversionTab({ biens, reservations, mob }) {
-  const [period, setPeriod] = React.useState("12");
+  const [period, setPeriod] = useState("12");
 
   const cutoff = (() => {
     const d = new Date();
@@ -9388,13 +9388,13 @@ function ConversionTab({ biens, reservations, mob }) {
    Coordonne les 17 agents via claude-sonnet, stocke les runs en D1
 ═══════════════════════════════════════════════════════════════════ */
 function OrchestratorTab({ mob }) {
-  const [runs,     setRuns]     = React.useState([]);
-  const [memories, setMemories] = React.useState([]);
-  const [loading,  setLoading]  = React.useState(false);
-  const [running,  setRunning]  = React.useState(false);
-  const [expanded, setExpanded] = React.useState(null);
-  const [memAgent, setMemAgent] = React.useState("all");
-  const [initDone, setInitDone] = React.useState(false);
+  const [runs,     setRuns]     = useState([]);
+  const [memories, setMemories] = useState([]);
+  const [loading,  setLoading]  = useState(false);
+  const [running,  setRunning]  = useState(false);
+  const [expanded, setExpanded] = useState(null);
+  const [memAgent, setMemAgent] = useState("all");
+  const [initDone, setInitDone] = useState(false);
 
   // Charge les runs et les mémoires
   async function loadData() {
@@ -9410,7 +9410,7 @@ function OrchestratorTab({ mob }) {
     setLoading(false);
   }
 
-  React.useEffect(() => { loadData(); }, []);
+  useEffect(() => { loadData(); }, []);
 
   // Déclenche une orchestration
   async function triggerOrchestration() {
