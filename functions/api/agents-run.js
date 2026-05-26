@@ -221,14 +221,15 @@ Pour CHAQUE bien, varie les angles : vue, équipements, expérience, saisonnalit
 Style : chaleureux, sensoriel, formel ("vous"), max 150-200 mots.
 Toujours inclure 3-5 hashtags pertinents en fin de caption.
 
-URLs d'images suggérées (les vraies photos publiques) :
-- Amaryllis  : https://villamaryllis.com/photos/amaryllis/hero.jpg
-- Zandoli    : https://villamaryllis.com/photos/zandoli/hero.jpg
-- Iguana     : https://villamaryllis.com/photos/iguana/hero.jpg
-- Géko       : https://villamaryllis.com/photos/geko/hero.jpg
-- Mabouya    : https://villamaryllis.com/photos/mabouya/hero.jpg
-- Schœlcher  : https://villamaryllis.com/photos/schoelcher/hero.jpg
-- Nogent     : https://villamaryllis.com/photos/nogent/hero.jpg`,
+URLs d'images suggérées (varie entre 01 et 12 selon les biens) :
+- Amaryllis  : https://villamaryllis.com/photos/amaryllis/01.webp (jusqu'à /12.webp)
+- Zandoli    : https://villamaryllis.com/photos/zandoli/01.webp
+- Iguana     : https://villamaryllis.com/photos/iguana/01.webp
+- Géko       : https://villamaryllis.com/photos/geko/01.webp
+- Mabouya    : https://villamaryllis.com/photos/mabouya/01.webp
+- Schœlcher  : https://villamaryllis.com/photos/schoelcher/01.webp
+- Nogent     : https://villamaryllis.com/photos/nogent/01.webp
+IMPORTANT : utilise UNIQUEMENT ce format .webp avec numéros 01 à 12, sinon l'image ne s'affichera pas.`,
   },
   "crm-manager": {
     types: ["email_campaign"],
