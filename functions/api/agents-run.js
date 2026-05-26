@@ -387,7 +387,17 @@ Retourne un JSON strict avec cette structure :
       "rationale": "Pourquoi ce contenu, maintenant (max 200 caractères)",
       "preview": "Aperçu court pour l'admin (max 80 caractères)",
       "payload": ${agent.id === "community-manager"
-        ? '{ "caption": "Le texte complet du post avec emojis et hashtags", "imageUrl": "URL d\'une image publique", "channels": ["ig","fb"] }'
+        ? `{
+        "blocks": {
+          "hook": "Hook ≤ 12 mots, sensoriel/chiffre/question",
+          "description": "3-5 lignes sensorielles (vue/son/ambiance), max 150 mots",
+          "benefice": "1 ligne : ce que le voyageur gagne",
+          "cta": "Réservez sur https://villamaryllis.com/{bienId} ⤴️",
+          "hashtags": "#AmaryllisLocations #Martinique #... (5-9 hashtags séparés par espace)"
+        },
+        "imageUrl": "https://villamaryllis.com/photos/{bienId}/01.webp à /12.webp",
+        "channels": ["ig","fb"]
+      }`
         : '{ "to": "vinsmaf@hotmail.com", "subject": "Sujet", "html": "<html>contenu</html>" }'
       }
     }
@@ -512,6 +522,15 @@ export async function onRequest(context) {
           if (!draft.type || !draft.payload) continue;
           if (!DRAFT_CAPABLE[agent.id].types.includes(draft.type)) continue;
 
+          // Si community-manager a renvoyé des blocs, reconstruire le caption
+          if (draft.type === "social_post" && draft.payload.blocks && !draft.payload.caption) {
+            const b = draft.payload.blocks;
+            const arr = [b.hook, b.description, b.benefice, b.cta, b.hashtags]
+              .filter(x => x && typeof x === "string" && x.trim())
+              .map(x => x.trim());
+            draft.payload.caption = arr.join("\n\n");
+          }
+
           // ── Validation par agents spécialisés (traffic-manager + seo) ──
           let reviews = null;
           if (draft.type === "social_post") {
@@ -551,9 +570,9 @@ Réservez sur https://villamaryllis.com/amaryllis ⤴️
 #AmaryllisLocations #Martinique #SainteLuce #VillaPiscine #SlowTravel #Caraïbes #Honeymoon
 """
 
-🚨 RÈGLE ABSOLUE : Tu DOIS TOUJOURS fournir improved_caption (sauf si verdict=reject).
+🚨 RÈGLE ABSOLUE : Tu DOIS TOUJOURS fournir improved_blocks (sauf si verdict=reject).
    Même si le draft est à 80/100, fournis la version optimisée à 95/100.
-   improved_caption doit respecter la structure 5 blocs EXACTEMENT (lignes vides entre blocs).
+   Chaque bloc va dans son propre champ JSON. Le serveur les concaténera avec \\n\\n.
 
 Retourne UNIQUEMENT un JSON :
 {
@@ -561,8 +580,16 @@ Retourne UNIQUEMENT un JSON :
   "verdict": "approve" si score≥85 | "needs_edits" si 50-84 | "reject" si <50,
   "traffic_manager": { "note": 0-10, "feedback": "1-2 phrases concrètes" },
   "seo_writer": { "note": 0-10, "feedback": "1-2 phrases concrètes" },
-  "improved_caption": "VERSION COMPLÈTE RÉÉCRITE avec structure 5 blocs, sauf si verdict=reject (alors null)"
-}`;
+  "improved_blocks": {
+    "hook": "Hook accrocheur ≤ 12 mots, sensoriel/chiffre/question",
+    "description": "3-5 lignes sensorielles (vue/son/ambiance), max 150 mots",
+    "benefice": "1 ligne : ce que le voyageur gagne concrètement",
+    "cta": "Réservez sur https://villamaryllis.com/{bienId} ⤴️",
+    "hashtags": "#AmaryllisLocations #Martinique #... (5-9 hashtags séparés par espace)"
+  }
+}
+
+Si verdict=reject : "improved_blocks": null`;
 
               const valRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
                 method: "POST",
@@ -580,8 +607,17 @@ Retourne UNIQUEMENT un JSON :
                 if (match) {
                   const parsed = JSON.parse(match[0]);
                   reviews = JSON.stringify(parsed);
-                  // Si le validator a fourni une version améliorée, on l'utilise
-                  if (parsed.improved_caption && parsed.verdict !== "reject") {
+                  // Reconstruire le caption depuis les 5 blocs (concatène avec lignes vides)
+                  if (parsed.improved_blocks && parsed.verdict !== "reject") {
+                    const b = parsed.improved_blocks;
+                    const blocks = [b.hook, b.description, b.benefice, b.cta, b.hashtags]
+                      .filter(x => x && typeof x === "string" && x.trim())
+                      .map(x => x.trim());
+                    if (blocks.length >= 3) {
+                      draft.payload.caption = blocks.join("\n\n");
+                    }
+                  } else if (parsed.improved_caption && parsed.verdict !== "reject") {
+                    // Fallback rétro-compat si le modèle utilise l'ancien format
                     draft.payload.caption = parsed.improved_caption;
                   }
                 }
