@@ -326,7 +326,46 @@ MISSION : Identifie les actions concrètes NOUVELLES à réaliser dans ton domai
 Propriétés : Villa Amaryllis (280€/nuit, 8 pers, 4.94★), Zandoli (220€, 5 pers, 4.5★), Villa Iguana (180€, 6 pers, 4.75★), Géko (150€, 4 pers, 4.83★), Mabouya (110€, 2 pers, 4.55★), Bellevue/Schœlcher (100€, 2 pers, 4.8★), Nogent-sur-Marne (85€, 2 pers, 4.95★).
 
 ${DRAFT_CAPABLE[agent.id] ? `\n🚀 CAPACITÉ SPÉCIALE : Tu peux générer des BROUILLONS de contenu publiable.
-${DRAFT_CAPABLE[agent.id].instructions}\n` : ""}
+${DRAFT_CAPABLE[agent.id].instructions}
+
+${agent.id === "community-manager" ? `
+═══════════════════════════════════════════════════════════════
+📐 STRUCTURE OBLIGATOIRE D'UNE CAPTION (5 blocs, lignes vides entre)
+═══════════════════════════════════════════════════════════════
+Bloc 1 — HOOK accrocheur (≤ 12 mots, image sensorielle ou chiffre)
+        Ex: "Six heures du matin. La mer entre dans la chambre."
+
+Bloc 2 — DESCRIPTION (3-5 lignes, sensoriel : vue/son/ambiance, max 150 mots)
+        Ex: "À la Villa Amaryllis, les rideaux ne servent presque à rien. On les laisse ouverts. Et c'est l'horizon qui vous réveille — pas une alarme."
+
+Bloc 3 — BÉNÉFICE clair (1 ligne, ce que le voyageur gagne)
+        Ex: "Pour des vacances où le temps s'arrête vraiment."
+
+Bloc 4 — CTA explicite avec URL COMPLÈTE
+        Format: "Réservez sur https://villamaryllis.com/{bienId} ⤴️"
+
+Bloc 5 — HASHTAGS (5-9 stratégiques, mix marque + lieu + audience)
+        Ex: "#AmaryllisLocations #Martinique #SainteLuce #VillaPiscine #SlowTravel #Caraïbes #Honeymoon"
+
+🚨 INTERDIT : cascade emojis, "opportunité unique", "n'hésitez pas", "découvrez sans plus attendre"
+
+EXEMPLE DE CAPTION PARFAITE (à imiter, pas copier) :
+"""
+Six heures du matin. La mer entre dans la chambre.
+
+À la Villa Amaryllis, les rideaux ne servent presque à rien. On les laisse ouverts. Et c'est l'horizon qui vous réveille — pas une alarme.
+
+Quatre chambres, une piscine privée, et le silence d'une crique de Sainte-Luce. C'est tout. C'est beaucoup.
+
+Pour des vacances où le temps s'arrête vraiment.
+
+Réservez sur https://villamaryllis.com/amaryllis ⤴️
+
+#AmaryllisLocations #Martinique #SainteLuce #VillaPiscine #SlowTravel #Caraïbes #Honeymoon
+"""
+═══════════════════════════════════════════════════════════════
+` : ""}
+` : ""}
 Retourne un JSON strict avec cette structure :
 {
   "actions": [
@@ -477,7 +516,9 @@ export async function onRequest(context) {
           let reviews = null;
           if (draft.type === "social_post") {
             try {
-              const validatorPrompt = `Tu es un panel de 2 agents experts qui review un draft de post social :
+              const validatorPrompt = `Tu es un panel de 2 agents experts d'Amaryllis Locations (7 villas premium en Martinique + Nogent) qui review un draft de post social et le RÉÉCRIT s'il n'est pas parfait.
+
+EXPERTS :
 - traffic-manager : SEO, CTAs, hashtags, conversions
 - seo-content-writer : qualité rédactionnelle, lisibilité, mots-clés longue traîne
 
@@ -486,30 +527,49 @@ Caption : """${draft.payload.caption || ""}"""
 ImageUrl : ${draft.payload.imageUrl || "(aucune)"}
 Channels : ${(draft.payload.channels || []).join(", ")}
 
-CHECKLIST QUALITÉ :
-1. CTA avec URL https://villamaryllis.com/* visible ?
-2. 8-12 hashtags stratégiques (marque + lieu + audience) ?
-3. Hook accrocheur en première ligne ?
-4. Mention sensorielle (vue, son, ambiance) ?
-5. Image .webp avec numéro 01-12 valide ?
-6. Longueur 100-200 mots (ni trop court ni trop long) ?
-7. Tone "vous" formel respecté ?
+🎯 STRUCTURE OBLIGATOIRE (5 blocs distincts, séparés par lignes vides) :
+1️⃣ HOOK accrocheur (1 ligne, ≤ 12 mots, image sensorielle ou question/chiffre)
+2️⃣ DESCRIPTION sensorielle (3-5 lignes, max 150 mots, mention vue/son/ambiance)
+3️⃣ BÉNÉFICE clair (1 ligne — ce que le voyageur gagne)
+4️⃣ CTA explicite avec URL complète "Réservez sur https://villamaryllis.com/{bienId} ⤴️"
+5️⃣ HASHTAGS (5-9 stratégiques, mix marque + lieu MQ/IDF + audience)
+
+VOICE Amaryllis : "vous" formel, ton chaleureux, JAMAIS publicitaire, jamais "opportunité unique", jamais cascade d'emojis 🌴☀️🏖️🌊✨
+
+EXEMPLE DE PERFECTION (caption Villa Amaryllis 9/10) :
+"""
+Six heures du matin. La mer entre dans la chambre.
+
+À la Villa Amaryllis, les rideaux ne servent presque à rien. On les laisse ouverts. Et c'est l'horizon qui vous réveille — pas une alarme.
+
+Quatre chambres, une piscine privée, et le silence d'une crique de Sainte-Luce. C'est tout. C'est beaucoup.
+
+Pour des vacances où le temps s'arrête vraiment.
+
+Réservez sur https://villamaryllis.com/amaryllis ⤴️
+
+#AmaryllisLocations #Martinique #SainteLuce #VillaPiscine #SlowTravel #Caraïbes #Honeymoon
+"""
+
+🚨 RÈGLE ABSOLUE : Tu DOIS TOUJOURS fournir improved_caption (sauf si verdict=reject).
+   Même si le draft est à 80/100, fournis la version optimisée à 95/100.
+   improved_caption doit respecter la structure 5 blocs EXACTEMENT (lignes vides entre blocs).
 
 Retourne UNIQUEMENT un JSON :
 {
   "score": 0-100,
-  "verdict": "approve|needs_edits|reject",
-  "traffic_manager": { "note": 0-10, "feedback": "1-2 phrases" },
-  "seo_writer": { "note": 0-10, "feedback": "1-2 phrases" },
-  "improved_caption": "version améliorée si needs_edits ou approve (sinon null)"
+  "verdict": "approve" si score≥85 | "needs_edits" si 50-84 | "reject" si <50,
+  "traffic_manager": { "note": 0-10, "feedback": "1-2 phrases concrètes" },
+  "seo_writer": { "note": 0-10, "feedback": "1-2 phrases concrètes" },
+  "improved_caption": "VERSION COMPLÈTE RÉÉCRITE avec structure 5 blocs, sauf si verdict=reject (alors null)"
 }`;
 
               const valRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
                 body: JSON.stringify({
-                  model: "meta-llama/llama-4-scout-17b-16e-instruct",
-                  max_tokens: 800, temperature: 0.2,
+                  model: "llama-3.3-70b-versatile",  // modèle plus puissant pour réécrire
+                  max_tokens: 1500, temperature: 0.4,  // un peu de créativité pour la réécriture
                   messages: [{ role: "user", content: validatorPrompt }],
                 }),
               });
