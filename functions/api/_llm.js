@@ -141,10 +141,13 @@ export async function callLLM(env, opts) {
       if (res.status === 200) {
         try {
           const data = await res.json();
-          const text = provider.parseResponse(data);
-          if (text) {
+          let text = provider.parseResponse(data);
+          // Sécurise toujours en string non-vide
+          if (typeof text !== "string") text = text ? JSON.stringify(text) : "";
+          if (text && text.trim()) {
             return { ok: true, text, provider: providerId, model, attempts: attempt + 1, errors: errors.length ? errors : undefined };
           }
+          errors.push({ provider: providerId, model, error: "empty response" });
         } catch (e) {
           errors.push({ provider: providerId, model, error: `parse: ${e.message}` });
         }

@@ -745,15 +745,19 @@ export async function onRequest(context) {
       }
 
       const activeModel = `${llmResult.provider}:${llmResult.model}`;
-      const text = llmResult.text;
+      // Sécurise text en string (certains providers renvoient parfois undefined/object)
+      let text = llmResult.text;
+      if (typeof text !== "string") {
+        try { text = String(text ?? ""); } catch { text = ""; }
+      }
 
       // Parser le JSON
       let parsed;
       try {
         const match = text.match(/\{[\s\S]*\}/);
         parsed = JSON.parse(match ? match[0] : text);
-      } catch {
-        return { agent: agent.id, model: activeModel, error: "JSON parse failed", raw: text.slice(0, 200) };
+      } catch (e) {
+        return { agent: agent.id, model: activeModel, error: "JSON parse failed", raw: String(text).slice(0, 200), parse_err: e.message };
       }
 
       const actions = parsed.actions || [];
