@@ -512,9 +512,9 @@ export async function onRequest(context) {
         messages: [{ role: "user", content: buildPrompt(agent, history, memories, recentDrafts) }],
       });
 
-      // Retry auto sur 429 avec backoff + AbortController 22s (CF timeout = 30s)
+      // Retry auto sur 429 ET 400 (Groq retourne parfois 400 = TPM exceeded en burst)
       let res, attempt = 0;
-      while (attempt < 3) {
+      while (attempt < 4) {
         const ctrl = new AbortController();
         const timer = setTimeout(() => ctrl.abort(), 22000);
         try {
@@ -527,9 +527,14 @@ export async function onRequest(context) {
         } finally {
           clearTimeout(timer);
         }
-        if (res.status !== 429) break;
+        if (res.status !== 429 && res.status !== 400) break;
+        // Sur 400, vérifier le body pour rate_limit
+        if (res.status === 400) {
+          const errText = await res.clone().text().catch(() => "");
+          if (!errText.includes("rate") && !errText.includes("token")) break; // 400 réel, pas rate limit
+        }
         attempt++;
-        await new Promise(r => setTimeout(r, 1500 * attempt)); // 1.5s, 3s, 4.5s
+        await new Promise(r => setTimeout(r, 2000 * attempt)); // 2s, 4s, 6s, 8s
       }
 
       if (!res.ok) {
@@ -763,9 +768,20 @@ Si verdict=reject : "improved_blocks": null`;
     }
   }
 
-  // ── Exécution PARALLÈLE — tous les agents simultanément ──────────────────
-  // Chaque agent utilise un modèle différent → buckets de rate limit distincts
-  const results = await Promise.all(targetAgents.map(agent => runAgent(agent)));
+  // ── Exécution en VAGUES de 4 agents pour éviter rate limits Groq ─────────
+  // 17 agents lancés simultanément = 400/429 sur les buckets saturés.
+  // Vagues séquentielles de 4 = équilibre throughput / rate limits.
+  const WAVE_SIZE = 4;
+  const results = [];
+  for (let i = 0; i < targetAgents.length; i += WAVE_SIZE) {
+    const wave = targetAgents.slice(i, i + WAVE_SIZE);
+    const waveResults = await Promise.all(wave.map(agent => runAgent(agent)));
+    results.push(...waveResults);
+    // Petit délai entre les vagues (sauf la dernière) pour décharger les buckets
+    if (i + WAVE_SIZE < targetAgents.length) {
+      await new Promise(r => setTimeout(r, 1500));
+    }
+  }
 
   const ok = results.filter(r => r.ok).length;
   const errors = results.filter(r => r.error).length;
