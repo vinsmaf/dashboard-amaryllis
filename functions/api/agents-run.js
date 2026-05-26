@@ -763,7 +763,7 @@ Si verdict=reject : "improved_blocks": null`;
           }
 
           try {
-            await db.prepare(`
+            const insertRes = await db.prepare(`
               INSERT INTO agent_drafts
                 (agent, agent_label, agent_emoji, type, payload, rationale, preview, reviews, status, created_at, updated_at)
               VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
@@ -774,6 +774,16 @@ Si verdict=reject : "improved_blocks": null`;
               reviews, now, now
             ).run();
             draftsCreated++;
+            const draftId = insertRes.meta?.last_row_id;
+
+            // Si la requête venait du calendrier éditorial, lier le draft à l'entrée
+            if (body.calendar_id && draftId) {
+              try {
+                await db.prepare(
+                  "UPDATE editorial_calendar SET draft_id = ?, status = 'drafted', updated_at = unixepoch() WHERE id = ?"
+                ).bind(draftId, body.calendar_id).run();
+              } catch {}
+            }
           } catch (e) {}
         }
       }

@@ -156,11 +156,17 @@ export async function onRequest(context) {
 
     if (action === "reject") {
       await db.prepare("UPDATE agent_drafts SET status='rejected', updated_at=? WHERE id=?").bind(now, id).run();
+      // Si lié à une entrée du calendrier éditorial → reset à 'planned' pour permettre regen
+      await db.prepare("UPDATE editorial_calendar SET status='planned', draft_id=NULL, updated_at=? WHERE draft_id=?")
+        .bind(now, id).run().catch(() => {});
       return json({ ok: true, status: "rejected" });
     }
 
     if (action === "approve") {
       await db.prepare("UPDATE agent_drafts SET status='approved', approved_at=?, updated_at=? WHERE id=?").bind(now, now, id).run();
+      // Propage le statut approved au calendrier (pour cron de publication auto)
+      await db.prepare("UPDATE editorial_calendar SET status='approved', updated_at=? WHERE draft_id=?")
+        .bind(now, id).run().catch(() => {});
       return json({ ok: true, status: "approved" });
     }
 
@@ -172,6 +178,10 @@ export async function onRequest(context) {
         UPDATE agent_drafts SET status=?, result=?, published_at=?, updated_at=?
         WHERE id=?
       `).bind(newStatus, JSON.stringify(result), result.ok ? now : null, now, id).run();
+      // Propage au calendrier
+      const calStatus = result.ok ? "published" : "failed";
+      await db.prepare("UPDATE editorial_calendar SET status=?, published_at=?, result=?, updated_at=? WHERE draft_id=?")
+        .bind(calStatus, result.ok ? now : null, JSON.stringify(result), now, id).run().catch(() => {});
       return json({ ok: result.ok, status: newStatus, result });
     }
 
@@ -192,6 +202,9 @@ export async function onRequest(context) {
     const id = parseInt(url.searchParams.get("id"));
     if (!id) return json({ error: "id requis" }, 400);
     await db.prepare("DELETE FROM agent_drafts WHERE id=?").bind(id).run();
+    // Reset calendrier éditorial si entrée liée → permet de regénérer
+    await db.prepare("UPDATE editorial_calendar SET status='planned', draft_id=NULL, updated_at=? WHERE draft_id=?")
+      .bind(now, id).run().catch(() => {});
     return json({ ok: true });
   }
 
