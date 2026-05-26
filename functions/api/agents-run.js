@@ -217,19 +217,45 @@ const DRAFT_CAPABLE = {
     instructions: `Tu peux aussi générer des BROUILLONS de posts pour Instagram + Facebook.
 Le compte Instagram est un page-backed (PBIA), donc un seul post va sur les 2 plateformes.
 
-Pour CHAQUE bien, varie les angles : vue, équipements, expérience, saisonnalité, ambiance.
-Style : chaleureux, sensoriel, formel ("vous"), max 150-200 mots.
-Toujours inclure 3-5 hashtags pertinents en fin de caption.
+📐 STRUCTURE OBLIGATOIRE d'une caption (dans cet ordre exact) :
+  1️⃣ Hook accrocheur (1 ligne, emoji en début)
+  2️⃣ Description sensorielle du bien (3-5 lignes, max 150 mots)
+  3️⃣ Bénéfice voyageur clair (1 ligne)
+  4️⃣ Call-to-action avec URL → "Réservez sur https://villamaryllis.com/{bienId} ⤴️"
+  5️⃣ Hashtags (8-12 mix : 3 marque + 3 destination + 2 type + 2 audience)
 
-URLs d'images suggérées (varie entre 01 et 12 selon les biens) :
-- Amaryllis  : https://villamaryllis.com/photos/amaryllis/01.webp (jusqu'à /12.webp)
-- Zandoli    : https://villamaryllis.com/photos/zandoli/01.webp
-- Iguana     : https://villamaryllis.com/photos/iguana/01.webp
-- Géko       : https://villamaryllis.com/photos/geko/01.webp
-- Mabouya    : https://villamaryllis.com/photos/mabouya/01.webp
-- Schœlcher  : https://villamaryllis.com/photos/schoelcher/01.webp
-- Nogent     : https://villamaryllis.com/photos/nogent/01.webp
-IMPORTANT : utilise UNIQUEMENT ce format .webp avec numéros 01 à 12, sinon l'image ne s'affichera pas.`,
+🔗 URLs réservation (toujours inclure dans la CTA) :
+  - Amaryllis  → https://villamaryllis.com/amaryllis
+  - Zandoli    → https://villamaryllis.com/zandoli
+  - Iguana     → https://villamaryllis.com/iguana
+  - Géko       → https://villamaryllis.com/geko
+  - Mabouya    → https://villamaryllis.com/mabouya
+  - Schœlcher  → https://villamaryllis.com/schoelcher
+  - Nogent     → https://villamaryllis.com/nogent
+
+#️⃣ STRATÉGIE HASHTAGS (8-12 obligatoires, varie selon bien/saison) :
+  Marque    : #AmaryllisLocations #VillaAmaryllis #VillamaryllisCom
+  Lieu MQ   : #Martinique #Caraïbes #SainteLuce #LeDiamant #Schoelcher #Antilles #VueMer
+  Lieu IDF  : #Nogent #ParisEst #VincennesParis
+  Type      : #LocationVacances #VillaPiscine #StayMartinique #VacanceHaut​DeGamme
+  Audience  : #FamilleVacances #Couple #Honeymoon #SéjourLuxe #VoyageZen #SlowTravel
+
+🖼️ URLs IMAGES (uniquement format .webp, numéros 01 à 12) :
+  - https://villamaryllis.com/photos/amaryllis/01.webp
+  - https://villamaryllis.com/photos/zandoli/01.webp
+  - https://villamaryllis.com/photos/iguana/01.webp
+  - https://villamaryllis.com/photos/geko/01.webp
+  - https://villamaryllis.com/photos/mabouya/01.webp
+  - https://villamaryllis.com/photos/schoelcher/01.webp
+  - https://villamaryllis.com/photos/nogent/01.webp
+
+Style : chaleureux, sensoriel, formel ("vous"), max 200 mots TOTAL.
+
+⚠️ Avant de finaliser un draft, vérifie mentalement :
+  ✓ CTA avec URL complète ? (sinon perte de conversions = ❌ retraffic)
+  ✓ 8-12 hashtags stratégiques ? (sinon faible portée = ❌ SEO/social)
+  ✓ Image .webp valide ? (sinon broken = ❌ qualité)
+Ces 3 points sont validés par les agents traffic-manager + seo-content-writer.`,
   },
   "crm-manager": {
     types: ["email_campaign"],
@@ -416,32 +442,91 @@ export async function onRequest(context) {
 
       // ── Insertion des drafts (si l'agent en a généré) ────────────────────
       if (drafts.length > 0 && DRAFT_CAPABLE[agent.id]) {
-        // S'assurer que la table existe (auto-init)
+        // S'assurer que la table existe (auto-init) avec colonne reviews
         try {
           await db.prepare(`CREATE TABLE IF NOT EXISTS agent_drafts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             agent TEXT NOT NULL, agent_label TEXT, agent_emoji TEXT,
             type TEXT NOT NULL, payload TEXT NOT NULL, rationale TEXT, preview TEXT,
-            status TEXT NOT NULL DEFAULT 'pending', result TEXT,
+            status TEXT NOT NULL DEFAULT 'pending', result TEXT, reviews TEXT,
             created_at INTEGER NOT NULL DEFAULT (unixepoch()),
             updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
             approved_at INTEGER, published_at INTEGER
           )`).run();
+          // Migration : ajouter la colonne reviews si manquante
+          try { await db.prepare(`ALTER TABLE agent_drafts ADD COLUMN reviews TEXT`).run(); } catch {}
         } catch {}
 
         for (const draft of drafts.slice(0, 2)) {
           if (!draft.type || !draft.payload) continue;
           if (!DRAFT_CAPABLE[agent.id].types.includes(draft.type)) continue;
+
+          // ── Validation par agents spécialisés (traffic-manager + seo) ──
+          let reviews = null;
+          if (draft.type === "social_post") {
+            try {
+              const validatorPrompt = `Tu es un panel de 2 agents experts qui review un draft de post social :
+- traffic-manager : SEO, CTAs, hashtags, conversions
+- seo-content-writer : qualité rédactionnelle, lisibilité, mots-clés longue traîne
+
+DRAFT À VALIDER :
+Caption : """${draft.payload.caption || ""}"""
+ImageUrl : ${draft.payload.imageUrl || "(aucune)"}
+Channels : ${(draft.payload.channels || []).join(", ")}
+
+CHECKLIST QUALITÉ :
+1. CTA avec URL https://villamaryllis.com/* visible ?
+2. 8-12 hashtags stratégiques (marque + lieu + audience) ?
+3. Hook accrocheur en première ligne ?
+4. Mention sensorielle (vue, son, ambiance) ?
+5. Image .webp avec numéro 01-12 valide ?
+6. Longueur 100-200 mots (ni trop court ni trop long) ?
+7. Tone "vous" formel respecté ?
+
+Retourne UNIQUEMENT un JSON :
+{
+  "score": 0-100,
+  "verdict": "approve|needs_edits|reject",
+  "traffic_manager": { "note": 0-10, "feedback": "1-2 phrases" },
+  "seo_writer": { "note": 0-10, "feedback": "1-2 phrases" },
+  "improved_caption": "version améliorée si needs_edits ou approve (sinon null)"
+}`;
+
+              const valRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+                body: JSON.stringify({
+                  model: "meta-llama/llama-4-scout-17b-16e-instruct",
+                  max_tokens: 800, temperature: 0.2,
+                  messages: [{ role: "user", content: validatorPrompt }],
+                }),
+              });
+              if (valRes.ok) {
+                const valData = await valRes.json();
+                const valText = valData.choices?.[0]?.message?.content || "";
+                const match = valText.match(/\{[\s\S]*\}/);
+                if (match) {
+                  const parsed = JSON.parse(match[0]);
+                  reviews = JSON.stringify(parsed);
+                  // Si le validator a fourni une version améliorée, on l'utilise
+                  if (parsed.improved_caption && parsed.verdict !== "reject") {
+                    draft.payload.caption = parsed.improved_caption;
+                  }
+                }
+              }
+            } catch (e) { /* validation optionnelle, on continue sans */ }
+          }
+
           try {
             await db.prepare(`
               INSERT INTO agent_drafts
-                (agent, agent_label, agent_emoji, type, payload, rationale, preview, status, created_at, updated_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
+                (agent, agent_label, agent_emoji, type, payload, rationale, preview, reviews, status, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
             `).bind(
               agent.id, agent.label, agent.emoji,
               draft.type, JSON.stringify(draft.payload),
               draft.rationale || null, draft.preview || null,
-              now, now
+              reviews, now, now
             ).run();
             draftsCreated++;
           } catch (e) {}

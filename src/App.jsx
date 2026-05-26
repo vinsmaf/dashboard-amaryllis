@@ -10104,6 +10104,40 @@ function ApprobationsTab({ mob }) {
                   </div>
                 )}
 
+                {/* Reviews des agents validateurs */}
+                {d.reviews && (() => {
+                  let r = null; try { r = JSON.parse(d.reviews); } catch {}
+                  if (!r) return null;
+                  const scoreColor = r.score >= 80 ? "#10b981" : r.score >= 60 ? "#f59e0b" : "#ef4444";
+                  const verdictBadge = {
+                    approve:     { label: "✅ Approuvé par les agents", color: "#10b981" },
+                    needs_edits: { label: "⚠️ Améliorations suggérées",  color: "#f59e0b" },
+                    reject:      { label: "🚫 Rejeté par les agents",   color: "#ef4444" },
+                  }[r.verdict] || { label: r.verdict, color: "#94a3b8" };
+                  return (
+                    <div style={{ padding: "10px 14px", background: "rgba(99,102,241,0.04)", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6 }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: verdictBadge.color, padding: "2px 8px", borderRadius: 10, background: `${verdictBadge.color}15` }}>
+                          {verdictBadge.label}
+                        </span>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: scoreColor }}>
+                          Score : {r.score}/100
+                        </span>
+                      </div>
+                      {r.traffic_manager && (
+                        <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 3 }}>
+                          <span style={{ color: "#e2e8f0" }}>📈 Traffic Manager</span> ({r.traffic_manager.note}/10) — {r.traffic_manager.feedback}
+                        </div>
+                      )}
+                      {r.seo_writer && (
+                        <div style={{ fontSize: 10, color: "#94a3b8" }}>
+                          <span style={{ color: "#e2e8f0" }}>✍️ SEO Writer</span> ({r.seo_writer.note}/10) — {r.seo_writer.feedback}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 {d.type === "social_post" && (
                   <div style={{ padding: "14px", display: "grid", gridTemplateColumns: payload.imageUrl && !mob ? "1fr 200px" : "1fr", gap: 14 }}>
                     <div>
