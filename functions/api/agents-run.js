@@ -153,6 +153,42 @@ const AGENTS = [
   },
 ];
 
+// ── Modèles Groq — rotation pour maximiser les appels parallèles ─────────────
+// Chaque modèle a sa propre bucket de rate limit → on peut les appeler simultanément
+const GROQ_MODELS = [
+  { model: "llama-3.3-70b-versatile",                   tier: "high"   }, // meilleur raisonnement
+  { model: "llama-3.1-8b-instant",                      tier: "fast"   }, // ultra-rapide
+  { model: "gemma2-9b-it",                              tier: "mid"    }, // Google Gemma
+  { model: "mixtral-8x7b-32768",                        tier: "mid"    }, // Mistral MoE
+  { model: "meta-llama/llama-4-scout-17b-16e-instruct", tier: "high"   }, // Llama 4 Scout
+  { model: "meta-llama/llama-4-maverick-17b-128e-instruct", tier:"high"}, // Llama 4 Maverick
+  { model: "deepseek-r1-distill-llama-70b",             tier: "high"   }, // DeepSeek R1
+  { model: "qwen-qwq-32b",                              tier: "high"   }, // Qwen QwQ
+  { model: "mistral-saba-24b",                          tier: "mid"    }, // Mistral Saba
+  { model: "llama-3.2-3b-preview",                      tier: "fast"   }, // mini
+];
+
+// Attribution agent → modèle (modèles "high" pour les agents critiques)
+const AGENT_MODELS = {
+  "juriste-compliance":        "llama-3.3-70b-versatile",                    // légal → top model
+  "architecte-reseau":         "meta-llama/llama-4-maverick-17b-128e-instruct", // sécurité → Llama 4
+  "webmaster":                 "deepseek-r1-distill-llama-70b",              // tech → DeepSeek
+  "traffic-manager":           "meta-llama/llama-4-scout-17b-16e-instruct",  // SEO → Llama 4 Scout
+  "data-analyst":              "qwen-qwq-32b",                               // data → QwQ
+  "revenue-manager":           "llama-3.3-70b-versatile",                    // revenus → top model
+  "developpeur-multimedia":    "mixtral-8x7b-32768",                         // media → Mixtral
+  "photographe-da":            "gemma2-9b-it",                               // DA → Gemma
+  "webdesigner":               "llama-3.1-8b-instant",                       // design → rapide
+  "chef-produit-web":          "meta-llama/llama-4-maverick-17b-128e-instruct", // produit → Llama 4
+  "community-manager":         "mistral-saba-24b",                           // CM → Mistral Saba
+  "commercial-publicite":      "meta-llama/llama-4-scout-17b-16e-instruct",  // pub → Llama 4 Scout
+  "crm-manager":               "deepseek-r1-distill-llama-70b",              // CRM → DeepSeek
+  "consultant-ebusiness":      "qwen-qwq-32b",                               // ebiz → QwQ
+  "responsable-service-client":"mixtral-8x7b-32768",                         // SC → Mixtral
+  "responsable-logistique":    "gemma2-9b-it",                               // logistique → Gemma
+  "seo-content-writer":        "llama-3.3-70b-versatile",                    // SEO content → top
+};
+
 // ── Récupère l'historique D1 d'un agent ──────────────────────────────────────
 async function fetchAgentHistory(db, agentId) {
   try {
@@ -261,15 +297,13 @@ export async function onRequest(context) {
 
   if (!targetAgents.length) return json({ error: "No matching agents found" }, 400);
 
-  const results = [];
   const now = Math.floor(Date.now() / 1000);
 
-  for (const agent of targetAgents) {
+  // ── Fonction d'appel Groq pour un agent donné ─────────────────────────────
+  async function runAgent(agent) {
     try {
-      // Récupère l'historique D1 de cet agent pour enrichir le prompt
+      // Historique D1 + mémoires de l'agent
       const history = await fetchAgentHistory(db, agent.id);
-
-      // Lire les mémoires de cet agent
       let memories = [];
       try {
         const { results: mems } = await db.prepare(
@@ -278,16 +312,19 @@ export async function onRequest(context) {
         memories = mems || [];
       } catch {}
 
-      // Appel API Groq avec retry auto sur 429 (rate limit)
+      // Modèle assigné à cet agent (bucket de rate limit distinct)
+      const model = AGENT_MODELS[agent.id] || "llama-3.3-70b-versatile";
+
       const groqBody = JSON.stringify({
-        model: "llama-3.3-70b-versatile",
+        model,
         max_tokens: 1024,
         temperature: 0.3,
         messages: [{ role: "user", content: buildPrompt(agent, history, memories) }],
       });
 
+      // Retry auto sur 429 avec backoff exponentiel
       let res, attempt = 0;
-      while (attempt < 3) {
+      while (attempt < 4) {
         res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
           method: "POST",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
@@ -295,30 +332,24 @@ export async function onRequest(context) {
         });
         if (res.status !== 429) break;
         attempt++;
-        // Backoff exponentiel : 3s, 6s, 12s
-        await new Promise(r => setTimeout(r, 3000 * attempt));
+        await new Promise(r => setTimeout(r, 2000 * attempt)); // 2s, 4s, 6s, 8s
       }
 
       if (!res.ok) {
-        results.push({ agent: agent.id, error: `Groq API ${res.status}` });
-        continue;
+        const errBody = await res.text().catch(() => "");
+        return { agent: agent.id, model, error: `Groq ${res.status}`, detail: errBody.slice(0, 100) };
       }
 
       const data = await res.json();
       const text = data.choices?.[0]?.message?.content || "";
 
-      // Délai 2s entre agents pour respecter le rate limit Groq
-      await new Promise(r => setTimeout(r, 2000));
-
-      // Parser le JSON retourné par Claude
+      // Parser le JSON
       let parsed;
       try {
-        // Extraire le JSON même si Claude a ajouté du texte
         const match = text.match(/\{[\s\S]*\}/);
         parsed = JSON.parse(match ? match[0] : text);
       } catch {
-        results.push({ agent: agent.id, error: "JSON parse failed", raw: text.slice(0, 200) });
-        continue;
+        return { agent: agent.id, model, error: "JSON parse failed", raw: text.slice(0, 200) };
       }
 
       const actions = parsed.actions || [];
@@ -329,7 +360,6 @@ export async function onRequest(context) {
         if (!row.id || !row.action) continue;
         const existing = await db.prepare("SELECT id, status FROM agent_actions WHERE id = ?").bind(row.id).first();
         if (existing) {
-          // Préserver tous les statuts sauf backlog — ne jamais écraser fait/bloqué/a-planifier/en-cours
           const keepStatus = ["fait", "bloqué", "a-planifier", "en-cours"].includes(existing.status);
           await db.prepare(`
             UPDATE agent_actions SET action=?, priority=?, effort=?, category=?,
@@ -349,39 +379,42 @@ export async function onRequest(context) {
         }
       }
 
-      // Stocker les observations en mémoire agent
+      // Mémoire : stocker les observations clés
       if (actions.length > 0) {
         const topAction = [...actions].sort((a, b) => {
-          const prio = { critique: 0, haute: 1, moyenne: 2, basse: 3 };
-          return (prio[a.priority] ?? 3) - (prio[b.priority] ?? 3);
+          const p = { critique: 0, haute: 1, moyenne: 2, basse: 3 };
+          return (p[a.priority] ?? 3) - (p[b.priority] ?? 3);
         })[0];
-
-        // Mémoire : dernière priorité critique ou haute identifiée
-        if (topAction.priority === 'critique' || topAction.priority === 'haute') {
+        if (topAction.priority === "critique" || topAction.priority === "haute") {
           await db.prepare(`
             INSERT INTO agent_memory (agent, key, value) VALUES (?,?,?)
             ON CONFLICT(agent, key) DO UPDATE SET value=excluded.value, created_at=unixepoch()
-          `).bind(agent.id, 'last_top_action', JSON.stringify({
-            action: topAction.action,
-            priority: topAction.priority,
-            category: topAction.category,
-            ts: now,
+          `).bind(agent.id, "last_top_action", JSON.stringify({
+            action: topAction.action, priority: topAction.priority,
+            category: topAction.category, model, ts: now,
           })).run().catch(() => {});
         }
-
-        // Mémoire : nombre d'actions générées lors du dernier run
         await db.prepare(`
           INSERT INTO agent_memory (agent, key, value) VALUES (?,?,?)
           ON CONFLICT(agent, key) DO UPDATE SET value=excluded.value, created_at=unixepoch()
-        `).bind(agent.id, 'last_run_count', String(actions.length)).run().catch(() => {});
+        `).bind(agent.id, "last_run_count", String(actions.length)).run().catch(() => {});
+
+        // Mémoire : modèle utilisé (pour suivi)
+        await db.prepare(`
+          INSERT INTO agent_memory (agent, key, value) VALUES (?,?,?)
+          ON CONFLICT(agent, key) DO UPDATE SET value=excluded.value, created_at=unixepoch()
+        `).bind(agent.id, "model", model).run().catch(() => {});
       }
 
-      results.push({ agent: agent.id, ok: true, inserted, updated, actions: actions.length, context_size: history.length });
-
+      return { agent: agent.id, model, ok: true, inserted, updated, actions: actions.length, context_size: history.length };
     } catch (e) {
-      results.push({ agent: agent.id, error: e.message });
+      return { agent: agent.id, error: e.message };
     }
   }
+
+  // ── Exécution PARALLÈLE — tous les agents simultanément ──────────────────
+  // Chaque agent utilise un modèle différent → buckets de rate limit distincts
+  const results = await Promise.all(targetAgents.map(agent => runAgent(agent)));
 
   const ok = results.filter(r => r.ok).length;
   const errors = results.filter(r => r.error).length;
