@@ -190,13 +190,14 @@ export default function AgentsKanban({ mob }) {
         return;
       }
       const incoming = d.actions || [];
-      // Détecter si le contenu a changé (comparaison rapide par updated_at max)
-      const prevMax = actionsRef.current.reduce((m, a) => Math.max(m, a.updated_at || 0), 0);
-      const nextMax = incoming.reduce((m, a) => Math.max(m, a.updated_at || 0), 0);
+      // Stats : toujours mettre à jour (indépendant de l'optimisation actions)
+      setStats(d.stats || {});
+      // Détecter si les actions ont changé (comparaison par longueur + updated_at max)
+      const prevMax = actionsRef.current.reduce((m, a) => Math.max(m, Number(a.updated_at) || 0), 0);
+      const nextMax = incoming.reduce((m, a) => Math.max(m, Number(a.updated_at) || 0), 0);
       if (nextMax > prevMax || incoming.length !== actionsRef.current.length) {
         actionsRef.current = incoming;
         setActions(incoming);
-        setStats(d.stats || {});
       }
       setInitNeeded(false);
       setLastRefresh(new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
