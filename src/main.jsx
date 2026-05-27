@@ -80,6 +80,53 @@ try {
 const params = new URLSearchParams(window.location.search);
 const cautionParam = params.get("caution"); // "ok" | "cancelled"
 
+// ── GA4 — delegated event listeners (couvre tous les liens présents et futurs) ──
+// 1. Clic WhatsApp → event "whatsapp_click"
+// 2. Clic email mailto → event "email_click"
+// 3. Clic phone tel: → event "phone_click"
+// 4. Clic vers /links (Linktree) → event "outbound_links_click"
+document.addEventListener("click", (e) => {
+  const link = e.target.closest("a[href]");
+  if (!link || !window.gtag) return;
+  const href = link.getAttribute("href") || "";
+  if (href.includes("wa.me/") || href.includes("api.whatsapp.com")) {
+    window.gtag("event", "whatsapp_click", {
+      link_url: href,
+      page_path: window.location.pathname,
+    });
+  } else if (href.startsWith("mailto:")) {
+    window.gtag("event", "email_click", {
+      link_url: href,
+      page_path: window.location.pathname,
+    });
+  } else if (href.startsWith("tel:")) {
+    window.gtag("event", "phone_click", {
+      link_url: href,
+      page_path: window.location.pathname,
+    });
+  }
+}, { passive: true });
+
+// Scroll depth — événement scroll_50 et scroll_90 (engagement contenu)
+(() => {
+  const fired = new Set();
+  const onScroll = () => {
+    if (!window.gtag) return;
+    const scrolled = window.scrollY + window.innerHeight;
+    const pct = Math.round((scrolled / document.body.scrollHeight) * 100);
+    [50, 90].forEach(threshold => {
+      if (pct >= threshold && !fired.has(threshold)) {
+        fired.add(threshold);
+        window.gtag("event", `scroll_${threshold}`, {
+          percent_scrolled: threshold,
+          page_path: window.location.pathname,
+        });
+      }
+    });
+  };
+  window.addEventListener("scroll", onScroll, { passive: true });
+})();
+
 const BIEN_IDS = ["amaryllis", "zandoli", "iguana", "geko", "mabouya", "schoelcher", "nogent"];
 const KNOWN = ["/", "/links", "/merci", "/devis", "/guide", "/explorer", "/guide-le-diamant", "/guide-sainte-anne", "/villa-rental-martinique", "/activites-sainte-luce", "/guide-proximite", "/guide-arlet", "/guide-trois-ilets", "/guide-plongee-martinique", "/guide-saint-pierre-martinique", "/guide-francois-martinique", "/guide-distilleries-martinique", "/guide-randonnees-martinique", "/guide-gastronomie-martinique", "/avis", "/faq", "/mentions-legales", "/politique-confidentialite", "/conditions-generales", "/sainte-luce-martinique", "/reservation-directe-martinique", "/meilleure-saison-martinique", "/seminaires", "/guide-nogent-sur-marne", "/location-villa-martinique-piscine"];
 const isKnown = KNOWN.includes(path)

@@ -3441,7 +3441,11 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
           /* Mobile: carousel */
           <div style={{ position: "relative", height: "min(70vw, 380px)", background: "#061616", flexShrink: 0 }}>
             <div
-              onClick={() => photos.length > 0 && setLightboxOpen(true)}
+              onClick={() => {
+                if (photos.length === 0) return;
+                setLightboxOpen(true);
+                if (window.gtag) window.gtag("event", "view_gallery", { item_id: bien.id, item_name: bien.nom, photo_index: photoIdx });
+              }}
               onTouchStart={onDetailTouchStart}
               onTouchEnd={onDetailTouchEnd}
               style={{ position: "absolute", inset: 0, cursor: "zoom-in" }}
@@ -7435,6 +7439,20 @@ export default function PublicSite() {
       if (match) {
         const withPrice = { ...match, prix: loadPriceOverrides()[match.id] ?? match.prix };
         setDetailBien(withPrice);
+        // GA4 event — view_item (fiche villa consultée)
+        if (window.gtag) {
+          window.gtag("event", "view_item", {
+            currency: "EUR",
+            value: withPrice.prix || 0,
+            items: [{
+              item_id: match.id,
+              item_name: match.nom,
+              item_category: match.lieu || "Martinique",
+              price: withPrice.prix || 0,
+              quantity: 1,
+            }],
+          });
+        }
         if (!BOOKING_DISABLED.has(match.id) && !directBienFetchedRef.current) {
           directBienFetchedRef.current = true;
           fetchAvailability(match.id);
