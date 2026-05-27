@@ -5,7 +5,7 @@
  * Extrait de src/App.jsx (refactor 2026, batch B/4).
  */
 import { useState, useEffect, useMemo, useRef } from "react";
-import { DEFAULT_PRIX, BIEN_LABELS, N } from "../App.jsx";
+import { DEFAULT_PRIX, BIEN_LABELS, BIEN_IDS, PRIX_LIMITS, MOIS_CAL, CAL_BIEN_IDS, N } from "../App.jsx";
 import { loadDailyPrices, saveDailyPrices, applyServerPriceOverrides, loadPriceOverrides } from "../seedPrices.js";
 
 // ── Helpers locaux saisons ──────────────────────────────────────────────────

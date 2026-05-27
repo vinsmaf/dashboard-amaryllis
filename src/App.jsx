@@ -704,9 +704,9 @@ export function ComparatifContent({ biens, n, mob, hist = HIST_SEED, prevYear = 
 // ============================================================================
 export const DEFAULT_PRIX = { amaryllis: 280, zandoli: 220, iguana: 180, geko: 150, mabouya: 110, schoelcher: 100, nogent: 85 };
 export const BIEN_LABELS = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", iguana: "Villa Iguana", geko: "Géko", mabouya: "Mabouya", schoelcher: "T2 Schœlcher", nogent: "T2 Nogent-sur-Marne" };
-const BIEN_IDS = Object.keys(DEFAULT_PRIX);
+export const BIEN_IDS = Object.keys(DEFAULT_PRIX);
 // Garde-fous tarifaires par bien : [min, max] en €
-const PRIX_LIMITS = {
+export const PRIX_LIMITS = {
   amaryllis:  [200, 800],
   zandoli:    [100, 300],
   iguana:     [50,  600],
@@ -716,9 +716,9 @@ const PRIX_LIMITS = {
   nogent:     [70,  300],
 };
 
-const MOIS_CAL = ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Jul", "Aoû", "Sep", "Oct", "Nov", "Déc"];
+export const MOIS_CAL = ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Jul", "Aoû", "Sep", "Oct", "Nov", "Déc"];
 // Logements actifs sur le site direct (hors Iguana et Nogent)
-const CAL_BIEN_IDS = ["amaryllis", "zandoli", "iguana", "geko", "mabouya", "schoelcher", "nogent"];
+export const CAL_BIEN_IDS = ["amaryllis", "zandoli", "iguana", "geko", "mabouya", "schoelcher", "nogent"];
 
 // Règles saisonnières par défaut — [moisDébut, moisFin] (1=Jan, 12=Déc), inclusif
 
