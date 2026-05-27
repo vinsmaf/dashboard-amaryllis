@@ -6366,17 +6366,13 @@ function LogoDropdown() {
         onClick={() => setOpen(o => !o)}
         style={{ display: "flex", alignItems: "center", gap: 14, background: "none", border: "none", cursor: "pointer", padding: 0 }}
       >
-        <svg width="30" height="30" viewBox="0 0 92 92">
-          <g transform="translate(46 46)" stroke="var(--c-cream)" strokeWidth="1" fill="none">
-            {[0, 60, 120, 180, 240, 300].map((rot, i) => (
-              <g key={i} transform={`rotate(${rot})`}>
-                <path d="M 0 0 L 0 -38 L 8 -20 Z" fill="var(--c-cream)" />
-                <path d="M 0 0 L 0 -38 L -8 -20 Z" fill="none" stroke="var(--c-cream)" strokeWidth="0.8" />
-              </g>
-            ))}
-            <circle r="3" fill="var(--c-gold)" />
-          </g>
-        </svg>
+        <img
+          src="/brand/amaryllis-mark-cream.svg"
+          alt="Amaryllis"
+          width="36"
+          height="36"
+          style={{ display: "block" }}
+        />
         <div style={{ textAlign: "left" }}>
           <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 15, letterSpacing: "0.55em", color: "var(--c-ivory)", textTransform: "uppercase" }}>AMARYLLIS</div>
           <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 9, color: "rgba(250,245,233,0.4)", letterSpacing: "0.35em", textTransform: "uppercase", marginTop: 2 }}>LOCATIONS D'EXCEPTION</div>

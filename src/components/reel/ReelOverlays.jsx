@@ -22,28 +22,24 @@ export function fade(t, start, fadeIn, hold, fadeOut) {
 }
 
 // ── Amaryllis flower mark (inline SVG, brand logo) ───────────────────────────
-export function FlowerMark({
-  size  = 32,
-  coral = "#c47254",
-  cream = "#f5e8c6",
-  navy  = "#0e3b3a",
-}) {
+// FlowerMark — wrapper <img> autour du nouveau brand mark Amaryllis.
+// variant: 'cream' (default, sur fond sombre) | 'navy' (sur fond clair) | 'color' (full color master).
+// Les anciens props (coral/cream/navy) sont acceptés pour rétro-compatibilité mais ignorés.
+export function FlowerMark({ size = 32, variant = "cream" }) {
+  const src = {
+    cream: "/brand/amaryllis-mark-cream.svg",
+    navy:  "/brand/amaryllis-mark-navy.svg",
+    color: "/brand/amaryllis-mark.svg",
+  }[variant] || "/brand/amaryllis-mark-cream.svg";
   return (
-    <svg width={size} height={size} viewBox="0 0 220 220" aria-hidden="true">
-      <circle cx="110" cy="110" r="100" fill={cream} />
-      <rect x="10" y="118" width="200" height="92" fill={navy} opacity="0.08" />
-      <line x1="10" y1="118" x2="210" y2="118" stroke={navy} strokeWidth="0.8" />
-      <g transform="translate(110,50) scale(0.55)">
-        {[0, 60, 120, 180, 240, 300].map(r => (
-          <g key={r} transform={`rotate(${r})`}>
-            <ellipse cx="0" cy="-22" rx="11" ry="22" fill={coral} />
-          </g>
-        ))}
-        <circle r="7" fill={cream} />
-        <circle r="2" fill={navy} />
-      </g>
-      <circle cx="110" cy="110" r="102" fill="none" stroke={navy} strokeWidth="1.5" />
-    </svg>
+    <img
+      src={src}
+      alt=""
+      width={size}
+      height={size}
+      style={{ display: "block", verticalAlign: "middle" }}
+      aria-hidden="true"
+    />
   );
 }
 
