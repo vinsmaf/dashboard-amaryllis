@@ -3,7 +3,8 @@
  * Extrait de src/App.jsx (refactor 2026, batch B/3).
  */
 import { useState } from "react";
-import { DEFAULT_PRIX, BIEN_LABELS, SEASONAL_KEY, SEASON_COLORS, SEASON_COLOR_LABELS, DEFAULT_SEASONS, CalendrierTarifs } from "../App.jsx";
+import { DEFAULT_PRIX, BIEN_LABELS, SEASONAL_KEY, SEASON_COLORS, SEASON_COLOR_LABELS, DEFAULT_SEASONS } from "../App.jsx";
+import CalendrierTarifs from "./CalendrierTarifs.jsx";
 import { useAppData } from "../AppDataContext.jsx";
 
 export default function Tarifs() {

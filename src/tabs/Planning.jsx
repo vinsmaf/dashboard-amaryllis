@@ -18,8 +18,9 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import {
   MOIS_FULL, CC, CB, N, TT,
   fmt, fmtK,
-  computeRevenusFromResas, MinNightsConfig,
+  computeRevenusFromResas,
 } from "../App.jsx";
+import MinNightsConfig from "./MinNightsConfig.jsx";
 import { sumN, avgN, addDays, diffDays, todayStr } from "../utils/calculations.js";
 import { loadDailyPrices } from "../seedPrices.js";
 import { useAppData } from "../AppDataContext.jsx";
