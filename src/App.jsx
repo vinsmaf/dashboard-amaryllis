@@ -31,6 +31,7 @@ import OrchestratorTab from "./tabs/OrchestratorTab.jsx";
 import SocialTab from "./tabs/SocialTab.jsx";
 import ApprobationsTab from "./tabs/ApprobationsTab.jsx";
 import EditorialCalendarTab from "./tabs/EditorialCalendarTab.jsx";
+import CroissanceTab from "./tabs/CroissanceTab.jsx";
 import { AppDataProvider } from "./AppDataContext.jsx";
 import { SEED_DAILY_PRICES, loadDailyPrices, saveDailyPrices, loadPriceOverrides, applyServerPriceOverrides } from "./seedPrices.js";
 import {
@@ -1226,6 +1227,7 @@ export default function App() {
         { id: "social", icon: "📣", label: "Réseaux sociaux" },
         { id: "approbations", icon: "📥", label: "Approbations" },
         { id: "editorial", icon: "📅", label: "Planning éditorial" },
+        { id: "croissance", icon: "📈", label: "Croissance audience" },
       ],
     },
     {
@@ -1446,6 +1448,7 @@ export default function App() {
             {tab === "social"        && <SocialTab />}
             {tab === "approbations"  && <ApprobationsTab />}
             {tab === "editorial"     && <EditorialCalendarTab />}
+            {tab === "croissance"    && <CroissanceTab />}
             {tab === "chat-admin"    && <LocalErrorBoundary><AdminChatTab /></LocalErrorBoundary>}
             {tab === "orchestrateur" && <OrchestratorTab />}
             {tab === "interventions" && <InterventionsTab />}

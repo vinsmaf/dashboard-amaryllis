@@ -24,9 +24,12 @@ export const FACT_CHECK_RULES = [
   // Équipements piscines / jacuzzi — vérité par bien
   // Piscine à débordement : UNIQUEMENT Villa Amaryllis
   { rx: /piscine\s+(à|a)\s+d(é|e)bordement/i, reason: "Piscine à débordement uniquement pour Villa Amaryllis — vérifier le bien mentionné" },
-  // Piscine avec cascade : UNIQUEMENT Zandoli et Géko
-  { rx: /(piscine|cascade).*(iguana|mabouya|sch(œ|oe)lcher|nogent|bellevue|amaryllis)/i, reason: "Piscine avec cascade uniquement pour Zandoli et Géko" },
-  { rx: /(iguana|mabouya|sch(œ|oe)lcher|nogent|bellevue|amaryllis).*(piscine|cascade)\s+(avec\s+)?cascade/i, reason: "Cascade uniquement pour Zandoli et Géko" },
+  // Cascade : UNIQUEMENT Zandoli et Géko (résidence partagée)
+  { rx: /cascade.*(iguana|mabouya|sch(œ|oe)lcher|nogent|bellevue|amaryllis)/i, reason: "Piscine avec cascade uniquement pour Zandoli et Géko" },
+  { rx: /(iguana|mabouya|sch(œ|oe)lcher|nogent|bellevue|amaryllis).*cascade/i, reason: "Cascade uniquement pour Zandoli et Géko" },
+  // Piscine eau salée : UNIQUEMENT Villa Iguana
+  { rx: /eau\s+sal(é|e)e.*(amaryllis|zandoli|geko|mabouya|sch(œ|oe)lcher|nogent|bellevue)/i, reason: "Piscine eau salée uniquement pour Villa Iguana" },
+  { rx: /(amaryllis|zandoli|geko|mabouya|sch(œ|oe)lcher|nogent|bellevue).*eau\s+sal(é|e)e/i, reason: "Piscine eau salée uniquement pour Villa Iguana" },
   // Jacuzzi : UNIQUEMENT Mabouya (privatif)
   { rx: /jacuzzi\s+privati(f|ve).*(amaryllis|zandoli|iguana|geko|sch(œ|oe)lcher|nogent|bellevue)/i, reason: "Jacuzzi privatif uniquement pour Studio Mabouya" },
   { rx: /(amaryllis|zandoli|iguana|geko|sch(œ|oe)lcher|nogent|bellevue).*jacuzzi\s+privati(f|ve)/i, reason: "Jacuzzi privatif uniquement pour Studio Mabouya" },
