@@ -9,7 +9,7 @@ crons = [
   "0 9 * * *",   # Audit + rappels + alertes + agents IA — chaque jour à 9h UTC (5h MQ)
   "0 12 * * *",  # Génération drafts éditoriaux J+2 — chaque jour à 12h UTC (8h MQ)
   "0 6 * * 1",   # Rapport hebdomadaire — lundi 6h UTC (2h Martinique / 8h Paris)
-  "0 1 1 * *",   # Export comptable mensuel — 1er du mois à 1h UTC
+  "0 1 1 * *",   # Mensuel — export comptable + article SEO long-tail (1er du mois 1h UTC)
 ]
 
 # KV namespace pour stocker les UIDs connus (anti-doublon notifications)

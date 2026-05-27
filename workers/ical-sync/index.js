@@ -918,6 +918,65 @@ async function runOccupancyAlerts(env, allEvents) {
   console.log(`[occupancy] Alerte envoyée — ${alerts.length} logement(s) sous le seuil${hasUrgent ? `, ${zeroAlerts.length} URGENT(s) 0 résa 14j` : ""}`);
 }
 
+// ── Article SEO long-tail mensuel ────────────────────────────────────────────
+// Génère un article 600-900 mots via seo-content-writer le 1er du mois.
+// L'article apparaît comme draft dans Approbations admin.
+async function runMonthlySeoArticle(env) {
+  const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+  const moisLabels = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+  const now = new Date();
+  const moisCourant = moisLabels[now.getMonth()];
+  const annee = now.getFullYear();
+
+  // Rotation des sujets long-tail (12 sujets = 1 par mois)
+  const SUJETS = [
+    { kw: "location villa Sainte-Luce piscine débordement", target: "/amaryllis" },
+    { kw: "studio jacuzzi privatif Martinique",              target: "/mabouya" },
+    { kw: "villa Martinique 8 personnes vue mer",            target: "/amaryllis" },
+    { kw: "meilleure saison Martinique voyage",              target: "/meilleure-saison-martinique" },
+    { kw: "plongée Martinique débutant",                     target: "/guide-plongee-martinique" },
+    { kw: "distilleries rhum Martinique visite",             target: "/guide-distilleries-martinique" },
+    { kw: "randonnée Montagne Pelée Martinique",             target: "/guide-randonnees-martinique" },
+    { kw: "Rocher du Diamant Martinique",                    target: "/guide-le-diamant" },
+    { kw: "Trois-Îlets Martinique activités",                target: "/guide-trois-ilets" },
+    { kw: "Saint-Pierre Martinique histoire",                target: "/guide-saint-pierre-martinique" },
+    { kw: "gastronomie créole Martinique",                   target: "/guide-gastronomie-martinique" },
+    { kw: "réservation directe villa Martinique",            target: "/reservation-directe-martinique" },
+  ];
+  const sujet = SUJETS[now.getMonth()];
+
+  const brief = `Article de blog SEO long-tail — ${moisCourant} ${annee}
+Mot-clé cible : "${sujet.kw}"
+URL cible pour maillage interne : ${sujet.target}
+
+Type : article 600-900 mots, optimisé SEO mais lisible et utile.
+Structure : H1 (mot-clé), intro 80 mots, 3-4 H2 thématiques, conclusion + CTA.
+Ton : voix Amaryllis (formel, sensoriel, informatif), jamais pub Meta Ads.
+Inclure 2 liens internes : 1 vers ${sujet.target}, 1 vers /amaryllis ou un autre bien pertinent.
+
+Données canoniques INTERDITES À ENFREINDRE :
+- Villa Amaryllis : piscine débordement eau salée 4×7m, 3 chambres, 8 pers (PAS de jacuzzi)
+- Mabouya : jacuzzi privatif (le seul)
+- Iguana : piscine eau salée non chlorée
+- Zandoli + Géko : chacune sa piscine privative à cascade
+- Tous sur les hauteurs, vue mer 180° (PAS bord de mer)
+
+Retourne UN draft type "social_post" avec caption = article complet markdown.`;
+
+  try {
+    console.log(`[seo-article] Démarrage génération article : ${sujet.kw}`);
+    const r = await fetch(`${siteUrl}/api/agents-run`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ agent: "seo-content-writer", brief }),
+    });
+    const data = await r.json();
+    console.log(`[seo-article] ✓ ${data.draftsCreated || 0} draft(s) créé(s) sur "${sujet.kw}"`);
+  } catch (e) {
+    console.error("[seo-article] Erreur:", e.message);
+  }
+}
+
 // ── Export comptable mensuel ─────────────────────────────────────────────────
 async function runMonthlyExport(env, allEvents) {
   const now = new Date();
@@ -1710,9 +1769,12 @@ export default {
       ]));
 
     } else if (cron === "0 1 1 * *") {
-      // 1er du mois — export comptable
+      // 1er du mois — export comptable + article SEO long-tail mensuel
       const { allEvents } = await runSync(env);
-      ctx.waitUntil(runMonthlyExport(env, allEvents));
+      ctx.waitUntil(Promise.all([
+        runMonthlyExport(env, allEvents),
+        runMonthlySeoArticle(env),
+      ]));
 
     } else if (cron === "0 12 * * *") {
       // 12h UTC chaque jour (8h Martinique) — génération drafts éditoriaux J+2

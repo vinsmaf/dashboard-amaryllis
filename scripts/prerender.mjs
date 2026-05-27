@@ -90,6 +90,73 @@ function buildVacationRentalLd({ id, nom, desc, prix, capacite, chambres, rating
   return JSON.stringify(ld, null, 2);
 }
 
+/* ── JSON-LD FAQPage par bien (rich snippet "People also ask" Google) ─ */
+function buildFAQLd(faqs) {
+  return JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": faqs.map(({ q, a }) => ({
+      "@type": "Question",
+      "name": q,
+      "acceptedAnswer": { "@type": "Answer", "text": a },
+    })),
+  }, null, 2);
+}
+
+// FAQ par bien — 5 questions stratégiques par propriété pour décrocher
+// les rich snippets "People also ask" dans Google FR.
+const FAQS_PAR_BIEN = {
+  amaryllis: [
+    { q: "Quel est le prix de la Villa Amaryllis en Martinique ?", a: "La Villa Amaryllis se loue à partir de 280€/nuit en réservation directe — sans frais Airbnb (jusqu'à 14% d'économie). Le prix varie selon la saison : haute saison décembre-avril, basse saison juillet-octobre." },
+    { q: "La Villa Amaryllis a-t-elle une piscine ?", a: "Oui — la Villa Amaryllis dispose d'une piscine à débordement eau salée de 4×7 mètres avec vue mer 180° sur la baie de Sainte-Luce. C'est la seule propriété à débordement du portfolio." },
+    { q: "Combien de personnes peut accueillir la Villa Amaryllis ?", a: "La Villa Amaryllis accueille jusqu'à 8 personnes dans 3 chambres climatisées, avec 3,5 salles de bain et une terrasse de 100 m² face à la mer." },
+    { q: "Comment réserver la Villa Amaryllis sans passer par Airbnb ?", a: "Directement sur villamaryllis.com/amaryllis — paiement sécurisé Stripe, contact WhatsApp direct avec l'hôte, économies jusqu'à 14% vs Airbnb." },
+    { q: "Où se trouve la Villa Amaryllis ?", a: "Sur les hauteurs de Sainte-Luce, sud de la Martinique. À 20 minutes des plages des Salines et de Sainte-Anne, à 35 minutes de l'aéroport, dans la résidence Amaryllis avec vue Caraïbes 180°." },
+  ],
+  zandoli: [
+    { q: "Quel est le prix de la villa Zandoli en Martinique ?", a: "Zandoli se loue à partir de 220€/nuit en direct sur villamaryllis.com — sans frais Airbnb." },
+    { q: "Zandoli a-t-elle une piscine privée ?", a: "Oui — Zandoli dispose de sa propre piscine privative avec cascade, située dans la résidence Amaryllis à Sainte-Luce." },
+    { q: "Combien de personnes peut accueillir Zandoli ?", a: "Zandoli accueille jusqu'à 5 personnes dans 2 chambres + mezzanine, avec jardin tropical et vue mer." },
+    { q: "Où se trouve la villa Zandoli ?", a: "Sur les hauteurs de Sainte-Luce, dans la résidence Amaryllis, à 5-7 minutes des plages du sud Martinique." },
+    { q: "Zandoli accepte-t-elle les animaux ?", a: "Oui, Zandoli accepte les animaux (supplément 40€/séjour, 2 maximum). Mentionnez-le à la réservation." },
+  ],
+  iguana: [
+    { q: "Villa Iguana a-t-elle une piscine en eau salée ?", a: "Oui — Villa Iguana dispose de l'unique piscine eau salée non chlorée de la résidence Amaryllis. Nager dedans, c'est nager comme dans la mer : pas de chlore, eau douce et vivante." },
+    { q: "Combien de personnes peut accueillir Villa Iguana ?", a: "Villa Iguana accueille jusqu'à 6 personnes dans 2 chambres climatisées. Idéale pour les longs séjours et les familles." },
+    { q: "Quelle est la vue depuis Villa Iguana ?", a: "Depuis la terrasse de Villa Iguana, la vue embrasse le Rocher du Diamant et la mer des Caraïbes. Un cadre rare, sur les hauteurs de Sainte-Luce." },
+    { q: "Villa Iguana est-elle disponible en courte durée ?", a: "Villa Iguana est principalement orientée location longue durée. Pour une réservation, contactez-nous directement via villamaryllis.com pour étudier les dates." },
+    { q: "Où se trouve Villa Iguana ?", a: "Dans la résidence Amaryllis à Sainte-Luce, sud Martinique. Vue panoramique sur le Rocher du Diamant et la mer Caraïbes." },
+  ],
+  geko: [
+    { q: "Quel est le prix de la villa Géko en Martinique ?", a: "Géko se loue à partir de 150€/nuit en réservation directe sur villamaryllis.com — sans frais Airbnb." },
+    { q: "Géko a-t-elle une piscine ?", a: "Oui — Géko dispose de sa propre piscine privative avec cascade, dans la résidence Amaryllis à Sainte-Luce sur les hauteurs." },
+    { q: "Combien de personnes peut accueillir Géko ?", a: "Géko accueille jusqu'à 4 personnes — idéal pour les couples ou petites familles. Climatisation, cuisine extérieure, barbecue." },
+    { q: "Où se trouve la villa Géko ?", a: "Sur les hauteurs de Sainte-Luce, dans la résidence Amaryllis, à 7 minutes des plages du sud." },
+    { q: "Quelle est la différence entre Géko et Zandoli ?", a: "Zandoli a 2 chambres + mezzanine pour 5 personnes (220€/nuit). Géko est un cocon 4 personnes (150€/nuit). Les deux ont leur propre piscine privative avec cascade." },
+  ],
+  mabouya: [
+    { q: "Quel est le prix du studio Mabouya en Martinique ?", a: "Studio Mabouya se loue à partir de 110€/nuit en réservation directe sur villamaryllis.com — l'option la plus accessible du portfolio." },
+    { q: "Mabouya a-t-il un jacuzzi privatif ?", a: "Oui — Studio Mabouya dispose d'un jacuzzi privatif en terrasse avec vue mer. C'est le seul logement de la résidence Amaryllis à proposer un jacuzzi privé." },
+    { q: "Mabouya est-il adapté pour un couple ?", a: "Absolument — Studio Mabouya est notre studio romantique par excellence : lit queen-size 160×200, jacuzzi privé, terrasse vue mer, intimité totale à flanc de colline." },
+    { q: "Combien de personnes peut accueillir Mabouya ?", a: "Studio Mabouya accueille 2 personnes maximum. Pensé pour les couples en escapade romantique." },
+    { q: "Où se trouve le studio Mabouya ?", a: "Dans la résidence Amaryllis à Sainte-Luce, Martinique. Sur les hauteurs avec vue mer panoramique." },
+  ],
+  schoelcher: [
+    { q: "Quel est le prix de l'appartement Bellevue à Schœlcher ?", a: "Bellevue se loue à partir de 100€/nuit en réservation directe — option idéale pour un séjour économique en Martinique." },
+    { q: "Quelle est la vue depuis Bellevue ?", a: "Vue panoramique sur la baie de Fort-de-France et les Trois-Îlets depuis les hauteurs de Schœlcher. Une des vues les plus dégagées du portfolio." },
+    { q: "Combien de personnes peut accueillir Bellevue ?", a: "Bellevue accueille jusqu'à 2 personnes — idéal pour un séjour calme et économique en couple." },
+    { q: "Où se trouve l'appartement Bellevue ?", a: "À Schœlcher, sur les hauteurs avec vue baie de Fort-de-France. À 5 minutes des plages." },
+    { q: "Bellevue a-t-il une piscine ?", a: "Non, Bellevue n'a pas de piscine. C'est un appartement vue baie idéal pour les voyageurs cherchant un séjour calme et économique. Les plages de Schœlcher sont à 5 minutes." },
+  ],
+  nogent: [
+    { q: "Quel est le prix de l'appartement Nogent-sur-Marne ?", a: "L'appartement de Nogent-sur-Marne se loue à partir de 85€/nuit — sans commission Airbnb." },
+    { q: "Combien de temps pour aller à Paris depuis Nogent ?", a: "20 minutes en RER A jusqu'à Châtelet-Les Halles. Idéal pour séjour business ou touristique à Paris sans payer les tarifs parisiens." },
+    { q: "L'appartement Nogent a-t-il un jardin ?", a: "Oui — l'appartement dispose d'un jardin et d'une terrasse privatifs, en bord de Marne. Calme et nature à 20 min de Paris." },
+    { q: "Combien de personnes peut accueillir Nogent ?", a: "L'appartement Nogent accueille 2 personnes — idéal pour un séjour business ou un couple visitant Paris." },
+    { q: "Où se trouve l'appartement Nogent ?", a: "À Nogent-sur-Marne (Val-de-Marne), bord de Marne, à 20 minutes du centre de Paris en RER A." },
+  ],
+};
+
 /* ── Métadonnées par route ──────────────────────────────────────────── */
 const ROUTES = [
 
@@ -101,6 +168,7 @@ const ROUTES = [
     image: `${BASE}/photos/amaryllis/01.webp`,
     lcpPreload: true,
     jsonld: buildVacationRentalLd({ id: "amaryllis", nom: "Villa Amaryllis", desc: "Villa Amaryllis à Sainte-Luce, Martinique. Piscine à débordement eau salée 4×7 m, vue Caraïbes 180° depuis les hauteurs. 3 chambres, 8 personnes.", prix: 280, capacite: 8, chambres: 3, rating: 4.94, reviews: 89, coords: { lat: 14.4728, lng: -60.9204 }, photos: ["/photos/amaryllis/01.webp","/photos/amaryllis/02.webp","/photos/amaryllis/03.webp","/photos/amaryllis/04.webp","/photos/amaryllis/05.webp","/photos/amaryllis/06.webp","/photos/amaryllis/07.webp","/photos/amaryllis/08.webp"] }),
+    faqld: buildFAQLd(FAQS_PAR_BIEN.amaryllis),
   },
   {
     path: "/zandoli",
@@ -108,6 +176,7 @@ const ROUTES = [
     desc:  "Villa Zandoli à Sainte-Luce, Martinique. Piscine privative avec cascade, mezzanine, jardin tropical. 5 personnes. Réservation directe.",
     image: `${BASE}/photos/zandoli/01.webp`,
     jsonld: buildVacationRentalLd({ id: "zandoli", nom: "Zandoli", desc: "Villa Zandoli à Sainte-Luce, Martinique. Piscine privative avec cascade, mezzanine, jardin tropical. 5 personnes.", prix: 220, capacite: 5, chambres: 2, rating: 4.5, reviews: 34, coords: { lat: 14.4730, lng: -60.9196 }, photos: ["/photos/zandoli/01.webp","/photos/zandoli/02.webp","/photos/zandoli/03.webp","/photos/zandoli/04.webp"] }),
+    faqld: buildFAQLd(FAQS_PAR_BIEN.zandoli),
   },
   {
     path: "/iguana",
@@ -115,6 +184,7 @@ const ROUTES = [
     desc:  "Villa Iguana à Sainte-Luce. Piscine eau salée, vue panoramique sur le Rocher du Diamant. 6 personnes. Réservation directe propriétaire.",
     image: `${BASE}/photos/iguana/01.webp`,
     jsonld: buildVacationRentalLd({ id: "iguana", nom: "Villa Iguana", desc: "Villa Iguana à Sainte-Luce, Martinique. Piscine eau salée (non chlorée, unique de la résidence), vue panoramique sur le Rocher du Diamant. 6 personnes. Location longue durée.", capacite: 6, chambres: 2, rating: 4.75, reviews: 42, coords: { lat: 14.4725, lng: -60.9192 }, photos: ["/photos/iguana/01.webp","/photos/iguana/02.webp","/photos/iguana/03.webp","/photos/iguana/04.webp"], bookable: false }),
+    faqld: buildFAQLd(FAQS_PAR_BIEN.iguana),
   },
   {
     path: "/geko",
@@ -122,6 +192,7 @@ const ROUTES = [
     desc:  "Cocon Géko à Sainte-Luce, Martinique. Piscine privative avec cascade, jardin tropical. 4 personnes. À partir de 150€/nuit. Réservation directe.",
     image: `${BASE}/photos/geko/01.webp`,
     jsonld: buildVacationRentalLd({ id: "geko", nom: "Géko", desc: "Cocon Géko à Sainte-Luce, Martinique. Piscine privative avec cascade, jardin tropical, sur les hauteurs. 4 personnes.", prix: 150, capacite: 4, chambres: 1, rating: 4.83, reviews: 28, coords: { lat: 14.4732, lng: -60.9196 }, photos: ["/photos/geko/01.webp","/photos/geko/02.webp","/photos/geko/03.webp","/photos/geko/04.webp"] }),
+    faqld: buildFAQLd(FAQS_PAR_BIEN.geko),
   },
   {
     path: "/mabouya",
@@ -129,6 +200,7 @@ const ROUTES = [
     desc:  "Le seul studio de la résidence avec jacuzzi privatif vue mer à Sainte-Luce, Martinique. Exclusivité totale pour 2 personnes. Jardin tropical, terrasse privée, plages à 5 min. Réservation directe dès 110€/nuit.",
     image: `${BASE}/photos/mabouya/01.webp`,
     jsonld: buildVacationRentalLd({ id: "mabouya", nom: "Studio Mabouya", desc: "Seul studio avec jacuzzi privatif vue mer de la résidence Amaryllis à Sainte-Luce, Martinique. Terrasse privée, jardin tropical fleuri. Idéal couple, escapade romantique.", prix: 110, capacite: 2, chambres: 1, rating: 4.55, reviews: 31, coords: { lat: 14.4732, lng: -60.9196 }, photos: ["/photos/mabouya/01.webp","/photos/mabouya/02.webp","/photos/mabouya/03.webp","/photos/mabouya/04.webp"] }),
+    faqld: buildFAQLd(FAQS_PAR_BIEN.mabouya),
   },
   {
     path: "/schoelcher",
@@ -136,6 +208,7 @@ const ROUTES = [
     desc:  "Appartement Bellevue à Schœlcher, Martinique. Vue sur la baie de Fort-de-France, 4 personnes. À 10 min du centre-ville. Réservation directe.",
     image: `${BASE}/photos/schoelcher/01.webp`,
     jsonld: buildVacationRentalLd({ id: "schoelcher", nom: "Bellevue Schoelcher", desc: "Appartement Bellevue à Schœlcher, Martinique. Vue sur la baie de Fort-de-France et Trois-Îlets depuis les hauteurs. 2 personnes.", prix: 100, capacite: 2, chambres: 1, rating: 4.8, reviews: 18, coords: { lat: 14.6167, lng: -61.1333 }, photos: ["/photos/schoelcher/01.webp","/photos/schoelcher/02.webp","/photos/schoelcher/03.webp","/photos/schoelcher/04.webp"], isMartinique: true }),
+    faqld: buildFAQLd(FAQS_PAR_BIEN.schoelcher),
   },
   {
     path: "/nogent",
@@ -143,6 +216,7 @@ const ROUTES = [
     desc:  "Appartement de standing à Nogent-sur-Marne — 85 €/nuit. Jardin privatif, home cinéma, bord de Marne. RER A : Paris en 20 min. Réservation directe sans commission Airbnb.",
     image: `${BASE}/photos/nogent/01.webp`,
     jsonld: buildVacationRentalLd({ id: "nogent", nom: "Appartement Nogent-sur-Marne", desc: "Appartement de standing à Nogent-sur-Marne. Jardin privatif, home cinéma, bord de Marne. RER A : Paris en 20 min.", prix: 85, capacite: 2, chambres: 1, rating: 4.8, reviews: 18, coords: { lat: 48.8374, lng: 2.4836 }, photos: ["/photos/nogent/01.webp","/photos/nogent/02.webp","/photos/nogent/03.webp","/photos/nogent/04.webp","/photos/nogent/05.webp","/photos/nogent/06.webp"], isMartinique: false }),
+    faqld: buildFAQLd(FAQS_PAR_BIEN.nogent),
   },
 
   /* ── Pages thématiques ── */
@@ -350,7 +424,7 @@ function replaceByAttr(html, matchAttr, matchVal, targetAttr, newVal) {
   });
 }
 
-function patchHtml(tmpl, { path: routePath, title, desc, image, noindex = false, jsonld = null, lang = "fr", lcpPreload = false }) {
+function patchHtml(tmpl, { path: routePath, title, desc, image, noindex = false, jsonld = null, faqld = null, lang = "fr", lcpPreload = false }) {
   const url = `${BASE}${routePath}`;
   let html = tmpl;
 
@@ -452,6 +526,14 @@ function patchHtml(tmpl, { path: routePath, title, desc, image, noindex = false,
     html = html.replace(
       /(<script type="application\/ld\+json" id="ld-main">)[\s\S]*?(<\/script>)/,
       `$1\n${jsonld}\n$2`
+    );
+  }
+
+  /* JSON-LD FAQPage — injecté juste avant </head> pour rich snippet "People also ask" */
+  if (faqld) {
+    html = html.replace(
+      /<\/head>/,
+      `<script type="application/ld+json" id="ld-faq">\n${faqld}\n</script>\n</head>`
     );
   }
 
