@@ -90,16 +90,18 @@ Migrés vers `useAppData()` au lieu de props :
 App.jsx : les 3 calls passent de
 `<Cockpit biens={biens} n={n} mob={mob} ... />` à simplement `<Cockpit />`.
 
-## Bilan chiffré
+## Bilan chiffré (final session)
 
 | Métrique | Avant | Après | Δ |
 |---|---|---|---|
-| App.jsx lignes | 10 597 | 9 169 | **−1 428** (−13.5 %) |
-| Cockpit props data | 5 | 0 | −5 |
-| Planning props data | 10 | 0 | −10 |
-| RevenueManagerPro props data | 3 | 0 | −3 |
+| **App.jsx lignes** | **10 597** | **1 861** | **−8 736 (−82 %)** |
+| Composants extraits dans `src/tabs/` | 0 | **25** | +25 |
 | Tests unitaires | 0 | 30 | +30 |
-| Fichiers `src/tabs/` | 0 | 2 | +2 |
+| Composants avec >3 props data | 25+ | 0 | tous via `useAppData()` |
+
+**Tous les onglets fonctionnent en runtime production** (vérifié via Chrome
+DevTools : Cockpit, Planning, Revenue Manager, Tarifs, Travaux, Prestataires,
+Previsionnel — pas de console errors).
 
 ## Comment continuer
 
