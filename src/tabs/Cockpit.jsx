@@ -16,6 +16,7 @@ import {
 // Helpers partagés exportés depuis App.jsx (temporaire — seront migrés vers utils/)
 import { Gauge, fmt, fmtK, MOIS, DOT, TT } from "../App.jsx";
 import { sumN, avgN, statutBien } from "../utils/calculations.js";
+import { useAppData } from "../AppDataContext.jsx";
 
 // ── Spark — micrograph trend (uniquement utilisé dans Cockpit) ──────────────
 function Spark({ data = [], color = "#0ea5e9", w = 68, h = 26 }) {
@@ -289,7 +290,8 @@ L'équipe Amaryllis Locations`;
 }
 
 // ── Cockpit — composant principal ────────────────────────────────────────────
-export default function Cockpit({ biens, n, mob, onUpdateRevenu, reservations = [] }) {
+export default function Cockpit() {
+  const { biens, n, mob, onUpdateRevenu, reservations = [] } = useAppData();
   const BIEN_COLORS = { nogent: "#0ea5e9", amaryllis: "#10b981", iguana: "#6366f1", geko: "#f59e0b", zandoli: "#3b82f6", mabouya: "#ec4899", schoelcher: "#8b5cf6" };
   const tc = { court: "#0ea5e9", long: "#10b981", moyen: "#f59e0b" };
   const tl = { court: "Court", long: "Long", moyen: "Moyen" };

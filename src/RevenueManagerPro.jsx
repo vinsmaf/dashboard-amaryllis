@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef, Component } from 'react';
+import { useAppData } from './AppDataContext.jsx';
 
 // ─── Error Boundary ──────────────────────────────────────────────────────────
 class RMErrorBoundary extends Component {
@@ -113,7 +114,8 @@ const StepBadge = ({ n }) => (
 );
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-function RevenueManagerPro({ biens = [], reservations = [], mob = false }) {
+function RevenueManagerPro() {
+  const { biens = [], reservations = [], mob = false } = useAppData();
   const [tab, setTab] = useState('dashboard');
   const [selProp, setSelProp] = useState('amaryllis');
   const [recos, setRecos] = useState([]);

@@ -22,6 +22,7 @@ import {
 } from "../App.jsx";
 import { sumN, avgN, addDays, diffDays, todayStr } from "../utils/calculations.js";
 import { loadDailyPrices } from "../seedPrices.js";
+import { useAppData } from "../AppDataContext.jsx";
 
 // ── parseICS — parser iCal (uniquement utilisé dans Planning) ────────────────
 function parseICS(text, bienId, canal = "airbnb") {
@@ -124,7 +125,8 @@ function parseICS(text, bienId, canal = "airbnb") {
 // ── Planning — composant principal ──────────────────────────────────────────
 const EMPTY_FORM = { bienId: "amaryllis", voyageur: "", canal: "booking", checkin: "", checkout: "", checkin_time: "", checkout_time: "", nb_guests: "", montant: "", notes: "", menage: "", reservation_code: "", phone: "", assigne: "" };
 
-export default function Planning({ biens, mob, reservations, saveRes, icalUrls, saveUrls, icalUrlsBooking, saveUrlsBooking, scriptUrl, onApplyRevenusFromResas, pushReservationsToScript }) {
+export default function Planning() {
+  const { biens, mob, reservations, saveRes, icalUrls, saveUrls, icalUrlsBooking, saveUrlsBooking, scriptUrl, onApplyRevenusFromResas, pushReservationsToScript } = useAppData();
   const reservationsRef = useRef(reservations);
   useEffect(() => { reservationsRef.current = reservations; }, [reservations]);
 

@@ -6,6 +6,7 @@ import LivretEditor from "./LivretEditor.jsx";
 import AgentsKanban from "./AgentsKanban.jsx";
 import Cockpit from "./tabs/Cockpit.jsx";
 import Planning from "./tabs/Planning.jsx";
+import { AppDataProvider } from "./AppDataContext.jsx";
 import { SEED_DAILY_PRICES, loadDailyPrices, saveDailyPrices, loadPriceOverrides, applyServerPriceOverrides } from "./seedPrices.js";
 import {
   BarChart, Bar, LineChart, Line, ComposedChart,
@@ -6201,15 +6202,22 @@ export default function App() {
             </div>
           )}
 
-          {/* Contenu de l'onglet */}
+          {/* Contenu de l'onglet — données partagées via AppDataContext */}
+          <AppDataProvider value={{
+            biens, n, mob, hist, reservations,
+            scriptUrl, icalUrls, icalUrlsBooking,
+            saveRes, saveUrls, saveUrlsBooking,
+            addToast,
+            onUpdateRevenu, onApplyRevenusFromResas, pushReservationsToScript,
+          }}>
           <div style={{ padding: mob ? "12px" : "18px 24px", flex: 1, paddingBottom: "calc(76px + env(safe-area-inset-bottom))" }}>
-            {tab === "planning" && <Planning biens={biens} mob={mob} reservations={reservations} saveRes={saveRes} icalUrls={icalUrls} saveUrls={saveUrls} icalUrlsBooking={icalUrlsBooking} saveUrlsBooking={saveUrlsBooking} scriptUrl={scriptUrl} onApplyRevenusFromResas={onApplyRevenusFromResas} pushReservationsToScript={pushReservationsToScript} />}
-            {tab === "cockpit" && <Cockpit biens={biens} n={n} mob={mob} onUpdateRevenu={onUpdateRevenu} reservations={reservations} />}
+            {tab === "planning" && <Planning />}
+            {tab === "cockpit" && <Cockpit />}
             {tab === "previsionnel" && <Previsionnel biens={biens} n={n} mob={mob} hist={hist} />}
             {tab === "charges" && <Charges biens={biens} n={n} mob={mob} />}
             {tab === "pilotage" && <Pilotage biens={biens} n={n} mob={mob} reservations={reservations} />}
             {tab === "historique" && <Historique biens={biens} n={n} mob={mob} hist={hist} />}
-            {tab === "revenue"  && <RevenueManagerPro biens={biens} reservations={reservations} mob={mob} />}
+            {tab === "revenue"  && <RevenueManagerPro />}
             {tab === "tarifs" && <Tarifs reservations={reservations} />}
             {tab === "analytics" && <AnalyticsTab mob={mob} />}
             {tab === "menage"         && <MenageTab biens={biens} reservations={reservations} saveRes={saveRes} mob={mob} />}
@@ -6232,6 +6240,7 @@ export default function App() {
             {tab === "linge"         && <LingeTab         biens={biens} mob={mob} />}
             {tab === "conversion"    && <ConversionTab    biens={biens} reservations={reservations} mob={mob} />}
           </div>
+          </AppDataProvider>
         </div>
       </div>
 
