@@ -2,6 +2,7 @@
  * LingeTab — extrait de src/App.jsx (refactor 2026, batch B/5).
  */
 import { useState } from "react";
+import { LINGE_KEY, LINGE_SETS, LINGE_STATES } from "../App.jsx";
 import { useAppData } from "../AppDataContext.jsx";
 
 export default function LingeTab() {

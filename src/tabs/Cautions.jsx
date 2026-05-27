@@ -2,6 +2,7 @@
  * Cautions — extrait de src/App.jsx (refactor 2026, batch B/5).
  */
 import { useState, useEffect } from "react";
+import { BIENS_CAUTION } from "../App.jsx";
 
 export default function Cautions() {
   const [deposits, setDeposits] = useState([]);

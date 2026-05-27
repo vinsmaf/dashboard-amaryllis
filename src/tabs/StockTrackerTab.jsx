@@ -2,6 +2,7 @@
  * StockTrackerTab — extrait de src/App.jsx (refactor 2026, batch B/5).
  */
 import { useState } from "react";
+import { STOCK_KEY, STOCK_DEFAULTS } from "../App.jsx";
 import { useAppData } from "../AppDataContext.jsx";
 
 export default function StockTrackerTab() {

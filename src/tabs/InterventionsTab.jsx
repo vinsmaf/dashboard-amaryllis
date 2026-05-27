@@ -2,6 +2,7 @@
  * InterventionsTab — extrait de src/App.jsx (refactor 2026, batch B/5).
  */
 import { useState } from "react";
+import { INTER_KEY, INTER_STATUS, INTER_TYPES } from "../App.jsx";
 import { useAppData } from "../AppDataContext.jsx";
 
 export default function InterventionsTab() {

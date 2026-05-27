@@ -2,6 +2,7 @@
  * Travaux — extrait de src/App.jsx (refactor 2026, batch B/5).
  */
 import { useState } from "react";
+import { TRAVAUX_KEY, TRAVAUX_PRIORITIES, TRAVAUX_PRIO_COLORS, TRAVAUX_PRIO_LABELS, TRAVAUX_STATUSES, TRAVAUX_STATUS_COLORS, TRAVAUX_STATUS_LABELS } from "../App.jsx";
 import { useAppData } from "../AppDataContext.jsx";
 
 export default function Travaux() {

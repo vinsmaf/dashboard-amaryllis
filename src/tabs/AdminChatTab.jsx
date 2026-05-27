@@ -2,6 +2,7 @@
  * AdminChatTab — extrait de src/App.jsx (refactor 2026, batch B/5).
  */
 import { useState, useEffect, useCallback, useRef } from "react";
+import { ADMIN_SHORTCUTS } from "../App.jsx";
 import { useAppData } from "../AppDataContext.jsx";
 
 export default function AdminChatTab() {

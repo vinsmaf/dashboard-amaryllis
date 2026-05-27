@@ -847,7 +847,7 @@ function PasswordGate({ onAuth }) {
 // ============================================================================
 // BEDS24 ADMIN — Réservations Nogent via channel manager
 // ============================================================================
-const STATUS_OPTIONS = [
+export const STATUS_OPTIONS = [
   { v: "",   l: "Tous statuts" },
   { v: "1",  l: "✅ Confirmé" },
   { v: "0",  l: "🆕 Nouveau" },
@@ -856,7 +856,7 @@ const STATUS_OPTIONS = [
   { v: "2",  l: "❌ Annulé" },
 ];
 
-const CHANNEL_COLORS = {
+export const CHANNEL_COLORS = {
   "Airbnb":       "#ff5a5f",
   "Booking.com":  "#003580",
   "Expedia":      "#ffc72c",
@@ -876,13 +876,13 @@ const CHANNEL_COLORS = {
 // ============================================================================
 // TRAVAUX
 // ============================================================================
-const TRAVAUX_KEY = "amaryllis_travaux";
-const TRAVAUX_PRIORITIES = ["urgent", "haute", "normale", "faible"];
-const TRAVAUX_STATUSES   = ["todo", "en_cours", "done"];
-const TRAVAUX_PRIO_COLORS  = { urgent: "#ef4444", haute: "#f59e0b", normale: "#0ea5e9", faible: "#64748b" };
-const TRAVAUX_PRIO_LABELS  = { urgent: "🔴 Urgent", haute: "🟠 Haute", normale: "🔵 Normale", faible: "⚫ Faible" };
-const TRAVAUX_STATUS_COLORS = { todo: "#64748b", en_cours: "#f59e0b", done: "#10b981" };
-const TRAVAUX_STATUS_LABELS = { todo: "À faire", en_cours: "En cours", done: "Terminé" };
+export const TRAVAUX_KEY = "amaryllis_travaux";
+export const TRAVAUX_PRIORITIES = ["urgent", "haute", "normale", "faible"];
+export const TRAVAUX_STATUSES = ["todo", "en_cours", "done"];
+export const TRAVAUX_PRIO_COLORS = { urgent: "#ef4444", haute: "#f59e0b", normale: "#0ea5e9", faible: "#64748b" };
+export const TRAVAUX_PRIO_LABELS = { urgent: "🔴 Urgent", haute: "🟠 Haute", normale: "🔵 Normale", faible: "⚫ Faible" };
+export const TRAVAUX_STATUS_COLORS = { todo: "#64748b", en_cours: "#f59e0b", done: "#10b981" };
+export const TRAVAUX_STATUS_LABELS = { todo: "À faire", en_cours: "En cours", done: "Terminé" };
 
 
 // ============================================================================
@@ -1725,7 +1725,7 @@ export default function App() {
 
 // ─── Cautions (dépôts de garantie pré-autorisés) ────────────────────────────
 
-const BIENS_CAUTION = [
+export const BIENS_CAUTION = [
   { id: "amaryllis",  nom: "Villa Amaryllis",     depot: 1500 },
   { id: "zandoli",    nom: "Zandoli",              depot: 700  },
   { id: "iguana",     nom: "Villa Iguana",         depot: 500  },
@@ -1736,8 +1736,8 @@ const BIENS_CAUTION = [
 ];
 
 // ── Carnet prestataires ───────────────────────────────────────────────────────
-const PRESTATAIRES_KEY = "amaryllis_prestataires_v1";
-const PREST_CATEGORIES = [
+export const PRESTATAIRES_KEY = "amaryllis_prestataires_v1";
+export const PREST_CATEGORIES = [
   { id: "menage",      label: "Ménage",       icon: "🧹" },
   { id: "plomberie",   label: "Plomberie",    icon: "🔧" },
   { id: "electricite", label: "Électricité",  icon: "⚡" },
@@ -1747,13 +1747,13 @@ const PREST_CATEGORIES = [
   { id: "peinture",    label: "Peinture",     icon: "🎨" },
   { id: "autre",       label: "Autre",        icon: "📌" },
 ];
-const PREST_BIEN_LABELS = { amaryllis: "Villa Amaryllis", geko: "Géko", mabouya: "Mabouya", zandoli: "Zandoli", schoelcher: "Schœlcher", iguana: "Villa Iguana", nogent: "Nogent" };
+export const PREST_BIEN_LABELS = { amaryllis: "Villa Amaryllis", geko: "Géko", mabouya: "Mabouya", zandoli: "Zandoli", schoelcher: "Schœlcher", iguana: "Villa Iguana", nogent: "Nogent" };
 
 
 
 // ─── Devis Editor ────────────────────────────────────────────────────────────
 
-const BIENS_DEVIS = [
+export const BIENS_DEVIS = [
   { id: "amaryllis", nom: "Villa Amaryllis", depot: 1500 },
   { id: "zandoli",   nom: "Zandoli",         depot: 700  },
   { id: "iguana",    nom: "Villa Iguana",    depot: 500  },
@@ -1789,7 +1789,7 @@ class LocalErrorBoundary extends Component {
 }
 
 // ── AdminChatTab — Assistant IA pour l'admin ─────────────────────────────
-const ADMIN_SHORTCUTS = [
+export const ADMIN_SHORTCUTS = [
   { icon: "📊", label: "Résumé de la semaine",       prompt: "Fais-moi un résumé de la situation de mes locations cette semaine : réservations en cours, taux d'occupation global, points d'attention." },
   { icon: "✉️", label: "Email de bienvenue",          prompt: "Rédige un email de bienvenue chaleureux pour un voyageur qui arrive demain à la Villa Amaryllis. Ton : professionnel et chaleureux." },
   { icon: "📝", label: "Description Airbnb",          prompt: "Propose une description optimisée pour Airbnb de la Villa Amaryllis : accrocheuse, avec les mots-clés pertinents, max 500 mots." },
@@ -1804,9 +1804,9 @@ const ADMIN_SHORTCUTS = [
    log-003 — INTERVENTIONS TAB
    Suivi des interventions / travaux prestataires, stocké en localStorage
 ═══════════════════════════════════════════════════════════════════ */
-const INTER_KEY = "ldb_interventions_v1";
-const INTER_TYPES = ["Ménage", "Plomberie", "Électricité", "Jardinage", "Piscine", "Climatisation", "Serrurerie", "Peinture", "Électroménager", "Autre"];
-const INTER_STATUS = [
+export const INTER_KEY = "ldb_interventions_v1";
+export const INTER_TYPES = ["Ménage", "Plomberie", "Électricité", "Jardinage", "Piscine", "Climatisation", "Serrurerie", "Peinture", "Électroménager", "Autre"];
+export const INTER_STATUS = [
   { v: "todo",       label: "À planifier", color: "#f59e0b" },
   { v: "scheduled",  label: "Planifiée",   color: "#0ea5e9" },
   { v: "done",       label: "Terminée",    color: "#10b981" },
@@ -1817,8 +1817,8 @@ const INTER_STATUS = [
    log-004 — STOCK TRACKER TAB
    Niveaux min/max par propriété, alertes sous le seuil
 ═══════════════════════════════════════════════════════════════════ */
-const STOCK_KEY = "ldb_stocks_v1";
-const STOCK_DEFAULTS = [
+export const STOCK_KEY = "ldb_stocks_v1";
+export const STOCK_DEFAULTS = [
   { cat: "Linge", items: ["Draps 2p", "Draps 1p", "Taies d'oreiller", "Serviettes bain", "Serviettes main", "Peignoirs"] },
   { cat: "Cuisine", items: ["Éponges", "Liquide vaisselle", "Sacs poubelle", "Papier essuie-tout", "Café capsules", "Thé sachets"] },
   { cat: "Salle de bain", items: ["Gel douche", "Shampoing", "Savon", "PQ rouleaux", "Coton-tiges"] },
@@ -1829,9 +1829,9 @@ const STOCK_DEFAULTS = [
    log-006 — LINGE TAB
    Dashboard rotation linge : stock draps/serviettes par logement
 ═══════════════════════════════════════════════════════════════════ */
-const LINGE_KEY   = "ldb_linge_v1";
-const LINGE_SETS  = ["Draps 2 personnes", "Draps 1 personne", "Serviettes bain", "Serviettes main", "Housses de couette", "Oreillers housses", "Tapis de bain"];
-const LINGE_STATES = [
+export const LINGE_KEY = "ldb_linge_v1";
+export const LINGE_SETS = ["Draps 2 personnes", "Draps 1 personne", "Serviettes bain", "Serviettes main", "Housses de couette", "Oreillers housses", "Tapis de bain"];
+export const LINGE_STATES = [
   { v: "propre",   label: "Propre",    color: "#10b981", icon: "✓" },
   { v: "utilise",  label: "Utilisé",   color: "#f59e0b", icon: "≈" },
   { v: "lavage",   label: "Au lavage", color: "#0ea5e9", icon: "↺" },

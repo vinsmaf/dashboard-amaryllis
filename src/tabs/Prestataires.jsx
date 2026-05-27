@@ -2,6 +2,7 @@
  * Prestataires — extrait de src/App.jsx (refactor 2026, batch B/5).
  */
 import { useState } from "react";
+import { PRESTATAIRES_KEY, PREST_BIEN_LABELS, PREST_CATEGORIES } from "../App.jsx";
 import { useAppData } from "../AppDataContext.jsx";
 
 export default function Prestataires() {

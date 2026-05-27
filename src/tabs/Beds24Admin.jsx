@@ -2,6 +2,7 @@
  * Beds24Admin — extrait de src/App.jsx (refactor 2026, batch B/5).
  */
 import { useState, useEffect } from "react";
+import { CHANNEL_COLORS, STATUS_OPTIONS } from "../App.jsx";
 import { useAppData } from "../AppDataContext.jsx";
 
 export default function Beds24Admin() {

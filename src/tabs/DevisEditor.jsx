@@ -2,6 +2,7 @@
  * DevisEditor — extrait de src/App.jsx (refactor 2026, batch B/5).
  */
 import { useState } from "react";
+import { BIENS_DEVIS } from "../App.jsx";
 
 export default function DevisEditor() {
   const [form, setForm] = useState({
