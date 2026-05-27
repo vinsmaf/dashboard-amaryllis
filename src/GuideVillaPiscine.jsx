@@ -18,7 +18,7 @@ const HERO_IMG = `${BASE}/photos/amaryllis/02.webp`;
 const FAQ_ITEMS = [
   {
     q: "Quelle villa choisir à la Martinique avec piscine privée ?",
-    a: "Cela dépend de votre groupe et de votre budget. Pour 6 personnes avec vue mer et jacuzzi, la Villa Amaryllis (piscine à débordement eau salée, à partir de 280 €/nuit) est notre propriété phare. Pour 5 personnes avec un excellent rapport confort/prix, Zandoli propose une piscine chauffée vue mer dès 220 €/nuit. Les couples trouveront leur bonheur chez Mabouya (jacuzzi privatif, à partir de 110 €/nuit) ou Géko (piscine privée, 150 €/nuit pour 4 personnes).",
+    a: "Cela dépend de votre groupe et de votre budget. Pour 8 personnes avec piscine à débordement eau salée et vue mer 180°, la Villa Amaryllis (à partir de 280 €/nuit) est notre propriété phare. Pour 5 personnes avec piscine privative à cascade et un excellent rapport confort/prix, Zandoli propose une mezzanine et vue mer dès 220 €/nuit. Les couples trouveront leur bonheur chez Mabouya (jacuzzi privatif, à partir de 110 €/nuit) ou Géko (piscine privative à cascade, 150 €/nuit pour 4 personnes). Pour une piscine eau salée unique et vue Rocher du Diamant, Iguana (180 €/nuit, 6 personnes).",
   },
   {
     q: "Quelle est la meilleure saison pour louer une villa avec piscine en Martinique ?",
@@ -47,9 +47,9 @@ const VILLAS = [
     id: "amaryllis",
     nom: "Villa Amaryllis",
     accroche: "La propriété phare — piscine à débordement eau salée, vue Caraïbe 180°",
-    capacite: "6 personnes",
+    capacite: "8 personnes",
     chambres: "3 chambres",
-    piscine: "Piscine débordement eau salée + Jacuzzi",
+    piscine: "Piscine débordement eau salée (4×7 m)",
     vue: "Vue mer panoramique",
     prix: "À partir de 280 €/nuit",
     highlight: true,
@@ -499,10 +499,11 @@ export default function GuideVillaPiscine() {
                 <div className="gvp-compare-cell">Prix / nuit</div>
               </div>
               {[
-                { name: "Villa Amaryllis", cap: "6 pers.", piscine: "Débordement eau salée + jacuzzi", vue: "180° Caraïbes", prix: "dès 280 €" },
-                { name: "Villa Zandoli",   cap: "5 pers.", piscine: "Privée chauffée",                  vue: "Oui",         prix: "dès 220 €" },
-                { name: "Villa Géko",      cap: "4 pers.", piscine: "Privée",                            vue: "Jardin",      prix: "dès 150 €" },
-                { name: "Villa Mabouya",   cap: "2 pers.", piscine: "Jacuzzi privatif",                  vue: "Oui",         prix: "dès 110 €" },
+                { name: "Villa Amaryllis", cap: "8 pers.", piscine: "Débordement eau salée 4×7 m", vue: "180° Caraïbes", prix: "dès 280 €" },
+                { name: "Villa Zandoli",   cap: "5 pers.", piscine: "Privative à cascade",          vue: "Mer + jardin",   prix: "dès 220 €" },
+                { name: "Villa Iguana",    cap: "6 pers.", piscine: "Eau salée non chlorée",        vue: "Rocher Diamant", prix: "dès 180 €" },
+                { name: "Villa Géko",      cap: "4 pers.", piscine: "Privative à cascade",          vue: "Jardin tropical",prix: "dès 150 €" },
+                { name: "Studio Mabouya",  cap: "2 pers.", piscine: "Jacuzzi privatif",             vue: "Mer terrasse",   prix: "dès 110 €" },
               ].map(row => (
                 <div key={row.name} className="gvp-compare-row">
                   <div className="gvp-compare-cell name">{row.name}</div>
@@ -515,7 +516,7 @@ export default function GuideVillaPiscine() {
             </div>
 
             <p className="gvp-body">
-              <strong style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, color: NAVY }}>Pour un séjour en famille ou entre amis (5–6 personnes) :</strong> la Villa Amaryllis s'impose. Sa piscine à débordement eau salée — inspirée des hôtels de luxe aux Maldives — offre une sensation de fusion avec la mer Caraïbe. Le jacuzzi privatif, les trois chambres climatisées et la terrasse de 100 m² en font la propriété la plus polyvalente.
+              <strong style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, color: NAVY }}>Pour un séjour en famille ou entre amis (jusqu'à 8 personnes) :</strong> la Villa Amaryllis s'impose. Sa piscine à débordement eau salée 4×7 m — inspirée des hôtels de luxe aux Maldives — offre une sensation de fusion avec la mer Caraïbe. Les trois chambres climatisées, la terrasse de 100 m² face à la baie et le jardin tropical en font la propriété la plus polyvalente du portfolio.
             </p>
             <p className="gvp-body">
               <strong style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, color: NAVY }}>Pour un groupe de 5 personnes avec budget maîtrisé :</strong> Zandoli est le choix le plus cohérent. Sa piscine chauffée garantit une température parfaite même en décembre-janvier, et la vue mer n'a rien à envier à Amaryllis.

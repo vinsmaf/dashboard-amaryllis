@@ -27,9 +27,10 @@ export const FACT_CHECK_RULES = [
   // Cascade : UNIQUEMENT Zandoli et Géko (résidence partagée)
   { rx: /cascade.*(iguana|mabouya|sch(œ|oe)lcher|nogent|bellevue|amaryllis)/i, reason: "Piscine avec cascade uniquement pour Zandoli et Géko" },
   { rx: /(iguana|mabouya|sch(œ|oe)lcher|nogent|bellevue|amaryllis).*cascade/i, reason: "Cascade uniquement pour Zandoli et Géko" },
-  // Piscine eau salée : UNIQUEMENT Villa Iguana
-  { rx: /eau\s+sal(é|e)e.*(amaryllis|zandoli|geko|mabouya|sch(œ|oe)lcher|nogent|bellevue)/i, reason: "Piscine eau salée uniquement pour Villa Iguana" },
-  { rx: /(amaryllis|zandoli|geko|mabouya|sch(œ|oe)lcher|nogent|bellevue).*eau\s+sal(é|e)e/i, reason: "Piscine eau salée uniquement pour Villa Iguana" },
+  // Piscine eau salée : Villa Amaryllis (à débordement) ET Villa Iguana (non chlorée).
+  // Interdit pour les autres biens (Zandoli/Géko/Mabouya/Schœlcher/Nogent/Bellevue).
+  { rx: /eau\s+sal(é|e)e.*(zandoli|geko|mabouya|sch(œ|oe)lcher|nogent|bellevue)/i, reason: "Piscine eau salée uniquement pour Villa Amaryllis et Villa Iguana" },
+  { rx: /(zandoli|geko|mabouya|sch(œ|oe)lcher|nogent|bellevue).*eau\s+sal(é|e)e/i, reason: "Piscine eau salée uniquement pour Villa Amaryllis et Villa Iguana" },
   // Jacuzzi : UNIQUEMENT Mabouya (privatif)
   { rx: /jacuzzi\s+privati(f|ve).*(amaryllis|zandoli|iguana|geko|sch(œ|oe)lcher|nogent|bellevue)/i, reason: "Jacuzzi privatif uniquement pour Studio Mabouya" },
   { rx: /(amaryllis|zandoli|iguana|geko|sch(œ|oe)lcher|nogent|bellevue).*jacuzzi\s+privati(f|ve)/i, reason: "Jacuzzi privatif uniquement pour Studio Mabouya" },

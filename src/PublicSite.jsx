@@ -4628,7 +4628,7 @@ const FAQ_CHATBOT_ITEMS = [
   { tags: ["animaux","chien","chat","pet","animal"], q: "Les animaux de compagnie sont-ils acceptés ?", a: "Les animaux de compagnie ne sont généralement pas acceptés dans nos propriétés. Si vous avez une situation particulière, contactez l'hôte directement pour en discuter." },
   { tags: ["parking","voiture","garage","stationnement"], q: "Y a-t-il un parking ?", a: "Oui, toutes nos villas en Martinique disposent d'un stationnement privé et sécurisé. Pour l'appartement Nogent, un parking à proximité est disponible." },
   { tags: ["remise","réduction","discount","semaine","long"], q: "Y a-t-il des remises pour les longs séjours ?", a: "Oui ! −5% pour 7 nuits ou plus, −10% pour 14 nuits, −15% pour 28 nuits. Ces remises s'appliquent automatiquement dans le calculateur." },
-  { tags: ["piscine","bain","baignade","jacuzzi"], q: "Quelle propriété a une piscine ou jacuzzi ?", a: "Villa Amaryllis (piscine débordement + jacuzzi), Géko, Zandoli et Mabouya (piscines privées). Consultez chaque fiche pour les équipements détaillés." },
+  { tags: ["piscine","bain","baignade","jacuzzi"], q: "Quelle propriété a une piscine ou jacuzzi ?", a: "Villa Amaryllis (piscine à débordement eau salée), Iguana (piscine eau salée non chlorée), Zandoli et Géko (chacune sa piscine privative à cascade), Mabouya (jacuzzi privatif). Consultez chaque fiche pour les équipements détaillés." },
   { tags: ["annulation","rembours","annuler","cancel"], q: "Quelle est la politique d'annulation ?", a: "Annulation gratuite jusqu'à 14 jours avant l'arrivée. Au-delà, 50% de la somme est retenu. Pour les séjours réservés moins de 14j à l'avance, l'acompte est non remboursable." },
   { tags: ["paiement","carte","caution","dépôt","stripe"], q: "Comment se passe le paiement et la caution ?", a: "Paiement par carte bancaire sécurisé via Stripe. Un dépôt de garantie (caution) en pré-autorisation est demandé séparément — votre carte n'est pas débitée, les fonds sont juste bloqués." },
   { tags: ["ménage","nettoyage","propre","linge","serviette"], q: "Le ménage et le linge sont-ils inclus ?", a: "Le linge de lit et les serviettes sont fournis. Un ménage de fin de séjour est inclus. Un service de ménage en cours de séjour peut être arrangé en option." },
@@ -5817,7 +5817,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Peut-on louer une villa avec jacuzzi privatif en Martinique ?",
-    a: "Oui ! La Villa Amaryllis dispose d'un jacuzzi privatif en plus de la piscine à débordement. Le studio Mabouya est entièrement dédié au romantisme avec jacuzzi privé et vue mer à partir de 110€/nuit.",
+    a: "Oui ! Le studio Mabouya est entièrement dédié au romantisme avec jacuzzi privatif en terrasse et vue mer à partir de 110€/nuit. C'est le seul logement de la résidence à proposer un jacuzzi privé.",
   },
   {
     q: "Y a-t-il des logements disponibles en Île-de-France ?",

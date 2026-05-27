@@ -171,14 +171,14 @@ const CATEGORIES = [
         q: "Quelle est la différence entre vos sept villas ?",
         a: <>
           <p>Chaque adresse a un caractère :</p>
-          <p><strong>Amaryllis</strong> est notre flagship — 3 suites, piscine à débordement, vue mer. <strong>Mabouya</strong> est romantique — studio avec jacuzzi privé. <strong>Zandoli</strong> est familial — 2 chambres, jardin, piscine. <strong>Géko</strong> est cosy — T2 avec piscine privée. <strong>Iguana</strong> est pour les longs séjours. <strong>Bellevue (Schœlcher)</strong> a la vue mer la plus dégagée. <strong>Nogent</strong> est notre pied-à-terre IDF.</p>
+          <p><strong>Amaryllis</strong> est notre flagship — 3 suites, piscine à débordement eau salée, terrasse 100 m², vue mer 180°. <strong>Mabouya</strong> est romantique — studio avec jacuzzi privatif et vue mer. <strong>Zandoli</strong> est familial — 2 chambres, mezzanine, piscine privative à cascade, jardin tropical. <strong>Géko</strong> est cosy — piscine privative à cascade, jardin. <strong>Iguana</strong> a la piscine eau salée unique (non chlorée) et vue Rocher du Diamant. <strong>Bellevue (Schœlcher)</strong> a la vue baie de Fort-de-France la plus dégagée. <strong>Nogent</strong> est notre pied-à-terre IDF avec jardin et terrasse.</p>
           <p>Pour choisir, le plus simple : nous dire qui vous êtes (combien, quoi, pour quoi) — on vous oriente en 3 lignes sur WhatsApp.</p>
         </>,
       },
       {
         q: "Peut-on louer une villa avec jacuzzi privatif ?",
         a: <>
-          <p>Oui. La <strong>Villa Amaryllis</strong> dispose d'un jacuzzi privatif en plus de la piscine à débordement. Le studio <strong>Mabouya</strong> est entièrement dédié au romantisme avec jacuzzi privé et vue mer à partir de 110€/nuit.</p>
+          <p>Oui. Le studio <strong>Mabouya</strong> est entièrement dédié au romantisme avec jacuzzi privatif en terrasse et vue mer à partir de 110€/nuit. C'est le seul logement de la résidence à proposer un jacuzzi privé — l'expérience couple idéale.</p>
         </>,
       },
       {
@@ -461,7 +461,7 @@ export default function Faq() {
         "@type": "FAQPage",
         "mainEntity": [
           { "@type": "Question", "name": "Comment réserver une villa en Martinique sans passer par Airbnb ?", "acceptedAnswer": { "@type": "Answer", "text": "Directement sur villamaryllis.com. Sélectionnez votre villa, choisissez vos dates et payez par carte (Stripe sécurisé). Vous économisez les frais de service jusqu'à 14% et bénéficiez d'un contact direct avec l'hôte. Réservation aussi possible par WhatsApp au +33 6 10 88 07 72." } },
-          { "@type": "Question", "name": "Quel est le prix d'une villa avec piscine en Martinique ?", "acceptedAnswer": { "@type": "Answer", "text": "Nos villas avec piscine vont de 140€/nuit (Géko, T2 avec piscine privée) jusqu'à 280€/nuit pour la Villa Amaryllis (piscine à débordement, vue mer, 3 chambres). Le studio Mabouya avec jacuzzi privatif démarre à 110€/nuit." } },
+          { "@type": "Question", "name": "Quel est le prix d'une villa avec piscine en Martinique ?", "acceptedAnswer": { "@type": "Answer", "text": "Nos villas avec piscine vont de 150€/nuit (Géko, piscine privative à cascade) jusqu'à 280€/nuit pour la Villa Amaryllis (piscine à débordement eau salée, vue mer 180°, 3 chambres). Zandoli (220€) a aussi sa propre piscine privative à cascade. Iguana (180€) propose la seule piscine eau salée non chlorée de la résidence. Le studio Mabouya avec jacuzzi privatif démarre à 110€/nuit." } },
           { "@type": "Question", "name": "Quelle est la politique d'annulation ?", "acceptedAnswer": { "@type": "Answer", "text": "Annulation gratuite jusqu'à 7 jours avant l'arrivée, remboursement intégral. Entre J-7 et J-2 : 50% remboursé. Moins de 48h : pas de remboursement, mais report possible. En cas de vigilance cyclonique orange ou rouge : remboursement 100%." } },
           { "@type": "Question", "name": "Faut-il louer une voiture pour séjourner en Martinique ?", "acceptedAnswer": { "@type": "Answer", "text": "Oui, en Martinique les transports en commun sont quasi-inexistants. Nous recommandons des loueurs locaux fiables qui livrent à la villa pour environ 280€/semaine. Pour notre appartement à Nogent-sur-Marne, le RER A est à 10 minutes à pied." } },
           { "@type": "Question", "name": "Quel est le montant de la caution pour une villa ?", "acceptedAnswer": { "@type": "Answer", "text": "Entre 500€ et 1 500€ selon la villa. La caution est uniquement pré-autorisée sur votre carte (jamais débitée) et libérée automatiquement 3 jours après votre départ si la villa est rendue en bon état." } },

@@ -97,10 +97,10 @@ const ROUTES = [
   {
     path: "/amaryllis",
     title: "Villa Amaryllis — Location villa Martinique piscine débordement vue mer | Amaryllis",
-    desc:  "Réservez directement la Villa Amaryllis à Sainte-Luce, Martinique. Piscine à débordement, vue Caraïbes 180°, 3 chambres, 8 personnes. À partir de 280€/nuit sans frais Airbnb.",
+    desc:  "Réservez directement la Villa Amaryllis à Sainte-Luce, Martinique. Piscine à débordement eau salée 4×7 m, vue Caraïbes 180°, terrasse 100 m², 3 chambres, 8 personnes. À partir de 280€/nuit sans frais Airbnb.",
     image: `${BASE}/photos/amaryllis/01.webp`,
     lcpPreload: true,
-    jsonld: buildVacationRentalLd({ id: "amaryllis", nom: "Villa Amaryllis", desc: "Villa Amaryllis à Sainte-Luce, Martinique. Piscine à débordement, vue Caraïbes 180° depuis les hauteurs. 3 chambres, 8 personnes.", prix: 280, capacite: 8, chambres: 3, rating: 4.94, reviews: 89, coords: { lat: 14.4728, lng: -60.9204 }, photos: ["/photos/amaryllis/01.webp","/photos/amaryllis/02.webp","/photos/amaryllis/03.webp","/photos/amaryllis/04.webp","/photos/amaryllis/05.webp","/photos/amaryllis/06.webp","/photos/amaryllis/07.webp","/photos/amaryllis/08.webp"] }),
+    jsonld: buildVacationRentalLd({ id: "amaryllis", nom: "Villa Amaryllis", desc: "Villa Amaryllis à Sainte-Luce, Martinique. Piscine à débordement eau salée 4×7 m, vue Caraïbes 180° depuis les hauteurs. 3 chambres, 8 personnes.", prix: 280, capacite: 8, chambres: 3, rating: 4.94, reviews: 89, coords: { lat: 14.4728, lng: -60.9204 }, photos: ["/photos/amaryllis/01.webp","/photos/amaryllis/02.webp","/photos/amaryllis/03.webp","/photos/amaryllis/04.webp","/photos/amaryllis/05.webp","/photos/amaryllis/06.webp","/photos/amaryllis/07.webp","/photos/amaryllis/08.webp"] }),
   },
   {
     path: "/zandoli",
@@ -237,7 +237,7 @@ const ROUTES = [
   {
     path: "/location-villa-martinique-piscine",
     title: "Location Villa Martinique avec Piscine — Réservation directe | Amaryllis",
-    desc:  "Louez une villa Martinique avec piscine privée à Sainte-Luce. Piscines à débordement, jacuzzi, vue mer. Amaryllis, Zandoli, Géko, Mabouya dès 110€/nuit — sans frais Airbnb.",
+    desc:  "Louez une villa Martinique avec piscine privative à Sainte-Luce. Amaryllis (débordement eau salée 4×7m, 8 pers.), Zandoli & Géko (cascade), Iguana (eau salée), Mabouya (jacuzzi). Dès 110€/nuit — sans frais Airbnb.",
     image: `${BASE}/photos/amaryllis/01.webp`,
   },
 
