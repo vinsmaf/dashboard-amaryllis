@@ -29,9 +29,13 @@ const STATUS_LABELS = {
   ok:       { label: "OK",       color: "#10b981", bg: "rgba(16,185,129,0.08)" },
 };
 
+// Le stock mutualisé MQ est représenté par le bien virtuel "_general".
+// Nogent (géré par conciergerie externe) est exclu du système.
+const VIRTUAL_GENERAL = { id: "_general", emoji: "🏬", nom: "Stock général MQ" };
+
 export default function InventaireTab() {
   const { biens = [] } = useAppData();
-  const [bienId, setBienId] = useState("amaryllis");
+  const [bienId, setBienId] = useState("_general");
   const [catFilter, setCatFilter] = useState("all");
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -126,8 +130,19 @@ export default function InventaireTab() {
 
       {/* Filtres */}
       <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap", alignItems: "center" }}>
-        <span style={{ fontSize: 10, color: "#64748b", marginRight: 4 }}>Bien :</span>
-        {biens.map(b => (
+        <span style={{ fontSize: 10, color: "#64748b", marginRight: 4 }}>Stock :</span>
+        {/* Stock mutualisé MQ en premier — par défaut */}
+        <button onClick={() => setBienId(VIRTUAL_GENERAL.id)} style={{
+          padding: "5px 11px", borderRadius: 14, border: "none", cursor: "pointer", fontSize: 11,
+          fontWeight: bienId === VIRTUAL_GENERAL.id ? 700 : 400,
+          background: bienId === VIRTUAL_GENERAL.id ? "#10b981" : "rgba(16,185,129,0.12)",
+          color: bienId === VIRTUAL_GENERAL.id ? "#fff" : "#10b981",
+        }}>
+          {VIRTUAL_GENERAL.emoji} {VIRTUAL_GENERAL.nom}
+        </button>
+        <span style={{ fontSize: 10, color: "#475569", margin: "0 4px" }}>·</span>
+        <span style={{ fontSize: 10, color: "#64748b" }}>Équipements bien :</span>
+        {biens.filter(b => b.id !== "nogent").map(b => (
           <button key={b.id} onClick={() => setBienId(b.id)} style={{
             padding: "5px 11px", borderRadius: 14, border: "none", cursor: "pointer", fontSize: 11,
             fontWeight: bienId === b.id ? 700 : 400,
@@ -137,6 +152,10 @@ export default function InventaireTab() {
             {b.emoji} {b.nom.replace("Villa ","").replace("T2 ","")}
           </button>
         ))}
+      </div>
+      {/* Note Nogent */}
+      <div style={{ fontSize: 10, color: "#475569", marginBottom: 12, fontStyle: "italic" }}>
+        ℹ️ Nogent : géré par une conciergerie externe — hors système.
       </div>
 
       <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>

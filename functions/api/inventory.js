@@ -58,43 +58,53 @@ const SCHEMA = [
   `CREATE INDEX IF NOT EXISTS idx_inv_mov_item ON inventory_movements(item_id, created_at)`,
 ];
 
-// ── Seed par défaut : items typiques par bien ────────────────────────────────
-// Quantités min/max calées sur 1 résa typique (4-7 nuits, 2-8 personnes).
-const SEED_TEMPLATES = {
-  // Catégorie LINGE
+// ── Structure réelle Amaryllis Locations ────────────────────────────────────
+//
+// • Nogent  : géré par une conciergerie externe, PAS dans notre système.
+// • 6 biens Martinique (résidence Amaryllis) : stock mutualisé "_general"
+//   pour linge/hygiène/cuisine/entretien (1 réserve commune sur place).
+// • Chaque bien MQ a ses équipements PROPRES (bien_etre + spécifiques piscine).
+
+// Items mutualisés (1 seul stock pour les 6 biens MQ).
+// Quantités calées sur le portefeuille (8+5+6+4+2+2 = 27 voyageurs en pic).
+const SEED_GENERAL = {
   linge: [
-    { item_name: "Draps 2 personnes 180×200",  unit: "set",  min: 2, max: 4 },
-    { item_name: "Draps 1 personne 90×190",    unit: "set",  min: 2, max: 4 },
-    { item_name: "Housses de couette",         unit: "pièce",min: 2, max: 4 },
-    { item_name: "Taies d'oreiller",           unit: "pièce",min: 4, max: 8 },
-    { item_name: "Serviettes de bain",         unit: "pièce",min: 6, max: 12 },
-    { item_name: "Serviettes de main",         unit: "pièce",min: 4, max: 8 },
-    { item_name: "Tapis de bain",              unit: "pièce",min: 2, max: 4 },
-    { item_name: "Torchons cuisine",           unit: "pièce",min: 3, max: 6 },
+    { item_name: "Draps 2 personnes 180×200",  unit: "set",    min: 8,  max: 16 },
+    { item_name: "Draps 1 personne 90×190",    unit: "set",    min: 6,  max: 12 },
+    { item_name: "Housses de couette",         unit: "pièce",  min: 10, max: 20 },
+    { item_name: "Taies d'oreiller",           unit: "pièce",  min: 20, max: 40 },
+    { item_name: "Serviettes de bain",         unit: "pièce",  min: 24, max: 48 },
+    { item_name: "Serviettes de main",         unit: "pièce",  min: 16, max: 32 },
+    { item_name: "Tapis de bain",              unit: "pièce",  min: 8,  max: 16 },
+    { item_name: "Torchons cuisine",           unit: "pièce",  min: 12, max: 24 },
   ],
   hygiene: [
-    { item_name: "Savon liquide mains",        unit: "flacon", min: 1, max: 3 },
-    { item_name: "Gel douche / shampoing",     unit: "flacon", min: 1, max: 3 },
-    { item_name: "Papier toilette",            unit: "rouleau",min: 6, max: 18 },
-    { item_name: "Mouchoirs en boîte",         unit: "boîte",  min: 1, max: 3 },
+    { item_name: "Savon liquide mains",        unit: "flacon", min: 6,  max: 12 },
+    { item_name: "Gel douche / shampoing",     unit: "flacon", min: 6,  max: 12 },
+    { item_name: "Papier toilette",            unit: "rouleau",min: 36, max: 72 },
+    { item_name: "Mouchoirs en boîte",         unit: "boîte",  min: 6,  max: 12 },
   ],
   cuisine: [
-    { item_name: "Capsules Nespresso",         unit: "boîte",  min: 1, max: 3 },
-    { item_name: "Sachets thé",                unit: "boîte",  min: 1, max: 2 },
-    { item_name: "Sel / poivre",               unit: "pot",    min: 1, max: 2 },
-    { item_name: "Huile olive",                unit: "bouteille",min: 1, max: 2 },
-    { item_name: "Liquide vaisselle",          unit: "flacon", min: 1, max: 2 },
-    { item_name: "Pastilles lave-vaisselle",   unit: "boîte",  min: 1, max: 2 },
-    { item_name: "Éponges",                    unit: "pièce",  min: 2, max: 5 },
+    { item_name: "Capsules Nespresso",         unit: "boîte",  min: 4,  max: 12 },
+    { item_name: "Sachets thé",                unit: "boîte",  min: 3,  max: 8 },
+    { item_name: "Sel / poivre",               unit: "pot",    min: 2,  max: 6 },
+    { item_name: "Huile olive",                unit: "bouteille",min: 2,max: 6 },
+    { item_name: "Liquide vaisselle",          unit: "flacon", min: 3,  max: 8 },
+    { item_name: "Pastilles lave-vaisselle",   unit: "boîte",  min: 2,  max: 5 },
+    { item_name: "Éponges",                    unit: "pièce",  min: 8,  max: 20 },
   ],
   entretien: [
-    { item_name: "Produit multi-usages",       unit: "flacon", min: 1, max: 2 },
-    { item_name: "Produit sols",               unit: "flacon", min: 1, max: 2 },
-    { item_name: "Produit vitres",             unit: "flacon", min: 1, max: 2 },
-    { item_name: "Anti-calcaire SDB",          unit: "flacon", min: 1, max: 2 },
-    { item_name: "Sacs poubelle 30L",          unit: "rouleau",min: 1, max: 2 },
-    { item_name: "Sacs poubelle 100L",         unit: "rouleau",min: 1, max: 2 },
+    { item_name: "Produit multi-usages",       unit: "flacon", min: 3,  max: 8 },
+    { item_name: "Produit sols",               unit: "flacon", min: 3,  max: 8 },
+    { item_name: "Produit vitres",             unit: "flacon", min: 2,  max: 5 },
+    { item_name: "Anti-calcaire SDB",          unit: "flacon", min: 2,  max: 5 },
+    { item_name: "Sacs poubelle 30L",          unit: "rouleau",min: 3,  max: 8 },
+    { item_name: "Sacs poubelle 100L",         unit: "rouleau",min: 3,  max: 8 },
   ],
+};
+
+// Items dédiés à chaque bien MQ (équipements physiques individuels).
+const SEED_PER_BIEN = {
   bien_etre: [
     { item_name: "Sèche-cheveux",              unit: "pièce",  min: 1, max: 1 },
     { item_name: "Fer à repasser + table",     unit: "set",    min: 1, max: 1 },
@@ -102,10 +112,11 @@ const SEED_TEMPLATES = {
   ],
 };
 
-// Liste des biens (cohérent avec PublicSite.jsx BIENS)
-const BIEN_IDS = ["amaryllis", "zandoli", "iguana", "geko", "mabouya", "schoelcher", "nogent"];
+// "_general" = bien virtuel pour le stock mutualisé MQ.
+// Nogent EXCLU : géré par la conciergerie externe.
+const BIEN_IDS = ["amaryllis", "zandoli", "iguana", "geko", "mabouya", "schoelcher"];
 
-// Items spécifiques par bien (en plus du seed générique)
+// Items piscine spécifiques par bien (équipements individuels).
 const BIEN_SPECIFIC = {
   amaryllis:  { piscine: [
     { item_name: "Chlore piscine", unit: "litre", min: 5, max: 15 },
@@ -183,8 +194,21 @@ export async function onRequest({ request, env }) {
       }
 
       let inserted = 0;
+
+      // 1) Stock mutualisé (bien_id = "_general") — partagé par les 6 biens MQ
+      for (const [cat, items] of Object.entries(SEED_GENERAL)) {
+        for (const it of items) {
+          await db.prepare(`
+            INSERT INTO inventory_items (bien_id, category, item_name, unit, qty_current, qty_min, qty_max)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+          `).bind("_general", cat, it.item_name, it.unit, it.max, it.min, it.max).run();
+          inserted++;
+        }
+      }
+
+      // 2) Items dédiés par bien MQ (équipements physiques + piscine)
       for (const bienId of BIEN_IDS) {
-        for (const [cat, items] of Object.entries(SEED_TEMPLATES)) {
+        for (const [cat, items] of Object.entries(SEED_PER_BIEN)) {
           for (const it of items) {
             await db.prepare(`
               INSERT INTO inventory_items (bien_id, category, item_name, unit, qty_current, qty_min, qty_max)
@@ -206,7 +230,7 @@ export async function onRequest({ request, env }) {
           }
         }
       }
-      return json({ ok: true, inserted, message: `${inserted} items créés sur ${BIEN_IDS.length} biens` });
+      return json({ ok: true, inserted, message: `${inserted} items créés : 1 stock mutualisé + équipements pour ${BIEN_IDS.length} biens MQ (Nogent exclu — conciergerie externe)` });
     } catch (e) {
       return json({ error: e.message }, 500);
     }
