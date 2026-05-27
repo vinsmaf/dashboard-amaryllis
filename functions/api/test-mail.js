@@ -11,7 +11,7 @@ export async function onRequestGet({ env, request }) {
     method: "POST",
     headers: { "Authorization": `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      from: env.RESEND_FROM || "Amaryllis <notifications@mail.villamaryllis.com>",
+      from: "Amaryllis Test <onboarding@resend.dev>",
       to: [to],
       subject: "✅ Test de boîte mail — Amaryllis",
       html: `<div style="font-family:system-ui;padding:24px"><h2>Test reçu ✅</h2><p>Si tu lis ce mail, c'est que <strong>${to}</strong> est bien fonctionnel.</p><p>Tu peux maintenant tester la récupération de mot de passe Instagram avec cet email.</p><p style="color:#888;font-size:12px;margin-top:24px">Envoyé depuis le dashboard Amaryllis · ${new Date().toLocaleString("fr-FR")}</p></div>`,
