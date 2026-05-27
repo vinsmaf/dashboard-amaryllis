@@ -44,20 +44,28 @@ async function executeDraft(env, draft) {
   const payload = JSON.parse(draft.payload);
 
   if (draft.type === "social_post") {
-    const token  = env.META_PAGE_TOKEN;
-    const pageId = env.META_PAGE_ID;
-    if (!token || !pageId) return { ok: false, error: "Meta non configuré" };
+    // Délègue à /api/social (publication multi-channels FB + IG)
+    const channels = Array.isArray(payload.channels) && payload.channels.length
+      ? payload.channels
+      : ["fb", "ig"];
 
-    const body = new URLSearchParams({
-      ...(payload.imageUrl
-        ? { url: payload.imageUrl, caption: payload.caption }
-        : { message: payload.caption }),
-      access_token: token,
+    const origin = new URL(env.PAGES_URL || "https://dashboard-amaryllis.pages.dev").origin;
+    const r = await fetch(`${origin}/api/social`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "publish",
+        caption: payload.caption,
+        imageUrl: payload.imageUrl,
+        channels,
+        firstComment: payload.firstComment,
+      }),
     });
-    const endpoint = payload.imageUrl ? `${pageId}/photos` : `${pageId}/feed`;
-    const r = await fetch(`https://graph.facebook.com/v25.0/${endpoint}`, { method: "POST", body });
     const data = await r.json();
-    return data.error ? { ok: false, error: data.error.message } : { ok: true, id: data.id };
+    if (!data.ok) {
+      return { ok: false, error: "Aucune publication réussie", results: data.results };
+    }
+    return { ok: true, results: data.results };
   }
 
   if (draft.type === "price_change") {
@@ -196,6 +204,7 @@ export async function onRequest(context) {
 
     // ── action=improve : régénère un caption amélioré en intégrant les
     //    conseils des agents reviewers (traffic-manager + seo-writer)
+    //    + corrige les erreurs détectées par le fact-checker
     if (action === "improve") {
       if (draft.type !== "social_post") return json({ error: "Only social_post drafts can be improved" }, 400);
 
@@ -207,6 +216,10 @@ export async function onRequest(context) {
       const trafficFb = reviews.traffic_manager?.feedback || "";
       const seoFb     = reviews.seo_writer?.feedback || "";
       const currentScore = reviews.score || 0;
+      const factErrors = reviews.fact_check?.errors || [];
+      const factErrorsList = factErrors.length
+        ? factErrors.map(e => `  - "${e.phrase}" → ${e.reason}`).join("\n")
+        : "(aucune)";
 
       // Appel LLM avec prompt d'amélioration ciblée
       const { callLLM } = await import("./_llm.js");
@@ -221,7 +234,10 @@ RETOURS DES EXPERTS :
 📈 Traffic Manager : ${trafficFb || "(aucun)"}
 ✍️ SEO Writer : ${seoFb || "(aucun)"}
 
-🎯 MISSION : Réécris cette caption pour viser 100/100 en intégrant chaque retour.
+🚨 ERREURS FACTUELLES À CORRIGER IMPÉRATIVEMENT :
+${factErrorsList}
+
+🎯 MISSION : Réécris cette caption pour viser 100/100 en intégrant chaque retour ET en corrigeant TOUTES les erreurs factuelles ci-dessus.
 Conserve :
   - La structure 5 blocs (hook, description sensorielle, bénéfice, CTA, hashtags)
   - L'URL exacte du CTA : ${payload.imageUrl?.match(/photos\/([a-z]+)/)?.[1] ? `https://villamaryllis.com/${payload.imageUrl.match(/photos\/([a-z]+)/)[1]}` : "URL existante"}
@@ -277,10 +293,18 @@ Retourne UNIQUEMENT un JSON :
 
       // Update payload
       payload.caption = newCaption;
-      // Update reviews avec le nouveau score estimé
+
+      // ── Re-fact-check après amélioration ────────────────────────────────
+      const { factCheckCaption, loadLearnedLessons } = await import("./_factcheck.js");
+      const learned = await loadLearnedLessons(db);
+      const newFactErrors = factCheckCaption(newCaption, learned);
+
       reviews.previous_score = currentScore;
       reviews.score_after_improve = parsed.score_estimated || null;
       reviews.improvement_notes = parsed.what_changed || null;
+      reviews.fact_check = newFactErrors.length
+        ? { passed: false, errors: newFactErrors }
+        : { passed: true };
 
       await db.prepare(`
         UPDATE agent_drafts SET payload = ?, reviews = ?, updated_at = ? WHERE id = ?
@@ -291,6 +315,8 @@ Retourne UNIQUEMENT un JSON :
         previous_score: currentScore,
         new_score: parsed.score_estimated,
         what_changed: parsed.what_changed,
+        fact_check_passed: newFactErrors.length === 0,
+        fact_check_errors: newFactErrors,
       });
     }
 

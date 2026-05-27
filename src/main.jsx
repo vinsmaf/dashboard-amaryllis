@@ -16,6 +16,10 @@ Sentry.init({
   ignoreErrors: [
     "ResizeObserver loop limit exceeded",
     "Non-Error promise rejection",
+    // Bugs du navigateur in-app Facebook/Instagram (Android)
+    "Java object is gone",
+    "Error invoking postMessage",
+    "navigation_performance_logger",
   ],
 })
 

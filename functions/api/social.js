@@ -92,92 +92,97 @@ function extractAmaryllisUrl(caption) {
 }
 
 // POST /api/social — publish
-// Note: le compte Instagram est un PBIA (page-backed Instagram account).
-// Poster sur la Page Facebook publie automatiquement sur Instagram aussi.
-// Donc "ig" et "fb" envoient tous les deux vers la Page Facebook.
-//
-// Auto-comment : on poste le lien direct en 1er commentaire (cliquable sur FB,
-// au moins visible/copiable sur Instagram → contourne la limitation IG).
+// @amaryllislocations est un Instagram Business Account séparé (pas PBIA).
+// Publication indépendante : Facebook via Page, Instagram via container Graph API.
 async function handlePublish(env, { caption, imageUrl, channels = ["ig", "fb"], firstComment }) {
   const token  = env.META_PAGE_TOKEN;
   const pageId = env.META_PAGE_ID;
+  const igId   = env.META_IG_ACCOUNT_ID;
 
   if (!token || !pageId) return json({ error: "Secrets non configurés" }, 500);
 
   const results = {};
 
-  // Un seul post vers la Page Facebook publie sur FB + Instagram (PBIA)
-  const shouldPost = channels.includes("fb") || channels.includes("ig");
-  let publishedPostId = null;
-  if (shouldPost) {
+  // ── Facebook Page ────────────────────────────────────────────────────────
+  let fbPostId = null;
+  if (channels.includes("fb")) {
     try {
       if (imageUrl) {
         const r = await graphPost(`${pageId}/photos`, token, { url: imageUrl, caption });
-        const result = r.error ? { error: r.error.message } : { id: r.id, ok: true };
-        if (result.ok) publishedPostId = r.post_id || r.id;
-        if (channels.includes("fb")) results.fb = result;
-        if (channels.includes("ig")) results.ig = { ...result, note: "Via Page Facebook (PBIA)" };
+        results.fb = r.error ? { error: r.error.message } : { id: r.id, ok: true };
+        if (results.fb.ok) fbPostId = r.post_id || r.id;
       } else {
         const r = await graphPost(`${pageId}/feed`, token, { message: caption });
-        const result = r.error ? { error: r.error.message } : { id: r.id, ok: true };
-        if (result.ok) publishedPostId = r.id;
-        if (channels.includes("fb")) results.fb = result;
-        if (channels.includes("ig")) results.ig = { error: "Instagram nécessite une image" };
+        results.fb = r.error ? { error: r.error.message } : { id: r.id, ok: true };
+        if (results.fb.ok) fbPostId = r.id;
       }
     } catch (e) {
-      if (channels.includes("fb")) results.fb = { error: e.message };
-      if (channels.includes("ig")) results.ig = { error: e.message };
+      results.fb = { error: e.message };
     }
   }
 
-  // ── Premier commentaire automatique avec le lien direct ──────────────────
-  // Astuce : le 1er commentaire de la Page est cliquable sur FB. Sur Instagram,
-  // les commentaires ne sont pas cliquables non plus, mais au moins le lien est
-  // visible et copiable (vs caption où l'URL serait parsée différemment).
-  if (publishedPostId) {
-    const linkUrl = extractAmaryllisUrl(caption);
-    const commentText = firstComment || (linkUrl
-      ? `🔗 Réservez directement ici : ${linkUrl}\n\n👉 Ou retrouvez tous nos hébergements : https://villamaryllis.com/links`
-      : null);
-    if (commentText) {
+  // ── Instagram via Graph API (container + publish) ────────────────────────
+  let igPostId = null;
+  if (channels.includes("ig")) {
+    if (!igId) {
+      results.ig = { error: "META_IG_ACCOUNT_ID non configuré" };
+    } else if (!imageUrl) {
+      results.ig = { error: "Instagram nécessite une image" };
+    } else {
       try {
-        const cr = await graphPost(`${publishedPostId}/comments`, token, { message: commentText });
-        results.first_comment = cr.error ? { error: cr.error.message } : { id: cr.id, ok: true };
-      } catch (e) {
-        results.first_comment = { error: e.message };
-      }
-    }
-  }
-
-  // ── Instagram Graph API (si jamais instagram_content_publish est accordé) ──
-  if (false) {
-    try {
-      if (!imageUrl) {
-        results.ig = { error: "Instagram nécessite une image" };
-      } else {
-        // Étape 1 : créer le container
-        const igId = env.META_IG_ACCOUNT_ID;
+        // Étape 1 : créer le container média
         const container = await graphPost(`${igId}/media`, token, {
           image_url: imageUrl,
           caption,
         });
-
         if (container.error) {
           results.ig = { error: container.error.message };
         } else {
-          // Étape 2 : publier
+          // Le container IG a besoin de ~2-5 sec avant d'être publiable
+          await new Promise(r => setTimeout(r, 4000));
+
+          // Étape 2 : publier le container
           const publish = await graphPost(`${igId}/media_publish`, token, {
             creation_id: container.id,
           });
           results.ig = publish.error
             ? { error: publish.error.message }
             : { id: publish.id, ok: true };
+          if (results.ig.ok) igPostId = publish.id;
         }
+      } catch (e) {
+        results.ig = { error: e.message };
       }
-    } catch (e) {
-      results.ig = { error: e.message };
     }
-  } // end if(false)
+  }
+
+  // ── Premier commentaire avec le lien direct (Facebook uniquement) ────────
+  // Nécessite pages_manage_engagement (non disponible dans l'app actuelle).
+  // On tente quand même — si erreur permission, on ignore silencieusement
+  // (le lien est déjà dans la caption, c'était juste un bonus de visibilité).
+  if (fbPostId) {
+    const linkUrl = extractAmaryllisUrl(caption);
+    const commentText = firstComment || (linkUrl
+      ? `🔗 Réservez directement ici : ${linkUrl}\n\n👉 Ou retrouvez tous nos hébergements : https://villamaryllis.com/links`
+      : null);
+    if (commentText) {
+      try {
+        const cr = await graphPost(`${fbPostId}/comments`, token, { message: commentText });
+        if (cr.error) {
+          // On ne remonte l'erreur que si elle n'est pas liée aux permissions manquantes
+          const isPermissionError = /permission|access|scope/i.test(cr.error.message || "");
+          if (!isPermissionError) {
+            results.first_comment = { error: cr.error.message };
+          }
+          // sinon : silent skip (le lien est déjà dans la caption)
+        } else {
+          results.first_comment = { id: cr.id, ok: true };
+        }
+      } catch (e) {
+        // Silent skip réseau aussi — non bloquant
+      }
+    }
+  }
 
   const hasSuccess = Object.values(results).some(r => r.ok);
   return json({ results, ok: hasSuccess }, hasSuccess ? 200 : 422);
