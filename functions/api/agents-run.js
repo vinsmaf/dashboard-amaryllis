@@ -463,9 +463,9 @@ ${brief}
 ═══════════════════════════════════════════════════════════════
 📋 DONNÉES CANONIQUES pour ${bienId.toUpperCase()} (utilise-les) :
 ${bienId === "amaryllis"  ? "  Villa Amaryllis, Sainte-Luce — 8 pers · 3 chambres · 4,94★ · sur les HAUTEURS, vue mer 180°, alizés, PISCINE À DÉBORDEMENT (la seule du portfolio)" : ""}
-${bienId === "zandoli"    ? "  Zandoli, Sainte-Luce (résidence Amaryllis) — 5 pers · 2 chambres · 4,5★ · cocon tropical, mezzanine, jardin, PISCINE AVEC CASCADE (partagée résidence)" : ""}
+${bienId === "zandoli"    ? "  Zandoli, Sainte-Luce (résidence Amaryllis) — 5 pers · 2 chambres · 4,5★ · cocon tropical, mezzanine, jardin, PISCINE PRIVATIVE AVEC CASCADE (chacune des villas de la résidence a sa propre piscine)" : ""}
 ${bienId === "iguana"     ? "  Villa Iguana, Sainte-Luce — 6 pers · 2 chambres · 4,75★ · vue Rocher du Diamant, PISCINE EAU SALÉE (la seule de la résidence, non chlorée)" : ""}
-${bienId === "geko"       ? "  Géko, Sainte-Luce (résidence Amaryllis hauteurs) — 4 pers · 1 chambre · 4,83★ · jardin tropical, PISCINE AVEC CASCADE (partagée résidence)" : ""}
+${bienId === "geko"       ? "  Géko, Sainte-Luce (résidence Amaryllis hauteurs) — 4 pers · 1 chambre · 4,83★ · jardin tropical, PISCINE PRIVATIVE AVEC CASCADE (chacune des villas de la résidence a sa propre piscine)" : ""}
 ${bienId === "mabouya"    ? "  Studio Mabouya (résidence Amaryllis hauteurs) — 2 pers · 1 chambre · 4,55★ · JACUZZI privatif terrasse avec VUE mer (pas de piscine, pas pieds dans l'eau)" : ""}
 ${bienId === "schoelcher" ? "  Bellevue, Schœlcher (hauteurs) — 2 pers · 1 chambre · 4,8★ · vue baie Fort-de-France + Trois-Îlets (pas de piscine)" : ""}
 ${bienId === "nogent"     ? "  Appt Nogent-sur-Marne — 2 pers · 1 chambre · jardin + terrasse · bord de Marne, RER A 20min Paris" : ""}
@@ -479,7 +479,7 @@ ${bienId === "nogent"     ? "  Appt Nogent-sur-Marne — 2 pers · 1 chambre · 
 
 🚫 ÉQUIPEMENTS — INTERDIT (mensonge factuel) :
   - "piscine à débordement" UNIQUEMENT pour Villa Amaryllis (PAS pour les autres)
-  - "piscine avec cascade" UNIQUEMENT pour Zandoli et Géko (partagée résidence)
+  - "piscine privative avec cascade" UNIQUEMENT pour Zandoli et Géko (chacune sa propre piscine dans la résidence Amaryllis)
   - "piscine eau salée" UNIQUEMENT pour Villa Iguana (seule de la résidence)
   - Pas de "piscine" pour Mabouya, Schœlcher, Nogent
   - "jacuzzi privatif" UNIQUEMENT pour Mabouya (PAS pour les autres)

@@ -105,9 +105,9 @@ const ROUTES = [
   {
     path: "/zandoli",
     title: "Zandoli — Location villa Martinique piscine cascade | Résidence Amaryllis",
-    desc:  "Villa Zandoli à Sainte-Luce, Martinique. Piscine avec cascade (résidence partagée), mezzanine, jardin tropical. 5 personnes. Réservation directe.",
+    desc:  "Villa Zandoli à Sainte-Luce, Martinique. Piscine privative avec cascade, mezzanine, jardin tropical. 5 personnes. Réservation directe.",
     image: `${BASE}/photos/zandoli/01.webp`,
-    jsonld: buildVacationRentalLd({ id: "zandoli", nom: "Zandoli", desc: "Villa Zandoli à Sainte-Luce, Martinique. Piscine avec cascade (résidence partagée), mezzanine, jardin tropical. 5 personnes.", prix: 220, capacite: 5, chambres: 2, rating: 4.5, reviews: 34, coords: { lat: 14.4730, lng: -60.9196 }, photos: ["/photos/zandoli/01.webp","/photos/zandoli/02.webp","/photos/zandoli/03.webp","/photos/zandoli/04.webp"] }),
+    jsonld: buildVacationRentalLd({ id: "zandoli", nom: "Zandoli", desc: "Villa Zandoli à Sainte-Luce, Martinique. Piscine privative avec cascade, mezzanine, jardin tropical. 5 personnes.", prix: 220, capacite: 5, chambres: 2, rating: 4.5, reviews: 34, coords: { lat: 14.4730, lng: -60.9196 }, photos: ["/photos/zandoli/01.webp","/photos/zandoli/02.webp","/photos/zandoli/03.webp","/photos/zandoli/04.webp"] }),
   },
   {
     path: "/iguana",
@@ -119,9 +119,9 @@ const ROUTES = [
   {
     path: "/geko",
     title: "Géko — Location villa Martinique piscine cascade Sainte-Luce | Résidence Amaryllis",
-    desc:  "Cocon Géko à Sainte-Luce, Martinique. Piscine avec cascade (résidence partagée), jardin tropical. 4 personnes. À partir de 150€/nuit. Réservation directe.",
+    desc:  "Cocon Géko à Sainte-Luce, Martinique. Piscine privative avec cascade, jardin tropical. 4 personnes. À partir de 150€/nuit. Réservation directe.",
     image: `${BASE}/photos/geko/01.webp`,
-    jsonld: buildVacationRentalLd({ id: "geko", nom: "Géko", desc: "Cocon Géko à Sainte-Luce, Martinique. Piscine avec cascade (résidence partagée), jardin tropical, sur les hauteurs. 4 personnes.", prix: 150, capacite: 4, chambres: 1, rating: 4.83, reviews: 28, coords: { lat: 14.4732, lng: -60.9196 }, photos: ["/photos/geko/01.webp","/photos/geko/02.webp","/photos/geko/03.webp","/photos/geko/04.webp"] }),
+    jsonld: buildVacationRentalLd({ id: "geko", nom: "Géko", desc: "Cocon Géko à Sainte-Luce, Martinique. Piscine privative avec cascade, jardin tropical, sur les hauteurs. 4 personnes.", prix: 150, capacite: 4, chambres: 1, rating: 4.83, reviews: 28, coords: { lat: 14.4732, lng: -60.9196 }, photos: ["/photos/geko/01.webp","/photos/geko/02.webp","/photos/geko/03.webp","/photos/geko/04.webp"] }),
   },
   {
     path: "/mabouya",
