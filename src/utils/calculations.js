@@ -11,16 +11,24 @@
 // ── Helpers tableau ─────────────────────────────────────────────────────────
 
 /**
+ * Nombre de mois écoulés depuis le début de l'année (1-12).
+ * Source unique pour le paramètre `n` par défaut des helpers ci-dessous.
+ * Calculé à l'initialisation du module — pour un test reproductible, passe
+ * explicitement le paramètre `n` aux fonctions plutôt que d'utiliser le défaut.
+ */
+export const N = new Date().getMonth() + 1;
+
+/**
  * Somme des n premières valeurs d'un tableau (valeurs nulles/undefined ignorées).
  * Utilisé pour "revenus YTD à n mois" (n = mois écoulés sur l'année courante).
  */
-export const sumN = (arr, n) => (arr || []).slice(0, n).reduce((s, v) => s + (v || 0), 0);
+export const sumN = (arr, n = N) => (arr || []).slice(0, n).reduce((s, v) => s + (v || 0), 0);
 
 /**
  * Moyenne des valeurs STRICTEMENT POSITIVES sur les n premières positions.
  * Utilisé pour ADR moyen (un mois à 0 = mois non commercialisé, on l'exclut).
  */
-export const avgN = (arr, n) => {
+export const avgN = (arr, n = N) => {
   const valid = (arr || []).slice(0, n).filter(x => x > 0);
   return valid.length ? valid.reduce((s, x) => s + x, 0) / valid.length : 0;
 };
@@ -106,14 +114,19 @@ export const computeRevPAR = (revenu, nuitsDispo) => {
 // ── Statut bien (cashflow agrégé sur n mois) ────────────────────────────────
 
 /**
- * Classifie un bien selon son cashflow cumulé sur n mois.
- *  - "ok"   : cashflow ≥ 0
- *  - "warn" : cashflow entre -1000 et 0
- *  - "ko"   : cashflow < -1000
+ * Classifie un bien selon cashflow, occupation et revenus YTD.
+ * Replique 1:1 la logique inline de src/App.jsx (statutBien const).
+ *  - "green"  : cashflow > 0 ET occupation > 50%
+ *  - "red"    : cashflow < -500 OU revenus YTD nuls
+ *  - "yellow" : tout le reste
+ *
+ * Les 3 sommes/moyennes sont prises sur N mois écoulés (= mois courant).
  */
-export const statutBien = (bien, n) => {
-  const cf = sumN(bien?.cashflow, n);
-  if (cf >= 0) return "ok";
-  if (cf > -1000) return "warn";
-  return "ko";
+export const statutBien = (bien) => {
+  const cf  = sumN(bien?.cashflow);
+  const occ = avgN(bien?.occ);
+  const ytd = sumN(bien?.revenus);
+  if (cf > 0 && occ > 50) return "green";
+  if (cf < -500 || ytd === 0) return "red";
+  return "yellow";
 };

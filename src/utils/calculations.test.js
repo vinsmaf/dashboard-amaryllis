@@ -128,19 +128,35 @@ describe('computeRevPAR', () => {
   })
 })
 
-describe('statutBien', () => {
-  const bien = (cashflow) => ({ cashflow })
-  it('ok si cashflow positif', () => {
-    expect(statutBien(bien([1000, 2000, 3000]), 3)).toBe('ok')
+describe('statutBien (replique App.jsx 1:1)', () => {
+  // N (mois courant) est dynamique — on construit des tableaux remplis sur 12 mois
+  // pour que sumN/avgN voient des valeurs significatives quelle que soit N.
+  const fill = (val) => new Array(12).fill(val)
+  const make = ({ cf = 0, occ = 0, rev = 0 } = {}) => ({
+    cashflow: fill(cf),
+    occ:      fill(occ),
+    revenus:  fill(rev),
   })
-  it('warn si entre -1000 et 0', () => {
-    expect(statutBien(bien([-200, -300]), 2)).toBe('warn')
+
+  it('green si cashflow > 0 ET occupation > 50%', () => {
+    expect(statutBien(make({ cf: 100, occ: 60, rev: 1000 }))).toBe('green')
   })
-  it('ko si < -1000', () => {
-    expect(statutBien(bien([-2000, -500]), 2)).toBe('ko')
+  it('yellow si cashflow > 0 mais occupation faible', () => {
+    expect(statutBien(make({ cf: 100, occ: 30, rev: 1000 }))).toBe('yellow')
   })
-  it('robuste face à undefined cashflow → ok (cf = 0)', () => {
-    expect(statutBien({}, 3)).toBe('ok')
-    expect(statutBien({ cashflow: null }, 3)).toBe('ok')
+  it('red si cashflow < -500', () => {
+    expect(statutBien(make({ cf: -600, occ: 80, rev: 1000 }))).toBe('red')
+  })
+  it('red si revenus YTD nuls (cf = 0)', () => {
+    expect(statutBien(make({ cf: 0, occ: 80, rev: 0 }))).toBe('red')
+  })
+  it('yellow par défaut (zone tampon)', () => {
+    // cf cumulé doit être > -500 ET revenus > 0 → yellow
+    // valeurs par mois faibles pour rester sous le seuil quel que soit N
+    expect(statutBien(make({ cf: -20, occ: 30, rev: 50 }))).toBe('yellow')
+  })
+  it('robuste face à bien null/undefined fields', () => {
+    expect(statutBien({})).toBe('red')           // ytd = 0 → red
+    expect(statutBien({ cashflow: null })).toBe('red')
   })
 })
