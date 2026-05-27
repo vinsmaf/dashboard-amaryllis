@@ -918,6 +918,65 @@ async function runOccupancyAlerts(env, allEvents) {
   console.log(`[occupancy] Alerte envoyée — ${alerts.length} logement(s) sous le seuil${hasUrgent ? `, ${zeroAlerts.length} URGENT(s) 0 résa 14j` : ""}`);
 }
 
+// ── Alertes inventaire (cron quotidien 9h UTC) ───────────────────────────────
+// Envoie un email récap au propriétaire si des items sont en rupture imminente.
+// Implémente log-008 (Option B Phase 5).
+async function runInventoryAlerts(env) {
+  const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+  try {
+    const r = await fetch(`${siteUrl}/api/inventory?action=alerts`);
+    const d = await r.json();
+    const items = (d.items || []).filter(i => i.status === "critique" || i.status === "rupture");
+    if (items.length === 0) {
+      console.log("[inventory-alerts] ✓ Aucun item critique");
+      return;
+    }
+
+    // Grouper par bien
+    const byBien = {};
+    for (const it of items) {
+      if (!byBien[it.bien_id]) byBien[it.bien_id] = [];
+      byBien[it.bien_id].push(it);
+    }
+
+    // Construire HTML email
+    const sections = Object.entries(byBien).map(([bienId, list]) => {
+      const rows = list.map(it => `
+        <tr>
+          <td style="padding:6px 10px;font-size:12px;color:#0e3b3a">${it.item_name}</td>
+          <td style="padding:6px 10px;font-size:11px;color:#94a3b8">${it.category}</td>
+          <td style="padding:6px 10px;font-size:13px;color:${it.status === "rupture" ? "#dc2626" : "#ef4444"};font-weight:700;text-align:right;font-family:var(--font-mono)">${it.qty_current} ${it.unit}</td>
+          <td style="padding:6px 10px;font-size:11px;color:#64748b;text-align:right;font-family:var(--font-mono)">min ${it.qty_min}</td>
+          <td style="padding:6px 10px;font-size:11px;color:${it.eta_rupture_days !== null && it.eta_rupture_days < 7 ? "#ef4444" : "#94a3b8"};text-align:right;font-family:var(--font-mono)">${it.eta_rupture_days !== null ? it.eta_rupture_days + "j" : "—"}</td>
+        </tr>
+      `).join("");
+      return `
+        <div style="margin-bottom:18px">
+          <h3 style="margin:0 0 8px;color:#0e3b3a;font-size:13px;text-transform:uppercase;letter-spacing:1px">${bienId.toUpperCase()} — ${list.length} item${list.length > 1 ? "s" : ""}</h3>
+          <table style="width:100%;border-collapse:collapse;background:#fff;border-radius:6px;overflow:hidden">
+            <thead><tr style="background:#f8f4ed"><th style="padding:6px 10px;text-align:left;font-size:10px;color:#64748b">Item</th><th style="padding:6px 10px;text-align:left;font-size:10px;color:#64748b">Cat.</th><th style="padding:6px 10px;text-align:right;font-size:10px;color:#64748b">Stock</th><th style="padding:6px 10px;text-align:right;font-size:10px;color:#64748b">Min</th><th style="padding:6px 10px;text-align:right;font-size:10px;color:#64748b">ETA</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`;
+    }).join("");
+
+    await sendEmail(env, {
+      subject: `🚨 Inventaire — ${items.length} item${items.length > 1 ? "s" : ""} en rupture imminente`,
+      html: emailWrapper(`
+        <h2 style="color:#dc2626;margin:0 0 8px">🚨 Alerte stocks bas</h2>
+        <p style="color:#7a6b5a;font-size:13px;margin:0 0 20px">${items.length} item${items.length > 1 ? "s" : ""} en stock bas ou rupture sur ${Object.keys(byBien).length} bien${Object.keys(byBien).length > 1 ? "s" : ""}. Penser à commander.</p>
+        ${sections}
+        <div style="margin-top:20px;text-align:center">
+          <a href="${siteUrl}/admin" style="background:#0e3b3a;color:#fff;text-decoration:none;padding:10px 22px;border-radius:8px;font-weight:700;font-size:13px;display:inline-block">Voir Inventaire →</a>
+        </div>
+      `),
+    });
+    console.log(`[inventory-alerts] Email envoyé — ${items.length} items en rupture`);
+  } catch (e) {
+    console.error("[inventory-alerts] Erreur:", e.message);
+  }
+}
+
 // ── Article SEO long-tail mensuel ────────────────────────────────────────────
 // Génère un article 600-900 mots via seo-content-writer le 1er du mois.
 // L'article apparaît comme draft dans Approbations admin.
@@ -1790,6 +1849,7 @@ export default {
         await runGapPricing(env, allEvents);
         await runYieldPricing(env, allEvents);
         await runCautionAutoRelease(env);
+        await runInventoryAlerts(env);
         // ── Analyse autonome des 17 agents (GROQ_API_KEY requis dans les secrets CF Pages) ──
         if (env.GROQ_API_KEY) {
           const siteUrl = env.SITE_URL || "https://villamaryllis.com";

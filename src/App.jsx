@@ -26,6 +26,7 @@ import DevisEditor from "./tabs/DevisEditor.jsx";
 import InterventionsTab from "./tabs/InterventionsTab.jsx";
 import StockTrackerTab from "./tabs/StockTrackerTab.jsx";
 import LingeTab from "./tabs/LingeTab.jsx";
+import InventaireTab from "./tabs/InventaireTab.jsx";
 import ConversionTab from "./tabs/ConversionTab.jsx";
 import OrchestratorTab from "./tabs/OrchestratorTab.jsx";
 import SocialTab from "./tabs/SocialTab.jsx";
@@ -1180,8 +1181,9 @@ export default function App() {
         { id: "planning",      icon: "📅", label: "Planning",    badge: planningAlerts > 0 ? planningAlerts : null, badgeColor: "#f59e0b" },
         { id: "menage",        icon: "🧹", label: "Ménage",      badge: menageBadge > 0    ? menageBadge : null,   badgeColor: "#f59e0b" },
         { id: "interventions", icon: "🔨", label: "Interventions" },
-        { id: "stocks",        icon: "📦", label: "Stocks" },
-        { id: "linge",         icon: "🛏️",  label: "Linge" },
+        { id: "inventaire",    icon: "📦", label: "Inventaire" },
+        { id: "stocks",        icon: "📦", label: "Stocks (legacy)" },
+        { id: "linge",         icon: "🛏️",  label: "Linge (legacy)" },
         { id: "prestataires",  icon: "👷", label: "Prestataires" },
         { id: "messages",      icon: "💬", label: "Messages" },
         { id: "emails",        icon: "📧", label: "Emails" },
@@ -1455,6 +1457,7 @@ export default function App() {
             {tab === "chat-admin"    && <LocalErrorBoundary><AdminChatTab /></LocalErrorBoundary>}
             {tab === "orchestrateur" && <OrchestratorTab />}
             {tab === "interventions" && <InterventionsTab />}
+            {tab === "inventaire"    && <InventaireTab />}
             {tab === "stocks"        && <StockTrackerTab />}
             {tab === "linge"         && <LingeTab />}
             {tab === "conversion"    && <ConversionTab />}
