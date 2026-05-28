@@ -1,11 +1,12 @@
 # Assets versionnés (hash dans le nom). S'ils existent, Cloudflare Pages les sert
-# directement AVANT d'évaluer ces règles. S'ils sont absents (propagation de
-# déploiement en cours), on renvoie un statut 404 — JAMAIS un 200 HTML.
-# Raison : avec `/* /index.html 200`, un asset .js manquant recevait du HTML en 200,
-# que le navigateur mettait en cache (Cache-Control: immutable, 1 an) sous un nom .js
-# → le module devenait du HTML → page blanche pendant 1 an. Le statut 404 fait
-# échouer l'import proprement et n'est pas mis en cache immutable.
-/assets/*  /index.html  404
+# directement AVANT ces règles. S'ils sont absents (propagation de déploiement),
+# on renvoie un VRAI 404 (page /404.html dédiée) — JAMAIS le HTML de l'app en 200.
+#
+# Pourquoi : avec `/* /index.html 200`, un asset .js manquant recevait l'app HTML
+# en statut 200, que le navigateur gelait (Cache-Control: immutable, 1 an) sous un
+# nom .js → le module devenait du HTML → page blanche pendant 1 an, sans erreur.
+# Un statut 404 fait échouer l'import proprement ET n'est pas mis en cache immutable.
+/assets/*  /404.html  404
 
 # SPA fallback — routes applicatives uniquement
 /*  /index.html  200
