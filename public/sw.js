@@ -1,63 +1,28 @@
-const CACHE = "amaryllis-v5";
-const ASSETS = ["/", "/index.html"];
+// KILL SWITCH — ce Service Worker se désinscrit lui-même et purge tous les caches.
+// Raison : l'ancien SW (cache HTML network-first) a servi des documents périmés
+// (ex. un 404.html déployé brièvement resté en cache pour /admin). Pour un site de
+// réservation + dashboard admin, la fiabilité prime sur le mode hors-ligne PWA.
+// Chaque navigateur qui récupère ce sw.js va : vider les caches, se désinscrire,
+// puis recharger ses onglets → site frais garanti, plus aucune interférence SW.
 
-self.addEventListener("install", e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
+self.addEventListener("install", () => {
   self.skipWaiting();
 });
 
-self.addEventListener("activate", e => {
-  // Supprimer TOUS les anciens caches (y compris v1..v4)
-  e.waitUntil(caches.keys().then(keys =>
-    Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-  ));
-  self.clients.claim();
+self.addEventListener("activate", (event) => {
+  event.waitUntil((async () => {
+    // 1. Purger tous les caches
+    const keys = await caches.keys();
+    await Promise.all(keys.map((k) => caches.delete(k)));
+    // 2. Se désinscrire
+    await self.registration.unregister();
+    // 3. Recharger tous les onglets contrôlés pour repartir sans SW
+    const clients = await self.clients.matchAll({ type: "window" });
+    for (const client of clients) {
+      client.navigate(client.url);
+    }
+  })());
 });
 
-// Détecte un asset JS/CSS servi par erreur en HTML (cache empoisonné par un
-// fallback SPA 200). Dans ce cas on refait un fetch en bypassant le cache HTTP.
-function looksLikeHtmlForAsset(url, res) {
-  const isAsset = /\.(js|css|mjs)$/i.test(url.pathname);
-  if (!isAsset) return false;
-  const ct = res.headers.get("content-type") || "";
-  return ct.includes("text/html");
-}
-
-self.addEventListener("fetch", e => {
-  if (e.request.method !== "GET") return;
-  const url = new URL(e.request.url);
-
-  // ── Assets versionnés : garde-fou anti-empoisonnement ────────────────────
-  // Si la réponse est du HTML alors qu'on attend du JS/CSS, on re-fetch en
-  // forçant le réseau (cache: 'reload') pour évincer la copie corrompue.
-  if (url.pathname.startsWith("/assets/")) {
-    e.respondWith(
-      fetch(e.request).then(res => {
-        if (looksLikeHtmlForAsset(url, res)) {
-          return fetch(e.request, { cache: "reload" });
-        }
-        return res;
-      }).catch(() => fetch(e.request, { cache: "reload" }))
-    );
-    return;
-  }
-
-  // Ne pas intercepter les APIs ni les domaines externes
-  if (url.pathname.startsWith("/api/") ||
-      url.hostname.includes("google") ||
-      url.hostname.includes("airbnb") ||
-      url.hostname.includes("booking") ||
-      url.hostname.includes("corsproxy") ||
-      url.hostname.includes("allorigins")) return;
-
-  // Stratégie network-first pour le reste (HTML, images locales)
-  e.respondWith(
-    fetch(e.request).then(res => {
-      if (res.ok && res.type !== "opaque") {
-        const clone = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, clone));
-      }
-      return res;
-    }).catch(() => caches.match(e.request))
-  );
-});
+// Pass-through total — on n'intercepte plus rien (réseau direct).
+self.addEventListener("fetch", () => {});

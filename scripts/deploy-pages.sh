@@ -72,11 +72,11 @@ else
   SMOKE_FAIL=1
 fi
 
-# 3. Le Service Worker (garde-fou anti-empoisonnement) est bien déployé
-if curl -s "$DOMAIN/sw.js" | grep -q "looksLikeHtmlForAsset"; then
-  echo "   ✅ Service Worker garde-fou présent"
+# 3. Le Service Worker est bien le kill-switch (désinscription, pas de cache)
+if curl -s "$DOMAIN/sw.js" | grep -q "unregister"; then
+  echo "   ✅ Service Worker = kill-switch (pas de cache HTML)"
 else
-  echo "   ⚠️  sw.js ne contient pas le garde-fou anti-empoisonnement"
+  echo "   ⚠️  sw.js n'est pas le kill-switch attendu"
 fi
 
 if [[ "$SMOKE_FAIL" == "1" ]]; then

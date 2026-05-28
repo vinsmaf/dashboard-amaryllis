@@ -227,10 +227,16 @@
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
     <script>
+      // Service Worker DÉSACTIVÉ (fiabilité > offline pour réservation/admin).
+      // On désinscrit tout SW résiduel et on purge ses caches directement, pour
+      // nettoyer les navigateurs encore infectés par d'anciens documents en cache.
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch(() => {});
-        });
+        navigator.serviceWorker.getRegistrations()
+          .then(regs => regs.forEach(r => r.unregister()))
+          .catch(() => {});
+        if (window.caches && caches.keys) {
+          caches.keys().then(ks => ks.forEach(k => caches.delete(k))).catch(() => {});
+        }
       }
     </script>
   </body>
