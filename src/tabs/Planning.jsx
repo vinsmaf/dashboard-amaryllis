@@ -22,6 +22,7 @@ import {
   DEFAULT_PRIX,
 } from "../App.jsx";
 import MinNightsConfig from "./MinNightsConfig.jsx";
+import Beds24Admin from "./Beds24Admin.jsx";
 import { sumN, avgN, addDays, diffDays, todayStr } from "../utils/calculations.js";
 import { loadDailyPrices } from "../seedPrices.js";
 import { useAppData } from "../AppDataContext.jsx";

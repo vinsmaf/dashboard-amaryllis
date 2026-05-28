@@ -62,6 +62,10 @@ const Links           = lazy(() => import('./Links.jsx'))
 const StoriesTemplate = lazy(() => import('./StoriesTemplate.jsx'))
 const MenageGuide     = lazy(() => import('./MenageGuide.jsx'))
 
+// Build ID — exposé pour debug + force un nouveau hash d'asset à chaque déploiement
+// (évite le cache immutable empoisonné quand un asset 404 pendant la propagation)
+window.__BUILD__ = "2026-05-28-1";
+
 // Normalise les chemins avec trailing slash (/amaryllis/ → /amaryllis)
 const path = window.location.pathname.replace(/\/$/, "") || "/";
 
