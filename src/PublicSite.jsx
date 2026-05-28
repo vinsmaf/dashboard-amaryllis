@@ -6,6 +6,12 @@ import { Reveal } from "./useReveal.jsx";
 import { useLang, LangToggle } from "./i18n.jsx";
 import { Eyebrow, Display, Editorial, Button, RatingBadge, Icon, ThemeToggle, Chip, StateTile, RImg } from "./primitives.jsx";
 import { Curtain } from "./Curtain.jsx";
+import { getVariant, trackConversion } from "./utils/abTest.js";
+
+// A/B test growth-001 : libellé du CTA réservation principal
+// Variante A (contrôle) = "RÉSERVER" · Variante B = "VÉRIFIER LES DISPOS"
+const CTA_AB_VARIANT = getVariant("cta_label");
+const CTA_LABEL_FR = CTA_AB_VARIANT === "B" ? "VÉRIFIER LES DISPOS" : "RÉSERVER";
 const PropertyMap = lazy(() => import("./PropertyMap.jsx"));
 const VillaAmaryllisReel = lazy(() => import("./components/reel/VillaAmaryllisReel.jsx"));
 
@@ -3430,8 +3436,8 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                 </>
               )}
             </div>
-            <button data-cta-reservation data-cta-position="header" onClick={() => onBook(bien)} style={{ background: CORAL, border: "none", color: "#fff", borderRadius: 8, padding: "9px 20px", fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, cursor: "pointer", letterSpacing: "0.05em" }}>
-              RÉSERVER →
+            <button data-cta-reservation data-cta-position="header" onClick={() => { trackConversion("cta_label", { position: "header" }); onBook(bien); }} style={{ background: CORAL, border: "none", color: "#fff", borderRadius: 8, padding: "9px 20px", fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, cursor: "pointer", letterSpacing: "0.05em" }}>
+              {lang === "fr" ? `${CTA_LABEL_FR} →` : "BOOK →"}
             </button>
           </div>
         )}
@@ -4519,7 +4525,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                 <div style={{ padding: "0 24px 24px" }}>
                   <button
                     data-cta-reservation data-cta-position="calendar-main"
-                    onClick={() => calCheckin && calCheckout ? onBook(bien, calCheckin, calCheckout) : onBook(bien)}
+                    onClick={() => { trackConversion("cta_label", { position: "calendar-main" }); return calCheckin && calCheckout ? onBook(bien, calCheckin, calCheckout) : onBook(bien); }}
                     style={{
                       width: "100%", background: CORAL, border: "none", color: "#fff",
                       borderRadius: 10, padding: "14px 0",
@@ -4530,7 +4536,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                     onMouseEnter={e => { e.currentTarget.style.opacity = "0.88"; }}
                     onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
                   >
-                    {calCheckin && calCheckout ? "Réserver ces dates →" : "Réserver →"}
+                    {calCheckin && calCheckout ? "Réserver ces dates →" : (lang === "fr" ? `${CTA_LABEL_FR} →` : "BOOK →")}
                   </button>
                   {calCheckin && calCheckout && (
                     <button
