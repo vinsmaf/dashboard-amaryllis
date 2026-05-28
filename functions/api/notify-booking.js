@@ -36,15 +36,19 @@ async function sendEmail(env, subject, html, text) {
   if (!env.RESEND_API_KEY) return false;
   // Destinataires : NOTIFICATION_EMAIL (liste séparée par virgules) si défini,
   // sinon les 2 adresses de Vincent par défaut.
+  // NOTE : tant que le domaine n'est pas vérifié dans Resend, l'envoi via
+  // onboarding@resend.dev n'atteint QUE l'email du compte Resend (vinsmaf@hotmail.com).
+  // Pour ajouter contact@villamaryllis.com + un expéditeur brandé : vérifier le
+  // domaine sur resend.com/domains, puis définir RESEND_FROM + NOTIFICATION_EMAIL.
   const to = env.NOTIFICATION_EMAIL
     ? env.NOTIFICATION_EMAIL.split(",").map(s => s.trim()).filter(Boolean)
-    : ["vinsmaf@hotmail.com", "contact@villamaryllis.com"];
+    : ["vinsmaf@hotmail.com"];
   try {
     const r = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from: env.RESEND_FROM || "Amaryllis <notifications@mail.villamaryllis.com>",
+        from: env.RESEND_FROM || "Amaryllis <onboarding@resend.dev>",
         to, subject, html, text,
       }),
     });
@@ -69,6 +73,16 @@ export async function onRequest(context) {
   const { request, env } = context;
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   if (request.method !== "POST") return json({ error: "POST requis" }, 405);
+
+  // Mode test : POST ?test=1 → envoie une alerte de démonstration (sans Stripe, sans D1)
+  const url0 = new URL(request.url);
+  if (url0.searchParams.get("test") === "1") {
+    const emailSent = await sendEmail(env, "🧪 Test alerte réservation — Amaryllis",
+      "<div style='font-family:Georgia,serif'><h2 style='color:#0e3b3a'>🧪 Test d'alerte</h2><p>Si vous lisez ceci, les notifications email de nouvelle réservation fonctionnent ✅</p></div>",
+      "Test alerte réservation Amaryllis — si vous lisez ceci, l'email fonctionne.");
+    const ntfySent = await sendNtfy(env, "🧪 Test alerte résa Amaryllis", "Test push — si vous voyez ça, ntfy fonctionne ✅");
+    return json({ test: true, emailSent, ntfySent });
+  }
 
   const body = await request.json().catch(() => ({}));
   const { paymentIntentId, bienNom = "?", voyageur = "", total = 0, checkin = "", checkout = "", depot = 0 } = body;
