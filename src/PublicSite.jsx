@@ -6699,6 +6699,15 @@ function DevisPage() {
     });
     if (err) { setError(err.message); setPaying(false); return; }
     if (paymentIntent?.status === "succeeded") {
+      // 🔔 Alerte hôte fiable (email + push) — déclenchée dès le paiement réussi
+      fetch("/api/notify-booking", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          paymentIntentId: paymentIntent.id,
+          bienNom: data.bienNom || data.bienId, voyageur: data.voyageur,
+          total: data.total, depot: data.depot, checkin: data.checkin, checkout: data.checkout,
+        }),
+      }).catch(() => {});
       const cs = sessionStorage.getItem("deposit_cs");
       if (data?.depot && cs) {
         const el2 = stripe.elements({ clientSecret: cs, appearance });
