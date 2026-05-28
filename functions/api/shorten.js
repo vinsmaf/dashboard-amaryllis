@@ -64,12 +64,24 @@ export async function onRequest(context) {
     const payload = body.d;
     if (!payload || typeof payload !== "string") return json({ error: "champ 'd' (payload base64) requis" }, 400);
 
-    // Génère un code unique (réessaie en cas de collision)
-    let code = genCode();
-    for (let i = 0; i < 5; i++) {
+    let code;
+    // Slug personnalisé (ex: "laurent-geko") — nettoyé : minuscules, a-z 0-9 et tirets
+    if (body.slug) {
+      code = String(body.slug).toLowerCase().trim()
+        .normalize("NFD").replace(/[̀-ͯ]/g, "")   // retire accents
+        .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") // espaces → tirets
+        .slice(0, 40);
+      if (!code) return json({ error: "slug invalide" }, 400);
       const exists = await db.prepare("SELECT 1 FROM short_links WHERE code = ?").bind(code).first();
-      if (!exists) break;
+      if (exists) return json({ error: `slug '${code}' déjà utilisé — choisis-en un autre` }, 409);
+    } else {
+      // Code aléatoire (réessaie en cas de collision)
       code = genCode();
+      for (let i = 0; i < 5; i++) {
+        const ex = await db.prepare("SELECT 1 FROM short_links WHERE code = ?").bind(code).first();
+        if (!ex) break;
+        code = genCode();
+      }
     }
     await db.prepare("INSERT INTO short_links (code, payload, label) VALUES (?, ?, ?)")
       .bind(code, payload, body.label || null).run();
