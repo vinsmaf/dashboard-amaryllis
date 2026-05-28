@@ -1946,8 +1946,21 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
 
   const formOk = form.prenom && form.nom && form.email && form.email.includes("@");
 
+  // Init Stripe — AUTO-SUFFISANT : attend window.Stripe (script async) puis
+  // récupère la clé publique (module STRIPE_PK si déjà chargée, sinon fetch direct
+  // /api/get-config). Ne dépend plus du timing du fetch module — cause du bouton
+  // Payer désactivé quand STRIPE_PK n'était pas encore peuplé au montage.
   useEffect(() => {
-    if (window.Stripe && STRIPE_PK) setStripe(window.Stripe(STRIPE_PK));
+    let cancelled = false;
+    (async () => {
+      for (let i = 0; i < 50 && !window.Stripe; i++) await new Promise(r => setTimeout(r, 200));
+      if (cancelled || !window.Stripe) return;
+      let pk = STRIPE_PK;
+      if (!pk) { try { const c = await fetch("/api/get-config").then(r => r.json()); pk = c.stripePk; } catch { /* ignore */ } }
+      if (cancelled || !pk) return;
+      setStripe(window.Stripe(pk));
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   // Close on Escape
@@ -6619,12 +6632,25 @@ function DevisPage() {
 
   const appearance = { theme: "stripe", variables: { colorPrimary: CORAL, borderRadius: "8px", colorBackground: CREAM, colorText: NAVY } };
 
+  // Init Stripe — AUTO-SUFFISANT : attend window.Stripe (script async) puis
+  // récupère la clé publique (module STRIPE_PK si déjà chargée, sinon fetch direct
+  // /api/get-config). Ne dépend plus du timing du fetch module — cause du bouton
+  // Payer désactivé quand STRIPE_PK n'était pas encore peuplé au montage.
   useEffect(() => {
-    if (window.Stripe && STRIPE_PK) setStripe(window.Stripe(STRIPE_PK));
+    let cancelled = false;
+    (async () => {
+      for (let i = 0; i < 50 && !window.Stripe; i++) await new Promise(r => setTimeout(r, 200));
+      if (cancelled || !window.Stripe) return;
+      let pk = STRIPE_PK;
+      if (!pk) { try { const c = await fetch("/api/get-config").then(r => r.json()); pk = c.stripePk; } catch { /* ignore */ } }
+      if (cancelled || !pk) return;
+      setStripe(window.Stripe(pk));
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
-    if (!stripe || !data) return;
+    if (!stripe || !data || elements) return; // elements: évite double-création
     const totalCents = Math.round((data.total || 0) * 100);
     if (totalCents < 50) return;
     (async () => {
@@ -6656,7 +6682,7 @@ function DevisPage() {
         setError(e.message);
       }
     })();
-  }, [stripe]); // data is decoded from URL at render and never changes
+  }, [stripe, data]); // data peut arriver en async pour les liens courts /r/{code}
 
   useEffect(() => {
     if (step === 1 && elements) { const pe = elements.getElement("payment"); if (pe) pe.mount("#dp-pay"); }
