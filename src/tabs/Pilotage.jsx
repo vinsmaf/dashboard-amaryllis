@@ -5,7 +5,7 @@
  */
 import { useState } from "react";
 import { ResponsiveContainer, BarChart, LineChart, ComposedChart, PieChart, Pie, Bar, Line, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
-import { MOIS, TT, REVENUS_CANAL_2025, CHARGES_2025, fmt, fmtK } from "../App.jsx";
+import { MOIS, TT, REVENUS_CANAL_2025, CHARGES_2025, POSTES_CHARGES, fmt, fmtK } from "../App.jsx";
 import { sumN, avgN } from "../utils/calculations.js";
 import { useAppData } from "../AppDataContext.jsx";
 

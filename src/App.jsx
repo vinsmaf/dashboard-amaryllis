@@ -123,7 +123,7 @@ export const CHARGES_2025 = {
   mabouya:    { conciergerie: 0,    credit: 3332,  electricite: 950,  taxes: 0,    charges_copro: 0,    internet: 38,  assurance: 0,   eau: 252, syndic: 0 },
   schoelcher: { conciergerie: 0,    credit: 9564,  electricite: 624,  taxes: 1608, charges_copro: 0,    internet: 629, assurance: 300, eau: 234, syndic: 1320 },
 };
-const POSTES_CHARGES = [
+export const POSTES_CHARGES = [
   { k: "credit",        l: "Crédit",         c: "#ef4444" },
   { k: "conciergerie",  l: "Conciergerie",   c: "#a855f7" },
   { k: "taxes",         l: "Taxes foncières", c: "#f59e0b" },
