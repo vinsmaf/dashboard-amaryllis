@@ -1,23 +1,81 @@
 // Cloudflare Pages Function — POST /api/beds24-webhook
 // Reçoit les notifications Beds24 en temps réel → transmet à Apps Script
+//
+// Sécurité (arch-053) — vérification d'authenticité du webhook :
+//   Configurer le secret Cloudflare `BEDS24_WEBHOOK_SECRET`, puis dans Beds24
+//   ajouter le secret à l'URL du webhook : .../api/beds24-webhook?secret=XXXX
+//   (ou header X-Webhook-Secret, ou signature HMAC-SHA256 dans X-Signature).
+//   Tant que le secret n'est pas configuré → on log un warning mais on accepte
+//   (rétro-compatibilité, migration en douceur).
 
 const BEDS24_URL = "https://api.beds24.com/json/getBookings";
 const PROP_ID    = "158192";
 
+// Comparaison à temps constant (anti timing-attack)
+function safeEqual(a, b) {
+  if (typeof a !== "string" || typeof b !== "string" || a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+// HMAC-SHA256(rawBody, secret) en hex — pour vérifier X-Signature si fourni
+async function hmacHex(secret, rawBody) {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(rawBody));
+  return [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+// Retourne { ok:true } si authentifié, sinon { ok:false, reason }
+async function verifyWebhook(request, url, rawBody, secret) {
+  if (!secret) {
+    console.warn("[beds24-webhook] ⚠️ BEDS24_WEBHOOK_SECRET non configuré — webhook NON protégé");
+    return { ok: true, unprotected: true };
+  }
+  // 1. Secret en query param ?secret=
+  const qSecret = url.searchParams.get("secret");
+  if (qSecret && safeEqual(qSecret, secret)) return { ok: true, via: "query" };
+  // 2. Header X-Webhook-Secret
+  const hSecret = request.headers.get("X-Webhook-Secret");
+  if (hSecret && safeEqual(hSecret, secret)) return { ok: true, via: "header" };
+  // 3. Signature HMAC-SHA256 dans X-Signature
+  const sigHeader = request.headers.get("X-Signature") || request.headers.get("X-Beds24-Signature");
+  if (sigHeader) {
+    const expected = await hmacHex(secret, rawBody);
+    const provided = sigHeader.replace(/^sha256=/i, "").trim().toLowerCase();
+    if (safeEqual(provided, expected)) return { ok: true, via: "hmac" };
+  }
+  return { ok: false, reason: "secret/signature invalide ou absent" };
+}
+
 export async function onRequestPost(context) {
   const { request, env } = context;
+  const url = new URL(request.url);
 
   const apiKey       = env.BEDS24_API_KEY;
   const propKey      = env.BEDS24_PROP_KEY;
   const scriptUrl    = env.APPS_SCRIPT_URL;
-  const webhookSecret = env.BEDS24_WEBHOOK_SECRET; // optionnel
+  const webhookSecret = env.BEDS24_WEBHOOK_SECRET; // optionnel (recommandé)
 
   if (!apiKey || !propKey)   return json({ error: "Clés Beds24 manquantes" }, 500);
   if (!scriptUrl)            return json({ error: "APPS_SCRIPT_URL manquante" }, 500);
 
-  // ── Lire le body du webhook Beds24 ──
+  // ── Lire le body brut (nécessaire pour la vérification HMAC) ──
+  const rawBody = await request.text();
+
+  // ── Sécurité : vérifier l'authenticité du webhook ──
+  const auth = await verifyWebhook(request, url, rawBody, webhookSecret);
+  if (!auth.ok) {
+    console.warn("[beds24-webhook] 🚫 Webhook rejeté :", auth.reason);
+    return json({ error: "Unauthorized" }, 401);
+  }
+
+  // ── Parser le payload Beds24 ──
   let payload;
-  try { payload = await request.json(); }
+  try { payload = rawBody ? JSON.parse(rawBody) : {}; }
   catch { payload = {}; }
 
   console.log("[beds24-webhook] reçu:", JSON.stringify(payload));
