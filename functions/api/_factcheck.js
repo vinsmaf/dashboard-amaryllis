@@ -36,6 +36,14 @@ export const FACT_CHECK_RULES = [
   { rx: /(amaryllis|zandoli|iguana|geko|sch(œ|oe)lcher|nogent|bellevue).*jacuzzi\s+privati(f|ve)/i, reason: "Jacuzzi privatif uniquement pour Studio Mabouya" },
   // Pas de piscine pour Nogent (jardin + terrasse seulement)
   { rx: /nogent.*piscine|piscine.*nogent/i, reason: "Nogent : pas de piscine — jardin et terrasse uniquement" },
+  // Pas de piscine pour Bellevue (Schœlcher) — vue panoramique uniquement
+  { rx: /bellevue.*piscine|piscine.*bellevue/i, reason: "Bellevue (Schœlcher) : pas de piscine — vue panoramique uniquement" },
+  { rx: /sch(œ|oe)lcher.*piscine|piscine.*sch(œ|oe)lcher/i, reason: "Bellevue Schœlcher : pas de piscine — vue panoramique uniquement" },
+  // Pas de piscine pour Mabouya (jacuzzi privatif uniquement)
+  { rx: /mabouya.*piscine|piscine.*mabouya/i, reason: "Studio Mabouya : pas de piscine — jacuzzi privatif uniquement" },
+  // Débordement uniquement Amaryllis
+  { rx: /d(é|e)bordement.*(iguana|zandoli|geko|mabouya|sch(œ|oe)lcher|nogent|bellevue)/i, reason: "Piscine à débordement uniquement pour Villa Amaryllis" },
+  { rx: /(iguana|zandoli|geko|mabouya|sch(œ|oe)lcher|nogent|bellevue).*d(é|e)bordement/i, reason: "Piscine à débordement uniquement pour Villa Amaryllis" },
 ];
 
 // Vérifie un caption contre la fact-check list — retourne [erreurs] ou []

@@ -1,4 +1,4 @@
-// AgentsKanban.jsx — Tableau Kanban des actions des 17 agents Amaryllis
+// AgentsKanban.jsx — Tableau Kanban des actions des 23 agents Amaryllis
 // Onglet "Agents" dans l'admin dashboard
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -55,6 +55,12 @@ const ALL_AGENTS = [
   { id: "responsable-service-client",label: "Service Client",emoji: "🤝" },
   { id: "responsable-logistique",    label: "Logistique",   emoji: "🏠"  },
   { id: "seo-content-writer",        label: "SEO Writer",   emoji: "✍️" },
+  { id: "qa-tester",                 label: "QA Tester",    emoji: "🧪"  },
+  { id: "growth-experiments",        label: "Growth / A/B", emoji: "🧬"  },
+  { id: "veille-concurrentielle",    label: "Veille Conc.", emoji: "🔭"  },
+  { id: "prompt-engineer",           label: "Prompt Eng.",  emoji: "🪄"  },
+  { id: "seo-local",                 label: "SEO Local",    emoji: "🗺️"  },
+  { id: "voyageur-research",         label: "Voy. Research",emoji: "🔬"  },
 ];
 
 // ── Utils ────────────────────────────────────────────────────────────────────
@@ -336,7 +342,7 @@ export default function AgentsKanban({ mob }) {
         <h2 style={{ color: "#e2e8f0", fontSize: 18, marginBottom: 8 }}>Base de données non initialisée</h2>
         <p style={{ color: "#64748b", fontSize: 13, marginBottom: 24, lineHeight: 1.6 }}>
           La table <code style={{ background: "rgba(255,255,255,0.05)", padding: "1px 5px", borderRadius: 4 }}>agent_actions</code> n'existe pas encore dans D1.<br />
-          Cliquez pour créer la table et charger les <strong style={{ color: "#e2e8f0" }}>70 actions</strong> issues des rapports des 17 agents.
+          Cliquez pour créer la table et charger les <strong style={{ color: "#e2e8f0" }}>70 actions</strong> issues des rapports des {ALL_AGENTS.length} agents.
         </p>
         <button
           onClick={handleInit}
@@ -358,7 +364,7 @@ export default function AgentsKanban({ mob }) {
             🤖 Agents — Plan d'action
           </h2>
           <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: 12, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-            <span>17 agents · {total} actions · Analyse autonome quotidienne à 9h UTC</span>
+            <span>{ALL_AGENTS.length} agents · {total} actions · Analyse autonome quotidienne à 9h UTC</span>
             {lastRun && <span style={{ color: "#10b981" }}>· Dernière relance {lastRun}</span>}
             {lastRefresh && (
               <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>

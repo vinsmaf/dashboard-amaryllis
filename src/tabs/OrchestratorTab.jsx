@@ -64,10 +64,10 @@ export default function OrchestratorTab() {
   // Agents par catégorie pour la visualisation réseau
   const AGENT_GROUPS = [
     { label: "Juridique & Sécurité", color: "#ef4444", agents: ["juriste-compliance", "architecte-reseau"] },
-    { label: "Tech & Infra",         color: "#0ea5e9", agents: ["webmaster", "developpeur-multimedia"] },
-    { label: "Revenu & Commerce",    color: "#10b981", agents: ["revenue-manager", "consultant-ebusiness", "commercial-publicite"] },
-    { label: "Acquisition",          color: "#f59e0b", agents: ["traffic-manager", "data-analyst", "seo-content-writer"] },
-    { label: "Client & CRM",         color: "#a855f7", agents: ["crm-manager", "responsable-service-client", "community-manager"] },
+    { label: "Tech & Infra",         color: "#0ea5e9", agents: ["webmaster", "developpeur-multimedia", "qa-tester", "prompt-engineer"] },
+    { label: "Revenu & Commerce",    color: "#10b981", agents: ["revenue-manager", "consultant-ebusiness", "commercial-publicite", "veille-concurrentielle"] },
+    { label: "Acquisition",          color: "#f59e0b", agents: ["traffic-manager", "data-analyst", "seo-content-writer", "seo-local", "growth-experiments"] },
+    { label: "Client & CRM",         color: "#a855f7", agents: ["crm-manager", "responsable-service-client", "community-manager", "voyageur-research"] },
     { label: "Ops & Logistique",     color: "#64748b", agents: ["responsable-logistique", "photographe-da", "webdesigner", "chef-produit-web"] },
   ];
 
@@ -82,7 +82,7 @@ export default function OrchestratorTab() {
         <div>
           <h2 style={{ margin: 0, fontSize: 18, color: "#f1f5f9" }}>🧠 Orchestrateur multi-agents</h2>
           <p style={{ margin: "4px 0 0", fontSize: 11, color: "#64748b" }}>
-            Claude Sonnet coordonne les 17 agents · mémoire persistante D1 · décisions cross-fonctionnelles
+            Claude Sonnet coordonne les 23 agents · mémoire persistante D1 · décisions cross-fonctionnelles
           </p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>

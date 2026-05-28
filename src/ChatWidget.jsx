@@ -45,6 +45,17 @@ export default function ChatWidget() {
     const content = (text || input).trim();
     if (!content || loading) return;
 
+    // GA4 — track chat_message_sent (longueur message + page)
+    if (typeof window !== "undefined" && typeof window.gtag === "function") {
+      try {
+        window.gtag("event", "chat_message_sent", {
+          message_length: content.length,
+          page_path: window.location.pathname,
+          is_suggestion: !!text,
+        });
+      } catch { /* silent */ }
+    }
+
     const userMsg = { role: "user", content };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);

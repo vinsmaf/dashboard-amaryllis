@@ -229,6 +229,16 @@ export function LangProvider({ children }) {
   function setLang(l) {
     setLangState(l);
     try { localStorage.setItem("amaryllis_lang", l); } catch {} // choix manuel → persisté
+    // GA4 — track lang_switch (seulement si changement effectif)
+    if (l !== lang && typeof window !== "undefined" && typeof window.gtag === "function") {
+      try {
+        window.gtag("event", "lang_switch", {
+          from_lang: lang,
+          target_lang: l,
+          page_path: window.location.pathname,
+        });
+      } catch { /* silent */ }
+    }
   }
 
   // t(key, ...args) — args passés aux fonctions de traduction

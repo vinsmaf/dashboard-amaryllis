@@ -155,6 +155,54 @@ const AGENTS = [
     focus: "rédaction SEO, structure contenu, mots-clés longue traîne, guides destination, maillage interne",
     files_hint: "scripts/prerender.mjs (meta data), src/GuideArlet.jsx, src/GuideDiamant.jsx, src/Faq.jsx",
   },
+  {
+    id: "qa-tester",
+    label: "QA Tester",
+    emoji: "🧪",
+    prefix: "qa",
+    focus: "tests Vitest, smoke tests post-déploiement, parité mobile/desktop, cas limites (jours fériés, fuseaux MQ vs FR, devises), triage bugs prod, prévention régressions",
+    files_hint: "src/calculations.js (tests existants), vitest.config.js, src/App.jsx, functions/api/, public/_headers, public/sitemap.xml",
+  },
+  {
+    id: "growth-experiments",
+    label: "Growth / A/B",
+    emoji: "🧬",
+    prefix: "growth",
+    focus: "hypothèses ICE, A/B tests UX/copy/prix/CTA/hero, métriques conversion, taille échantillon, segmentation post-test, watchdogs (bounce, RPS)",
+    files_hint: "src/PublicSite.jsx (CTAs, hero), src/main.jsx (GA4 events), functions/api/analytics.js, src/RevenueManagerPro.jsx (prix)",
+  },
+  {
+    id: "veille-concurrentielle",
+    label: "Veille Concurrence",
+    emoji: "🔭",
+    prefix: "veille",
+    focus: "scraping concurrents Airbnb/Booking, prix médian marché, dispos, photos hero, avis, signaux forts (variations prix, nouveaux listings, photos changées)",
+    files_hint: "functions/api/rm-competitors.js, functions/api/rm-scrape.js, D1 rm_competitors / rm_competitors_snapshots",
+  },
+  {
+    id: "prompt-engineer",
+    label: "Prompt Engineer",
+    emoji: "🪄",
+    prefix: "prompt",
+    focus: "optimisation prompts agents-run, ChatWidget, fact-checker, AI summary admin. Mesure qualité sorties (hallucinations, ton, concision), choix modèles (Groq/CF AI/Cerebras/Mistral/Anthropic), garde-fous, JSON schema",
+    files_hint: "functions/api/agents-run.js, functions/api/chat.js, functions/api/_factcheck.js, functions/api/ai-summary.js, ~/.claude/skills/*/SKILL.md",
+  },
+  {
+    id: "seo-local",
+    label: "SEO Local",
+    emoji: "🗺️",
+    prefix: "local",
+    focus: "Google Business Profile (7 fiches), Apple Plans, TripAdvisor, Bing Places, citations NAP, reviews cross-platform, ranking local Maps, mots-clés locaux (Sainte-Luce, Trois-Îlets, Schoelcher, Nogent)",
+    files_hint: "functions/api/google-reviews.js, public/sitemap.xml (citations), index.html (LocalBusiness schema), src/PublicSite.jsx (avis section)",
+  },
+  {
+    id: "voyageur-research",
+    label: "Voyageur Research",
+    emoji: "🔬",
+    prefix: "voyageur",
+    focus: "analyse en masse avis Airbnb/Google/Booking/TripAdvisor, codage thématique, sentiment, personas voyageurs, NPS, frictions récurrentes, attentes non couvertes, synthèse trimestrielle",
+    files_hint: "D1 google_reviews / contacts, functions/api/google-reviews.js, ~/.claude/skills/voyageur-research-amaryllis/SKILL.md",
+  },
 ];
 
 // ── Modèles Groq — rotation pour maximiser les appels parallèles ─────────────
@@ -195,6 +243,16 @@ const AGENT_TIERS = {
   "architecte-reseau":          "fast",
   "responsable-service-client": "fast",
   "responsable-logistique":     "fast",
+  "qa-tester":                  "fast",
+  "veille-concurrentielle":     "fast",
+  // growth = medium (raisonnement statistique + créativité variantes)
+  "growth-experiments":         "medium",
+  // prompt-engineer = smart (méta-IA, demande du raisonnement fin)
+  "prompt-engineer":            "smart",
+  // seo-local = fast (analyses techniques NAP, fiches)
+  "seo-local":                  "fast",
+  // voyageur-research = medium (analyse sentiment + synthèse)
+  "voyageur-research":          "medium",
 };
 
 // Provider préféré par agent (cascade vers les autres si échec)
@@ -221,6 +279,14 @@ const AGENT_PREFERRED_PROVIDER = {
   // Mistral (2 agents) — FR-native pour contenu opérationnel
   "architecte-reseau":          "mistral",
   "responsable-logistique":     "mistral",
+  // Nouveaux agents (2026-05) — répartition équilibrée
+  "qa-tester":                  "cerebras",   // ultra-rapide pour smoke tests
+  "growth-experiments":         "groq",       // raisonnement stat
+  "veille-concurrentielle":     "mistral",    // analyse marché FR
+  // Phase 2 — 3 derniers agents (2026-05)
+  "prompt-engineer":            "cloudflare", // bucket séparé pour méta-tâches
+  "seo-local":                  "groq",       // analyses techniques NAP
+  "voyageur-research":          "cerebras",   // synthèse rapide grand corpus
 };
 
 // ── Récupère l'historique D1 d'un agent ────────────────────────────────────
@@ -491,6 +557,61 @@ ${bienId === "nogent"     ? "  Appt Nogent-sur-Marne — 2 pers · 1 chambre · 
   - "parfum des fleurs tropicales", "chant des oiseaux"
 
 ═══════════════════════════════════════════════════════════════
+📚 EXEMPLES (few-shot) — apprends de ces patterns
+═══════════════════════════════════════════════════════════════
+
+✅ EXEMPLES VALIDES (à reproduire) :
+
+  Bien=amaryllis :
+    "Villa Amaryllis et sa piscine à débordement eau salée, perchée sur les hauteurs de Sainte-Luce avec vue 180° sur la baie."
+
+  Bien=iguana :
+    "Villa Iguana, sa piscine eau salée non chlorée et la vue imprenable sur le Rocher du Diamant."
+
+  Bien=zandoli :
+    "Zandoli, son cocon tropical avec mezzanine et sa piscine privative avec cascade dans la résidence Amaryllis."
+
+  Bien=geko :
+    "Géko, son jardin tropical et sa piscine privative avec cascade pour un week-end en couple."
+
+  Bien=mabouya :
+    "Studio Mabouya, son jacuzzi privatif sur la terrasse avec vue mer pour un séjour romantique."
+
+  Bien=schoelcher :
+    "Bellevue à Schœlcher, sa vue panoramique sur la baie de Fort-de-France et les Trois-Îlets."
+
+  Bien=nogent :
+    "Appt Nogent-sur-Marne, son jardin et sa terrasse à 20 min de Paris en RER A."
+
+❌ EXEMPLES À NE PAS PRODUIRE (raisons précises) :
+
+  ❌ "Villa Amaryllis et son jacuzzi privatif sous les étoiles"
+     → FAUX : Amaryllis a une PISCINE à débordement, PAS de jacuzzi.
+
+  ❌ "Studio Mabouya et sa grande piscine eau salée"
+     → FAUX : Mabouya = jacuzzi privatif uniquement, AUCUNE piscine.
+
+  ❌ "Géko et sa piscine eau salée non chlorée"
+     → FAUX : Géko = piscine privative avec CASCADE (eau classique). Eau salée = Amaryllis + Iguana uniquement.
+
+  ❌ "Villa Iguana et sa piscine à débordement"
+     → FAUX : débordement = Amaryllis uniquement. Iguana = piscine eau salée non chlorée.
+
+  ❌ "Zandoli et son jacuzzi pour 5 personnes"
+     → FAUX : Zandoli = piscine avec cascade. Jacuzzi = Mabouya uniquement.
+
+  ❌ "Bellevue à Schœlcher, sa piscine et sa vue mer"
+     → FAUX : Bellevue n'a PAS de piscine. Seulement la vue panoramique.
+
+  ❌ "Appt Nogent et sa piscine privée"
+     → FAUX : Nogent = jardin + terrasse, AUCUNE piscine.
+
+  ❌ "Villa Amaryllis, 4 chambres, parfaite pour 10 personnes"
+     → FAUX : Amaryllis = 3 chambres, 8 personnes max.
+
+🎯 RÈGLE D'OR : si tu doutes d'un équipement → ne le mentionne pas. Utilise la liste AUTORISÉE.
+
+═══════════════════════════════════════════════════════════════
 Image à utiliser : ${photoUrl}
 
 Retourne UN SEUL JSON :
@@ -533,7 +654,24 @@ MISSION : Identifie les actions concrètes NOUVELLES à réaliser dans ton domai
   ❌ INTERDIT : "mer entre dans la chambre", "pieds dans l'eau", "à 5m de la plage", "crique privée"
   ✅ AUTORISÉ : "vue mer panoramique", "perché sur les hauteurs", "bercé par les alizés", "horizon caraïbe"
 
-⚠️ Si tu n'es pas sûr d'un chiffre, reste vague ("plusieurs chambres") plutôt que d'inventer.
+🏊 ÉQUIPEMENTS PAR BIEN — RÈGLE STRICTE (mensonge = rejet du draft) :
+  • Amaryllis : PISCINE À DÉBORDEMENT EAU SALÉE 4×7 m  → PAS de jacuzzi
+  • Iguana    : PISCINE EAU SALÉE non chlorée            → PAS de débordement, PAS de jacuzzi
+  • Zandoli   : PISCINE PRIVATIVE AVEC CASCADE           → eau classique, PAS eau salée
+  • Géko      : PISCINE PRIVATIVE AVEC CASCADE           → eau classique, PAS eau salée
+  • Mabouya   : JACUZZI PRIVATIF VUE MER                 → AUCUNE piscine
+  • Bellevue  : VUE PANORAMIQUE BAIE                     → AUCUNE piscine, AUCUN jacuzzi
+  • Nogent    : JARDIN + TERRASSE                        → AUCUNE piscine, AUCUN jacuzzi
+
+📚 EXEMPLES À NE PAS REPRODUIRE :
+  ❌ "Villa Amaryllis et son jacuzzi"            → Amaryllis = piscine à débordement, pas de jacuzzi
+  ❌ "Géko et sa piscine eau salée"              → Géko = cascade, eau classique
+  ❌ "Studio Mabouya et sa piscine"              → Mabouya = jacuzzi uniquement
+  ❌ "Bellevue et sa piscine"                    → Bellevue n'a aucune piscine
+  ❌ "Iguana et sa piscine à débordement"        → débordement = Amaryllis uniquement
+  ❌ "Amaryllis a 4 chambres pour 10 personnes" → 3 chambres, 8 personnes max
+
+⚠️ Si tu n'es pas sûr d'un chiffre ou d'un équipement, reste vague ("piscine privative") ou ne le mentionne pas.
 
 ${DRAFT_CAPABLE[agent.id] && recentDrafts.length > 0 ? `
 🔁 ANTI-RÉPÉTITION (drafts des 14 derniers jours pour cet agent) :

@@ -11,6 +11,35 @@
 const BEDS24_V2_BOOKINGS = "https://beds24.com/api/v2/bookings";
 const BEDS24_AUTH_TOKEN  = "https://beds24.com/api/v2/authentication/token";
 
+// GA4 — server-side event via Measurement Protocol
+// Doc : https://developers.google.com/analytics/devguides/collection/protocol/ga4
+// Requiert un API Secret créé dans GA4 Admin → Data Streams → Mesurement Protocol API secrets
+async function ga4Event(env, eventName, params = {}, clientId = null) {
+  const measurementId = "G-N9BM709ZBL";
+  const apiSecret = env.GA4_API_SECRET;
+  if (!apiSecret) {
+    console.log(`[ga4] GA4_API_SECRET manquant — event "${eventName}" ignoré`);
+    return;
+  }
+  // client_id stable mais anonymisé : on prend le bookingId Stripe (unique, non-PII)
+  const cid = clientId || `srv-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  try {
+    await fetch(
+      `https://www.google-analytics.com/mp/collect?measurement_id=${measurementId}&api_secret=${apiSecret}`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          client_id: cid,
+          non_personalized_ads: true,
+          events: [{ name: eventName, params }],
+        }),
+      }
+    );
+  } catch (e) {
+    console.error(`[ga4] Erreur envoi event ${eventName}:`, e.message);
+  }
+}
+
 // Échange le refreshToken contre un access token Beds24 (valable 24h)
 async function getBeds24Token(env) {
   if (env.BEDS24_REFRESH_TOKEN) {
@@ -219,6 +248,17 @@ export async function onRequestPost(context) {
 
     // 2. Email de confirmation au voyageur
     await sendConfirmationToGuest(env, { bienNom, voyageur, email: guestEmail, checkin, checkout, amount, bookingId });
+
+    // 3. GA4 server-side — event "booking_completed" (la conversion macro la plus précieuse)
+    await ga4Event(env, "booking_completed", {
+      bien_id: bienId || "unknown",
+      booking_id: bookingId || "unknown",
+      value: pi?.amount ? pi.amount / 100 : 0,
+      currency: pi?.currency?.toUpperCase() || "EUR",
+      channel: meta.channel || "direct",
+      checkin,
+      checkout,
+    }, `booking-${bookingId || pi.id}`);
 
     return json({ ok: true, type: event.type });
   }

@@ -203,7 +203,33 @@ export async function onRequestPost({ request, env }) {
   try { body = await request.json(); } catch { return json({ error: "Body JSON invalide" }, 400); }
 
   if (body.action === "publish") return handlePublish(env, body);
+  if (body.action === "update-profile-pic") return handleUpdateProfilePic(env, body);
   return json({ error: "action inconnue" }, 400);
+}
+
+// ── Update Facebook Page profile picture ──────────────────────────────────────
+// Requiert pages_manage_metadata sur le PAGE token.
+// Instagram : impossible via API (limitation Meta), faire manuellement via l'app.
+async function handleUpdateProfilePic(env, { imageUrl }) {
+  const token  = env.META_PAGE_TOKEN;
+  const pageId = env.META_PAGE_ID;
+  if (!token || !pageId) return json({ error: "Secrets META non configurés" }, 500);
+  if (!imageUrl) return json({ error: "imageUrl requis" }, 400);
+
+  try {
+    // L'API Meta accepte directement l'URL dans le champ `picture`
+    const set = await graphPost(`${pageId}/picture`, token, {
+      picture: imageUrl,
+    });
+
+    return json({
+      ok: !set.error,
+      result: set,
+      instagram_note: "Instagram doit être mis à jour manuellement via l'app mobile — l'API Meta ne permet pas de changer la photo de profil IG.",
+    }, set.error ? 422 : 200);
+  } catch (e) {
+    return json({ error: e.message }, 500);
+  }
 }
 
 export async function onRequestOptions() {
