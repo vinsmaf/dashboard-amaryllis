@@ -100,56 +100,51 @@ export default function MinNightsConfig() {
     setConfig(p => ({ ...p, [bienId]: { ...p[bienId], periods: p[bienId].periods.filter(pr => pr.id !== pid) } }));
   }
 
-  // ── Recommandations saisonnières ─────────────────────────────
-  // Martinique : haute saison = jul-août + déc 15-jan 5 → 7 nuits
-  //              intermédiaire = fév-juin + sept-nov → 4 nuits
-  //              Nogent : pas de saisonnalité forte → défaut 1 nuit
-  const RECO_PERIODS = {
-    amaryllis: [
-      { label: "Été (jul–août)",    from: `${new Date().getFullYear()}-07-01`, to: `${new Date().getFullYear()}-08-31`,  min: 7 },
-      { label: "Fêtes (déc–jan)",   from: `${new Date().getFullYear()}-12-15`, to: `${new Date().getFullYear() + 1}-01-05`, min: 7 },
-      { label: "Saison interm.",    from: `${new Date().getFullYear()}-02-01`, to: `${new Date().getFullYear()}-06-30`,  min: 4 },
-    ],
-    geko:     [
-      { label: "Été (jul–août)",    from: `${new Date().getFullYear()}-07-01`, to: `${new Date().getFullYear()}-08-31`,  min: 7 },
-      { label: "Fêtes (déc–jan)",   from: `${new Date().getFullYear()}-12-15`, to: `${new Date().getFullYear() + 1}-01-05`, min: 7 },
-      { label: "Saison interm.",    from: `${new Date().getFullYear()}-02-01`, to: `${new Date().getFullYear()}-06-30`,  min: 3 },
-    ],
-    zandoli:  [
-      { label: "Été (jul–août)",    from: `${new Date().getFullYear()}-07-01`, to: `${new Date().getFullYear()}-08-31`,  min: 5 },
-      { label: "Fêtes (déc–jan)",   from: `${new Date().getFullYear()}-12-15`, to: `${new Date().getFullYear() + 1}-01-05`, min: 5 },
-    ],
-    schoelcher: [
-      { label: "Été (jul–août)",    from: `${new Date().getFullYear()}-07-01`, to: `${new Date().getFullYear()}-08-31`,  min: 5 },
-      { label: "Fêtes (déc–jan)",   from: `${new Date().getFullYear()}-12-15`, to: `${new Date().getFullYear() + 1}-01-05`, min: 5 },
-    ],
-    mabouya: [
-      { label: "Été (jul–août)",    from: `${new Date().getFullYear()}-07-01`, to: `${new Date().getFullYear()}-08-31`,  min: 4 },
-      { label: "Fêtes (déc–jan)",   from: `${new Date().getFullYear()}-12-15`, to: `${new Date().getFullYear() + 1}-01-05`, min: 4 },
-    ],
-    nogent:   [], // Urbain : 1 nuit minimum uniforme, pas de saisonnalité
-    iguana:   [],
+  // ── Recommandations saisonnières (Martinique) ────────────────
+  // Haute saison RÉELLE Martinique = 15 déc → 15 avr (hiver européen, saison
+  // sèche, fêtes/carnaval/Pâques) → min-stay long pour capter la forte demande.
+  // Saison verte = juin → nov (hivernage, demande faible) → min-stay court.
+  // Saison moyenne = le reste (= valeur « défaut »).
+  // Chaque reco définit le DÉFAUT (moyenne) + les périodes verte & haute.
+  const Y = new Date().getFullYear();
+  const HAUTE = { from: `${Y}-12-15`, to: `${Y + 1}-04-15` };
+  const VERTE = { from: `${Y}-06-01`, to: `${Y}-11-30` };
+  const RECO = {
+    amaryllis:  { default: 4, verte: 3, haute: 7 },
+    zandoli:    { default: 3, verte: 2, haute: 5 },
+    iguana:     { default: 3, verte: 2, haute: 5 },
+    geko:       { default: 3, verte: 2, haute: 4 },
+    mabouya:    { default: 2, verte: 2, haute: 3 },
+    schoelcher: { default: 3, verte: 2, haute: 4 },
+    nogent:     { default: 2, verte: 1, haute: 3 },
   };
+
+  // Construit les périodes (verte + haute) à partir d'une reco
+  function recoPeriods(r) {
+    const periods = [];
+    if (r.verte !== r.default) {
+      periods.push({ id: `reco-v-${Date.now()}-${Math.random().toString(36).slice(2)}`, label: "Saison verte (juin–nov)", from: VERTE.from, to: VERTE.to, min: r.verte });
+    }
+    periods.push({ id: `reco-h-${Date.now()}-${Math.random().toString(36).slice(2)}`, label: "Haute saison (15 déc–15 avr)", from: HAUTE.from, to: HAUTE.to, min: r.haute });
+    return periods;
+  }
 
   const [showReco, setShowReco] = useState(false);
 
   function applyReco(bienId) {
-    const recos = RECO_PERIODS[bienId] || [];
-    if (!recos.length) return;
-    const newPeriods = recos.map(r => ({ ...r, id: `reco-${Date.now()}-${Math.random().toString(36).slice(2)}` }));
+    const r = RECO[bienId];
+    if (!r) return;
     setConfig(p => ({
       ...p,
-      [bienId]: { ...p[bienId], periods: newPeriods },
+      [bienId]: { ...p[bienId], default: r.default, periods: recoPeriods(r) },
     }));
   }
 
   function applyAllReco() {
     setConfig(p => {
       const next = { ...p };
-      for (const [bienId, recos] of Object.entries(RECO_PERIODS)) {
-        if (!recos.length) continue;
-        const newPeriods = recos.map(r => ({ ...r, id: `reco-${Date.now()}-${Math.random().toString(36).slice(2)}` }));
-        next[bienId] = { ...next[bienId], periods: newPeriods };
+      for (const [bienId, r] of Object.entries(RECO)) {
+        next[bienId] = { ...next[bienId], default: r.default, periods: recoPeriods(r) };
       }
       return next;
     });
@@ -201,29 +196,30 @@ export default function MinNightsConfig() {
 
         {showReco && (
           <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 10 }}>
-            {Object.entries(RECO_PERIODS).map(([bienId, recos]) => (
-              <div key={bienId} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 8, padding: "10px 12px" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "#e2e8f0" }}>{BIEN_NAMES_ADMIN[bienId]}</span>
-                  {recos.length > 0 && (
+            {Object.entries(RECO).map(([bienId, r]) => {
+              const rows = [
+                { label: "🟢 Verte (juin–nov)", min: r.verte },
+                { label: "🟡 Moyenne (défaut)",  min: r.default },
+                { label: "🔴 Haute (15 déc–15 avr)", min: r.haute },
+              ];
+              return (
+                <div key={bienId} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 8, padding: "10px 12px" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: "#e2e8f0" }}>{BIEN_NAMES_ADMIN[bienId]}</span>
                     <button onClick={() => applyReco(bienId)}
                       style={{ fontSize: 10, padding: "3px 8px", borderRadius: 5, border: "1px solid rgba(245,158,11,0.4)", background: "none", color: "#fbbf24", cursor: "pointer", fontWeight: 600 }}>
                       Appliquer
                     </button>
-                  )}
-                </div>
-                {recos.length === 0 ? (
-                  <div style={{ fontSize: 10, color: "#475569", fontStyle: "italic" }}>Pas de saisonnalité — défaut 1 nuit</div>
-                ) : (
-                  recos.map((r, i) => (
+                  </div>
+                  {rows.map((row, i) => (
                     <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 10, color: "#94a3b8", padding: "2px 0" }}>
-                      <span>{r.label}</span>
-                      <span style={{ fontWeight: 700, color: r.min >= 7 ? "#f59e0b" : r.min >= 4 ? "#38bdf8" : "#94a3b8" }}>{r.min} nuits</span>
+                      <span>{row.label}</span>
+                      <span style={{ fontWeight: 700, color: row.min >= 6 ? "#f59e0b" : row.min >= 4 ? "#38bdf8" : "#94a3b8" }}>{row.min} nuits</span>
                     </div>
-                  ))
-                )}
-              </div>
-            ))}
+                  ))}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
@@ -273,7 +269,7 @@ export default function MinNightsConfig() {
                 style={{ background: "rgba(14,165,233,0.08)", border: "1px solid rgba(14,165,233,0.22)", borderRadius: 6, color: "#38bdf8", cursor: "pointer", fontSize: 11, padding: "5px 12px", fontWeight: 600 }}>
                 + Ajouter une période
               </button>
-              {(RECO_PERIODS[bienId]?.length > 0) && (
+              {RECO[bienId] && (
                 <button onClick={() => applyReco(bienId)}
                   style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)", borderRadius: 6, color: "#f59e0b", cursor: "pointer", fontSize: 11, padding: "5px 12px", fontWeight: 600 }}>
                   ⚡ Reco. saison
