@@ -3430,7 +3430,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                 </>
               )}
             </div>
-            <button onClick={() => onBook(bien)} style={{ background: CORAL, border: "none", color: "#fff", borderRadius: 8, padding: "9px 20px", fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, cursor: "pointer", letterSpacing: "0.05em" }}>
+            <button data-cta-reservation data-cta-position="header" onClick={() => onBook(bien)} style={{ background: CORAL, border: "none", color: "#fff", borderRadius: 8, padding: "9px 20px", fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, cursor: "pointer", letterSpacing: "0.05em" }}>
               RÉSERVER →
             </button>
           </div>
@@ -4142,6 +4142,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                           💰 Vous économisez ~{Math.round(calTotal * 0.15 / 5) * 5}€ vs Airbnb en réservant en direct
                         </div>
                         <button
+                          data-cta-reservation data-cta-position="calendar-inline"
                           onClick={() => onBook(bien, calCheckin, calCheckout)}
                           style={{ width: "100%", background: CORAL, border: "none", color: "#fff", borderRadius: 8, padding: "12px 0", fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 13, letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer", boxShadow: "0 4px 14px rgba(196,114,84,0.3)" }}
                         >
@@ -4517,6 +4518,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                 {/* Reserve button */}
                 <div style={{ padding: "0 24px 24px" }}>
                   <button
+                    data-cta-reservation data-cta-position="calendar-main"
                     onClick={() => calCheckin && calCheckout ? onBook(bien, calCheckin, calCheckout) : onBook(bien)}
                     style={{
                       width: "100%", background: CORAL, border: "none", color: "#fff",
