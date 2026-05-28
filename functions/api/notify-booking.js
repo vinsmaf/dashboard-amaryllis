@@ -34,14 +34,18 @@ const fmtDate = (iso) => {
 
 async function sendEmail(env, subject, html, text) {
   if (!env.RESEND_API_KEY) return false;
-  const to = env.NOTIFICATION_EMAIL || "contact@villamaryllis.com";
+  // Destinataires : NOTIFICATION_EMAIL (liste séparée par virgules) si défini,
+  // sinon les 2 adresses de Vincent par défaut.
+  const to = env.NOTIFICATION_EMAIL
+    ? env.NOTIFICATION_EMAIL.split(",").map(s => s.trim()).filter(Boolean)
+    : ["vinsmaf@hotmail.com", "contact@villamaryllis.com"];
   try {
     const r = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         from: env.RESEND_FROM || "Amaryllis <notifications@mail.villamaryllis.com>",
-        to: [to], subject, html, text,
+        to, subject, html, text,
       }),
     });
     return r.ok;
