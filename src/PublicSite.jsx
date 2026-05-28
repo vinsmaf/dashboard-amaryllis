@@ -6588,8 +6588,27 @@ function HoverContact({ light = false, direction = "up", pill = false }) {
 // ── Devis Page ───────────────────────────────────────────────────
 function DevisPage() {
   const params = new URLSearchParams(window.location.search);
-  let data = null;
-  try { data = JSON.parse(atob(params.get("d") || "")); } catch {}
+  // Décodage direct du payload ?d= (lien long)
+  const [data, setData] = useState(() => {
+    try { return JSON.parse(atob(params.get("d") || "")); } catch { return null; }
+  });
+  // Lien court /r/{code} : on récupère le payload côté serveur puis on décode
+  const [shortLoading, setShortLoading] = useState(() => !data && /^\/r\/[^/]+/.test(window.location.pathname));
+
+  useEffect(() => {
+    if (data) return;
+    const m = window.location.pathname.match(/^\/r\/([^/]+)/);
+    if (!m) return;
+    fetch(`/api/shorten?code=${encodeURIComponent(m[1])}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.ok && d.d) {
+          try { setData(JSON.parse(atob(d.d))); } catch { /* payload corrompu */ }
+        }
+        setShortLoading(false);
+      })
+      .catch(() => setShortLoading(false));
+  }, []); // eslint-disable-line
 
   const [stripe, setStripe] = useState(null);
   const [elements, setElements] = useState(null);
@@ -6680,6 +6699,15 @@ function DevisPage() {
   }
 
   const fmtEur = v => v?.toLocaleString("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
+
+  if (!data && shortLoading) return (
+    <div style={{ minHeight: "100vh", background: CREAM, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Georgia,serif" }}>
+      <div style={{ textAlign: "center", color: NAVY }}>
+        <div style={{ fontSize: 32, marginBottom: 12 }}>⏳</div>
+        <div style={{ fontSize: 16 }}>Chargement de votre devis…</div>
+      </div>
+    </div>
+  );
 
   if (!data) return (
     <div style={{ minHeight: "100vh", background: CREAM, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Georgia,serif" }}>
@@ -7484,7 +7512,7 @@ export default function PublicSite() {
 
   const path = window.location.pathname;
   if (path === "/merci") return <MerciPage />;
-  if (path === "/devis") return <DevisPage />;
+  if (path === "/devis" || path.startsWith("/r/")) return <DevisPage />;
 
   // ── Mode page propriété directe ──────────────────────────────
   // Normalise le chemin : /amaryllis/ → amaryllis (trailing slash compatible redirects Cloudflare)

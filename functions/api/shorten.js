@@ -1,0 +1,82 @@
+// Cloudflare Pages Function — /api/shorten
+// Liens courts pour les devis : villamaryllis.com/r/{code}
+//
+// POST  (auth admin) { d: "<base64 payload devis>", label?: "..." } → { ok, code, url }
+// GET   ?code=XXXX  (public) → { ok, d: "<payload>", clicks }   + incrémente le compteur
+//
+// Stockage D1 (binding: revenue_manager, table: short_links)
+
+const CORS = {
+  "Content-Type": "application/json",
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: CORS });
+
+const DDL = `CREATE TABLE IF NOT EXISTS short_links (
+  code        TEXT PRIMARY KEY,
+  payload     TEXT NOT NULL,
+  label       TEXT,
+  clicks      INTEGER NOT NULL DEFAULT 0,
+  created_at  INTEGER NOT NULL DEFAULT (unixepoch())
+);`;
+
+// Code court non ambigu (sans 0/O/1/I/l) — 5 caractères
+const ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789";
+function genCode(n = 5) {
+  let c = "";
+  const arr = crypto.getRandomValues(new Uint8Array(n));
+  for (let i = 0; i < n; i++) c += ALPHABET[arr[i] % ALPHABET.length];
+  return c;
+}
+
+export async function onRequest(context) {
+  const { request, env } = context;
+  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
+
+  const db = env.revenue_manager;
+  if (!db) return json({ error: "D1 indisponible" }, 500);
+  await db.prepare(DDL).run();
+
+  const url = new URL(request.url);
+
+  // ── GET ?code= : résoudre un lien court (public) ──
+  if (request.method === "GET") {
+    const code = url.searchParams.get("code");
+    if (!code) return json({ error: "code requis" }, 400);
+    const row = await db.prepare("SELECT payload, clicks FROM short_links WHERE code = ?").bind(code).first();
+    if (!row) return json({ error: "Lien introuvable" }, 404);
+    // Incrémente le compteur de clics (best-effort, non bloquant)
+    db.prepare("UPDATE short_links SET clicks = clicks + 1 WHERE code = ?").bind(code).run().catch(() => {});
+    return json({ ok: true, d: row.payload, clicks: (row.clicks || 0) + 1 });
+  }
+
+  // ── POST : créer un lien court (auth admin) ──
+  if (request.method === "POST") {
+    const auth = (request.headers.get("Authorization") || "").replace("Bearer ", "").trim();
+    // ADMIN_PWD = variable réellement configurée (utilisée par admin-auth).
+    // Fallback ADMIN_PASSWORD pour compat. Rejet si aucune n'est définie (sécurisé).
+    const adminPwd = env.ADMIN_PWD || env.ADMIN_PASSWORD;
+    if (!adminPwd || auth !== adminPwd) return json({ error: "Unauthorized" }, 401);
+
+    const body = await request.json().catch(() => ({}));
+    const payload = body.d;
+    if (!payload || typeof payload !== "string") return json({ error: "champ 'd' (payload base64) requis" }, 400);
+
+    // Génère un code unique (réessaie en cas de collision)
+    let code = genCode();
+    for (let i = 0; i < 5; i++) {
+      const exists = await db.prepare("SELECT 1 FROM short_links WHERE code = ?").bind(code).first();
+      if (!exists) break;
+      code = genCode();
+    }
+    await db.prepare("INSERT INTO short_links (code, payload, label) VALUES (?, ?, ?)")
+      .bind(code, payload, body.label || null).run();
+
+    const origin = url.origin;
+    return json({ ok: true, code, url: `${origin}/r/${code}` });
+  }
+
+  return json({ error: "Méthode non autorisée" }, 405);
+}

@@ -180,6 +180,7 @@ const isKnown = KNOWN.includes(path)
   || path.startsWith("/api/")
   || path === "/stories-template"
   || path === "/guide-menage"
+  || path.startsWith("/r/")
   || BIEN_IDS.some(id => path === `/${id}`);
 
 let Component;
