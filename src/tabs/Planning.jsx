@@ -19,6 +19,7 @@ import {
   MOIS_FULL, CC, CB, N, TT,
   fmt, fmtK,
   computeRevenusFromResas,
+  DEFAULT_PRIX,
 } from "../App.jsx";
 import MinNightsConfig from "./MinNightsConfig.jsx";
 import { sumN, avgN, addDays, diffDays, todayStr } from "../utils/calculations.js";

@@ -534,7 +534,7 @@ function AISummary({ biens, n }) {
 export const MIN_NIGHTS_DEFAULTS_ADMIN = {
   amaryllis: 4, geko: 3, zandoli: 3, schoelcher: 3, mabouya: 2, nogent: 1, iguana: 0,
 };
-const BIEN_NAMES_ADMIN = {
+export const BIEN_NAMES_ADMIN = {
   amaryllis: "Villa Amaryllis", geko: "Géko", zandoli: "Zandoli",
   schoelcher: "Bellevue", mabouya: "Mabouya", nogent: "Appt. Nogent", iguana: "Villa Iguana",
 };
@@ -1854,7 +1854,7 @@ export const LINGE_STATES = [
 
 /* ═══════════════════════════════════════════════════════════════════
    ORCHESTRATEUR TAB — interface multi-agents avec mémoire
-   Coordonne les 17 agents via claude-sonnet, stocke les runs en D1
+   Coordonne les 23 agents via claude-sonnet, stocke les runs en D1
 ═══════════════════════════════════════════════════════════════════ */
 
 /* ═══════════════════════════════════════════════════════════════

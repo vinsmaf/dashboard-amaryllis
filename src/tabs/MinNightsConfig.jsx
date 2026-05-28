@@ -3,7 +3,7 @@
  * Extrait de src/App.jsx (refactor 2026, batch B/4). Sync avec /api/site-config.
  */
 import { useState, useEffect, useRef } from "react";
-import { MIN_NIGHTS_DEFAULTS_ADMIN } from "../App.jsx";
+import { MIN_NIGHTS_DEFAULTS_ADMIN, BIEN_NAMES_ADMIN } from "../App.jsx";
 
 export default function MinNightsConfig() {
   // ── Init depuis localStorage ──────────────────────────────────
