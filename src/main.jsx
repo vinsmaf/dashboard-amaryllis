@@ -84,30 +84,70 @@ try {
 const params = new URLSearchParams(window.location.search);
 const cautionParam = params.get("caution"); // "ok" | "cancelled"
 
-// ── GA4 — delegated event listeners (couvre tous les liens présents et futurs) ──
-// 1. Clic WhatsApp → event "whatsapp_click"
-// 2. Clic email mailto → event "email_click"
-// 3. Clic phone tel: → event "phone_click"
-// 4. Clic vers /links (Linktree) → event "outbound_links_click"
+// ── GA4 — delegated event listeners (couvre tous les éléments présents et futurs) ──
+// Helpers
+function ga(name, params = {}) {
+  if (!window.gtag) return;
+  try { window.gtag("event", name, { page_path: window.location.pathname, ...params }); }
+  catch { /* silent */ }
+}
+function bienFromPath() {
+  const m = window.location.pathname.match(/^\/(amaryllis|zandoli|iguana|geko|mabouya|schoelcher|nogent)(?:\/|$)/);
+  return m ? m[1] : null;
+}
+
+// 1. Clics délégués — liens (mail/tel/whatsapp), CTA réservation, ouverture chat
 document.addEventListener("click", (e) => {
+  if (!window.gtag || !e.target || !e.target.closest) return;
+
   const link = e.target.closest("a[href]");
-  if (!link || !window.gtag) return;
-  const href = link.getAttribute("href") || "";
-  if (href.includes("wa.me/") || href.includes("api.whatsapp.com")) {
-    window.gtag("event", "whatsapp_click", {
-      link_url: href,
-      page_path: window.location.pathname,
+  if (link) {
+    const href = link.getAttribute("href") || "";
+    if (href.includes("wa.me/") || href.includes("api.whatsapp.com")) ga("whatsapp_click", { link_url: href });
+    else if (href.startsWith("mailto:")) ga("email_click", { link_url: href });
+    else if (href.startsWith("tel:"))    ga("phone_click", { link_url: href });
+  }
+
+  // CTA réservation — boutons/liens marqués data-cta-reservation ou pointant vers réservation
+  const cta = e.target.closest("[data-cta-reservation], a[href*='#reservation'], a[href*='/devis'], a[href*='beds24.com']");
+  if (cta) {
+    ga("cta_reservation_click", {
+      cta_label: (cta.innerText || cta.textContent || "").trim().slice(0, 50),
+      bien_id: bienFromPath(),
     });
-  } else if (href.startsWith("mailto:")) {
-    window.gtag("event", "email_click", {
-      link_url: href,
-      page_path: window.location.pathname,
-    });
-  } else if (href.startsWith("tel:")) {
-    window.gtag("event", "phone_click", {
-      link_url: href,
-      page_path: window.location.pathname,
-    });
+  }
+
+  // Ouverture du ChatWidget — bouton avec data-chat-toggle ou aria-label chat/discuter
+  const chatBtn = e.target.closest("[data-chat-toggle], [aria-label*='hat' i], [aria-label*='iscuter' i]");
+  if (chatBtn) ga("chat_widget_open", { bien_id: bienFromPath() });
+}, { passive: true });
+
+// 2. Soumission du formulaire de contact → contact_form_submit
+document.addEventListener("submit", (e) => {
+  const form = e.target;
+  if (!window.gtag || !(form instanceof HTMLFormElement)) return;
+  if ((form.action || "").includes("/contact") || form.id === "contact-form" || form.classList.contains("contact-form")) {
+    ga("contact_form_submit", { form_id: form.id || "contact", bien_id: bienFromPath() });
+  }
+}, { passive: true });
+
+// 3. Calendrier — focus sur un champ date → calendar_open (1× par page)
+let calendarOpened = false;
+document.addEventListener("focusin", (e) => {
+  const t = e.target;
+  if (!window.gtag || calendarOpened || !t || !t.matches) return;
+  if (t.matches("input[type='date'], [data-calendar-trigger]")) {
+    calendarOpened = true;
+    ga("calendar_open", { bien_id: bienFromPath() });
+  }
+}, { passive: true });
+
+// 4. Sélection de dates → date_selected
+document.addEventListener("change", (e) => {
+  const t = e.target;
+  if (!window.gtag || !t || !t.matches) return;
+  if (t.matches("input[type='date']")) {
+    ga("date_selected", { bien_id: bienFromPath(), field_name: t.name || t.id || "date" });
   }
 }, { passive: true });
 
