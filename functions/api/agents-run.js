@@ -19,8 +19,8 @@ const CORS = {
 };
 const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: CORS });
 
-// ── Définition des 17 agents avec leur contexte métier ──────────────────────
-const AGENTS = [
+// ── Définition des agents avec leur contexte métier ──────────────────────
+export const AGENTS = [
   {
     id: "juriste-compliance",
     label: "Juriste Compliance",
