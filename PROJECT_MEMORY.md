@@ -135,6 +135,7 @@ Autres crons via le **Worker** (`workers/ical-sync`) : sync iCal horaire, drafts
 - `_llm.js` : ordre modèle = `opts.model` (test isolé) > **plan AI-Ops (D1, cache 10 min)** > `MODELS` statique. Providers `plan.disabled` skippés.
 - **Gemini** = provider câblé (endpoint OpenAI-compat) mais **NON activé** : l'API Gemini gratuite est **restreinte géographiquement** (indisponible depuis la Martinique / le compte de Vincent). Stub inerte sans clé ; ne pas chercher à l'activer. Si jamais une clé géo-bloquée était posée, l'AI-Ops la désactiverait automatiquement.
 - **max_tokens agents = 4096** (débridé depuis 2048 le 30/05) pour des réponses plus complètes.
+- **Historique transmis** débridé (`fetchAgentHistory`) : 120 non-faits + 80 faits (était 80/40) → agents mieux contextualisés. Contexte « Gemini ~1M » non dispo (géo-restreint).
 - Premier run : Groq smart auto-upgradé vers **`openai/gpt-oss-120b`** ; 12/12 modèles verts. Inspiré du moteur `ai-ops.js` du patrimoine-dashboard (version KV) — ici en D1.
 
 ## Journal des mises à jour

@@ -291,16 +291,17 @@ const AGENT_PREFERRED_PROVIDER = {
 };
 
 // ── Récupère l'historique D1 d'un agent ────────────────────────────────────
-// Stratégie : tout l'historique non-faits (max 80) + les 40 faits les plus récents.
+// Stratégie : tout l'historique non-faits (max 120) + les 80 faits les plus récents.
 // L'agent voit toujours les bloqué/a-planifier/backlog ; les "fait" sont
-// trimés pour économiser des tokens.
+// trimés pour économiser des tokens. Débridé le 30/05 (était 80/40) — les modèles
+// gratuits actuels ont de grands contextes (128k+), on peut transmettre plus.
 async function fetchAgentHistory(db, agentId) {
   try {
     const { results: nonDone } = await db.prepare(
-      "SELECT id, action, status, notes FROM agent_actions WHERE agent = ? AND status != 'fait' ORDER BY updated_at DESC LIMIT 80"
+      "SELECT id, action, status, notes FROM agent_actions WHERE agent = ? AND status != 'fait' ORDER BY updated_at DESC LIMIT 120"
     ).bind(agentId).all();
     const { results: done } = await db.prepare(
-      "SELECT id, action, status, notes FROM agent_actions WHERE agent = ? AND status = 'fait' ORDER BY updated_at DESC LIMIT 40"
+      "SELECT id, action, status, notes FROM agent_actions WHERE agent = ? AND status = 'fait' ORDER BY updated_at DESC LIMIT 80"
     ).bind(agentId).all();
     return [...(nonDone || []), ...(done || [])].reverse();
   } catch {
