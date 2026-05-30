@@ -1126,7 +1126,7 @@ export async function onRequest(context) {
       const llmResult = await callLLM(env, {
         provider: preferred,
         tier,
-        max_tokens: 2048,
+        max_tokens: 4096, // débridé (était 2048) — réponses agents plus complètes
         temperature: 0.3,
         logSource: `agent:${agent.id}`, // prompt-004 — journalise la sortie en D1
         messages: [{ role: "user", content: buildPrompt(agent, history, memories, recentDrafts, body.brief || "", liveSection, feedbackSection, outcomesSection) }],

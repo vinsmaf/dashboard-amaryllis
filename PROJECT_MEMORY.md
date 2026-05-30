@@ -133,7 +133,8 @@ Autres crons via le **Worker** (`workers/ical-sync`) : sync iCal horaire, drafts
 - **`functions/api/ai-ops.js`** : agent qui (1) auto-découvre les modèles dispo par provider (`/v1/models`), (2) choisit le meilleur par provider×tier via classement, (3) teste leur santé en isolation, (4) écrit un **plan** en D1 (table `ai_ops`, clé `plan`) que **`_llm.js` applique en LIVE** (bascule de modèle **sans redéploiement**), (5) désactive les providers totalement KO, (6) se **rafraîchit seul** si > 20 h.
 - Déclenché en tâche de fond (`context.waitUntil`) au début de **chaque `agents-run`** → self-forming sans intervention. Aussi : `GET /api/ai-ops?secret=POSTSTAY_SECRET` (état + refresh si périmé), `POST {action:'refresh'|'reset'}`.
 - `_llm.js` : ordre modèle = `opts.model` (test isolé) > **plan AI-Ops (D1, cache 10 min)** > `MODELS` statique. Providers `plan.disabled` skippés.
-- **Gemini** ajouté comme provider **prêt-à-activer** (endpoint OpenAI-compat) : poser `GEMINI_API_KEY` (clé gratuite Google AI Studio) → AI-Ops le découvre et l'intègre automatiquement.
+- **Gemini** = provider câblé (endpoint OpenAI-compat) mais **NON activé** : l'API Gemini gratuite est **restreinte géographiquement** (indisponible depuis la Martinique / le compte de Vincent). Stub inerte sans clé ; ne pas chercher à l'activer. Si jamais une clé géo-bloquée était posée, l'AI-Ops la désactiverait automatiquement.
+- **max_tokens agents = 4096** (débridé depuis 2048 le 30/05) pour des réponses plus complètes.
 - Premier run : Groq smart auto-upgradé vers **`openai/gpt-oss-120b`** ; 12/12 modèles verts. Inspiré du moteur `ai-ops.js` du patrimoine-dashboard (version KV) — ici en D1.
 
 ## Journal des mises à jour
