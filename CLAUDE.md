@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+> 📌 **Mémoire long terme du projet → lire `PROJECT_MEMORY.md`** (état, décisions, secrets, crons cron-job.org + Worker, Place IDs GBP, système d'agents IA + RAG, contraintes de Vincent, backlog). Ce fichier-ci (`CLAUDE.md`) = référence **architecture/technique**.
+
 ## Project
 
 Rental property management dashboard for 7 properties in France (Martinique + Nogent-sur-Marne). Combined public website (villamaryllis.com) and private `/admin` dashboard. Stack: React 19 + Vite, deployed on Cloudflare Pages.
@@ -133,13 +135,36 @@ All server-side logic lives in `functions/api/` (Cloudflare Pages Functions form
 | `/api/ai-summary` | POST | `ai-summary.js` | Proxy sécurisé vers l'API Anthropic (claude-haiku-4-5) pour les résumés IA du dashboard. Body : `{ prompt, maxTokens }`. |
 | `/api/send-prix-alert` | POST | `send-prix-alert.js` | Envoie email + push ntfy quand des prix sont sous le seuil minimum. Appelé depuis le CalendrierTarifs. |
 | `/api/send-prix-recap` | GET | `send-prix-recap.js` | Récap email hebdomadaire des prix + liens Airbnb (prévu pour cron-job.org chaque lundi). Auth : `?secret=PRIX_RECAP_SECRET`. |
+| `/api/send-guest-email` | POST | `send-guest-email.js` | Envoi générique email voyageur (templates `public/email-templates/*`). Réservé résas DIRECTES. Auth `X-Send-Secret`/`?secret=POSTSTAY_SECRET`. |
+| `/api/send-prearrivee` | GET | `send-prearrivee.js` | Cron J-3 : email pré-arrivée aux résas directes (D1 `direct_bookings`). |
+| `/api/send-poststay` | GET | `send-poststay.js` | Cron J+1/J+3 : post-séjour (Nogent/Beds24 + résas directes). Liens avis Google par bien. |
+| `/api/send-relance-panier` | GET | `send-relance-panier.js` | Cron horaire : relance panier abandonné (D1 `abandoned_carts`, exclut convertis). |
+| `/api/notify-booking` | POST | `notify-booking.js` | Alerte hôte fiable (email+ntfy) post-paiement + enregistre la résa directe en D1. |
 
 **Agents IA**
 
 | Endpoint | Méthode | File | Purpose |
 |---|---|---|---|
-| `/api/agents-actions` | GET/POST/PATCH | `agents-actions.js` | CRUD pour les actions des 17 agents Amaryllis — stockage D1 (`agent_actions`). |
-| `/api/agents-run` | POST | `agents-run.js` | Déclenche l'analyse autonome des 17 agents via l'API Anthropic (claude-haiku-4-5). Met à jour D1. |
+| `/api/agents-actions` | GET/POST/PATCH | `agents-actions.js` | CRUD pour les actions des ~23 agents Amaryllis — stockage D1 (`agent_actions`). |
+| `/api/agents-run` | POST | `agents-run.js` | Déclenche l'analyse autonome des ~23 agents via **LLM multi-provider** (`callLLM` : Groq/Cloudflare/Mistral/Cerebras). Body `{agents:["id"]\|"all", brief?}`. Self-refresh AI-Ops (waitUntil). Grounding RAG pour les agents content. |
+| `/api/agents-orchestrate` | POST | `agents-orchestrate.js` | **Orchestrateur** : objectif → décompose → dispatche aux agents → plan coordonné (D1 `orchestrations`). |
+| `/api/agents-triggers` | GET | `agents-triggers.js` | **Déclencheurs réactifs** : avis/note/résas → réveille le bon agent (état D1 `agent_triggers`). Cron conseillé. |
+| `/api/agents-deliver` | POST | `agents-deliver.js` | **Livrables prêts** : `meta-seo` (title/desc validés), `email-sequence`, `pricing-reco`. |
+| `/api/agents-stats` | GET | `agents-stats.js` | Observabilité (backlog, impacts, usage LLM 7j, qualité, plan modèles). |
+| `/api/agents-eval` | GET | `agents-eval.js` | LLM-juge note les sorties (table `llm_evals`). |
+| `/api/agents-verify` | GET | `agents-verify.js` | Vérif adversariale (challenger Mistral) pour agents à enjeu → annote `notes ⚠️ VÉRIF`. |
+
+**LLM multi-provider, AI-Ops & RAG**
+
+| Endpoint / module | Role |
+|---|---|
+| `functions/api/_llm.js` | `callLLM(env, {provider?, tier, messages, ...})` — cascade Groq→Cloudflare→Mistral→Cerebras(+Gemini si clé). Modèle = `opts.model` > plan AI-Ops (D1 `ai_ops`) > `MODELS` statique. |
+| `/api/ai-ops` | `ai-ops.js` — **agent AI-Ops** : auto-découvre/teste/bascule les modèles gratuits, écrit un plan D1 appliqué en live par `_llm.js`. Self-refresh si >20h. |
+| `/api/llm-ping` | `llm-ping.js` — health-check par provider isolé + `?list=1` (modèles `/v1/models`). |
+| `functions/api/_biens.js` | **Source unique des faits** des 7 biens (nomenclature/équipements/capacités) + `EQUIP_RULES_TEXT`. |
+| `functions/api/_rag.js` | RAG : `embed`/`ragUpsert`/`ragSearch`/`ragBlock` (Vectorize `VECTORIZE` + embeddings `@cf/baai/bge-m3`). |
+| `/api/rag-ingest` | `rag-ingest.js` — ingère faits+avis+drafts → vecteurs. Auto chaque lundi (Worker cron). |
+| `/api/rag-search` | `rag-search.js` — retrieval test (`?q=`, `?debug=1`). |
 
 **Guides & Divers**
 
