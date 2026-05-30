@@ -79,9 +79,11 @@ export const MODELS = {
     smart:   "mistral-large-latest",
   },
   cerebras: {
-    fast:    "llama-3.1-8b",
-    medium:  "llama-3.3-70b",
-    smart:   "llama-3.3-70b",
+    // ⚠️ Compte Cerebras : seuls gpt-oss-120b et zai-glm-4.7 sont accessibles
+    // (anciens IDs llama-3.x supprimés → 404). Vérifié via /api/llm-ping?list=1 le 2026-05-30.
+    fast:    "gpt-oss-120b",
+    medium:  "gpt-oss-120b",
+    smart:   "zai-glm-4.7",
   },
 };
 

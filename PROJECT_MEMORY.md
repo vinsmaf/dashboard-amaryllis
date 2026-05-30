@@ -130,4 +130,5 @@ Autres crons via le **Worker** (`workers/ical-sync`) : sync iCal horaire, drafts
 ---
 
 ## Journal des mises à jour
+- **2026-05-30 (soir)** : Fix LLM — Cerebras était **cassé** (IDs modèles llama-3.x supprimés du compte → 404 silencieux, fallback Groq). Corrigé : Cerebras = **`gpt-oss-120b`** (fast/medium) + **`zai-glm-4.7`** (smart). Nouvel endpoint **`/api/llm-ping`** (health-check par provider isolé + `?list=1` pour découvrir les modèles via `/v1/models`). Vérifié end-to-end (agent data-analyst sur cerebras OK + log `llm_outputs`). Gotcha : modèles à raisonnement (gpt-oss/glm) → budget ≥ qq centaines de tokens. Providers actifs confirmés : Groq, Cloudflare AI, Mistral (small/medium/large), Cerebras. Distribution réelle : Groq ~10, Cloudflare ~6, Cerebras 4, Mistral 3 agents.
 - **2026-05-30** : Création de ce fichier. Branchement complet emails voyageurs (pré-arrivée/post-séjour/relance panier + crons). Fix schéma `direct_bookings`. Optimisation GBP (noms + catégorie « Maison de vacances » sur Villa & Résidence Amaryllis). Constat : GBP n'expose pas d'attributs pour cette catégorie. Kit GBP + audit créés. Facebook Ads ajouté au backlog.
