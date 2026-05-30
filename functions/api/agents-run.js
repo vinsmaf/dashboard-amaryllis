@@ -8,6 +8,7 @@
 import { getSkillForAgent } from "./_skills.js";
 import { callLLM } from "./_llm.js";
 import { maybeRefresh } from "./ai-ops.js";
+import { EQUIP_RULES_TEXT } from "./_biens.js"; // #8 source unique des faits
 import { factCheckCaption, loadLearnedLessons } from "./_factcheck.js";
 
 const CORS = {
@@ -657,26 +658,7 @@ MISSION : Identifie les actions concrètes NOUVELLES à réaliser dans ton domai
   ❌ NE SONT PAS des villas → écrire SANS « Villa » : « Zandoli » (logement), « Géko » (cocon), « Studio Mabouya » (studio), « Bellevue » (appartement), « Appartement Nogent ».
   ❌ INTERDIT ABSOLU : « Villa Zandoli », « Villa Géko », « Villa Mabouya », « Villa Bellevue ».
 
-🌊 GÉOGRAPHIE — TOUS LES BIENS MARTINIQUE SONT SUR LES HAUTEURS, PAS EN BORD DE MER :
-  ❌ INTERDIT : "mer entre dans la chambre", "pieds dans l'eau", "à 5m de la plage", "crique privée"
-  ✅ AUTORISÉ : "vue mer panoramique", "perché sur les hauteurs", "bercé par les alizés", "horizon caraïbe"
-
-🏊 ÉQUIPEMENTS PAR BIEN — RÈGLE STRICTE (mensonge = rejet du draft) :
-  • Amaryllis : PISCINE À DÉBORDEMENT EAU SALÉE 4×7 m  → PAS de jacuzzi
-  • Iguana    : PISCINE EAU SALÉE non chlorée            → PAS de débordement, PAS de jacuzzi
-  • Zandoli   : PISCINE PRIVATIVE AVEC CASCADE           → eau classique, PAS eau salée
-  • Géko      : PISCINE PRIVATIVE AVEC CASCADE           → eau classique, PAS eau salée
-  • Mabouya   : JACUZZI PRIVATIF VUE MER                 → AUCUNE piscine
-  • Bellevue  : VUE PANORAMIQUE BAIE                     → AUCUNE piscine, AUCUN jacuzzi
-  • Nogent    : JARDIN + TERRASSE                        → AUCUNE piscine, AUCUN jacuzzi
-
-📚 EXEMPLES À NE PAS REPRODUIRE :
-  ❌ "Villa Amaryllis et son jacuzzi"            → Amaryllis = piscine à débordement, pas de jacuzzi
-  ❌ "Géko et sa piscine eau salée"              → Géko = cascade, eau classique
-  ❌ "Studio Mabouya et sa piscine"              → Mabouya = jacuzzi uniquement
-  ❌ "Bellevue et sa piscine"                    → Bellevue n'a aucune piscine
-  ❌ "Iguana et sa piscine à débordement"        → débordement = Amaryllis uniquement
-  ❌ "Amaryllis a 4 chambres pour 10 personnes" → 3 chambres, 8 personnes max
+${EQUIP_RULES_TEXT}
 
 ⚠️ Si tu n'es pas sûr d'un chiffre ou d'un équipement, reste vague ("piscine privative") ou ne le mentionne pas.
 
