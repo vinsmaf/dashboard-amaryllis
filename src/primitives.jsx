@@ -328,8 +328,12 @@ export function FlowMark({ size = 40, color = "var(--c-coral, #c47254)", gold = 
 // web-010 : Cloudflare Image Resizing n'étant pas actif (404), on sert des
 // variantes statiques pré-générées au build (scripts/gen-image-variants.mjs) :
 //   /photos/x/06.webp + largeur → /photos/x/06-800w.webp
-// Largeurs disponibles : 480/800/1200/1600 (on prend la plus proche ≥ demandée).
-const _VARIANT_WIDTHS = [480, 800, 1200, 1600];
+// Largeurs disponibles : 480/800/1200 (on prend la plus proche ≥ demandée).
+// ⚠️ PAS de 1600 : gen-image-variants.mjs utilise withoutEnlargement, donc -1600w
+// n'est généré que pour les rares originaux ≥1600px. Pour tous les autres,
+// /photos/.../XX-1600w.webp renvoie la SPA (HTML) en HTTP 200 → sur écran large/retina
+// la hero pioche ce candidat et reçoit du HTML au lieu d'une image = photo cassée.
+const _VARIANT_WIDTHS = [480, 800, 1200];
 export function cfImg(src, w, quality = 85) { // quality conservé pour compat d'appel
   if (!src || src.startsWith("http")) return src;
   if (!/\.webp$/i.test(src)) return src;
@@ -364,8 +368,8 @@ export function RImg({ src, alt, sizes = "100vw", className, style, loading = "l
 
   if (!isHero) injectShimmerOnce();
 
-  const qualityMap = { 480: 75, 800: 85, 1200: 85, 1600: 90 };
-  const srcset = [480, 800, 1200, 1600].map(w => `${cfImg(src, w, qualityMap[w])} ${w}w`).join(", ");
+  const qualityMap = { 480: 75, 800: 85, 1200: 85 };
+  const srcset = [480, 800, 1200].map(w => `${cfImg(src, w, qualityMap[w])} ${w}w`).join(", ");
 
   const shimmerStyle = loaded ? {} : {
     background: "linear-gradient(90deg,var(--c-sand,#e0d4bc) 25%,var(--c-cream,#f4ecdc) 50%,var(--c-sand,#e0d4bc) 75%)",
