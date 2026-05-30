@@ -1843,6 +1843,17 @@ async function runTokenRotationReminder(env) {
 }
 
 // ── Exports Cloudflare Worker ────────────────────────────────────────────────
+// ── Ingestion RAG hebdomadaire (rafraîchit l'index vectoriel Vectorize) ──────
+async function runRagIngest(env) {
+  try {
+    if (!env.POSTSTAY_SECRET) { console.log("[rag] POSTSTAY_SECRET absent — skip"); return; }
+    const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+    const r = await fetch(`${siteUrl}/api/rag-ingest?secret=${env.POSTSTAY_SECRET}`);
+    const j = await r.json().catch(() => ({}));
+    console.log("[rag] ingestion:", JSON.stringify(j).slice(0, 150));
+  } catch (e) { console.error("[rag] ingestion échouée:", e.message); }
+}
+
 export default {
   async scheduled(event, env, ctx) {
     const cron = event.cron;
@@ -1853,6 +1864,7 @@ export default {
       ctx.waitUntil(Promise.all([
         runWeeklyReport(env, allEvents),
         runPrixRecap(env),
+        runRagIngest(env), // #2 RAG — rafraîchit l'index vectoriel chaque lundi
       ]));
 
     } else if (cron === "0 1 1 * *") {
