@@ -9,6 +9,10 @@ import { getSkillForAgent } from "./_skills.js";
 import { callLLM } from "./_llm.js";
 import { maybeRefresh } from "./ai-ops.js";
 import { EQUIP_RULES_TEXT } from "./_biens.js"; // #8 source unique des faits
+import { ragBlock } from "./_rag.js"; // #2 RAG — grounding sur les vraies données
+
+// Agents "content" qui bénéficient du grounding sur les vraies données (avis/guides/drafts).
+const RAG_AGENTS = new Set(["community-manager", "seo-content-writer", "voyageur-research", "crm-manager", "commercial-publicite"]);
 import { factCheckCaption, loadLearnedLessons } from "./_factcheck.js";
 
 const CORS = {
@@ -457,7 +461,7 @@ Ces 3 points sont validés par les agents traffic-manager + seo-content-writer.`
 };
 
 // ── Prompt template pour chaque agent ────────────────────────────────────────
-function buildPrompt(agent, history = [], memories = [], recentDrafts = [], brief = "", liveSection = "", feedbackSection = "", outcomesSection = "") {
+function buildPrompt(agent, history = [], memories = [], recentDrafts = [], brief = "", liveSection = "", feedbackSection = "", outcomesSection = "", ragSection = "") {
   // Sépare l'historique par statut pour donner du contexte à l'agent
   const done    = history.filter(h => h.status === "fait");
   const blocked = history.filter(h => h.status === "bloqué");
@@ -641,7 +645,7 @@ Retourne UN SEUL JSON :
 TON DOMAINE D'EXPERTISE : ${agent.focus}
 
 FICHIERS CLÉS à analyser : ${agent.files_hint}
-${skillSection}${liveSection}${memorySection}${feedbackSection}${outcomesSection}${historySection}
+${skillSection}${liveSection}${ragSection}${memorySection}${feedbackSection}${outcomesSection}${historySection}
 MISSION : Identifie les actions concrètes NOUVELLES à réaliser dans ton domaine. Tiens compte de ce qui a déjà été fait ou identifié pour approfondir ton analyse et aller plus loin.
 
 📋 DONNÉES CANONIQUES PROPRIÉTÉS (NE JAMAIS INVENTER) :
@@ -1106,13 +1110,18 @@ export async function onRequest(context) {
       const tier      = AGENT_TIERS[agent.id] || "medium";
       const preferred = AGENT_PREFERRED_PROVIDER[agent.id] || "groq";
 
+      // #2 RAG — pour les agents content, injecte des extraits RÉELS (fail-open)
+      const ragSection = RAG_AGENTS.has(agent.id)
+        ? await ragBlock(env, body.brief || agent.focus || agent.label, 4).catch(() => "")
+        : "";
+
       const llmResult = await callLLM(env, {
         provider: preferred,
         tier,
         max_tokens: 4096, // débridé (était 2048) — réponses agents plus complètes
         temperature: 0.3,
         logSource: `agent:${agent.id}`, // prompt-004 — journalise la sortie en D1
-        messages: [{ role: "user", content: buildPrompt(agent, history, memories, recentDrafts, body.brief || "", liveSection, feedbackSection, outcomesSection) }],
+        messages: [{ role: "user", content: buildPrompt(agent, history, memories, recentDrafts, body.brief || "", liveSection, feedbackSection, outcomesSection, ragSection) }],
       });
 
       if (!llmResult.ok) {
