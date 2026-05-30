@@ -20,6 +20,8 @@
 //
 // Auth : Bearer ADMIN_PASSWORD (même mécanisme que contacts.js)
 
+import { verifyBearer } from "./_adminauth.js";
+
 const CORS = {
   "Content-Type": "application/json",
   "Access-Control-Allow-Origin": "*",
@@ -28,11 +30,11 @@ const CORS = {
 };
 const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: CORS });
 
-function checkAuth(request, env) {
-  const pwd = env.ADMIN_PASSWORD;
-  if (!pwd) return true;
-  const auth = request.headers.get("Authorization") || "";
-  return auth.replace("Bearer ", "").trim() === pwd;
+// arch-009 : accepte un token de session signé OU le mot de passe brut (rétro-compat)
+async function checkAuth(request, env) {
+  if (!env.ADMIN_PASSWORD && !env.ADMIN_PWD) return true;
+  const { ok } = await verifyBearer(request, env);
+  return ok;
 }
 
 const BIEN_LABELS = {
@@ -58,7 +60,7 @@ export async function onRequestOptions() {
 export async function onRequestPost(context) {
   const { request, env } = context;
 
-  if (!checkAuth(request, env)) {
+  if (!(await checkAuth(request, env))) {
     return json({ error: "Non autorisé" }, 401);
   }
 

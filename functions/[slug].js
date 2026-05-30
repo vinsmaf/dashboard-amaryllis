@@ -112,6 +112,31 @@ const GUIDE_PROXIMITE = {
   url: `${BASE}/guide-proximite`,
 };
 
+// traf-013/019/025 — titres ≤60c (mot-clé en tête) + descriptions ≤158c (prix gardé en desc + JSON-LD)
+const SEO = {
+  amaryllis:  { title: "Villa Amaryllis Sainte-Luce — piscine vue mer Martinique", desc: "Villa Amaryllis à Sainte-Luce : piscine à débordement, vue Caraïbes 180°, 3 chambres, 8 personnes. Dès 280€/nuit en direct, sans frais Airbnb." },
+  zandoli:    { title: "Zandoli Sainte-Luce — logement piscine cascade Martinique", desc: "Zandoli à Sainte-Luce : piscine privative à cascade, mezzanine, jardin tropical. 5 personnes. Dès 220€/nuit en réservation directe." },
+  iguana:     { title: "Villa Iguana Martinique — vue Rocher du Diamant", desc: "Villa Iguana à Sainte-Luce : piscine eau salée, vue panoramique sur le Rocher du Diamant. 6 personnes. Réservation directe propriétaire." },
+  geko:       { title: "Géko Sainte-Luce — cocon piscine cascade Martinique", desc: "Cocon Géko à Sainte-Luce : piscine privative à cascade, jardin tropical, sur les hauteurs. 4 personnes. Dès 150€/nuit en réservation directe." },
+  mabouya:    { title: "Studio Mabouya Martinique — jacuzzi privatif vue mer", desc: "Studio Mabouya à Sainte-Luce : seul jacuzzi privatif vue mer de la résidence. Idéal couple, terrasse privée, plages à 5 min. Dès 110€/nuit." },
+  schoelcher: { title: "Bellevue Schœlcher — appart vue baie Fort-de-France", desc: "Appartement Bellevue à Schœlcher : vue sur la baie de Fort-de-France, 2 personnes, à 10 min du centre. Réservation directe dès 100€/nuit." },
+  nogent:     { title: "Appart Nogent-sur-Marne — bord de Marne, Paris 20 min", desc: "Appartement de standing à Nogent-sur-Marne : jardin privatif, home cinéma, bord de Marne. RER A, Paris en 20 min. Dès 85€/nuit en direct." },
+};
+
+const GROUP_STAY = {
+  title: "Location grand groupe Martinique — jusqu'à 11 personnes, Sainte-Luce",
+  desc: "Réunissez jusqu'à 11 proches en réservant Zandoli, Géko et Mabouya ensemble à Sainte-Luce. Résidence privée, piscines, réservation directe sans frais. Devis et paiement rapides.",
+  image: `${BASE}/photos/zandoli/01.webp`,
+  url: `${BASE}/location-groupe-sainte-luce`,
+};
+
+const SCHOELCHER_APPART = {
+  title: "Location appartement vue mer Schœlcher — Martinique",
+  desc: "Appartement de standing à Schœlcher : vue panoramique sur la baie de Fort-de-France, dernier étage, 2 personnes, à 10 min du centre. Réservation directe sans frais.",
+  image: `${BASE}/photos/schoelcher/01.webp`,
+  url: `${BASE}/location-appartement-vue-mer-schoelcher`,
+};
+
 function escHtml(s) {
   return String(s)
     .replace(/&/g, "&amp;")
@@ -152,8 +177,8 @@ export async function onRequest(context) {
     const bien = BIENS[slug];
     const url = `${BASE}/${slug}`;
     const image = `${BASE}/photos/${slug}/01.webp`;
-    const title = `${bien.nom} — Location ${bien.lieu} à partir de ${bien.prix}€/nuit`;
-    const desc = bien.desc.slice(0, 155) + (bien.desc.length > 155 ? "…" : "");
+    const title = SEO[slug]?.title || `${bien.nom} — Location ${bien.lieu} à partir de ${bien.prix}€/nuit`;
+    const desc = SEO[slug]?.desc || (bien.desc.slice(0, 155) + (bien.desc.length > 155 ? "…" : ""));
 
     const ldJson = JSON.stringify({
       "@context": "https://schema.org",
@@ -321,6 +346,72 @@ export async function onRequest(context) {
       "image": g.image,
       "author": { "@id": `${BASE}/#organization` },
       "publisher": { "@id": `${BASE}/#organization` },
+    });
+    const meta = buildMeta(g.title, g.desc, g.url, g.image);
+    const resp = await context.next();
+    const html = await resp.text();
+    return new Response(injectMeta(html, meta, ldJson), {
+      status: 200,
+      headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=3600" },
+    });
+  }
+
+  // Handle /location-groupe-sainte-luce
+  if (slug === "location-groupe-sainte-luce") {
+    const g = GROUP_STAY;
+    const ldJson = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "name": g.title,
+      "description": g.desc,
+      "url": g.url,
+      "image": g.image,
+      "about": { "@type": "LodgingBusiness", "name": "Résidence Amaryllis", "url": BASE },
+    });
+    const meta = buildMeta(g.title, g.desc, g.url, g.image);
+    const resp = await context.next();
+    const html = await resp.text();
+    return new Response(injectMeta(html, meta, ldJson), {
+      status: 200,
+      headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=3600" },
+    });
+  }
+
+  // Handle /location-appartement-vue-mer-schoelcher
+  if (slug === "location-appartement-vue-mer-schoelcher") {
+    const g = SCHOELCHER_APPART;
+    const ldJson = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Apartment",
+      "name": "Bellevue — appartement de standing à Schœlcher",
+      "description": g.desc,
+      "url": g.url,
+      "image": g.image,
+      "numberOfRooms": 1,
+      "occupancy": { "@type": "QuantitativeValue", "maxValue": 2 },
+      "address": { "@type": "PostalAddress", "addressLocality": "Schœlcher", "addressRegion": "Martinique", "addressCountry": "FR" },
+    });
+    const meta = buildMeta(g.title, g.desc, g.url, g.image);
+    const resp = await context.next();
+    const html = await resp.text();
+    return new Response(injectMeta(html, meta, ldJson), {
+      status: 200,
+      headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=3600" },
+    });
+  }
+
+  // Handle /plus-belles-plages-sud-martinique
+  if (slug === "plus-belles-plages-sud-martinique") {
+    const g = {
+      title: "Plus belles plages du Sud de la Martinique",
+      desc: "Sable blanc, eau turquoise, tortues : découvrez les plus belles plages du Sud de la Martinique, toutes à moins de 40 min de Sainte-Luce.",
+      image: `${BASE}/photos/amaryllis/05.webp`,
+      url: `${BASE}/plus-belles-plages-sud-martinique`,
+    };
+    const ldJson = JSON.stringify({
+      "@context": "https://schema.org", "@type": "Article",
+      "headline": g.title, "description": g.desc, "url": g.url, "image": g.image,
+      "author": { "@id": `${BASE}/#organization` }, "publisher": { "@id": `${BASE}/#organization` },
     });
     const meta = buildMeta(g.title, g.desc, g.url, g.image);
     const resp = await context.next();

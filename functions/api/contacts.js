@@ -4,21 +4,22 @@
 // Binding D1 requis : revenue_manager
 // Auth : même mot de passe que l'admin (ADMIN_PASSWORD)
 
+import { verifyBearer } from "./_adminauth.js";
+
 const json = (d, s = 200) => Response.json(d, {
   status: s,
   headers: { "Content-Type": "application/json" },
 });
 
-function checkAuth(context) {
-  const authHeader = context.request.headers.get("Authorization") || "";
-  const token = authHeader.replace("Bearer ", "").trim();
-  const pwd = context.env.ADMIN_PASSWORD;
-  if (!pwd) return true; // pas configuré → pas de protection (dev)
-  return token === pwd;
+// arch-009 : accepte un token de session signé OU le mot de passe brut (rétro-compat)
+async function checkAuth(context) {
+  if (!context.env.ADMIN_PASSWORD && !context.env.ADMIN_PWD) return true; // dev
+  const { ok } = await verifyBearer(context.request, context.env);
+  return ok;
 }
 
 export async function onRequestGet(context) {
-  if (!checkAuth(context)) return json({ error: "Non autorisé" }, 401);
+  if (!(await checkAuth(context))) return json({ error: "Non autorisé" }, 401);
 
   const db = context.env.revenue_manager;
   if (!db) return json({ error: "D1 non configuré" }, 503);
@@ -50,7 +51,7 @@ export async function onRequestGet(context) {
 }
 
 export async function onRequestPatch(context) {
-  if (!checkAuth(context)) return json({ error: "Non autorisé" }, 401);
+  if (!(await checkAuth(context))) return json({ error: "Non autorisé" }, 401);
 
   const db = context.env.revenue_manager;
   if (!db) return json({ error: "D1 non configuré" }, 503);

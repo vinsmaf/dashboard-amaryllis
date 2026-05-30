@@ -1,0 +1,204 @@
+// ============================================================================
+// REVENUS AUTO 2026  Projet Apps Script AUTONOME (separe du script principal)
+// ----------------------------------------------------------------------------
+// Remplit automatiquement "revenus locatif 2026" a partir de DEUX sources :
+//   - "Toutes les R\u00e9servations" (iCal Airbnb/Booking, pousse par le worker horaire)
+//   - "r\u00e9servations"            (saisies directes du Planning  instantane au "Ajouter")
+// Dedoublonnage par ID (memoire)  chaque resa comptee 1 seule fois, meme si
+// elle apparait dans les deux onglets.
+//
+//   - Revenus  : canal DIRECT uniquement (brut = net). OTA = saisie manuelle.
+//   - Nb reservations + Nb nuits ("jours occupes") : TOUS canaux (hors blocages).
+//   - Resa a cheval sur 2 mois : nuits reparties par mois reel, montant prorata.
+//
+// INSTALLATION (1 fois, dans l'ordre) :
+//   1) testRevenus2026_dryRun()   log, n'ecrit RIEN
+//   2) setupRevenus2026()         baseline (marque l'existant des 2 onglets) + trigger 15 min
+// Ensuite syncRevenus2026() tourne seul via le trigger.
+// ============================================================================
+
+var SHEET_ID  = "1xuhU0KraEMxF9NAWO5MKEt23JI_V8mnNnWktzHy6q2U";
+var SRC_SHEET = "Toutes les R\u00e9servations";  // accent en \u  paste-safe
+var RESA_SHEET = "r\u00e9servations";            // saisies directes du Planning
+var DST_SHEET = "revenus locatif 2026";
+var MEMO_SHEET = "rev2026_traites";          // memoire des IDs deja appliques (onglet cache)
+
+// Mapping colonnes par onglet (index 0-based) ; statut:-1 = colonne absente
+// "Toutes les R\u00e9servations" : A=ID B=Propriete C=Voyageur D=Canal E=Arrivee F=Depart G=Nuits H=Montant I=Statut K=Notes
+var COL_TOUTES = { id:0, prop:1, voy:2, canal:3, arrivee:4, depart:5, montant:7, statut:8, notes:10, ncols:11 };
+// "r\u00e9servations" : A=id B=bienId C=voyageur D=canal E=checkin F=checkout G=montant H=notes
+var COL_RESA   = { id:0, prop:1, voy:2, canal:3, arrivee:4, depart:5, montant:6, statut:-1, notes:7, ncols:8 };
+
+// Libelle/identifiant bien  id interne (tolere labels ET ids bruts)
+var BIEN_BY_LABEL = {
+  "t2 nogent":"nogent", "nogent":"nogent",
+  "villa amaryllis":"amaryllis", "amaryllis":"amaryllis",
+  "villa iguana":"iguana", "iguana":"iguana",
+  "geko":"geko", "geko amaryllis":"geko",
+  "zandoli":"zandoli", "zandoli amaryllis":"zandoli",
+  "mabouya":"mabouya", "mabouya amaryllis":"mabouya",
+  "t2 schoelcher":"schoelcher", "t2 scheolcher":"schoelcher", "schoelcher":"schoelcher",
+};
+
+// Lignes "revenus locatif 2026"  colonne = mois + 2 (janv=C=3 ... mai=G=7 ... dec=N=14)
+var REV_ROWS = {
+  nogent:{airbnb:2,booking:3,direct:4}, amaryllis:{airbnb:7,booking:8,direct:9},
+  iguana:{airbnb:11,booking:12,direct:13}, geko:{airbnb:15,booking:16,direct:17},
+  zandoli:{airbnb:19,booking:20,direct:21}, mabouya:{airbnb:23,booking:24,direct:25},
+  schoelcher:{airbnb:28,booking:29,direct:30},
+};
+var CNT_ROWS = {
+  nogent:{airbnb:36,booking:37,direct:38}, amaryllis:{airbnb:40,booking:41,direct:42},
+  iguana:{airbnb:44,booking:45,direct:46}, geko:{airbnb:48,booking:49,direct:50},
+  zandoli:{airbnb:52,booking:53,direct:54}, mabouya:{airbnb:56,booking:57,direct:58},
+  schoelcher:{airbnb:60,booking:61,direct:62},
+};
+var NIGHTS_ROW = { nogent:68, amaryllis:75, iguana:81, geko:87, zandoli:93, mabouya:99, schoelcher:105 };
+
+//  Helpers 
+function canalKey_(canal) {
+  var c = String(canal || "").toLowerCase();
+  if (c.indexOf("airbnb") >= 0 || c.indexOf("air bnb") >= 0) return "airbnb";
+  if (c.indexOf("direct") >= 0) return "direct";
+  return "booking";
+}
+function toNoonUTC_(v) {
+  if (v instanceof Date) return new Date(Date.UTC(v.getFullYear(), v.getMonth(), v.getDate(), 12));
+  var s = String(v || "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}/.test(s)) return null;
+  return new Date(s + "T12:00:00Z");
+}
+function nightsByMonth2026_(ci, co) {
+  var res = {}, d = toNoonUTC_(ci), end = toNoonUTC_(co), g = 0;
+  if (!d || !end) return res;
+  while (d < end && g++ < 400) {
+    if (d.getUTCFullYear() === 2026) { var m = d.getUTCMonth() + 1; res[m] = (res[m] || 0) + 1; }
+    d.setUTCDate(d.getUTCDate() + 1);
+  }
+  return res;
+}
+function appendCell_(sheet, row, col, delta) {
+  if (!delta) return;
+  var cell = sheet.getRange(row, col), f = cell.getFormula();
+  if (f && f.charAt(0) === "=") { cell.setFormula(f + "+" + delta); }
+  else { var v = cell.getValue(); var base = (typeof v === "number" && !isNaN(v)) ? v : 0; cell.setValue(base + delta); }
+}
+function isBlocage_(voy, statut, notes) {
+  voy = String(voy || "").toLowerCase(); statut = String(statut || "").toLowerCase(); notes = String(notes || "").toLowerCase();
+  return statut.indexOf("bloqu") >= 0 || statut.indexOf("closed") >= 0 ||
+         voy.indexOf("not available") >= 0 || voy.indexOf("indisponible") >= 0 ||
+         notes.indexOf("closed") >= 0 || notes.indexOf("not available") >= 0;
+}
+
+// Applique UNE reservation (ligne brute + mapping colonnes C). dryRun  retourne juste les changements.
+function applyOne_(row, C, dstSheet, dryRun) {
+  var changes = [];
+  var bienId = BIEN_BY_LABEL[String(row[C.prop] || "").toLowerCase().trim()];
+  if (!bienId || !REV_ROWS[bienId]) return changes;
+  var statut = (C.statut >= 0) ? row[C.statut] : "";
+  var notes  = (C.notes  >= 0) ? row[C.notes]  : "";
+  if (isBlocage_(row[C.voy], statut, notes)) return changes;
+  var nbm = nightsByMonth2026_(row[C.arrivee], row[C.depart]);
+  var totalN = 0; for (var k in nbm) totalN += nbm[k];
+  if (totalN === 0) return changes;
+
+  var ck = canalKey_(row[C.canal]);
+  var montant = parseFloat(row[C.montant]) || 0;
+  var aDate = toNoonUTC_(row[C.arrivee]);
+  var arrivalMonth = (aDate && aDate.getUTCFullYear() === 2026) ? aDate.getUTCMonth() + 1 : null;
+  if (!arrivalMonth) { for (var mm in nbm) { arrivalMonth = parseInt(mm, 10); break; } }
+
+  if (arrivalMonth) {
+    var cRow = CNT_ROWS[bienId][ck], cCol = arrivalMonth + 2;
+    changes.push({ bloc:"resa", row:cRow, col:cCol, delta:1 });
+    if (!dryRun) appendCell_(dstSheet, cRow, cCol, 1);
+  }
+  for (var m in nbm) {
+    var month = parseInt(m, 10), col = month + 2, nightsM = nbm[m];
+    if (montant > 0 && ck === "direct") {
+      var part = Math.round(montant * nightsM / totalN * 100) / 100;
+      changes.push({ bloc:"revenus", row:REV_ROWS[bienId].direct, col:col, delta:part });
+      if (!dryRun) appendCell_(dstSheet, REV_ROWS[bienId].direct, col, part);
+    }
+    changes.push({ bloc:"nuits", row:NIGHTS_ROW[bienId], col:col, delta:nightsM });
+    if (!dryRun) appendCell_(dstSheet, NIGHTS_ROW[bienId], col, nightsM);
+  }
+  return changes;
+}
+
+//  Memoire des IDs deja traites 
+function getMemoSheet_(ss) {
+  var s = ss.getSheetByName(MEMO_SHEET);
+  if (!s) { s = ss.insertSheet(MEMO_SHEET); s.getRange(1,1).setValue("id_traite"); s.hideSheet(); }
+  return s;
+}
+function readProcessed_(memo) {
+  var set = {}, last = memo.getLastRow();
+  if (last > 1) memo.getRange(2,1,last-1,1).getValues().forEach(function(r){ if(r[0]) set[String(r[0])] = true; });
+  return set;
+}
+function appendProcessed_(memo, ids) {
+  if (!ids.length) return;
+  memo.getRange(memo.getLastRow()+1, 1, ids.length, 1).setValues(ids.map(function(id){ return [id]; }));
+}
+
+// Scanne un onglet : applique les resas non encore traitees (ou les liste si dryRun)
+function scanSheet_(ss, name, C, dst, processed, newIds, dryRun, preview) {
+  var sh = ss.getSheetByName(name); if (!sh) return;
+  var last = sh.getLastRow(); if (last < 2) return;
+  var rows = sh.getRange(2, 1, last - 1, C.ncols).getValues();
+  rows.forEach(function(row) {
+    var id = String(row[C.id] || ""); if (!id || processed[id]) return;
+    var ch = applyOne_(row, C, dst, dryRun);
+    processed[id] = true;            // dedup (memoire)  aussi entre les 2 onglets
+    if (!dryRun) newIds.push(id);
+    else if (ch.length) preview.push({ id:id, src:name, prop:row[C.prop], canal:row[C.canal], arrivee:String(row[C.arrivee]).slice(0,10), changements:ch });
+  });
+}
+
+//  Fonction recurrente (cible du trigger 15 min) 
+function syncRevenus2026() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var dst = ss.getSheetByName(DST_SHEET); if (!dst) return;
+  var memo = getMemoSheet_(ss), processed = readProcessed_(memo);
+  var newIds = [];
+  scanSheet_(ss, SRC_SHEET,  COL_TOUTES, dst, processed, newIds, false, null);
+  scanSheet_(ss, RESA_SHEET, COL_RESA,   dst, processed, newIds, false, null);
+  appendProcessed_(memo, newIds);
+  return { applied: newIds.length };
+}
+
+//  Installation 1 fois : baseline (marque l'existant des 2 onglets, SANS appliquer) + trigger 
+function baselineSheet_(ss, name, processed, baseline) {
+  var sh = ss.getSheetByName(name); if (!sh || sh.getLastRow() < 2) return;
+  sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues().forEach(function(r) {
+    var id = String(r[0] || ""); if (id && !processed[id]) { processed[id] = true; baseline.push(id); }
+  });
+}
+function setupRevenus2026() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var memo = getMemoSheet_(ss), processed = readProcessed_(memo);
+  var baseline = [];
+  baselineSheet_(ss, SRC_SHEET,  processed, baseline);
+  baselineSheet_(ss, RESA_SHEET, processed, baseline);
+  appendProcessed_(memo, baseline);
+
+  ScriptApp.getProjectTriggers().forEach(function(t){ if (t.getHandlerFunction() === "syncRevenus2026") ScriptApp.deleteTrigger(t); });
+  ScriptApp.newTrigger("syncRevenus2026").timeBased().everyMinutes(15).create();
+
+  Logger.log("Setup OK  " + baseline.length + " reservations marquees (baseline, 2 onglets). Trigger 15 min installe.");
+  return { baseline: baseline.length };
+}
+
+//  Test DRY-RUN : log ce qui SERAIT applique, sans rien ecrire 
+function testRevenus2026_dryRun() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var dst = ss.getSheetByName(DST_SHEET); if (!dst) { Logger.log("Onglet cible introuvable"); return; }
+  var memo = getMemoSheet_(ss), processed = readProcessed_(memo);
+  var preview = [];
+  scanSheet_(ss, SRC_SHEET,  COL_TOUTES, dst, processed, [], true, preview);
+  scanSheet_(ss, RESA_SHEET, COL_RESA,   dst, processed, [], true, preview);
+  Logger.log("A TRAITER (nouvelles, non comptees) : " + preview.length);
+  Logger.log(JSON.stringify(preview, null, 2));
+  return preview;
+}

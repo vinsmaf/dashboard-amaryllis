@@ -325,9 +325,17 @@ export function FlowMark({ size = 40, color = "var(--c-coral, #c47254)", gold = 
 // Transforme /photos/... en URL CDN redimensionnée.
 // Les URLs externes (http/https) sont retournées telles quelles.
 // media-008 : quality configurable (défaut 85, hero=90, thumbnail=75)
-export function cfImg(src, w, quality = 85) {
+// web-010 : Cloudflare Image Resizing n'étant pas actif (404), on sert des
+// variantes statiques pré-générées au build (scripts/gen-image-variants.mjs) :
+//   /photos/x/06.webp + largeur → /photos/x/06-800w.webp
+// Largeurs disponibles : 480/800/1200/1600 (on prend la plus proche ≥ demandée).
+const _VARIANT_WIDTHS = [480, 800, 1200, 1600];
+export function cfImg(src, w, quality = 85) { // quality conservé pour compat d'appel
   if (!src || src.startsWith("http")) return src;
-  return `/cdn-cgi/image/width=${w},format=auto,quality=${quality}${src}`;
+  if (!/\.webp$/i.test(src)) return src;
+  if (/-\d+w\.webp$/i.test(src)) return src; // déjà une variante
+  const target = _VARIANT_WIDTHS.find(x => x >= w) || _VARIANT_WIDTHS[_VARIANT_WIDTHS.length - 1];
+  return src.replace(/\.webp$/i, `-${target}w.webp`);
 }
 
 // ── Shimmer keyframes injection (once, lazy) ─────────────────────

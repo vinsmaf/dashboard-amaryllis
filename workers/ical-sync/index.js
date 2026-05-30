@@ -1814,6 +1814,34 @@ async function runEditorialAutoPublish(env) {
   }
 }
 
+// ── arch-018 : rappel rotation des tokens critiques (cadence 90j) ─────────────
+// Appelé par le cron mensuel ; n'agit qu'en janvier/avril/juillet/octobre.
+async function runTokenRotationReminder(env) {
+  const month = new Date().getUTCMonth(); // 0=jan
+  if (![0, 3, 6, 9].includes(month)) return; // trimestriel ≈ 90 jours
+  const tokens = [
+    "BEDS24_TOKEN (auto-refresh via /api/beds24-refresh — vérifier que le refresh tourne)",
+    "STRIPE_SECRET_KEY (Dashboard Stripe → Développeurs → Clés API → Roll)",
+    "RESEND_API_KEY (Resend → API Keys → régénérer)",
+    "META_PAGE_TOKEN (Graph API → token longue durée Page, ~60j → à régénérer)",
+    "GROQ_API_KEY (console Groq)",
+    "ANTHROPIC_API_KEY (console Anthropic)",
+    "APPS_SCRIPT_URL (rotation seulement si fuite suspectée)",
+    "APIFY_TOKEN (console Apify)",
+  ];
+  const html = `<h2>🔐 Rotation trimestrielle des tokens (arch-018)</h2>
+    <p>Rappel automatique tous les 90 jours. À vérifier / faire tourner :</p>
+    <ul>${tokens.map((t) => `<li>${t}</li>`).join("")}</ul>
+    <p>Après rotation, mettre à jour les secrets dans <strong>Cloudflare Pages → dashboard-amaryllis → Settings → Environment variables</strong> (et <code>wrangler secret put</code> pour le Worker).</p>
+    <p style="color:#888;font-size:12px">⚠️ META_PAGE_TOKEN expire ~tous les 60 j — c'est le plus urgent.</p>`;
+  try {
+    await sendEmail(env, { subject: "🔐 Rotation des tokens — checklist trimestrielle", html });
+    console.log("[token-rotation] rappel envoyé");
+  } catch (e) {
+    console.error("[token-rotation] erreur:", e.message);
+  }
+}
+
 // ── Exports Cloudflare Worker ────────────────────────────────────────────────
 export default {
   async scheduled(event, env, ctx) {
@@ -1833,6 +1861,7 @@ export default {
       ctx.waitUntil(Promise.all([
         runMonthlyExport(env, allEvents),
         runMonthlySeoArticle(env),
+        runTokenRotationReminder(env), // arch-018 — n'agit qu'en jan/avr/juil/oct
       ]));
 
     } else if (cron === "0 12 * * *") {

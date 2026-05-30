@@ -31,3 +31,6 @@ dist-ssr
 
 # Zip archives
 *.zip
+
+# Variantes images responsive générées au build (web-010)
+public/photos/**/*-[0-9]*w.webp

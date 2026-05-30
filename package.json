@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:cf": "wrangler pages dev --compatibility-date=2025-01-01 -- npm run dev",
-    "build": "vite build && node scripts/prerender.mjs",
+    "build": "node scripts/gen-image-variants.mjs && vite build && node scripts/prerender.mjs",
     "build:skills": "node scripts/build-skills.mjs",
     "lint": "eslint .",
     "preview": "vite preview",

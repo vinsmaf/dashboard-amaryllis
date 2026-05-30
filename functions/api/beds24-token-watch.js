@@ -69,6 +69,7 @@ export async function onRequestGet(context) {
 
   const resendKey = env.RESEND_API_KEY;
   const notifEmail = env.NOTIFICATION_EMAIL || env.RECAP_EMAIL;
+  const notifTo = String(notifEmail || "").split(",").map(s => s.trim()).filter(Boolean);
   if (!resendKey || !notifEmail) {
     return json({ error: "RESEND_API_KEY ou NOTIFICATION_EMAIL manquant" }, 500);
   }
@@ -97,8 +98,8 @@ export async function onRequestGet(context) {
         method: "POST",
         headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          from: env.RESEND_FROM || "Amaryllis <notifications@mail.villamaryllis.com>",
-          to: [notifEmail],
+          from: env.RESEND_FROM || "Amaryllis <notifications@villamaryllis.com>",
+          to: notifTo,
           subject: "🔴 URGENT — Token Beds24 invalide ou expiré",
           html: buildAlertHtml({ expiresInDays: 0, expiresAt: "DÉJÀ EXPIRÉ", tokenPreview: token.slice(0, 8) + "…" }),
         }),
@@ -130,8 +131,8 @@ export async function onRequestGet(context) {
         method: "POST",
         headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          from: env.RESEND_FROM || "Amaryllis <notifications@mail.villamaryllis.com>",
-          to: [notifEmail],
+          from: env.RESEND_FROM || "Amaryllis <notifications@villamaryllis.com>",
+          to: notifTo,
           subject: `${urgencyLabel} Token Beds24 expire dans ${expiresInDays}j — action requise`,
           html: buildAlertHtml({ expiresInDays, expiresAt, tokenPreview }),
         }),

@@ -173,7 +173,7 @@ export default function NotFound() {
             <a href="/amaryllis" className="nf-link">Villa Amaryllis</a>
             <a href="/zandoli" className="nf-link">Zandoli</a>
             <a href="/geko" className="nf-link">Géko</a>
-            <a href="/guide" className="nf-link">Guide Martinique</a>
+            <a href="/guide-hub" className="nf-link">Guide Martinique</a>
             <a href="/explorer" className="nf-link">Explorer</a>
           </div>
         </div>

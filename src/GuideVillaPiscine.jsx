@@ -58,7 +58,7 @@ const VILLAS = [
   },
   {
     id: "zandoli",
-    nom: "Villa Zandoli",
+    nom: "Zandoli",
     accroche: "Piscine chauffée vue mer — le confort, sans compromis",
     capacite: "5 personnes",
     chambres: "3 chambres",
@@ -71,7 +71,7 @@ const VILLAS = [
   },
   {
     id: "geko",
-    nom: "Villa Géko",
+    nom: "Géko",
     accroche: "Piscine privée dans un jardin tropical — idéale en famille",
     capacite: "4 personnes",
     chambres: "2 chambres",
@@ -348,7 +348,7 @@ export default function GuideVillaPiscine() {
           <div style={{ maxWidth: 960, margin: "0 auto", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <a href="/" style={{ color: IVORY, textDecoration: "none", fontWeight: 300, fontSize: 18, letterSpacing: "0.15em", textTransform: "uppercase" }}>Amaryllis</a>
             <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
-              <a href="/guide" style={{ color: IVORY, textDecoration: "none", fontSize: 12, letterSpacing: "0.08em", opacity: 0.6 }}>Explorer Martinique</a>
+              <a href="/guide-hub" style={{ color: IVORY, textDecoration: "none", fontSize: 12, letterSpacing: "0.08em", opacity: 0.6 }}>Explorer Martinique</a>
               <a href="/" style={{ color: IVORY, textDecoration: "none", fontSize: 12, letterSpacing: "0.08em", opacity: 0.7 }}>← Nos villas</a>
             </div>
           </div>
@@ -500,9 +500,9 @@ export default function GuideVillaPiscine() {
               </div>
               {[
                 { name: "Villa Amaryllis", cap: "8 pers.", piscine: "Débordement eau salée 4×7 m", vue: "180° Caraïbes", prix: "dès 280 €" },
-                { name: "Villa Zandoli",   cap: "5 pers.", piscine: "Privative à cascade",          vue: "Mer + jardin",   prix: "dès 220 €" },
+                { name: "Zandoli",   cap: "5 pers.", piscine: "Privative à cascade",          vue: "Mer + jardin",   prix: "dès 220 €" },
                 { name: "Villa Iguana",    cap: "6 pers.", piscine: "Eau salée non chlorée",        vue: "Rocher Diamant", prix: "dès 180 €" },
-                { name: "Villa Géko",      cap: "4 pers.", piscine: "Privative à cascade",          vue: "Jardin tropical",prix: "dès 150 €" },
+                { name: "Géko",      cap: "4 pers.", piscine: "Privative à cascade",          vue: "Jardin tropical",prix: "dès 150 €" },
                 { name: "Studio Mabouya",  cap: "2 pers.", piscine: "Jacuzzi privatif",             vue: "Mer terrasse",   prix: "dès 110 €" },
               ].map(row => (
                 <div key={row.name} className="gvp-compare-row">
@@ -687,7 +687,7 @@ export default function GuideVillaPiscine() {
 
           {/* ── Navigation inter-guides ── */}
           <nav className="gvp-nav" aria-label="Navigation guides Martinique">
-            <a href="/guide">← Tous les guides</a>
+            <a href="/guide-hub">← Tous les guides</a>
             <a href="/amaryllis">Villa Amaryllis</a>
             <a href="/guide-sainte-anne">Guide Sainte-Anne</a>
             <a href="/guide-arlet">Guide Arlet →</a>

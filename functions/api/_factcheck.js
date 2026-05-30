@@ -29,11 +29,11 @@ export const FACT_CHECK_RULES = [
   { rx: /(iguana|mabouya|sch(œ|oe)lcher|nogent|bellevue|amaryllis).*cascade/i, reason: "Cascade uniquement pour Zandoli et Géko" },
   // Piscine eau salée : Villa Amaryllis (à débordement) ET Villa Iguana (non chlorée).
   // Interdit pour les autres biens (Zandoli/Géko/Mabouya/Schœlcher/Nogent/Bellevue).
-  { rx: /eau\s+sal(é|e)e.*(zandoli|geko|mabouya|sch(œ|oe)lcher|nogent|bellevue)/i, reason: "Piscine eau salée uniquement pour Villa Amaryllis et Villa Iguana" },
-  { rx: /(zandoli|geko|mabouya|sch(œ|oe)lcher|nogent|bellevue).*eau\s+sal(é|e)e/i, reason: "Piscine eau salée uniquement pour Villa Amaryllis et Villa Iguana" },
+  { rx: /eau\s+sal(é|e)e.*(zandoli|g(é|e)ko|mabouya|sch(œ|oe)lcher|nogent|bellevue)/i, reason: "Piscine eau salée uniquement pour Villa Amaryllis et Villa Iguana" },
+  { rx: /(zandoli|g(é|e)ko|mabouya|sch(œ|oe)lcher|nogent|bellevue).*eau\s+sal(é|e)e/i, reason: "Piscine eau salée uniquement pour Villa Amaryllis et Villa Iguana" },
   // Jacuzzi : UNIQUEMENT Mabouya (privatif)
-  { rx: /jacuzzi\s+privati(f|ve).*(amaryllis|zandoli|iguana|geko|sch(œ|oe)lcher|nogent|bellevue)/i, reason: "Jacuzzi privatif uniquement pour Studio Mabouya" },
-  { rx: /(amaryllis|zandoli|iguana|geko|sch(œ|oe)lcher|nogent|bellevue).*jacuzzi\s+privati(f|ve)/i, reason: "Jacuzzi privatif uniquement pour Studio Mabouya" },
+  { rx: /jacuzzi\s+privati(f|ve).*(amaryllis|zandoli|iguana|g(é|e)ko|sch(œ|oe)lcher|nogent|bellevue)/i, reason: "Jacuzzi privatif uniquement pour Studio Mabouya" },
+  { rx: /(amaryllis|zandoli|iguana|g(é|e)ko|sch(œ|oe)lcher|nogent|bellevue).*jacuzzi\s+privati(f|ve)/i, reason: "Jacuzzi privatif uniquement pour Studio Mabouya" },
   // Pas de piscine pour Nogent (jardin + terrasse seulement)
   { rx: /nogent.*piscine|piscine.*nogent/i, reason: "Nogent : pas de piscine — jardin et terrasse uniquement" },
   // Pas de piscine pour Bellevue (Schœlcher) — vue panoramique uniquement
@@ -42,8 +42,11 @@ export const FACT_CHECK_RULES = [
   // Pas de piscine pour Mabouya (jacuzzi privatif uniquement)
   { rx: /mabouya.*piscine|piscine.*mabouya/i, reason: "Studio Mabouya : pas de piscine — jacuzzi privatif uniquement" },
   // Débordement uniquement Amaryllis
-  { rx: /d(é|e)bordement.*(iguana|zandoli|geko|mabouya|sch(œ|oe)lcher|nogent|bellevue)/i, reason: "Piscine à débordement uniquement pour Villa Amaryllis" },
-  { rx: /(iguana|zandoli|geko|mabouya|sch(œ|oe)lcher|nogent|bellevue).*d(é|e)bordement/i, reason: "Piscine à débordement uniquement pour Villa Amaryllis" },
+  { rx: /d(é|e)bordement.*(iguana|zandoli|g(é|e)ko|mabouya|sch(œ|oe)lcher|nogent|bellevue)/i, reason: "Piscine à débordement uniquement pour Villa Amaryllis" },
+  { rx: /(iguana|zandoli|g(é|e)ko|mabouya|sch(œ|oe)lcher|nogent|bellevue).*d(é|e)bordement/i, reason: "Piscine à débordement uniquement pour Villa Amaryllis" },
+  // Nomenclature : seuls Amaryllis et Iguana sont des "villas".
+  // Zandoli (logement), Géko (cocon), Mabouya (studio), Bellevue (appartement) ne le sont pas.
+  { rx: /villa\s+(zandoli|g(é|e)ko|mabouya|bellevue)/i, reason: "Zandoli/Géko/Mabouya/Bellevue ne sont PAS des villas — écrire le nom sans « Villa »" },
 ];
 
 // Vérifie un caption contre la fact-check list — retourne [erreurs] ou []

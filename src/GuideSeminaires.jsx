@@ -213,7 +213,8 @@ function DevisForm() {
         {loading ? "Envoi…" : "Demander un devis gratuit →"}
       </button>
       <p style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, color: MUTED, textAlign: "center", marginTop: 12 }}>
-        Réponse sous 24h · Aucun engagement
+        Réponse sous 24h · Aucun engagement<br/>
+        En envoyant, vous acceptez notre <a href="/politique-confidentialite" target="_blank" rel="noopener" style={{ color: CORAL, textDecoration: "underline" }}>politique de confidentialité</a>.
       </p>
     </form>
   );

@@ -206,3 +206,70 @@ Single large file (~3000+ lines). Key sections in order:
 `EmailSync.jsx` — parses Gmail confirmation emails to extract booking amounts/platforms  
 `src/i18n.jsx` — FR/EN translations object + `LangProvider` / `useLang()` hook  
 `src/WikiImg.jsx` — Wikipedia image fetcher used in guide pages
+
+---
+
+## ⚠️ Footguns & pièges connus (à lire avant de toucher au SEO, aux résas ou aux réseaux)
+
+### 1. SEO meta des fiches — DOUBLE SOURCE (le piège n°1)
+
+Le `<title>` / `<meta description>` / `og:*` / JSON-LD des **fiches villas et de certains guides** existent à **DEUX endroits**, et c'est le **2ᵉ qui gagne** :
+
+| Source | Fichier | Quand | Autorité |
+|---|---|---|---|
+| **Prerender statique** | `scripts/prerender.mjs` (tableau `ROUTES`) | au build (`npm run build`) → écrit dans `dist/<slug>.html` | ⚠️ **écrasé** pour les slugs interceptés |
+| **Injection runtime** | `functions/[slug].js` (HTMLRewriter `injectMeta`) | à **chaque requête** Cloudflare Pages | ✅ **fait foi** (réécrit le `<title>` de l'HTML servi) |
+
+**Conséquence :** modifier un titre/description de villa **uniquement dans `prerender.mjs` n'a AUCUN effet en prod** — `functions/[slug].js` le réécrit par-dessus.
+
+**Slugs interceptés par `functions/[slug].js`** : les 7 biens (`amaryllis, zandoli, iguana, geko, mabouya, schoelcher, nogent`) + `guide`, `guide-le-diamant`, `guide-sainte-anne`, `villa-rental-martinique`, `activites-sainte-luce`, `guide-proximite`.
+
+**Règle :** pour ces slugs, éditer le titre/desc dans **`functions/[slug].js`** (objet `SEO` pour les biens, ou les constantes `GUIDE_*`). Garder `prerender.mjs` cohérent en parallèle (baseline crawler + routes non interceptées), mais la vérité = la fonction.
+
+**Vérif live obligatoire** (curl ne sépare pas les 2 sources, mais montre ce qui est servi) :
+```bash
+curl -s https://villamaryllis.com/mabouya | grep -oE "<title>[^<]*</title>"
+```
+- Cibles SEO : **title ≤ 60c**, **meta description ≤ 158c** (au-delà → tronqué en SERP).
+- ⚠️ `functions/[slug].js` a sa **propre table `BIENS`** (nom, prix, desc, rating) **dupliquée** de `PublicSite.jsx` / `prerender.mjs` — prix codés en dur (280, 220, …), pas lus depuis l'admin Tarifs. Mettre à jour les 2-3 endroits si un prix change.
+
+### 2. Réservations — UN SEUL onglet Sheet : « Toutes les Réservations »
+
+Tous les flux convergent vers l'onglet **« Toutes les Réservations »** (13 colonnes) via l'action Apps Script **`importAllReservations`** :
+- saisies manuelles directes (admin add/edit/delete) ;
+- sync principal 📊 (`App.jsx` → iCal toutes propriétés + Beds24 Nogent) ;
+- onglet Beds24 (`src/tabs/Beds24Admin.jsx`) + **webhook temps réel** (`functions/api/beds24-webhook.js`).
+
+Les 3 flux mappent vers le format unifié **côté JS** avec un id `beds24-<bookingId>` (upsert sans doublon). L'action `importBeds24` et l'onglet « Réservations Nogent » **n'existent plus**. Les suppressions comparent l'id **en `String`** (un bug historique number/string est corrigé).
+
+**Source Apps Script** : `appscript/SCRIPT_SHEETS.js` (déployé via `clasp`). ⚠️ Le `SCRIPT_SHEETS.gs` à la racine est une **copie divergente obsolète** — ne pas s'y fier.
+
+**Déploiement Apps Script** (projet **« Site web Amaryllis »**, scriptId `1PJVUdEra…`) :
+```bash
+node_modules/.bin/clasp push -f
+node_modules/.bin/clasp deploy -i AKfycbw-t5kd_0f3OsEoDkOJHzYPHIBhWzz34aj7yagP57-Cj-7pLj6TiuRaUuusrCwAiA30Gg -d "msg"
+```
+Toujours redéployer sur **ce même deployment id** (= `APPS_SCRIPT_URL`) pour préserver l'URL. Réponse POST directe = page HTML Drive (quirk redirect) ; la vraie réponse passe par `/api/sheets-proxy` (`forwardChunked`).
+
+### 3. Calendrier éditorial réseaux — publication auto + canaux
+
+- Source de vérité = table D1 `editorial_calendar` (pas les docs `docs/planning-*`). API : `/api/editorial-calendar`.
+- Le **Worker** (`workers/ical-sync/index.js`) génère les drafts à J-2 (`runEditorialDraftGen`, cron `0 12 * * *`) et **publie les entrées `approved`** dont l'heure est due (`runEditorialAutoPublish`, cron horaire `0 * * * *`).
+- La publication délègue à `/api/agent-drafts?action=publish` → `/api/social` (FB + IG via Graph API).
+- ⚠️ **Canaux** : un draft `social_post` doit avoir `payload.channels = ["ig","fb"]`. Si le LLM n'émet que `["ig"]`, **Facebook est silencieusement zappé** (pas d'erreur). Corrigé dans `agents-run.js` (force les 2 canaux), mais vérifier sur tout nouveau draft. Statut `drafted` ≠ publié : il faut `approved` pour que le cron le sorte.
+
+### 4. Sécurité / exploitation
+
+- **Rate limiting** : module partagé `functions/api/_ratelimit.js` (`rateLimit(db, {key, limit, windowSec})`, D1, fail-open). Déjà sur `/api/admin-auth`, `/api/contact`, `/api/beds24-bookings` (60/min/IP). DB = `env.revenue_manager`.
+- **Rotation des tokens** : runbook `docs/runbook-rotation-tokens.md` + rappel email trimestriel auto (`runTokenRotationReminder`, jan/avr/juil/oct). `META_PAGE_TOKEN` expire ~60j = le plus urgent.
+
+### 5. A/B testing
+
+Infra : `src/utils/abTest.js` — `getVariant("nom_test")` (cookie 50/50 + GA4 `ab_variant_assigned`), `trackConversion("nom_test", {…})` (GA4 `ab_conversion`). Tests actifs : `cta_label`, `hero_amaryllis`.
+⚠️ **Ne jamais A/B le prix via `bien.prix`** : il alimente le calcul du total de réservation (incohérence checkout). Un test charm-pricing nécessiterait un champ d'affichage `prixAffiche` découplé du calcul.
+
+### 6. Déploiement & vérif
+
+- `npm run deploy:pages` rebuild + déploie + **smoke test** (home/villa/admin, bundle JS, kill-switch SW, anti-asset-gelé `/guide-hub`, API `get-config`/`social`, `sitemap.xml`, meta prérendue). Échec smoke = exit 1.
+- Le **Worker** se déploie séparément : `npx wrangler deploy`.
+- Après tout changement SEO/résa/réseaux : **vérifier en live** (curl + endpoints), le build local ne reflète pas l'injection runtime.

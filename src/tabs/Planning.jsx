@@ -126,7 +126,7 @@ function parseICS(text, bienId, canal = "airbnb") {
 }
 
 // ── Planning — composant principal ──────────────────────────────────────────
-const EMPTY_FORM = { bienId: "amaryllis", voyageur: "", canal: "booking", checkin: "", checkout: "", checkin_time: "", checkout_time: "", nb_guests: "", montant: "", notes: "", menage: "", reservation_code: "", phone: "", assigne: "" };
+const EMPTY_FORM = { bienId: "amaryllis", voyageur: "", canal: "booking", checkin: "", checkout: "", checkin_time: "", checkout_time: "", nb_guests: "", montant: "", notes: "", menage: "", reservation_code: "", phone: "", email: "", assigne: "" };
 
 export default function Planning() {
   const { biens, mob, reservations, saveRes, icalUrls, saveUrls, icalUrlsBooking, saveUrlsBooking, scriptUrl, onApplyRevenusFromResas, pushReservationsToScript } = useAppData();
@@ -303,7 +303,7 @@ export default function Planning() {
   }, []);
 
   const openEdit = (r) => {
-    setForm({ bienId: r.bienId, voyageur: r.voyageur, canal: r.canal, checkin: r.checkin, checkout: r.checkout, checkin_time: r.checkin_time || "", checkout_time: r.checkout_time || "", nb_guests: r.nb_guests || "", montant: r.montant || "", notes: r.notes || "", menage: r.menage || "", reservation_code: r.reservation_code || "", phone: r.phone || "", assigne: r.assigne || "" });
+    setForm({ bienId: r.bienId, voyageur: r.voyageur, canal: r.canal, checkin: r.checkin, checkout: r.checkout, checkin_time: r.checkin_time || "", checkout_time: r.checkout_time || "", nb_guests: r.nb_guests || "", montant: r.montant || "", notes: r.notes || "", menage: r.menage || "", reservation_code: r.reservation_code || "", phone: r.phone || "", email: r.email || "", assigne: r.assigne || "" });
     setEditId(r.id);
     setShowForm(true);
   };
@@ -315,14 +315,14 @@ export default function Planning() {
       const updated = reservations.map(r => r.id === editId ? { ...r, ...data } : r);
       saveRes(updated);
       if (scriptUrl) {
-        const p = new URLSearchParams({ action: "addReservation", id: String(editId), bienId: data.bienId, voyageur: data.voyageur, canal: data.canal, checkin: data.checkin, checkout: data.checkout, montant: String(data.montant), notes: data.notes || "" });
+        const p = new URLSearchParams({ action: "addReservation", id: String(editId), bienId: data.bienId, voyageur: data.voyageur, canal: data.canal, checkin: data.checkin, checkout: data.checkout, montant: String(data.montant), notes: data.notes || "", phone: data.phone || "", email: data.email || "" });
         fetch(`${scriptUrl}?${p}`, { redirect: "follow" }).catch(() => {});
       }
     } else {
       const newR = { id: Date.now(), ...data, menage_done: false, checkin_done: false };
       saveRes([...reservations, newR]);
       if (scriptUrl) {
-        const p = new URLSearchParams({ action: "addReservation", id: String(newR.id), bienId: newR.bienId, voyageur: newR.voyageur, canal: newR.canal, checkin: newR.checkin, checkout: newR.checkout, montant: String(newR.montant), notes: newR.notes || "" });
+        const p = new URLSearchParams({ action: "addReservation", id: String(newR.id), bienId: newR.bienId, voyageur: newR.voyageur, canal: newR.canal, checkin: newR.checkin, checkout: newR.checkout, montant: String(newR.montant), notes: newR.notes || "", phone: newR.phone || "", email: newR.email || "" });
         fetch(`${scriptUrl}?${p}`, { redirect: "follow" }).catch(() => {});
       }
     }
@@ -337,20 +337,6 @@ export default function Planning() {
     }
   };
   const togRes = (id, field) => saveRes(reservations.map(r => r.id === id ? { ...r, [field]: !r[field] } : r));
-
-  const syncAll = () => {
-    const sources = [];
-    Object.keys(icalUrls).forEach(k => { if (icalUrls[k]) sources.push({ bienId: k, canal: "airbnb", url: icalUrls[k] }); });
-    Object.keys(icalUrlsBooking).forEach(k => { if (icalUrlsBooking[k]) sources.push({ bienId: k, canal: "booking", url: icalUrlsBooking[k] }); });
-    let current = reservations;
-    (async () => {
-      for (const s of sources) {
-        current = await importIcal(s.bienId, s.canal, s.url, current) || current;
-      }
-      if (onApplyRevenusFromResas) onApplyRevenusFromResas(computeRevenusFromResas(current));
-      pushReservationsToScript(current);
-    })();
-  };
 
   const td = todayStr();
   const tm = addDays(td, 1);
@@ -465,9 +451,6 @@ export default function Planning() {
                 </button>
                 <button onClick={() => setShowUrls(!showUrls)} style={{ padding: "5px 9px", borderRadius: 6, border: "1px solid #334155", background: "none", color: "#64748b", cursor: "pointer", fontSize: 10 }}>
                   {showUrls ? "▲" : "▼"} URLs
-                </button>
-                <button onClick={syncAll} style={{ padding: "5px 11px", borderRadius: 6, border: "none", background: "#FF5A5F", color: "#fff", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>
-                  ⟳ Sync
                 </button>
               </div>
             </div>
@@ -857,6 +840,7 @@ export default function Planning() {
               { l: "Assigné à", k: "assigne", t: "text", ph: "Assigné à (ménage/conciergerie)…" },
               { l: "Code réservation", k: "reservation_code", t: "text", ph: "HM…" },
               { l: "Téléphone", k: "phone", t: "text", ph: "+596…" },
+              { l: "Email", k: "email", t: "email", ph: "voyageur@email.com" },
               { l: "Notes", k: "notes", t: "text", ph: "" },
             ].map(f => (
               <div key={f.k} style={{ marginBottom: 9 }}>

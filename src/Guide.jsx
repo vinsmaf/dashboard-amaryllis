@@ -1,7 +1,10 @@
 // Guide.jsx — /guide — Hub Martinique v2 · design system Amaryllis
 
+import { useState } from "react";
 import SEOMeta from "./SEOMeta.jsx";
 import { FAQAccordion } from "./primitives.jsx";
+import { GUIDES_INDEX } from "./data/guidesIndex.js";
+import { GUIDE_HUB_SECTIONS } from "./data/guideHubSections.js";
 
 const BASE = "https://villamaryllis.com";
 
@@ -29,7 +32,7 @@ const destinations = [
   },
   {
     href: "/guide-arlet",
-    photo: "/photos/dest-arlet.webp",
+    photo: "https://commons.wikimedia.org/wiki/Special:FilePath/Ponton_et_%C3%89glise_Saint-Henri_des_Anses-d'Arlet.jpg",
     emoji: "🐢",
     nom: "Anses d'Arlet",
     accroche: "Nager avec les tortues — garanties tôt le matin",
@@ -39,7 +42,7 @@ const destinations = [
   },
   {
     href: "/guide-le-diamant",
-    photo: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/Diamond_Rock.jpg/960px-Diamond_Rock.jpg",
+    photo: "https://commons.wikimedia.org/wiki/Special:FilePath/Rocher_du_Diamant_Martinique.jpg",
     emoji: "🗿",
     nom: "Le Diamant",
     accroche: "Plongée d'exception face au Rocher mythique",
@@ -121,12 +124,12 @@ const CSS = `
     font-family: 'Jost', sans-serif; font-weight: 300; font-size: 8px;
     letter-spacing: 0.42em; text-transform: uppercase; color: rgba(250,245,233,0.5); line-height: 1;
   }
-  .g2-top h1 {
+  .g2-top .pagetitle {
     flex: 1; text-align: center;
     font-family: 'Jost', sans-serif; font-weight: 200; font-size: 13px;
     letter-spacing: 0.32em; text-transform: uppercase; color: #faf5e9; margin: 0;
   }
-  .g2-top h1 em {
+  .g2-top .pagetitle em {
     font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 400;
     color: #c9a673; letter-spacing: 0.02em; text-transform: none; margin-left: 6px;
   }
@@ -142,17 +145,23 @@ const CSS = `
     position: relative; height: 540px; overflow: hidden;
   }
   .g2-hero .bg {
-    position: absolute; inset: -30px;
-    background: #0e2020 url('/photos/amaryllis/05.webp') center/cover;
-    animation: kenburns 22s ease-in-out infinite alternate;
+    position: absolute; inset: -24px;
+    background: #0e2020 url('https://commons.wikimedia.org/wiki/Special:FilePath/Martinique-11-Les_Salines_Beach.jpg') center/cover;
+    animation: kenburns 28s ease-in-out infinite alternate;
   }
   @keyframes kenburns {
-    0%   { transform: scale(1.06); }
-    100% { transform: scale(1.16) translate(-18px, -6px); }
+    0%   { transform: scale(1.04); }
+    100% { transform: scale(1.10) translate(-12px, -4px); }
   }
+  @media (prefers-reduced-motion: reduce) {
+    .g2-hero .bg { animation: none; transform: scale(1.04); }
+  }
+  /* Voile bas + voile latéral gauche (style editorial) pour lisibilité du titre */
   .g2-hero::after {
     content: ""; position: absolute; inset: 0;
-    background: linear-gradient(180deg, rgba(14,59,58,0.35) 0%, rgba(14,59,58,0) 30%, rgba(14,59,58,0.72) 100%);
+    background:
+      linear-gradient(90deg, rgba(14,59,58,0.55) 0%, rgba(14,59,58,0.12) 50%, rgba(14,59,58,0) 70%),
+      linear-gradient(180deg, rgba(14,59,58,0.30) 0%, rgba(14,59,58,0) 35%, rgba(14,59,58,0.74) 100%);
   }
   .g2-hero-content {
     position: absolute; inset: 0; z-index: 2;
@@ -163,13 +172,13 @@ const CSS = `
     font-family: 'Cormorant Garamond', serif; font-style: italic;
     font-size: 18px; letter-spacing: 0.04em; color: #c9a673; margin-bottom: 22px;
   }
-  .g2-hero-content h2 {
+  .g2-hero-content h1 {
     font-family: 'Jost', sans-serif; font-weight: 200;
     font-size: clamp(40px, 7vw, 88px); letter-spacing: 0.14em;
     text-transform: uppercase; color: #faf5e9; line-height: 0.98; margin: 0 0 22px;
     max-width: 800px;
   }
-  .g2-hero-content h2 em {
+  .g2-hero-content h1 em {
     font-family: 'Cormorant Garamond', serif; font-style: italic;
     font-weight: 400; color: #c9a673; letter-spacing: 0; text-transform: none;
   }
@@ -177,6 +186,31 @@ const CSS = `
     font-family: 'Cormorant Garamond', serif; font-style: italic;
     font-size: clamp(17px, 1.6vw, 22px); line-height: 1.55;
     color: rgba(250,245,233,0.92); max-width: 560px; margin: 0;
+  }
+  .g2-hero-content .hero-cta {
+    display: inline-block; margin-top: 30px; align-self: flex-start;
+    background: #c47254; color: #fff; text-decoration: none;
+    padding: 15px 34px; border-radius: 8px;
+    font-family: 'Jost', sans-serif; font-weight: 600; font-size: 13px;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.28);
+    transition: transform 0.2s, background 0.2s;
+  }
+  .g2-hero-content .hero-cta:hover { transform: translateY(-2px); background: #b3633f; }
+
+  /* ── Bandeau réassurance ── */
+  .g2-trust { background: #0e3b3a; border-top: 1px solid rgba(250,245,233,0.08); }
+  .g2-trust-row {
+    display: flex; flex-wrap: wrap; justify-content: center; align-items: center;
+    gap: 10px 28px; padding: 14px 28px;
+    font-family: 'Jost', sans-serif; font-weight: 300; font-size: 12.5px;
+    letter-spacing: 0.03em; color: rgba(250,245,233,0.72);
+  }
+  .g2-trust-row span { white-space: nowrap; }
+  .g2-trust-row b { color: #c9a673; font-weight: 500; }
+  .g2-trust-row span + span { border-left: 1px solid rgba(250,245,233,0.14); padding-left: 28px; }
+  @media (max-width: 760px) {
+    .g2-trust-row span + span { border-left: none; padding-left: 0; }
   }
 
   /* ── Container ── */
@@ -190,12 +224,12 @@ const CSS = `
     font-family: 'Jost', sans-serif; font-weight: 300; font-size: 11px;
     letter-spacing: 0.55em; text-transform: uppercase; color: #c47254; margin-bottom: 18px;
   }
-  .g2-intro h3 {
+  .g2-intro h2 {
     font-family: 'Jost', sans-serif; font-weight: 200;
     font-size: clamp(26px, 4vw, 38px); letter-spacing: 0.10em;
     text-transform: uppercase; color: #0e3b3a; margin: 0 0 20px; line-height: 1.1;
   }
-  .g2-intro h3 em {
+  .g2-intro h2 em {
     font-family: 'Cormorant Garamond', serif; font-style: italic;
     font-weight: 400; color: #c47254; letter-spacing: 0; text-transform: none;
   }
@@ -245,15 +279,15 @@ const CSS = `
     font-family: 'Cormorant Garamond', serif; font-style: italic;
     font-size: 14px; line-height: 1.4; color: rgba(255,255,255,0.85);
   }
-  .g2-dcard .body { padding: 16px 20px; }
-  .g2-dcard .tags { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 14px; }
+  .dcard-main { display: block; color: inherit; text-decoration: none; }
+  .g2-dcard .tags { display: flex; gap: 5px; flex-wrap: wrap; padding: 16px 20px 14px; }
   .g2-dcard .tag {
     background: #f4ecdc; border: 1px solid #e0d4bc;
     padding: 3px 9px; border-radius: 4px;
     font-family: 'Jost', sans-serif; font-weight: 400; font-size: 10px; color: #7a6b5a;
   }
   .g2-dcard .villas {
-    border-top: 1px solid #e0d4bc; padding-top: 12px;
+    border-top: 1px solid #e0d4bc; margin: 0 20px 18px; padding-top: 12px;
   }
   .g2-dcard .villas-lbl {
     font-family: 'Jost', sans-serif; font-weight: 600; font-size: 9px;
@@ -261,12 +295,53 @@ const CSS = `
     margin-bottom: 8px;
   }
   .g2-dcard .villa-row {
-    display: flex; align-items: center; gap: 8px; padding: 3px 0;
+    display: flex; align-items: center; gap: 8px; padding: 5px 0;
     font-family: 'Jost', sans-serif; font-size: 12px;
   }
   .g2-dcard .villa-row .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
   .g2-dcard .villa-row .vnm { flex: 1; color: #0e3b3a; font-weight: 500; }
   .g2-dcard .villa-row .vmin { color: #c47254; font-weight: 500; }
+  /* Lignes villas cliquables → fiche bien (pont inspiration→réservation) */
+  a.villa-link { text-decoration: none; color: inherit; border-radius: 6px; margin: 0 -8px; padding: 5px 8px; transition: background 0.15s; }
+  a.villa-link:hover { background: #f4ecdc; }
+  a.villa-link:hover .vmin::after { content: " →"; }
+
+  /* ── Contenu long-forme ── */
+  .g2-longform { max-width: 820px; margin: 0 auto; padding: 0 0 72px; }
+  .g2-lf-block { margin-bottom: 36px; }
+  .g2-lf-block h2 {
+    font-family: 'Jost', sans-serif; font-weight: 300; font-size: 22px; letter-spacing: 0.02em;
+    color: #0e3b3a; margin: 0 0 12px; padding-left: 14px; border-left: 3px solid #c47254;
+  }
+  .g2-lf-block p { font-family: 'Cormorant Garamond', serif; font-size: 18px; line-height: 1.7; color: #3a3530; margin: 0; }
+  .g2-lf-block a { color: #c47254; text-decoration: underline; text-underline-offset: 2px; }
+  .g2-lf-block a:hover { color: #0e3b3a; }
+  .g2-lf-block strong { color: #0e3b3a; font-weight: 600; }
+
+  /* ── Newsletter / guide PDF ── */
+  .g2-news { background: linear-gradient(135deg, #0e3b3a 0%, #163f3e 100%); padding: 60px 0; }
+  .g2-news-inner { max-width: 640px; margin: 0 auto; text-align: center; }
+  .g2-news-pre { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 17px; color: #c9a673; margin-bottom: 12px; }
+  .g2-news h2 { font-family: 'Jost', sans-serif; font-weight: 200; font-size: clamp(24px, 4vw, 34px); letter-spacing: 0.06em; text-transform: uppercase; color: #faf5e9; margin: 0 0 14px; }
+  .g2-news h2 em { font-family: 'Cormorant Garamond', serif; font-style: italic; color: #c47254; letter-spacing: 0; text-transform: none; }
+  .g2-news p { font-family: 'Cormorant Garamond', serif; font-size: 18px; line-height: 1.6; color: rgba(250,245,233,0.82); margin: 0 0 26px; }
+  .g2-news-form { display: flex; gap: 10px; max-width: 480px; margin: 0 auto; flex-wrap: wrap; }
+  .g2-news-form input {
+    flex: 1; min-width: 200px; padding: 14px 18px; border-radius: 8px; border: 1px solid rgba(250,245,233,0.25);
+    background: rgba(250,245,233,0.06); color: #faf5e9; font-family: 'Jost', sans-serif; font-size: 14px;
+  }
+  .g2-news-form input::placeholder { color: rgba(250,245,233,0.45); }
+  .g2-news-form input:focus { outline: none; border-color: #c9a673; }
+  .g2-news-form button {
+    background: #c47254; color: #fff; border: none; padding: 14px 26px; border-radius: 8px; cursor: pointer;
+    font-family: 'Jost', sans-serif; font-weight: 600; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
+    transition: background 0.2s, transform 0.2s; white-space: nowrap;
+  }
+  .g2-news-form button:hover:not(:disabled) { background: #b3633f; transform: translateY(-2px); }
+  .g2-news-form button:disabled { opacity: 0.6; cursor: default; }
+  .g2-news-ok { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 19px; color: #c9a673; padding: 14px 0; }
+  .g2-news-err { color: #f0a; font-size: 13px; margin-top: 10px; font-family: 'Jost', sans-serif; color: #e8927c; }
+  .g2-news-legal { font-family: 'Jost', sans-serif; font-size: 11px; color: rgba(250,245,233,0.45); margin-top: 14px; letter-spacing: 0.04em; }
 
   /* ── CTA carte interactive ── */
   .g2-map-cta {
@@ -282,6 +357,37 @@ const CSS = `
     transition: background .2s;
   }
   .g2-map-cta .lnk:hover { background: #a85a3f; }
+
+  /* ── Index complet des guides ── */
+  .g2-index { margin-bottom: 64px; }
+  .g2-index-head { text-align: center; max-width: 620px; margin: 0 auto 32px; }
+  .g2-index-head h2 { font-family: 'Jost', sans-serif; font-weight: 200; font-size: 28px; letter-spacing: 0.04em; color: #0e3b3a; margin: 8px 0 10px; }
+  .g2-index-head h2 em { font-family: 'Cormorant Garamond', serif; font-style: italic; color: #c47254; }
+  /* Pastille emoji premium (remplace l'emoji nu) */
+  .g2-index-group .gi-emoji {
+    width: 34px; height: 34px; flex-shrink: 0; border-radius: 50%;
+    background: #f4ecdc; border: 1px solid #e0d4bc;
+    display: inline-flex; align-items: center; justify-content: center; font-size: 17px;
+    transition: background .15s, border-color .15s, transform .15s;
+  }
+  .g2-index-group a:hover .gi-emoji { background: #fff; border-color: #c47254; transform: scale(1.08); }
+  .g2-index-head p { font-size: 15px; color: #7a6b5a; line-height: 1.6; margin: 0; }
+  .g2-index-group { margin-bottom: 26px; }
+  .g2-index-group h4 {
+    font-family: 'Jost', sans-serif; font-weight: 500; font-size: 12px; letter-spacing: 0.16em;
+    text-transform: uppercase; color: #c47254; margin: 0 0 12px; padding-bottom: 8px; border-bottom: 1px solid #e0d4bc;
+  }
+  .g2-index-group ul {
+    list-style: none; margin: 0; padding: 0;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px 18px;
+  }
+  .g2-index-group a {
+    display: flex; align-items: center; gap: 9px; text-decoration: none;
+    color: #0e3b3a; font-size: 15px; font-family: 'Jost', sans-serif; font-weight: 300;
+    padding: 8px 10px; border-radius: 8px; transition: background .15s, color .15s;
+  }
+  .g2-index-group a:hover { background: #f4ecdc; color: #c47254; }
+  .g2-index-group .gi-emoji { font-size: 17px; flex-shrink: 0; }
 
   /* ── Section hôtes ── */
   .g2-host {
@@ -299,7 +405,7 @@ const CSS = `
   }
   .g2-host-portrait {
     aspect-ratio: 16/9;
-    background: url('/photos/hosts.webp') center top/cover;
+    background: #0e2020 url('/photos/hosts.webp') center top/cover;
     border-radius: 18px;
     box-shadow: 0 24px 64px rgba(0,0,0,0.40);
     position: relative;
@@ -367,13 +473,11 @@ const CSS = `
     padding: 16px 32px; border-radius: 6px;
     font-family: 'Jost', sans-serif; font-weight: 600; font-size: 13px;
     letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer;
-    animation: pulse 2.6s ease-in-out infinite;
+    box-shadow: 0 4px 18px rgba(196,114,84,0.40);
+    transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
     text-decoration: none; display: inline-block;
   }
-  @keyframes pulse {
-    0%,100% { box-shadow: 0 4px 18px rgba(196,114,84,0.40); }
-    50%      { box-shadow: 0 6px 32px rgba(196,114,84,0.70); }
-  }
+  .btn-coral:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(196,114,84,0.5); background: #b3633f; }
   .btn-wa {
     background: #25D366; color: #fff; padding: 16px 28px; border-radius: 6px;
     text-decoration: none;
@@ -424,39 +528,91 @@ function DestCard({ d }) {
     : closestVillas(d.distFrom, 3);
 
   return (
-    <a className="g2-dcard" href={d.href}>
-      <div className="photo" style={{ backgroundImage: `url(${d.photo})` }}>
-        {d.must && <span className="must-badge">★ Incontournable</span>}
-        <div className="photo-name">
-          <span className="nm"><span className="emo">{d.emoji}</span>{d.nom}</span>
-          <span className="accroche">{d.accroche}</span>
+    <div className="g2-dcard">
+      <a className="dcard-main" href={d.href}>
+        <div className="photo" style={{ backgroundImage: `url("${d.photo}")` }}>
+          {d.must && <span className="must-badge">★ Incontournable</span>}
+          <div className="photo-name">
+            <span className="nm"><span className="emo">{d.emoji}</span>{d.nom}</span>
+            <span className="accroche">{d.accroche}</span>
+          </div>
         </div>
-      </div>
-      <div className="body">
         <div className="tags">
           {d.tags.map(t => <span key={t} className="tag">{t}</span>)}
         </div>
-        <div className="villas">
-          <div className="villas-lbl">
-            {d.customDist ? d.customDist : "Distance depuis nos villas"}
-          </div>
-          {close && close.map(v => (
-            <div key={v.id} className="villa-row">
-              <span className="dot" style={{ background: v.couleur }} />
-              <span className="vnm">{v.nom}</span>
-              <span className="vmin">{v.min} min</span>
-            </div>
-          ))}
-          {d.customDist && (
-            <div className="villa-row">
-              <span className="dot" style={{ background: "#10b981" }} />
-              <span className="vnm">Amaryllis · Zandoli · Géko · Mabouya</span>
-              <span className="vmin">★</span>
-            </div>
-          )}
+      </a>
+      <div className="villas">
+        <div className="villas-lbl">
+          {d.customDist ? d.customDist : "Réserver une villa proche →"}
         </div>
+        {close && close.map(v => (
+          <a key={v.id} className="villa-row villa-link" href={`/${v.id}`}>
+            <span className="dot" style={{ background: v.couleur }} />
+            <span className="vnm">{v.nom}</span>
+            <span className="vmin">{v.min} min</span>
+          </a>
+        ))}
+        {d.customDist && (
+          <div className="villa-row">
+            <span className="dot" style={{ background: "#10b981" }} />
+            <span className="vnm">Amaryllis · Zandoli · Géko · Mabouya</span>
+            <span className="vmin">★</span>
+          </div>
+        )}
       </div>
-    </a>
+    </div>
+  );
+}
+
+/* ─── Newsletter / guide PDF (capture lead → /api/contact) ──── */
+function NewsletterForm() {
+  const [email, setEmail] = useState("");
+  const [state, setState] = useState("idle"); // idle | sending | ok | err
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!/.+@.+\..+/.test(email)) { setState("err"); return; }
+    setState("sending");
+    try {
+      const r = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nom: "Abonné guide PDF",
+          email,
+          message: "Demande du guide PDF du Sud Martinique (opt-in newsletter depuis /guide-hub).",
+          source: "newsletter-guide-hub",
+        }),
+      });
+      const d = await r.json().catch(() => ({}));
+      setState(r.ok && d.ok !== false ? "ok" : "err");
+    } catch { setState("err"); }
+  };
+
+  return (
+    <section className="g2-news">
+      <div className="g2-ctn g2-news-inner">
+        <div className="g2-news-pre">— Avant de partir</div>
+        <h2>Recevez notre <em>guide PDF du Sud</em></h2>
+        <p>Adresses d'initiés, criques secrètes, tables sans touristes — notre carnet personnel, gratuit, dans votre boîte mail.</p>
+        {state === "ok" ? (
+          <div className="g2-news-ok">✓ C'est noté ! Vous recevrez le guide très vite. À bientôt en Martinique.</div>
+        ) : (
+          <form className="g2-news-form" onSubmit={submit}>
+            <input
+              type="email" required placeholder="votre@email.com"
+              value={email} onChange={e => { setEmail(e.target.value); if (state === "err") setState("idle"); }}
+              aria-label="Votre adresse email"
+            />
+            <button type="submit" disabled={state === "sending"}>
+              {state === "sending" ? "Envoi…" : "Recevoir le guide →"}
+            </button>
+          </form>
+        )}
+        {state === "err" && <div className="g2-news-err">Une erreur est survenue — vérifiez votre email ou réessayez.</div>}
+        <div className="g2-news-legal">Pas de spam. Désinscription en un clic. En vous inscrivant, vous acceptez notre <a href="/politique-confidentialite" target="_blank" rel="noopener" style={{ textDecoration: "underline" }}>politique de confidentialité</a>.</div>
+      </div>
+    </section>
   );
 }
 
@@ -466,10 +622,10 @@ export default function Guide() {
     <>
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <SEOMeta
-        title="Explorer le Sud Martinique — Guides de destination depuis Sainte-Luce | Amaryllis"
-        description="Les Salines, les tortues d'Arlet, le Rocher du Diamant — tous à moins de 25 min de nos villas à Sainte-Luce. Guides immersifs pour explorer le Sud Martinique."
-        canonical="/guide"
-        image="https://villamaryllis.com/photos/amaryllis/01.webp"
+        title="Que faire dans le Sud de la Martinique — Guide d'initiés | Amaryllis"
+        description="Que faire dans le Sud de la Martinique ? Le guide de nos hôtes à Sainte-Luce : nos coups de cœur, tous nos guides de destination par zone et nos conseils d'initiés."
+        canonical="/guide-hub"
+        image="https://commons.wikimedia.org/wiki/Special:FilePath/Martinique-11-Les_Salines_Beach.jpg"
         type="website"
       />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
@@ -483,13 +639,29 @@ export default function Guide() {
             })),
           },
           {
-            "@type": "Article",
-            "headline": "Explorer le Sud Martinique — Guide de voyage depuis Sainte-Luce",
+            "@type": "CollectionPage",
+            "name": "Que faire dans le Sud de la Martinique — Le guide de nos hôtes",
             "description": "Les Salines, les tortues d'Arlet, la plongée au Diamant — le guide complet du sud de la Martinique depuis nos villas à Sainte-Luce.",
-            "url": `${BASE}/guide`,
-            "image": `${BASE}/photos/amaryllis/05.webp`,
-            "author": { "@id": `${BASE}/#organization` },
+            "url": `${BASE}/guide-hub`,
+            "image": `${BASE}/photos/amaryllis/01.webp`,
             "publisher": { "@id": `${BASE}/#organization` },
+          },
+          {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              { "@type": "ListItem", "position": 1, "name": "Accueil", "item": `${BASE}/` },
+              { "@type": "ListItem", "position": 2, "name": "Guide Martinique", "item": `${BASE}/guide-hub` },
+            ],
+          },
+          {
+            "@type": "ItemList",
+            "name": "Guides de destination — Martinique",
+            "itemListElement": GUIDES_INDEX.flatMap(g => g.items).map((it, i) => ({
+              "@type": "ListItem",
+              "position": i + 1,
+              "name": it.nom,
+              "url": `${BASE}${it.href}`,
+            })),
           },
         ],
       })}} />
@@ -500,7 +672,7 @@ export default function Guide() {
           <span className="b1">Amaryllis</span>
           <span className="b2">Locations d'exception</span>
         </a>
-        <h1>Le Sud Martinique <em>depuis nos villas</em></h1>
+        <div className="pagetitle">Le Sud Martinique <em>depuis nos villas</em></div>
         <a className="explorer-link" href="/explorer">🗺️ Carte →</a>
       </header>
 
@@ -509,28 +681,77 @@ export default function Guide() {
         <div className="bg" />
         <div className="g2-hero-content">
           <div className="pre">— Carnet de voyage signé par vos hôtes</div>
-          <h2>Le sud, <em>depuis votre porte</em></h2>
+          <h1>Le sud, <em>depuis votre porte</em></h1>
           <p className="lede">Les Salines à 15 min, les tortues d'Arlet à 25, le Rocher du Diamant à 20. Tout est proche — et personne ne vous l'expliquera mieux que nous.</p>
+          <a href="/" className="hero-cta" data-cta-reservation>Voir nos 7 villas →</a>
         </div>
       </section>
+
+      {/* ── Bandeau réassurance ── */}
+      <div className="g2-trust">
+        <div className="g2-ctn g2-trust-row">
+          <span><b>4,9/5</b> · 200+ voyageurs</span>
+          <span>Réservation directe <b>sans frais</b> (−14% vs Airbnb)</span>
+          <span>Hôtes locaux · accueil en personne</span>
+          <span>Réponse WhatsApp en quelques minutes</span>
+        </div>
+      </div>
 
       {/* ── Intro ── */}
       <div className="g2-ctn">
         <div className="g2-intro">
-          <div className="pre">Six destinations</div>
-          <h3>Le Sud, <em>tel qu'on l'aime</em></h3>
+          <div className="pre">Nos coups de cœur</div>
+          <h2>Le Sud, <em>tel qu'on l'aime</em></h2>
           <p>
             Notre équipe vit ici. Nous sommes nés à Sainte-Luce, nous y avons grandi, nous y avons vu les saisons passer. Ce guide n'est pas une liste de spots Instagram — c'est ce qu'on raconterait à un ami qui débarque demain matin.
           </p>
         </div>
       </div>
 
-      {/* ── Grille destinations ── */}
+      {/* ── Grille destinations (coups de cœur) ── */}
       <div className="g2-ctn">
         <div className="g2-grid">
           {destinations.map(d => <DestCard key={d.href} d={d} />)}
         </div>
       </div>
+
+      {/* ── Index complet des guides (maillage SEO) ── */}
+      <div className="g2-ctn">
+        <div className="g2-index">
+          <div className="g2-index-head">
+            <div className="pre">Tous nos guides</div>
+            <h2>L'île entière, <em>guide par guide</em></h2>
+            <p>Plus de 20 guides de destination, du sud à la pointe nord. Choisissez par zone ou par envie.</p>
+          </div>
+          {GUIDES_INDEX.map(group => (
+            <div key={group.zone} className="g2-index-group">
+              <h4>{group.label}</h4>
+              <ul>
+                {group.items.map(it => (
+                  <li key={it.href}>
+                    <a href={it.href}><span className="gi-emoji" aria-hidden>{it.emoji}</span>{it.nom}</a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Contenu long-forme (densité SEO + intentions secondaires) ── */}
+      <div className="g2-ctn">
+        <div className="g2-longform">
+          {GUIDE_HUB_SECTIONS.map(s => (
+            <section key={s.h2} className="g2-lf-block">
+              <h2>{s.h2}</h2>
+              <div dangerouslySetInnerHTML={{ __html: s.html }} />
+            </section>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Newsletter / guide PDF ── */}
+      <NewsletterForm />
 
       {/* ── CTA carte interactive ── */}
       <div className="g2-ctn">
@@ -576,7 +797,20 @@ export default function Guide() {
         </div>
       </section>
 
-      {/* ── Séminaires ── */}
+      {/* ── Final CTA (B2C — CTA dominant, avant l'offre B2B séminaires) ── */}
+      <section className="g2-final">
+        <div className="g2-ctn">
+          <div className="pre">Prêt à explorer</div>
+          <h3>Posez vos valises, <em>on s'occupe du reste</em></h3>
+          <p>Choisissez votre villa, on vous envoie notre guide personnalisé du Sud — adresses, horaires, contacts locaux — 48h avant votre arrivée.</p>
+          <div className="actions">
+            <a href="/" className="btn-coral" data-cta-reservation>Voir nos villas →</a>
+            <a href="https://wa.me/33610880772" target="_blank" rel="noopener noreferrer" className="btn-wa">WhatsApp — on en parle</a>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Séminaires (B2B — sous le CTA principal) ── */}
       <section style={{ background: "#f5efe0", padding: "56px 0", borderTop: "1px solid #e8dcc8" }}>
         <div className="g2-ctn">
           <a href="/seminaires" style={{ textDecoration: "none", display: "block" }}>
@@ -613,19 +847,6 @@ export default function Guide() {
               </div>
             </div>
           </a>
-        </div>
-      </section>
-
-      {/* ── Final CTA ── */}
-      <section className="g2-final">
-        <div className="g2-ctn">
-          <div className="pre">Prêt à explorer</div>
-          <h3>Posez vos valises, <em>on s'occupe du reste</em></h3>
-          <p>Choisissez votre villa, on vous envoie notre guide personnalisé du Sud — adresses, horaires, contacts locaux — 48h avant votre arrivée.</p>
-          <div className="actions">
-            <a href="/" className="btn-coral">Voir nos villas →</a>
-            <a href="https://wa.me/33610880772" target="_blank" rel="noopener noreferrer" className="btn-wa">WhatsApp — on en parle</a>
-          </div>
         </div>
       </section>
 

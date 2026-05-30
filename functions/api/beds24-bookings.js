@@ -3,24 +3,35 @@
 // arch-009 : lit le token depuis D1 en priorité (rotation auto via /api/beds24-refresh)
 
 import { getActiveBeds24Token } from "./beds24-refresh.js";
+import { verifyBearer } from "./_adminauth.js";
+import { rateLimit } from "./_ratelimit.js";
 
 const BEDS24_V2_URL = "https://beds24.com/api/v2/bookings";
 const PROP_ID = "158192";
 const PAGE_SIZE = 100; // max raisonnable pour V2
 
-// arch-008 : vérifie Bearer = ADMIN_PASSWORD (même mécanisme que contacts.js)
-function checkAuth(request, env) {
-  const pwd = env.ADMIN_PASSWORD;
-  if (!pwd) return true; // dev local sans secret configuré
-  const auth = request.headers.get("Authorization") || "";
-  return auth.replace("Bearer ", "").trim() === pwd;
+// arch-009 : accepte un token de session signé OU le mot de passe brut (rétro-compat)
+async function checkAuth(request, env) {
+  if (!env.ADMIN_PASSWORD && !env.ADMIN_PWD) return true; // dev local sans secret configuré
+  const { ok } = await verifyBearer(request, env);
+  return ok;
 }
 
 export async function onRequestGet(context) {
   const { request, env } = context;
 
-  if (!checkAuth(request, env)) {
+  if (!(await checkAuth(request, env))) {
     return json({ error: "Non autorisé" }, 401);
+  }
+
+  // arch-012 : rate limiting D1 — garde-fou anti-abus / boucle runaway (60 req/min/IP)
+  const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+  const rl = await rateLimit(env.revenue_manager, { key: `beds24:${ip}`, limit: 60, windowSec: 60 });
+  if (!rl.ok) {
+    return new Response(
+      JSON.stringify({ error: "Trop de requêtes — réessayez dans un instant", retryAfter: rl.retryAfter }),
+      { status: 429, headers: { "Content-Type": "application/json", "Retry-After": String(rl.retryAfter) } }
+    );
   }
 
   // arch-009 : token D1 en priorité, env var en fallback

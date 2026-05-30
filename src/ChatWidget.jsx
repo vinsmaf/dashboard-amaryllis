@@ -125,7 +125,7 @@ export default function ChatWidget() {
                 overflow: "hidden", flexShrink: 0,
                 boxShadow: "0 2px 8px rgba(14,59,58,0.3)",
               }}>
-                <img src="/photos/assistant.png" alt="Assistante Amaryllis"
+                <img src="/photos/assistant.webp" alt="Assistante Amaryllis"
                   style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "52% 10%", transform: "scale(2.0)", transformOrigin: "52% 10%" }} />
               </div>
               <div>
@@ -156,7 +156,7 @@ export default function ChatWidget() {
               }}>
                 {m.role === "assistant" && (
                   <div style={{ width: 26, height: 26, borderRadius: "50%", border: `1px solid ${SAND}`, overflow: "hidden", flexShrink: 0, marginBottom: 2 }}>
-                    <img src="/photos/assistant.png" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "52% 10%", transform: "scale(2.0)", transformOrigin: "52% 10%" }} />
+                    <img src="/photos/assistant.webp" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "52% 10%", transform: "scale(2.0)", transformOrigin: "52% 10%" }} />
                   </div>
                 )}
                 <div style={{
@@ -207,7 +207,7 @@ export default function ChatWidget() {
             {loading && (
               <div style={{ display: "flex", alignItems: "flex-end", gap: 6 }}>
                 <div style={{ width: 26, height: 26, borderRadius: "50%", border: `1px solid ${SAND}`, overflow: "hidden", flexShrink: 0 }}>
-                  <img src="/photos/assistant.png" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "52% 10%", transform: "scale(2.0)", transformOrigin: "52% 10%" }} />
+                  <img src="/photos/assistant.webp" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "52% 10%", transform: "scale(2.0)", transformOrigin: "52% 10%" }} />
                 </div>
                 <div style={{ background: "#fff", border: `1px solid ${SAND}`, borderRadius: "4px 16px 16px 16px", padding: "12px 16px", boxShadow: "0 1px 4px rgba(14,59,58,0.08)" }}>
                   <div style={{ display: "flex", gap: 4, alignItems: "center" }}>

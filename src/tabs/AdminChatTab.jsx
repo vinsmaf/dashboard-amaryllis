@@ -83,7 +83,7 @@ export default function AdminChatTab() {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 18 }}>
         <div style={{ width: 44, height: 44, borderRadius: "50%", overflow: "hidden", border: "2px solid rgba(167,139,250,0.4)", flexShrink: 0 }}>
-          <img src="/photos/assistant.png" alt="Assistant IA" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "52% 10%", transform: "scale(2.0)", transformOrigin: "52% 10%" }} />
+          <img src="/photos/assistant.webp" alt="Assistant IA" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "52% 10%", transform: "scale(2.0)", transformOrigin: "52% 10%" }} />
         </div>
         <div>
           <div style={{ fontSize: 16, fontWeight: 700, color: "#e2e8f0" }}>✨ Assistant IA — Mode Admin</div>
@@ -114,7 +114,7 @@ export default function AdminChatTab() {
           <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", justifyContent: m.role === "user" ? "flex-end" : "flex-start" }}>
             {m.role === "assistant" && (
               <div style={{ width: 28, height: 28, borderRadius: "50%", overflow: "hidden", border: "1px solid rgba(167,139,250,0.3)", flexShrink: 0 }}>
-                <img src="/photos/assistant.png" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "52% 10%", transform: "scale(2.0)", transformOrigin: "52% 10%" }} />
+                <img src="/photos/assistant.webp" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "52% 10%", transform: "scale(2.0)", transformOrigin: "52% 10%" }} />
               </div>
             )}
             <div style={{
@@ -131,7 +131,7 @@ export default function AdminChatTab() {
         {loading && (
           <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
             <div style={{ width: 28, height: 28, borderRadius: "50%", overflow: "hidden", border: "1px solid rgba(167,139,250,0.3)", flexShrink: 0 }}>
-              <img src="/photos/assistant.png" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "52% 10%", transform: "scale(2.0)", transformOrigin: "52% 10%" }} />
+              <img src="/photos/assistant.webp" alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "52% 10%", transform: "scale(2.0)", transformOrigin: "52% 10%" }} />
             </div>
             <div style={{ background: "#1e293b", border: "1px solid #334155", borderRadius: "4px 16px 16px 16px", padding: "12px 16px" }}>
               <div style={{ display: "flex", gap: 5 }}>

@@ -454,7 +454,7 @@ Ces 3 points sont validés par les agents traffic-manager + seo-content-writer.`
 };
 
 // ── Prompt template pour chaque agent ────────────────────────────────────────
-function buildPrompt(agent, history = [], memories = [], recentDrafts = [], brief = "") {
+function buildPrompt(agent, history = [], memories = [], recentDrafts = [], brief = "", liveSection = "", feedbackSection = "", outcomesSection = "") {
   // Sépare l'historique par statut pour donner du contexte à l'agent
   const done    = history.filter(h => h.status === "fait");
   const blocked = history.filter(h => h.status === "bloqué");
@@ -529,9 +529,9 @@ ${brief}
 ═══════════════════════════════════════════════════════════════
 📋 DONNÉES CANONIQUES pour ${bienId.toUpperCase()} (utilise-les) :
 ${bienId === "amaryllis"  ? "  Villa Amaryllis, Sainte-Luce — 8 pers · 3 chambres · 4,94★ · sur les HAUTEURS, vue mer 180°, alizés, PISCINE À DÉBORDEMENT EAU SALÉE 4×7 m (la seule à débordement du portfolio). PAS de jacuzzi." : ""}
-${bienId === "zandoli"    ? "  Zandoli, Sainte-Luce (résidence Amaryllis) — 5 pers · 2 chambres · 4,5★ · cocon tropical, mezzanine, jardin, PISCINE PRIVATIVE AVEC CASCADE (chacune des villas de la résidence a sa propre piscine)" : ""}
+${bienId === "zandoli"    ? "  Zandoli, Sainte-Luce (résidence Amaryllis) — 5 pers · 2 chambres · 4,5★ · cocon tropical, mezzanine, jardin, PISCINE PRIVATIVE AVEC CASCADE (chaque logement de la résidence a sa propre piscine)" : ""}
 ${bienId === "iguana"     ? "  Villa Iguana, Sainte-Luce — 6 pers · 2 chambres · 4,75★ · vue Rocher du Diamant, PISCINE EAU SALÉE (la seule de la résidence, non chlorée)" : ""}
-${bienId === "geko"       ? "  Géko, Sainte-Luce (résidence Amaryllis hauteurs) — 4 pers · 1 chambre · 4,83★ · jardin tropical, PISCINE PRIVATIVE AVEC CASCADE (chacune des villas de la résidence a sa propre piscine)" : ""}
+${bienId === "geko"       ? "  Géko, Sainte-Luce (résidence Amaryllis hauteurs) — 4 pers · 1 chambre · 4,83★ · jardin tropical, PISCINE PRIVATIVE AVEC CASCADE (chaque logement de la résidence a sa propre piscine)" : ""}
 ${bienId === "mabouya"    ? "  Studio Mabouya (résidence Amaryllis hauteurs) — 2 pers · 1 chambre · 4,55★ · JACUZZI privatif terrasse avec VUE mer (pas de piscine, pas pieds dans l'eau)" : ""}
 ${bienId === "schoelcher" ? "  Bellevue, Schœlcher (hauteurs) — 2 pers · 1 chambre · 4,8★ · vue baie Fort-de-France + Trois-Îlets (pas de piscine)" : ""}
 ${bienId === "nogent"     ? "  Appt Nogent-sur-Marne — 2 pers · 1 chambre · jardin + terrasse · bord de Marne, RER A 20min Paris" : ""}
@@ -638,7 +638,7 @@ Retourne UN SEUL JSON :
 TON DOMAINE D'EXPERTISE : ${agent.focus}
 
 FICHIERS CLÉS à analyser : ${agent.files_hint}
-${skillSection}${memorySection}${historySection}
+${skillSection}${liveSection}${memorySection}${feedbackSection}${outcomesSection}${historySection}
 MISSION : Identifie les actions concrètes NOUVELLES à réaliser dans ton domaine. Tiens compte de ce qui a déjà été fait ou identifié pour approfondir ton analyse et aller plus loin.
 
 📋 DONNÉES CANONIQUES PROPRIÉTÉS (NE JAMAIS INVENTER) :
@@ -649,6 +649,11 @@ MISSION : Identifie les actions concrètes NOUVELLES à réaliser dans ton domai
 • Studio Mabouya (Sainte-Luce, résidence hauteurs) : 110€/nuit · 2 pers · 1 chambre · 1 SDB · 4,55★ · jacuzzi privatif VUE mer
 • Bellevue (Schœlcher, hauteurs) : 100€/nuit · 2 pers · 1 chambre · 1 SDB · 4,8★ · vue baie Fort-de-France
 • Appt Nogent-sur-Marne (IDF) : 85€/nuit · 2 pers · 1 chambre · 1 SDB · bord de Marne
+
+🏷️ NOMENCLATURE EXACTE — NE JAMAIS ajouter ni retirer « Villa » :
+  ✅ SONT des villas (et SEULEMENT elles) : « Villa Amaryllis », « Villa Iguana ».
+  ❌ NE SONT PAS des villas → écrire SANS « Villa » : « Zandoli » (logement), « Géko » (cocon), « Studio Mabouya » (studio), « Bellevue » (appartement), « Appartement Nogent ».
+  ❌ INTERDIT ABSOLU : « Villa Zandoli », « Villa Géko », « Villa Mabouya », « Villa Bellevue ».
 
 🌊 GÉOGRAPHIE — TOUS LES BIENS MARTINIQUE SONT SUR LES HAUTEURS, PAS EN BORD DE MER :
   ❌ INTERDIT : "mer entre dans la chambre", "pieds dans l'eau", "à 5m de la plage", "crique privée"
@@ -781,6 +786,263 @@ Règles :
 }
 
 // ── Handler ───────────────────────────────────────────────────────────────────
+// ── LIVE CONTEXT : KPIs réels injectés dans chaque run (lever #1) ───────────
+// Tout vient du même D1 (binding revenue_manager). Chaque requête est isolée
+// dans un try/catch : si une source manque, on dégrade sans casser le run.
+function seasonLabel(d = new Date()) {
+  const m = d.getUTCMonth() + 1, day = d.getUTCDate();
+  // Haute saison Martinique : mi-décembre → mi-avril
+  const high = (m === 12 && day >= 15) || m <= 3 || (m === 4 && day <= 15);
+  const shoulder = m === 4 || m === 5 || m === 11 || (m === 12 && day < 15);
+  return high ? "HAUTE SAISON (forte demande, prix premium)"
+       : shoulder ? "MOYENNE SAISON (demande modérée)"
+       : "BASSE SAISON (creux — privilégier remplissage & directs)";
+}
+
+async function fetchLiveContext(db) {
+  const today = new Date().toISOString().slice(0, 10);
+  const date30 = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+  const ctx = { ts: Math.floor(Date.now() / 1000), date: today, season: seasonLabel() };
+
+  // Leads (contacts)
+  try {
+    const { results } = await db.prepare(
+      "SELECT status, COUNT(*) c FROM contacts GROUP BY status"
+    ).all();
+    ctx.leads = Object.fromEntries((results || []).map(r => [r.status, r.c]));
+    ctx.leadsTotal = (results || []).reduce((s, r) => s + r.c, 0);
+  } catch { ctx.leads = null; }
+
+  // Santé du backlog agents
+  try {
+    const { results } = await db.prepare(
+      "SELECT priority, COUNT(*) c FROM agent_actions WHERE status IN ('backlog','a-planifier','en-cours') GROUP BY priority"
+    ).all();
+    ctx.backlog = Object.fromEntries((results || []).map(r => [r.priority, r.c]));
+  } catch { ctx.backlog = null; }
+
+  // Pricing & signaux marché (30 prochains jours) — par bien
+  try {
+    const { results } = await db.prepare(
+      `SELECT property_id,
+              ROUND(AVG(recommended_price_cents)/100.0) avg_eur,
+              SUM(CASE WHEN premium_opportunity=1 THEN 1 ELSE 0 END) premium,
+              SUM(CASE WHEN vacancy_risk_score>=70 THEN 1 ELSE 0 END) risk
+       FROM rm_recommendations
+       WHERE date >= ? AND date <= ?
+       GROUP BY property_id`
+    ).bind(today, date30).all();
+    ctx.pricing = results || [];
+  } catch { ctx.pricing = null; }
+
+  return ctx;
+}
+
+function readSnapshot(memoriesSystem) {
+  try {
+    const row = (memoriesSystem || []).find(m => m.key === "kpi_snapshot");
+    return row ? JSON.parse(row.value) : null;
+  } catch { return null; }
+}
+
+// Rendu de la section "DONNÉES LIVE + ÉVOLUTION" (identique pour tous les agents)
+function renderLiveSection(ctx, prev) {
+  if (!ctx) return "";
+  const lines = [`📊 DONNÉES LIVE (${ctx.date}) — ${ctx.season}`];
+
+  if (ctx.leads) {
+    const d = prev?.leadsTotal != null ? ` (était ${prev.leadsTotal} au dernier run)` : "";
+    lines.push(`• Leads : ${ctx.leadsTotal} au total${d} — ${Object.entries(ctx.leads).map(([k, v]) => `${v} ${k}`).join(", ")}`);
+  }
+  if (ctx.backlog) {
+    const open = Object.values(ctx.backlog).reduce((s, v) => s + v, 0);
+    lines.push(`• Backlog agents : ${open} actions ouvertes (${ctx.backlog.critique || 0} critiques, ${ctx.backlog.haute || 0} hautes)`);
+  }
+  if (ctx.pricing?.length) {
+    const premium = ctx.pricing.reduce((s, p) => s + (p.premium || 0), 0);
+    const risk = ctx.pricing.reduce((s, p) => s + (p.risk || 0), 0);
+    lines.push(`• Pricing 30j : ${premium} jours en opportunité premium, ${risk} jours à risque de vacance sur l'ensemble du portefeuille`);
+    lines.push(`  Prix moyen recommandé/bien : ${ctx.pricing.map(p => `${p.property_id} ${p.avg_eur || "?"}€`).join(" · ")}`);
+  }
+  if (lines.length === 1) return ""; // aucune donnée → pas de section
+  return `\n${lines.join("\n")}\nUtilise ces chiffres réels pour prioriser : agis là où l'impact est mesurable.\n`;
+}
+
+// Section feedback par agent (lever #2) : ce qu'il a accompli depuis son dernier passage
+function renderFeedbackSection(completedSince, lastRunTs) {
+  if (!lastRunTs) return "";
+  const when = new Date(lastRunTs * 1000).toISOString().slice(0, 10);
+  if (completedSince > 0) {
+    return `\n🔄 DEPUIS TON DERNIER RUN (${when}) : ${completedSince} de tes actions sont passées en "fait". Capitalise dessus et propose la suite logique, pas un redémarrage.\n`;
+  }
+  return `\n🔄 DEPUIS TON DERNIER RUN (${when}) : aucune de tes actions n'a encore été marquée "fait". Privilégie des actions à fort levier et faible effort pour débloquer.\n`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ATTRIBUTION CAUSALE (corrélationnelle) — ferme la boucle d'apprentissage
+// Série temporelle kpi_history capturée chaque run → on compare l'état des KPIs
+// au moment où une action est passée "fait" vs ~14j après. Honnête : c'est de
+// la corrélation, pas de la causalité (confondants : saison, pubs…).
+// ═══════════════════════════════════════════════════════════════════════════
+const ATTR_WINDOW_DAYS = 14;
+// Métrique principale par agent : sessions (visibilité/trafic), leads (conversion), revenue (CA Sheets)
+const AGENT_PRIMARY_METRIC = {
+  "traffic-manager": "sessions", "seo-content-writer": "sessions", "seo-local": "sessions",
+  "chef-produit-web": "sessions", "webdesigner": "sessions", "developpeur-multimedia": "sessions",
+  "photographe-da": "sessions", "community-manager": "sessions",
+  "crm-manager": "leads", "responsable-service-client": "leads",
+  "revenue-manager": "revenue", "commercial-publicite": "revenue",
+  "consultant-ebusiness": "revenue", "data-analyst": "revenue",
+};
+
+async function captureKpiHistory(db, env, request) {
+  await db.prepare(`CREATE TABLE IF NOT EXISTS kpi_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    captured_at INTEGER NOT NULL,
+    scope TEXT NOT NULL,
+    value REAL NOT NULL
+  )`).run().catch(() => {});
+  const now = Math.floor(Date.now() / 1000);
+  const rows = [];
+  // Leads (D1)
+  try {
+    const r = await db.prepare("SELECT COUNT(*) c FROM contacts").first();
+    rows.push(["leads", r?.c || 0]);
+  } catch {}
+  // Trafic GA4 par fiche bien (sous-requête vers /api/analytics, même origine)
+  try {
+    const aurl = new URL("/api/analytics", request.url).toString();
+    const res = await fetch(aurl, { headers: { "User-Agent": "Mozilla/5.0" }, cf: { cacheTtl: 300 } });
+    if (res.ok) {
+      const data = await res.json();
+      const pages = data.bienConversions || data.pages || [];
+      let total = 0;
+      for (const p of pages) {
+        const s = p.sessions || 0;
+        total += s;
+        if (p.pagePath) rows.push([`page:${p.pagePath}`, s]);
+      }
+      rows.push(["sessions_total", total]);
+    }
+  } catch {}
+  // Revenu par bien (Google Sheets via Apps Script) — CA YTD cumulé.
+  // delta(après - avant) sur la fenêtre = CA réellement généré pendant la période.
+  let revDiag = env.APPS_SCRIPT_URL ? "no-data" : "no-url";
+  try {
+    if (env.APPS_SCRIPT_URL) {
+      const res = await fetch(env.APPS_SCRIPT_URL, { redirect: "follow" });
+      const text = await res.text();
+      if (text.trimStart().startsWith("<")) {
+        revDiag = `html(${res.status})`;
+      } else {
+        const data = JSON.parse(text);
+        let totalCA = 0;
+        for (const b of (data.biens || [])) {
+          const ytd = (b.revenus || []).reduce((s, v) => s + (Number(v) || 0), 0);
+          totalCA += ytd;
+          if (b.id) rows.push([`revenue:${b.id}`, ytd]);
+        }
+        rows.push(["revenue_total", totalCA]);
+        revDiag = `ok:${(data.biens || []).length}biens:${Math.round(totalCA)}€`;
+      }
+    }
+  } catch (e) { revDiag = `err:${e.name}:${(e.message || "").slice(0, 60)}`; }
+  for (const [scope, value] of rows) {
+    await db.prepare("INSERT INTO kpi_history (captured_at, scope, value) VALUES (?,?,?)")
+      .bind(now, scope, value).run().catch(() => {});
+  }
+  return { n: rows.length, revDiag };
+}
+
+async function kpiAt(db, scope, ts) {
+  // Valeur la plus proche AVANT ou le jour même de la complétion (+1j de marge)
+  try {
+    const r = await db.prepare(
+      "SELECT value FROM kpi_history WHERE scope=? AND captured_at<=? ORDER BY captured_at DESC LIMIT 1"
+    ).bind(scope, ts + 86400).first();
+    return r ? r.value : null;
+  } catch { return null; }
+}
+async function kpiLatest(db, scope) {
+  try {
+    const r = await db.prepare(
+      "SELECT value FROM kpi_history WHERE scope=? ORDER BY captured_at DESC LIMIT 1"
+    ).bind(scope).first();
+    return r ? r.value : null;
+  } catch { return null; }
+}
+
+async function measureDueOutcomes(db) {
+  const now = Math.floor(Date.now() / 1000);
+  const cutoff = now - ATTR_WINDOW_DAYS * 86400;
+  let due = [];
+  try {
+    const { results } = await db.prepare(
+      "SELECT action_id, agent, completed_at FROM action_outcomes WHERE measured_at IS NULL AND completed_at <= ?"
+    ).bind(cutoff).all();
+    due = results || [];
+  } catch { return 0; }
+
+  let measured = 0;
+  for (const o of due) {
+    const leadsB = await kpiAt(db, "leads", o.completed_at);
+    const leadsA = await kpiLatest(db, "leads");
+    const sessB = await kpiAt(db, "sessions_total", o.completed_at);
+    const sessA = await kpiLatest(db, "sessions_total");
+    const revB = await kpiAt(db, "revenue_total", o.completed_at);
+    const revA = await kpiLatest(db, "revenue_total");
+    const metric = AGENT_PRIMARY_METRIC[o.agent] || "leads";
+
+    let label;
+    if (metric === "revenue") {
+      // CA YTD cumulé : le delta absolu = CA généré pendant la fenêtre.
+      if (revB != null && revA != null) {
+        const d = Math.round(revA - revB);
+        const arrow = d > 0 ? "↑" : d < 0 ? "↓" : "→";
+        label = `${arrow} ${d >= 0 ? "+" : ""}${d.toLocaleString("fr-FR")}€ de CA (14j)`;
+      } else {
+        label = "données insuffisantes (historique trop court)";
+      }
+    } else {
+      const [b, a] = metric === "sessions" ? [sessB, sessA] : [leadsB, leadsA];
+      const noun = metric === "sessions" ? "trafic fiches" : "leads";
+      if (b != null && a != null && b > 0) {
+        const pct = Math.round(((a - b) / b) * 100);
+        const arrow = pct > 3 ? "↑" : pct < -3 ? "↓" : "→";
+        label = `${arrow} ${pct >= 0 ? "+" : ""}${pct}% ${noun} (14j)`;
+      } else if (b != null && a != null) {
+        label = `${noun} ${b}→${a} (14j)`;
+      } else {
+        label = "données insuffisantes (historique trop court)";
+      }
+    }
+    const detail = JSON.stringify({ leads: [leadsB, leadsA], sessions: [sessB, sessA], revenue: [revB, revA], metric });
+    await db.prepare(
+      "UPDATE action_outcomes SET measured_at=?, impact_label=?, detail_json=? WHERE action_id=?"
+    ).bind(now, label, detail, o.action_id).run().catch(() => {});
+    measured++;
+  }
+  return measured;
+}
+
+async function fetchAgentOutcomes(db, agentId) {
+  try {
+    const { results } = await db.prepare(`
+      SELECT o.action_id, o.impact_label, a.action
+      FROM action_outcomes o LEFT JOIN agent_actions a ON a.id = o.action_id
+      WHERE o.agent = ? AND o.measured_at IS NOT NULL
+      ORDER BY o.measured_at DESC LIMIT 5
+    `).bind(agentId).all();
+    return results || [];
+  } catch { return []; }
+}
+
+function renderOutcomesSection(outcomes) {
+  if (!outcomes?.length) return "";
+  const lines = outcomes.map(o => `  • "${(o.action || o.action_id).slice(0, 70)}" → ${o.impact_label}`);
+  return `\n📈 IMPACT MESURÉ DE TES ACTIONS PASSÉES (corrélation, ~14j après complétion) :\n${lines.join("\n")}\nApprends-en : reproduis ce qui corrèle avec une hausse, abandonne ce qui ne bouge rien.\n`;
+}
+
 export async function onRequest(context) {
   const { request, env } = context;
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
@@ -804,6 +1066,23 @@ export async function onRequest(context) {
 
   const now = Math.floor(Date.now() / 1000);
 
+  // ── Contexte LIVE partagé (lever #1) : 1 seul fetch pour tout le run ───────
+  const liveCtx = await fetchLiveContext(db);
+  // Snapshot global précédent (lever #2 : deltas d'évolution)
+  let prevSnapshot = null;
+  try {
+    const { results: sysMem } = await db.prepare(
+      "SELECT key, value FROM agent_memory WHERE agent = '_system'"
+    ).all();
+    prevSnapshot = readSnapshot(sysMem);
+  } catch {}
+  const liveSection = renderLiveSection(liveCtx, prevSnapshot);
+
+  // ── Attribution causale : capture la série KPI + mesure les outcomes mûrs ──
+  const kpiResult = await captureKpiHistory(db, env, request).catch(() => ({ n: 0, revDiag: "throw" }));
+  const kpiCaptured = kpiResult.n;
+  const outcomesMeasured = await measureDueOutcomes(db).catch(() => 0);
+
   // ── Fonction d'appel Groq pour un agent donné ─────────────────────────────
   async function runAgent(agent) {
     try {
@@ -818,6 +1097,23 @@ export async function onRequest(context) {
         memories = mems || [];
       } catch {}
 
+      // Feedback (lever #2) : actions passées en "fait" depuis le dernier run de cet agent
+      let lastRunTs = null, completedSince = 0;
+      try {
+        const lr = memories.find(m => m.key === "last_run_ts");
+        lastRunTs = lr ? parseInt(lr.value, 10) : null;
+        if (lastRunTs) {
+          const row = await db.prepare(
+            "SELECT COUNT(*) c FROM agent_actions WHERE agent = ? AND status = 'fait' AND updated_at >= ?"
+          ).bind(agent.id, lastRunTs).first();
+          completedSince = row?.c || 0;
+        }
+      } catch {}
+      const feedbackSection = renderFeedbackSection(completedSince, lastRunTs);
+
+      // Attribution causale : impact mesuré des actions passées de cet agent
+      const outcomesSection = renderOutcomesSection(await fetchAgentOutcomes(db, agent.id));
+
       // ── Appel LLM multi-provider avec cascade automatique ──────────────
       const tier      = AGENT_TIERS[agent.id] || "medium";
       const preferred = AGENT_PREFERRED_PROVIDER[agent.id] || "groq";
@@ -827,7 +1123,8 @@ export async function onRequest(context) {
         tier,
         max_tokens: 2048,
         temperature: 0.3,
-        messages: [{ role: "user", content: buildPrompt(agent, history, memories, recentDrafts, body.brief || "") }],
+        logSource: `agent:${agent.id}`, // prompt-004 — journalise la sortie en D1
+        messages: [{ role: "user", content: buildPrompt(agent, history, memories, recentDrafts, body.brief || "", liveSection, feedbackSection, outcomesSection) }],
       });
 
       if (!llmResult.ok) {
@@ -1005,8 +1302,10 @@ Si verdict=reject : "improved_blocks": null`;
               const expectedPhoto = photoMatch[1];
               // Force l'imageUrl (le serveur sait mieux que le LLM)
               draft.payload.imageUrl = expectedPhoto;
-              // Force la channels par défaut
-              if (!draft.payload.channels?.length) draft.payload.channels = ["ig", "fb"];
+              // Force les 2 canaux : la stratégie éditoriale cross-poste toujours
+              // FB + IG (entrées calendrier = "both"). Le LLM émet parfois ["ig"]
+              // seul, ce qui laissait Facebook de côté → on garantit les deux.
+              draft.payload.channels = ["ig", "fb"];
               // Vérifie que le caption mentionne bien le bien attendu
               const cap = (draft.payload.caption || "").toLowerCase();
               const BIEN_NAMES = {
@@ -1143,7 +1442,13 @@ Si verdict=reject : "improved_blocks": null`;
         `).bind(agent.id, "model", activeModel).run().catch(() => {});
       }
 
-      return { agent: agent.id, model: activeModel, ok: true, inserted, updated, skipped, drafts: draftsCreated, actions: actions.length, context_size: history.length };
+      // Mémoire enrichie (lever #3) : horodatage du run pour le feedback du prochain passage
+      await db.prepare(`
+        INSERT INTO agent_memory (agent, key, value) VALUES (?,?,?)
+        ON CONFLICT(agent, key) DO UPDATE SET value=excluded.value, created_at=unixepoch()
+      `).bind(agent.id, "last_run_ts", String(now)).run().catch(() => {});
+
+      return { agent: agent.id, model: activeModel, ok: true, inserted, updated, skipped, drafts: draftsCreated, actions: actions.length, context_size: history.length, completed_since: completedSince };
     } catch (e) {
       return {
         agent: agent.id,
@@ -1168,7 +1473,19 @@ Si verdict=reject : "improved_blocks": null`;
     }
   }
 
+  // Snapshot global du contexte live (lever #2) : alimente les deltas du prochain run
+  try {
+    await db.prepare(`
+      INSERT INTO agent_memory (agent, key, value) VALUES ('_system','kpi_snapshot',?)
+      ON CONFLICT(agent, key) DO UPDATE SET value=excluded.value, created_at=unixepoch()
+    `).bind(JSON.stringify({
+      ts: liveCtx.ts, date: liveCtx.date,
+      leadsTotal: liveCtx.leadsTotal ?? null,
+      backlog: liveCtx.backlog ?? null,
+    })).run();
+  } catch {}
+
   const ok = results.filter(r => r.ok).length;
   const errors = results.filter(r => r.error).length;
-  return json({ ok: true, agents_run: targetAgents.length, ok_count: ok, error_count: errors, results });
+  return json({ ok: true, agents_run: targetAgents.length, ok_count: ok, error_count: errors, live: !!liveSection, kpi_captured: kpiCaptured, rev_diag: kpiResult.revDiag, outcomes_measured: outcomesMeasured, results });
 }

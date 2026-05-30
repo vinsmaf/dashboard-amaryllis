@@ -12,6 +12,7 @@
 //                   chaque jour à 10h UTC
 
 import { getActiveBeds24Token } from "./beds24-refresh.js";
+import { sendGuestEmail } from "./send-guest-email.js";
 
 const BEDS24_V2_URL = "https://beds24.com/api/v2/bookings";
 const PROP_ID       = "158192"; // Appartement Nogent — seul bien Beds24
@@ -24,8 +25,12 @@ const GOOGLE_REVIEW = {
   geko:       "https://search.google.com/local/writereview?placeid=ChIJc2hlO7chQIwRQaczraCwlNs",
   mabouya:    "https://search.google.com/local/writereview?placeid=ChIJc2hlO7chQIwRQaczraCwlNs",
   iguana:     "https://search.google.com/local/writereview?placeid=ChIJc2hlO7chQIwRQaczraCwlNs",
-  schoelcher: "https://search.google.com/local/writereview?placeid=ChIJc2hlO7chQIwRQaczraCwlNs",
-  nogent:     "https://search.google.com/local/writereview?placeid=ChIJWbeKdLghQIwRCppz2lJ39Jk",
+  // Schœlcher & Nogent : pas (encore) de fiche Google Business dédiée.
+  // On évite d'envoyer ces voyageurs noter une fiche d'une autre localité (trompeur + filtré
+  // par Google). Fallback page avis interne. ➜ À remplacer par le writereview de leur Place ID
+  // dès que les fiches GBP Bellevue/Nogent sont créées et validées.
+  schoelcher: "https://villamaryllis.com/avis",
+  nogent:     "https://villamaryllis.com/avis",
   default:    "https://search.google.com/local/writereview?placeid=ChIJWbeKdLghQIwRCppz2lJ39Jk",
 };
 
@@ -136,6 +141,46 @@ function buildHtml({ firstName, bienNom, bienId, arrival, departure, reviewUrl, 
 }
 
 // ── Handler principal ────────────────────────────────────────────────────────
+// crm — post-séjour J+1 aux RÉSERVATIONS DIRECTES (D1 direct_bookings),
+// avec le nouveau template on-brand (2 boutons avis Google + Airbnb).
+async function sendDirectPostStay(env, origin) {
+  const db = env.revenue_manager;
+  if (!db) return { sent: 0, failed: 0, candidats: 0 };
+  const y = new Date(); y.setUTCDate(y.getUTCDate() - 1);
+  const yesterday = y.toISOString().slice(0, 10);
+  try {
+    await db.prepare(`CREATE TABLE IF NOT EXISTS direct_bookings (
+      payment_intent_id TEXT PRIMARY KEY, bien_nom TEXT, voyageur TEXT,
+      total INTEGER, depot INTEGER, checkin TEXT, checkout TEXT,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+      email TEXT, prenom TEXT, bien_id TEXT,
+      prearrivee_sent INTEGER DEFAULT 0, poststay_sent INTEGER DEFAULT 0)`).run();
+    const { results } = await db.prepare(
+      "SELECT rowid AS rid, * FROM direct_bookings WHERE checkout = ? AND poststay_sent = 0 AND email IS NOT NULL AND email != ''"
+    ).bind(yesterday).all();
+    let sent = 0, failed = 0;
+    for (const b of results || []) {
+      const r = await sendGuestEmail(env, origin, {
+        template: "post-sejour",
+        to: b.email,
+        subject: `Merci pour votre séjour à ${b.bien_nom || "Amaryllis"}`,
+        vars: {
+          prenom: b.prenom || "", bien_nom: b.bien_nom || "votre logement",
+          checkin: b.checkin || "", checkout: b.checkout || "",
+          lien_avis_google: GOOGLE_REVIEW[b.bien_id] || GOOGLE_REVIEW.default,
+          lien_avis_airbnb: "https://villamaryllis.com/avis",
+        },
+      });
+      if (r.ok) { await db.prepare("UPDATE direct_bookings SET poststay_sent = 1 WHERE rowid = ?").bind(b.rid).run(); sent++; }
+      else { console.error(`[poststay-direct] échec ${b.email}: ${r.error}`); failed++; }
+    }
+    return { sent, failed, candidats: (results || []).length };
+  } catch (e) {
+    console.error("[poststay-direct]", e.message);
+    return { sent: 0, failed: 0, candidats: 0, error: e.message };
+  }
+}
+
 export async function onRequestGet(context) {
   const { env, request } = context;
 
@@ -145,6 +190,9 @@ export async function onRequestGet(context) {
   if (env.POSTSTAY_SECRET && secret !== env.POSTSTAY_SECRET) {
     return json({ error: "Non autorisé" }, 401);
   }
+
+  // ── Réservations DIRECTES (D1) — nouveau template on-brand ──
+  const directResult = await sendDirectPostStay(env, url.origin);
 
   const resendKey = env.RESEND_API_KEY;
   if (!resendKey) {
@@ -192,7 +240,7 @@ export async function onRequestGet(context) {
   }
 
   if (departures.length === 0) {
-    return json({ ok: true, sent: 0, skipped: 0, reason: `Aucun départ le ${targetDep} avec email`, targetDep, dryRun });
+    return json({ ok: true, sent: 0, skipped: 0, reason: `Aucun départ Beds24 le ${targetDep} avec email`, targetDep, dryRun, direct: directResult });
   }
 
   // ── Envoi emails ──────────────────────────────────────────────────────────
@@ -231,7 +279,7 @@ export async function onRequestGet(context) {
   const sent    = results.filter(r => r.status === "sent").length;
   const errors  = results.filter(r => r.status.startsWith("error")).length;
 
-  return json({ ok: true, targetDep, dryRun, sent, errors, skipped: departures.length - sent - errors, results });
+  return json({ ok: true, targetDep, dryRun, sent, errors, skipped: departures.length - sent - errors, results, direct: directResult });
 }
 
 export async function onRequest(context) {

@@ -10,6 +10,7 @@
 
 import fs   from "node:fs";
 import path from "node:path";
+import { GUIDES_POI } from "../src/data/guidesPoi.js";
 
 const BASE    = "https://villamaryllis.com";
 const DIST    = path.resolve("dist");
@@ -114,10 +115,10 @@ const FAQS_PAR_BIEN = {
     { q: "Où se trouve la Villa Amaryllis ?", a: "Sur les hauteurs de Sainte-Luce, sud de la Martinique. À 20 minutes des plages des Salines et de Sainte-Anne, à 35 minutes de l'aéroport, dans la résidence Amaryllis avec vue Caraïbes 180°." },
   ],
   zandoli: [
-    { q: "Quel est le prix de la villa Zandoli en Martinique ?", a: "Zandoli se loue à partir de 220€/nuit en direct sur villamaryllis.com — sans frais Airbnb." },
+    { q: "Quel est le prix de Zandoli en Martinique ?", a: "Zandoli se loue à partir de 220€/nuit en direct sur villamaryllis.com — sans frais Airbnb." },
     { q: "Zandoli a-t-elle une piscine privée ?", a: "Oui — Zandoli dispose de sa propre piscine privative avec cascade, située dans la résidence Amaryllis à Sainte-Luce." },
     { q: "Combien de personnes peut accueillir Zandoli ?", a: "Zandoli accueille jusqu'à 5 personnes dans 2 chambres + mezzanine, avec jardin tropical et vue mer." },
-    { q: "Où se trouve la villa Zandoli ?", a: "Sur les hauteurs de Sainte-Luce, dans la résidence Amaryllis, à 5-7 minutes des plages du sud Martinique." },
+    { q: "Où se trouve Zandoli ?", a: "Sur les hauteurs de Sainte-Luce, dans la résidence Amaryllis, à 5-7 minutes des plages du sud Martinique." },
     { q: "Zandoli accepte-t-elle les animaux ?", a: "Oui, Zandoli accepte les animaux (supplément 40€/séjour, 2 maximum). Mentionnez-le à la réservation." },
   ],
   iguana: [
@@ -128,10 +129,10 @@ const FAQS_PAR_BIEN = {
     { q: "Où se trouve Villa Iguana ?", a: "Dans la résidence Amaryllis à Sainte-Luce, sud Martinique. Vue panoramique sur le Rocher du Diamant et la mer Caraïbes." },
   ],
   geko: [
-    { q: "Quel est le prix de la villa Géko en Martinique ?", a: "Géko se loue à partir de 150€/nuit en réservation directe sur villamaryllis.com — sans frais Airbnb." },
+    { q: "Quel est le prix de Géko en Martinique ?", a: "Géko se loue à partir de 150€/nuit en réservation directe sur villamaryllis.com — sans frais Airbnb." },
     { q: "Géko a-t-elle une piscine ?", a: "Oui — Géko dispose de sa propre piscine privative avec cascade, dans la résidence Amaryllis à Sainte-Luce sur les hauteurs." },
     { q: "Combien de personnes peut accueillir Géko ?", a: "Géko accueille jusqu'à 4 personnes — idéal pour les couples ou petites familles. Climatisation, cuisine extérieure, barbecue." },
-    { q: "Où se trouve la villa Géko ?", a: "Sur les hauteurs de Sainte-Luce, dans la résidence Amaryllis, à 7 minutes des plages du sud." },
+    { q: "Où se trouve Géko ?", a: "Sur les hauteurs de Sainte-Luce, dans la résidence Amaryllis, à 7 minutes des plages du sud." },
     { q: "Quelle est la différence entre Géko et Zandoli ?", a: "Zandoli a 2 chambres + mezzanine pour 5 personnes (220€/nuit). Géko est un cocon 4 personnes (150€/nuit). Les deux ont leur propre piscine privative avec cascade." },
   ],
   mabouya: [
@@ -163,8 +164,8 @@ const ROUTES = [
   /* ── Propriétés ── */
   {
     path: "/amaryllis",
-    title: "Villa Amaryllis — Location villa Martinique piscine débordement vue mer | Amaryllis",
-    desc:  "Réservez directement la Villa Amaryllis à Sainte-Luce, Martinique. Piscine à débordement eau salée 4×7 m, vue Caraïbes 180°, terrasse 100 m², 3 chambres, 8 personnes. À partir de 280€/nuit sans frais Airbnb.",
+    title: "Villa Amaryllis Sainte-Luce — piscine vue mer Martinique",
+    desc:  "Villa Amaryllis à Sainte-Luce : piscine à débordement, vue Caraïbes 180°, 3 chambres, 8 personnes. Dès 280€/nuit en direct, sans frais Airbnb.",
     image: `${BASE}/photos/amaryllis/01.webp`,
     lcpPreload: true,
     jsonld: buildVacationRentalLd({ id: "amaryllis", nom: "Villa Amaryllis", desc: "Villa Amaryllis à Sainte-Luce, Martinique. Piscine à débordement eau salée 4×7 m, vue Caraïbes 180° depuis les hauteurs. 3 chambres, 8 personnes.", prix: 280, capacite: 8, chambres: 3, rating: 4.94, reviews: 89, coords: { lat: 14.4728, lng: -60.9204 }, photos: ["/photos/amaryllis/01.webp","/photos/amaryllis/02.webp","/photos/amaryllis/03.webp","/photos/amaryllis/04.webp","/photos/amaryllis/05.webp","/photos/amaryllis/06.webp","/photos/amaryllis/07.webp","/photos/amaryllis/08.webp"] }),
@@ -172,48 +173,48 @@ const ROUTES = [
   },
   {
     path: "/zandoli",
-    title: "Zandoli — Location villa Martinique piscine cascade | Résidence Amaryllis",
-    desc:  "Villa Zandoli à Sainte-Luce, Martinique. Piscine privative avec cascade, mezzanine, jardin tropical. 5 personnes. Réservation directe.",
+    title: "Zandoli Sainte-Luce — logement piscine cascade Martinique",
+    desc:  "Zandoli à Sainte-Luce : piscine privative à cascade, mezzanine, jardin tropical. 5 personnes. Dès 220€/nuit en réservation directe.",
     image: `${BASE}/photos/zandoli/01.webp`,
-    jsonld: buildVacationRentalLd({ id: "zandoli", nom: "Zandoli", desc: "Villa Zandoli à Sainte-Luce, Martinique. Piscine privative avec cascade, mezzanine, jardin tropical. 5 personnes.", prix: 220, capacite: 5, chambres: 2, rating: 4.5, reviews: 34, coords: { lat: 14.4730, lng: -60.9196 }, photos: ["/photos/zandoli/01.webp","/photos/zandoli/02.webp","/photos/zandoli/03.webp","/photos/zandoli/04.webp"] }),
+    jsonld: buildVacationRentalLd({ id: "zandoli", nom: "Zandoli", desc: "Zandoli à Sainte-Luce, Martinique. Piscine privative avec cascade, mezzanine, jardin tropical. 5 personnes.", prix: 220, capacite: 5, chambres: 2, rating: 4.5, reviews: 34, coords: { lat: 14.4730, lng: -60.9196 }, photos: ["/photos/zandoli/01.webp","/photos/zandoli/02.webp","/photos/zandoli/03.webp","/photos/zandoli/04.webp"] }),
     faqld: buildFAQLd(FAQS_PAR_BIEN.zandoli),
   },
   {
     path: "/iguana",
-    title: "Villa Iguana — Location Martinique vue Rocher du Diamant | Résidence Amaryllis",
-    desc:  "Villa Iguana à Sainte-Luce. Piscine eau salée, vue panoramique sur le Rocher du Diamant. 6 personnes. Réservation directe propriétaire.",
+    title: "Villa Iguana Martinique — vue Rocher du Diamant",
+    desc:  "Villa Iguana à Sainte-Luce : piscine eau salée, vue panoramique sur le Rocher du Diamant. 6 personnes. Réservation directe propriétaire.",
     image: `${BASE}/photos/iguana/01.webp`,
     jsonld: buildVacationRentalLd({ id: "iguana", nom: "Villa Iguana", desc: "Villa Iguana à Sainte-Luce, Martinique. Piscine eau salée (non chlorée, unique de la résidence), vue panoramique sur le Rocher du Diamant. 6 personnes. Location longue durée.", capacite: 6, chambres: 2, rating: 4.75, reviews: 42, coords: { lat: 14.4725, lng: -60.9192 }, photos: ["/photos/iguana/01.webp","/photos/iguana/02.webp","/photos/iguana/03.webp","/photos/iguana/04.webp"], bookable: false }),
     faqld: buildFAQLd(FAQS_PAR_BIEN.iguana),
   },
   {
     path: "/geko",
-    title: "Géko — Location villa Martinique piscine cascade Sainte-Luce | Résidence Amaryllis",
-    desc:  "Cocon Géko à Sainte-Luce, Martinique. Piscine privative avec cascade, jardin tropical. 4 personnes. À partir de 150€/nuit. Réservation directe.",
+    title: "Géko Sainte-Luce — cocon piscine cascade Martinique",
+    desc:  "Cocon Géko à Sainte-Luce : piscine privative à cascade, jardin tropical, sur les hauteurs. 4 personnes. Dès 150€/nuit en réservation directe.",
     image: `${BASE}/photos/geko/01.webp`,
     jsonld: buildVacationRentalLd({ id: "geko", nom: "Géko", desc: "Cocon Géko à Sainte-Luce, Martinique. Piscine privative avec cascade, jardin tropical, sur les hauteurs. 4 personnes.", prix: 150, capacite: 4, chambres: 1, rating: 4.83, reviews: 28, coords: { lat: 14.4732, lng: -60.9196 }, photos: ["/photos/geko/01.webp","/photos/geko/02.webp","/photos/geko/03.webp","/photos/geko/04.webp"] }),
     faqld: buildFAQLd(FAQS_PAR_BIEN.geko),
   },
   {
     path: "/mabouya",
-    title: "Studio Mabouya — Jacuzzi privatif & vue mer Martinique | Escapade romantique",
-    desc:  "Le seul studio de la résidence avec jacuzzi privatif vue mer à Sainte-Luce, Martinique. Exclusivité totale pour 2 personnes. Jardin tropical, terrasse privée, plages à 5 min. Réservation directe dès 110€/nuit.",
+    title: "Studio Mabouya Martinique — jacuzzi privatif vue mer",
+    desc:  "Studio Mabouya à Sainte-Luce : seul jacuzzi privatif vue mer de la résidence. Idéal couple, terrasse privée, plages à 5 min. Dès 110€/nuit.",
     image: `${BASE}/photos/mabouya/01.webp`,
     jsonld: buildVacationRentalLd({ id: "mabouya", nom: "Studio Mabouya", desc: "Seul studio avec jacuzzi privatif vue mer de la résidence Amaryllis à Sainte-Luce, Martinique. Terrasse privée, jardin tropical fleuri. Idéal couple, escapade romantique.", prix: 110, capacite: 2, chambres: 1, rating: 4.55, reviews: 31, coords: { lat: 14.4732, lng: -60.9196 }, photos: ["/photos/mabouya/01.webp","/photos/mabouya/02.webp","/photos/mabouya/03.webp","/photos/mabouya/04.webp"] }),
     faqld: buildFAQLd(FAQS_PAR_BIEN.mabouya),
   },
   {
     path: "/schoelcher",
-    title: "Bellevue — Location appartement Schœlcher Martinique vue Fort-de-France",
-    desc:  "Appartement Bellevue à Schœlcher, Martinique. Vue sur la baie de Fort-de-France, 4 personnes. À 10 min du centre-ville. Réservation directe.",
+    title: "Bellevue Schœlcher — appart vue baie Fort-de-France",
+    desc:  "Appartement Bellevue à Schœlcher : vue sur la baie de Fort-de-France, 2 personnes, à 10 min du centre. Réservation directe dès 100€/nuit.",
     image: `${BASE}/photos/schoelcher/01.webp`,
     jsonld: buildVacationRentalLd({ id: "schoelcher", nom: "Bellevue Schoelcher", desc: "Appartement Bellevue à Schœlcher, Martinique. Vue sur la baie de Fort-de-France et Trois-Îlets depuis les hauteurs. 2 personnes.", prix: 100, capacite: 2, chambres: 1, rating: 4.8, reviews: 18, coords: { lat: 14.6167, lng: -61.1333 }, photos: ["/photos/schoelcher/01.webp","/photos/schoelcher/02.webp","/photos/schoelcher/03.webp","/photos/schoelcher/04.webp"], isMartinique: true }),
     faqld: buildFAQLd(FAQS_PAR_BIEN.schoelcher),
   },
   {
     path: "/nogent",
-    title: "Appartement Nogent-sur-Marne — Bord de Marne, Paris 20 min | 85€/nuit | Amaryllis",
-    desc:  "Appartement de standing à Nogent-sur-Marne — 85 €/nuit. Jardin privatif, home cinéma, bord de Marne. RER A : Paris en 20 min. Réservation directe sans commission Airbnb.",
+    title: "Appart Nogent-sur-Marne — bord de Marne, Paris 20 min",
+    desc:  "Appartement de standing à Nogent-sur-Marne : jardin privatif, home cinéma, bord de Marne. RER A, Paris en 20 min. Dès 85€/nuit en direct.",
     image: `${BASE}/photos/nogent/01.webp`,
     jsonld: buildVacationRentalLd({ id: "nogent", nom: "Appartement Nogent-sur-Marne", desc: "Appartement de standing à Nogent-sur-Marne. Jardin privatif, home cinéma, bord de Marne. RER A : Paris en 20 min.", prix: 85, capacite: 2, chambres: 1, rating: 4.8, reviews: 18, coords: { lat: 48.8374, lng: 2.4836 }, photos: ["/photos/nogent/01.webp","/photos/nogent/02.webp","/photos/nogent/03.webp","/photos/nogent/04.webp","/photos/nogent/05.webp","/photos/nogent/06.webp"], isMartinique: false }),
     faqld: buildFAQLd(FAQS_PAR_BIEN.nogent),
@@ -235,9 +236,9 @@ const ROUTES = [
 
   /* ── Guides Martinique ── */
   {
-    path: "/guide",
-    title: "Guide Martinique — Les meilleures destinations du Sud | Amaryllis",
-    desc:  "Guide de voyage Martinique par vos hôtes : Les Salines, Arlet, Le Diamant, Trois-Îlets, Sainte-Luce. Conseils d'initiés pour explorer le Sud Martinique.",
+    path: "/guide-hub",
+    title: "Que faire dans le Sud de la Martinique — Guide d'initiés | Amaryllis",
+    desc:  "Que faire dans le Sud de la Martinique ? Le guide de nos hôtes à Sainte-Luce : nos coups de cœur, tous nos guides de destination par zone et nos conseils d'initiés.",
     image: `${BASE}/photos/amaryllis/01.webp`,
   },
   {
@@ -278,8 +279,8 @@ const ROUTES = [
   },
   {
     path: "/explorer",
-    title: "Carte interactive du Sud Martinique — Explorer depuis Sainte-Luce | Amaryllis",
-    desc:  "Carte interactive des destinations du Sud Martinique. Filtrez par activité : plages, snorkeling, famille, culture. Tortues d'Arlet, Les Salines, Rocher du Diamant.",
+    title: "Carte interactive des activités en Martinique — Plages, tortues, rhum | Amaryllis",
+    desc:  "Carte interactive des lieux cultes de Martinique : filtrez par zone et par activité (plages, snorkeling, rhum, rando), épinglez vos spots et composez votre séjour.",
     image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Salines_beach.jpg/960px-Salines_beach.jpg",
   },
 
@@ -295,6 +296,24 @@ const ROUTES = [
     title: "Réservation directe Martinique — Sans frais Airbnb | Amaryllis",
     desc:  "Réservez directement vos villas en Martinique sans frais Airbnb ni Booking. Économisez 12–18%, flexibilité maximale, paiement sécurisé Stripe.",
     image: `${BASE}/photos/amaryllis/01.webp`,
+  },
+  {
+    path: "/location-groupe-sainte-luce",
+    title: "Location grand groupe Martinique — jusqu'à 11 personnes, Sainte-Luce",
+    desc:  "Réunissez jusqu'à 11 proches en réservant Zandoli, Géko et Mabouya ensemble à Sainte-Luce. Résidence privée, piscines, réservation directe sans frais. Devis et paiement rapides.",
+    image: `${BASE}/photos/zandoli/01.webp`,
+  },
+  {
+    path: "/location-appartement-vue-mer-schoelcher",
+    title: "Location appartement vue mer Schœlcher — Martinique",
+    desc:  "Appartement de standing à Schœlcher : vue panoramique sur la baie de Fort-de-France, dernier étage, 2 personnes, à 10 min du centre. Réservation directe sans frais.",
+    image: `${BASE}/photos/schoelcher/01.webp`,
+  },
+  {
+    path: "/plus-belles-plages-sud-martinique",
+    title: "Plus belles plages du Sud de la Martinique",
+    desc:  "Sable blanc, eau turquoise, tortues : découvrez les plus belles plages du Sud de la Martinique, toutes à moins de 40 min de Sainte-Luce.",
+    image: `${BASE}/photos/amaryllis/05.webp`,
   },
   {
     path: "/meilleure-saison-martinique",
@@ -383,6 +402,15 @@ const ROUTES = [
     desc:  "CGV de villamaryllis.com : réservation directe, annulation, caution, responsabilités. Applicable à toutes les locations Amaryllis en Martinique et Île-de-France.",
     image: `${BASE}/photos/amaryllis/01.webp`,
   },
+
+  /* ── Guides lieux cultes (générés depuis src/data/guidesPoi.js) ── */
+  ...GUIDES_POI.map(g => ({
+    path:  g.slug,
+    title: `${g.metaTitle} | Amaryllis`,
+    desc:  g.metaDescription,
+    image: g.photo || `${BASE}/photos/amaryllis/01.webp`,
+    faqld: buildFAQLd(g.faq || []),
+  })),
 ];
 
 /* ── Fonctions de remplacement ───────────────────────────────────────── */

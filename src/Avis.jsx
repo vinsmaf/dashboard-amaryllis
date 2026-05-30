@@ -158,7 +158,7 @@ function ReviewCard({ r }) {
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         {r.avatar
-          ? <img src={r.avatar} alt={name} style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} onError={e => e.currentTarget.style.display = "none"} />
+          ? <img loading="lazy" decoding="async" src={r.avatar} alt={name} style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} onError={e => e.currentTarget.style.display = "none"} />
           : <div style={{
               width: 40, height: 40, borderRadius: "50%", flexShrink: 0,
               background: "var(--c-navy)", color: "var(--c-ivory)",

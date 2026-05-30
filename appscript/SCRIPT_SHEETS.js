@@ -49,7 +49,6 @@ function doPost(e) {
   try { body = JSON.parse(e.postData.contents); } catch(err) { return json_({ error: "JSON invalide" }); }
 
   var action = body.action || "";
-  if (action === "importBeds24")       return importBeds24_(body.bookings || []);
   if (action === "importAllReservations") return importAllReservations_(body.reservations || []);
   if (action === "setConfig")             return setConfig_(body);
 
@@ -178,43 +177,63 @@ function updateRevenu_(p) {
 
 // ── ÉCRITURE réservations ────────────────────────────────────────
 // ?action=addReservation&bienId=nogent&checkin=2026-06-01&checkout=2026-06-05&voyageur=Jean&montant=800&canal=direct&id=xxx
-function addReservation_(p) {
-  let sheet = getSheet_("réservations");
+// ── Onglet unique pour TOUTES les réservations (manuelles + Beds24) ──────────
+function resaSheet_() {
+  const ss = SpreadsheetApp.openById("1xuhU0KraEMxF9NAWO5MKEt23JI_V8mnNnWktzHy6q2U");
+  let sheet = ss.getSheetByName("Toutes les Réservations");
   if (!sheet) {
-    const ss = SpreadsheetApp.openById("1xuhU0KraEMxF9NAWO5MKEt23JI_V8mnNnWktzHy6q2U");
-    sheet = ss.insertSheet("réservations");
-    sheet.getRange(1, 1, 1, 8).setValues([["id","bienId","voyageur","canal","checkin","checkout","montant","notes"]]);
-    sheet.getRange(1, 1, 1, 8).setFontWeight("bold");
+    sheet = ss.insertSheet("Toutes les Réservations");
+    const headers = ["ID","Propriété","Voyageur","Canal","Arrivée","Départ","Nuits","Montant (€)","Statut","Voyageurs","Notes","Source","Modifié le"];
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers])
+      .setBackground("#1e3a5f").setFontColor("#ffffff").setFontWeight("bold");
+    sheet.setFrozenRows(1);
   }
+  return sheet;
+}
+const RESA_BIEN_LABELS = { nogent:"T2 Nogent", amaryllis:"Villa Amaryllis", iguana:"Villa Iguana", geko:"Geko", zandoli:"Zandoli", mabouya:"Mabouya", schoelcher:"T2 Schoelcher" };
+const RESA_CANAL_LABELS = { airbnb:"Airbnb", booking:"Booking.com", direct:"Direct", beds24:"Beds24" };
+
+function addReservation_(p) {
+  const sheet = resaSheet_();
+  const id = String(p.id || Utilities.getUuid());
+  let nights = 0;
+  if (p.checkin && p.checkout) {
+    const a = new Date(p.checkin + "T12:00:00Z"), b = new Date(p.checkout + "T12:00:00Z");
+    nights = Math.round((b - a) / 86400000);
+  }
+  const bienLabel  = RESA_BIEN_LABELS[p.bienId] || p.bienId || "";
+  const canalLabel = RESA_CANAL_LABELS[p.canal] || p.canal || "Direct";
+  const now = Utilities.formatDate(new Date(), "Europe/Paris", "yyyy-MM-dd");
+  const row = [ id, bienLabel, p.voyageur || "—", canalLabel, p.checkin || "", p.checkout || "", nights,
+                parseFloat(p.montant) || 0, "Confirmé", parseInt(p.voyageurs || p.numGuests || 1, 10) || 1,
+                p.notes || "", "Manuel", now ];
 
   const lastRow = sheet.getLastRow();
-  if (p.id && lastRow > 1) {
-    const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat();
-    const idx = ids.indexOf(p.id);
+  if (lastRow > 1) {
+    const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat().map(String);
+    const idx = ids.indexOf(id);
     if (idx >= 0) {
-      const row = idx + 2;
-      sheet.getRange(row, 1, 1, 8).setValues([[p.id, p.bienId, p.voyageur, p.canal, p.checkin, p.checkout, parseFloat(p.montant)||0, p.notes||""]]);
-      return json_({ ok: true, action: "updated", row });
+      sheet.getRange(idx + 2, 1, 1, row.length).setValues([row]);
+      return json_({ ok: true, action: "updated" });
     }
   }
-
-  sheet.appendRow([p.id || Utilities.getUuid(), p.bienId, p.voyageur, p.canal, p.checkin, p.checkout, parseFloat(p.montant)||0, p.notes||""]);
+  sheet.appendRow(row);
   return json_({ ok: true, action: "added" });
 }
 
-// ?action=deleteReservation&id=xxx
+// ?action=deleteReservation&id=xxx  (suppression dans "Toutes les Réservations", id comparé en String)
 function deleteReservation_(p) {
-  const sheet = getSheet_("réservations");
+  const sheet = getSheet_("Toutes les Réservations");
   if (!sheet || !p.id) return json_({ ok: true, action: "noop" });
 
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return json_({ ok: true, action: "noop" });
 
-  const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat();
-  const idx = ids.indexOf(p.id);
-  if (idx >= 0) sheet.deleteRow(idx + 2);
+  const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat().map(String);
+  const idx = ids.indexOf(String(p.id));
+  if (idx >= 0) { sheet.deleteRow(idx + 2); return json_({ ok: true, action: "deleted" }); }
 
-  return json_({ ok: true, action: "deleted" });
+  return json_({ ok: true, action: "not_found" });
 }
 
 // ?action=fetchIcal&url=https%3A%2F%2F...
@@ -322,116 +341,10 @@ function sendNtfyPush_(title, body) {
   } catch(e) {}
 }
 
-// ── IMPORT BEDS24 → feuille "Réservations Nogent" ───────────────
-// Colonnes : A=bookingId B=Client C=Email D=Téléphone E=Arrivée F=Départ
-//            G=Nuits H=Canal I=Montant J=Statut K=Voyageurs L=Notes M=Créé le N=Modifié le
-function importBeds24_(bookings) {
-  if (!bookings || bookings.length === 0) return json_({ ok: true, updated: 0, added: 0 });
-
-  var ss = SpreadsheetApp.openById("1xuhU0KraEMxF9NAWO5MKEt23JI_V8mnNnWktzHy6q2U");
-
-  // ── Créer la feuille si elle n'existe pas ──
-  var SHEET_NAME = "Réservations Nogent";
-  var sheet = ss.getSheetByName(SHEET_NAME);
-  if (!sheet) {
-    sheet = ss.insertSheet(SHEET_NAME);
-    // En-têtes
-    var headers = ["ID Beds24","Client","Email","Téléphone","Arrivée","Départ","Nuits","Canal","Montant (€)","Statut","Voyageurs","Notes","Créé le","Modifié le"];
-    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-    sheet.getRange(1, 1, 1, headers.length)
-      .setBackground("#1e3a5f").setFontColor("#ffffff").setFontWeight("bold");
-    sheet.setFrozenRows(1);
-    sheet.setColumnWidths(1, headers.length, 120);
-    sheet.setColumnWidth(2, 160); // Client
-    sheet.setColumnWidth(3, 200); // Email
-    sheet.setColumnWidth(12, 240); // Notes
-  }
-
-  // ── Lire les IDs existants ──
-  var lastRow = sheet.getLastRow();
-  var existingIds = {};
-  if (lastRow > 1) {
-    var ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
-    ids.forEach(function(row, i) {
-      if (row[0]) existingIds[String(row[0])] = i + 2; // numéro de ligne
-    });
-  }
-
-  var added = 0, updated = 0;
-
-  bookings.forEach(function(b) {
-    var row = [
-      b.bookingId   || "",
-      b.guestName   || "",
-      b.email       || "",
-      b.phone       || "",
-      b.arrival     || "",
-      b.departure   || "",
-      b.nights      || 0,
-      b.channelLabel || b.channel || "",
-      b.price       || 0,
-      b.statusLabel  || String(b.status) || "",
-      b.numGuests   || 1,
-      b.notes       || "",
-      b.createdOn   || "",
-      b.modifiedOn  || "",
-    ];
-
-    var existingRow = existingIds[String(b.bookingId)];
-    if (existingRow) {
-      // Mettre à jour la ligne existante
-      sheet.getRange(existingRow, 1, 1, row.length).setValues([row]);
-      updated++;
-    } else {
-      // Ajouter une nouvelle ligne
-      sheet.appendRow(row);
-      existingIds[String(b.bookingId)] = sheet.getLastRow();
-      added++;
-    }
-
-    // ── Colorer selon statut ──
-    var rowNum = existingIds[String(b.bookingId)];
-    var statusNum = String(b.status);
-    var color = statusNum === "1" ? "#e8f5e9"   // confirmé → vert clair
-              : statusNum === "2" ? "#fce4ec"   // annulé → rouge clair
-              : statusNum === "0" ? "#fff8e1"   // nouveau → jaune clair
-              : "#ffffff";
-    sheet.getRange(rowNum, 1, 1, row.length).setBackground(color);
-  });
-
-  // ── Trier par arrivée décroissante (col E = 5) ──
-  if (sheet.getLastRow() > 2) {
-    sheet.getRange(2, 1, sheet.getLastRow() - 1, 14).sort({ column: 5, ascending: false });
-  }
-
-  // ── Mise à jour revenus mensuels Nogent (réservations confirmées) ──
-  var revSheet = ss.getSheetByName("revenus locatif 2026");
-  if (revSheet) {
-    var nogentRevRow = 6; // ligne Nogent dans revenus locatif 2026
-    bookings.forEach(function(b) {
-      if (b.statusCode !== "1") return; // seulement les confirmées
-      if (!b.arrival || !b.price)  return;
-
-      var mois = new Date(b.arrival + "T12:00:00Z").getUTCMonth() + 1; // 1-12
-      var col  = mois + 2; // col C=3 pour janvier, etc.
-
-      var current = revSheet.getRange(nogentRevRow, col).getValue() || 0;
-      // On n'additionne pas aveuglément — on recalcule depuis la feuille Réservations
-      // (logique simplifiée : ajouter uniquement si la réservation est nouvelle)
-    });
-  }
-
-  // Notif push si nouvelle réservation
-  if (added > 0) {
-    var newBookings = bookings.slice(0, added);
-    var msg = newBookings.map(function(b) {
-      return b.guestName + " · " + b.arrival + " → " + b.departure + " · " + b.price + "€";
-    }).join("\n");
-    sendNtfyPush_("🏙️ Nouvelle résa Nogent (" + added + ")", msg);
-  }
-
-  return json_({ ok: true, added: added, updated: updated });
-}
+// Note : les réservations Beds24 (Nogent) — onglet Beds24 + webhook temps réel —
+// sont désormais mappées au format unifié côté JS (Beds24Admin.jsx / beds24-webhook.js)
+// puis envoyées via l'action importAllReservations. Plus de fonction importBeds24_
+// ni d'onglet "Réservations Nogent" : tout converge dans "Toutes les Réservations".
 
 // ── IMPORT TOUTES LES RÉSERVATIONS → feuille "Toutes les Réservations" ─
 // Format unifié : iCal (Airbnb/Booking/Direct) + Beds24 (toutes propriétés)

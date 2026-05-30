@@ -26,3 +26,13 @@
 # ── HTML — pas de cache (version toujours fraîche) ─────────────────────────
 /*.html
   Cache-Control: no-cache
+# Chemins sans extension (servis depuis un .html prérendu) : Pages applique sinon
+# un max-age=3600 par défaut qui masque les déploiements pendant 1h.
+/guide
+  Cache-Control: no-cache
+/guide/
+  Cache-Control: no-cache
+/guide-hub
+  Cache-Control: no-cache
+/guide-hub/
+  Cache-Control: no-cache

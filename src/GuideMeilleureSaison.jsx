@@ -111,7 +111,7 @@ export default function GuideMeilleureSaison() {
           <div style={{ maxWidth: 960, margin: "0 auto", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <a href="/" style={{ color: IVORY, textDecoration: "none", fontWeight: 300, fontSize: 18, letterSpacing: "0.15em", textTransform: "uppercase" }}>Amaryllis</a>
             <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
-              <a href="/guide" style={{ color: IVORY, textDecoration: "none", fontSize: 12, letterSpacing: "0.08em", opacity: 0.6 }}>Explorer</a>
+              <a href="/guide-hub" style={{ color: IVORY, textDecoration: "none", fontSize: 12, letterSpacing: "0.08em", opacity: 0.6 }}>Explorer</a>
               <a href="/sainte-luce-martinique" style={{ color: IVORY, textDecoration: "none", fontSize: 12, letterSpacing: "0.08em", opacity: 0.7 }}>← Sainte-Luce</a>
             </div>
           </div>
@@ -360,7 +360,7 @@ export default function GuideMeilleureSaison() {
               { href: "/", label: "Villas" },
               { href: "/sainte-luce-martinique", label: "Sainte-Luce" },
               { href: "/reservation-directe-martinique", label: "Réservation directe" },
-              { href: "/guide", label: "Explorer" },
+              { href: "/guide-hub", label: "Explorer" },
               { href: "/guide-sainte-anne", label: "Les Salines" },
               { href: "/activites-sainte-luce", label: "Activités" },
             ].map(l => (

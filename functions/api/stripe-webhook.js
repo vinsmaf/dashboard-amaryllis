@@ -123,7 +123,7 @@ async function sendEmail(env, { subject, html, to }) {
     headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       from: env.RESEND_FROM || "Amaryllis <notifications@mail.villamaryllis.com>",
-      to: Array.isArray(recipient) ? recipient : [recipient],
+      to: Array.isArray(recipient) ? recipient : String(recipient).split(",").map(s => s.trim()).filter(Boolean),
       subject,
       html,
     }),
@@ -200,6 +200,37 @@ async function sendConfirmationToGuest(env, { bienNom, voyageur, email, checkin,
   console.log(`[webhook] Email confirmation envoyé → ${email}`);
 }
 
+// Stocke une réservation DIRECTE en D1 (pour emails pré-arrivée / post-séjour).
+// Fail-silent : ne casse jamais le webhook.
+async function storeDirectBooking(env, { paymentIntentId, email, voyageur, bienId, bienNom, checkin, checkout }) {
+  const db = env.revenue_manager;
+  if (!db || !email || !email.includes("@") || !checkin) return;
+  try {
+    // Table partagée avec notify-booking.js (clé = payment_intent_id).
+    await db.prepare(`CREATE TABLE IF NOT EXISTS direct_bookings (
+      payment_intent_id TEXT PRIMARY KEY, bien_nom TEXT, voyageur TEXT,
+      total INTEGER, depot INTEGER, checkin TEXT, checkout TEXT,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+      email TEXT, prenom TEXT, bien_id TEXT,
+      prearrivee_sent INTEGER DEFAULT 0, poststay_sent INTEGER DEFAULT 0
+    )`).run();
+    const prenom = String(voyageur || "").trim().split(/\s+/)[0] || "";
+    // Clé stable : pi.id si dispo, sinon fallback déterministe (évite les doublons).
+    const pid = paymentIntentId || `direct-${email}-${checkin}`;
+    // Upsert : fusionne avec la ligne créée par notify-booking (même payment_intent_id),
+    // en y ajoutant l'email/prénom indispensables aux emails pré-arrivée / post-séjour.
+    await db.prepare(`INSERT INTO direct_bookings
+        (payment_intent_id, email, prenom, bien_id, bien_nom, voyageur, checkin, checkout)
+      VALUES (?,?,?,?,?,?,?,?)
+      ON CONFLICT(payment_intent_id) DO UPDATE SET
+        email=excluded.email, prenom=excluded.prenom, bien_id=excluded.bien_id,
+        bien_nom=excluded.bien_nom, checkout=excluded.checkout`)
+      .bind(pid, email, prenom, bienId || "", bienNom || "", voyageur || "", checkin, checkout || "").run();
+  } catch (e) {
+    console.error("[direct-booking] D1:", e.message);
+  }
+}
+
 export async function onRequestPost(context) {
   const { request, env } = context;
   const rawBody = await request.text();
@@ -233,6 +264,35 @@ export async function onRequestPost(context) {
     const checkout  = meta.checkout  || "?";
     const amount    = pi?.amount     ? `${(pi.amount / 100).toFixed(0)} €` : "?";
 
+    // ── Réservation GROUPÉE (offre résidence : plusieurs logements iCal, pas Beds24) ──
+    // Ces logements (Sainte-Luce) ne se bloquent pas automatiquement → alerte hôte impérative.
+    if (meta.type === "group") {
+      const logements = meta.logements || "Zandoli + Géko + Mabouya";
+      const guests    = meta.guests || "?";
+      try {
+        await sendEmail(env, {
+          subject: `🚨 Résa GROUPÉE payée — BLOQUER les calendriers (${logements})`,
+          html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto">
+            <h2 style="color:#0e3b3a">Réservation groupée payée ✅ — action requise</h2>
+            <p style="font-size:14px;color:#b91c1c"><strong>Bloquez immédiatement</strong> les calendriers Airbnb/Booking des logements ci-dessous pour éviter une double réservation (ils ne se bloquent pas automatiquement) :</p>
+            <p style="font-size:18px;font-weight:700;color:#0e3b3a">${logements}</p>
+            <table style="font-size:14px;color:#4a3f35">
+              <tr><td style="padding:4px 0">Voyageur</td><td style="padding:4px 0;font-weight:700">${voyageur || "?"}</td></tr>
+              <tr><td style="padding:4px 0">Email</td><td style="padding:4px 0">${guestEmail || "?"}</td></tr>
+              <tr><td style="padding:4px 0">Dates</td><td style="padding:4px 0;font-weight:700">${checkin} → ${checkout}</td></tr>
+              <tr><td style="padding:4px 0">Voyageurs</td><td style="padding:4px 0">${guests}</td></tr>
+              <tr><td style="padding:4px 0">Montant payé</td><td style="padding:4px 0;font-weight:700">${amount}</td></tr>
+              <tr><td style="padding:4px 0">Paiement</td><td style="padding:4px 0;font-size:12px">${pi.id}</td></tr>
+            </table>
+          </div>`,
+        });
+      } catch (e) { console.error("[webhook] alerte hôte groupe:", e.message); }
+      await sendConfirmationToGuest(env, { bienNom: logements, voyageur, email: guestEmail, checkin, checkout, amount, bookingId: pi.id });
+      await ga4Event(env, "booking_completed", { bien_id: "groupe", booking_id: pi.id, value: pi?.amount ? pi.amount / 100 : 0, currency: "EUR", channel: "direct-groupe", checkin });
+      await storeDirectBooking(env, { paymentIntentId: pi.id, email: guestEmail, voyageur, bienId: "groupe", bienNom: logements, checkin, checkout });
+      return json({ received: true, group: true });
+    }
+
     // 1. Confirmer la réservation Beds24
     if (bookingId) {
       try {
@@ -248,6 +308,9 @@ export async function onRequestPost(context) {
 
     // 2. Email de confirmation au voyageur
     await sendConfirmationToGuest(env, { bienNom, voyageur, email: guestEmail, checkin, checkout, amount, bookingId });
+
+    // 2b. Stocke la résa DIRECTE en D1 → permet les emails pré-arrivée (J-3) et post-séjour (J+1)
+    await storeDirectBooking(env, { paymentIntentId: pi.id, email: guestEmail, voyageur, bienId, bienNom, checkin, checkout });
 
     // 3. GA4 server-side — event "booking_completed" (la conversion macro la plus précieuse)
     await ga4Event(env, "booking_completed", {

@@ -131,8 +131,8 @@ const villas = [
   { id: "amaryllis", nom: "Villa Amaryllis", desc: "Piscine débordement, 3 ch., vue mer panoramique", prix: "dès 280€/nuit", photo: "/photos/amaryllis/01.webp" },
   { id: "iguana",    nom: "Villa Iguana",    desc: "Piscine eau salée, vue Rocher du Diamant, 3 ch.", prix: "dès 220€/nuit", photo: "/photos/iguana/01.webp" },
   { id: "mabouya",   nom: "Villa Mabouya",   desc: "Jacuzzi privatif vue mer, jardin, 2 ch.",         prix: "dès 140€/nuit", photo: "/photos/mabouya/01.webp" },
-  { id: "zandoli",   nom: "Villa Zandoli",   desc: "Piscine partagée, jardin tropical, 2 ch.",         prix: "dès 120€/nuit", photo: "/photos/zandoli/01.webp" },
-  { id: "geko",      nom: "Villa Géko",      desc: "Piscine partagée, cadre naturel, 2 ch.",           prix: "dès 120€/nuit", photo: "/photos/geko/01.webp" },
+  { id: "zandoli",   nom: "Zandoli",   desc: "Piscine partagée, jardin tropical, 2 ch.",         prix: "dès 120€/nuit", photo: "/photos/zandoli/01.webp" },
+  { id: "geko",      nom: "Géko",      desc: "Piscine partagée, cadre naturel, 2 ch.",           prix: "dès 120€/nuit", photo: "/photos/geko/01.webp" },
   { id: "schoelcher", nom: "Villa Schœlcher", desc: "Terrasse vue mer, piscine partagée, 2 ch.",       prix: "dès 110€/nuit", photo: "/photos/schoelcher/01.webp" },
 ];
 
@@ -312,7 +312,8 @@ function ContactForm() {
           ) : "Envoyer ma demande →"}
         </button>
         <p style={{ textAlign: "center", fontFamily: "'Jost', sans-serif", fontSize: 11, color: MUTED, margin: "14px 0 0" }}>
-          🔒 Vos données ne sont jamais partagées · Réponse sous 24 h
+          🔒 Vos données ne sont jamais partagées · Réponse sous 24 h<br/>
+          En envoyant, vous acceptez notre <a href="/politique-confidentialite" target="_blank" rel="noopener" style={{ color: CORAL, textDecoration: "underline" }}>politique de confidentialité</a>.
         </p>
       </form>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -588,7 +589,7 @@ export default function GuideReservationDirecte() {
             {[
               { href: "/", label: "Villas" },
               { href: "/sainte-luce-martinique", label: "Sainte-Luce" },
-              { href: "/guide", label: "Explorer" },
+              { href: "/guide-hub", label: "Explorer" },
               { href: "/faq", label: "FAQ" },
               { href: "/mentions-legales", label: "Légal" },
             ].map(l => (

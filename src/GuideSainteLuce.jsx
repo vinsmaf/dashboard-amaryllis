@@ -131,13 +131,13 @@ const villas = [
   },
   {
     id: "zandoli",
-    nom: "Villa Zandoli",
+    nom: "Zandoli",
     desc: "Piscine partagée, jardin tropical, 2 chambres",
     photo: "https://villamaryllis.com/photos/zandoli/01.webp",
   },
   {
     id: "geko",
-    nom: "Villa Géko",
+    nom: "Géko",
     desc: "Piscine partagée, cadre naturel, 2 chambres",
     photo: "https://villamaryllis.com/photos/geko/01.webp",
   },
@@ -194,7 +194,7 @@ export default function GuideSainteLuce() {
           <div style={{ maxWidth: 960, margin: "0 auto", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <a href="/" style={{ color: IVORY, textDecoration: "none", fontWeight: 300, fontSize: 18, letterSpacing: "0.15em", textTransform: "uppercase" }}>Amaryllis</a>
             <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
-              <a href="/guide" style={{ color: IVORY, textDecoration: "none", fontSize: 12, letterSpacing: "0.08em", opacity: 0.6 }}>Explorer Martinique</a>
+              <a href="/guide-hub" style={{ color: IVORY, textDecoration: "none", fontSize: 12, letterSpacing: "0.08em", opacity: 0.6 }}>Explorer Martinique</a>
               <a href="/" style={{ color: IVORY, textDecoration: "none", fontSize: 12, letterSpacing: "0.08em", opacity: 0.7 }}>← Voir les villas</a>
             </div>
           </div>
@@ -480,7 +480,7 @@ export default function GuideSainteLuce() {
           <div style={{ display: "flex", justifyContent: "center", gap: 24, flexWrap: "wrap", marginBottom: 20 }}>
             {[
               { href: "/", label: "Villas" },
-              { href: "/guide", label: "Explorer" },
+              { href: "/guide-hub", label: "Explorer" },
               { href: "/guide-le-diamant", label: "Le Diamant" },
               { href: "/guide-sainte-anne", label: "Sainte-Anne" },
               { href: "/activites-sainte-luce", label: "Activités" },

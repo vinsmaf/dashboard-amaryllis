@@ -1,6 +1,12 @@
 # SPA fallback — toutes les routes applicatives servent index.html.
 # NB : un fichier public/404.html casserait ce fallback (Cloudflare Pages sert
 # automatiquement 404.html pour les routes sans fichier statique). Ne PAS en ajouter.
-# La protection anti-cache-empoisonné est assurée côté client par sw.js (v5) qui
-# détecte un asset .js/.css servi en HTML et le re-fetch en bypassant le cache.
+# Protection anti-cache-empoisonné : sw.js est un kill-switch (désinscrit tout SW
+# + purge les caches) et window.__BUILD__ fait tourner le hash des assets à chaque
+# déploiement → toute copie HTML cachée sous un nom .js devient obsolète.
+# /guide : asset gelé côté Pages (manifeste figé). Le hub vit désormais sur
+# /guide-hub (blob frais) ; 301 pour préserver le SEO de l'ancienne URL.
+/guide       /guide-hub  301
+/guide/      /guide-hub  301
+
 /*  /index.html  200

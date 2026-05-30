@@ -108,8 +108,8 @@ async function sendEmail(env, bienNom, dates, minPrice, year) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: context.env.RESEND_FROM || "Amaryllis <notifications@mail.villamaryllis.com>",
-        to: [dest],
+        from: context.env.RESEND_FROM || "Amaryllis <notifications@villamaryllis.com>",
+        to: dest.split(",").map(s => s.trim()).filter(Boolean),
         subject: `⚠️ ${dates.length} prix sous seuil — ${bienNom}`,
         html,
       }),

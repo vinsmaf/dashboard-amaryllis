@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<!--
+  ============================================================
+  AMARYLLIS LOCATIONS — Email PRÉ-ARRIVÉE (J-3)
+  ============================================================
+  OBJETS A/B (à tester) :
+    A : {{prenom}}, votre arrivée à {{bien_nom}} se prépare
+    B : Tout est prêt pour votre séjour à {{bien_nom}}
+    C : {{prenom}}, vos clés vous attendent à {{bien_nom}}
+  PRÉHEADER (texte masqué d'aperçu boîte de réception) :
+    Vos dates, l'accès, le code et nos adresses préférées à Sainte-Luce.
+  ============================================================
+-->
+<html lang="fr" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="x-apple-disable-message-reformatting">
+  <title>Votre arrivée à {{bien_nom}}</title>
+  <!--[if mso]>
+  <noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
+  <![endif]-->
+  <style>
+    @media only screen and (max-width:600px){
+      .container{width:100% !important;}
+      .px{padding-left:24px !important;padding-right:24px !important;}
+      .stack{display:block !important;width:100% !important;}
+      .h1{font-size:26px !important;line-height:32px !important;}
+    }
+    a{color:#c47254;}
+  </style>
+</head>
+<body style="margin:0;padding:0;background-color:#fffdf8;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
+  <!-- Préheader masqué -->
+  <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#fffdf8;opacity:0;">
+    Vos dates, l'accès, le code et nos adresses préférées à Sainte-Luce.&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#fffdf8;">
+    <tr>
+      <td align="center" style="padding:24px 12px;">
+
+        <table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background-color:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 1px 4px rgba(31,42,61,0.06);">
+
+          <!-- Bandeau -->
+          <tr>
+            <td style="background-color:#1f2a3d;padding:28px 32px;" align="center">
+              <div style="font-family:Georgia,'Times New Roman',serif;font-size:22px;letter-spacing:3px;color:#fffdf8;text-transform:uppercase;">Amaryllis</div>
+              <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;letter-spacing:4px;color:#c47254;text-transform:uppercase;margin-top:6px;">Locations &middot; Martinique</div>
+            </td>
+          </tr>
+
+          <!-- Filet corail -->
+          <tr><td style="height:4px;background-color:#c47254;line-height:4px;font-size:0;">&nbsp;</td></tr>
+
+          <!-- Intro -->
+          <tr>
+            <td class="px" style="padding:36px 40px 8px 40px;font-family:Georgia,'Times New Roman',serif;">
+              <h1 class="h1" style="margin:0;font-size:30px;line-height:38px;color:#1f2a3d;font-weight:normal;">Bonjour {{prenom}},</h1>
+              <p style="margin:18px 0 0 0;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:26px;color:#3a4658;">
+                Dans trois jours, vous poussez la porte de <strong style="color:#1f2a3d;">{{bien_nom}}</strong>. La maison est prête, le linge sent bon le propre, et il ne vous reste qu'à venir respirer le grand air de Sainte-Luce. Voici tout ce qui rendra votre arrivée simple et sereine.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Dates -->
+          <tr>
+            <td class="px" style="padding:28px 40px 0 40px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#fffdf8;border-radius:12px;">
+                <tr>
+                  <td class="stack" width="50%" style="padding:22px 24px;font-family:Arial,Helvetica,sans-serif;" valign="top">
+                    <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#c47254;">Arrivée</div>
+                    <div style="font-size:20px;color:#1f2a3d;margin-top:6px;font-weight:bold;">{{checkin}}</div>
+                    <div style="font-size:14px;color:#3a4658;margin-top:4px;">à partir de 17h00</div>
+                  </td>
+                  <td class="stack" width="50%" style="padding:22px 24px;font-family:Arial,Helvetica,sans-serif;border-left:1px solid #ece6d9;" valign="top">
+                    <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#c47254;">Départ</div>
+                    <div style="font-size:20px;color:#1f2a3d;margin-top:6px;font-weight:bold;">{{checkout}}</div>
+                    <div style="font-size:14px;color:#3a4658;margin-top:4px;">avant 12h00</div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Accès -->
+          <tr>
+            <td class="px" style="padding:30px 40px 0 40px;font-family:Arial,Helvetica,sans-serif;">
+              <div style="font-size:13px;letter-spacing:2px;text-transform:uppercase;color:#1f2a3d;font-weight:bold;border-bottom:2px solid #c47254;display:inline-block;padding-bottom:4px;">Votre accès</div>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:16px;">
+                <tr>
+                  <td style="padding:8px 0;font-size:15px;line-height:24px;color:#3a4658;">
+                    <strong style="color:#1f2a3d;">Adresse</strong><br>{{adresse}}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:14px 0 8px 0;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="background-color:#1f2a3d;border-radius:10px;padding:16px 28px;font-family:'Courier New',Courier,monospace;font-size:24px;letter-spacing:6px;color:#fffdf8;font-weight:bold;">{{code_acces}}</td>
+                        <td style="padding-left:16px;font-size:13px;line-height:20px;color:#3a4658;font-family:Arial,Helvetica,sans-serif;">Code de la boîte<br>à clés / serrure</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Conseils locaux -->
+          <tr>
+            <td class="px" style="padding:32px 40px 0 40px;font-family:Arial,Helvetica,sans-serif;">
+              <div style="font-size:13px;letter-spacing:2px;text-transform:uppercase;color:#1f2a3d;font-weight:bold;border-bottom:2px solid #c47254;display:inline-block;padding-bottom:4px;">Sainte-Luce, nos adresses</div>
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:16px;">
+                <tr>
+                  <td valign="top" width="34" style="font-family:Georgia,serif;font-size:22px;color:#c47254;line-height:24px;">01</td>
+                  <td valign="top" style="font-size:15px;line-height:24px;color:#3a4658;padding-bottom:14px;">
+                    <strong style="color:#1f2a3d;">La plage Corps de Garde</strong> au lever du jour : sable clair, eau tiède et bateaux de pêcheurs. Le moment le plus doux pour une première baignade.
+                  </td>
+                </tr>
+                <tr>
+                  <td valign="top" width="34" style="font-family:Georgia,serif;font-size:22px;color:#c47254;line-height:24px;">02</td>
+                  <td valign="top" style="font-size:15px;line-height:24px;color:#3a4658;padding-bottom:14px;">
+                    <strong style="color:#1f2a3d;">Le marché du bourg</strong>, le matin : fruits à pain, ti-punch d'accueil et accras tout chauds pour remplir votre première glacière.
+                  </td>
+                </tr>
+                <tr>
+                  <td valign="top" width="34" style="font-family:Georgia,serif;font-size:22px;color:#c47254;line-height:24px;">03</td>
+                  <td valign="top" style="font-size:15px;line-height:24px;color:#3a4658;">
+                    <strong style="color:#1f2a3d;">Le coucher de soleil de l'Anse Mabouya</strong> : une courte route côtière, et le ciel se teinte de corail. Gardez votre appareil photo à portée de main.
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- WhatsApp hôte -->
+          <tr>
+            <td class="px" style="padding:30px 40px 0 40px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#fffdf8;border:1px solid #ece6d9;border-radius:12px;">
+                <tr>
+                  <td style="padding:22px 24px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;color:#3a4658;">
+                    Une question avant le grand départ, un horaire d'avion qui glisse&nbsp;? Votre hôte vous répond directement sur WhatsApp&nbsp;:
+                    <div style="margin-top:14px;">
+                      <!--[if mso]>
+                      <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://wa.me/{{wa_hote}}" style="height:46px;v-text-anchor:middle;width:230px;" arcsize="22%" strokecolor="#c47254" fillcolor="#c47254">
+                        <w:anchorlock/>
+                        <center style="color:#ffffff;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Écrire sur WhatsApp</center>
+                      </v:roundrect>
+                      <![endif]-->
+                      <!--[if !mso]><!-- -->
+                      <a href="https://wa.me/{{wa_hote}}" style="background-color:#c47254;color:#ffffff;display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;text-decoration:none;padding:13px 28px;border-radius:10px;">Écrire sur WhatsApp</a>
+                      <!--<![endif]-->
+                    </div>
+                    <div style="margin-top:10px;font-size:13px;color:#8a8170;">{{wa_hote}}</div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Signature -->
+          <tr>
+            <td class="px" style="padding:30px 40px 36px 40px;font-family:Georgia,'Times New Roman',serif;">
+              <p style="margin:0;font-size:16px;line-height:26px;color:#3a4658;">
+                Nous vous souhaitons un voyage tout en douceur. À très vite sous le soleil de la Martinique.
+              </p>
+              <p style="margin:16px 0 0 0;font-size:16px;color:#1f2a3d;">L'équipe Amaryllis</p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#1f2a3d;padding:24px 40px;font-family:Arial,Helvetica,sans-serif;" align="center">
+              <div style="font-size:12px;line-height:20px;color:#aeb6c2;">Amaryllis Locations &middot; Sainte-Luce, Martinique</div>
+              <div style="font-size:11px;line-height:18px;color:#7c8593;margin-top:6px;">Vous recevez ce message car un séjour est réservé à votre nom.</div>
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

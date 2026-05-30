@@ -73,7 +73,7 @@ function timeAgo(ts) {
 }
 
 // ── Composant Card ────────────────────────────────────────────────────────────
-function ActionCard({ action, onStatusChange, mob }) {
+function ActionCard({ action, onStatusChange, mob, impact }) {
   const [open, setOpen] = useState(false);
   const prio = PRIORITY_COLORS[action.priority] || PRIORITY_COLORS.basse;
   const cat  = CATEGORY_LABELS[action.category] || action.category;
@@ -125,6 +125,18 @@ function ActionCard({ action, onStatusChange, mob }) {
         <span style={{ fontSize: 9, color: "#475569" }}>⏱ {action.effort}</span>
         {ago && <span style={{ fontSize: 9, color: "#334155" }}>🤖 analysé il y a {ago}</span>}
         {action.notes && <span style={{ fontSize: 9, color: "#6366f1" }}>📝 note</span>}
+        {impact && (() => {
+          const up = impact.startsWith("↑"), down = impact.startsWith("↓");
+          const c = up ? "#10b981" : down ? "#ef4444" : "#64748b";
+          return (
+            <span title="Impact mesuré ~14j après complétion (corrélation)" style={{
+              fontSize: 9, padding: "1px 6px", borderRadius: 4, fontWeight: 700,
+              background: `${c}1a`, color: c,
+            }}>
+              📈 {impact}
+            </span>
+          );
+        })()}
       </div>
 
       {/* Détails dépliables */}
@@ -181,6 +193,7 @@ export default function AgentsKanban({ mob }) {
   const [lastRun, setLastRun]         = useState(null);
   const [lastRefresh, setLastRefresh] = useState(null);
   const [liveActive, setLiveActive]   = useState(false);
+  const [outcomes, setOutcomes]       = useState({});
   const runTimeout  = useRef(null);
   const pollRef     = useRef(null);
   const actionsRef  = useRef([]);
@@ -188,6 +201,18 @@ export default function AgentsKanban({ mob }) {
   // ── Charger les actions ──────────────────────────────────────────────────
   const load = useCallback(async (silent = false) => {
     try {
+      // Attribution causale : impacts mesurés (best-effort, ne bloque pas le load)
+      fetch("/api/agents-actions?table=outcomes")
+        .then(r => r.json())
+        .then(o => {
+          const map = {};
+          for (const x of (o.outcomes || [])) {
+            if (x.impact_label) map[x.action_id] = x.impact_label;
+          }
+          setOutcomes(map);
+        })
+        .catch(() => {});
+
       const r = await fetch("/api/agents-actions");
       const d = await r.json();
       if (d.hint?.includes("init")) {
@@ -522,7 +547,7 @@ export default function AgentsKanban({ mob }) {
                 </div>
               ) : (
                 cards.map(a => (
-                  <ActionCard key={a.id} action={a} onStatusChange={handleStatusChange} mob={mob} />
+                  <ActionCard key={a.id} action={a} onStatusChange={handleStatusChange} mob={mob} impact={outcomes[a.id]} />
                 ))
               )}
             </div>

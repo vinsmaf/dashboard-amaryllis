@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo, Component } from "react";
+import { fetchWithTimeout, fetchJSON } from "./lib/apiFetch.js";
 import EmailSync from "./EmailSync.jsx";
 import RevenueManagerPro from "./RevenueManagerPro.jsx";
 import GuideEditor from "./GuideEditor.jsx";
@@ -804,7 +805,10 @@ function PasswordGate({ onAuth }) {
       try { data = await res.json(); } catch { data = {}; }
       if (data.ok && data.role) {
         sessionStorage.setItem(PWD_KEY, "ok");
-        sessionStorage.setItem("ldb_tok", val); // arch-008 : token pour Bearer auth
+        // arch-009 : on stocke le token de session signé (HMAC, expire) — plus
+        // jamais le mot de passe en clair. Fallback sur val pour rétro-compat
+        // si un ancien backend ne renvoie pas encore de token.
+        sessionStorage.setItem("ldb_tok", data.token || val);
         sessionStorage.setItem("admin_role", data.role);
         onAuth(data.role);
       } else {
@@ -908,8 +912,7 @@ export default function App() {
   // - Apps Script URL
   // - URLs iCal Airbnb (stockées en env var CF, jamais dans le bundle)
   useEffect(() => {
-    fetch("/api/get-config")
-      .then(r => r.json())
+    fetchJSON("/api/get-config", { timeout: 8000 })
       .then(d => {
         if (d.scriptUrl && !scriptUrl) {
           setScriptUrl(d.scriptUrl);
@@ -968,8 +971,7 @@ export default function App() {
   useEffect(() => {
     const hasUrls = Object.values(icalUrlsBooking).some(v => v && v.length > 10);
     if (!hasUrls) {
-      fetch("/api/ical-config")
-        .then(r => r.json())
+      fetchJSON("/api/ical-config", { timeout: 8000 })
         .then(d => {
           if (d.ok && d.booking) {
             const filled = Object.fromEntries(Object.entries(d.booking).filter(([, v]) => v));
@@ -1078,11 +1080,11 @@ export default function App() {
       // 2. Beds24 Nogent (fetch frais depuis l'API)
       let beds24Resas = [];
       try {
-        const b24 = await fetch("/api/beds24-bookings", {
+        const b24data = await fetchJSON("/api/beds24-bookings", {
+          timeout: 15000,
           headers: { Authorization: "Bearer " + (sessionStorage.getItem("ldb_tok") || "") },
         });
-        if (b24.ok) {
-          const b24data = await b24.json();
+        {
           beds24Resas = (b24data.bookings || []).map(b => ({
             id:        "beds24-" + b.bookingId,
             bienId:    "nogent",
@@ -1107,21 +1109,23 @@ export default function App() {
       ];
 
       // 4. Envoyer via proxy CF (évite CORS browser → Apps Script)
-      const res = await fetch("/api/sheets-proxy", {
+      const data = await fetchJSON("/api/sheets-proxy", {
         method: "POST",
+        timeout: 30000, // import complet : opération potentiellement longue
         headers: { "Content-Type": "application/json", "X-Script-Url": scriptUrl },
         body: JSON.stringify({ action: "importAllReservations", reservations: allResas }),
       });
-      const data = await res.json();
       setGlobalSyncStatus(data.ok ? "ok" : "error");
+      addToast(data.ok ? "Synchro Sheets réussie ✓" : "Synchro Sheets : réponse inattendue", data.ok ? "success" : "error");
       // Reset après 5s
       setTimeout(() => setGlobalSyncStatus("idle"), 5000);
     } catch (e) {
       console.error("syncAllToSheets:", e);
       setGlobalSyncStatus("error");
+      addToast("Synchro Sheets échouée — " + (e?.message || "erreur inconnue"), "error");
       setTimeout(() => setGlobalSyncStatus("idle"), 5000);
     }
-  }, [scriptUrl, reservations]);
+  }, [scriptUrl, reservations, addToast]);
 
   const onUpdateRevenu = useCallback(async (bienId, month, value) => {
     setBiens(prev => prev.map(b => b.id === bienId
@@ -1430,6 +1434,8 @@ export default function App() {
             onUpdateRevenu, onApplyRevenusFromResas, pushReservationsToScript,
           }}>
           <div style={{ padding: mob ? "12px" : "18px 24px", flex: 1, paddingBottom: "calc(76px + env(safe-area-inset-bottom))" }}>
+            {/* key={tab} : un crash isole l'onglet courant et se réinitialise au changement d'onglet */}
+            <LocalErrorBoundary key={tab}>
             {tab === "planning" && <Planning />}
             {tab === "cockpit" && <Cockpit />}
             {tab === "previsionnel" && <Previsionnel />}
@@ -1454,13 +1460,14 @@ export default function App() {
             {tab === "editorial"     && <EditorialCalendarTab />}
             {tab === "croissance"    && <CroissanceTab />}
             {tab === "seo-audit"     && <SEOAuditTab />}
-            {tab === "chat-admin"    && <LocalErrorBoundary><AdminChatTab /></LocalErrorBoundary>}
+            {tab === "chat-admin"    && <AdminChatTab />}
             {tab === "orchestrateur" && <OrchestratorTab />}
             {tab === "interventions" && <InterventionsTab />}
             {tab === "inventaire"    && <InventaireTab />}
             {tab === "stocks"        && <StockTrackerTab />}
             {tab === "linge"         && <LingeTab />}
             {tab === "conversion"    && <ConversionTab />}
+            </LocalErrorBoundary>
           </div>
           </AppDataProvider>
         </div>

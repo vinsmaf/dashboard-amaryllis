@@ -1,5 +1,30 @@
 // Cloudflare Pages Function — POST /api/create-payment-intent
 
+// Enregistre un "panier" en D1 dès la création du PaymentIntent.
+// Sert à la relance panier abandonné (cron send-relance-panier) si le paiement
+// n'aboutit pas. Fail-silent : ne bloque jamais la création du PaymentIntent.
+async function storeAbandonedCart(env, paymentIntentId, m = {}) {
+  const db = env.revenue_manager;
+  const email = String(m.email || "").trim();
+  if (!db || !paymentIntentId || !email.includes("@") || !m.checkin) return;
+  try {
+    await db.prepare(`CREATE TABLE IF NOT EXISTS abandoned_carts (
+      payment_intent_id TEXT PRIMARY KEY, email TEXT, prenom TEXT,
+      bien_id TEXT, type TEXT, logements TEXT, checkin TEXT, checkout TEXT,
+      guests TEXT, created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+      relance_sent INTEGER DEFAULT 0)`).run();
+    const prenom = String(m.voyageur || "").trim().split(/\s+/)[0] || "";
+    await db.prepare(`INSERT INTO abandoned_carts
+        (payment_intent_id, email, prenom, bien_id, type, logements, checkin, checkout, guests)
+      VALUES (?,?,?,?,?,?,?,?,?)
+      ON CONFLICT(payment_intent_id) DO UPDATE SET
+        email=excluded.email, prenom=excluded.prenom, bien_id=excluded.bien_id,
+        type=excluded.type, logements=excluded.logements,
+        checkin=excluded.checkin, checkout=excluded.checkout, guests=excluded.guests`)
+      .bind(paymentIntentId, email, prenom, m.bienId || "", m.type || "", m.logements || "", m.checkin || "", m.checkout || "", m.guests || "").run();
+  } catch (e) { console.error("[cart] D1:", e.message); }
+}
+
 export async function onRequestPost(context) {
   const { request, env } = context;
 
@@ -27,6 +52,10 @@ export async function onRequestPost(context) {
     "metadata[voyageur]":  metadata.voyageur || "",
     "metadata[email]":     metadata.email    || "",
     "metadata[bookingId]": bookingId || metadata.bookingId || metadata.beds24Id || "",
+    // Réservation groupée (offre résidence — plusieurs logements, 1 paiement)
+    "metadata[type]":      metadata.type      || "",
+    "metadata[logements]": metadata.logements || "",
+    "metadata[guests]":    metadata.guests    || "",
   });
 
   try {
@@ -64,6 +93,7 @@ export async function onRequestPost(context) {
       checkout: metadata.checkout || "",
       ts: new Date().toISOString(),
     }));
+    await storeAbandonedCart(env, parsed.id, metadata).catch(() => {});
     return json({ clientSecret: parsed.client_secret });
   } catch (err) {
     console.error(JSON.stringify({

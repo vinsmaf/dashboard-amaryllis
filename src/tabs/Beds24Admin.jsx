@@ -67,10 +67,27 @@ export default function Beds24Admin() {
     if (bookings.length === 0) { addToast("Charge d'abord les réservations", "error"); return; }
     setSyncStatus("syncing");
     try {
+      // Beds24 (Nogent) → format unifié "Toutes les Réservations".
+      // id "beds24-<bookingId>" identique au sync principal → upsert sans doublon.
+      const reservations = bookings.map(b => ({
+        id:         "beds24-" + b.bookingId,
+        bienId:     "nogent",
+        voyageur:   b.guestName,
+        canal:      b.channelLabel || b.channel || "Beds24",
+        checkin:    b.arrival,
+        checkout:   b.departure,
+        nights:     b.nights,
+        montant:    b.price,
+        nb_guests:  b.numGuests,
+        notes:      b.notes || "",
+        source:     "Beds24",
+        status:     b.statusLabel || "Confirmé",
+        modifiedOn: b.modifiedOn || b.arrival || "",
+      }));
       const res  = await fetch("/api/sheets-proxy", {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-Script-Url": scriptUrl },
-        body: JSON.stringify({ action: "importBeds24", bookings }),
+        body: JSON.stringify({ action: "importAllReservations", reservations }),
       });
       const data = await res.json();
       if (data.ok) {

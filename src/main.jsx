@@ -4,6 +4,7 @@ import * as Sentry from "@sentry/react"
 import './index.css'
 import './tokens.css'
 import { LangProvider } from './i18n.jsx'
+import { GUIDES_POI_SLUGS } from './data/guidesPoiSlugs.js'
 
 Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN || "",
@@ -35,6 +36,7 @@ const GuideActivites = lazy(() => import('./GuideActivites.jsx'))
 const GuideProximite = lazy(() => import('./GuideProximite.jsx'))
 const GuideArlet     = lazy(() => import('./GuideArlet.jsx'))
 const GuideExplorer  = lazy(() => import('./GuideExplorer.jsx'))
+const GuidePOI       = lazy(() => import('./GuidePOI.jsx'))
 const GuideTroisIlets = lazy(() => import('./GuideTroisIlets.jsx'))
 const GuidePlongee             = lazy(() => import('./GuidePlongee.jsx'))
 const GuideSaintPierre         = lazy(() => import('./GuideSaintPierre.jsx'))
@@ -172,8 +174,9 @@ document.addEventListener("change", (e) => {
 })();
 
 const BIEN_IDS = ["amaryllis", "zandoli", "iguana", "geko", "mabouya", "schoelcher", "nogent"];
-const KNOWN = ["/", "/links", "/merci", "/devis", "/guide", "/explorer", "/guide-le-diamant", "/guide-sainte-anne", "/villa-rental-martinique", "/activites-sainte-luce", "/guide-proximite", "/guide-arlet", "/guide-trois-ilets", "/guide-plongee-martinique", "/guide-saint-pierre-martinique", "/guide-francois-martinique", "/guide-distilleries-martinique", "/guide-randonnees-martinique", "/guide-gastronomie-martinique", "/avis", "/faq", "/mentions-legales", "/politique-confidentialite", "/conditions-generales", "/sainte-luce-martinique", "/reservation-directe-martinique", "/meilleure-saison-martinique", "/seminaires", "/guide-nogent-sur-marne", "/location-villa-martinique-piscine"];
+const KNOWN = ["/", "/links", "/merci", "/devis", "/guide", "/guide-hub", "/explorer", "/guide-le-diamant", "/guide-sainte-anne", "/villa-rental-martinique", "/activites-sainte-luce", "/guide-proximite", "/guide-arlet", "/guide-trois-ilets", "/guide-plongee-martinique", "/guide-saint-pierre-martinique", "/guide-francois-martinique", "/guide-distilleries-martinique", "/guide-randonnees-martinique", "/guide-gastronomie-martinique", "/avis", "/faq", "/mentions-legales", "/politique-confidentialite", "/conditions-generales", "/sainte-luce-martinique", "/reservation-directe-martinique", "/meilleure-saison-martinique", "/seminaires", "/guide-nogent-sur-marne", "/location-villa-martinique-piscine", "/location-groupe-sainte-luce", "/location-appartement-vue-mer-schoelcher", "/plus-belles-plages-sud-martinique"];
 const isKnown = KNOWN.includes(path)
+  || GUIDES_POI_SLUGS.includes(path)
   || path.startsWith("/admin")
   || path.startsWith("/landing")
   || path.startsWith("/bienvenue")
@@ -192,7 +195,9 @@ if (!isKnown) {
   Component = Landing;
 } else if (path === "/links") {
   Component = Links;
-} else if (path === "/guide") {
+} else if (GUIDES_POI_SLUGS.includes(path)) {
+  Component = GuidePOI;
+} else if (path === "/guide" || path === "/guide-hub") {
   Component = Guide;
 } else if (path === "/guide-le-diamant") {
   Component = GuideDiamant;

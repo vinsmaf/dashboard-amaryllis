@@ -224,6 +224,39 @@ export async function onRequest(context) {
       }
     }
 
+    // GET ?table=outcomes — attribution causale mesurée
+    if (table === "outcomes") {
+      try {
+        let q = "SELECT * FROM action_outcomes WHERE 1=1";
+        const params = [];
+        if (agent) { q += " AND agent = ?"; params.push(agent); }
+        q += " ORDER BY completed_at DESC";
+        const { results } = await db.prepare(q).bind(...params).all();
+        return json({ outcomes: results, total: results.length });
+      } catch (e) {
+        return json({ outcomes: [], total: 0, error: e.message });
+      }
+    }
+
+    // GET ?table=llm_outputs — journal des sorties LLM (prompt-004)
+    if (table === "llm_outputs") {
+      try {
+        await db.prepare(`CREATE TABLE IF NOT EXISTS llm_outputs (
+          id INTEGER PRIMARY KEY AUTOINCREMENT, source TEXT, tier TEXT, provider TEXT, model TEXT,
+          prompt TEXT, output TEXT, output_len INTEGER, attempts INTEGER,
+          created_at INTEGER NOT NULL DEFAULT (unixepoch()))`).run();
+        let q = "SELECT id, source, tier, provider, model, output_len, attempts, created_at, substr(prompt,1,200) AS prompt_preview, substr(output,1,400) AS output_preview FROM llm_outputs WHERE 1=1";
+        const params = [];
+        if (agent) { q += " AND source = ?"; params.push(`agent:${agent}`); }
+        const limit = Math.min(parseInt(url.searchParams.get("limit") || "100", 10) || 100, 500);
+        q += ` ORDER BY id DESC LIMIT ${limit}`;
+        const { results } = await db.prepare(q).bind(...params).all();
+        return json({ logs: results, total: results.length });
+      } catch (e) {
+        return json({ logs: [], total: 0, error: e.message });
+      }
+    }
+
     const status   = url.searchParams.get("status");
     const priority = url.searchParams.get("priority");
     const category = url.searchParams.get("category");
@@ -275,6 +308,30 @@ export async function onRequest(context) {
 
     try {
       await db.prepare(`UPDATE agent_actions SET ${fields.join(", ")} WHERE id = ?`).bind(...params).run();
+
+      // Attribution causale : quand une action passe en "fait", on note la date
+      // de complétion + l'agent. La mesure d'impact est faite plus tard par
+      // agents-run (passe de mesure ~14j après, via la série kpi_history).
+      if (body.status === "fait") {
+        try {
+          const row = await db.prepare("SELECT agent FROM agent_actions WHERE id = ?").bind(id).first();
+          await db.prepare(`
+            CREATE TABLE IF NOT EXISTS action_outcomes (
+              action_id    TEXT PRIMARY KEY,
+              agent        TEXT NOT NULL,
+              completed_at INTEGER NOT NULL,
+              measured_at  INTEGER,
+              impact_label TEXT,
+              detail_json  TEXT
+            )
+          `).run();
+          await db.prepare(`
+            INSERT INTO action_outcomes (action_id, agent, completed_at) VALUES (?,?,?)
+            ON CONFLICT(action_id) DO UPDATE SET completed_at=excluded.completed_at, measured_at=NULL, impact_label=NULL, detail_json=NULL
+          `).bind(id, row?.agent || "?", Math.floor(Date.now() / 1000)).run();
+        } catch (_) { /* best-effort, ne bloque jamais le PATCH */ }
+      }
+
       return json({ ok: true, id });
     } catch (e) {
       return json({ error: e.message }, 500);

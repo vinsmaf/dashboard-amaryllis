@@ -145,6 +145,10 @@ export async function callLLM(env, opts) {
           // Sécurise toujours en string non-vide
           if (typeof text !== "string") text = text ? JSON.stringify(text) : "";
           if (text && text.trim()) {
+            // prompt-004 — log opt-in des sorties LLM en D1 (analyse a posteriori).
+            if (opts.logSource) {
+              await logLLMOutput(env, { source: opts.logSource, tier, provider: providerId, model, messages, text, attempts: attempt + 1 });
+            }
             return { ok: true, text, provider: providerId, model, attempts: attempt + 1, errors: errors.length ? errors : undefined };
           }
           errors.push({ provider: providerId, model, error: "empty response" });
@@ -171,4 +175,31 @@ export async function callLLM(env, opts) {
   }
 
   return { ok: false, text: "", provider: null, model: null, attempts: 0, errors };
+}
+
+// prompt-004 — journalise une sortie LLM en D1 (table llm_outputs).
+// Opt-in via opts.logSource. Ne casse JAMAIS l'appel LLM (try/catch, fail-silent).
+async function logLLMOutput(env, { source, tier, provider, model, messages, text, attempts }) {
+  const db = env.revenue_manager;
+  if (!db) return;
+  try {
+    await db.prepare(`CREATE TABLE IF NOT EXISTS llm_outputs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      source TEXT, tier TEXT, provider TEXT, model TEXT,
+      prompt TEXT, output TEXT, output_len INTEGER, attempts INTEGER,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch())
+    )`).run();
+    const lastUser = (messages || []).filter(m => m.role === "user").pop();
+    const prompt = (lastUser?.content || "").slice(0, 2000);
+    const output = String(text || "").slice(0, 4000);
+    await db.prepare(
+      "INSERT INTO llm_outputs (source, tier, provider, model, prompt, output, output_len, attempts) VALUES (?,?,?,?,?,?,?,?)"
+    ).bind(source, tier || null, provider || null, model || null, prompt, output, String(text || "").length, attempts || 1).run();
+    // Purge légère : garde les 2000 dernières lignes (probabiliste pour éviter le surcoût)
+    if (Math.random() < 0.05) {
+      await db.prepare("DELETE FROM llm_outputs WHERE id < (SELECT MAX(id) - 2000 FROM llm_outputs)").run();
+    }
+  } catch (e) {
+    console.error("[llm-log] erreur D1:", e.message);
+  }
 }

@@ -139,6 +139,10 @@ const PETS_FORBIDDEN = new Set(["nogent"]);
 const BOOKING_DISABLED = new Set(["iguana"]);
 // Biens sans affichage de prix (location longue durée)
 const PRICE_HIDDEN = new Set(["iguana"]);
+// Biens où l'on masque le bloc "Tarifs prévisionnels" (PricingCalendar) :
+// grille saisonnière statique jugée redondante/non dynamique → on s'appuie sur le
+// calendrier de disponibilités/réservation qui lit les prix réels (onglet admin Tarifs).
+const PRICING_CAL_HIDDEN = new Set(["geko", "mabouya", "zandoli", "schoelcher", "nogent"]);
 
 const IVORY  = "var(--c-ivory)";  // paper — main background
 const CREAM  = "var(--c-cream)";  // cream — card/modal background
@@ -2227,6 +2231,16 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
               </div>
             )}
 
+            {/* Nudge offre groupée — quand on atteint le max d'une villa de la résidence */}
+            {["amaryllis","zandoli","geko","mabouya"].includes(bien.id) && nbGuests >= bien.capacite && (
+              <a href="/location-groupe-sainte-luce" style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, background: CREAM, border: `1px solid ${SAND}`, borderRadius: 10, padding: "11px 16px", textDecoration: "none", color: NAVY, fontFamily: "'Jost', sans-serif" }}>
+                <span style={{ fontSize: 16 }}>👨‍👩‍👧‍👦</span>
+                <span style={{ fontSize: 12.5, lineHeight: 1.4 }}>
+                  Groupe plus nombreux ? La <strong>Résidence Amaryllis</strong> accueille jusqu'à 11 personnes (3 logements) <span style={{ color: CORAL }}>→</span>
+                </span>
+              </a>
+            )}
+
             {/* Animaux */}
             {!PETS_FORBIDDEN.has(bien.id) && (
               <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 12, background: CREAM, border: `1px solid ${SAND}`, borderRadius: 12, padding: "13px 18px" }}>
@@ -2353,6 +2367,9 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
                 </span>
               ))}
             </div>
+            <p style={{ fontFamily: "'Jost', sans-serif", fontSize: 10.5, color: MUTED, margin: "8px 0 0", lineHeight: 1.5 }}>
+              En réservant, vous acceptez notre <a href="/politique-confidentialite" target="_blank" rel="noopener" style={{ color: CORAL, textDecoration: "underline" }}>politique de confidentialité</a>. Vos données servent uniquement à gérer votre séjour.
+            </p>
 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginTop: 18, paddingTop: 18, borderTop: `1px solid ${SAND}` }}>
               <button onClick={() => setStep(1)} style={{ background: "none", border: "none", color: MUTED, cursor: "pointer", fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 12, letterSpacing: "0.06em" }}>← Retour</button>
@@ -4019,7 +4036,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
 
             {/* Tarifs prévisionnels — design-007 : PricingCalendar inline */}
             {/* Sur desktop pour amaryllis : déjà affiché dans le breakout reel — ne pas dupliquer */}
-            {!PRICE_HIDDEN.has(bien.id) && !BOOKING_DISABLED.has(bien.id) && (isMobile || bien.id !== "amaryllis") && (
+            {!PRICE_HIDDEN.has(bien.id) && !BOOKING_DISABLED.has(bien.id) && !PRICING_CAL_HIDDEN.has(bien.id) && (isMobile || bien.id !== "amaryllis") && (
               <>
                 <div style={{ height: 1, background: SAND, marginBottom: 26 }} />
                 <PricingCalendar bien={bien} isMobile={isMobile} />
@@ -4248,7 +4265,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                         <div key={c.key} style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 10, padding: "18px 20px" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
                             {c.avatar
-                              ? <img src={c.avatar} alt={c.name} style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} onError={e => e.currentTarget.style.display = "none"} />
+                              ? <img loading="lazy" decoding="async" src={c.avatar} alt={c.name} style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} onError={e => e.currentTarget.style.display = "none"} />
                               : <div style={{ width: 36, height: 36, borderRadius: "50%", background: NAVY, display: "flex", alignItems: "center", justifyContent: "center", color: IVORY, fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 14, flexShrink: 0 }}>
                                   {c.initial}
                                 </div>
@@ -4897,7 +4914,7 @@ function ComparatorModal({ biens, onClose }) {
   }, [onClose]);
 
   const rows = [
-    { label: "Photo",       render: b => <img src={b.photos[0]} alt={b.nom} style={{ width:"100%", height:110, objectFit:"cover", borderRadius:8, display:"block" }} /> },
+    { label: "Photo",       render: b => <img loading="lazy" decoding="async" src={b.photos[0]} alt={b.nom} style={{ width:"100%", height:110, objectFit:"cover", borderRadius:8, display:"block" }} /> },
     { label: "Logement",    render: b => <span style={{ fontWeight:600, color:NAVY, fontSize:13 }}>{b.nom}</span> },
     { label: "Lieu",        render: b => <span style={{ fontSize:12, color:MUTED }}>{b.lieu}</span> },
     { label: "Note",        render: b => <span style={{ fontSize:13, color:GOLD, fontWeight:600 }}>★ {b.rating} <span style={{ color:MUTED, fontWeight:400, fontSize:11 }}>({b.reviews} avis)</span></span> },
@@ -5014,6 +5031,7 @@ function SearchByDates({ biens, onBook, onDetail }) {
   const [minGuests, setMinGuests] = useState("0");   // "0" = pas de filtre
   const [minChambres, setMinChambres] = useState("0");
   const [results, setResults]   = useState(null); // null = pas lancé
+  const [groupCombos, setGroupCombos] = useState([]); // combinaisons résidence dispo (groupe >8)
   const [loading, setLoading]   = useState(false);
   const [alerteTarget, setAlerteTarget] = useState(null); // { bien, checkin, checkout }
   const searchAbortRef = useRef(null);
@@ -5110,6 +5128,38 @@ function SearchByDates({ biens, onBook, onDetail }) {
       return 0;
     });
 
+    // ── Combos résidence (groupe > 8) : combinaisons Zandoli+Géko+Mabouya réellement libres ──
+    let combos = [];
+    if (gFilter > 8) {
+      const RES = ["zandoli", "geko", "mabouya"];
+      const disc = getDiscount(nights);
+      const info = {};
+      RES.forEach(id => {
+        const b = candidates.find(c => c.id === id);
+        if (!b) return;
+        const blocked = availMap[id] || [];
+        let avail = true, c2 = checkin;
+        for (let i = 0; i < nights; i++) { if (blocked.includes(c2)) { avail = false; break; } c2 = addDays(c2, 1); }
+        const map = allPrices[id] || {};
+        let sum = 0; c2 = checkin;
+        for (let i = 0; i < nights; i++) { sum += map[c2] ?? b.prix; c2 = addDays(c2, 1); }
+        const discAmt = disc > 0 ? Math.round(sum * disc) : 0;
+        const frais = FRAIS_MENAGE[id] ?? 0;
+        info[id] = { bien: b, avail, total: sum - discAmt + frais, cap: b.capacite };
+      });
+      const ids = RES.filter(id => info[id]);
+      for (let mask = 1; mask < (1 << ids.length); mask++) {
+        const sub = ids.filter((_, i) => mask & (1 << i));
+        if (sub.some(id => !info[id].avail)) continue;          // une villa prise → combo écarté
+        const cap = sub.reduce((s, id) => s + info[id].cap, 0);
+        if (cap < gFilter) continue;                            // ne couvre pas le groupe
+        const total = sub.reduce((s, id) => s + info[id].total, 0);
+        combos.push({ villas: sub.map(id => info[id].bien), cap, total, nights });
+      }
+      combos.sort((a, b) => a.villas.length - b.villas.length || a.total - b.total); // + petit combo, puis + cher
+    }
+    setGroupCombos(combos);
+
     setResults(res);
     setLoading(false);
   }
@@ -5117,9 +5167,11 @@ function SearchByDates({ biens, onBook, onDetail }) {
   const [open, setOpen] = useState(false);
   const canSearch = checkin && checkout && checkout > checkin;
   const availableCount = results ? results.filter(r => r.isAvailable && !r.belowMin).length : 0;
+  // >8 voyageurs : aucune villa seule ne suffit (max Amaryllis = 8) → pousser l'offre groupée résidence
+  const groupNeeded = parseInt(minGuests || "0", 10) > 8;
 
   // Fermer et réinitialiser
-  function reset() { setCheckin(""); setCheckout(""); setResults(null); setOpen(false); }
+  function reset() { setCheckin(""); setCheckout(""); setResults(null); setGroupCombos([]); setOpen(false); }
 
   return (
     <div style={{ background: IVORY, borderBottom: `1px solid ${SAND}` }}>
@@ -5177,7 +5229,7 @@ function SearchByDates({ biens, onBook, onDetail }) {
                 backgroundRepeat: "no-repeat", backgroundPosition: "right 10px center",
               }}>
                 <option value="0">Voyageurs</option>
-                {[1,2,3,4,5,6,7,8].map(n => <option key={n} value={n}>{n} voyageur{n > 1 ? "s" : ""}</option>)}
+                {[1,2,3,4,5,6,7,8,9,10,11].map(n => <option key={n} value={n}>{n} voyageur{n > 1 ? "s" : ""}</option>)}
               </select>
 
               {/* Chambres */}
@@ -5208,6 +5260,57 @@ function SearchByDates({ biens, onBook, onDetail }) {
             {/* Résultats */}
             {results && (
               <div style={{ marginTop: 16 }}>
+                {groupNeeded ? (
+                  <div>
+                    <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 13, color: NAVY, marginBottom: 4 }}>
+                      Pour {minGuests} voyageurs — Résidence Amaryllis
+                    </div>
+                    <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11.5, color: MUTED, marginBottom: 12, lineHeight: 1.5 }}>
+                      Aucune villa seule n'accueille plus de 8 personnes. Voici les combinaisons de villas libres sur vos dates :
+                    </div>
+                    {groupCombos.length === 0 ? (
+                      <div style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 10, padding: "14px 16px" }}>
+                        <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 12, color: "#ef4444", marginBottom: 10 }}>
+                          Aucune combinaison entièrement libre sur ces dates.
+                        </div>
+                        <button
+                          onClick={() => { window.location.href = "/location-groupe-sainte-luce"; }}
+                          style={{ background: CORAL, border: "none", color: "#fff", borderRadius: 7, padding: "8px 16px", fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer" }}
+                        >
+                          Demander un devis groupé →
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                        {groupCombos.map((c, i) => (
+                          <div key={i} style={{ background: "#fff", border: `1px solid rgba(14,59,58,0.12)`, borderRadius: 9, padding: "13px 16px", boxShadow: "0 1px 6px rgba(14,59,58,0.06)" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, flexWrap: "wrap" }}>
+                              <div>
+                                <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 13, color: NAVY }}>
+                                  {c.villas.map(v => v.nom).join(" + ")}
+                                </div>
+                                <div style={{ fontSize: 11, color: MUTED, fontFamily: "'Jost', sans-serif", marginTop: 2 }}>
+                                  jusqu'à {c.cap} pers · {c.villas.length} logement{c.villas.length > 1 ? "s" : ""} · {c.nights} nuit{c.nights > 1 ? "s" : ""}
+                                </div>
+                              </div>
+                              <div style={{ fontSize: 19, fontWeight: 700, color: CORAL, lineHeight: 1, whiteSpace: "nowrap" }}>{c.total.toLocaleString("fr-FR")}€</div>
+                            </div>
+                            <a
+                              href={`/location-groupe-sainte-luce?checkin=${checkin}&checkout=${checkout}&guests=${minGuests}`}
+                              style={{ display: "inline-block", marginTop: 11, background: CORAL, color: "#fff", textDecoration: "none", borderRadius: 6, padding: "8px 16px", fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}
+                            >
+                              Réserver cette formule →
+                            </a>
+                          </div>
+                        ))}
+                        <div style={{ fontSize: 10, color: MUTED, fontFamily: "'Jost', sans-serif", opacity: 0.8 }}>
+                          Paiement unique en ligne · calendriers vérifiés en direct
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                <>
                 <div style={{ fontSize: 10, color: MUTED, fontFamily: "'Jost', sans-serif", marginBottom: 10, letterSpacing: "0.08em", textTransform: "uppercase" }}>
                   {availableCount === 0
                     ? <span style={{ color: "#ef4444" }}>Aucun logement disponible pour ces critères</span>
@@ -5268,12 +5371,328 @@ function SearchByDates({ biens, onBook, onDetail }) {
                     );
                   })}
                 </div>
+                </>
+                )}
               </div>
             )}
           </div>
         )}
       </div>
       {alerteTarget && <AlerteDispoModal bien={alerteTarget.bien} checkin={alerteTarget.checkin} checkout={alerteTarget.checkout} onClose={() => setAlerteTarget(null)} />}
+    </div>
+  );
+}
+
+/* ─── Configurateur multi-logements (offre groupée résidence) ─────────────── */
+function GroupBookingBuilder({ biens }) {
+  const RES_IDS = ["zandoli", "geko", "mabouya"];
+  const ICONS = { zandoli: "🏊", geko: "🌿", mabouya: "♨️" };
+  const resBiens = RES_IDS.map(id => biens.find(b => b.id === id)).filter(Boolean);
+  // Pré-remplissage depuis l'URL (?checkin=&checkout=&guests=) — flux recherche → page
+  const _gp = (() => { try { return new URLSearchParams(window.location.search); } catch { return new URLSearchParams(); } })();
+  const [checkin, setCheckin]   = useState(_gp.get("checkin") || "");
+  const [checkout, setCheckout] = useState(_gp.get("checkout") || "");
+  const [guests, setGuests]     = useState(() => { const g = parseInt(_gp.get("guests"), 10); return (g >= 1 && g <= 11) ? g : 9; });
+  const [selected, setSelected] = useState(() => new Set(RES_IDS));
+  const [avail, setAvail]       = useState({});       // id -> true/false (dispo sur la plage)
+  const [availLoading, setAvailLoading] = useState(false);
+  const [showPay, setShowPay]   = useState(false);
+  const abortRef = useRef(null);
+
+  const nights = (checkin && checkout && checkout > checkin) ? dateDiff(checkin, checkout) : 0;
+  const todayVal = today();
+
+  useEffect(() => {
+    if (!nights) { setAvail({}); return; }
+    if (abortRef.current) abortRef.current.abort();
+    const ctrl = new AbortController(); abortRef.current = ctrl;
+    setAvailLoading(true);
+    let bookingUrls = {}; try { bookingUrls = JSON.parse(localStorage.getItem("ical_urls_booking") || "{}"); } catch {}
+    Promise.all(resBiens.map(async b => {
+      try {
+        let url = `/api/get-availability?bienId=${b.id}`;
+        if (bookingUrls[b.id]) url += `&bookingUrl=${encodeURIComponent(bookingUrls[b.id])}`;
+        const r = await fetch(url, { signal: ctrl.signal });
+        const d = r.ok ? await r.json() : {};
+        const blocked = d.blockedDates || [];
+        let ok = true, cur = checkin;
+        for (let i = 0; i < nights; i++) { if (blocked.includes(cur)) { ok = false; break; } cur = addDays(cur, 1); }
+        return [b.id, ok];
+      } catch (e) { if (e.name === "AbortError") return null; return [b.id, true]; }
+    })).then(pairs => {
+      if (ctrl.signal.aborted) return;
+      const m = {}; pairs.filter(Boolean).forEach(([id, ok]) => { m[id] = ok; });
+      setAvail(m); setAvailLoading(false);
+    });
+    return () => ctrl.abort();
+  }, [checkin, checkout, nights]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const allPrices = loadDailyPrices();
+  function bienTotal(b) {
+    if (!nights) return 0;
+    const map = allPrices[b.id] || {};
+    let sum = 0, cur = checkin;
+    for (let i = 0; i < nights; i++) { sum += map[cur] ?? b.prix; cur = addDays(cur, 1); }
+    const disc = getDiscount(nights); const discAmt = disc > 0 ? Math.round(sum * disc) : 0;
+    const frais = FRAIS_MENAGE[b.id] ?? 0;
+    return sum - discAmt + frais;
+  }
+
+  function toggle(id) {
+    if (nights && avail[id] === false) return; // indispo → non sélectionnable
+    setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  }
+
+  const selectedBiens = resBiens.filter(b => selected.has(b.id) && !(nights && avail[b.id] === false));
+  const totalCap   = selectedBiens.reduce((s, b) => s + b.capacite, 0);
+  const totalPrice = nights ? selectedBiens.reduce((s, b) => s + bienTotal(b), 0) : 0;
+  const capOk      = totalCap >= guests;
+  const canQuote   = nights > 0 && selectedBiens.length > 0 && capOk;
+
+  const mailto = `mailto:contact@villamaryllis.com?subject=${encodeURIComponent(`Réservation groupée Résidence Amaryllis — ${guests} pers`)}&body=${encodeURIComponent(`Bonjour,\n\nJe souhaite réserver la formule groupée suivante (paiement unique) :\n${selectedBiens.map(b => "• " + b.nom).join("\n")}\n\nArrivée : ${checkin ? formatDateLong(checkin) : "—"}\nDépart : ${checkout ? formatDateLong(checkout) : "—"}\nNuits : ${nights}\nVoyageurs : ${guests}\nCapacité totale : ${totalCap} personnes\nTotal estimé : ${totalPrice}€\n\nMerci de me confirmer la disponibilité et de m'envoyer le lien de paiement.`)}`;
+
+  const inputStyle = { border: `1px solid ${SAND}`, borderRadius: 8, padding: "9px 12px", fontFamily: "'Jost', sans-serif", fontSize: 13, color: NAVY, background: "#fff", outline: "none" };
+
+  return (
+    <div style={{ background: "#fff", border: `1px solid ${SAND}`, borderRadius: 16, padding: "26px 26px 28px" }}>
+      <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 14, color: NAVY, marginBottom: 4 }}>
+        Composez votre séjour groupé
+      </div>
+      <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 12, color: MUTED, marginBottom: 20 }}>
+        Choisissez vos dates, le nombre de voyageurs et les logements — le prix et la disponibilité se mettent à jour automatiquement.
+      </div>
+
+      {/* Dates + voyageurs */}
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
+        <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <span style={{ fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: MUTED, fontFamily: "'Jost', sans-serif" }}>Arrivée</span>
+          <input type="date" value={checkin} min={todayVal} onChange={e => { setCheckin(e.target.value); if (checkout && e.target.value >= checkout) setCheckout(""); }} style={inputStyle} />
+        </label>
+        <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <span style={{ fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: MUTED, fontFamily: "'Jost', sans-serif" }}>Départ</span>
+          <input type="date" value={checkout} min={checkin || todayVal} onChange={e => setCheckout(e.target.value)} style={inputStyle} />
+        </label>
+        <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <span style={{ fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: MUTED, fontFamily: "'Jost', sans-serif" }}>Voyageurs</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, height: 39 }}>
+            <button onClick={() => setGuests(g => Math.max(1, g - 1))} style={{ width: 30, height: 30, borderRadius: "50%", border: `1px solid ${SAND}`, background: IVORY, fontSize: 17, cursor: "pointer", color: NAVY }}>−</button>
+            <span style={{ fontSize: 15, fontWeight: 700, color: NAVY, minWidth: 22, textAlign: "center" }}>{guests}</span>
+            <button onClick={() => setGuests(g => Math.min(11, g + 1))} style={{ width: 30, height: 30, borderRadius: "50%", border: `1px solid ${SAND}`, background: IVORY, fontSize: 17, cursor: "pointer", color: NAVY }}>+</button>
+          </div>
+        </label>
+      </div>
+
+      {/* Sélection des logements */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginBottom: 20 }}>
+        {resBiens.map(b => {
+          const unavailable = nights > 0 && avail[b.id] === false;
+          const isSel = selected.has(b.id) && !unavailable;
+          return (
+            <div key={b.id} role="button" tabIndex={unavailable ? -1 : 0}
+              onClick={() => toggle(b.id)}
+              onKeyDown={e => { if ((e.key === "Enter" || e.key === " ") && !unavailable) { e.preventDefault(); toggle(b.id); } }}
+              style={{ textAlign: "left", cursor: unavailable ? "not-allowed" : "pointer", background: isSel ? "rgba(14,59,58,0.04)" : "#fff", border: `2px solid ${isSel ? NAVY : SAND}`, borderRadius: 12, overflow: "hidden", opacity: unavailable ? 0.5 : 1, padding: 0, display: "flex", flexDirection: "column" }}>
+              <div style={{ position: "relative", height: 110 }}>
+                <img src={`/photos/${b.id}/01.webp`} alt={b.nom} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                <div style={{ position: "absolute", top: 8, right: 8, width: 24, height: 24, borderRadius: "50%", background: isSel ? NAVY : "rgba(255,255,255,0.85)", border: `1px solid ${isSel ? NAVY : SAND}`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 13 }}>{isSel ? "✓" : ""}</div>
+                {unavailable && <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.55)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#ef4444", fontFamily: "'Jost', sans-serif" }}>Indisponible</div>}
+              </div>
+              <div style={{ padding: "11px 14px 13px" }}>
+                <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 13.5, color: NAVY }}>{ICONS[b.id]} {b.nom}</div>
+                <div style={{ fontSize: 11, color: MUTED, fontFamily: "'Jost', sans-serif", marginTop: 2 }}>jusqu'à {b.capacite} pers.</div>
+                <div style={{ fontSize: 13, color: CORAL, fontWeight: 700, fontFamily: "'Jost', sans-serif", marginTop: 6 }}>
+                  {nights > 0 ? `${bienTotal(b).toLocaleString("fr-FR")}€ / ${nights} nuit${nights > 1 ? "s" : ""}` : `${b.prix}€ / nuit`}
+                </div>
+                <a href={`/${b.id}`} onClick={e => e.stopPropagation()} style={{ fontSize: 11, color: MUTED, fontFamily: "'Jost', sans-serif", textDecoration: "underline", marginTop: 6, display: "inline-block" }}>Voir la fiche →</a>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Récap + CTA */}
+      <div style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 12, padding: "18px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
+        <div>
+          <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 12, color: MUTED }}>
+            {selectedBiens.length} logement{selectedBiens.length > 1 ? "s" : ""} · capacité {totalCap} pers.
+            {availLoading && " · vérification des disponibilités…"}
+          </div>
+          <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 700, fontSize: 22, color: NAVY, lineHeight: 1.1, marginTop: 4 }}>
+            {nights > 0 ? `${totalPrice.toLocaleString("fr-FR")}€` : "—"}
+            {nights > 0 && <span style={{ fontWeight: 300, fontSize: 12, color: MUTED, marginLeft: 6 }}>total · {nights} nuit{nights > 1 ? "s" : ""}</span>}
+          </div>
+          {!capOk && selectedBiens.length > 0 && (
+            <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, color: "#ef4444", marginTop: 4 }}>
+              Capacité insuffisante pour {guests} voyageurs — ajoutez un logement.
+            </div>
+          )}
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+          <button
+            onClick={() => { if (canQuote) setShowPay(true); }}
+            disabled={!canQuote}
+            style={{ background: canQuote ? CORAL : SAND, color: canQuote ? "#fff" : MUTED, border: "none", padding: "13px 26px", borderRadius: 8, fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: "0.1em", textTransform: "uppercase", whiteSpace: "nowrap", cursor: canQuote ? "pointer" : "not-allowed" }}
+          >
+            Réserver et payer →
+          </button>
+          <a href={canQuote ? mailto : undefined} target={canQuote ? "_blank" : undefined} rel="noopener noreferrer"
+            onClick={e => { if (!canQuote) e.preventDefault(); }}
+            style={{ fontSize: 11, color: MUTED, fontFamily: "'Jost', sans-serif", textDecoration: "underline", pointerEvents: canQuote ? "auto" : "none", opacity: canQuote ? 1 : 0.5 }}>
+            ou demander un devis
+          </a>
+        </div>
+      </div>
+      <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 10, color: MUTED, opacity: 0.8, marginTop: 10, textAlign: "center" }}>
+        Disponibilités vérifiées en direct · paiement unique sécurisé · réponse sous 2h
+      </div>
+      {showPay && (
+        <GroupPaymentModal
+          biens={selectedBiens}
+          checkin={checkin}
+          checkout={checkout}
+          guests={guests}
+          nights={nights}
+          total={totalPrice}
+          onClose={() => setShowPay(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ─── Paiement unique d'une réservation groupée (capture immédiate + alerte hôte) ─── */
+function GroupPaymentModal({ biens, checkin, checkout, guests, nights, total, onClose }) {
+  const [step, setStep]   = useState(1); // 1 = infos, 2 = paiement
+  const [form, setForm]   = useState({ prenom: "", nom: "", email: "", tel: "" });
+  const [stripe, setStripe]     = useState(null);
+  const [elements, setElements] = useState(null);
+  const [paying, setPaying]     = useState(false);
+  const [err, setErr]           = useState("");
+  const stripeAppearance = { theme: "stripe", variables: { colorPrimary: CORAL, borderRadius: "8px", colorBackground: CREAM, colorText: NAVY } };
+  const formOk = form.prenom.trim() && form.nom.trim() && form.email.includes("@");
+  const logementsLabel = biens.map(b => b.nom).join(" + ");
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      for (let i = 0; i < 50 && !window.Stripe; i++) await new Promise(r => setTimeout(r, 200));
+      if (cancelled || !window.Stripe) return;
+      let pk = STRIPE_PK;
+      if (!pk) { try { const c = await fetch("/api/get-config").then(r => r.json()); pk = c.stripePk; } catch { /* */ } }
+      if (cancelled || !pk) return;
+      setStripe(window.Stripe(pk));
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    const fn = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", fn);
+    return () => window.removeEventListener("keydown", fn);
+  }, [onClose]);
+
+  useEffect(() => {
+    if (step === 2 && elements) { const pe = elements.getElement("payment"); if (pe) pe.mount("#grp-pe"); }
+  }, [step, elements]);
+
+  async function goToPayment() {
+    setPaying(true); setErr("");
+    try {
+      // Re-check dispo de TOUS les logements sélectionnés juste avant paiement (anti double-résa)
+      let bookingUrls = {}; try { bookingUrls = JSON.parse(localStorage.getItem("ical_urls_booking") || "{}"); } catch {}
+      const checks = await Promise.all(biens.map(async b => {
+        try {
+          let url = `/api/get-availability?bienId=${b.id}`;
+          if (bookingUrls[b.id]) url += `&bookingUrl=${encodeURIComponent(bookingUrls[b.id])}`;
+          const r = await fetch(url); const d = r.ok ? await r.json() : {};
+          const blocked = d.blockedDates || [];
+          let ok = true, cur = checkin;
+          for (let i = 0; i < nights; i++) { if (blocked.includes(cur)) { ok = false; break; } cur = addDays(cur, 1); }
+          return ok;
+        } catch { return true; }
+      }));
+      if (checks.some(ok => !ok)) { setErr("Un des logements vient d'être réservé sur ces dates. Revenez en arrière pour ajuster votre sélection."); setPaying(false); return; }
+
+      const res = await fetch("/api/create-payment-intent", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: total * 100, currency: "eur", metadata: { type: "group", bienId: "groupe", logements: logementsLabel, checkin, checkout, guests: String(guests), voyageur: `${form.prenom} ${form.nom}`.trim(), email: form.email } }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      const el = stripe.elements({ clientSecret: data.clientSecret, appearance: stripeAppearance });
+      el.create("payment"); setElements(el); setStep(2);
+    } catch (e) { setErr(e.message); }
+    setPaying(false);
+  }
+
+  async function handlePay() {
+    if (!stripe || !elements) return;
+    setPaying(true); setErr("");
+    const { error, paymentIntent } = await stripe.confirmPayment({
+      elements, confirmParams: { return_url: window.location.origin + "/merci" }, redirect: "if_required",
+    });
+    if (error) { setErr(error.message); setPaying(false); return; }
+    if (paymentIntent?.status === "succeeded") {
+      // Alerte hôte immédiate (en plus du webhook) — bloquer les calendriers
+      fetch("/api/contact", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nom: `${form.prenom} ${form.nom}`.trim(), email: form.email, tel: form.tel, bien: `GROUPE : ${logementsLabel}`, source: "reservation-groupe",
+          message: `🚨 RÉSA GROUPÉE PAYÉE (${paymentIntent.id}) — BLOQUER les calendriers Airbnb/Booking de : ${biens.map(b => b.nom).join(", ")}\nDates : ${checkin} → ${checkout} (${nights} nuits)\nVoyageurs : ${guests}\nTotal payé : ${total}€` }),
+      }).catch(() => {});
+      if (window.gtag) { try { window.gtag("event", "purchase", { transaction_id: paymentIntent.id, currency: "EUR", value: total }); } catch { /* */ } }
+      window.location.href = "/merci";
+      return;
+    }
+    setPaying(false);
+  }
+
+  const lbl = { fontSize: 11, color: MUTED, fontFamily: "'Jost', sans-serif", marginBottom: 4, display: "block" };
+  const inp = { width: "100%", border: `1px solid ${SAND}`, borderRadius: 8, padding: "10px 12px", fontFamily: "'Jost', sans-serif", fontSize: 14, color: NAVY, boxSizing: "border-box" };
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(7,18,42,0.55)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: IVORY, borderRadius: 16, maxWidth: 460, width: "100%", maxHeight: "92vh", overflowY: "auto", padding: "26px 26px 28px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+          <div>
+            <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 24, color: NAVY }}>Réservation groupée</div>
+            <div style={{ fontSize: 12, color: MUTED, fontFamily: "'Jost', sans-serif", marginTop: 2 }}>{logementsLabel}</div>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 22, color: MUTED, cursor: "pointer", lineHeight: 1 }}>×</button>
+        </div>
+
+        {/* Récap */}
+        <div style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 10, padding: "12px 16px", marginBottom: 18, fontFamily: "'Jost', sans-serif", fontSize: 13, color: NAVY }}>
+          <div>{formatDateLong(checkin)} → {formatDateLong(checkout)} · {nights} nuit{nights > 1 ? "s" : ""}</div>
+          <div style={{ color: MUTED, fontSize: 12, marginTop: 2 }}>{guests} voyageurs · {biens.length} logement{biens.length > 1 ? "s" : ""}</div>
+          <div style={{ fontWeight: 700, fontSize: 20, color: CORAL, marginTop: 6 }}>{total.toLocaleString("fr-FR")}€ <span style={{ fontWeight: 300, fontSize: 12, color: MUTED }}>total</span></div>
+        </div>
+
+        {err && <div style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#b91c1c", borderRadius: 8, padding: "10px 12px", fontSize: 12, fontFamily: "'Jost', sans-serif", marginBottom: 14 }}>{err}</div>}
+
+        {step === 1 ? (
+          <>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+              <div><span style={lbl}>Prénom</span><input style={inp} value={form.prenom} onChange={e => setForm(f => ({ ...f, prenom: e.target.value }))} /></div>
+              <div><span style={lbl}>Nom</span><input style={inp} value={form.nom} onChange={e => setForm(f => ({ ...f, nom: e.target.value }))} /></div>
+            </div>
+            <div style={{ marginBottom: 12 }}><span style={lbl}>Email</span><input type="email" style={inp} value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} /></div>
+            <div style={{ marginBottom: 18 }}><span style={lbl}>Téléphone (optionnel)</span><input type="tel" style={inp} value={form.tel} onChange={e => setForm(f => ({ ...f, tel: e.target.value }))} /></div>
+            <button onClick={goToPayment} disabled={!formOk || !stripe || paying}
+              style={{ width: "100%", background: (formOk && stripe && !paying) ? CORAL : SAND, color: (formOk && stripe && !paying) ? "#fff" : MUTED, border: "none", borderRadius: 8, padding: "13px", fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 13, letterSpacing: "0.08em", textTransform: "uppercase", cursor: (formOk && stripe && !paying) ? "pointer" : "not-allowed" }}>
+              {paying ? "Vérification…" : "Continuer vers le paiement →"}
+            </button>
+          </>
+        ) : (
+          <>
+            <div id="grp-pe" style={{ marginBottom: 16 }} />
+            <button onClick={handlePay} disabled={paying}
+              style={{ width: "100%", background: paying ? SAND : CORAL, color: paying ? MUTED : "#fff", border: "none", borderRadius: 8, padding: "13px", fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 13, letterSpacing: "0.08em", textTransform: "uppercase", cursor: paying ? "not-allowed" : "pointer" }}>
+              {paying ? "Paiement…" : `Payer ${total.toLocaleString("fr-FR")}€`}
+            </button>
+            <div style={{ fontSize: 10, color: MUTED, textAlign: "center", marginTop: 10, fontFamily: "'Jost', sans-serif" }}>Paiement sécurisé Stripe · un seul règlement pour tous les logements</div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -5552,9 +5971,29 @@ function BienPickerModal({ biens, onSelect, onClose }) {
 // ── Hero Brand ───────────────────────────────────────────────────
 function HeroBrand({ biens, onBook }) {
   const { lang } = useLang();
-  const heroPhoto = biens.find(b => b.id === "amaryllis")?.photos?.[1]
+  // growth-003 — A/B hero Amaryllis : A = piscine (actuel), B = salon (07.webp)
+  const heroVariant = getVariant("hero_amaryllis");
+  const piscinePhoto = biens.find(b => b.id === "amaryllis")?.photos?.[1]
     || biens[0]?.photos?.[0]
     || "";
+  const heroPhoto = heroVariant === "B" ? "/photos/amaryllis/07.webp" : piscinePhoto;
+
+  // Mesure d'engagement : conversion = scroll au-delà de 50% (une seule fois)
+  const scrollFired = useRef(false);
+  useEffect(() => {
+    const onScroll = () => {
+      if (scrollFired.current) return;
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      if (max > 0 && window.scrollY / max >= 0.5) {
+        scrollFired.current = true;
+        trackConversion("hero_amaryllis", { depth: "50pct" });
+        window.removeEventListener("scroll", onScroll);
+      }
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
     <div style={{
       position: "relative",
@@ -6042,7 +6481,7 @@ function GoogleReviews({ compact = false }) {
               {/* Header avis */}
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 {r.avatar
-                  ? <img src={r.avatar} alt={r.author} style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover" }} onError={e => e.currentTarget.style.display = "none"} />
+                  ? <img loading="lazy" decoding="async" src={r.avatar} alt={r.author} style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover" }} onError={e => e.currentTarget.style.display = "none"} />
                   : <div style={{ width: 40, height: 40, borderRadius: "50%", background: NAVY, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                       <span style={{ color: "var(--c-ivory)", fontSize: 16, fontWeight: 600 }}>{r.author?.[0] ?? "?"}</span>
                     </div>
@@ -6133,7 +6572,7 @@ function FaqSection() {
           <a href="/faq" style={{ display: "inline-block", background: NAVY, color: "var(--c-ivory)", padding: "12px 28px", borderRadius: 6, fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase", textDecoration: "none" }}>
             Toutes les questions →
           </a>
-          <a href="/guide" style={{ fontFamily: "'Jost', sans-serif", fontSize: 13, letterSpacing: "0.12em", textTransform: "uppercase", color: NAVY, textDecoration: "none", borderBottom: `1px solid ${CORAL}`, paddingBottom: 2 }}>
+          <a href="/guide-hub" style={{ fontFamily: "'Jost', sans-serif", fontSize: 13, letterSpacing: "0.12em", textTransform: "uppercase", color: NAVY, textDecoration: "none", borderBottom: `1px solid ${CORAL}`, paddingBottom: 2 }}>
             Lire notre guide complet Sainte-Luce →
           </a>
         </div>
@@ -6379,7 +6818,7 @@ function LogoDropdown() {
     { label: "🏠  Accueil",            href: "/" },
     { label: "🏡  Nos propriétés",     href: "/#properties" },
     { label: "⭐  Nos avis",           href: "/avis" },
-    { label: "🗺️  Guide Martinique",   href: "/guide" },
+    { label: "🗺️  Guide Martinique",   href: "/guide-hub" },
     { label: "📍  Carte interactive",  href: "/explorer" },
     { label: "❓  FAQ",                href: "/faq" },
     { label: "💬  Contactez-nous",     href: "/#contact" },
@@ -7062,7 +7501,7 @@ function MapSection({ biens, onDetail }) {
                 }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = NAVY; e.currentTarget.style.boxShadow = "0 2px 12px rgba(14,59,58,0.1)"; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = SAND; e.currentTarget.style.boxShadow = "none"; }}>
-                <img src={b.photos[0]} alt={b.nom} style={{ width: 52, height: 52, borderRadius: 7, objectFit: "cover", flexShrink: 0 }} />
+                <img loading="lazy" decoding="async" src={b.photos[0]} alt={b.nom} style={{ width: 52, height: 52, borderRadius: 7, objectFit: "cover", flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: 13, color: NAVY, fontFamily: "'Jost', sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{b.nom}</div>
                   <div style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>{b.lieu}</div>
@@ -7592,6 +8031,270 @@ export default function PublicSite() {
     );
   }
 
+  // ── Page dédiée : offre groupée résidence (location grand groupe) ──────────
+  if (path === "/location-groupe-sainte-luce") {
+    const groupFaq = [
+      { q: "Combien de personnes peut accueillir la résidence ?", a: "Jusqu'à 11 personnes en réservant les 3 logements ensemble : Zandoli (5), Géko (4) et Mabouya (2). Vous pouvez aussi n'en combiner que deux selon votre groupe." },
+      { q: "Les logements sont-ils proches les uns des autres ?", a: "Oui, Zandoli, Géko et Mabouya sont dans la même résidence sur les hauteurs de Sainte-Luce — idéal pour réunir famille ou amis tout en gardant l'intimité de chacun (chaque logement a sa piscine ou son jacuzzi privatif)." },
+      { q: "Comment se passe la réservation et le paiement ?", a: "Sélectionnez vos dates et vos logements ci-dessus : la disponibilité est vérifiée en direct et le prix total s'affiche automatiquement. Vous recevez un devis et un paiement unique sécurisé pour l'ensemble du séjour." },
+    ];
+    return (
+      <div style={{ background: IVORY, fontFamily: "'Jost', system-ui, -apple-system, sans-serif", color: TEXT, overflowX: "hidden" }}>
+        <SEOMeta
+          title="Location grand groupe Martinique — jusqu'à 11 personnes, Sainte-Luce"
+          description="Réunissez jusqu'à 11 proches en réservant Zandoli, Géko et Mabouya ensemble à Sainte-Luce. Résidence privée, piscines, réservation directe sans frais. Devis et paiement rapides."
+          canonical="/location-groupe-sainte-luce"
+          image="https://villamaryllis.com/photos/zandoli/01.webp"
+        />
+        <CookieBanner />
+
+        {/* Header minimal */}
+        <header style={{ position: "sticky", top: 0, zIndex: 200, background: "#0e3b3a", height: 58, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px" }}>
+          <a href="/" style={{ color: IVORY, textDecoration: "none", fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 22, letterSpacing: "0.04em" }}>Amaryllis</a>
+          <a href="/" style={{ color: "rgba(250,245,233,0.75)", textDecoration: "none", fontFamily: "'Jost', sans-serif", fontSize: 12, letterSpacing: "0.1em", textTransform: "uppercase" }}>← Tous nos logements</a>
+        </header>
+
+        {/* Hero */}
+        <section style={{ position: "relative", background: `#0e2020 url('/photos/zandoli/01.webp') center/cover no-repeat`, padding: "90px 24px 96px" }}>
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(14,59,58,0.35) 0%, rgba(14,59,58,0.78) 100%)" }} />
+          <div style={{ position: "relative", maxWidth: 820, margin: "0 auto", textAlign: "center" }}>
+            <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, letterSpacing: "0.4em", textTransform: "uppercase", color: "rgba(250,245,233,0.7)", marginBottom: 16 }}>Résidence Amaryllis · Sainte-Luce</div>
+            <h1 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontWeight: 400, fontSize: "clamp(30px, 5vw, 52px)", color: IVORY, margin: "0 0 16px", lineHeight: 1.12 }}>
+              Location grand groupe en Martinique — jusqu'à 11 personnes
+            </h1>
+            <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 16, color: "rgba(250,245,233,0.85)", maxWidth: 600, margin: "0 auto", lineHeight: 1.6 }}>
+              Réunissez famille ou amis en réservant ensemble Zandoli, Géko et Mabouya — trois logements de la même résidence privée sur les hauteurs de Sainte-Luce, chacun avec piscine ou jacuzzi.
+            </p>
+          </div>
+        </section>
+
+        {/* Configurateur */}
+        <section style={{ padding: "56px 24px", maxWidth: 960, margin: "0 auto" }}>
+          <GroupBookingBuilder biens={biensList} />
+        </section>
+
+        {/* Argumentaire */}
+        <section style={{ background: CREAM, borderTop: `1px solid ${SAND}`, borderBottom: `1px solid ${SAND}`, padding: "56px 24px" }}>
+          <div style={{ maxWidth: 900, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 28 }}>
+            {[
+              { icon: "🏡", t: "Toute la résidence pour vous", d: "Privatisez jusqu'à 3 logements voisins : la convivialité d'être ensemble, l'intimité de chacun son espace." },
+              { icon: "💧", t: "Piscines & jacuzzi privatifs", d: "Chaque logement a sa propre piscine à cascade ou son jacuzzi vue mer — pas de partage." },
+              { icon: "💸", t: "Réservation directe, sans frais", d: "Prix total transparent calculé en direct, paiement unique sécurisé, contact direct avec l'hôte." },
+            ].map(x => (
+              <div key={x.t} style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 30, marginBottom: 10 }}>{x.icon}</div>
+                <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 15, color: NAVY, marginBottom: 6 }}>{x.t}</div>
+                <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13, color: MUTED, lineHeight: 1.55 }}>{x.d}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* FAQ */}
+        <section style={{ padding: "56px 24px", maxWidth: 760, margin: "0 auto" }}>
+          <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontWeight: 400, fontSize: 30, color: NAVY, textAlign: "center", margin: "0 0 28px" }}>Questions fréquentes</h2>
+          {groupFaq.map(f => (
+            <div key={f.q} style={{ borderTop: `1px solid ${SAND}`, padding: "18px 0" }}>
+              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 14, color: NAVY, marginBottom: 6 }}>{f.q}</div>
+              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13.5, color: MUTED, lineHeight: 1.6 }}>{f.a}</div>
+            </div>
+          ))}
+          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: groupFaq.map(f => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })) }) }} />
+        </section>
+
+        <FooterSection />
+        <FooterBottomBar />
+      </div>
+    );
+  }
+
+  // ── Page SEO : Location appartement vue mer à Schœlcher (seo-030) ──────────
+  if (path === "/location-appartement-vue-mer-schoelcher") {
+    const bellevue = biensList.find(b => b.id === "schoelcher");
+    const schFaq = [
+      { q: "L'appartement Bellevue est-il une villa ?", a: "Non — Bellevue est un appartement de standing au dernier étage d'une résidence sécurisée à Schœlcher, et non une villa. Il offre une vue panoramique sur la baie de Fort-de-France pour 2 personnes." },
+      { q: "Quelle est la vue depuis l'appartement ?", a: "Une vue dégagée sur la baie de Fort-de-France et les Trois-Îlets, depuis la terrasse du dernier étage. Idéale au coucher du soleil." },
+      { q: "Schœlcher est-il bien situé en Martinique ?", a: "Oui — Schœlcher jouxte Fort-de-France (centre à ~10 min), avec plages, université et commerces à proximité. Un bon camp de base pour rayonner sur toute l'île." },
+    ];
+    return (
+      <div style={{ background: IVORY, fontFamily: "'Jost', system-ui, -apple-system, sans-serif", color: TEXT, overflowX: "hidden" }}>
+        <SEOMeta
+          title="Location appartement vue mer Schœlcher — Martinique"
+          description="Appartement de standing à Schœlcher : vue panoramique sur la baie de Fort-de-France, dernier étage, 2 personnes, à 10 min du centre. Réservation directe sans frais."
+          canonical="/location-appartement-vue-mer-schoelcher"
+          image="https://villamaryllis.com/photos/schoelcher/01.webp"
+        />
+        <CookieBanner />
+        <header style={{ position: "sticky", top: 0, zIndex: 200, background: "#0e3b3a", height: 58, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px" }}>
+          <a href="/" style={{ color: IVORY, textDecoration: "none", fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 22, letterSpacing: "0.04em" }}>Amaryllis</a>
+          <a href="/" style={{ color: "rgba(250,245,233,0.75)", textDecoration: "none", fontFamily: "'Jost', sans-serif", fontSize: 12, letterSpacing: "0.1em", textTransform: "uppercase" }}>← Tous nos logements</a>
+        </header>
+
+        <section style={{ position: "relative", background: `#0e2020 url('/photos/schoelcher/01.webp') center/cover no-repeat`, padding: "90px 24px 96px" }}>
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(14,59,58,0.35) 0%, rgba(14,59,58,0.78) 100%)" }} />
+          <div style={{ position: "relative", maxWidth: 820, margin: "0 auto", textAlign: "center" }}>
+            <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, letterSpacing: "0.4em", textTransform: "uppercase", color: "rgba(250,245,233,0.7)", marginBottom: 16 }}>Schœlcher · Martinique</div>
+            <h1 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontWeight: 400, fontSize: "clamp(30px, 5vw, 50px)", color: IVORY, margin: "0 0 16px", lineHeight: 1.12 }}>
+              Location appartement vue mer à Schœlcher
+            </h1>
+            <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 16, color: "rgba(250,245,233,0.85)", maxWidth: 600, margin: "0 auto", lineHeight: 1.6 }}>
+              Bellevue — un appartement de standing au dernier étage, avec vue panoramique sur la baie de Fort-de-France et les Trois-Îlets. Pour deux, au calme, à dix minutes du centre.
+            </p>
+          </div>
+        </section>
+
+        <section style={{ padding: "56px 24px", maxWidth: 820, margin: "0 auto" }}>
+          <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 15, color: TEXT, lineHeight: 1.8 }}>
+            Perché au dernier étage d'une résidence sécurisée de Schœlcher, l'appartement <strong>Bellevue</strong> ouvre sur l'un des plus beaux panoramas de la côte caraïbe : la baie de Fort-de-France, les Trois-Îlets au loin, et des couchers de soleil qui embrasent l'horizon. Ce n'est pas une villa, mais un <strong>appartement de standing</strong> pensé pour deux — lumineux, calme, raffiné. La brise marine y rend la climatisation presque superflue, et les plages comme le centre-ville sont à quelques minutes.
+          </p>
+        </section>
+
+        <section style={{ background: CREAM, borderTop: `1px solid ${SAND}`, borderBottom: `1px solid ${SAND}`, padding: "56px 24px" }}>
+          <div style={{ maxWidth: 900, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 28 }}>
+            {[
+              { icon: "🌅", t: "Vue baie panoramique", d: "Fort-de-France et les Trois-Îlets depuis votre terrasse, au dernier étage." },
+              { icon: "📍", t: "À 10 min du centre", d: "Schœlcher jouxte Fort-de-France : commerces, plages et culture à portée." },
+              { icon: "🔑", t: "Réservation directe", d: "Sans frais Airbnb, contact direct avec l'hôte, paiement sécurisé." },
+            ].map(x => (
+              <div key={x.t} style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 30, marginBottom: 10 }}>{x.icon}</div>
+                <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 15, color: NAVY, marginBottom: 6 }}>{x.t}</div>
+                <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13, color: MUTED, lineHeight: 1.55 }}>{x.d}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ textAlign: "center", marginTop: 40 }}>
+            <a href="/schoelcher" style={{ display: "inline-block", background: CORAL, color: "#fff", textDecoration: "none", padding: "14px 32px", borderRadius: 8, fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase" }}>
+              Voir l'appartement Bellevue{bellevue?.prix ? ` — dès ${bellevue.prix}€/nuit` : ""} →
+            </a>
+          </div>
+        </section>
+
+        <section style={{ padding: "56px 24px", maxWidth: 760, margin: "0 auto" }}>
+          <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontWeight: 400, fontSize: 30, color: NAVY, textAlign: "center", margin: "0 0 28px" }}>Questions fréquentes</h2>
+          {schFaq.map(f => (
+            <div key={f.q} style={{ borderTop: `1px solid ${SAND}`, padding: "18px 0" }}>
+              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 14, color: NAVY, marginBottom: 6 }}>{f.q}</div>
+              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13.5, color: MUTED, lineHeight: 1.6 }}>{f.a}</div>
+            </div>
+          ))}
+          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: schFaq.map(f => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })) }) }} />
+        </section>
+
+        <FooterSection />
+        <FooterBottomBar />
+      </div>
+    );
+  }
+
+  // ── Guide SEO : Les plus belles plages du Sud de la Martinique (seo cluster) ──
+  if (path === "/plus-belles-plages-sud-martinique") {
+    const plages = [
+      { h2: "Les Salines, l'icône dorée de Sainte-Anne", p1: "Au bout de la presqu'île, la plage des Salines déroule plus d'un kilomètre de sable blond bordé de cocotiers penchés vers l'eau. Tôt le matin, vous avez l'impression que cette carte postale n'appartient qu'à vous : la lumière est douce, l'eau translucide et tiède.", p2: "Comptez 30 à 35 minutes depuis Sainte-Luce. Parking gratuit le long de la plage (arrivez avant 10h en haute saison). Stands de boissons et accras, baignade facile au fond sableux, idéale en famille. Pour le snorkeling, préférez les extrémités rocheuses." },
+      { h2: "Anse Corps de Garde, le secret tortues de Sainte-Luce", p1: "Juste à votre porte, l'Anse Corps de Garde est l'une de ces plages que les voyageurs gardent jalousement. Sable clair, eau calme protégée, et la promesse certains matins de croiser une tortue verte broutant les herbiers.", p2: "Vous y êtes en 5 à 10 minutes depuis nos logements. Stationnement le long de la route — arrivez tôt le week-end. Masque et tuba dans le sac : les herbiers proches du rivage offrent un snorkeling accessible. Observez les tortues à distance, sans les toucher." },
+      { h2: "Le Diamant, le grand large face au Rocher", p1: "Près de quatre kilomètres de sable ouverts sur l'océan, avec en toile de fond le célèbre Rocher du Diamant. Le vent caresse les filaos, les vagues roulent avec énergie, et les couchers de soleil y prennent des teintes spectaculaires.", p2: "À environ 25 minutes de Sainte-Luce, plusieurs accès et parkings le long du bourg. Attention : les courants peuvent être forts, baignez-vous près du rivage. Pas un spot de snorkeling, mais un terrain de jeu magnifique pour la marche et la contemplation au coucher du soleil." },
+      { h2: "Grande Anse d'Arlet, le ponton et les tortues du matin", p1: "Lovée entre deux mornes, Grande Anse d'Arlet est un village de pêcheurs aux maisons colorées reflétées dans une eau d'un calme absolu. Le ponton de bois s'avance vers le large, les yoles dansent doucement.", p2: "Environ 35 à 40 minutes depuis Sainte-Luce. Parking à l'entrée du village, venez tôt. Le snorkeling autour du ponton et des rochers est superbe : tortues, poissons multicolores, eau limpide. Petits restaurants les pieds dans le sable." },
+      { h2: "Anse Dufour et Anse Noire, les deux sœurs voisines", p1: "Deux criques jumelles au contraste saisissant : Anse Dufour et son sable clair, Anse Noire et son étonnant sable volcanique. L'eau y est calme, ourlée de cocotiers — l'endroit rêvé pour une journée nature, masque sur le visage.", p2: "Environ 35 minutes depuis Sainte-Luce ; parking à Anse Dufour, escalier vers Anse Noire (chaussures conseillées). Snorkeling exceptionnel : tortues vertes fréquentes à Anse Dufour, fonds rocheux poissonneux à Anse Noire." },
+      { h2: "Pointe Marin, le sable familial de Sainte-Anne", p1: "À l'entrée du bourg de Sainte-Anne, la Pointe Marin marie l'eau turquoise des Salines au confort d'un véritable village. Cocotiers, sable fin, mer peu profonde et translucide : tout invite à la baignade tranquille.", p2: "Une trentaine de minutes de Sainte-Luce, avec parking, douches, restaurants et clubs nautiques à proximité. Baignade en eau calme au fond progressif, parfaite pour les enfants. Pour le snorkeling, dirigez-vous vers les rochers en bordure." },
+      { h2: "Les Trois-Îlets, criques discrètes et vue sur Fort-de-France", p1: "Côté baie de Fort-de-France, les Trois-Îlets égrènent plusieurs petites plages (Anse Mitan, Anse à l'Âne), intimistes, où l'eau calme se teinte de reflets argentés au soleil couchant.", p2: "Environ 40 minutes de route depuis Sainte-Luce. Parkings et navettes maritimes vers Fort-de-France rendent le secteur pratique. Baignade facile et sécurisante, idéale pour une demi-journée tranquille." },
+    ];
+    const dist = [
+      ["Anse Corps de Garde", "~3 km", "5–10 min"], ["Le Diamant", "~18 km", "~25 min"],
+      ["Pointe Marin (Sainte-Anne)", "~22 km", "~30 min"], ["Les Salines (Sainte-Anne)", "~25 km", "30–35 min"],
+      ["Anse Dufour / Anse Noire", "~28 km", "~35 min"], ["Grande Anse d'Arlet", "~30 km", "35–40 min"],
+      ["Les Trois-Îlets", "~32 km", "~40 min"],
+    ];
+    const plagesFaq = [
+      { q: "Quelle est la plus belle plage du Sud de la Martinique ?", a: "Les Salines à Sainte-Anne font figure d'icône, mais l'Anse Corps de Garde à Sainte-Luce et Grande Anse d'Arlet séduisent par leur authenticité et leurs tortues. La plus belle est souvent celle où vous arrivez avant la foule, tôt le matin." },
+      { q: "Où nager avec les tortues dans le Sud de la Martinique ?", a: "Grande Anse d'Arlet, Anse Dufour et l'Anse Corps de Garde à Sainte-Luce sont les meilleurs spots. Le matin tôt augmente nettement vos chances. Observez-les à distance, sans les toucher ni les nourrir." },
+      { q: "Les plages du Sud sont-elles loin de Sainte-Luce ?", a: "Non : l'Anse Corps de Garde est à 5–10 minutes, et la plupart des grandes plages (Diamant, Salines, Arlet) se trouvent entre 25 et 40 minutes de route." },
+      { q: "Quelles plages sont adaptées aux enfants ?", a: "La Pointe Marin et les Salines à Sainte-Anne, ainsi que les criques des Trois-Îlets, offrent une eau calme et peu profonde. Évitez le Diamant, où les courants peuvent être forts." },
+      { q: "Faut-il payer pour accéder aux plages et au parking ?", a: "Les plages de Martinique sont publiques et gratuites. Le stationnement est le plus souvent gratuit mais limité : arrivez tôt, surtout le week-end et en haute saison." },
+    ];
+    const maillage = [
+      ["Guide Sainte-Anne et les Salines", "/guide-sainte-anne"], ["Guide Grande Anse d'Arlet", "/guide-arlet"],
+      ["Guide du Diamant", "/guide-le-diamant"], ["Carte interactive du Sud", "/explorer"], ["Séjourner à Sainte-Luce", "/sainte-luce-martinique"],
+    ];
+    return (
+      <div style={{ background: IVORY, fontFamily: "'Jost', system-ui, -apple-system, sans-serif", color: TEXT, overflowX: "hidden" }}>
+        <SEOMeta
+          title="Plus belles plages du Sud de la Martinique"
+          description="Sable blanc, eau turquoise, tortues : découvrez les plus belles plages du Sud de la Martinique, toutes à moins de 40 min de Sainte-Luce."
+          canonical="/plus-belles-plages-sud-martinique"
+          image="https://villamaryllis.com/photos/amaryllis/05.webp"
+        />
+        <CookieBanner />
+        <header style={{ position: "sticky", top: 0, zIndex: 200, background: "#0e3b3a", height: 58, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px" }}>
+          <a href="/" style={{ color: IVORY, textDecoration: "none", fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 22, letterSpacing: "0.04em" }}>Amaryllis</a>
+          <a href="/explorer" style={{ color: "rgba(250,245,233,0.75)", textDecoration: "none", fontFamily: "'Jost', sans-serif", fontSize: 12, letterSpacing: "0.1em", textTransform: "uppercase" }}>Carte des activités →</a>
+        </header>
+
+        <section style={{ position: "relative", background: `#0e2020 url('/photos/amaryllis/05.webp') center/cover no-repeat`, padding: "90px 24px 96px" }}>
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(14,59,58,0.35) 0%, rgba(14,59,58,0.78) 100%)" }} />
+          <div style={{ position: "relative", maxWidth: 840, margin: "0 auto", textAlign: "center" }}>
+            <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, letterSpacing: "0.4em", textTransform: "uppercase", color: "rgba(250,245,233,0.7)", marginBottom: 16 }}>Guide d'initiés · Sud Martinique</div>
+            <h1 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontWeight: 400, fontSize: "clamp(28px, 4.6vw, 48px)", color: IVORY, margin: "0 0 16px", lineHeight: 1.14 }}>
+              Les plus belles plages du Sud de la Martinique
+            </h1>
+            <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 16, color: "rgba(250,245,233,0.85)", maxWidth: 640, margin: "0 auto", lineHeight: 1.65 }}>
+              Imaginez le sable frais au lever du jour, l'eau si claire qu'elle semble invisible, et au loin la silhouette du Rocher du Diamant. Des Salines dorées aux criques secrètes d'Anse Noire — depuis Sainte-Luce, vous êtes idéalement placés pour les explorer une à une.
+            </p>
+          </div>
+        </section>
+
+        <section style={{ padding: "48px 24px", maxWidth: 760, margin: "0 auto" }}>
+          {plages.map(s => (
+            <div key={s.h2} style={{ marginBottom: 36 }}>
+              <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontWeight: 400, fontSize: 26, color: NAVY, margin: "0 0 12px", lineHeight: 1.2 }}>{s.h2}</h2>
+              <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 14.5, color: TEXT, lineHeight: 1.75, margin: "0 0 12px" }}>{s.p1}</p>
+              <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13.5, color: MUTED, lineHeight: 1.7, margin: 0 }}>{s.p2}</p>
+            </div>
+          ))}
+        </section>
+
+        <section style={{ background: CREAM, borderTop: `1px solid ${SAND}`, borderBottom: `1px solid ${SAND}`, padding: "48px 24px" }}>
+          <div style={{ maxWidth: 700, margin: "0 auto" }}>
+            <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontWeight: 400, fontSize: 28, color: NAVY, textAlign: "center", margin: "0 0 10px" }}>Depuis nos logements</h2>
+            <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13.5, color: MUTED, textAlign: "center", margin: "0 0 24px" }}>Toutes ces plages rayonnent autour de Sainte-Luce, votre camp de base idéal pour explorer le Sud.</p>
+            <div style={{ overflow: "hidden", borderRadius: 12, border: `1px solid ${SAND}`, background: "#fff" }}>
+              {dist.map((r, i) => (
+                <div key={r[0]} style={{ display: "flex", justifyContent: "space-between", padding: "11px 16px", borderTop: i ? `1px solid ${SAND}` : "none", fontFamily: "'Jost', sans-serif", fontSize: 13 }}>
+                  <span style={{ color: NAVY, fontWeight: 500 }}>{r[0]}</span>
+                  <span style={{ color: MUTED }}>{r[1]} · {r[2]}</span>
+                </div>
+              ))}
+            </div>
+            <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13.5, color: TEXT, lineHeight: 1.7, margin: "20px 0 0", textAlign: "center" }}>
+              Pour rentrer le soir et savourer le coucher du soleil chez vous, réservez en direct : nos villas <a href="/amaryllis" style={{ color: CORAL }}>Amaryllis</a> et <a href="/iguana" style={{ color: CORAL }}>Iguana</a>, le logement <a href="/zandoli" style={{ color: CORAL }}>Zandoli</a>, le cocon <a href="/geko" style={{ color: CORAL }}>Géko</a> et le studio <a href="/mabouya" style={{ color: CORAL }}>Mabouya</a> vous accueillent à quelques minutes de l'Anse Corps de Garde.
+            </p>
+          </div>
+        </section>
+
+        <section style={{ padding: "48px 24px", maxWidth: 760, margin: "0 auto" }}>
+          <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontWeight: 400, fontSize: 28, color: NAVY, textAlign: "center", margin: "0 0 24px" }}>Questions fréquentes</h2>
+          {plagesFaq.map(f => (
+            <div key={f.q} style={{ borderTop: `1px solid ${SAND}`, padding: "16px 0" }}>
+              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 14, color: NAVY, marginBottom: 6 }}>{f.q}</div>
+              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13.5, color: MUTED, lineHeight: 1.6 }}>{f.a}</div>
+            </div>
+          ))}
+          <div style={{ marginTop: 28, textAlign: "center" }}>
+            <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: MUTED, marginBottom: 12 }}>À lire aussi</div>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
+              {maillage.map(([label, href]) => (
+                <a key={href} href={href} style={{ fontFamily: "'Jost', sans-serif", fontSize: 12.5, color: NAVY, textDecoration: "none", border: `1px solid ${SAND}`, borderRadius: 20, padding: "7px 16px" }}>{label} →</a>
+              ))}
+            </div>
+          </div>
+          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: plagesFaq.map(f => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })) }) }} />
+        </section>
+
+        <FooterSection />
+        <FooterBottomBar />
+      </div>
+    );
+  }
+
   const lieux = [
     { key: "all", label: t("filterAll") },
     { key: "Martinique", label: t("martinique") },
@@ -7666,7 +8369,7 @@ export default function PublicSite() {
 
             {/* Right: liens + contact CTA */}
             <div style={{ display: "flex", alignItems: "center", gap: 18, flexShrink: 0 }}>
-              <a href="/guide" style={{ fontSize: 12, fontFamily: "'Jost', sans-serif", fontWeight: 300, color: "rgba(250,245,233,0.6)", textDecoration: "none", letterSpacing: "0.08em", whiteSpace: "nowrap", display: window.innerWidth < 860 ? "none" : "block", transition: "color 0.2s" }}
+              <a href="/guide-hub" style={{ fontSize: 12, fontFamily: "'Jost', sans-serif", fontWeight: 300, color: "rgba(250,245,233,0.6)", textDecoration: "none", letterSpacing: "0.08em", whiteSpace: "nowrap", display: window.innerWidth < 860 ? "none" : "block", transition: "color 0.2s" }}
                 onMouseEnter={e => e.currentTarget.style.color = "var(--c-ivory)"}
                 onMouseLeave={e => e.currentTarget.style.color = "rgba(250,245,233,0.6)"}
               >
@@ -7821,6 +8524,7 @@ export default function PublicSite() {
               { key: 4, label: "4+" },
               { key: 6, label: "6+" },
               { key: 8, label: "8+" },
+              { key: 9, label: "9+ groupe" },
             ].map(({ key, label }) => {
               const active = filterGuests === key;
               return (
@@ -7856,6 +8560,25 @@ export default function PublicSite() {
 
           {/* Grid */}
           {filtered.length === 0 ? (
+            filterGuests > 8 ? (
+              <div style={{ display: "flex", justifyContent: "center", padding: "32px 0 56px" }}>
+                <div style={{ maxWidth: 520, textAlign: "center", background: CREAM, border: `1px solid ${SAND}`, borderRadius: 14, padding: "28px 26px" }}>
+                  <div style={{ fontSize: 30, marginBottom: 10 }}>👨‍👩‍👧‍👦</div>
+                  <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontWeight: 400, fontSize: 24, color: NAVY, marginBottom: 8, lineHeight: 1.2 }}>
+                    Pour un groupe de 9 à 11 personnes
+                  </div>
+                  <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13, color: MUTED, marginBottom: 18, lineHeight: 1.55 }}>
+                    Aucun logement seul n'accueille plus de 8 personnes. Réunissez votre groupe avec la <strong>Résidence Amaryllis</strong> — Zandoli + Géko + Mabouya, jusqu'à 11 personnes.
+                  </div>
+                  <button
+                    onClick={() => { window.location.href = "/location-groupe-sainte-luce"; }}
+                    style={{ background: CORAL, border: "none", color: "#fff", borderRadius: 8, padding: "12px 26px", fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer" }}
+                  >
+                    Voir l'offre groupée →
+                  </button>
+                </div>
+              </div>
+            ) : (
             <div style={{ display: "flex", justifyContent: "center", padding: "48px 0 64px" }}>
               <StateTile
                 variant="empty"
@@ -7867,6 +8590,7 @@ export default function PublicSite() {
                 style={{ maxWidth: 340 }}
               />
             </div>
+            )
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: 24, paddingBottom: 48 }}>
               {filtered.map((b, i) => (
@@ -7912,59 +8636,23 @@ export default function PublicSite() {
       <QuickBook biens={biensList} onBook={openBien} />
 
       {/* ── OFFRE GROUPÉE RÉSIDENCE — pub-008 ── */}
-      <div style={{ background: IVORY, borderTop: `1px solid ${SAND}`, padding: "72px 28px" }}>
-        <div style={{ maxWidth: 960, margin: "0 auto" }}>
-          <div style={{ textAlign: "center", marginBottom: 40 }}>
-            <Eyebrow style={{ marginBottom: 12 }}>Résidence Clos de Bellevue · Sainte-Luce</Eyebrow>
-            <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontWeight: 400, fontSize: "clamp(26px, 3.5vw, 40px)", color: NAVY, margin: "0 0 14px", lineHeight: 1.15 }}>
-              Votre groupe au complet — jusqu'à 11 personnes
-            </h2>
-            <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 14, color: MUTED, maxWidth: 560, margin: "0 auto" }}>
-              Zandoli, Géko et Mabouya sont dans la même résidence. Réservez les 3 villas simultanément pour réunir famille ou amis — piscines privées, jacuzzi, jardin tropical.
-            </p>
-          </div>
-
-          {/* 3 villas côte à côte */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 20, marginBottom: 32 }}>
-            {[
-              { id: "zandoli",  nom: "Zandoli",  guests: 4, prix: 220, icon: "🏊", highlight: "Piscine privée · Vue jardin & mer" },
-              { id: "geko",     nom: "Géko",     guests: 2, prix: 150, icon: "🌿", highlight: "Piscine privée · Jardin tropical" },
-              { id: "mabouya", nom: "Mabouya", guests: 2, prix: 110, icon: "♨️", highlight: "Jacuzzi privatif · Vue mer" },
-            ].map(v => (
-              <a key={v.id} href={`/${v.id}`} style={{ textDecoration: "none", background: "#fff", border: `1px solid ${SAND}`, borderRadius: 14, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-                <img src={`/photos/${v.id}/01.webp`} alt={v.nom} loading="lazy" style={{ width: "100%", height: 160, objectFit: "cover", display: "block" }} />
-                <div style={{ padding: "18px 20px 20px", flex: 1, display: "flex", flexDirection: "column", gap: 6 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 18 }}>{v.icon}</span>
-                    <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 15, color: NAVY }}>{v.nom}</span>
-                  </div>
-                  <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, color: CORAL, letterSpacing: "0.03em" }}>{v.highlight}</div>
-                  <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 12, color: MUTED, marginTop: 2 }}>jusqu'à {v.guests} personnes</div>
-                  <div style={{ marginTop: "auto", paddingTop: 12, fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 16, color: NAVY }}>
-                    {v.prix}€<span style={{ fontWeight: 300, fontSize: 12 }}>/nuit</span>
-                  </div>
-                </div>
-              </a>
+      <div id="offre-groupee" style={{ background: IVORY, borderTop: `1px solid ${SAND}`, padding: "72px 28px", scrollMarginTop: 80 }}>
+        <div style={{ maxWidth: 880, margin: "0 auto", textAlign: "center" }}>
+          <Eyebrow style={{ marginBottom: 12 }}>Vous êtes nombreux ?</Eyebrow>
+          <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontWeight: 400, fontSize: "clamp(26px, 3.5vw, 40px)", color: NAVY, margin: "0 0 14px", lineHeight: 1.15 }}>
+            Réservez la résidence — jusqu'à 11 personnes
+          </h2>
+          <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 14, color: MUTED, maxWidth: 560, margin: "0 auto 28px", lineHeight: 1.6 }}>
+            Zandoli, Géko et Mabouya sont dans la même résidence. Combinez-les pour réunir famille ou amis — chacun sa piscine ou son jacuzzi, dates et prix en direct.
+          </p>
+          <div style={{ display: "flex", gap: 12, justifyContent: "center", marginBottom: 28, flexWrap: "wrap" }}>
+            {["zandoli", "geko", "mabouya"].map(id => (
+              <img key={id} src={`/photos/${id}/01.webp`} alt={id} loading="lazy" style={{ width: 120, height: 84, objectFit: "cover", borderRadius: 10, border: `1px solid ${SAND}` }} />
             ))}
           </div>
-
-          {/* CTA contact groupé */}
-          <div style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 14, padding: "28px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 20 }}>
-            <div>
-              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 14, color: NAVY, marginBottom: 4 }}>
-                Formule 3 villas — à partir de 480€/nuit
-              </div>
-              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 12, color: MUTED }}>
-                Tarif préférentiel sur demande · Réponse sous 2h · Paiement sécurisé Stripe
-              </div>
-            </div>
-            <a
-              href={`mailto:contact@villamaryllis.com?subject=Demande%20offre%20groupée%20résidence%20(11%20personnes)&body=Bonjour%2C%0A%0AJe%20souhaite%20réserver%20les%203%20villas%20Zandoli%20%2B%20Géko%20%2B%20Mabouya%20pour%20un%20groupe.%0A%0ADates%20envisagées%20:%0ANombre%20de%20personnes%20:%0A%0AMerci`}
-              style={{ background: CORAL, color: "#fff", textDecoration: "none", padding: "13px 28px", borderRadius: 8, fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", whiteSpace: "nowrap" }}
-            >
-              Demander un devis groupé
-            </a>
-          </div>
+          <a href="/location-groupe-sainte-luce" style={{ display: "inline-block", background: CORAL, color: "#fff", textDecoration: "none", padding: "14px 32px", borderRadius: 8, fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase" }}>
+            Composer mon séjour groupé →
+          </a>
         </div>
       </div>
 
@@ -7995,7 +8683,7 @@ export default function PublicSite() {
                   onClick={() => openDetail(b)}
                   onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 2px 12px rgba(14,59,58,0.1)"; }}
                   onMouseLeave={e => { e.currentTarget.style.boxShadow = "none"; }}>
-                  <img src={b.photos[0]} alt={b.nom} style={{ width: 48, height: 48, borderRadius: 7, objectFit: "cover", flexShrink: 0 }} />
+                  <img loading="lazy" decoding="async" src={b.photos[0]} alt={b.nom} style={{ width: 48, height: 48, borderRadius: 7, objectFit: "cover", flexShrink: 0 }} />
                   <div>
                     <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 13, color: NAVY }}>{b.nom}</div>
                     {!PRICE_HIDDEN.has(b.id) && (
@@ -8062,7 +8750,7 @@ export default function PublicSite() {
               const b = biensList.find(x => x.id === id);
               return b ? (
                 <div key={id} style={{ display:"flex", alignItems:"center", gap:6, background:"rgba(255,255,255,0.1)", borderRadius:6, padding:"4px 10px" }}>
-                  <img src={b.photos[0]} alt={b.nom} style={{ width:28, height:28, borderRadius:4, objectFit:"cover" }} />
+                  <img loading="lazy" decoding="async" src={b.photos[0]} alt={b.nom} style={{ width:28, height:28, borderRadius:4, objectFit:"cover" }} />
                   <span style={{ fontSize:13, fontWeight:500 }}>{b.nom}</span>
                   <button onClick={e => toggleCompare(e, id)} style={{ background:"none", border:"none", color:"rgba(255,255,255,0.5)", cursor:"pointer", fontSize:16, lineHeight:1, padding:"0 2px" }}>×</button>
                 </div>

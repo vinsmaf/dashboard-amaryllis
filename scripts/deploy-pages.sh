@@ -79,6 +79,46 @@ else
   echo "   ⚠️  sw.js n'est pas le kill-switch attendu"
 fi
 
+# 4. Anti-asset-gelé : la taille du /guide servi doit correspondre au build local
+#    (détecte un manifeste Pages figé qui sert une vieille version — cf. incident /guide)
+if [[ -f dist/guide-hub/index.html ]]; then
+  LOCAL_SZ=$(wc -c < dist/guide-hub/index.html | tr -d ' ')
+  REMOTE_SZ=$(curl -s "$DOMAIN/guide-hub" | wc -c | tr -d ' ')
+  DELTA=$(( LOCAL_SZ > REMOTE_SZ ? LOCAL_SZ - REMOTE_SZ : REMOTE_SZ - LOCAL_SZ ))
+  if [[ "$DELTA" -le 800 ]]; then
+    echo "   ✅ /guide servi à jour (local=$LOCAL_SZ, remote=$REMOTE_SZ)"
+  else
+    echo "   ⚠️  /guide possiblement gelé/caché — local=$LOCAL_SZ vs remote=$REMOTE_SZ (purger le cache ou vérifier le manifeste Pages)"
+  fi
+fi
+
+# 5. (qa-003) Endpoints API critiques répondent (pas de 5xx ni 404)
+for api in "/api/get-config" "/api/social?action=status"; do
+  ST=$(curl -s -o /dev/null -w "%{http_code}" -H "User-Agent: Mozilla/5.0" "$DOMAIN$api" || echo "000")
+  if [[ "$ST" =~ ^(200|401|405)$ ]]; then
+    echo "   ✅ API $api → $ST (vivant)"
+  else
+    echo "   ❌ API $api → $ST (5xx/404 = fonction cassée)"
+    SMOKE_FAIL=1
+  fi
+done
+
+# 6. (qa-003) sitemap.xml servi en XML et non vide
+SMAP=$(curl -s "$DOMAIN/sitemap.xml")
+if echo "$SMAP" | grep -q "<urlset"; then
+  echo "   ✅ sitemap.xml valide ($(echo "$SMAP" | grep -c "<loc>") URLs)"
+else
+  echo "   ❌ sitemap.xml absent ou invalide"
+  SMOKE_FAIL=1
+fi
+
+# 7. (qa-003) une fiche villa prérendue contient bien son <title> SEO (meta injectée)
+if curl -s "$DOMAIN/mabouya" | grep -qi "<title>.*Mabouya"; then
+  echo "   ✅ Meta prérendue OK (/mabouya a son <title>)"
+else
+  echo "   ⚠️  /mabouya sans <title> attendu — vérifier le prerender"
+fi
+
 if [[ "$SMOKE_FAIL" == "1" ]]; then
   echo ""
   echo "🚨 SMOKE TEST ÉCHOUÉ — le site ne rend pas correctement, vérifier le déploiement"

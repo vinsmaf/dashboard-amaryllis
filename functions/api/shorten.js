@@ -6,6 +6,8 @@
 //
 // Stockage D1 (binding: revenue_manager, table: short_links)
 
+import { verifyBearer } from "./_adminauth.js";
+
 const CORS = {
   "Content-Type": "application/json",
   "Access-Control-Allow-Origin": "*",
@@ -54,11 +56,11 @@ export async function onRequest(context) {
 
   // ── POST : créer un lien court (auth admin) ──
   if (request.method === "POST") {
-    const auth = (request.headers.get("Authorization") || "").replace("Bearer ", "").trim();
-    // ADMIN_PWD = variable réellement configurée (utilisée par admin-auth).
-    // Fallback ADMIN_PASSWORD pour compat. Rejet si aucune n'est définie (sécurisé).
-    const adminPwd = env.ADMIN_PWD || env.ADMIN_PASSWORD;
-    if (!adminPwd || auth !== adminPwd) return json({ error: "Unauthorized" }, 401);
+    // arch-009 : token de session signé OU mot de passe brut (rétro-compat).
+    // Rejet si aucun secret n'est défini (sécurisé).
+    if (!env.ADMIN_PWD && !env.ADMIN_PASSWORD) return json({ error: "Unauthorized" }, 401);
+    const { ok } = await verifyBearer(request, env);
+    if (!ok) return json({ error: "Unauthorized" }, 401);
 
     const body = await request.json().catch(() => ({}));
     const payload = body.d;

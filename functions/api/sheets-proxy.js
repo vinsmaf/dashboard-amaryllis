@@ -30,9 +30,6 @@ export async function onRequestPost(context) {
   if (parsed && parsed.action === "importAllReservations" && Array.isArray(parsed.reservations)) {
     return forwardChunked(scriptUrl, "importAllReservations", parsed.reservations);
   }
-  if (parsed && parsed.action === "importBeds24" && Array.isArray(parsed.bookings)) {
-    return forwardChunked(scriptUrl, "importBeds24", parsed.bookings);
-  }
 
   // ── Toutes les autres actions → forwarding POST classique ──
   try {

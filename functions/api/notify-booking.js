@@ -42,13 +42,13 @@ async function sendEmail(env, subject, html, text) {
   // domaine sur resend.com/domains, puis définir RESEND_FROM + NOTIFICATION_EMAIL.
   const to = env.NOTIFICATION_EMAIL
     ? env.NOTIFICATION_EMAIL.split(",").map(s => s.trim()).filter(Boolean)
-    : ["vinsmaf@hotmail.com"];
+    : ["vinsmaf@hotmail.com", "contact@villamaryllis.com"];
   try {
     const r = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from: env.RESEND_FROM || "Amaryllis <onboarding@resend.dev>",
+        from: env.RESEND_FROM || "Amaryllis <notifications@villamaryllis.com>",
         to, subject, html, text,
       }),
     });
@@ -74,8 +74,8 @@ export async function onRequest(context) {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   if (request.method !== "POST") return json({ error: "POST requis" }, 405);
 
-  // Mode test : POST ?test=1 → envoie une alerte de démonstration (sans Stripe, sans D1)
   const url0 = new URL(request.url);
+  // Mode test : POST ?test=1 → envoie une alerte de démonstration (sans Stripe, sans D1)
   if (url0.searchParams.get("test") === "1") {
     const emailSent = await sendEmail(env, "🧪 Test alerte réservation — Amaryllis",
       "<div style='font-family:Georgia,serif'><h2 style='color:#0e3b3a'>🧪 Test d'alerte</h2><p>Si vous lisez ceci, les notifications email de nouvelle réservation fonctionnent ✅</p></div>",

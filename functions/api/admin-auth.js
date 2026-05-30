@@ -3,6 +3,7 @@
 // Retourne { ok: true, role: "admin" | "menage" } ou { ok: false } (401).
 
 import { rateLimit } from './_ratelimit.js';
+import { signSession } from './_adminauth.js';
 
 // arch-007 : restreindre CORS aux domaines Amaryllis uniquement
 const ALLOWED_ORIGINS = [
@@ -58,10 +59,12 @@ export async function onRequestPost(context) {
   }
 
   if (password === adminPwd) {
-    return json({ ok: true, role: "admin" }, 200, request);
+    const token = await signSession("admin", env);
+    return json({ ok: true, role: "admin", token }, 200, request);
   }
   if (menagePwd && password === menagePwd) {
-    return json({ ok: true, role: "menage" }, 200, request);
+    const token = await signSession("menage", env);
+    return json({ ok: true, role: "menage", token }, 200, request);
   }
 
   return json({ ok: false }, 401, request);

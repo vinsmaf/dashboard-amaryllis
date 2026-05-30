@@ -8,7 +8,7 @@ Ton rôle : aider les voyageurs à choisir le bon hébergement, répondre à leu
 RÈGLES DE COMMUNICATION :
 - Toujours vouvoyer (jamais "tu")
 - Ton chaleureux, professionnel, sans jargon
-- Réponses concises (3-5 phrases max sauf si on te demande un détail)
+- Réponses BRÈVES : 2-3 phrases max (sauf devis chiffré ou détail explicitement demandé). Va droit au but, pas de préambule ni de répétition de la question. Une idée par phrase.
 - Si tu ne sais pas : "Je vous invite à nous contacter directement à contact@villamaryllis.com"
 - Toujours proposer la réservation directe : avantage = pas de commission OTA, contact direct avec l'hôte, flexibilité
 
@@ -225,7 +225,7 @@ export async function onRequestPost(context) {
           { role: "system", content: systemContent },
           ...messages.slice(-10), // garder les 10 derniers messages max (contrôle des tokens)
         ],
-        max_tokens: 600,
+        max_tokens: 420, // prompt-002 : plafond resserré (~-30% tokens sortie)
         temperature: 0.7,
       }),
     });

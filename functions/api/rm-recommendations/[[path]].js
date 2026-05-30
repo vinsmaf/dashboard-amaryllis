@@ -17,7 +17,7 @@ const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, header
  * Find which seasonal profile applies to a given date for a property.
  * Returns the profile with the highest priority that covers the date.
  */
-function findSeasonalProfile(profiles, dateStr) {
+export function findSeasonalProfile(profiles, dateStr) {
   const matching = profiles.filter(
     (p) => p.is_active && dateStr >= p.date_start && dateStr <= p.date_end
   );
@@ -28,7 +28,7 @@ function findSeasonalProfile(profiles, dateStr) {
 /**
  * Get the base price from the property given a season type.
  */
-function getBasePrice(property, seasonType) {
+export function getBasePrice(property, seasonType) {
   switch (seasonType) {
     case "peak": return property.base_price_high; // use high as proxy for peak
     case "high": return property.base_price_high;
@@ -41,7 +41,7 @@ function getBasePrice(property, seasonType) {
 /**
  * Get the recommended min_stay from the property given a season type.
  */
-function getMinStay(property, seasonType) {
+export function getMinStay(property, seasonType) {
   switch (seasonType) {
     case "peak":
     case "high": return property.min_stay_high;
@@ -54,7 +54,7 @@ function getMinStay(property, seasonType) {
 /**
  * Compute percentile of a sorted array.
  */
-function percentile(sorted, p) {
+export function percentile(sorted, p) {
   if (!sorted.length) return 0;
   const idx = (p / 100) * (sorted.length - 1);
   const lo = Math.floor(idx);
@@ -66,7 +66,7 @@ function percentile(sorted, p) {
  * Calculate a single date's pricing recommendation.
  * Returns an object ready to be inserted into rm_recommendations.
  */
-function calcDateReco({
+export function calcDateReco({
   property,
   dateStr,
   profiles,

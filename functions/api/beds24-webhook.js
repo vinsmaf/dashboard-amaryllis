@@ -134,14 +134,30 @@ export async function onRequestPost(context) {
     return json({ ok: true, msg: "Webhook reçu, aucune réservation à synchroniser" });
   }
 
-  // ── Normaliser et envoyer à Apps Script ──
+  // ── Normaliser → format unifié "Toutes les Réservations" et envoyer à Apps Script ──
   const normalized = bookings.map(normalizeBooking);
+  // id "beds24-<bookingId>" identique au sync principal → upsert sans doublon, un seul onglet.
+  const reservations = normalized.map((b) => ({
+    id:         "beds24-" + b.bookingId,
+    bienId:     "nogent",
+    voyageur:   b.guestName,
+    canal:      b.channel || "Beds24",
+    checkin:    b.arrival,
+    checkout:   b.departure,
+    nights:     b.nights,
+    montant:    b.price,
+    nb_guests:  b.numGuests,
+    notes:      b.notes || "",
+    source:     "Beds24",
+    status:     b.status || "Confirmé",
+    modifiedOn: b.modifiedOn || b.arrival || "",
+  }));
 
   try {
     const r = await fetch(scriptUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "importBeds24", bookings: normalized }),
+      body: JSON.stringify({ action: "importAllReservations", reservations }),
       redirect: "follow",
     });
     const txt = await r.text();
