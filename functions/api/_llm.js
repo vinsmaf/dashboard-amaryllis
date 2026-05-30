@@ -59,6 +59,20 @@ const PROVIDERS = {
     }),
     parseResponse: (data) => data.choices?.[0]?.message?.content || "",
   },
+
+  // Google Gemini — endpoint OpenAI-compatible. Prêt-à-activer : poser GEMINI_API_KEY.
+  // (clé gratuite via Google AI Studio — quota généreux, contexte ~1M, multimodal)
+  gemini: {
+    endpoint: "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+    needsKey: "GEMINI_API_KEY",
+    headers: (key) => ({ "Content-Type": "application/json", "Authorization": `Bearer ${key}` }),
+    body: (model, messages, opts) => JSON.stringify({
+      model, messages,
+      max_tokens: opts.max_tokens || 2048,
+      temperature: opts.temperature ?? 0.3,
+    }),
+    parseResponse: (data) => data.choices?.[0]?.message?.content || "",
+  },
 };
 
 // Modèles par provider — actifs vérifiés mai 2026
@@ -85,10 +99,31 @@ export const MODELS = {
     medium:  "gpt-oss-120b",
     smart:   "zai-glm-4.7",
   },
+  gemini: {
+    // Activés seulement si GEMINI_API_KEY posée ; l'agent AI-Ops ajuste les IDs réels.
+    fast:    "gemini-2.0-flash-lite",
+    medium:  "gemini-2.0-flash",
+    smart:   "gemini-2.5-flash",
+  },
 };
 
-// Cascade par défaut : groq → cloudflare → mistral → cerebras
-const DEFAULT_CASCADE = ["groq", "cloudflare", "mistral", "cerebras"];
+// Cascade par défaut : groq → cloudflare → mistral → cerebras → gemini(si clé)
+const DEFAULT_CASCADE = ["groq", "cloudflare", "mistral", "cerebras", "gemini"];
+
+// ── Override dynamique piloté par l'agent AI-Ops (table D1 ai_ops, clé 'plan') ──
+// Permet de BASCULER de modèle / désactiver un provider défaillant SANS redéploiement.
+// Cache module-level 10 min ; fallback transparent sur MODELS statiques si pas de plan.
+let _planCache = { at: 0, models: null, disabled: null };
+async function activePlan(env) {
+  const now = Date.now();
+  if (_planCache.at && now - _planCache.at < 600000) return _planCache;
+  try {
+    const row = await env.revenue_manager?.prepare("SELECT v FROM ai_ops WHERE k='plan'").first();
+    const plan = row?.v ? JSON.parse(row.v) : null;
+    _planCache = { at: now, models: plan?.models || null, disabled: new Set(plan?.disabled || []) };
+  } catch { _planCache = { at: now, models: null, disabled: new Set() }; }
+  return _planCache;
+}
 
 /**
  * Appel LLM résilient avec cascade automatique.
@@ -104,7 +139,11 @@ export async function callLLM(env, opts) {
   const timeoutMs   = opts.timeoutMs || 22000;
 
   // Ordonne la cascade en commençant par startWith
-  const order = [startWith, ...cascade.filter(p => p !== startWith)];
+  const baseOrder = [startWith, ...cascade.filter(p => p !== startWith)];
+  // Plan AI-Ops : retire les providers désactivés (sauf si ça vide tout → garde la base)
+  const plan = await activePlan(env);
+  const liveOrder = baseOrder.filter(p => !plan.disabled?.has?.(p));
+  const order = liveOrder.length ? liveOrder : baseOrder;
   const errors = [];
 
   for (const providerId of order) {
@@ -114,7 +153,8 @@ export async function callLLM(env, opts) {
     const apiKey = env[provider.needsKey];
     if (!apiKey) { errors.push({ provider: providerId, error: `missing ${provider.needsKey}` }); continue; }
 
-    const model = MODELS[providerId]?.[tier];
+    // Modèle : opts.model (usage isolé) > plan AI-Ops (D1) > MODELS statique
+    const model = opts.model || plan.models?.[providerId]?.[tier] || MODELS[providerId]?.[tier];
     if (!model) { errors.push({ provider: providerId, error: `no model for tier=${tier}` }); continue; }
 
     const endpoint = typeof provider.endpoint === "function"

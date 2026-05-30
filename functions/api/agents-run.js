@@ -7,6 +7,7 @@
 
 import { getSkillForAgent } from "./_skills.js";
 import { callLLM } from "./_llm.js";
+import { maybeRefresh } from "./ai-ops.js";
 import { factCheckCaption, loadLearnedLessons } from "./_factcheck.js";
 
 const CORS = {
@@ -1055,6 +1056,10 @@ export async function onRequest(context) {
 
   const db = env.revenue_manager;
   if (!db) return json({ error: "D1 binding 'revenue_manager' not found" }, 503);
+
+  // Agent AI-Ops : auto-entretien des sources LLM gratuites (rebuild si plan > 20h),
+  // en tâche de fond → ne ralentit pas la réponse. Self-forming sans intervention.
+  try { context.waitUntil(maybeRefresh(env).catch(() => {})); } catch { /* waitUntil indispo : ignore */ }
 
   const body = await request.json().catch(() => ({}));
   // agents peut être "all" ou un tableau d'IDs d'agents spécifiques
