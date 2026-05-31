@@ -3,7 +3,7 @@
 > Mémoire long terme du projet. Complète `CLAUDE.md` (architecture technique de référence).
 > Ici : état, décisions, contraintes de Vincent, faits opérationnels (crons, secrets, IDs), pièges, et historique.
 > **Tenir à jour** à chaque session significative (ajouter en bas la date + ce qui a changé).
-> Dernière mise à jour : **2026-05-30**.
+> Dernière mise à jour : **2026-05-31**.
 
 ---
 
@@ -121,12 +121,15 @@ Autres crons via le **Worker** (`workers/ical-sync`) : sync iCal horaire, drafts
 ---
 
 ## 9. À faire (côté Vincent / prochaines sessions)
-- Créer fiches GBP **Bellevue (Schœlcher) + Nogent** (kit prêt) → puis fournir leurs Place ID pour personnaliser les liens d'avis emails.
+- **PRIORITÉ reprise 31/05** : finir le scrape avis Airbnb (run Apify `WMQVMTBpHdU9hyx6N` jamais terminé → relancer `/api/voyageur-feedback?action=ingest` puis `?action=collect`). Infra prête.
+- **Valider les recos pricing basse saison** dans l'admin (doc `docs/pricing-basse-saison-reco.md`) — rien n'a été appliqué.
+- Importer la conversion **`purchase`** (pas booking_completed) dans Google Ads + corriger funnel aveugle (GA4 conversions=0).
 - Vérifier crédit 400 € Google Ads → lancer campagne Brand/Search.
-- Importer la conversion **`purchase`** (pas booking_completed) dans Google Ads.
+- Réveiller le **SEO organique** (~5 sessions/mois pour 30+ guides = gisement gratuit).
+- Créer fiches GBP **Bellevue (Schœlcher) + Nogent** (kit prêt) → puis fournir leurs Place ID pour personnaliser les liens d'avis emails.
 - Répondre à tous les avis Villa Amaryllis (1/20).
 - Valider docs compliance avec un avocat.
-- Plus tard : Meta Ads (option A), avis Airbnb en D1, fiches Google Business Profile cluster.
+- Plus tard : Meta Ads (option A), fiches Google Business Profile cluster.
 
 ---
 
@@ -156,6 +159,15 @@ Autres crons via le **Worker** (`workers/ical-sync`) : sync iCal horaire, drafts
 **Améliorations transverses (même journée)** : Cerebras réparé (`gpt-oss-120b`), agent **AI-Ops** (auto-gestion modèles, voir §dédiée), débridage agents (max_tokens 4096, historique 120/80). **Reste possible** : router `ai-summary` vers le gratuit ; ingérer les avis Airbnb dans le RAG (quand en D1).
 
 ## Journal des mises à jour
+- **2026-05-31 (session complète — nuit)** : Grosse session. Bilan :
+  - **Audit data-driven** (données live GA4/RM/avis) : vrai problème = **trafic famine** (~5 visiteurs/j, SEO organique ~5 sessions/mois) + Revenue Manager qui tournait **dans le vide** (91 recos/bien, 0 publiée). `/amaryllis` cartonne en engagement (611s) mais GA4 conversions=0 (funnel aveugle).
+  - **Pricing basse saison** : doc `docs/pricing-basse-saison-reco.md` (recos RM 30j × 5 biens, croisées avec occupation iCal réelle, plafond prudence −20%). **Confirmé le piège** : Bellevue 30/30 nuits déjà louées → RM voulait brader du vendu. Les 4 biens Sainte-Luce avaient 26-30/30 nuits réellement libres. Reco only, rien publié.
+  - **Fix hero photos cassées** (commit `b82b45a`) : `srcset` annonçait `-1600w.webp` (généré seulement pour 17/477 photos via `withoutEnlargement`) → sur écran large/retina la hero recevait la SPA HTML au lieu de l'image. Retiré 1600 de `_VARIANT_WIDTHS`+srcset dans `src/primitives.jsx`. Piège noté §5.4. Vérifié en preview navigateur.
+  - **5 bugs admin corrigés + déployés** : data-001 double-comptage GA4 `purchase` flux groupé (`d382375`) ; 3 ReferenceError runtime (`SEED_DAILY_PRICES` non importé CalendrierTarifs, `applyServerPriceOverrides`+`setPricesSyncMsg` Beds24Admin) (`15e7894`) ; crash précédence `?:/||` Historique (`81b6525`) ; régression build export dupliqué que j'avais introduite, corrigée (`d22e72c`). Tests 70/70, 0 `no-undef`/`no-unsafe-optional` dans src.
+  - **voyageur-001 (avis Airbnb→D1)** : nouvel endpoint `/api/voyageur-feedback` + table D1 `voyageur_feedback` (RGPD : prénom seul). Acteur Apify **`tri_angle~airbnb-reviews-scraper`** (le `dtrungtin~airbnb-scraper` refuse les URLs fiche = scraper prix). Input `{listingUrls:[...]}`. Scrape verrouillé derrière POSTSTAY_SECRET **ou** token admin. ⚠️ **Au coucher : run `WMQVMTBpHdU9hyx6N` toujours "pas terminé" côté Apify, 0 avis en D1.** À reprendre : relancer un scrape (POST `?action=ingest {bien}`) puis collecter (`?action=collect&runId=`). 6 listing IDs Airbnb réels en dur dans le fichier (Iguana exclu = bail long).
+  - **Backlog agents classé + normalisé** (commits `dae4188`, `d4de0ea`) : 453 actions, doc `docs/backlog-agents-classification.md`. PATCH `/api/agents-actions` étendu (category+effort). Normalisation : `secirute`→securite, `expe`→growth, `prompt`→technique, `Acquisition payante`→ads, efforts `M`/`ext (2 jours)`→4h/ext, **1 ligne id NULL réparée en D1 → `traf-020`**. 0 anomalie résiduelle.
+  - **Infra** : token Cloudflare avait expiré en cours de session → refresh OAuth manuel (refresh_token dans `~/.wrangler/config/default.toml`) ; depuis, re-login navigateur OK. **Gotcha PATCH agents-actions : l'id passe en `?id=` query string, PAS dans le body.**
+  - **À reprendre en priorité (non fait)** : (1) finir le scrape avis Airbnb ; (2) funnel conversion aveugle (importer `purchase` dans Google Ads, GA4 conversions=0) ; (3) lancer les 400€ Google Ads ; (4) SEO organique endormi (gisement gratuit). Le pricing basse saison reste **à valider par Vincent dans l'admin** (rien appliqué).
 - **2026-05-30 (soir 4 — fin de session)** : Programme agents **8/8 complet** : #1 orchestrateur, #5 livrables, #6 déclencheurs réactifs, **#2 RAG Vectorize** (index créé + binding posé via API Cloudflare, 38 vecteurs ingérés, branché 5 agents content, cron hebdo Worker). `CLAUDE.md` mis à jour (pointeur mémoire + ~15 nouveaux endpoints). Git propre + poussé. ~50 commits sur la session.
 - **2026-05-30 (soir 3)** : Programme amélioration agents Phases 1-2 (4/8). Endpoints `/api/agents-stats`, `/api/agents-eval` (table `llm_evals`), `/api/agents-verify`. Module `_biens.js` (source unique faits, branché dans agents-run). 70 tests OK.
 - **2026-05-30 (soir 2)** : Création **agent AI-Ops** (`/api/ai-ops`) — auto-découverte/choix/santé/bascule des modèles LLM gratuits via plan D1 appliqué en live par `_llm.js`. Gemini ajouté en provider prêt-à-activer. Auto-refresh via `agents-run` (waitUntil). 70 tests OK.
