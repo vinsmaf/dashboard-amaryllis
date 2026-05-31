@@ -5639,7 +5639,13 @@ function GroupPaymentModal({ biens, checkin, checkout, guests, nights, total, on
         body: JSON.stringify({ nom: `${form.prenom} ${form.nom}`.trim(), email: form.email, tel: form.tel, bien: `GROUPE : ${logementsLabel}`, source: "reservation-groupe",
           message: `🚨 RÉSA GROUPÉE PAYÉE (${paymentIntent.id}) — BLOQUER les calendriers Airbnb/Booking de : ${biens.map(b => b.nom).join(", ")}\nDates : ${checkin} → ${checkout} (${nights} nuits)\nVoyageurs : ${guests}\nTotal payé : ${total}€` }),
       }).catch(() => {});
-      if (window.gtag) { try { window.gtag("event", "purchase", { transaction_id: paymentIntent.id, currency: "EUR", value: total }); } catch { /* */ } }
+      if (window.gtag) {
+        const guardKey = `ga_purchase_fired_${paymentIntent.id}`;
+        if (!sessionStorage.getItem(guardKey)) {
+          sessionStorage.setItem(guardKey, "1");
+          try { window.gtag("event", "purchase", { transaction_id: paymentIntent.id, currency: "EUR", value: total }); } catch { /* */ }
+        }
+      }
       window.location.href = "/merci";
       return;
     }
