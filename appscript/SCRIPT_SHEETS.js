@@ -436,7 +436,7 @@ function importAllReservations_(input) {
     sheet.setColumnWidth(11, 220); // Notes
   }
 
-  var NCOLS = 13;
+  var NCOLS = 15;
 
   // Index des IDs existants
   var lastRow = sheet.getLastRow();
