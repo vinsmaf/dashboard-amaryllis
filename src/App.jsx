@@ -1056,6 +1056,16 @@ export default function App() {
     }
   }, [biens, scriptUrl]);
 
+  // Auto-sync à l'affichage : dès que scriptUrl est dispo, on recharge une fois
+  // automatiquement depuis Sheets (résas directes + données) sans bouton.
+  // Garde-fou : ne tourne qu'une seule fois par montage (ref), fail-open.
+  const autoSyncDone = useRef(false);
+  useEffect(() => {
+    if (!scriptUrl || autoSyncDone.current) return;
+    autoSyncDone.current = true;
+    doSync();
+  }, [scriptUrl, doSync]);
+
   // ── Sync global : iCal + Beds24 → Google Sheets ──────────────────
   const syncAllToSheets = useCallback(async () => {
     if (!scriptUrl) { alert("Configure d'abord l'URL Apps Script (bouton ⚙)"); return; }
