@@ -130,7 +130,7 @@ function readReservations_() {
     if (!sheet) return [];
     var lastRow = sheet.getLastRow();
     if (lastRow < 2) return [];
-    var rows = sheet.getRange(2, 1, lastRow - 1, 13).getValues();
+    var rows = sheet.getRange(2, 1, lastRow - 1, 15).getValues();
     // Inverse du mapping label → id (cohérent avec RESA_BIEN_LABELS / BIEN_LABELS)
     var LABEL_TO_ID = {
       "T2 Nogent": "nogent", "Villa Amaryllis": "amaryllis", "Villa Iguana": "iguana",
@@ -159,6 +159,8 @@ function readReservations_() {
         status: String(r[8] || ""),
         nb_guests: Number(r[9]) || 1,
         notes: String(r[10] || ""),
+        phone: String(r[13] || ""),
+        email: String(r[14] || ""),
       });
     });
     return out;
@@ -234,7 +236,7 @@ function resaSheet_() {
   let sheet = ss.getSheetByName("Toutes les Réservations");
   if (!sheet) {
     sheet = ss.insertSheet("Toutes les Réservations");
-    const headers = ["ID","Propriété","Voyageur","Canal","Arrivée","Départ","Nuits","Montant (€)","Statut","Voyageurs","Notes","Source","Modifié le"];
+    const headers = ["ID","Propriété","Voyageur","Canal","Arrivée","Départ","Nuits","Montant (€)","Statut","Voyageurs","Notes","Source","Modifié le","Téléphone","Email"];
     sheet.getRange(1, 1, 1, headers.length).setValues([headers])
       .setBackground("#1e3a5f").setFontColor("#ffffff").setFontWeight("bold");
     sheet.setFrozenRows(1);
@@ -257,7 +259,7 @@ function addReservation_(p) {
   const now = Utilities.formatDate(new Date(), "Europe/Paris", "yyyy-MM-dd");
   const row = [ id, bienLabel, p.voyageur || "—", canalLabel, p.checkin || "", p.checkout || "", nights,
                 parseFloat(p.montant) || 0, "Confirmé", parseInt(p.voyageurs || p.numGuests || 1, 10) || 1,
-                p.notes || "", "Manuel", now ];
+                p.notes || "", "Manuel", now, p.phone || p.tel || "", p.email || "" ];
 
   const lastRow = sheet.getLastRow();
   if (lastRow > 1) {
@@ -421,7 +423,7 @@ function importAllReservations_(input) {
   var sheet = ss.getSheetByName(SHEET_NAME);
   if (!sheet) {
     sheet = ss.insertSheet(SHEET_NAME);
-    var headers = ["ID","Propriété","Voyageur","Canal","Arrivée","Départ","Nuits","Montant (€)","Statut","Voyageurs","Notes","Source","Modifié le"];
+    var headers = ["ID","Propriété","Voyageur","Canal","Arrivée","Départ","Nuits","Montant (€)","Statut","Voyageurs","Notes","Source","Modifié le","Téléphone","Email"];
     sheet.getRange(1, 1, 1, headers.length).setValues([headers])
       .setBackground("#1e3a5f").setFontColor("#ffffff").setFontWeight("bold");
     sheet.setFrozenRows(1);
@@ -486,6 +488,8 @@ function importAllReservations_(input) {
       r.notes    || r.note      || "",
       r.source   || canalLabel,
       r.modifiedOn || r.checkin || "",
+      r.phone    || r.tel       || "",
+      r.email    || "",
     ];
 
     var existingRow = existingIds[id];
