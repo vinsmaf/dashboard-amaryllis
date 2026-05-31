@@ -3,6 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 > 📌 **Mémoire long terme du projet → lire `PROJECT_MEMORY.md`** (état, décisions, secrets, crons cron-job.org + Worker, Place IDs GBP, système d'agents IA + RAG, contraintes de Vincent, backlog). Ce fichier-ci (`CLAUDE.md`) = référence **architecture/technique**.
+> 🚨 **Lire aussi `docs/ERREURS-LOG.md`** (journal des erreurs déjà commises + garde-fous) — pour ne pas les reproduire. **Y ajouter une entrée à chaque nouvelle erreur.**
 
 ## Project
 
