@@ -1854,6 +1854,19 @@ async function runRagIngest(env) {
   } catch (e) { console.error("[rag] ingestion échouée:", e.message); }
 }
 
+async function runAgentsExecuteAndDigest(env) {
+  const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+  if (!env.POSTSTAY_SECRET) { console.log("[agents] POSTSTAY_SECRET absent — skip"); return; }
+  try {
+    const e = await fetch(`${siteUrl}/api/agents-execute?secret=${env.POSTSTAY_SECRET}`);
+    console.log("[agents-execute]", JSON.stringify(await e.json().catch(() => ({}))).slice(0, 150));
+  } catch (err) { console.error("[agents-execute] échec:", err.message); }
+  try {
+    const g = await fetch(`${siteUrl}/api/agents-digest?secret=${env.POSTSTAY_SECRET}`);
+    console.log("[agents-digest]", JSON.stringify(await g.json().catch(() => ({}))).slice(0, 150));
+  } catch (err) { console.error("[agents-digest] échec:", err.message); }
+}
+
 export default {
   async scheduled(event, env, ctx) {
     const cron = event.cron;
@@ -1865,6 +1878,7 @@ export default {
         runWeeklyReport(env, allEvents),
         runPrixRecap(env),
         runRagIngest(env), // #2 RAG — rafraîchit l'index vectoriel chaque lundi
+        runAgentsExecuteAndDigest(env), // L4 — agents-execute (auto drafts) puis digest hebdo
       ]));
 
     } else if (cron === "0 1 1 * *") {

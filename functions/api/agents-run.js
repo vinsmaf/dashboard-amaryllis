@@ -7,6 +7,7 @@
 
 import { getSkillForAgent } from "./_skills.js";
 import { callLLM } from "./_llm.js";
+import { triageAction } from "./_triage.js";
 import { maybeRefresh } from "./ai-ops.js";
 import { EQUIP_RULES_TEXT } from "./_biens.js"; // #8 source unique des faits
 import { ragBlock } from "./_rag.js"; // #2 RAG — grounding sur les vraies données
@@ -1150,7 +1151,7 @@ export async function onRequest(context) {
 
       const actions = parsed.actions || [];
       const drafts  = parsed.drafts || [];
-      let inserted = 0, updated = 0, draftsCreated = 0;
+      let inserted = 0, updated = 0, draftsCreated = 0, rejected = 0;
 
       // ── Insertion des drafts (si l'agent en a généré) ────────────────────
       if (drafts.length > 0 && DRAFT_CAPABLE[agent.id]) {
@@ -1399,13 +1400,33 @@ Si verdict=reject : "improved_blocks": null`;
             skipped++;
             continue;
           }
+          // ── Triage des nouvelles actions : filtre qualité + risque ──
+          let verdict = triageAction(row, []);
+          if (!verdict.keep && (verdict.reason === "vague" || verdict.reason === "court")) {
+            // Retry 1× : demander à l'agent de reformuler concrètement
+            try {
+              const retry = await callLLM(env, {
+                tier: "fast", max_tokens: 200, temperature: 0.4,
+                logSource: `triage-retry:${agent.id}`,
+                messages: [{ role: "user", content:
+                  `Réécris cette action pour qu'elle soit CONCRÈTE : nomme le bien, chiffre la cible, cite l'endpoint/outil. Une seule phrase, sans guillemets. Action vague : "${row.action}"` }],
+              });
+              const improved = String(retry.text || "").trim().replace(/^["']|["']$/g, "");
+              if (improved) {
+                const v2 = triageAction({ ...row, action: improved }, []);
+                if (v2.keep) { row.action = improved; verdict = v2; }
+              }
+            } catch (_) { /* retry best-effort */ }
+          }
+          if (!verdict.keep) { rejected++; continue; }
+          const risk = verdict.risk || "review";
           await db.prepare(`
             INSERT OR IGNORE INTO agent_actions
-              (id, agent, agent_label, agent_emoji, category, action, priority, effort, status, last_analyzed, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'backlog', ?, ?, ?)
+              (id, agent, agent_label, agent_emoji, category, action, priority, effort, status, risk, last_analyzed, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'backlog', ?, ?, ?, ?)
           `).bind(row.id, row.agent || agent.id, row.agent_label || agent.label, row.agent_emoji || agent.emoji,
                  row.category || "autre", row.action, row.priority || "moyenne", row.effort || "?",
-                 now, now, now).run();
+                 risk, now, now, now).run();
           inserted++;
         }
       }
@@ -1445,7 +1466,7 @@ Si verdict=reject : "improved_blocks": null`;
         ON CONFLICT(agent, key) DO UPDATE SET value=excluded.value, created_at=unixepoch()
       `).bind(agent.id, "last_run_ts", String(now)).run().catch(() => {});
 
-      return { agent: agent.id, model: activeModel, ok: true, inserted, updated, skipped, drafts: draftsCreated, actions: actions.length, context_size: history.length, completed_since: completedSince };
+      return { agent: agent.id, model: activeModel, ok: true, inserted, updated, rejected, skipped, drafts: draftsCreated, actions: actions.length, context_size: history.length, completed_since: completedSince };
     } catch (e) {
       return {
         agent: agent.id,

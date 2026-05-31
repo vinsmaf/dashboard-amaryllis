@@ -303,6 +303,7 @@ export async function onRequest(context) {
     if (body.priority !== undefined) { fields.push("priority = ?"); params.push(body.priority); }
     if (body.category !== undefined) { fields.push("category = ?"); params.push(body.category); }
     if (body.effort   !== undefined) { fields.push("effort = ?");   params.push(body.effort); }
+    if (body.risk     !== undefined) { fields.push("risk = ?");     params.push(body.risk); }
     if (!fields.length) return json({ error: "Nothing to update" }, 400);
 
     fields.push("updated_at = ?"); params.push(Math.floor(Date.now() / 1000));
@@ -351,6 +352,8 @@ export async function onRequest(context) {
         for (const stmt of MIGRATE_DDL.split(";").map(s => s.trim()).filter(Boolean)) {
           await db.prepare(stmt).run();
         }
+        // Colonne risk (triage) — idempotent, D1 n'a pas ADD COLUMN IF NOT EXISTS
+        try { await db.prepare("ALTER TABLE agent_actions ADD COLUMN risk TEXT DEFAULT 'review'").run(); } catch (_) { /* déjà présente */ }
         return json({ ok: true, message: "Migration terminée — CHECK constraint sur status supprimé, 'a-planifier' supporté" });
       } catch (e) {
         return json({ ok: false, error: e.message }, 500);
@@ -364,6 +367,8 @@ export async function onRequest(context) {
         for (const stmt of DDL.split(";").map(s => s.trim()).filter(Boolean)) {
           await db.prepare(stmt).run();
         }
+        // Migration idempotente : colonne risk (triage) — D1 n'a pas ADD COLUMN IF NOT EXISTS
+        try { await db.prepare("ALTER TABLE agent_actions ADD COLUMN risk TEXT DEFAULT 'review'").run(); } catch (_) { /* déjà présente */ }
         // Seed (INSERT OR IGNORE pour idempotence)
         const now = Math.floor(Date.now() / 1000);
         for (const row of SEED) {
@@ -383,6 +388,8 @@ export async function onRequest(context) {
     if (action === "upsert") {
       const { actions: incoming = [] } = body;
       if (!Array.isArray(incoming) || !incoming.length) return json({ error: "actions[] is required" }, 400);
+      // Migration idempotente : garantit la colonne risk avant tout upsert (D1 n'a pas ADD COLUMN IF NOT EXISTS)
+      try { await db.prepare("ALTER TABLE agent_actions ADD COLUMN risk TEXT DEFAULT 'review'").run(); } catch (_) { /* déjà présente */ }
       const now = Math.floor(Date.now() / 1000);
       let inserted = 0, updated = 0;
       for (const row of incoming) {
@@ -391,15 +398,15 @@ export async function onRequest(context) {
         if (existing) {
           // Mettre à jour action + priorité + effort + last_analyzed (ne pas écraser status si déjà traité)
           await db.prepare(`
-            UPDATE agent_actions SET action=?, priority=?, effort=?, last_analyzed=?, updated_at=?
+            UPDATE agent_actions SET action=?, priority=?, effort=?, risk=?, last_analyzed=?, updated_at=?
             WHERE id=?
-          `).bind(row.action, row.priority || "moyenne", row.effort || "?", now, now, row.id).run();
+          `).bind(row.action, row.priority || "moyenne", row.effort || "?", row.risk || "review", now, now, row.id).run();
           updated++;
         } else {
           await db.prepare(`
-            INSERT INTO agent_actions (id, agent, agent_label, agent_emoji, category, action, priority, effort, status, last_analyzed, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'backlog', ?, ?, ?)
-          `).bind(row.id, row.agent, row.agent_label || row.agent, row.agent_emoji || "🤖", row.category || "autre", row.action, row.priority || "moyenne", row.effort || "?", now, now, now).run();
+            INSERT INTO agent_actions (id, agent, agent_label, agent_emoji, category, action, priority, effort, status, risk, last_analyzed, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'backlog', ?, ?, ?, ?)
+          `).bind(row.id, row.agent, row.agent_label || row.agent, row.agent_emoji || "🤖", row.category || "autre", row.action, row.priority || "moyenne", row.effort || "?", row.risk || "review", now, now, now).run();
           inserted++;
         }
       }
