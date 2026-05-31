@@ -37,7 +37,7 @@ Conciergerie + site de réservation directe pour **7 logements** (Martinique + N
 ### Apps Script (Google Sheets bridge)
 - Projet **« Site web Amaryllis »**, scriptId `1PJVUdEra…`, deployment id `AKfycbw-t5kd_0f3OsEoDkOJHzYPHIBhWzz34aj7yagP57-Cj-7pLj6TiuRaUuusrCwAiA30Gg`.
 - Source **`appscript/SCRIPT_SHEETS.js`** (le `SCRIPT_SHEETS.gs` racine est OBSOLÈTE). Déploiement : `clasp push -f` puis `clasp deploy -i <deployment id> -d "msg"` (toujours le **même** deployment id pour garder l'URL).
-- Spreadsheet ID : `1xuhU0KraEMxF9NAWO5MKEt23JI_V8mnNnWktzHy6q2U`. Onglet unique réservations : **« Toutes les Réservations »** (13 colonnes), action `importAllReservations`.
+- Spreadsheet ID : `1xuhU0KraEMxF9NAWO5MKEt23JI_V8mnNnWktzHy6q2U`. Onglet unique réservations : **« Toutes les Réservations »** (**15 colonnes** depuis 31/05 : A-M + N=Téléphone + O=Email), action `importAllReservations`. Lecture multi-appareils : `read` renvoie `reservations[]` (via `doGet` ET `doPost`), front lit via `/api/sheets-proxy` (jamais fetch direct script.google = CORS cassé, cf E9). ⚠️ Les résas stockées AVANT le 31/05 ont N/O vides → re-sauver pour peupler tél/email.
 
 ### Beds24
 - API **V2 uniquement** (V1 morte = errorCode 1000). Compte louerpremium@gmail.com (ID 46819). **Nogent = propId 158192** (seul bien sur Beds24 ; les biens Martinique sont gérés iCal). Secret `BEDS24_TOKEN`.
