@@ -113,7 +113,56 @@ function readAll_() {
       cashflow: getVals(sheet, b.cfRow,     2, 12),
     })),
     hist: readHist_(),
+    reservations: readReservations_(),
   });
+}
+
+// ── LECTURE RÉSERVATIONS → tableau pour sync multi-appareils ──────
+// Relit l'onglet "Toutes les Réservations" et le reconvertit au format
+// front (bienId, voyageur, canal, checkin, checkout, montant, id…).
+// Colonnes : A=ID B=Propriété C=Voyageur D=Canal E=Arrivée F=Départ
+//            G=Nuits H=Montant I=Statut J=Voyageurs K=Notes L=Source M=Modifié
+function readReservations_() {
+  try {
+    var sheet = getSheet_("Toutes les Réservations");
+    if (!sheet) return [];
+    var lastRow = sheet.getLastRow();
+    if (lastRow < 2) return [];
+    var rows = sheet.getRange(2, 1, lastRow - 1, 13).getValues();
+    // Inverse du mapping label → id (cohérent avec RESA_BIEN_LABELS / BIEN_LABELS)
+    var LABEL_TO_ID = {
+      "T2 Nogent": "nogent", "Villa Amaryllis": "amaryllis", "Villa Iguana": "iguana",
+      "Geko": "geko", "Zandoli": "zandoli", "Mabouya": "mabouya", "T2 Schoelcher": "schoelcher"
+    };
+    var CANAL_TO_ID = { "Airbnb": "airbnb", "Booking.com": "booking", "Direct": "direct", "Beds24": "beds24" };
+    var fmtDate = function(v) {
+      if (v instanceof Date) {
+        return v.getFullYear() + "-" + String(v.getMonth() + 1).padStart(2, "0") + "-" + String(v.getDate()).padStart(2, "0");
+      }
+      return String(v || "");
+    };
+    var out = [];
+    rows.forEach(function(r) {
+      var id = String(r[0] || "");
+      if (!id) return;
+      out.push({
+        id: id,
+        bienId: LABEL_TO_ID[r[1]] || String(r[1] || ""),
+        voyageur: String(r[2] || ""),
+        canal: CANAL_TO_ID[r[3]] || String(r[3] || "").toLowerCase(),
+        checkin: fmtDate(r[4]),
+        checkout: fmtDate(r[5]),
+        nights: Number(r[6]) || 0,
+        montant: Number(r[7]) || 0,
+        status: String(r[8] || ""),
+        nb_guests: Number(r[9]) || 1,
+        notes: String(r[10] || ""),
+      });
+    });
+    return out;
+  } catch (e) {
+    return []; // fail-safe : ne casse jamais readAll_
+  }
 }
 
 // ── LECTURE HISTORIQUE 2022-2025 ─────────────────────────────────
