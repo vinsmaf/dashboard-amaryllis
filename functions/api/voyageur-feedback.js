@@ -14,13 +14,14 @@
 //
 // Listing IDs Airbnb (publics, présents dans l'URL d'annonce). Iguana = bail
 // long, pas d'annonce active → absent.
+// IDs réels extraits des URLs iCal Airbnb (/api/get-config). Iguana = bail long → exclu.
 const AIRBNB_LISTINGS = {
-  amaryllis:  "36979754",
-  zandoli:    "1090733613409604289",
-  geko:       "53968455",
-  mabouya:    "1146442015376979257",
-  schoelcher: "895434377751279572",
-  nogent:     "40289047",
+  amaryllis:  "54269844",
+  zandoli:    "792768220924504884",
+  geko:       "1263155865459755724",
+  mabouya:    "1046596752160926069",
+  schoelcher: "24242415",
+  nogent:     "22600160",
 };
 
 import { verifyBearer } from "./_adminauth.js";
