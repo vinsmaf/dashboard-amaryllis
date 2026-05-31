@@ -144,6 +144,7 @@ export default function Planning() {
   const [view, setView] = useState("todo");
   const [ganttBienFilter, setGanttBienFilter] = useState(null); // null = all
   const [searchQuery, setSearchQuery] = useState("");
+  const [onlyDirect, setOnlyDirect] = useState(false);
   const [dailyPrices, setDailyPrices] = useState(loadDailyPrices);
 
   useEffect(() => {
@@ -746,6 +747,11 @@ export default function Planning() {
                 style={{ padding: "5px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#0f172a", color: "#e2e8f0", fontSize: 11, width: 180, outline: "none" }}
               />
               {searchQuery && <button onClick={() => setSearchQuery("")} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 12 }}>✕</button>}
+              <button
+                onClick={() => setOnlyDirect(v => !v)}
+                title="Afficher uniquement les réservations directes"
+                style={{ padding: "5px 10px", borderRadius: 8, border: `1px solid ${onlyDirect ? "#10b981" : "rgba(255,255,255,0.12)"}`, background: onlyDirect ? "#10b981" : "transparent", color: onlyDirect ? "#06281f" : "#94a3b8", fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}
+              >🟢 Directes</button>
               <span style={{ fontSize: 10, color: "#10b981" }}>
                 {filteredReservations.filter(r => r.fromIcal).length} Airbnb · {filteredReservations.filter(r => !r.fromIcal).length} manuelles
               </span>
@@ -753,8 +759,11 @@ export default function Planning() {
           </div>
           {(() => {
             const q = searchQuery.toLowerCase().trim();
+            const base = onlyDirect
+              ? filteredReservations.filter(r => (r.canal || "").toLowerCase() === "direct")
+              : filteredReservations;
             const listResas = q
-              ? filteredReservations.filter(r => {
+              ? base.filter(r => {
                   const bien = biens.find(x => x.id === r.bienId);
                   return (r.voyageur || "").toLowerCase().includes(q)
                     || (r.canal || "").toLowerCase().includes(q)
@@ -764,7 +773,7 @@ export default function Planning() {
                     || (r.notes || "").toLowerCase().includes(q)
                     || (r.reservation_code || "").toLowerCase().includes(q);
                 })
-              : filteredReservations;
+              : base;
             if (listResas.length === 0) return (
               <div style={{ padding: 20, textAlign: "center", color: "#475569", fontSize: 12 }}>
                 {q ? `Aucun résultat pour "${q}"` : `Aucune réservation${ganttBienFilter ? " pour ce bien" : ""}`}
