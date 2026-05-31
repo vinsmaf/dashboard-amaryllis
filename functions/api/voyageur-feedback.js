@@ -89,6 +89,42 @@ export async function onRequest(context) {
       const total = results.reduce((s, r) => s + r.n, 0);
       return json({ ok: true, total, by_bien: results });
     }
+
+    // collect : récupère le dataset d'un run Apify terminé et le stocke
+    if (action === "collect") {
+      const secret = url.searchParams.get("secret");
+      const secretOk = env.POSTSTAY_SECRET && secret === env.POSTSTAY_SECRET;
+      const { ok: adminOk } = await verifyBearer(request, env);
+      if (!secretOk && !adminOk) return json({ error: "Non autorisé (secret ou token admin requis)" }, 401);
+      const runId = url.searchParams.get("runId");
+      if (!runId) return json({ error: "runId requis" }, 400);
+      const r = await fetch(`https://api.apify.com/v2/actor-runs/${runId}?token=${env.APIFY_TOKEN}`);
+      const meta = await r.json().catch(() => ({}));
+      const status = meta?.data?.status;
+      if (status !== "SUCCEEDED") return json({ ok: false, status, message: "Run pas encore terminé" });
+      const dsId = meta?.data?.defaultDatasetId;
+      const items = await (await fetch(`https://api.apify.com/v2/datasets/${dsId}/items?token=${env.APIFY_TOKEN}&clean=true`)).json().catch(() => []);
+      const idToBien = Object.fromEntries(Object.entries(AIRBNB_LISTINGS).map(([b, id]) => [String(id), b]));
+      let stored = 0;
+      for (const it of (Array.isArray(items) ? items : [])) {
+        const lid = String(it.listingId || it.roomId || it.id || "");
+        const bienId = idToBien[lid] || url.searchParams.get("bien") || "inconnu";
+        const prenom = firstNameOnly(it.reviewer || it.author || it.name || it.reviewerName);
+        const rating = Number(it.rating || it.score || 0) || null;
+        const text = (it.text || it.comment || it.review || it.reviewText || "").slice(0, 2000);
+        const date = (it.createdAt || it.date || it.reviewedAt || "").slice(0, 10) || null;
+        const lang = it.language || it.lang || null;
+        if (!text && !rating) continue;
+        const id = await rowId(bienId, date, prenom, text);
+        await db.prepare(
+          "INSERT INTO voyageur_feedback (id,bien_id,source,prenom,rating,review_text,review_date,lang) " +
+          "VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING"
+        ).bind(id, bienId, "airbnb", prenom, rating, text, date, lang).run();
+        stored++;
+      }
+      return json({ ok: true, stored, fetched: Array.isArray(items) ? items.length : 0 });
+    }
+
     // liste détaillée : admin uniquement
     const { ok } = await verifyBearer(request, env);
     if (!ok && (env.ADMIN_PWD || env.ADMIN_PASSWORD)) return json({ error: "Non autorisé" }, 401);
@@ -102,8 +138,11 @@ export async function onRequest(context) {
 
   // ── POST ?action=ingest : SCRAPE PAYANT (Apify) ──────────────────────────
   if (request.method === "POST" && action === "ingest") {
+    // Autorisé via POSTSTAY_SECRET (cron) OU token admin signé (action manuelle au dashboard).
     const secret = url.searchParams.get("secret");
-    if (!env.POSTSTAY_SECRET || secret !== env.POSTSTAY_SECRET) return json({ error: "secret invalide" }, 401);
+    const secretOk = env.POSTSTAY_SECRET && secret === env.POSTSTAY_SECRET;
+    const { ok: adminOk } = await verifyBearer(request, env);
+    if (!secretOk && !adminOk) return json({ error: "Non autorisé (secret ou token admin requis)" }, 401);
     if (!env.APIFY_TOKEN) return json({ error: "APIFY_TOKEN absent" }, 500);
 
     const body = await request.json().catch(() => ({}));
@@ -112,14 +151,15 @@ export async function onRequest(context) {
     if (Object.values(targets).some(v => !v)) return json({ error: "bien inconnu" }, 400);
 
     // Acteur Apify avis Airbnb (tri/dataset selon l'acteur configuré côté compte)
-    const ACTOR = body.actor || "tri_angle~airbnb-reviews-scraper";
+    // Acteur Airbnb déjà utilisé (et fonctionnel) par rm-scrape : dtrungtin~airbnb-scraper.
+    const ACTOR = (body.actor || "dtrungtin~airbnb-scraper").replace("/", "~");
     const startUrls = Object.values(targets).map(id => ({ url: `https://www.airbnb.com/rooms/${id}` }));
 
     // Démarre le run (asynchrone) — on NE bloque pas 3 min ici.
-    const runRes = await fetch(`https://api.apify.com/v2/acts/${encodeURIComponent(ACTOR)}/runs?token=${env.APIFY_TOKEN}`, {
+    const runRes = await fetch(`https://api.apify.com/v2/acts/${ACTOR}/runs?token=${env.APIFY_TOKEN}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ startUrls, maxReviews: body.maxReviews || 50 }),
+      body: JSON.stringify({ startUrls, includeReviews: true, maxReviews: body.maxReviews || 50, maxListings: Object.keys(targets).length }),
     });
     const run = await runRes.json().catch(() => ({}));
     if (!runRes.ok) return json({ error: "Apify run échoué", detail: run }, 502);
@@ -132,41 +172,6 @@ export async function onRequest(context) {
       poll: `/api/voyageur-feedback?action=collect&runId=${run?.data?.id}&secret=...`,
       targets: Object.keys(targets),
     });
-  }
-
-  // ── GET ?action=collect&runId= : récupère le dataset d'un run terminé et stocke
-  if (request.method === "GET" && action === "collect") {
-    const secret = url.searchParams.get("secret");
-    if (!env.POSTSTAY_SECRET || secret !== env.POSTSTAY_SECRET) return json({ error: "secret invalide" }, 401);
-    const runId = url.searchParams.get("runId");
-    if (!runId) return json({ error: "runId requis" }, 400);
-    const r = await fetch(`https://api.apify.com/v2/actor-runs/${runId}?token=${env.APIFY_TOKEN}`);
-    const meta = await r.json().catch(() => ({}));
-    const status = meta?.data?.status;
-    if (status !== "SUCCEEDED") return json({ ok: false, status, message: "Run pas encore terminé" });
-    const dsId = meta?.data?.defaultDatasetId;
-    const items = await (await fetch(`https://api.apify.com/v2/datasets/${dsId}/items?token=${env.APIFY_TOKEN}&clean=true`)).json().catch(() => []);
-
-    // Mapping listingId → bienId
-    const idToBien = Object.fromEntries(Object.entries(AIRBNB_LISTINGS).map(([b, id]) => [String(id), b]));
-    let stored = 0;
-    for (const it of (Array.isArray(items) ? items : [])) {
-      const lid = String(it.listingId || it.roomId || "");
-      const bienId = idToBien[lid] || url.searchParams.get("bien") || "inconnu";
-      const prenom = firstNameOnly(it.reviewer || it.author || it.name);
-      const rating = Number(it.rating || it.score || 0) || null;
-      const text = (it.text || it.comment || it.review || "").slice(0, 2000);
-      const date = (it.createdAt || it.date || "").slice(0, 10) || null;
-      const lang = it.language || it.lang || null;
-      if (!text && !rating) continue;
-      const id = await rowId(bienId, date, prenom, text);
-      await db.prepare(
-        "INSERT INTO voyageur_feedback (id,bien_id,source,prenom,rating,review_text,review_date,lang) " +
-        "VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING"
-      ).bind(id, bienId, "airbnb", prenom, rating, text, date, lang).run();
-      stored++;
-    }
-    return json({ ok: true, stored, fetched: Array.isArray(items) ? items.length : 0 });
   }
 
   return json({ error: "Méthode/action non supportée" }, 405);
