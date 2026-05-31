@@ -26,7 +26,7 @@ export default function Historique() {
 
   const getMonthly = (id) => MOIS.map((_, m) => ({
     mois: MOIS[m],
-    ...Object.fromEntries(histYearsAll.map(y => [y, (id === "all" ? hist[y]?.total : hist[y]?.[id] || [])[m] || 0])),
+    ...Object.fromEntries(histYearsAll.map(y => [y, ((id === "all" ? hist[y]?.total : hist[y]?.[id]) || [])[m] || 0])),
     [cy2]: id === "all" ? biens.reduce((s, b) => s + (b.revenus[m] || 0), 0) : (biens.find(b => b.id === id)?.revenus[m] || 0),
   }));
 

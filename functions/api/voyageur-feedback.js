@@ -101,7 +101,12 @@ export async function onRequest(context) {
       const r = await fetch(`https://api.apify.com/v2/actor-runs/${runId}?token=${env.APIFY_TOKEN}`);
       const meta = await r.json().catch(() => ({}));
       const status = meta?.data?.status;
-      if (status !== "SUCCEEDED") return json({ ok: false, status, message: "Run pas encore terminé" });
+      if (status !== "SUCCEEDED") return json({
+        ok: false, status,
+        message: status === "FAILED" ? "Run Apify échoué" : "Run pas encore terminé",
+        statusMessage: meta?.data?.statusMessage || null,
+        exitCode: meta?.data?.exitCode ?? null,
+      });
       const dsId = meta?.data?.defaultDatasetId;
       const items = await (await fetch(`https://api.apify.com/v2/datasets/${dsId}/items?token=${env.APIFY_TOKEN}&clean=true`)).json().catch(() => []);
       const idToBien = Object.fromEntries(Object.entries(AIRBNB_LISTINGS).map(([b, id]) => [String(id), b]));
@@ -150,16 +155,17 @@ export async function onRequest(context) {
     const targets = body.bien ? { [body.bien]: AIRBNB_LISTINGS[body.bien] } : AIRBNB_LISTINGS;
     if (Object.values(targets).some(v => !v)) return json({ error: "bien inconnu" }, 400);
 
-    // Acteur Apify avis Airbnb (tri/dataset selon l'acteur configuré côté compte)
-    // Acteur Airbnb déjà utilisé (et fonctionnel) par rm-scrape : dtrungtin~airbnb-scraper.
-    const ACTOR = (body.actor || "dtrungtin~airbnb-scraper").replace("/", "~");
-    const startUrls = Object.values(targets).map(id => ({ url: `https://www.airbnb.com/rooms/${id}` }));
+    // Acteur Apify spécialisé AVIS : tri_angle/airbnb-reviews-scraper.
+    // (dtrungtin~airbnb-scraper = prix/calendrier, refuse les URLs de fiche.)
+    // Input attendu : { listingUrls: ["https://www.airbnb.com/rooms/ID", ...], maxReviews }
+    const ACTOR = (body.actor || "tri_angle~airbnb-reviews-scraper").replace("/", "~");
+    const listingUrls = Object.values(targets).map(id => `https://www.airbnb.com/rooms/${id}`);
 
     // Démarre le run (asynchrone) — on NE bloque pas 3 min ici.
     const runRes = await fetch(`https://api.apify.com/v2/acts/${ACTOR}/runs?token=${env.APIFY_TOKEN}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ startUrls, includeReviews: true, maxReviews: body.maxReviews || 50, maxListings: Object.keys(targets).length }),
+      body: JSON.stringify({ listingUrls, maxReviews: body.maxReviews || 50 }),
     });
     const run = await runRes.json().catch(() => ({}));
     if (!runRes.ok) return json({ error: "Apify run échoué", detail: run }, 502);
