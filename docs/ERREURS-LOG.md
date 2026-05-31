@@ -23,6 +23,8 @@
 | E5 | **`/api/*` testé sur le dev-server localhost** → renvoie l'index.html (SPA), pas le JSON | Les Pages Functions ne tournent qu'en **prod** (ou `wrangler pages dev`). Tester les endpoints sur `https://villamaryllis.com`, pas `localhost:5173`. |
 | E6 | **Confondre lint cosmétique et vrai bug** | Pour chasser les bugs runtime : filtrer ESLint sur `no-undef` + `no-unsafe-optional-chaining` + `react-hooks/*`. Ignorer `no-unused-vars`/`no-empty`/`react-refresh`. |
 | E7 | **`npm run build` exit 1 mais message tronqué (rolldown)** | Relancer `npx vite build` seul pour voir l'erreur complète (`Duplicated export`, etc.). `deploy:pages` peut réussir sur cache → ne pas s'y fier comme preuve de build sain. |
+| E8 | **Doublons Jaccard sur-déclenchent** (phrases structurées, cibles ≠) | Ne jamais auto-bloquer un doublon Jaccard ; signaler pour revue. Bloquer auto seulement vague/court. |
+| E9 | **`fetch(scriptUrl)` DIRECT vers script.google.com depuis le navigateur = CORS cassé** | Google répond 302 → `googleusercontent.com` (cross-origin) → le navigateur bloque (curl marche car ignore CORS). **Toujours lire/écrire le Sheet via `POST /api/sheets-proxy`** (fetch côté serveur). ⚠️ L'action `read` doit exister dans **`doPost`** de l'Apps Script (le proxy forwarde en POST), pas seulement dans `doGet`. |
 
 ---
 
