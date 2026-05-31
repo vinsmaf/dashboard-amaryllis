@@ -301,6 +301,8 @@ export async function onRequest(context) {
     if (body.notes  !== undefined) { fields.push("notes = ?");  params.push(body.notes); }
     if (body.action !== undefined) { fields.push("action = ?"); params.push(body.action); }
     if (body.priority !== undefined) { fields.push("priority = ?"); params.push(body.priority); }
+    if (body.category !== undefined) { fields.push("category = ?"); params.push(body.category); }
+    if (body.effort   !== undefined) { fields.push("effort = ?");   params.push(body.effort); }
     if (!fields.length) return json({ error: "Nothing to update" }, 400);
 
     fields.push("updated_at = ?"); params.push(Math.floor(Date.now() / 1000));
