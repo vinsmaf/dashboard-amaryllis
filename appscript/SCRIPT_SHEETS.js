@@ -51,6 +51,8 @@ function doPost(e) {
   var action = body.action || "";
   if (action === "importAllReservations") return importAllReservations_(body.reservations || []);
   if (action === "setConfig")             return setConfig_(body);
+  if (action === "read")                  return readAll_();
+  if (action === "getConfig")             return getConfig_(body);
 
   return json_({ error: "action POST inconnue: " + action });
 }

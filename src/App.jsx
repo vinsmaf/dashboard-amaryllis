@@ -304,7 +304,15 @@ export function ChannelChip({ channel, value }) {
 
 async function syncFromSheets(biens, scriptUrl) {
   if (!scriptUrl) throw new Error("URL Apps Script non configurée");
-  const res = await fetch(scriptUrl, { redirect: "follow" });
+  // Lecture via le proxy serveur /api/sheets-proxy : le fetch direct vers
+  // script.google.com renvoie un 302 cross-origin (→ googleusercontent.com) qui
+  // casse le CORS côté navigateur. Le proxy fait le fetch côté serveur (no CORS)
+  // et renvoie le JSON tel quel. (action "read" = forwarding POST classique.)
+  const res = await fetch("/api/sheets-proxy", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Script-Url": scriptUrl },
+    body: JSON.stringify({ action: "read" }),
+  });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const text = await res.text();
   if (text.trimStart().startsWith("<")) {
