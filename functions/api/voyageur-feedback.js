@@ -162,13 +162,18 @@ export async function onRequest(context) {
     const listingUrls = Object.values(targets).map(id => `https://www.airbnb.com/rooms/${id}`);
 
     // Démarre le run (asynchrone) — on NE bloque pas 3 min ici.
-    const runRes = await fetch(`https://api.apify.com/v2/acts/${ACTOR}/runs?token=${env.APIFY_TOKEN}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ listingUrls, maxReviews: body.maxReviews || 50 }),
-    });
-    const run = await runRes.json().catch(() => ({}));
-    if (!runRes.ok) return json({ error: "Apify run échoué", detail: run }, 502);
+    let runRes, run;
+    try {
+      runRes = await fetch(`https://api.apify.com/v2/acts/${ACTOR}/runs?token=${env.APIFY_TOKEN}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ listingUrls, maxReviews: body.maxReviews || 50 }),
+      });
+      run = await runRes.json().catch(() => ({}));
+    } catch (e) {
+      return json({ error: "fetch Apify a levé une exception", detail: String(e && e.message || e) }, 502);
+    }
+    if (!runRes.ok) return json({ error: "Apify run échoué", status: runRes.status, detail: run }, 502);
 
     return json({
       ok: true,
