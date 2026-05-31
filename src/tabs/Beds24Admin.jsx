@@ -4,6 +4,7 @@
 import { useState, useEffect } from "react";
 import { CHANNEL_COLORS, STATUS_OPTIONS } from "../App.jsx";
 import { useAppData } from "../AppDataContext.jsx";
+import { applyServerPriceOverrides } from "../seedPrices.js";
 
 export default function Beds24Admin() {
   const { scriptUrl, reservations = [], saveRes, addToast = () => {} } = useAppData();
@@ -142,7 +143,6 @@ export default function Beds24Admin() {
 
   async function syncPricesFromBeds24() {
     setPricesSyncStatus("loading");
-    setPricesSyncMsg("");
     try {
       const res = await fetch("/api/beds24-prices");
       let data;

@@ -6,7 +6,7 @@
  */
 import { useState, useEffect, useMemo, useRef } from "react";
 import { DEFAULT_PRIX, BIEN_LABELS, BIEN_IDS, PRIX_LIMITS, MOIS_CAL, CAL_BIEN_IDS, N } from "../App.jsx";
-import { loadDailyPrices, saveDailyPrices, applyServerPriceOverrides, loadPriceOverrides } from "../seedPrices.js";
+import { loadDailyPrices, saveDailyPrices, applyServerPriceOverrides, loadPriceOverrides, SEED_DAILY_PRICES } from "../seedPrices.js";
 
 // ── Helpers locaux saisons ──────────────────────────────────────────────────
 const DEFAULT_SAISONS = [
