@@ -121,6 +121,7 @@ Autres crons via le **Worker** (`workers/ical-sync`) : sync iCal horaire, drafts
 ---
 
 ## 9. À faire (côté Vincent / prochaines sessions)
+- **🔒 SÉCU (session dédiée)** : ajouter auth/rate-limit aux ~11 endpoints sensibles encore ouverts (liste + méthode dans `docs/audit-coherence-2026-06-01.md` §RESTANTS). Le helper `apiFetch` est prêt côté front. Faire endpoint par endpoint, tester l'admin + le checkout après chaque. NE PAS patcher `window.fetch` global.
 - **PRIORITÉ reprise 31/05** : finir le scrape avis Airbnb (run Apify `WMQVMTBpHdU9hyx6N` jamais terminé → relancer `/api/voyageur-feedback?action=ingest` puis `?action=collect`). Infra prête.
 - **Valider les recos pricing basse saison** dans l'admin (doc `docs/pricing-basse-saison-reco.md`) — rien n'a été appliqué.
 - Importer la conversion **`purchase`** (pas booking_completed) dans Google Ads + corriger funnel aveugle (GA4 conversions=0).
@@ -159,6 +160,15 @@ Autres crons via le **Worker** (`workers/ical-sync`) : sync iCal horaire, drafts
 **Améliorations transverses (même journée)** : Cerebras réparé (`gpt-oss-120b`), agent **AI-Ops** (auto-gestion modèles, voir §dédiée), débridage agents (max_tokens 4096, historique 120/80). **Reste possible** : router `ai-summary` vers le gratuit ; ingérer les avis Airbnb dans le RAG (quand en D1).
 
 ## Journal des mises à jour
+- **2026-06-01 (audit cohérence multi-agents + corrections)** :
+  - **Audit** : revue multi-agents (61 agents, 9 dimensions, vérif adversariale) → 37 incohérences confirmées / 11 faux positifs. Rapport : `docs/audit-coherence-2026-06-01.md`.
+  - **Corrigé + déployé en prod** (merge `cff0fe6`, vérifié sur le domaine) :
+    - **Factcheck** : jacuzzi fantôme retiré de Villa Amaryllis (amenities FR/EN + avis James K. — interdit par `_biens.js`, le jacuzzi=Mabouya) ; capacité Iguana 4→**6** dans `[slug].js` ; ligature « Bellevue Schœlcher » dans JSON-LD `prerender.mjs`.
+    - **Sécurité** : `rm-init` verrouillé (`?secret=POSTSTAY_SECRET` OU token admin → 401 vérifié) ; **helper `src/lib/apiFetch.js`** injecte auto le Bearer `ldb_tok` sur `/api/*` pour `fetchJSON`/`fetchWithTimeout`.
+    - **SEO** : 22 meta trop longues raccourcies (title≤60c, desc≤158c) — 6 dans `[slug].js` + 16 dans `prerender.mjs`. ⚠️ Ne PAS toucher les meta prerender des 9 slugs interceptés par `[slug].js` (il fait foi) ni des 7 biens.
+  - **Faux positifs écartés** (ne pas "corriger") : guides POI déjà prérendus (`prerender.mjs:407`), `contacts.js` fail-open (OK en prod), jacuzzi /amaryllis (mots-clés+Mabouya).
+  - **⚠️ Bug deploy connu** : `npm run deploy:pages` échoue si le dernier message de commit contient emoji/accents (`Invalid commit message, must be valid UTF-8` code 8000111). Contournement : `npx wrangler pages deploy dist --project-name dashboard-amaryllis --branch main --commit-message "ascii" --commit-dirty=true`. ⚠️ `--branch main` = prod ; sans branche ou autre branche = preview (le domaine ne change pas !).
+  - **REPORTÉ (backlog sécu, session dédiée)** : ~11 endpoints encore sans auth (rm-dashboard/overrides/properties/scrape, agent-drafts, agents-actions, agents-run, beds24-create/manage, ical-config, chat). Chantier front+serveur, voir §RESTANTS du doc audit. Garde-fou : JAMAIS patcher `window.fetch` global (casse checkout Stripe public).
 - **2026-05-31 → 06-01 (session soir/nuit — sync multi-appareils, agents, KV)** :
   - **Triage autonome des agents L1→L4 LIVRÉ + DÉPLOYÉ** (merge `b3d60ab`) : `_triage.js` (isVague/isDuplicate/classifyRisk/triageAction, 17 tests), colonne `risk` sur `agent_actions`, branché dans `agents-run` (filtre+retry 1×), `scripts/triage-backlog-once.mjs` (backlog classé en prod : ~16-18 auto / ~88-117 review / 26 blocked + 16 vagues bloquées ; doublons Jaccard NON auto-bloqués = faux positifs → revue manuelle), `agents-execute` (cron lundi → drafts non publiés, niveau prudent meta-SEO), `agents-digest` (Resend+ntfy, cron lundi Worker). Spec+plan dans `docs/superpowers/`.
   - **Sync réservations multi-appareils — RÉPARÉ** : (1) résas directes saisies sur un appareil invisibles ailleurs → cause = action `read`/`readAll_` ne renvoyait PAS les réservations → ajout `readReservations_` (`3f2ca08`) ; (2) **auto-sync à l'affichage** de l'admin (`7abbd8b`, useEffect une fois quand scriptUrl dispo, fusion sans écrasement) ; (3) **bug CORS** : `syncFromSheets` faisait un fetch DIRECT vers script.google.com → 302 cross-origin casse le CORS navigateur (curl marche car ignore CORS) → bouton rouge « seed local ». Fix = lecture via `/api/sheets-proxy` (fetch serveur, no CORS) + action `read` ajoutée au `doPost` Apps Script (`8941c06`, **E9**). ⚠️ Apps Script déployé via clasp @22.

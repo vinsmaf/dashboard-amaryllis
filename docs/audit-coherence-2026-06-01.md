@@ -109,3 +109,36 @@ Audit de cohérence du site et des fonctions serverless : **35 incohérences con
 - ✅ **agent-drafts.js** : CONFIRMÉ CORS `*` + pas d'auth (ligne 10, onRequest 102).
 - ⚠️ **contacts.js checkAuth** : nuance — fail-open SEULEMENT si `ADMIN_PASSWORD`/`ADMIN_PWD` absents. En prod ils existent → auth fonctionne. Gravité réelle = défense en profondeur, pas faille active.
 - ⚠️ **sync-sheets fetch directs** : les findings citent `src/Planning.jsx` mais le vrai fichier est `src/tabs/Planning.jsx` — vérifier le chemin exact avant correction.
+
+---
+
+## 🔒 RESTANTS À SÉCURISER (session dédiée — backlog)
+
+> Corrigé le 01/06 : seul **rm-init** verrouillé (le plus destructeur) + helper `apiFetch` qui injecte le Bearer.
+> Le reste reporté car c'est un **vrai chantier front+serveur** (risque de casser l'admin / le checkout si bâclé).
+
+### Endpoints sensibles encore SANS auth ni rate-limit
+| Endpoint | Risque | Action |
+|---|---|---|
+| `rm-dashboard.js` | expose KPIs/prix RM | `verifyBearer` + valider `property_id` |
+| `rm-overrides.js` | écrit overrides prix D1 | `verifyBearer` |
+| `rm-properties.js` | écrit config biens D1 | `verifyBearer` |
+| `rm-scrape/[[path]].js` | déclenche scrape Apify (coût $) | `verifyBearer` + rate-limit |
+| `agent-drafts.js` | CRUD drafts + publish réseaux | `verifyBearer` (CORS `*` aussi) |
+| `agents-actions.js` | CRUD backlog agents | `verifyBearer` |
+| `agents-run.js` | déclenche les ~23 agents (coût LLM) | `verifyBearer` + rate-limit |
+| `beds24-create.js` | crée réservation Beds24 | `verifyBearer` + rate-limit |
+| `beds24-manage.js` | modifie/annule réservation | `verifyBearer` |
+| `ical-config.js` | expose URLs iCal Booking | `verifyBearer` |
+| `chat.js` | proxy Groq (coût/abus) | rate-limit |
+
+### Méthode recommandée (à froid, session dédiée)
+1. **Front d'abord** : le helper `src/lib/apiFetch.js` injecte déjà le Bearer pour `fetchJSON`/`fetchWithTimeout`. MAIS la plupart des appels admin utilisent `fetch` NU (ApprobationsTab, AgentsKanban, RevenueManagerPro…). → soit migrer ces appels vers `fetchJSON`, soit patcher `window.fetch` **uniquement dans le bundle admin** (PAS global — risque checkout Stripe sur le site public).
+2. **Serveur ensuite** : ajouter `verifyBearer` endpoint par endpoint, en testant l'admin après CHAQUE ajout (un endpoint sécurisé sans token côté front = admin cassé).
+3. **Distinguer** : endpoints appelés par le **site public** (rm-recommendations pour le widget prix) ≠ endpoints **admin only**. Ne PAS exiger d'auth sur ceux du public.
+4. ⚠️ **Garde-fou** : NE JAMAIS patcher `window.fetch` globalement (le site public encaisse via Stripe.js — un patch mal ciblé casse le paiement). E5/E9 + tester le checkout avant deploy.
+
+### Faux positifs de l'audit (ne PAS "corriger")
+- **Guides POI** : déjà prérendus (`prerender.mjs:407` `...GUIDES_POI.map`) avec metaTitle + sitemap. SEO OK.
+- **contacts.js fail-open** : `checkAuth` ne retourne `true` que si `ADMIN_PASSWORD`/`ADMIN_PWD` absents → en prod ils existent, auth fonctionne. Défense en profondeur seulement.
+- **Jacuzzi /amaryllis** : les occurrences résiduelles = mots-clés SEO globaux + fiche Mabouya (légitime).
