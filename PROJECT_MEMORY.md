@@ -72,7 +72,7 @@ Autres crons via le **Worker** (`workers/ical-sync`) : sync iCal horaire, drafts
 - 30/05 : noms recapitalisés + **catégorie principale → « Maison de vacances »** sur les 2 fiches (en attente Google). ⚠️ Cette catégorie **n'expose AUCUN attribut** (piscine/WiFi/etc.) ni horaires standards → équipements à mettre dans description + photos.
 
 ### Paiement (Stripe)
-- `create-payment-intent` (capture immédiate) → enregistre le **panier** en D1. `notify-booking` (client, après paiement) → alerte hôte email+ntfy + enregistre la résa. `stripe-webhook` → confirme Beds24 + email confirmation voyageur + `storeDirectBooking` (avec email) + event GA4 `booking_completed`. Caution = pré-autorisation séparée (`create-deposit-intent`).
+- `create-payment-intent` (capture immédiate) → enregistre le **panier** en D1. `notify-booking` (client, après paiement) → alerte hôte email+ntfy + enregistre la résa. `stripe-webhook` → confirme Beds24 + email confirmation voyageur + `storeDirectBooking` (avec email) + event GA4 `booking_completed`. Caution = pré-autorisation séparée (`create-deposit-intent`). **Gestion caution = `/api/manage-deposit`** (POST `{action}`) : `list` (cautions actives `requires_capture`), `capture` (débiter en cas de dommage, `{paymentIntentId, amount?}`), `cancel` (libérer), **`history`** (toutes cautions tous statuts, filtre `{bienId}` optionnel — sert à VÉRIFIER qu'une caution est bien `canceled`=libérée vs `requires_capture`=encore bloquée ; `requires_payment_method`=formulaire ouvert jamais bloqué, normal). ⚠️ Une caution « libérée » = `canceled` côté Stripe ; le déblocage banque du client prend 1-5 j.
 
 ---
 
