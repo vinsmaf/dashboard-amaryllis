@@ -128,9 +128,10 @@ export async function onRequest(context) {
       sources: { beds24: { ok: blocked.size >= 0, count: blocked.size } },
     };
 
-    // Store in KV cache (TTL 10 min)
+    // Store in KV cache (TTL 6 h — économise les écritures KV ; quota gratuit partagé
+    // avec patrimoine-dashboard. Une dispo ne change pas en 10 min.)
     if (env.AVAIL_CACHE) {
-      await env.AVAIL_CACHE.put(cacheKey, JSON.stringify(result), { expirationTtl: 600 });
+      await env.AVAIL_CACHE.put(cacheKey, JSON.stringify(result), { expirationTtl: 21600 });
     }
 
     return json(result);
@@ -185,8 +186,9 @@ export async function onRequest(context) {
   };
 
   // Store in KV cache only when using env-configured URLs (not dynamic param)
+  // TTL 6 h — économise les écritures KV (quota gratuit partagé avec patrimoine-dashboard).
   if (env.AVAIL_CACHE && !bookingUrlSafe) {
-    await env.AVAIL_CACHE.put(cacheKey, JSON.stringify(result), { expirationTtl: 600 });
+    await env.AVAIL_CACHE.put(cacheKey, JSON.stringify(result), { expirationTtl: 21600 });
   }
 
   return json(result);
