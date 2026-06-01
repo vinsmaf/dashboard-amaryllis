@@ -419,6 +419,9 @@ const ROUTES = [
     title: `${g.metaTitle} | Amaryllis`,
     desc:  g.metaDescription,
     image: g.photo || `${BASE}/photos/amaryllis/01.webp`,
+    h1:    g.h1 || null,
+    intro: g.intro || null,
+    sections: (g.sections || []).map(s => ({ h2: s.h2, body: s.body })),
     faqld: buildFAQLd(g.faq || []),
   })),
 ];
@@ -478,25 +481,32 @@ const NAV_BIENS = [
 // Bloc SEO fallback injecté dans #root : <h1> + intro + maillage interne.
 // React le REMPLACE au montage (donc invisible pour l'utilisateur), mais Googlebot
 // le lit au crawl initial → corps de page enfin non vide. Résout le frein SEO n°1.
-function buildSeoBody({ h1, title, desc, routePath }) {
+function buildSeoBody({ h1, title, desc, routePath, intro = null, sections = [] }) {
   const heading = h1 || title || "Amaryllis Locations";
   const links = NAV_BIENS
     .filter(([p]) => p !== routePath)
     .map(([p, n]) => `<a href="${p}">${esc(n)}</a>`)
     .join(" · ");
+  // Contenu riche optionnel (guides POI : intro + sections h2/body) → corps crawlable étoffé
+  const introHtml = intro ? `<p>${esc(intro)}</p>` : "";
+  const sectionsHtml = (sections || [])
+    .map(s => `<section><h2>${esc(s.h2)}</h2><p>${esc(s.body)}</p></section>`)
+    .join("");
   return `<div id="root"><div data-prerender-seo>` +
     `<h1>${esc(heading)}</h1>` +
+    introHtml +
     `<p>${esc(desc)}</p>` +
+    sectionsHtml +
     `<nav aria-label="Nos locations"><a href="/">Accueil</a> · ${links} · <a href="/explorer">Guides Martinique</a></nav>` +
     `</div></div>`;
 }
 
-function patchHtml(tmpl, { path: routePath, title, desc, image, h1 = null, noindex = false, jsonld = null, faqld = null, lang = "fr", lcpPreload = false }) {
+function patchHtml(tmpl, { path: routePath, title, desc, image, h1 = null, intro = null, sections = [], noindex = false, jsonld = null, faqld = null, lang = "fr", lcpPreload = false }) {
   const url = `${BASE}${routePath}`;
   let html = tmpl;
 
   /* Corps SEO fallback dans #root (remplacé par React au runtime) */
-  html = html.replace(/<div id="root">\s*<\/div>/, buildSeoBody({ h1, title, desc, routePath }));
+  html = html.replace(/<div id="root">\s*<\/div>/, buildSeoBody({ h1, title, desc, routePath, intro, sections }));
 
   /* LCP preload — injecté uniquement sur les pages avec image hero critique */
   if (lcpPreload && image && image.startsWith(BASE + "/photos/")) {
