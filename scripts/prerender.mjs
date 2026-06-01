@@ -161,6 +161,16 @@ const FAQS_PAR_BIEN = {
 /* ── Métadonnées par route ──────────────────────────────────────────── */
 const ROUTES = [
 
+  /* ── Accueil ── */
+  {
+    path: "/",
+    title: "Amaryllis — Location villa Martinique avec piscine | Réservation directe",
+    desc:  "Louez directement nos villas et appartements en Martinique (Sainte-Luce, Schœlcher) et à Nogent-sur-Marne. Piscine, vue mer, sans frais Airbnb. Dès 85€/nuit.",
+    image: `${BASE}/photos/amaryllis/01.webp`,
+    h1:    "Locations de vacances en Martinique & à Nogent — réservation directe",
+    lcpPreload: true,
+  },
+
   /* ── Propriétés ── */
   {
     path: "/amaryllis",
@@ -452,9 +462,41 @@ function replaceByAttr(html, matchAttr, matchVal, targetAttr, newVal) {
   });
 }
 
-function patchHtml(tmpl, { path: routePath, title, desc, image, noindex = false, jsonld = null, faqld = null, lang = "fr", lcpPreload = false }) {
+// Échappe le HTML pour injection sûre dans le body
+function esc(s) {
+  return String(s || "")
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+// Liens internes vers les 7 biens — maillage interne crawlable, présent sur chaque page.
+const NAV_BIENS = [
+  ["/amaryllis", "Villa Amaryllis"], ["/zandoli", "Zandoli"], ["/iguana", "Villa Iguana"],
+  ["/geko", "Géko"], ["/mabouya", "Studio Mabouya"], ["/schoelcher", "Bellevue Schœlcher"],
+  ["/nogent", "Appartement Nogent"],
+];
+
+// Bloc SEO fallback injecté dans #root : <h1> + intro + maillage interne.
+// React le REMPLACE au montage (donc invisible pour l'utilisateur), mais Googlebot
+// le lit au crawl initial → corps de page enfin non vide. Résout le frein SEO n°1.
+function buildSeoBody({ h1, title, desc, routePath }) {
+  const heading = h1 || title || "Amaryllis Locations";
+  const links = NAV_BIENS
+    .filter(([p]) => p !== routePath)
+    .map(([p, n]) => `<a href="${p}">${esc(n)}</a>`)
+    .join(" · ");
+  return `<div id="root"><div data-prerender-seo>` +
+    `<h1>${esc(heading)}</h1>` +
+    `<p>${esc(desc)}</p>` +
+    `<nav aria-label="Nos locations"><a href="/">Accueil</a> · ${links} · <a href="/explorer">Guides Martinique</a></nav>` +
+    `</div></div>`;
+}
+
+function patchHtml(tmpl, { path: routePath, title, desc, image, h1 = null, noindex = false, jsonld = null, faqld = null, lang = "fr", lcpPreload = false }) {
   const url = `${BASE}${routePath}`;
   let html = tmpl;
+
+  /* Corps SEO fallback dans #root (remplacé par React au runtime) */
+  html = html.replace(/<div id="root">\s*<\/div>/, buildSeoBody({ h1, title, desc, routePath }));
 
   /* LCP preload — injecté uniquement sur les pages avec image hero critique */
   if (lcpPreload && image && image.startsWith(BASE + "/photos/")) {
@@ -578,6 +620,14 @@ for (const route of ROUTES) {
   // Stratégie : dist/{route}.html (Cloudflare le sert à /{route} sans extension)
   // + dist/{route}/index.html (fallback avec trailing slash — ex. /amaryllis/)
   const slug = route.path.replace(/^\//, "");
+
+  // Cas accueil "/" → écrit dist/index.html (le template racine, avec contenu SEO)
+  if (slug === "") {
+    fs.writeFileSync(path.join(DIST, "index.html"), html, "utf8");
+    count++;
+    console.log(`  ✓ ${route.path} (index.html)`);
+    continue;
+  }
 
   // Fichier à la racine : /amaryllis.html → servi à /amaryllis
   fs.writeFileSync(path.join(DIST, `${slug}.html`), html, "utf8");
