@@ -1,11 +1,15 @@
 // Cloudflare Pages Function — POST /api/rm-init
 // Initializes the Revenue Manager database (creates tables + seeds data)
+// ⚠️ Endpoint sensible (crée/seed les tables D1) → protégé par secret OU token admin.
+//    Appel : POST /api/rm-init?secret=POSTSTAY_SECRET  (ou Authorization: Bearer <token admin>)
+
+import { verifyBearer } from "./_adminauth.js";
 
 const CORS = {
   "Content-Type": "application/json",
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: CORS });
 
@@ -481,6 +485,15 @@ export async function onRequest(context) {
   const { request, env } = context;
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   if (request.method !== "POST") return json({ error: "POST only" }, 405);
+
+  // ── Auth : secret OU token admin signé ───────────────────────────────────
+  const url = new URL(request.url);
+  const secret = url.searchParams.get("secret");
+  const secretOk = env.POSTSTAY_SECRET && secret === env.POSTSTAY_SECRET;
+  const { ok: adminOk } = await verifyBearer(request, env);
+  if (!secretOk && !adminOk) {
+    return json({ error: "Non autorisé — rm-init nécessite ?secret=POSTSTAY_SECRET ou un token admin" }, 401);
+  }
 
   const db = env.revenue_manager;
   if (!db) return json({ error: "D1 binding 'revenue_manager' not found" }, 503);

@@ -208,7 +208,7 @@ const ROUTES = [
     title: "Bellevue Schœlcher — appart vue baie Fort-de-France",
     desc:  "Appartement Bellevue à Schœlcher : vue sur la baie de Fort-de-France, 2 personnes, à 10 min du centre. Réservation directe dès 100€/nuit.",
     image: `${BASE}/photos/schoelcher/01.webp`,
-    jsonld: buildVacationRentalLd({ id: "schoelcher", nom: "Bellevue Schoelcher", desc: "Appartement Bellevue à Schœlcher, Martinique. Vue sur la baie de Fort-de-France et Trois-Îlets depuis les hauteurs. 2 personnes.", prix: 100, capacite: 2, chambres: 1, rating: 4.8, reviews: 18, coords: { lat: 14.6167, lng: -61.1333 }, photos: ["/photos/schoelcher/01.webp","/photos/schoelcher/02.webp","/photos/schoelcher/03.webp","/photos/schoelcher/04.webp"], isMartinique: true }),
+    jsonld: buildVacationRentalLd({ id: "schoelcher", nom: "Bellevue Schœlcher", desc: "Appartement Bellevue à Schœlcher, Martinique. Vue sur la baie de Fort-de-France et Trois-Îlets depuis les hauteurs. 2 personnes.", prix: 100, capacite: 2, chambres: 1, rating: 4.8, reviews: 18, coords: { lat: 14.6167, lng: -61.1333 }, photos: ["/photos/schoelcher/01.webp","/photos/schoelcher/02.webp","/photos/schoelcher/03.webp","/photos/schoelcher/04.webp"], isMartinique: true }),
     faqld: buildFAQLd(FAQS_PAR_BIEN.schoelcher),
   },
   {
@@ -223,7 +223,7 @@ const ROUTES = [
   /* ── Pages thématiques ── */
   {
     path: "/avis",
-    title: "Avis voyageurs — 4,79★ · 97 avis vérifiés | Amaryllis Locations",
+    title: "Avis voyageurs — 4,79★ · 97 avis vérifiés | Amaryllis",
     desc:  "97 avis authentiques sur nos 7 villas et appartements en Martinique et Île-de-France. Note moyenne 4,79/5. Réservation directe propriétaire.",
     image: `${BASE}/photos/amaryllis/01.webp`,
   },
@@ -237,8 +237,8 @@ const ROUTES = [
   /* ── Guides Martinique ── */
   {
     path: "/guide-hub",
-    title: "Que faire dans le Sud de la Martinique — Guide d'initiés | Amaryllis",
-    desc:  "Que faire dans le Sud de la Martinique ? Le guide de nos hôtes à Sainte-Luce : nos coups de cœur, tous nos guides de destination par zone et nos conseils d'initiés.",
+    title: "Que faire dans le Sud de la Martinique | Amaryllis",
+    desc:  "Le guide de nos hôtes à Sainte-Luce : coups de cœur, guides de destination par zone et conseils d'initiés pour le Sud de la Martinique.",
     image: `${BASE}/photos/amaryllis/01.webp`,
   },
   {
@@ -255,13 +255,13 @@ const ROUTES = [
   },
   {
     path: "/guide-arlet",
-    title: "Guide Anses d'Arlet Martinique — Nager avec les tortues marines | Amaryllis",
+    title: "Guide Anses d'Arlet Martinique — Tortues marines | Amaryllis",
     desc:  "Les Anses d'Arlet (25 min de Sainte-Luce) : nager avec des tortues marines garanties tôt le matin. Village de pêcheurs, snorkeling, restaurants.",
     image: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2d/Grande_Anse_d%27_Arlet_%2847001622912%29.jpg/960px-Grande_Anse_d%27_Arlet_%2847001622912%29.jpg",
   },
   {
     path: "/guide-trois-ilets",
-    title: "Guide Les Trois-Îlets Martinique — Musée Pagerie & marina | Amaryllis",
+    title: "Guide Les Trois-Îlets Martinique — Pagerie | Amaryllis",
     desc:  "Guide Trois-Îlets depuis Sainte-Luce (35 min) : Musée de la Pagerie (naissance de Joséphine), village créole, marina face à Fort-de-France.",
     image: `${BASE}/photos/amaryllis/01.webp`,
   },
@@ -279,8 +279,8 @@ const ROUTES = [
   },
   {
     path: "/explorer",
-    title: "Carte interactive des activités en Martinique — Plages, tortues, rhum | Amaryllis",
-    desc:  "Carte interactive des lieux cultes de Martinique : filtrez par zone et par activité (plages, snorkeling, rhum, rando), épinglez vos spots et composez votre séjour.",
+    title: "Carte interactive des activités en Martinique | Amaryllis",
+    desc:  "Carte des lieux cultes de Martinique : filtrez par zone et activité (plages, snorkeling, rhum, rando), épinglez vos spots et composez votre séjour.",
     image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Salines_beach.jpg/960px-Salines_beach.jpg",
   },
 
@@ -293,7 +293,7 @@ const ROUTES = [
   },
   {
     path: "/reservation-directe-martinique",
-    title: "Réservation directe Martinique — Sans frais Airbnb | Amaryllis",
+    title: "Réservation directe Martinique — Sans frais | Amaryllis",
     desc:  "Réservez directement vos villas en Martinique sans frais Airbnb ni Booking. Économisez 12–18%, flexibilité maximale, paiement sécurisé Stripe.",
     image: `${BASE}/photos/amaryllis/01.webp`,
   },
@@ -318,56 +318,56 @@ const ROUTES = [
   {
     path: "/meilleure-saison-martinique",
     title: "Meilleure saison Martinique — Quand partir ? | Amaryllis",
-    desc:  "Quand partir en Martinique ? Mois par mois : météo, température mer, pluies, activités. Avis d'un hôte local de Sainte-Luce. Saison sèche déc–avr vs hivernage juin–oct.",
+    desc:  "Quand partir en Martinique ? Mois par mois : météo, mer, pluies, activités. Saison sèche déc–avr vs hivernage juin–oct. Avis d'un hôte local.",
     image: `${BASE}/photos/amaryllis/01.webp`,
   },
   {
     path: "/seminaires",
     title: "Séminaires Martinique — Villa vue mer | Amaryllis",
-    desc:  "Louez la Villa Amaryllis pour votre séminaire en Martinique. Exclusivité totale, piscine débordement, terrasse 100m² vue mer, Wifi Starlink. Dès 1 960€ HT / 2 nuits.",
+    desc:  "Louez la Villa Amaryllis pour votre séminaire en Martinique : exclusivité totale, piscine débordement, terrasse vue mer, Starlink. Dès 1 960€ HT / 2 nuits.",
     image: `${BASE}/photos/amaryllis/01.webp`,
   },
   {
     path: "/location-villa-martinique-piscine",
-    title: "Location Villa Martinique avec Piscine — Réservation directe | Amaryllis",
-    desc:  "Louez une villa Martinique avec piscine privative à Sainte-Luce. Amaryllis (débordement eau salée 4×7m, 8 pers.), Zandoli & Géko (cascade), Iguana (eau salée), Mabouya (jacuzzi). Dès 110€/nuit — sans frais Airbnb.",
+    title: "Location Villa Martinique avec Piscine | Amaryllis",
+    desc:  "Louez une villa avec piscine privative à Sainte-Luce, Martinique : débordement eau salée, cascade ou jacuzzi. Dès 110€/nuit — sans frais Airbnb.",
     image: `${BASE}/photos/amaryllis/01.webp`,
   },
 
   /* ── Nouveaux guides destinations ── */
   {
     path: "/guide-distilleries-martinique",
-    title: "Distilleries de Rhum Martinique — Rhum Agricole AOC | Amaryllis",
-    desc:  "Visitez les meilleures distilleries de rhum agricole en Martinique : JM, Clément, Saint-James, Depaz, Trois-Rivières. Guide complet depuis Sainte-Luce.",
+    title: "Distilleries de Rhum Martinique — AOC | Amaryllis",
+    desc:  "Visitez les meilleures distilleries de rhum agricole AOC en Martinique : JM, Clément, Saint-James, Depaz, Trois-Rivières. Guide depuis Sainte-Luce.",
     image: `${BASE}/photos/amaryllis/01.webp`,
   },
   {
     path: "/guide-francois-martinique",
-    title: "Le François Martinique — Fonds Blancs & Piscines Naturelles | Amaryllis",
+    title: "Le François Martinique — Fonds Blancs | Amaryllis",
     desc:  "Découvrez les Fonds Blancs du François : piscines naturelles, sable blanc immergé, ti-punch en mer. Guide complet depuis Sainte-Luce (35 min).",
     image: `${BASE}/photos/amaryllis/01.webp`,
   },
   {
     path: "/guide-saint-pierre-martinique",
-    title: "Saint-Pierre Martinique — Pompéi des Caraïbes, Plongée & Histoire | Amaryllis",
+    title: "Saint-Pierre Martinique — Pompéi des Caraïbes | Amaryllis",
     desc:  "Visitez Saint-Pierre, la ville fantôme de Martinique : ruines de 1902, épaves de plongée uniques, musée Perret. Guide complet depuis Sainte-Luce (1h).",
     image: `${BASE}/photos/amaryllis/01.webp`,
   },
   {
     path: "/guide-randonnees-martinique",
-    title: "Randonnées Martinique — Montagne Pelée, Caravelle, Sentiers | Amaryllis",
+    title: "Randonnées Martinique — Pelée & Caravelle | Amaryllis",
     desc:  "Meilleures randonnées en Martinique : Montagne Pelée (1397m), Presqu'île de la Caravelle, forêt tropicale. Niveaux débutant à expert. Depuis Sainte-Luce.",
     image: `${BASE}/photos/amaryllis/01.webp`,
   },
   {
     path: "/guide-gastronomie-martinique",
-    title: "Gastronomie Martinique — Cuisine Créole, Restaurants & Marchés | Amaryllis",
+    title: "Gastronomie Martinique — Cuisine Créole | Amaryllis",
     desc:  "Saveurs créoles martiniquaises : langouste, blaff, ti-punch, accras. Marchés locaux, restaurants à Sainte-Luce. Guide gastronomique complet.",
     image: `${BASE}/photos/amaryllis/01.webp`,
   },
   {
     path: "/guide-plongee-martinique",
-    title: "Plongée Martinique — Épaves, Snorkeling, Tortues | Amaryllis Sainte-Luce",
+    title: "Plongée Martinique — Épaves, Snorkeling, Tortues | Amaryllis",
     desc:  "Meilleurs spots de plongée et snorkeling en Martinique : épaves de Saint-Pierre, tortues d'Arlet, Rocher du Diamant. Guide complet depuis Sainte-Luce.",
     image: `${BASE}/photos/amaryllis/01.webp`,
   },
@@ -399,7 +399,7 @@ const ROUTES = [
   {
     path: "/conditions-generales",
     title: "Conditions Générales de Vente (CGV) — Amaryllis Locations",
-    desc:  "CGV de villamaryllis.com : réservation directe, annulation, caution, responsabilités. Applicable à toutes les locations Amaryllis en Martinique et Île-de-France.",
+    desc:  "CGV de villamaryllis.com : réservation directe, annulation, caution, responsabilités. Locations Amaryllis en Martinique et Île-de-France.",
     image: `${BASE}/photos/amaryllis/01.webp`,
   },
 

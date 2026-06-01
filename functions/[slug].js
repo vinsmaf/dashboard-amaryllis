@@ -27,7 +27,7 @@ const BIENS = {
     nom: "Villa Iguana",
     lieu: "Sainte-Luce, Martinique",
     prix: 180,
-    desc: "Villa sur deux niveaux dans la résidence Amaryllis à Sainte-Luce, avec piscine eau salée, vue sur le Rocher du Diamant et jardin fleuri. 2 chambres, 4 personnes, parking privatif.",
+    desc: "Villa sur deux niveaux dans la résidence Amaryllis à Sainte-Luce, avec piscine eau salée, vue sur le Rocher du Diamant et jardin fleuri. 2 chambres, 6 personnes, parking privatif.",
     amenities: ["Piscine eau salée", "Vue Diamant", "Vue mer", "Wifi Starlink", "Parking"],
     rating: "4.92",
     reviews: 25,
@@ -71,8 +71,8 @@ const BIENS = {
 };
 
 const GUIDE = {
-  title: "Guide Sainte-Luce Martinique : plages, restaurants et activités",
-  desc: "Tout ce qu'il faut savoir pour visiter Sainte-Luce en Martinique : les meilleures plages (Anse Corps de Garde, Gros Raisin), restaurants créoles, activités (plongée, distilleries, catamaran) et conseils pratiques.",
+  title: "Guide Sainte-Luce Martinique : plages & activités",
+  desc: "Visiter Sainte-Luce en Martinique : meilleures plages (Anse Corps de Garde, Gros Raisin), restaurants créoles, plongée, distilleries et conseils pratiques.",
   image: `${BASE}/photos/amaryllis/01.webp`,
   url: `${BASE}/guide`,
 };
@@ -85,8 +85,8 @@ const GUIDE_DIAMANT = {
 };
 
 const GUIDE_SAINTE_ANNE = {
-  title: "Guide Sainte-Anne Martinique : plages, activités et restaurants",
-  desc: "Tout sur Sainte-Anne en Martinique : Grande Anse des Salines (plus belle plage des Caraïbes), kitesurf, catamaran aux îlets et restaurants créoles. À 20 min de Sainte-Luce.",
+  title: "Guide Sainte-Anne Martinique : plages & activités",
+  desc: "Sainte-Anne en Martinique : Grande Anse des Salines (plus belle plage des Caraïbes), kitesurf, catamaran aux îlets, restaurants. À 20 min de Sainte-Luce.",
   image: `${BASE}/photos/amaryllis/05.webp`,
   url: `${BASE}/guide-sainte-anne`,
 };
@@ -100,14 +100,14 @@ const GUIDE_EN = {
 
 const GUIDE_ACTIVITES = {
   title: "10 activités incontournables à Sainte-Luce, Martinique",
-  desc: "Notre sélection des 10 meilleures activités à ne pas manquer à Sainte-Luce : plage, mangrove, excursion en bateau, plongée au Rocher du Diamant, musée de la Canne, Fort-de-France. Guide rédigé par vos hôtes.",
+  desc: "Les 10 activités incontournables à Sainte-Luce : plage, mangrove, bateau, plongée au Rocher du Diamant, distilleries. Guide rédigé par vos hôtes.",
   image: `${BASE}/photos/amaryllis/01.webp`,
   url: `${BASE}/activites-sainte-luce`,
 };
 
 const GUIDE_PROXIMITE = {
-  title: "Activités à proximité de la Villa Amaryllis — Sainte-Luce, Martinique",
-  desc: "Les meilleures adresses à moins de 15 minutes de la résidence Amaryllis : Anse Corps de Garde, Forêt de Montravail, distillerie Trois-Rivières, nager avec les tortues. Guide rédigé par vos hôtes.",
+  title: "À proximité de la Villa Amaryllis — Sainte-Luce",
+  desc: "Les meilleures adresses à moins de 15 min de la résidence Amaryllis : Anse Corps de Garde, Forêt de Montravail, distillerie Trois-Rivières, tortues marines.",
   image: `${BASE}/photos/amaryllis/01.webp`,
   url: `${BASE}/guide-proximite`,
 };
@@ -124,15 +124,15 @@ const SEO = {
 };
 
 const GROUP_STAY = {
-  title: "Location grand groupe Martinique — jusqu'à 11 personnes, Sainte-Luce",
-  desc: "Réunissez jusqu'à 11 proches en réservant Zandoli, Géko et Mabouya ensemble à Sainte-Luce. Résidence privée, piscines, réservation directe sans frais. Devis et paiement rapides.",
+  title: "Location grand groupe Martinique — 11 pers, Sainte-Luce",
+  desc: "Réunissez jusqu'à 11 proches : Zandoli, Géko et Mabouya ensemble à Sainte-Luce. Résidence privée, piscines, réservation directe sans frais. Devis rapide.",
   image: `${BASE}/photos/zandoli/01.webp`,
   url: `${BASE}/location-groupe-sainte-luce`,
 };
 
 const SCHOELCHER_APPART = {
   title: "Location appartement vue mer Schœlcher — Martinique",
-  desc: "Appartement de standing à Schœlcher : vue panoramique sur la baie de Fort-de-France, dernier étage, 2 personnes, à 10 min du centre. Réservation directe sans frais.",
+  desc: "Appartement de standing à Schœlcher : vue panoramique sur la baie de Fort-de-France, dernier étage, à 10 min du centre. Réservation directe sans frais.",
   image: `${BASE}/photos/schoelcher/01.webp`,
   url: `${BASE}/location-appartement-vue-mer-schoelcher`,
 };

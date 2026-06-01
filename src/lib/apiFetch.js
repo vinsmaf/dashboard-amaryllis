@@ -23,6 +23,24 @@ export class ApiError extends Error {
  * fetch avec timeout. Lève une ApiError si le réseau échoue, si le délai est
  * dépassé ou si le statut HTTP n'est pas 2xx. Retourne l'objet Response sinon.
  */
+// Injecte automatiquement le token de session admin (Bearer) sur les appels
+// internes /api/* — sauf si un header Authorization est déjà fourni. Permet de
+// sécuriser les endpoints serveur (verifyBearer) sans toucher chaque appelant.
+function withAuth(url, opts) {
+  try {
+    const isInternal = typeof url === "string" && (url.startsWith("/api/") || url.includes("/api/"));
+    if (!isInternal) return opts;
+    const headers = new Headers(opts.headers || {});
+    if (!headers.has("Authorization")) {
+      const tok = typeof sessionStorage !== "undefined" ? sessionStorage.getItem("ldb_tok") : null;
+      if (tok) headers.set("Authorization", "Bearer " + tok);
+    }
+    return { ...opts, headers };
+  } catch {
+    return opts;
+  }
+}
+
 export async function fetchWithTimeout(url, { timeout = 12000, ...opts } = {}) {
   // Respecte un signal externe éventuel tout en ajoutant le timeout
   const ctrl = new AbortController();
@@ -31,6 +49,7 @@ export async function fetchWithTimeout(url, { timeout = 12000, ...opts } = {}) {
     if (opts.signal.aborted) ctrl.abort();
     else opts.signal.addEventListener("abort", () => ctrl.abort(), { once: true });
   }
+  opts = withAuth(url, opts);
   let res;
   try {
     res = await fetch(url, { ...opts, signal: ctrl.signal });
