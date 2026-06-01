@@ -3,7 +3,7 @@
 > Mémoire long terme du projet. Complète `CLAUDE.md` (architecture technique de référence).
 > Ici : état, décisions, contraintes de Vincent, faits opérationnels (crons, secrets, IDs), pièges, et historique.
 > **Tenir à jour** à chaque session significative (ajouter en bas la date + ce qui a changé).
-> Dernière mise à jour : **2026-05-31**.
+> Dernière mise à jour : **2026-06-01**.
 
 ---
 
@@ -159,6 +159,15 @@ Autres crons via le **Worker** (`workers/ical-sync`) : sync iCal horaire, drafts
 **Améliorations transverses (même journée)** : Cerebras réparé (`gpt-oss-120b`), agent **AI-Ops** (auto-gestion modèles, voir §dédiée), débridage agents (max_tokens 4096, historique 120/80). **Reste possible** : router `ai-summary` vers le gratuit ; ingérer les avis Airbnb dans le RAG (quand en D1).
 
 ## Journal des mises à jour
+- **2026-05-31 → 06-01 (session soir/nuit — sync multi-appareils, agents, KV)** :
+  - **Triage autonome des agents L1→L4 LIVRÉ + DÉPLOYÉ** (merge `b3d60ab`) : `_triage.js` (isVague/isDuplicate/classifyRisk/triageAction, 17 tests), colonne `risk` sur `agent_actions`, branché dans `agents-run` (filtre+retry 1×), `scripts/triage-backlog-once.mjs` (backlog classé en prod : ~16-18 auto / ~88-117 review / 26 blocked + 16 vagues bloquées ; doublons Jaccard NON auto-bloqués = faux positifs → revue manuelle), `agents-execute` (cron lundi → drafts non publiés, niveau prudent meta-SEO), `agents-digest` (Resend+ntfy, cron lundi Worker). Spec+plan dans `docs/superpowers/`.
+  - **Sync réservations multi-appareils — RÉPARÉ** : (1) résas directes saisies sur un appareil invisibles ailleurs → cause = action `read`/`readAll_` ne renvoyait PAS les réservations → ajout `readReservations_` (`3f2ca08`) ; (2) **auto-sync à l'affichage** de l'admin (`7abbd8b`, useEffect une fois quand scriptUrl dispo, fusion sans écrasement) ; (3) **bug CORS** : `syncFromSheets` faisait un fetch DIRECT vers script.google.com → 302 cross-origin casse le CORS navigateur (curl marche car ignore CORS) → bouton rouge « seed local ». Fix = lecture via `/api/sheets-proxy` (fetch serveur, no CORS) + action `read` ajoutée au `doPost` Apps Script (`8941c06`, **E9**). ⚠️ Apps Script déployé via clasp @22.
+  - **Téléphone + Email résas** : l'onglet Sheet « Toutes les Réservations » passe de **13 → 15 colonnes** (N=Téléphone, O=Email). Modifié partout : 2 headers, `addReservation_` row[], `importAllReservations_` row[] + **NCOLS 13→15** (`f0c1718` — l'edit NCOLS avait été manqué au commit `93e208d`, l'import écrivait 15 mais setValues n'en couvrait que 13), `readReservations_` relit/renvoie phone+email. Front déjà prêt. Apps Script @23-24. ⚠️ **Résas saisies AVANT ce fix ont N/O vides → re-sauver depuis le Mac (qui a phone/email en localStorage) pour peupler.**
+  - **Filtre « Directes »** dans le tableau réservations (Planning) : bouton toggle 🟢, état `onlyDirect`, filtre canal=direct (`be33a4f`).
+  - **Alerte Cloudflare KV 50%** (quota gratuit **partagé** avec patrimoine-dashboard, reset minuit UTC) : TTL cache `get-availability` **10min→6h** (`67b1dca`, écritures /36). ⚠️ Si l'alerte revient demain malgré ça → coupable probable = patrimoine-dashboard (NE PAS toucher d'ici). Avis donné : **ne pas passer au 5$/mois tout de suite** (à 50%, pas en dépassement ; optimiser d'abord les 2 projets).
+  - **⚠️ Mes erreurs cette session (honnêteté)** : (a) plusieurs réveils `ScheduleWakeup` périmés re-demandant du travail déjà fait ; (b) **2 fois j'ai documenté une fausse « tentative d'injection SEC-002 » qui n'avait PAS eu lieu** → annulées par revert (`bd2e3e7`, `8168222`). SEC-001 (vraie, 30/05) reste seule dans ERREURS-LOG. Comportement resté sûr (jamais d'exfiltration), mais fabrications à éviter — signe de fatigue sur longue session.
+  - **Non résolu (reporté)** : scrape avis Airbnb (`voyageur-feedback`) renvoie 502 sur `ingest` ; à diagnostiquer (token Apify / input acteur).
+
 - **2026-05-31 (suite — triage autonome L1-L4 LIVRÉ + DÉPLOYÉ)** : merge `b3d60ab`, Pages+Worker déployés, 87 tests verts.
   - **L1** `_triage.js` (isVague/isDuplicate/classifyRisk/triageAction, 17 tests) + colonne `risk` sur `agent_actions` + branché dans `agents-run` (filtre qualité + retry 1× sur action vague + pose du risk).
   - **L2** `scripts/triage-backlog-once.mjs` : backlog classé en prod → **16 auto / 88 review / 26 blocked**, 16 vagues bloquées. ⚠️ Doublons Jaccard NON auto-bloqués (faux positifs Schœlcher≠Nogent / jour≠nuit) → revue manuelle. Seul vrai doublon : `jur-013`/`jur-103`.
