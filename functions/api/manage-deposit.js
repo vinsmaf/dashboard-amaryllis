@@ -27,6 +27,30 @@ export async function onRequestPost(context) {
     }
   }
 
+  // action: "history" — toutes les cautions (tous statuts), filtrable par bienId.
+  // Lecture seule, sert à vérifier qu'une caution a bien été libérée (canceled).
+  if (action === "history") {
+    try {
+      let q = "metadata%5B%27type%27%5D%3A%27deposit%27";
+      if (body.bienId) q += `%20AND%20metadata%5B%27bienId%27%5D%3A%27${encodeURIComponent(body.bienId)}%27`;
+      const res = await fetch(
+        `https://api.stripe.com/v1/payment_intents/search?query=${q}&limit=50`,
+        { headers: { Authorization: `Bearer ${sk}` } }
+      );
+      const parsed = await res.json();
+      if (parsed.error) return json({ error: parsed.error.message }, 400);
+      const data = (parsed.data || []).map(pi => ({
+        id: pi.id, status: pi.status, amount: pi.amount, created: pi.created,
+        canceled_at: pi.canceled_at, capture_method: pi.capture_method,
+        bienId: pi.metadata?.bienId, voyageur: pi.metadata?.voyageur,
+        checkin: pi.metadata?.checkin, checkout: pi.metadata?.checkout,
+      }));
+      return json({ ok: true, data });
+    } catch (err) {
+      return json({ error: err.message }, 500);
+    }
+  }
+
   if (!paymentIntentId) return json({ error: "paymentIntentId requis" }, 400);
 
   let url;
