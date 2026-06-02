@@ -14,7 +14,7 @@
 
 ---
 
-### Post 2 — Résidence Amaryllis (calme / groupe)
+### Post 2 — Résidence Amaryllis (calme / groupe) ✅ (publié le 02/06)
 > ☀️ Un séjour ressourçant à Sainte-Luce ? La Résidence Amaryllis propose studio et appartements au calme, piscine et jardin tropical, à 5 min des plages du Sud. Parfait en couple, en famille, ou en réunissant plusieurs logements pour un grand groupe (jusqu'à 11 personnes). Accueil chaleureux avec cocktail de bienvenue 🍹 Réservation en direct sur villamaryllis.com, sans frais de service.
 
 **Bouton :** Réserver → `https://villamaryllis.com/location-groupe-sainte-luce`
