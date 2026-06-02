@@ -311,19 +311,19 @@ const ROUTES = [
   {
     path: "/reservation-directe-martinique",
     title: "Réservation directe Martinique — Sans frais | Amaryllis",
-    desc:  "Réservez directement vos villas en Martinique sans frais Airbnb ni Booking. Économisez 12–18%, flexibilité maximale, paiement sécurisé Stripe.",
+    desc:  "Réservez vos villas en Martinique en direct, sans frais Airbnb ni Booking : −15% en moyenne, contact hôte, paiement Stripe sécurisé. Dès 85€/nuit.",
     image: `${BASE}/photos/amaryllis/01.webp`,
   },
   {
     path: "/location-groupe-sainte-luce",
-    title: "Location grand groupe Martinique — jusqu'à 11 personnes, Sainte-Luce",
-    desc:  "Réunissez jusqu'à 11 proches en réservant Zandoli, Géko et Mabouya ensemble à Sainte-Luce. Résidence privée, piscines, réservation directe sans frais. Devis et paiement rapides.",
+    title: "Location grande capacité Martinique — 11 pers., Sainte-Luce",
+    desc:  "Louez 3 logements ensemble à Sainte-Luce (Zandoli, Géko, Mabouya) : jusqu'à 11 personnes, piscines privées, en direct sans frais. Devis rapide.",
     image: `${BASE}/photos/zandoli/01.webp`,
   },
   {
     path: "/location-appartement-vue-mer-schoelcher",
-    title: "Location appartement vue mer Schœlcher — Martinique",
-    desc:  "Appartement de standing à Schœlcher : vue panoramique sur la baie de Fort-de-France, dernier étage, 2 personnes, à 10 min du centre. Réservation directe sans frais.",
+    title: "Location appartement vue mer Schœlcher — dès 100€/nuit",
+    desc:  "Appartement vue mer à Schœlcher, Martinique : panorama sur la baie de Fort-de-France, dernier étage, 2 pers. Réservation directe dès 100€/nuit, sans frais.",
     image: `${BASE}/photos/schoelcher/01.webp`,
   },
   {
@@ -346,8 +346,8 @@ const ROUTES = [
   },
   {
     path: "/location-villa-martinique-piscine",
-    title: "Location Villa Martinique avec Piscine | Amaryllis",
-    desc:  "Louez une villa avec piscine privative à Sainte-Luce, Martinique : débordement eau salée, cascade ou jacuzzi. Dès 110€/nuit — sans frais Airbnb.",
+    title: "Location villa Martinique avec piscine — dès 110€/nuit",
+    desc:  "Villa avec piscine privée en Martinique à Sainte-Luce : débordement eau salée, cascade ou jacuzzi. Dès 110€/nuit en direct, sans frais Airbnb.",
     image: `${BASE}/photos/amaryllis/01.webp`,
   },
 

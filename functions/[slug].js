@@ -124,15 +124,15 @@ const SEO = {
 };
 
 const GROUP_STAY = {
-  title: "Location grand groupe Martinique — 11 pers, Sainte-Luce",
-  desc: "Réunissez jusqu'à 11 proches : Zandoli, Géko et Mabouya ensemble à Sainte-Luce. Résidence privée, piscines, réservation directe sans frais. Devis rapide.",
+  title: "Location grande capacité Martinique — 11 pers., Sainte-Luce",
+  desc: "Louez 3 logements ensemble à Sainte-Luce (Zandoli, Géko, Mabouya) : jusqu'à 11 personnes, piscines privées, en direct sans frais. Devis rapide.",
   image: `${BASE}/photos/zandoli/01.webp`,
   url: `${BASE}/location-groupe-sainte-luce`,
 };
 
 const SCHOELCHER_APPART = {
-  title: "Location appartement vue mer Schœlcher — Martinique",
-  desc: "Appartement de standing à Schœlcher : vue panoramique sur la baie de Fort-de-France, dernier étage, à 10 min du centre. Réservation directe sans frais.",
+  title: "Location appartement vue mer Schœlcher — dès 100€/nuit",
+  desc: "Appartement vue mer à Schœlcher, Martinique : panorama sur la baie de Fort-de-France, dernier étage, 2 pers. Réservation directe dès 100€/nuit, sans frais.",
   image: `${BASE}/photos/schoelcher/01.webp`,
   url: `${BASE}/location-appartement-vue-mer-schoelcher`,
 };

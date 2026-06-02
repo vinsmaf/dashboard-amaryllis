@@ -4045,6 +4045,22 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
               </div>
             </div>
 
+            {/* ── Lien contextuel SEO in-content (dé-orpheline les landings commerciales) ── */}
+            {(() => {
+              const aS = { color: CORAL, textDecoration: "underline", fontStyle: "normal" };
+              const CTX = {
+                amaryllis: <>Amaryllis fait partie de nos <a style={aS} href="/location-villa-martinique-piscine">villas avec piscine en Martinique</a> ; idéale aussi pour <a style={aS} href="/sainte-luce-martinique">séjourner à Sainte-Luce</a>.</>,
+                iguana:    <>Découvrez toutes <a style={aS} href="/location-villa-martinique-piscine">nos villas avec piscine à Sainte-Luce</a>, ou comment <a style={aS} href="/sainte-luce-martinique">séjourner à Sainte-Luce</a> côté sud.</>,
+                geko:      <>Géko peut se <a style={aS} href="/location-groupe-sainte-luce">réserver avec Zandoli et Mabouya pour un grand groupe</a>, à <a style={aS} href="/sainte-luce-martinique">Sainte-Luce</a>.</>,
+                zandoli:   <>Pour une <a style={aS} href="/location-groupe-sainte-luce">location pour un grand groupe à Sainte-Luce</a>, combinez Zandoli avec Géko et Mabouya. Tout sur <a style={aS} href="/sainte-luce-martinique">Sainte-Luce</a>.</>,
+                mabouya:   <>Mabouya se <a style={aS} href="/location-groupe-sainte-luce">combine avec 2 logements jusqu'à 11 personnes</a> ; à <a style={aS} href="/sainte-luce-martinique">Sainte-Luce</a>, plages à 5 min.</>,
+                schoelcher:<>En savoir plus sur cet <a style={aS} href="/location-appartement-vue-mer-schoelcher">appartement vue mer à Schœlcher</a>.</>,
+              }[bien.id];
+              return CTX ? (
+                <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontStyle: "italic", fontSize: 15, color: MUTED, margin: "0 0 32px", lineHeight: 1.6 }}>{CTX}</p>
+              ) : null;
+            })()}
+
             {/* Tarifs prévisionnels — design-007 : PricingCalendar inline */}
             {/* Sur desktop pour amaryllis : déjà affiché dans le breakout reel — ne pas dupliquer */}
             {!PRICE_HIDDEN.has(bien.id) && !BOOKING_DISABLED.has(bien.id) && !PRICING_CAL_HIDDEN.has(bien.id) && (isMobile || bien.id !== "amaryllis") && (
