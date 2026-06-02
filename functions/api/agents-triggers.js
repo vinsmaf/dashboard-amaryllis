@@ -24,9 +24,9 @@ async function setState(db, k, v) {
 async function reviews(origin, place) {
   try { const r = await fetch(`${origin}/api/google-reviews?place=${place}`); return await r.json(); } catch { return {}; }
 }
-async function wakeAgent(origin, agentId, brief) {
+async function wakeAgent(origin, agentId, brief, secret) {
   try {
-    const r = await fetch(`${origin}/api/agents-run`, {
+    const r = await fetch(`${origin}/api/agents-run${secret ? `?secret=${encodeURIComponent(secret)}` : ""}`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ agents: [agentId], brief }),
     });
@@ -86,7 +86,7 @@ export async function onRequestGet({ request, env }) {
   // ── Réveil des agents déclenchés (parallèle, dédupliqué) ─────────────────
   const seen = new Set();
   const toWake = wakeups.filter(w => !seen.has(w.agent) && seen.add(w.agent));
-  const fired = await Promise.all(toWake.map(w => wakeAgent(origin, w.agent, w.brief)));
+  const fired = await Promise.all(toWake.map(w => wakeAgent(origin, w.agent, w.brief, env.POSTSTAY_SECRET)));
 
   return json({ ok: true, mesures: { reviewsTotal, minRating, bookings }, baseline, declenches: toWake.map(w => w.agent), fired, signals });
 }

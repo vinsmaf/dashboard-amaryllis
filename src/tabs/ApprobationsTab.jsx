@@ -2,6 +2,7 @@
  * ApprobationsTab — extrait de src/App.jsx (refactor 2026, batch B/5).
  */
 import { useState, useEffect } from "react";
+import { adminFetch } from "../lib/apiFetch.js";
 import { useAppData } from "../AppDataContext.jsx";
 
 export default function ApprobationsTab() {
@@ -17,7 +18,7 @@ export default function ApprobationsTab() {
   async function loadDrafts() {
     setLoading(true);
     try {
-      const r = await fetch(`/api/agent-drafts?status=${filter === "all" ? "" : filter}&limit=100`);
+      const r = await adminFetch(`/api/agent-drafts?status=${filter === "all" ? "" : filter}&limit=100`);
       const d = await r.json();
       setDrafts(d.drafts || []);
     } catch (e) {
@@ -32,7 +33,7 @@ export default function ApprobationsTab() {
   async function act(id, action) {
     setActing(id);
     try {
-      const r = await fetch(`/api/agent-drafts?id=${id}&action=${action}`, { method: "PATCH" });
+      const r = await adminFetch(`/api/agent-drafts?id=${id}&action=${action}`, { method: "PATCH" });
       const d = await r.json();
       const msgs = {
         approve: "✅ Approuvé",
@@ -52,7 +53,7 @@ export default function ApprobationsTab() {
 
   async function saveEdit(id) {
     try {
-      await fetch(`/api/agent-drafts?id=${id}&action=edit`, {
+      await adminFetch(`/api/agent-drafts?id=${id}&action=edit`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ payload: editPayload }),

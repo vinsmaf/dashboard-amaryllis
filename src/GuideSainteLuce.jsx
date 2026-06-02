@@ -160,8 +160,8 @@ export default function GuideSainteLuce() {
     <>
       <style dangerouslySetInnerHTML={{ __html: css }} />
       <SEOMeta
-        title="Sainte-Luce Martinique — Villas & Activités | Amaryllis"
-        description="Tout sur Sainte-Luce, Martinique : plages, restaurants, activités, transports. Louez une villa avec piscine vue mer à Sainte-Luce dès 120€/nuit."
+        title="Location villa Sainte-Luce Martinique — piscine & vue mer"
+        description="Louez une villa à Sainte-Luce, Martinique : piscine privée, vue mer, dès 110€/nuit en direct sans frais. Plages, activités et conseils de vos hôtes."
         canonical="/sainte-luce-martinique"
         image={HERO_IMG}
         type="article"
@@ -212,7 +212,7 @@ export default function GuideSainteLuce() {
           <div className="sl-hero-overlay" />
           <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "0 32px 48px" }}>
             <div style={{ maxWidth: 760, margin: "0 auto", width: "100%" }}>
-              <p style={{ color: CORAL, fontSize: 12, letterSpacing: "0.3em", textTransform: "uppercase", margin: "0 0 14px" }}>Sud Martinique · Guide de destination</p>
+              <p style={{ color: CORAL, fontSize: 12, letterSpacing: "0.3em", textTransform: "uppercase", margin: "0 0 14px" }}>Location de villas · Sud Martinique</p>
               <h1 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: "clamp(32px, 6vw, 64px)", letterSpacing: "0.04em", color: IVORY, textTransform: "uppercase", margin: "0 0 20px", lineHeight: 1.05 }}>
                 Sainte-Luce<br /><em style={{ fontStyle: "normal", fontWeight: 400, color: CORAL }}>Martinique</em>
               </h1>

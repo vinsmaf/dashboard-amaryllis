@@ -2,11 +2,13 @@
 // CRUD pour les actions des 17 agents Amaryllis
 // Stockage D1 (binding: revenue_manager, table: agent_actions)
 
+import { verifyBearer } from "./_adminauth.js";
+
 const CORS = {
   "Content-Type": "application/json",
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET,POST,PATCH,OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "Content-Type,Authorization",
 };
 const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: CORS });
 
@@ -198,6 +200,12 @@ const SEED = [
 export async function onRequest(context) {
   const { request, env } = context;
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
+
+  // sec : backlog agents (CRUD D1) → admin (Bearer) OU secret partagé (script CLI).
+  const _url0 = new URL(request.url);
+  const _secretOk = env.POSTSTAY_SECRET && _url0.searchParams.get("secret") === env.POSTSTAY_SECRET;
+  const { ok: _adminOk } = await verifyBearer(request, env);
+  if (!_secretOk && !_adminOk) return json({ error: "Non autorisé" }, 401);
 
   const db = env.revenue_manager;
   if (!db) return json({ error: "D1 binding 'revenue_manager' not found" }, 503);

@@ -9,6 +9,7 @@
  * blocs ld+json côté server-rendered).
  */
 import { useState, useEffect } from "react";
+import { adminFetch } from "../lib/apiFetch.js";
 
 // 30 mots-clés cibles à fort potentiel (volume Google FR + intention voyageur)
 const KEYWORDS = [
@@ -100,7 +101,7 @@ Mabouya = jacuzzi privatif (seul), Iguana = eau salée non chlorée, Zandoli+Gé
 Retourne un draft de type "blog_article" avec : { title, slug, h1, intro, sections: [{h2, body}], cta, hashtags, photo_url }.`;
 
     try {
-      const r = await fetch("/api/agents-run", {
+      const r = await adminFetch("/api/agents-run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ agent: "seo-content-writer", brief }),

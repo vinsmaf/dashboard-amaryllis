@@ -440,7 +440,7 @@ const BIENS = [
     lits: 2,
     sdb: "1",
     rating: "4,83",
-    reviews: 23,
+    reviews: 24,
     couleur: "#f59e0b",
     photos: [
       "/photos/geko/01.webp",
@@ -2495,7 +2495,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {nights > 0 && (
             <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13, color: "rgba(250,245,233,0.7)" }}>
-              <span>{nights} × {bien.prix}€</span><span>{rawTotal}€</span>
+              <span>{nights} nuit{nights > 1 ? "s" : ""}{nights > 0 ? ` · ${Math.round(rawTotal / nights)}€/nuit moy.` : ""}</span><span>{rawTotal}€</span>
             </div>
           )}
           {hasDiscount && (
@@ -3150,6 +3150,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
   const [shareCopied, setShareCopied] = useState(false);
   const [showStickyBar, setShowStickyBar] = useState(false);
   const [googleRevs, setGoogleRevs] = useState(null); // null = pas encore chargé
+  const [voyageurRevs, setVoyageurRevs] = useState(null); // vrais avis Airbnb (D1, non masqués)
   const infoPanelRef = useRef(null);
   const photos = bien.photos || [];
   const touchStartXDetail = useRef(null);
@@ -3161,6 +3162,16 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
       .then(r => r.json())
       .then(d => { if (d.ok && d.reviews?.length) setGoogleRevs(d.reviews); else setGoogleRevs(STATIC_REVIEWS); })
       .catch(() => setGoogleRevs(STATIC_REVIEWS));
+  }, [bien.id]);
+
+  // Vrais avis voyageurs Airbnb (D1, non masqués) — pour tous les biens.
+  useEffect(() => {
+    let alive = true;
+    fetch(`/api/voyageur-feedback?action=public&bien=${encodeURIComponent(bien.id)}&limit=12`)
+      .then(r => r.json())
+      .then(d => { if (alive && d.ok && d.reviews?.length) setVoyageurRevs(d.reviews); })
+      .catch(() => {});
+    return () => { alive = false; };
   }, [bien.id]);
 
   // Signaux dynamiques — disponibilité + nudge + tendance prix
@@ -4228,18 +4239,32 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
 
             {/* Avis voyageurs */}
             {/* ── Avis voyageurs — Airbnb + Google fusionnés ── */}
-            {((bien.avis && bien.avis.length > 0) || googleRevs) && (() => {
-              // Normalisation Airbnb → format commun
-              const airbnbCards = (bien.avis || []).map(a => ({
-                key: `ab-${a.nom}`,
-                initial: a.nom[0],
-                avatar: null,
-                name: `${a.nom} ${a.pays || ""}`.trim(),
-                date: a.date,
-                rating: a.note,
-                text: a.texte,
-                source: "airbnb",
-              }));
+            {((bien.avis && bien.avis.length > 0) || googleRevs || (voyageurRevs && voyageurRevs.length > 0)) && (() => {
+              const stripHtml = (t) => String(t || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+              const MOIS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+              const frDate = (iso) => { const m = /^(\d{4})-(\d{2})/.exec(iso || ""); return m ? `${MOIS[+m[2] - 1]} ${m[1]}` : (iso || ""); };
+              // Source Airbnb : VRAIS avis (D1, non masqués) si dispo, sinon repli sur les avis statiques.
+              const airbnbCards = (voyageurRevs && voyageurRevs.length > 0
+                ? voyageurRevs.map((a, i) => ({
+                    key: `vf-${i}`,
+                    initial: (a.prenom || "V")[0],
+                    avatar: null,
+                    name: a.prenom || "Voyageur",
+                    date: frDate(a.review_date),
+                    rating: a.rating,
+                    text: stripHtml(a.review_text),
+                    source: "airbnb",
+                  }))
+                : (bien.avis || []).map(a => ({
+                    key: `ab-${a.nom}`,
+                    initial: a.nom[0],
+                    avatar: null,
+                    name: `${a.nom} ${a.pays || ""}`.trim(),
+                    date: a.date,
+                    rating: a.note,
+                    text: a.texte,
+                    source: "airbnb",
+                  })));
               // Normalisation Google → format commun
               const gCards = (googleRevs || []).map((r, i) => ({
                 key: `g-${i}`,
@@ -4411,7 +4436,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
             </div>
           )}
           {!isMobile && !BOOKING_DISABLED.has(bien.id) && (
-            <div id="booking-section" style={{ width: 380, flexShrink: 0, position: "sticky", top: 24, alignSelf: "flex-start", paddingTop: 40, paddingBottom: 40 }}>
+            <div id="booking-section" style={{ width: 380, flexShrink: 0, boxSizing: "border-box", position: "sticky", top: 24, alignSelf: "flex-start", paddingTop: 40, paddingBottom: 40, maxHeight: "calc(100vh - 48px)", overflowY: "auto", overflowX: "hidden" }}>
               <div style={{
                 background: IVORY, border: `1px solid ${SAND}`, borderRadius: 16,
                 boxShadow: "0 8px 40px rgba(14,40,58,0.10), 0 2px 8px rgba(14,40,58,0.06)",
@@ -4526,7 +4551,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                       <div style={{ height: 1, background: SAND }} />
                       <div style={{ padding: "16px 24px" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: MUTED, marginBottom: 6 }}>
-                          <span>{bien.prix}€ × {calNights} nuit{calNights > 1 ? "s" : ""}</span>
+                          <span>{calNights} nuit{calNights > 1 ? "s" : ""}{calNights > 0 ? ` · ${Math.round(calRawTotal / calNights)}€/nuit moy.` : ""}</span>
                           <span>{calRawTotal}€</span>
                         </div>
                         {calFrais > 0 && (
@@ -4536,7 +4561,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                         )}
                         {calDiscountRate > 0 && (
                           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: CORAL, fontWeight: 600, marginBottom: 6 }}>
-                            <span>🎁 {discountLabel(calNights)}</span><span>−{calDiscountAmount}€</span>
+                            <span>🎁 {discountLabel(calNights)} (−{Math.round(calDiscountRate * 100)}%)</span><span>−{calDiscountAmount}€</span>
                           </div>
                         )}
                         <div style={{ height: 1, background: SAND, margin: "10px 0" }} />
@@ -6746,6 +6771,45 @@ function FooterSection() {
         </div>
       </div>
 
+      {/* ── Maillage SEO : liens vers landing commerciales + guides (dé-orpheline) ── */}
+      <nav aria-label="Plan du site" style={{ maxWidth: 1280, margin: "0 auto", padding: "40px 32px 8px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 32, borderBottom: "1px solid rgba(250,245,233,0.08)" }}>
+        {[
+          { titre: "Locations en Martinique", liens: [
+            ["Location villa Sainte-Luce", "/sainte-luce-martinique"],
+            ["Villa avec piscine", "/location-villa-martinique-piscine"],
+            ["Appartement vue mer Schœlcher", "/location-appartement-vue-mer-schoelcher"],
+            ["Location pour groupe", "/location-groupe-sainte-luce"],
+            ["Réservation directe sans frais", "/reservation-directe-martinique"],
+            ["Séminaires & événements", "/seminaires"],
+          ]},
+          { titre: "Guides & destinations", liens: [
+            ["Le Diamant", "/guide-le-diamant"],
+            ["Sainte-Anne & les Salines", "/guide-sainte-anne"],
+            ["Activités à Sainte-Luce", "/activites-sainte-luce"],
+            ["Plus belles plages du Sud", "/plus-belles-plages-sud-martinique"],
+            ["Meilleure saison", "/meilleure-saison-martinique"],
+            ["Tout explorer", "/guide-hub"],
+          ]},
+          { titre: "Nos villas & studios", liens: [
+            ["Villa Amaryllis (8 pers.)", "/amaryllis"],
+            ["Zandoli (5 pers.)", "/zandoli"],
+            ["Villa Iguana (6 pers.)", "/iguana"],
+            ["Géko (4 pers.)", "/geko"],
+            ["Studio Mabouya (2 pers.)", "/mabouya"],
+            ["Tous nos avis", "/avis"],
+          ]},
+        ].map(col => (
+          <div key={col.titre}>
+            <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 10, letterSpacing: "0.25em", textTransform: "uppercase", color: "rgba(250,245,233,0.35)", marginBottom: 14 }}>{col.titre}</div>
+            {col.liens.map(([label, href]) => (
+              <a key={href} href={href} style={{ display: "block", fontFamily: "'Jost', sans-serif", fontSize: 13, color: "rgba(250,245,233,0.6)", textDecoration: "none", padding: "5px 0", transition: "color 0.2s" }}
+                onMouseEnter={e => { e.currentTarget.style.color = "rgba(250,245,233,0.95)"; }}
+                onMouseLeave={e => { e.currentTarget.style.color = "rgba(250,245,233,0.6)"; }}>{label}</a>
+            ))}
+          </div>
+        ))}
+      </nav>
+
       {/* ── Bottom bar ── */}
       <FooterBottomBar />
     </footer>
@@ -7609,13 +7673,32 @@ export default function PublicSite() {
       .catch(() => {});
   }, []);
 
-  // Charger les tarifs depuis le serveur au démarrage → fusionne dans localStorage
+  // Charger les tarifs JOURNALIERS depuis le serveur au démarrage → fusionne dans localStorage
   useEffect(() => {
     fetch("/api/site-config?type=prices")
       .then(r => r.json())
       .then(d => {
         if (d.ok && d.config && Object.keys(d.config).length) {
           applyServerPriceOverrides(d.config); // merge + dispatch amaryllis_prices_updated
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Charger les PRIX DE BASE (« à partir de X€/nuit ») depuis le serveur → synchro
+  // multi-appareils : un visiteur voit les prix de base publiés par l'admin, pas
+  // seulement ceux du localStorage local. Source partagée = /api/site-config base_prices.
+  useEffect(() => {
+    fetch("/api/site-config?type=base_prices")
+      .then(r => r.json())
+      .then(d => {
+        const cfg = d && d.config;
+        if (cfg && typeof cfg === "object" && Object.keys(cfg).length) {
+          try {
+            const cur = JSON.parse(localStorage.getItem("amaryllis_prices") || "{}");
+            localStorage.setItem("amaryllis_prices", JSON.stringify({ ...cur, ...cfg }));
+          } catch {}
+          setPriceOverrides(loadPriceOverrides());
         }
       })
       .catch(() => {});
@@ -7754,6 +7837,7 @@ export default function PublicSite() {
               "@id": url,
               "name": bien.nom,
               "url": url,
+              "identifier": bien.id,
               "description": bien.desc.slice(0, 300),
               "image": (bien.photos || []).slice(0, 8).map(p => ({
                 "@type": "ImageObject",
@@ -7784,6 +7868,13 @@ export default function PublicSite() {
               "amenityFeature": (bien.amenities || []).map(e => ({ "@type": "LocationFeatureSpecification", "name": e, "value": true })),
               "petsAllowed": (bien.amenities || []).some(a => /animaux/i.test(a)),
               "occupancy": { "@type": "QuantitativeValue", "maxValue": bien.capacite },
+              "containsPlace": {
+                "@type": "Accommodation",
+                "additionalType": "EntirePlace",
+                ...(bien.chambres ? { "numberOfBedrooms": bien.chambres } : {}),
+                "occupancy": { "@type": "QuantitativeValue", "maxValue": bien.capacite },
+                "amenityFeature": (bien.amenities || []).map(e => ({ "@type": "LocationFeatureSpecification", "name": e, "value": true })),
+              },
               "checkinTime": "17:00",
               "checkoutTime": "12:00",
               ...(!PRICE_HIDDEN.has(bien.id) ? {

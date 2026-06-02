@@ -1,11 +1,13 @@
 // Cloudflare Pages Function — /api/rm-overrides
 // Manual price/min_stay/block overrides for specific dates
 
+import { verifyBearer } from "./_adminauth.js";
+
 const CORS = {
   "Content-Type": "application/json",
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "Content-Type,Authorization",
 };
 const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: CORS });
 
@@ -82,10 +84,16 @@ export async function onRequest(context) {
   const { request, env } = context;
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
 
+  const url = new URL(request.url);
+
+  // sec : écrit/lit des overrides prix D1 → admin (Bearer) OU appel interne (secret).
+  const secret = url.searchParams.get("secret");
+  const secretOk = env.POSTSTAY_SECRET && secret === env.POSTSTAY_SECRET;
+  const { ok: adminOk } = await verifyBearer(request, env);
+  if (!secretOk && !adminOk) return json({ error: "Non autorisé" }, 401);
+
   const db = env.revenue_manager;
   if (!db) return json({ error: "D1 binding 'revenue_manager' not found" }, 503);
-
-  const url = new URL(request.url);
 
   try {
     if (request.method === "GET") return handleGet(db, url);

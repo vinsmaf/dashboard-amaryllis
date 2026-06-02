@@ -2,6 +2,8 @@
 // Crée une réservation Beds24 V2 directement via API (remplace l'iframe).
 // Retourne : bookingId + prix (local si Beds24 ne le fournit pas).
 
+import { rateLimit } from "./_ratelimit.js";
+
 const BEDS24_V2_BOOKINGS = "https://beds24.com/api/v2/bookings";
 const BEDS24_AUTH_TOKEN  = "https://beds24.com/api/v2/authentication/token";
 const DEFAULT_PROP_ID    = "158192";
@@ -29,6 +31,11 @@ export async function onRequestOptions() {
 
 export async function onRequestPost(context) {
   const { request, env } = context;
+
+  // Rate-limit anti-abus (endpoint PUBLIC, tunnel de résa) — généreux, fail-open.
+  const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+  const rl = await rateLimit(env.revenue_manager, { key: `b24create:${ip}`, limit: 15, windowSec: 60 });
+  if (!rl.ok) return json({ error: "Trop de tentatives, réessayez dans un instant." }, 429);
 
   // Préférer le refreshToken (write access) ; fallback sur token statique
   let token;

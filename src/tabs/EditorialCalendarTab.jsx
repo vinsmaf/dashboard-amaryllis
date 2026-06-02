@@ -2,6 +2,7 @@
  * EditorialCalendarTab — extrait de src/App.jsx (refactor 2026, batch B/5).
  */
 import { useState, useEffect } from "react";
+import { adminFetch } from "../lib/apiFetch.js";
 import { MOIS } from "../App.jsx";
 import { useAppData } from "../AppDataContext.jsx";
 
@@ -59,7 +60,7 @@ export default function EditorialCalendarTab() {
       // Brief enrichi pour community-manager
       const brief = `BRIEF CALENDAR (date=${new Date(entry.scheduled_at*1000).toLocaleDateString("fr-FR")}, bien=${entry.bien_id}, thème=${entry.theme}, variante=${entry.variante}, format=${entry.format}, photo=${entry.photo_url}, cta=${entry.cta}). Génère UN draft social_post selon ce brief précis.`;
       // ⚠️ calendar_id passé au serveur → il liera draft_id + status automatiquement
-      const r = await fetch("/api/agents-run", {
+      const r = await adminFetch("/api/agents-run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ agents: ["community-manager"], brief, calendar_id: entry.id }),

@@ -34,6 +34,7 @@ export default function CalendrierTarifs({ reservations = [] }) {
   const [selectedDates, setSelectedDates] = useState(new Set());
   const [bulkPrice, setBulkPrice] = useState("");
   const [syncStatus, setSyncStatus] = useState("idle"); // idle|local|syncing|synced|error
+  const [syncDetail, setSyncDetail] = useState(""); // message d'erreur serveur détaillé
   const [isDragging, setIsDragging] = useState(false);
   const [dragMode, setDragMode] = useState("add"); // "add" | "remove"
   const [tooltip, setTooltip] = useState(null); // { x, y, text }
@@ -53,9 +54,26 @@ export default function CalendrierTarifs({ reservations = [] }) {
   });
   const [history, setHistory] = useState([]); // stack of previous daily states (max 10)
   const serverTimer = useRef(null);
+  const pendingSync = useRef(false); // y a-t-il une synchro non encore poussée ?
 
-  // Cleanup du timer serveur quand le composant Tarifs est démonté
-  useEffect(() => { return () => clearTimeout(serverTimer.current); }, []);
+  // Au démontage : FLUSH la synchro en attente (sinon les dernières modifs sont
+  // perdues si on quitte l'onglet avant la fin du debounce → invisibles sur les
+  // autres appareils). keepalive = la requête survit au changement d'onglet/page.
+  useEffect(() => {
+    return () => {
+      clearTimeout(serverTimer.current);
+      if (!pendingSync.current) return;
+      try {
+        const overrides = JSON.parse(localStorage.getItem("amaryllis_daily_prices_v2") || "{}");
+        fetch("/api/site-config", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "prices", config: overrides }),
+          keepalive: true,
+        });
+      } catch {}
+    };
+  }, []);
 
   useEffect(() => {
     const stop = () => setIsDragging(false);
@@ -134,23 +152,40 @@ export default function CalendrierTarifs({ reservations = [] }) {
     return set;
   }, [reservations, bienId]);
 
-  // Sync serveur déboncée 2.5s après chaque modif locale
+  // POST immédiat des prix journaliers au serveur (source partagée multi-appareils).
+  async function doServerSync() {
+    setSyncStatus("syncing");
+    try {
+      const overrides = loadPriceOverrides();
+      // ⚠️ PAS de keepalive ici : keepalive plafonne le corps à 64 Ko et
+      //    rejette les gros catalogues de prix (beaucoup de dates éditées).
+      //    keepalive reste uniquement pour le flush au démontage (best-effort).
+      const r = await fetch("/api/site-config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "prices", config: overrides }),
+      });
+      const d = await r.json().catch(() => ({ ok: false, error: "réponse non-JSON" }));
+      pendingSync.current = false;
+      if (!d.ok) { setSyncStatus("error"); setSyncDetail(d.error || `HTTP ${r.status}`); return false; }
+      setSyncStatus("synced"); setSyncDetail("");
+      return true;
+    } catch (e) { setSyncStatus("error"); setSyncDetail(String(e && e.message || e)); return false; }
+  }
+
+  // Sync serveur déboncée 2.5s après chaque modif locale.
   function scheduleServerSync() {
     setSyncStatus("local");
+    pendingSync.current = true;
     clearTimeout(serverTimer.current);
-    serverTimer.current = setTimeout(async () => {
-      setSyncStatus("syncing");
-      try {
-        const overrides = loadPriceOverrides();
-        const r = await fetch("/api/site-config", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ type: "prices", config: overrides }),
-        });
-        const d = await r.json();
-        setSyncStatus(d.ok ? "synced" : "error");
-      } catch { setSyncStatus("error"); }
-    }, 2500);
+    serverTimer.current = setTimeout(doServerSync, 2500);
+  }
+
+  // Force la synchro MAINTENANT (bouton « Forcer la synchro »).
+  function flushServerSync() {
+    clearTimeout(serverTimer.current);
+    pendingSync.current = true;
+    return doServerSync();
   }
 
   function setDayPrice(date, price) {
@@ -338,6 +373,16 @@ export default function CalendrierTarifs({ reservations = [] }) {
         </div>
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
           {syncBadge && <span style={{ fontSize: 11, color: syncColor, fontWeight: 600 }}>{syncBadge}</span>}
+          <button
+            onClick={flushServerSync}
+            disabled={syncStatus === "syncing"}
+            title="Pousser immédiatement les prix du calendrier sur le serveur (visibles partout : site public + autres appareils)"
+            style={{ fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 6, border: "none", background: "#2563eb", color: "#fff", cursor: syncStatus === "syncing" ? "default" : "pointer", opacity: syncStatus === "syncing" ? 0.6 : 1 }}>
+            🌐 Forcer la synchro
+          </button>
+          {syncStatus === "error" && syncDetail && (
+            <span style={{ fontSize: 10, color: "#dc2626" }} title={syncDetail}>⚠ {syncDetail.slice(0, 60)}</span>
+          )}
           {history.length > 0 && (
             <button
               onClick={() => {

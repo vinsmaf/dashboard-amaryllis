@@ -2,6 +2,7 @@
 // Onglet "Agents" dans l'admin dashboard
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { adminFetch } from "./lib/apiFetch.js";
 
 // ── Constantes ───────────────────────────────────────────────────────────────
 const COLUMNS = [
@@ -202,7 +203,7 @@ export default function AgentsKanban({ mob }) {
   const load = useCallback(async (silent = false) => {
     try {
       // Attribution causale : impacts mesurés (best-effort, ne bloque pas le load)
-      fetch("/api/agents-actions?table=outcomes")
+      adminFetch("/api/agents-actions?table=outcomes")
         .then(r => r.json())
         .then(o => {
           const map = {};
@@ -213,7 +214,7 @@ export default function AgentsKanban({ mob }) {
         })
         .catch(() => {});
 
-      const r = await fetch("/api/agents-actions");
+      const r = await adminFetch("/api/agents-actions");
       const d = await r.json();
       if (d.hint?.includes("init")) {
         setInitNeeded(true);
@@ -270,7 +271,7 @@ export default function AgentsKanban({ mob }) {
   const handleInit = async () => {
     setLoading(true);
     try {
-      const r = await fetch("/api/agents-actions?action=init", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+      const r = await adminFetch("/api/agents-actions?action=init", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
       const d = await r.json();
       if (d.ok) await load();
     } catch { setLoading(false); }
@@ -282,7 +283,7 @@ export default function AgentsKanban({ mob }) {
     // Optimistic update (local + ref)
     actionsRef.current = actionsRef.current.map(a => a.id === id ? { ...a, status: newStatus, updated_at: now } : a);
     setActions(prev => prev.map(a => a.id === id ? { ...a, status: newStatus, updated_at: now } : a));
-    await fetch(`/api/agents-actions?id=${id}`, {
+    await adminFetch(`/api/agents-actions?id=${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: newStatus }),
@@ -307,7 +308,7 @@ export default function AgentsKanban({ mob }) {
     setRunning(true);
     setRunResult(null);
     try {
-      const r = await fetch("/api/agents-run", {
+      const r = await adminFetch("/api/agents-run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ agents: "all" }),

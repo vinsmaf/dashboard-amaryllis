@@ -9,6 +9,7 @@
  * Aucune data via useAppData (autonome, fetch local).
  */
 import { useState, useEffect } from "react";
+import { adminFetch } from "../lib/apiFetch.js";
 
 export default function CroissanceTab() {
   const [status, setStatus] = useState(null);
@@ -44,7 +45,7 @@ CTA : "👉 Inscrivez-vous à notre newsletter pour les prochains concours : htt
 Ton : excité, festif, croissance virale.
 Channels : ig + fb`;
 
-      const r = await fetch("/api/agents-run", {
+      const r = await adminFetch("/api/agents-run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ agent: "community-manager", brief }),

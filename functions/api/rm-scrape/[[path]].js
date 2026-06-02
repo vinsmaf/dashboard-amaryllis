@@ -2,11 +2,14 @@
 // Triggers Apify scraping for competitor listings
 // Requires env var: APIFY_TOKEN
 
+import { verifyBearer } from "../_adminauth.js";
+import { rateLimit } from "../_ratelimit.js";
+
 const CORS = {
   "Content-Type": "application/json",
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "Content-Type,Authorization",
 };
 const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: CORS });
 
@@ -218,6 +221,15 @@ async function handleGetStatus(db, url) {
 export async function onRequest(context) {
   const { request, env } = context;
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
+
+  // sec : déclenche un scrape Apify (coût $) → admin uniquement + rate-limit sur POST.
+  const { ok: authOk } = await verifyBearer(request, env);
+  if (!authOk) return json({ error: "Non autorisé" }, 401);
+  if (request.method === "POST") {
+    const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+    const rl = await rateLimit(env.revenue_manager, { key: `rmscrape:${ip}`, limit: 6, windowSec: 60 });
+    if (!rl.ok) return json({ error: "Trop de scrapes, patientez." }, 429);
+  }
 
   const db = env.revenue_manager;
   if (!db) return json({ error: "D1 binding 'revenue_manager' not found" }, 503);

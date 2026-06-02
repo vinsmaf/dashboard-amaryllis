@@ -15,13 +15,14 @@
 // Listing IDs Airbnb (publics, présents dans l'URL d'annonce). Iguana = bail
 // long, pas d'annonce active → absent.
 // IDs réels extraits des URLs iCal Airbnb (/api/get-config). Iguana = bail long → exclu.
+// Nogent retiré : annonce Airbnb supprimée (géré via Beds24/Booking, pas Airbnb).
+// Iguana absent : bail long, pas d'annonce active.
 const AIRBNB_LISTINGS = {
   amaryllis:  "54269844",
   zandoli:    "792768220924504884",
   geko:       "1263155865459755724",
   mabouya:    "1046596752160926069",
   schoelcher: "24242415",
-  nogent:     "22600160",
 };
 
 import { verifyBearer } from "./_adminauth.js";
@@ -29,7 +30,7 @@ import { verifyBearer } from "./_adminauth.js";
 const CORS = {
   "Content-Type": "application/json",
   "Access-Control-Allow-Origin": "https://villamaryllis.com",
-  "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+  "Access-Control-Allow-Methods": "GET,POST,PATCH,OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type,Authorization",
 };
 const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: CORS });
@@ -45,10 +46,13 @@ async function ensureTable(db) {
     "review_text TEXT," +
     "review_date TEXT," +                 // YYYY-MM ou YYYY-MM-DD
     "lang TEXT," +
+    "hidden INTEGER NOT NULL DEFAULT 0," + // modération : 1 = masqué du site public
     "created_at TEXT DEFAULT (datetime('now'))" +
     ")"
   );
   await db.exec("CREATE INDEX IF NOT EXISTS idx_vf_bien ON voyageur_feedback(bien_id)");
+  // Migration : ajoute la colonne hidden si la table existait déjà (sinon no-op).
+  try { await db.exec("ALTER TABLE voyageur_feedback ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0"); } catch {}
 }
 
 // Hash déterministe court (anti-doublon sans dépendance crypto lourde)
@@ -80,14 +84,99 @@ export async function onRequest(context) {
 
   // ── GET : lecture (admin) ────────────────────────────────────────────────
   if (request.method === "GET") {
-    // stats : public-safe (agrégats, pas de PII)
+    // stats : public-safe (agrégats, pas de PII). Exclut les avis masqués.
     if (action === "stats") {
       const { results } = await db.prepare(
         "SELECT bien_id, COUNT(*) n, ROUND(AVG(rating),2) avg_rating, MAX(review_date) last_review " +
-        "FROM voyageur_feedback GROUP BY bien_id"
+        "FROM voyageur_feedback WHERE hidden=0 GROUP BY bien_id"
       ).all();
       const total = results.reduce((s, r) => s + r.n, 0);
       return json({ ok: true, total, by_bien: results });
+    }
+
+    // public : avis individuels NON masqués pour un bien — SANS auth (RGPD-safe :
+    // prénom/note/texte/date/langue seulement). Alimente les fiches du site public.
+    if (action === "public") {
+      const bien = url.searchParams.get("bien");
+      if (!bien) return json({ error: "bien requis" }, 400);
+      const limit = Math.min(Number(url.searchParams.get("limit")) || 30, 100);
+      const { results } = await db.prepare(
+        "SELECT prenom, rating, review_text, review_date, lang FROM voyageur_feedback " +
+        "WHERE bien_id=? AND hidden=0 AND review_text IS NOT NULL AND review_text!='' " +
+        "ORDER BY review_date DESC LIMIT ?"
+      ).bind(bien, limit).all();
+      return json({ ok: true, bien, count: results.length, reviews: results });
+    }
+
+    // preflight : diagnostic LECTURE SEULE (aucun run, aucun crédit dépensé).
+    // Valide le token Apify, résout l'acteur et renvoie les vrais champs d'input
+    // attendus (depuis le build de l'acteur). Sert à débugger les 502 d'ingest.
+    if (action === "preflight") {
+      const secret = url.searchParams.get("secret");
+      const secretOk = env.POSTSTAY_SECRET && secret === env.POSTSTAY_SECRET;
+      const { ok: adminOk } = await verifyBearer(request, env);
+      if (!secretOk && !adminOk) return json({ error: "Non autorisé (secret ou token admin requis)" }, 401);
+
+      const diag = { apify_token_present: !!env.APIFY_TOKEN };
+      if (!env.APIFY_TOKEN) return json({ ok: false, diag, hint: "APIFY_TOKEN absent côté serveur" });
+      const tok = env.APIFY_TOKEN;
+
+      // 1) Validité du token + plan/usage
+      try {
+        const meRes = await fetch(`https://api.apify.com/v2/users/me?token=${tok}`);
+        diag.token_status = meRes.status;
+        diag.token_ok = meRes.ok;
+        const me = await meRes.json().catch(() => ({}));
+        diag.username = me?.data?.username || null;
+        diag.plan = me?.data?.plan?.id || null;
+        const u = me?.data?.monthlyUsage || me?.data?.usage || null;
+        if (u) diag.monthlyUsageUsd = u?.totalUsageCreditsUsd ?? u?.monthlyUsageUsd ?? null;
+        diag.isPaying = me?.data?.isPaying ?? null;
+      } catch (e) { diag.token_error = String(e && e.message || e); }
+
+      // 2) Résolution de l'acteur + champs d'input réels (depuis le build par défaut)
+      const ACTOR = (url.searchParams.get("actor") || "tri_angle~airbnb-reviews-scraper").replace("/", "~");
+      diag.actor = ACTOR;
+      try {
+        const aRes = await fetch(`https://api.apify.com/v2/acts/${ACTOR}?token=${tok}`);
+        diag.actor_status = aRes.status;
+        diag.actor_ok = aRes.ok;
+        const a = await aRes.json().catch(() => ({}));
+        diag.actor_id = a?.data?.id || null;
+        diag.actor_title = a?.data?.title || null;
+        const buildId = a?.data?.taggedBuilds?.latest?.buildId || a?.data?.defaultRunOptions?.build || null;
+        diag.buildId = buildId;
+        if (buildId) {
+          const bRes = await fetch(`https://api.apify.com/v2/acts/${ACTOR}/builds/${buildId}?token=${tok}`);
+          const b = await bRes.json().catch(() => ({}));
+          let schema = b?.data?.inputSchema;
+          if (typeof schema === "string") { try { schema = JSON.parse(schema); } catch {} }
+          if (schema && schema.properties) {
+            diag.input_fields = Object.keys(schema.properties);
+            diag.input_required = schema.required || [];
+            diag.input_url_field = Object.keys(schema.properties).find(k => /url/i.test(k)) || null;
+          }
+        }
+      } catch (e) { diag.actor_error = String(e && e.message || e); }
+
+      return json({ ok: true, diag });
+    }
+
+    // runstatus : LECTURE SEULE rapide — statut d'un run + nb d'items du dataset.
+    // Un seul appel Apify, pas de stockage. Sert à diagnostiquer un collect lent.
+    if (action === "runstatus") {
+      const { ok: adminOk } = await verifyBearer(request, env);
+      const secret = url.searchParams.get("secret");
+      if (!adminOk && !(env.POSTSTAY_SECRET && secret === env.POSTSTAY_SECRET)) return json({ error: "Non autorisé" }, 401);
+      const runId = url.searchParams.get("runId");
+      const r = await fetch(`https://api.apify.com/v2/actor-runs/${runId}?token=${env.APIFY_TOKEN}`);
+      const meta = await r.json().catch(() => ({}));
+      const d = meta?.data || {};
+      return json({
+        ok: true, status: d.status, startedAt: d.startedAt, finishedAt: d.finishedAt,
+        datasetId: d.defaultDatasetId, itemCount: d.stats?.itemCount ?? null,
+        statusMessage: d.statusMessage || null,
+      });
     }
 
     // collect : récupère le dataset d'un run Apify terminé et le stocke
@@ -108,24 +197,41 @@ export async function onRequest(context) {
         exitCode: meta?.data?.exitCode ?? null,
       });
       const dsId = meta?.data?.defaultDatasetId;
-      const items = await (await fetch(`https://api.apify.com/v2/datasets/${dsId}/items?token=${env.APIFY_TOKEN}&clean=true`)).json().catch(() => []);
+      // fields= : on ne récupère QUE les champs utiles → payload réduit (datasets de
+      // plusieurs centaines d'avis sinon trop lourds → dépassement du temps Function).
+      const fields = "startUrl,reviewer,rating,text,createdAt,language";
+      const items = await (await fetch(
+        `https://api.apify.com/v2/datasets/${dsId}/items?token=${env.APIFY_TOKEN}&clean=true&fields=${fields}`
+      )).json().catch(() => []);
       const idToBien = Object.fromEntries(Object.entries(AIRBNB_LISTINGS).map(([b, id]) => [String(id), b]));
-      let stored = 0;
+      const INSERT = "INSERT INTO voyageur_feedback (id,bien_id,source,prenom,rating,review_text,review_date,lang) " +
+                     "VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING";
+      const stmts = [];
       for (const it of (Array.isArray(items) ? items : [])) {
-        const lid = String(it.listingId || it.roomId || it.id || "");
+        // Listing : l'acteur expose startUrl (.../rooms/ID). it.id = ID de l'AVIS (≠ listing).
+        const lid = (String(it.startUrl || it.url || "").match(/rooms\/(\d+)/) || [])[1]
+          || String(it.listingId || it.roomId || "");
         const bienId = idToBien[lid] || url.searchParams.get("bien") || "inconnu";
-        const prenom = firstNameOnly(it.reviewer || it.author || it.name || it.reviewerName);
+        // reviewer = objet { firstName, ... } (RGPD : on ne garde que le prénom).
+        const rv = it.reviewer;
+        const reviewerName = (rv && typeof rv === "object")
+          ? (rv.firstName || rv.hostName)
+          : (rv || it.author || it.name || it.reviewerName);
+        const prenom = firstNameOnly(reviewerName);
         const rating = Number(it.rating || it.score || 0) || null;
         const text = (it.text || it.comment || it.review || it.reviewText || "").slice(0, 2000);
         const date = (it.createdAt || it.date || it.reviewedAt || "").slice(0, 10) || null;
         const lang = it.language || it.lang || null;
         if (!text && !rating) continue;
         const id = await rowId(bienId, date, prenom, text);
-        await db.prepare(
-          "INSERT INTO voyageur_feedback (id,bien_id,source,prenom,rating,review_text,review_date,lang) " +
-          "VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING"
-        ).bind(id, bienId, "airbnb", prenom, rating, text, date, lang).run();
-        stored++;
+        stmts.push(db.prepare(INSERT).bind(id, bienId, "airbnb", prenom, rating, text, date, lang));
+      }
+      // Écriture groupée par lots de 50 (db.batch = 1 aller-retour/lot, sinon ~300
+      // INSERT séquentiels dépassent la limite de temps de la Function).
+      let stored = 0;
+      for (let i = 0; i < stmts.length; i += 50) {
+        await db.batch(stmts.slice(i, i + 50));
+        stored += Math.min(50, stmts.length - i);
       }
       return json({ ok: true, stored, fetched: Array.isArray(items) ? items.length : 0 });
     }
@@ -155,11 +261,19 @@ export async function onRequest(context) {
     const targets = body.bien ? { [body.bien]: AIRBNB_LISTINGS[body.bien] } : AIRBNB_LISTINGS;
     if (Object.values(targets).some(v => !v)) return json({ error: "bien inconnu" }, 400);
 
-    // Acteur Apify spécialisé AVIS : tri_angle/airbnb-reviews-scraper.
+    // Acteur Apify spécialisé AVIS : tri_angle/airbnb-reviews-scraper (id TVfersbGTpMWGUMwt).
     // (dtrungtin~airbnb-scraper = prix/calendrier, refuse les URLs de fiche.)
-    // Input attendu : { listingUrls: ["https://www.airbnb.com/rooms/ID", ...], maxReviews }
+    // Schéma d'input réel (vérifié via ?action=preflight) :
+    //   startUrls (array de strings, REQUIS), maxReviewsPerListing (int), sortBy, sinceDate, locale.
     const ACTOR = (body.actor || "tri_angle~airbnb-reviews-scraper").replace("/", "~");
-    const listingUrls = Object.values(targets).map(id => `https://www.airbnb.com/rooms/${id}`);
+    // startUrls = format standard Apify "requestListSources" : array d'objets { url }.
+    // (Passer des strings → "Items in input.startUrls do not contain valid URLs".)
+    const startUrls = Object.values(targets).map(id => ({ url: `https://www.airbnb.com/rooms/${id}` }));
+    const apifyInput = {
+      startUrls,
+      maxReviewsPerListing: body.maxReviews || 50,
+      sortBy: "most-recent",
+    };
 
     // Démarre le run (asynchrone) — on NE bloque pas 3 min ici.
     let runRes, run;
@@ -167,13 +281,15 @@ export async function onRequest(context) {
       runRes = await fetch(`https://api.apify.com/v2/acts/${ACTOR}/runs?token=${env.APIFY_TOKEN}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ listingUrls, maxReviews: body.maxReviews || 50 }),
+        body: JSON.stringify(apifyInput),
       });
       run = await runRes.json().catch(() => ({}));
     } catch (e) {
       return json({ error: "fetch Apify a levé une exception", detail: String(e && e.message || e) }, 502);
     }
-    if (!runRes.ok) return json({ error: "Apify run échoué", status: runRes.status, detail: run }, 502);
+    // Erreur d'input/quota Apify renvoyée en 422 (et non 502) pour ne pas être
+    // masquée par la page d'erreur HTML de Cloudflare — le detail reste lisible.
+    if (!runRes.ok) return json({ error: "Apify run échoué", status: runRes.status, detail: run?.error || run }, 422);
 
     return json({
       ok: true,
@@ -183,6 +299,18 @@ export async function onRequest(context) {
       poll: `/api/voyageur-feedback?action=collect&runId=${run?.data?.id}&secret=...`,
       targets: Object.keys(targets),
     });
+  }
+
+  // ── PATCH ?action=moderate : masquer/afficher un avis (admin) ─────────────
+  if (request.method === "PATCH" && action === "moderate") {
+    const { ok: adminOk } = await verifyBearer(request, env);
+    if (!adminOk) return json({ error: "Non autorisé" }, 401);
+    const body = await request.json().catch(() => ({}));
+    const id = body.id;
+    if (!id) return json({ error: "id requis" }, 400);
+    const hidden = body.hidden ? 1 : 0;
+    await db.prepare("UPDATE voyageur_feedback SET hidden=? WHERE id=?").bind(hidden, id).run();
+    return json({ ok: true, id, hidden });
   }
 
   return json({ error: "Méthode/action non supportée" }, 405);

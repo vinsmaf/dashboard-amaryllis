@@ -2,7 +2,7 @@
  * Tarifs — prix de base + périodes saisonnières + calendrier des prix.
  * Extrait de src/App.jsx (refactor 2026, batch B/3).
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DEFAULT_PRIX, BIEN_LABELS, SEASONAL_KEY, SEASON_COLORS, SEASON_COLOR_LABELS, DEFAULT_SEASONS } from "../App.jsx";
 import CalendrierTarifs from "./CalendrierTarifs.jsx";
 import { useAppData } from "../AppDataContext.jsx";
@@ -16,6 +16,28 @@ export default function Tarifs() {
     } catch { return { ...DEFAULT_PRIX }; }
   });
   const [saved, setSaved] = useState(false);
+  const [published, setPublished] = useState(null); // null | "pub" | "err"
+
+  // Au chargement : récupère les prix de base DEPUIS LE SERVEUR (source partagée)
+  // → un autre PC voit les prix synchronisés, pas seulement le localStorage local.
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/site-config?type=base_prices")
+      .then(r => r.json())
+      .then(d => {
+        const cfg = (d && d.config) || {};
+        if (!alive || !cfg || typeof cfg !== "object" || !Object.keys(cfg).length) return;
+        setPrices(p => {
+          const merged = { ...p };
+          Object.keys(DEFAULT_PRIX).forEach(id => { if (cfg[id] != null) merged[id] = cfg[id]; });
+          try { localStorage.setItem("amaryllis_prices", JSON.stringify(merged)); } catch {}
+          window.dispatchEvent(new Event("amaryllis_prices_updated"));
+          return merged;
+        });
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
 
   // ── Seasonal periods ──
   const [seasons, setSeasons] = useState(() => {
@@ -63,11 +85,23 @@ export default function Tarifs() {
     }));
   }
 
-  function save() {
+  async function save() {
     localStorage.setItem("amaryllis_prices", JSON.stringify(prices));
     window.dispatchEvent(new Event("amaryllis_prices_updated"));
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
+    // Synchronisation SERVEUR → prix visibles par TOUS (autres appareils + visiteurs).
+    setPublished("pushing");
+    try {
+      const r = await fetch("/api/site-config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "base_prices", config: prices }),
+      });
+      const d = await r.json();
+      setPublished(d.ok ? "pub" : "err");
+    } catch { setPublished("err"); }
+    setTimeout(() => setPublished(null), 4000);
   }
 
   // helper: is a date within a season?
@@ -94,8 +128,11 @@ export default function Tarifs() {
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: "#e2e8f0" }}>Prix de base — site public</div>
           <div style={{ fontSize: 11, color: "#475569" }}>« À partir de X€ / nuit »</div>
-          <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
-            <button onClick={save} style={{ padding: "6px 14px", borderRadius: 7, border: "none", background: saved ? "#10b981" : "rgba(255,255,255,0.08)", color: saved ? "#fff" : "#94a3b8", fontWeight: 600, fontSize: 11, cursor: "pointer", transition: "background 0.25s" }}>{saved ? "✓ Sauvegardé" : "Sauvegarder"}</button>
+          <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+            {published === "pushing" && <span style={{ fontSize: 11, color: "#94a3b8" }}>⏳ Publication…</span>}
+            {published === "pub" && <span style={{ fontSize: 11, color: "#34d399" }}>🌐 Publié en ligne (visible partout)</span>}
+            {published === "err" && <span style={{ fontSize: 11, color: "#fca5a5" }}>⚠️ Sync serveur échouée — réessaie</span>}
+            <button onClick={save} disabled={published === "pushing"} style={{ padding: "6px 14px", borderRadius: 7, border: "none", background: saved ? "#10b981" : "#2563eb", color: "#fff", fontWeight: 600, fontSize: 11, cursor: published === "pushing" ? "default" : "pointer", opacity: published === "pushing" ? 0.6 : 1, transition: "background 0.25s" }}>{saved ? "✓ Enregistré & publié" : "💾 Enregistrer & publier"}</button>
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>

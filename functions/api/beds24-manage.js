@@ -2,6 +2,8 @@
 // Actions : find | confirm | cancel
 // Sécurisé : token Beds24 jamais exposé côté navigateur.
 
+import { rateLimit } from "./_ratelimit.js";
+
 const BEDS24_V2_BOOKINGS = "https://beds24.com/api/v2/bookings";
 const PROP_ID = "158192";
 
@@ -19,6 +21,12 @@ export async function onRequestOptions() {
 
 export async function onRequestPost(context) {
   const { request, env } = context;
+
+  // Rate-limit anti-abus (endpoint PUBLIC, tunnel de résa) — généreux, fail-open.
+  const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+  const rl = await rateLimit(env.revenue_manager, { key: `b24manage:${ip}`, limit: 30, windowSec: 60 });
+  if (!rl.ok) return json({ error: "Trop de tentatives, réessayez dans un instant." }, 429);
+
   const token = env.BEDS24_TOKEN;
   if (!token) return json({ error: "BEDS24_TOKEN manquant" }, 500);
 

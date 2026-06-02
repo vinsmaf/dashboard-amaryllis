@@ -1,17 +1,23 @@
 // Cloudflare Pages Function — GET /api/rm-dashboard
 // Main dashboard data for the Revenue Manager module
 
+import { verifyBearer } from "./_adminauth.js";
+
 const CORS = {
   "Content-Type": "application/json",
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "Content-Type,Authorization",
 };
 const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: CORS });
 
 export async function onRequest(context) {
   const { request, env } = context;
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
+
+  // sec : données RM sensibles (KPIs/prix) → admin uniquement.
+  const { ok: authOk } = await verifyBearer(request, env);
+  if (!authOk) return json({ error: "Non autorisé" }, 401);
 
   const db = env.revenue_manager;
   if (!db) return json({ error: "D1 binding 'revenue_manager' not found" }, 503);

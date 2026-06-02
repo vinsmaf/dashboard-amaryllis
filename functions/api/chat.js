@@ -1,6 +1,8 @@
 // functions/api/chat.js — Proxy Cloudflare → Groq API
 // Utilisé par le ChatWidget public (site) et l'assistant admin (dashboard)
 
+import { rateLimit } from "./_ratelimit.js";
+
 const SYSTEM_PROMPT = `Tu es l'assistant virtuel d'Amaryllis Locations, une collection de villas et appartements de prestige en Martinique et à Nogent-sur-Marne (Île-de-France).
 
 Ton rôle : aider les voyageurs à choisir le bon hébergement, répondre à leurs questions sur les disponibilités, les tarifs, les activités, et les guider vers une réservation directe sur villamaryllis.com.
@@ -194,6 +196,11 @@ export async function onRequestPost(context) {
     "Access-Control-Allow-Headers": "Content-Type",
     "Content-Type": "application/json",
   };
+
+  // Rate-limit anti-abus/coût (proxy LLM Groq, endpoint PUBLIC) — généreux, fail-open.
+  const ip = context.request.headers.get("CF-Connecting-IP") || "unknown";
+  const rl = await rateLimit(context.env.revenue_manager, { key: `chat:${ip}`, limit: 20, windowSec: 60 });
+  if (!rl.ok) return Response.json({ error: "Trop de messages, patientez un instant." }, { status: 429, headers: corsHeaders });
 
   try {
     const body = await context.request.json();

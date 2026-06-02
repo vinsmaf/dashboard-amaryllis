@@ -18,9 +18,11 @@ import { writeFileSync } from "node:fs";
 const BASE = "https://villamaryllis.com";
 const APPLY = process.argv.includes("--apply");
 
-// 1. Récupérer le backlog (endpoint public en lecture ? non — agents-actions GET nécessite rien de spécial)
-const res = await fetch(`${BASE}/api/agents-actions`);
-if (!res.ok) { console.error("Fetch agents-actions échoué:", res.status); process.exit(1); }
+// 1. Récupérer le backlog. agents-actions est désormais admin-only → passer le secret
+//    partagé via la variable d'env : POSTSTAY_SECRET=xxx node scripts/triage-backlog-once.mjs
+const SECRET = process.env.POSTSTAY_SECRET || "";
+const res = await fetch(`${BASE}/api/agents-actions${SECRET ? `?secret=${encodeURIComponent(SECRET)}` : ""}`);
+if (!res.ok) { console.error("Fetch agents-actions échoué:", res.status, "(POSTSTAY_SECRET défini ?)"); process.exit(1); }
 const data = await res.json();
 const all = data.actions || [];
 const backlog = all.filter(a => a.status === "backlog");

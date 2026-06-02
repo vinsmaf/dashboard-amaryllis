@@ -80,7 +80,31 @@
 - *Solution* : doc supprimé, recentrage sur la tâche.
 - *Garde-fou* : rester sur la tâche demandée ; proposer (pas exécuter) les chantiers adjacents.
 
-**EN COURS / NON RÉSOLU — Scrape avis Airbnb renvoie 502**
-- *Symptôme* : `POST /api/voyageur-feedback?action=ingest` → `502` Cloudflare brut en ~0.4s. `?action=stats` (GET) répond 200, `bien` invalide → 400. Donc le crash est sur le `fetch` Apify.
-- *Hypothèses à tester* : (a) `APIFY_TOKEN` invalide/expiré côté secrets prod ; (b) acteur `tri_angle~airbnb-reviews-scraper` exige un input différent / est payant et refuse ; (c) limite CPU/sous-requête de la Pages Function au démarrage du fetch.
-- *Piste* : tester le token Apify isolément (`curl "https://api.apify.com/v2/acts/tri_angle~airbnb-reviews-scraper/runs?token=$APIFY_TOKEN" -d '{...}'`) — mais le token n'est pas accessible en local (secret prod). À traiter avec Vincent.
+**ERR-009 — RÉSOLU : Scrape avis Airbnb « 502 » = input Apify invalide (pas un crash)**
+- *Symptôme* : `POST /api/voyageur-feedback?action=ingest` → page HTML `502` de Cloudflare en ~0.4s. GET stats/preflight = 200.
+- *Vraie cause (≠ hypothèses initiales)* : le token ET l'acteur étaient bons. La Function **ne plantait pas** (`exceptions:[]`, `logs:[]`, `cpuTime:30` au tail). Elle retournait notre **JSON 502** parce qu'Apify **refusait le run au démarrage** (HTTP 400 `invalid-input`). Cloudflare **remplace les réponses 5xx par sa page HTML**, ce qui masquait le `detail`.
+- *2 bugs d'input* : (1) on envoyait `listingUrls` au lieu du champ requis **`startUrls`** ; (2) `startUrls` attend le format Apify standard **array d'objets `{url}`**, pas des strings (`"Items in input.startUrls do not contain valid URLs"`).
+- *2 bugs de mapping de sortie (collect)* : (1) `bien_id` venait de `it.id` = ID de l'**avis** → toujours "inconnu" ; le bon champ est **`it.startUrl`** (`.../rooms/<listingId>`), à parser en regex. (2) `reviewer` est un **objet `{firstName,…}`**, pas une string → prénom = `"[object"`.
+- *Solutions* : input `{ startUrls:[{url}], maxReviewsPerListing, sortBy }` ; collect parse le listingId depuis `startUrl` + lit `reviewer.firstName`. Vérifié bout-en-bout sur geko (3 avis, prénoms OK, RGPD respecté).
+- *Garde-fous* :
+  - **E5** : les erreurs d'input/quota Apify renvoyées en **422** (et non 5xx) pour ne pas être masquées par la page HTML Cloudflare → le `detail` reste lisible côté client.
+  - **E6** : un mode **`?action=preflight`** (lecture seule, admin) lit le **vrai schéma d'input** de l'acteur Apify (token + actor + champs requis) sans dépenser de crédit — à utiliser avant tout debug d'ingest.
+  - Toujours inspecter la **forme réelle d'un item** du dataset avant de figer le mapping (les noms de champs des acteurs Apify ne sont pas devinables).
+- *Perf collect* : pour un dataset de ~114 avis, le stockage en **INSERT séquentiels** dépassait le temps de la Function → réécrit en **`db.batch()` par lots de 50** + fetch dataset restreint via `&fields=`. Désormais ~1 s. (Piège annexe : le pont CDP de Chrome timeoute à ~45 s ⇒ lire la réponse en `res.text()` avec un AbortController, ne pas conclure à un échec serveur — le `collect` réussissait alors que l'eval navigateur abandonnait.)
+- *Nogent retiré* de `AIRBNB_LISTINGS` (annonce Airbnb supprimée → c'était le « 1 failed » du run ; géré via Beds24/Booking). Iguana absent (bail long).
+- *Résultat* : 114 avis collectés (amaryllis 33 / schoelcher 30 / geko 24 / zandoli 16 / mabouya 11), notes moy. 4.5–4.94.
+
+**Affichage avis (feature, 2026-06-01)** — branché sur 3 surfaces :
+- Backend : colonne `hidden` (modération) + `?action=moderate` (PATCH admin) + `?action=public&bien=` (avis non masqués, sans auth, RGPD) ; `?action=stats` exclut les masqués.
+- Admin : onglet **⭐ Avis** (`src/tabs/AvisTab.jsx`) — synthèse/bien, liste filtrable, masquer/afficher.
+- Public : `PublicSite.jsx` PropertyDetail fetch `?action=public` → vraies cartes d'avis (repli sur `bien.avis` statiques si l'API échoue), dates FR, HTML strippé.
+- ⚠️ **PIÈGE COMPTEURS reviewCount = 5 sources à synchroniser** (aligné au réel le 2026-06-01) : `src/PublicSite.jsx` (BIENS), `src/Avis.jsx` (BIENS_AVIS), `functions/[slug].js` (BIENS — autorité SEO villas), `index.html` (@graph homepage), `scripts/prerender.mjs` (baseline + meta /avis). Valeurs réelles : amaryllis 4.94/33 · zandoli 4.5/16 · geko 4.83/24 · mabouya 4.55/11 · schoelcher 4.8/30 (iguana/nogent non scrapés = inchangés). **À rafraîchir dans ces 5 fichiers après chaque nouveau scrape** (ou rendre `functions/[slug].js` dynamique via D1 stats à terme).
+
+**Sécurisation endpoints (2026-06-01) — 11/11 fait, zéro casse**
+- Vague A (`verifyBearer`, 0 appelant ou admin via fetchJSON) : `rm-dashboard`, `rm-properties`, `ical-config`.
+- Vague B (PUBLICS → rate-limit seul, JAMAIS d'auth admin) : `beds24-create` 15/min, `beds24-manage` 30/min, `chat` 20/min (fail-open).
+- Vague C (`verifyBearer` admin **OU** `?secret=POSTSTAY_SECRET` pour crons/interne) : `rm-scrape`, `rm-overrides`, `agents-actions`, `agent-drafts`, `agents-run`.
+- **Pattern auth interne** : POSTSTAY_SECRET est déjà secret côté Pages ET côté Worker → réutilisé pour authentifier les appels server-to-server (Worker crons, agents-triggers, agent-drafts→rm-overrides) et le CLI (`POSTSTAY_SECRET=… node scripts/triage-backlog-once.mjs`).
+- **Front** : nouveau wrapper `adminFetch` dans `src/lib/apiFetch.js` (drop-in de fetch + Bearer) appliqué aux 6 tabs admin (RevenueManagerPro via `apiCall`, AgentsKanban, OrchestratorTab, ApprobationsTab, SEOAuditTab, CroissanceTab, EditorialCalendarTab). **PAS de patch `window.fetch` global** (garde-fou E5/E9 respecté).
+- ⚠️ **GARDE-FOU ORDRE DE DÉPLOIEMENT** : quand on sécurise un endpoint appelé par un cron Worker, **déployer le Worker D'ABORD** (`npm run deploy:worker`, qui envoie le secret) **PUIS** Pages (`npm run deploy:pages`, qui exige l'auth). L'inverse = fenêtre où les crons tombent en 401.
+- Vérifié : 401 anonyme + mauvais secret sur les 11 ; 200 avec token admin sur ical-config/rm-scrape/rm-overrides/agents-actions/agent-drafts ; flux public (chat/beds24) intact.

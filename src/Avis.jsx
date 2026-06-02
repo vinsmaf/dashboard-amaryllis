@@ -12,10 +12,10 @@ const BIENS_AVIS = [
     rating: "4,94",
     reviews: 33,
     photo: "/photos/amaryllis/01.webp",
-    amenities: ["Piscine à débordement", "Jacuzzi privé", "Vue océan"],
+    amenities: ["Piscine à débordement", "Terrasse 100 m²", "Vue océan"],
     avis: [
       { nom: "Sophie M.",       pays: "🇫🇷", note: 5, texte: "Vue extraordinaire, piscine à débordement parfaite et hôte très réactif. Un endroit hors du temps face aux Caraïbes. On reviendra sans hésiter !", date: "Avr. 2025" },
-      { nom: "James K.",        pays: "🇬🇧", note: 5, texte: "Stunning villa with incredible Caribbean views. The salt water infinity pool and private jacuzzi are exceptional. Best Airbnb we've ever stayed in — period.", date: "Mars 2025" },
+      { nom: "James K.",        pays: "🇬🇧", note: 5, texte: "Stunning villa with incredible Caribbean views. The salt water infinity pool is exceptional. Best Airbnb we've ever stayed in — period.", date: "Mars 2025" },
       { nom: "Marie-Claire D.", pays: "🇫🇷", note: 5, texte: "Séjour magique en famille. La terrasse de 100m² face à la mer est un rêve éveillé. Tout était impeccable, de l'accueil aux moindres détails de décoration.", date: "Fév. 2025" },
       { nom: "Céline & Marc",   pays: "🇫🇷", note: 5, texte: "Nous sommes restés 10 nuits et chaque matin au réveil, la vue sur la Caraïbe nous émerveillait. Le carbet, le barbecue, la piscine lagon… tout était parfait.", date: "Jan. 2025" },
       { nom: "Nina S.",         pays: "🇩🇪", note: 5, texte: "Absolut traumhaft! Die Villa übertrifft alle Erwartungen — Infinity-Pool, atemberaubender Meerblick, perfekte Ausstattung. Der Gastgeber war stets erreichbar.", date: "Déc. 2024" },
@@ -59,7 +59,7 @@ const BIENS_AVIS = [
     nom: "Géko",
     lieu: "Sainte-Luce, Martinique",
     rating: "4,83",
-    reviews: 23,
+    reviews: 24,
     photo: "/photos/geko/01.webp",
     amenities: ["Piscine privée", "Jardin tropical"],
     avis: [
@@ -268,6 +268,7 @@ export default function Avis() {
   });
   const [googleRevs, setGoogleRevs] = useState(STATIC_GOOGLE);         // Villa Amaryllis
   const [googleRevs2, setGoogleRevs2] = useState(STATIC_GOOGLE_RESIDENCE); // Résidence Amaryllis
+  const [voyageurByBien, setVoyageurByBien] = useState({});            // vrais avis Airbnb (D1) par bien
 
   useEffect(() => {
     fetch("/api/google-reviews?place=amaryllis")
@@ -278,6 +279,20 @@ export default function Avis() {
       .then(r => r.json())
       .then(d => { if (d.ok && d.reviews?.length) setGoogleRevs2(d.reviews.map(r => ({ ...r, source: "google" }))); })
       .catch(() => {});
+    // Vrais avis voyageurs Airbnb (D1, non masqués) pour chaque bien.
+    const stripHtml = (t) => String(t || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    const MOIS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+    const frDate = (iso) => { const m = /^(\d{4})-(\d{2})/.exec(iso || ""); return m ? `${MOIS[+m[2] - 1]} ${m[1]}` : (iso || ""); };
+    BIENS_AVIS.forEach(b => {
+      fetch(`/api/voyageur-feedback?action=public&bien=${encodeURIComponent(b.id)}&limit=12`)
+        .then(r => r.json())
+        .then(d => {
+          if (!d.ok || !d.reviews?.length) return;
+          const cards = d.reviews.map(rv => ({ nom: rv.prenom || "Voyageur", note: rv.rating, texte: stripHtml(rv.review_text), date: frDate(rv.review_date), source: "airbnb" }));
+          setVoyageurByBien(prev => ({ ...prev, [b.id]: cards }));
+        })
+        .catch(() => {});
+    });
   }, []);
 
   const totalAvis = BIENS_AVIS.reduce((s, b) => s + (b.reviews || b.avis.length), 0);
@@ -292,6 +307,13 @@ export default function Avis() {
   })();
 
   const biensFiltrés = filtre === "all" ? BIENS_AVIS : BIENS_AVIS.filter(b => b.id === filtre);
+
+  // Citation phare : un VRAI avis Amaryllis 5★ concis si chargé, sinon repli statique.
+  const featured = (() => {
+    const am = voyageurByBien["amaryllis"] || [];
+    const pick = am.find(r => r.note === 5 && r.texte && r.texte.length >= 90 && r.texte.length <= 210);
+    return pick ? { texte: pick.texte, nom: pick.nom, pays: "", bien: "Villa Amaryllis", date: pick.date } : FEATURED;
+  })();
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--c-ivory)", color: "var(--c-navy)" }}>
@@ -391,7 +413,7 @@ export default function Avis() {
               color: "var(--c-ivory)",
               margin: "0 0 28px",
             }}>
-              &ldquo;{FEATURED.texte}&rdquo;
+              &ldquo;{featured.texte}&rdquo;
             </p>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
               <div style={{
@@ -399,13 +421,13 @@ export default function Avis() {
                 background: "var(--c-coral)", color: "#fff",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 14,
-              }}>{FEATURED.nom[0]}</div>
+              }}>{featured.nom[0]}</div>
               <div style={{ textAlign: "left" }}>
                 <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 13, color: "var(--c-ivory)" }}>
-                  {FEATURED.pays} {FEATURED.nom}
+                  {featured.pays} {featured.nom}
                 </div>
                 <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11, color: "var(--c-coral)", letterSpacing: "0.06em" }}>
-                  {FEATURED.bien} · {FEATURED.date}
+                  {featured.bien} · {featured.date}
                 </div>
               </div>
             </div>
@@ -468,11 +490,7 @@ export default function Avis() {
                   {bien.lieu}
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <RatingBadge rating={bien.rating} count={
-                    bien.id === "amaryllis"          ? bien.avis.length + googleRevs.length
-                    : ["zandoli","iguana","geko","mabouya"].includes(bien.id) ? bien.avis.length + googleRevs2.length
-                    : bien.avis.length
-                  } />
+                  <RatingBadge rating={bien.rating} count={bien.reviews ?? bien.avis.length} />
                   {bien.amenities.map(a => (
                     <span key={a} style={{
                       fontFamily: "'Jost', sans-serif", fontSize: 10,
@@ -489,7 +507,10 @@ export default function Avis() {
 
             {/* Grille avis — Airbnb + Google (Amaryllis) */}
             {(() => {
-              const airbnbCards = bien.avis.map(r => ({ ...r, source: "airbnb" }));
+              // Vrais avis (D1) si chargés, sinon repli sur les avis statiques.
+              const airbnbCards = (voyageurByBien[bien.id]?.length
+                ? voyageurByBien[bien.id]
+                : bien.avis.map(r => ({ ...r, source: "airbnb" })));
               const RESIDENCE_IDS = ["zandoli", "iguana", "geko", "mabouya"];
               const gCards = bien.id === "amaryllis"             ? googleRevs
                            : RESIDENCE_IDS.includes(bien.id)    ? googleRevs2

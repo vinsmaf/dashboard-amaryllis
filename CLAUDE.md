@@ -152,6 +152,8 @@ All server-side logic lives in `functions/api/` (Cloudflare Pages Functions form
 | `/api/agents-triggers` | GET | `agents-triggers.js` | **Déclencheurs réactifs** : avis/note/résas → réveille le bon agent (état D1 `agent_triggers`). Cron conseillé. |
 | `/api/agents-deliver` | POST | `agents-deliver.js` | **Livrables prêts** : `meta-seo` (title/desc validés), `email-sequence`, `pricing-reco`. |
 | `/api/agents-stats` | GET | `agents-stats.js` | Observabilité (backlog, impacts, usage LLM 7j, qualité, plan modèles). |
+| `/api/client-errors` | POST/GET/PATCH | `client-errors.js` | Inbox bugs (table `client_errors`). POST **public** rate-limité (capteur JS `src/lib/bugCapture.js` + bouton `BugReporter.jsx`) ; GET/PATCH admin ou `?secret=`. PATCH `?id=` + `{tobacklog}` crée action `agent_actions`. Onglet 🐞 Bugs = `BugsTab.jsx`. |
+| `/api/bug-triage` | GET/POST | `bug-triage.js` | Agent triage hebdo : LLM classe gravité + ignore bruit → pousse au backlog + résumé. Cron Worker lundi `runBugTriage`. `?dry=1` simule. Revue visuelle proactive : `npm run visual-review` (`scripts/visual-review.mjs`, Playwright). |
 | `/api/agents-eval` | GET | `agents-eval.js` | LLM-juge note les sorties (table `llm_evals`). |
 | `/api/agents-verify` | GET | `agents-verify.js` | Vérif adversariale (challenger Mistral) pour agents à enjeu → annote `notes ⚠️ VÉRIF`. |
 

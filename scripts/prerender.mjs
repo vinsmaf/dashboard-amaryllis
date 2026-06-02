@@ -32,6 +32,7 @@ function buildVacationRentalLd({ id, nom, desc, prix, capacite, chambres, rating
         "@id": url,
         "name": nom,
         "url": url,
+        "identifier": id,
         "description": desc.slice(0, 300),
         "image": photos.slice(0, 8).map(p => ({
           "@type": "ImageObject",
@@ -57,6 +58,12 @@ function buildVacationRentalLd({ id, nom, desc, prix, capacite, chambres, rating
         } : {}),
         ...(chambres ? { "numberOfRooms": String(chambres) } : {}),
         ...(capacite ? { "occupancy": { "@type": "QuantitativeValue", "minValue": 1, "maxValue": capacite } } : {}),
+        "containsPlace": {
+          "@type": "Accommodation",
+          "additionalType": "EntirePlace",
+          ...(chambres ? { "numberOfBedrooms": chambres } : {}),
+          ...(capacite ? { "occupancy": { "@type": "QuantitativeValue", "maxValue": capacite } } : {}),
+        },
         ...(bookable && prix ? {
           "priceRange": `À partir de ${prix}€/nuit`,
           "offers": {
@@ -178,7 +185,7 @@ const ROUTES = [
     desc:  "Villa Amaryllis à Sainte-Luce : piscine à débordement, vue Caraïbes 180°, 3 chambres, 8 personnes. Dès 280€/nuit en direct, sans frais Airbnb.",
     image: `${BASE}/photos/amaryllis/01.webp`,
     lcpPreload: true,
-    jsonld: buildVacationRentalLd({ id: "amaryllis", nom: "Villa Amaryllis", desc: "Villa Amaryllis à Sainte-Luce, Martinique. Piscine à débordement eau salée 4×7 m, vue Caraïbes 180° depuis les hauteurs. 3 chambres, 8 personnes.", prix: 280, capacite: 8, chambres: 3, rating: 4.94, reviews: 89, coords: { lat: 14.4728, lng: -60.9204 }, photos: ["/photos/amaryllis/01.webp","/photos/amaryllis/02.webp","/photos/amaryllis/03.webp","/photos/amaryllis/04.webp","/photos/amaryllis/05.webp","/photos/amaryllis/06.webp","/photos/amaryllis/07.webp","/photos/amaryllis/08.webp"] }),
+    jsonld: buildVacationRentalLd({ id: "amaryllis", nom: "Villa Amaryllis", desc: "Villa Amaryllis à Sainte-Luce, Martinique. Piscine à débordement eau salée 4×7 m, vue Caraïbes 180° depuis les hauteurs. 3 chambres, 8 personnes.", prix: 280, capacite: 8, chambres: 3, rating: 4.94, reviews: 33, coords: { lat: 14.4728, lng: -60.9204 }, photos: ["/photos/amaryllis/01.webp","/photos/amaryllis/02.webp","/photos/amaryllis/03.webp","/photos/amaryllis/04.webp","/photos/amaryllis/05.webp","/photos/amaryllis/06.webp","/photos/amaryllis/07.webp","/photos/amaryllis/08.webp"] }),
     faqld: buildFAQLd(FAQS_PAR_BIEN.amaryllis),
   },
   {
@@ -186,7 +193,7 @@ const ROUTES = [
     title: "Zandoli Sainte-Luce — logement piscine cascade Martinique",
     desc:  "Zandoli à Sainte-Luce : piscine privative à cascade, mezzanine, jardin tropical. 5 personnes. Dès 220€/nuit en réservation directe.",
     image: `${BASE}/photos/zandoli/01.webp`,
-    jsonld: buildVacationRentalLd({ id: "zandoli", nom: "Zandoli", desc: "Zandoli à Sainte-Luce, Martinique. Piscine privative avec cascade, mezzanine, jardin tropical. 5 personnes.", prix: 220, capacite: 5, chambres: 2, rating: 4.5, reviews: 34, coords: { lat: 14.4730, lng: -60.9196 }, photos: ["/photos/zandoli/01.webp","/photos/zandoli/02.webp","/photos/zandoli/03.webp","/photos/zandoli/04.webp"] }),
+    jsonld: buildVacationRentalLd({ id: "zandoli", nom: "Zandoli", desc: "Zandoli à Sainte-Luce, Martinique. Piscine privative avec cascade, mezzanine, jardin tropical. 5 personnes.", prix: 220, capacite: 5, chambres: 2, rating: 4.5, reviews: 16, coords: { lat: 14.4730, lng: -60.9196 }, photos: ["/photos/zandoli/01.webp","/photos/zandoli/02.webp","/photos/zandoli/03.webp","/photos/zandoli/04.webp"] }),
     faqld: buildFAQLd(FAQS_PAR_BIEN.zandoli),
   },
   {
@@ -202,7 +209,7 @@ const ROUTES = [
     title: "Géko Sainte-Luce — cocon piscine cascade Martinique",
     desc:  "Cocon Géko à Sainte-Luce : piscine privative à cascade, jardin tropical, sur les hauteurs. 4 personnes. Dès 150€/nuit en réservation directe.",
     image: `${BASE}/photos/geko/01.webp`,
-    jsonld: buildVacationRentalLd({ id: "geko", nom: "Géko", desc: "Cocon Géko à Sainte-Luce, Martinique. Piscine privative avec cascade, jardin tropical, sur les hauteurs. 4 personnes.", prix: 150, capacite: 4, chambres: 1, rating: 4.83, reviews: 28, coords: { lat: 14.4732, lng: -60.9196 }, photos: ["/photos/geko/01.webp","/photos/geko/02.webp","/photos/geko/03.webp","/photos/geko/04.webp"] }),
+    jsonld: buildVacationRentalLd({ id: "geko", nom: "Géko", desc: "Cocon Géko à Sainte-Luce, Martinique. Piscine privative avec cascade, jardin tropical, sur les hauteurs. 4 personnes.", prix: 150, capacite: 4, chambres: 1, rating: 4.83, reviews: 24, coords: { lat: 14.4732, lng: -60.9196 }, photos: ["/photos/geko/01.webp","/photos/geko/02.webp","/photos/geko/03.webp","/photos/geko/04.webp"] }),
     faqld: buildFAQLd(FAQS_PAR_BIEN.geko),
   },
   {
@@ -210,7 +217,7 @@ const ROUTES = [
     title: "Studio Mabouya Martinique — jacuzzi privatif vue mer",
     desc:  "Studio Mabouya à Sainte-Luce : seul jacuzzi privatif vue mer de la résidence. Idéal couple, terrasse privée, plages à 5 min. Dès 110€/nuit.",
     image: `${BASE}/photos/mabouya/01.webp`,
-    jsonld: buildVacationRentalLd({ id: "mabouya", nom: "Studio Mabouya", desc: "Seul studio avec jacuzzi privatif vue mer de la résidence Amaryllis à Sainte-Luce, Martinique. Terrasse privée, jardin tropical fleuri. Idéal couple, escapade romantique.", prix: 110, capacite: 2, chambres: 1, rating: 4.55, reviews: 31, coords: { lat: 14.4732, lng: -60.9196 }, photos: ["/photos/mabouya/01.webp","/photos/mabouya/02.webp","/photos/mabouya/03.webp","/photos/mabouya/04.webp"] }),
+    jsonld: buildVacationRentalLd({ id: "mabouya", nom: "Studio Mabouya", desc: "Seul studio avec jacuzzi privatif vue mer de la résidence Amaryllis à Sainte-Luce, Martinique. Terrasse privée, jardin tropical fleuri. Idéal couple, escapade romantique.", prix: 110, capacite: 2, chambres: 1, rating: 4.55, reviews: 11, coords: { lat: 14.4732, lng: -60.9196 }, photos: ["/photos/mabouya/01.webp","/photos/mabouya/02.webp","/photos/mabouya/03.webp","/photos/mabouya/04.webp"] }),
     faqld: buildFAQLd(FAQS_PAR_BIEN.mabouya),
   },
   {
@@ -218,7 +225,7 @@ const ROUTES = [
     title: "Bellevue Schœlcher — appart vue baie Fort-de-France",
     desc:  "Appartement Bellevue à Schœlcher : vue sur la baie de Fort-de-France, 2 personnes, à 10 min du centre. Réservation directe dès 100€/nuit.",
     image: `${BASE}/photos/schoelcher/01.webp`,
-    jsonld: buildVacationRentalLd({ id: "schoelcher", nom: "Bellevue Schœlcher", desc: "Appartement Bellevue à Schœlcher, Martinique. Vue sur la baie de Fort-de-France et Trois-Îlets depuis les hauteurs. 2 personnes.", prix: 100, capacite: 2, chambres: 1, rating: 4.8, reviews: 18, coords: { lat: 14.6167, lng: -61.1333 }, photos: ["/photos/schoelcher/01.webp","/photos/schoelcher/02.webp","/photos/schoelcher/03.webp","/photos/schoelcher/04.webp"], isMartinique: true }),
+    jsonld: buildVacationRentalLd({ id: "schoelcher", nom: "Bellevue Schœlcher", desc: "Appartement Bellevue à Schœlcher, Martinique. Vue sur la baie de Fort-de-France et Trois-Îlets depuis les hauteurs. 2 personnes.", prix: 100, capacite: 2, chambres: 1, rating: 4.8, reviews: 30, coords: { lat: 14.6167, lng: -61.1333 }, photos: ["/photos/schoelcher/01.webp","/photos/schoelcher/02.webp","/photos/schoelcher/03.webp","/photos/schoelcher/04.webp"], isMartinique: true }),
     faqld: buildFAQLd(FAQS_PAR_BIEN.schoelcher),
   },
   {
@@ -233,8 +240,8 @@ const ROUTES = [
   /* ── Pages thématiques ── */
   {
     path: "/avis",
-    title: "Avis voyageurs — 4,79★ · 97 avis vérifiés | Amaryllis",
-    desc:  "97 avis authentiques sur nos 7 villas et appartements en Martinique et Île-de-France. Note moyenne 4,79/5. Réservation directe propriétaire.",
+    title: "Avis voyageurs — 4,79★ · 118 avis vérifiés | Amaryllis",
+    desc:  "118 avis authentiques sur nos villas et appartements en Martinique et Île-de-France. Note moyenne 4,79/5. Réservation directe propriétaire.",
     image: `${BASE}/photos/amaryllis/01.webp`,
   },
   {
@@ -297,8 +304,8 @@ const ROUTES = [
   /* ── Sainte-Luce + Réservation directe ── */
   {
     path: "/sainte-luce-martinique",
-    title: "Sainte-Luce Martinique — Villas & Activités | Amaryllis",
-    desc:  "Tout sur Sainte-Luce, Martinique : plages, restaurants, activités, transports. Louez une villa avec piscine vue mer à Sainte-Luce dès 120€/nuit.",
+    title: "Location villa Sainte-Luce Martinique — piscine & vue mer",
+    desc:  "Louez une villa à Sainte-Luce, Martinique : piscine privée, vue mer, dès 110€/nuit en direct sans frais. Plages, activités et conseils de vos hôtes.",
     image: `${BASE}/photos/iguana/01.webp`,
   },
   {
@@ -478,12 +485,25 @@ const NAV_BIENS = [
   ["/nogent", "Appartement Nogent"],
 ];
 
+// Landing commerciales — maillées dans le corps prérendu (dé-orpheline pour le crawl).
+const NAV_LANDINGS = [
+  ["/sainte-luce-martinique", "Location villa Sainte-Luce"],
+  ["/location-villa-martinique-piscine", "Villa avec piscine"],
+  ["/location-appartement-vue-mer-schoelcher", "Appartement vue mer Schœlcher"],
+  ["/location-groupe-sainte-luce", "Location pour groupe"],
+  ["/reservation-directe-martinique", "Réservation directe"],
+];
+
 // Bloc SEO fallback injecté dans #root : <h1> + intro + maillage interne.
 // React le REMPLACE au montage (donc invisible pour l'utilisateur), mais Googlebot
 // le lit au crawl initial → corps de page enfin non vide. Résout le frein SEO n°1.
 function buildSeoBody({ h1, title, desc, routePath, intro = null, sections = [] }) {
   const heading = h1 || title || "Amaryllis Locations";
   const links = NAV_BIENS
+    .filter(([p]) => p !== routePath)
+    .map(([p, n]) => `<a href="${p}">${esc(n)}</a>`)
+    .join(" · ");
+  const landingLinks = NAV_LANDINGS
     .filter(([p]) => p !== routePath)
     .map(([p, n]) => `<a href="${p}">${esc(n)}</a>`)
     .join(" · ");
@@ -498,6 +518,7 @@ function buildSeoBody({ h1, title, desc, routePath, intro = null, sections = [] 
     `<p>${esc(desc)}</p>` +
     sectionsHtml +
     `<nav aria-label="Nos locations"><a href="/">Accueil</a> · ${links} · <a href="/explorer">Guides Martinique</a></nav>` +
+    `<nav aria-label="Locations en Martinique">${landingLinks}</nav>` +
     `</div></div>`;
 }
 

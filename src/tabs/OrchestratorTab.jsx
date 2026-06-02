@@ -2,6 +2,7 @@
  * OrchestratorTab — extrait de src/App.jsx (refactor 2026, batch B/5).
  */
 import { useState, useEffect } from "react";
+import { adminFetch } from "../lib/apiFetch.js";
 import { useAppData } from "../AppDataContext.jsx";
 
 export default function OrchestratorTab() {
@@ -52,7 +53,7 @@ export default function OrchestratorTab() {
   // Initialise les tables D1 (si première utilisation)
   async function initTables() {
     try {
-      await fetch("/api/agents-actions?action=init", { method: "POST" });
+      await adminFetch("/api/agents-actions?action=init", { method: "POST" });
       setInitDone(true);
       await loadData();
     } catch {}

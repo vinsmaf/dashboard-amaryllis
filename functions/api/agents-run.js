@@ -16,11 +16,13 @@ import { ragBlock } from "./_rag.js"; // #2 RAG — grounding sur les vraies don
 const RAG_AGENTS = new Set(["community-manager", "seo-content-writer", "voyageur-research", "crm-manager", "commercial-publicite"]);
 import { factCheckCaption, loadLearnedLessons } from "./_factcheck.js";
 
+import { verifyBearer } from "./_adminauth.js";
+
 const CORS = {
   "Content-Type": "application/json",
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST,OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "Content-Type,Authorization",
 };
 const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: CORS });
 
@@ -1036,6 +1038,13 @@ export async function onRequest(context) {
   const { request, env } = context;
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   if (request.method !== "POST") return json({ error: "POST only" }, 405);
+
+  // sec : déclenche les agents (coût LLM, écritures D1) → admin (Bearer) OU secret
+  //       partagé (crons Worker x3 + déclencheur interne agents-triggers).
+  const _u = new URL(request.url);
+  const _secretOk = env.POSTSTAY_SECRET && _u.searchParams.get("secret") === env.POSTSTAY_SECRET;
+  const { ok: _adminOk } = await verifyBearer(request, env);
+  if (!_secretOk && !_adminOk) return json({ error: "Non autorisé" }, 401);
 
   // Vérifie qu'au moins un provider LLM est configuré
   if (!env.GROQ_API_KEY && !env.CF_AI_TOKEN && !env.MISTRAL_API_KEY && !env.CEREBRAS_API_KEY) {

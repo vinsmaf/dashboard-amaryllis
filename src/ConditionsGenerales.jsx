@@ -157,7 +157,7 @@ export default function ConditionsGenerales() {
               <Li>Le linge de maison (draps, serviettes) selon les propriétés</Li>
             </Ul>
             <P>Ne sont pas inclus : le ménage de fin de séjour (forfait indiqué à la réservation) et les consommations exceptionnelles.</P>
-            <P><strong>Taxe de séjour :</strong> La taxe de séjour applicable en Martinique est susceptible d'être facturée séparément conformément à la réglementation locale.</P>
+            <P><strong>Taxe de séjour :</strong> La taxe de séjour instituée par la commune du bien (Sainte-Luce, Schœlcher ou Nogent-sur-Marne) est due par le Voyageur conformément au Code général des collectivités territoriales. Pour les réservations via les plateformes (Airbnb, Booking.com), elle est collectée et reversée directement par celles-ci. Pour les <strong>réservations en direct</strong>, elle est facturée séparément, indiquée dans le récapitulatif de réservation, et reversée à la commune par le Propriétaire.</P>
             <P><strong>Moyen de paiement :</strong> Carte bancaire via Stripe (Visa, Mastercard, American Express). Les données de paiement sont traitées exclusivement par Stripe Inc. et ne sont pas stockées par Amaryllis Locations.</P>
           </Section>
 

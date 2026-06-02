@@ -118,19 +118,22 @@ Audit de cohérence du site et des fonctions serverless : **35 incohérences con
 > Le reste reporté car c'est un **vrai chantier front+serveur** (risque de casser l'admin / le checkout si bâclé).
 
 ### Endpoints sensibles encore SANS auth ni rate-limit
+> ✅ **Vague A sécurisée le 01/06 (zéro casse, 401 anonyme vérifié)** : `rm-dashboard`, `rm-properties`, `ical-config`.
+> Cartographie appelants : `beds24-create/manage` + `chat` = **PUBLICS** (jamais d'auth admin → rate-limit seul). `rm-overrides/rm-scrape/agents-actions` = admin via `fetch` nu (migrer front d'abord). `agent-drafts/agents-run` = admin + **crons Worker** (besoin `?secret=`).
+
 | Endpoint | Risque | Action |
 |---|---|---|
-| `rm-dashboard.js` | expose KPIs/prix RM | `verifyBearer` + valider `property_id` |
-| `rm-overrides.js` | écrit overrides prix D1 | `verifyBearer` |
-| `rm-properties.js` | écrit config biens D1 | `verifyBearer` |
-| `rm-scrape/[[path]].js` | déclenche scrape Apify (coût $) | `verifyBearer` + rate-limit |
-| `agent-drafts.js` | CRUD drafts + publish réseaux | `verifyBearer` (CORS `*` aussi) |
-| `agents-actions.js` | CRUD backlog agents | `verifyBearer` |
-| `agents-run.js` | déclenche les ~23 agents (coût LLM) | `verifyBearer` + rate-limit |
-| `beds24-create.js` | crée réservation Beds24 | `verifyBearer` + rate-limit |
-| `beds24-manage.js` | modifie/annule réservation | `verifyBearer` |
-| `ical-config.js` | expose URLs iCal Booking | `verifyBearer` |
-| `chat.js` | proxy Groq (coût/abus) | rate-limit |
+| ✅ `rm-dashboard.js` | expose KPIs/prix RM | **FAIT** — `verifyBearer` |
+| ✅ `rm-overrides.js` | écrit overrides prix D1 | **FAIT** — `verifyBearer` OU `?secret=` (appel interne agent-drafts) + front apiCall tokenisé |
+| ✅ `rm-properties.js` | écrit config biens D1 | **FAIT** — `verifyBearer` |
+| ✅ `rm-scrape/[[path]].js` | déclenche scrape Apify (coût $) | **FAIT** — `verifyBearer` + rate-limit 6/min + front tokenisé |
+| ✅ `agent-drafts.js` | CRUD drafts + publish réseaux | **FAIT** — `verifyBearer` OU `?secret=` (front adminFetch + cron Worker redéployé) |
+| ✅ `agents-actions.js` | CRUD backlog agents | **FAIT** — `verifyBearer` OU `?secret=` (front adminFetch + CLI via POSTSTAY_SECRET) |
+| ✅ `agents-run.js` | déclenche les ~23 agents (coût LLM) | **FAIT** — `verifyBearer` OU `?secret=` (4 tabs adminFetch + Worker x3 + agents-triggers, Worker redéployé) |
+| ✅ `beds24-create.js` | crée réservation Beds24 | **FAIT** — 🚫 PUBLIC → rate-limit 15/min |
+| ✅ `beds24-manage.js` | modifie/annule réservation | **FAIT** — 🚫 PUBLIC → rate-limit 30/min |
+| ✅ `ical-config.js` | expose URLs iCal Booking | **FAIT** — `verifyBearer` (appelant admin via fetchJSON) |
+| ✅ `chat.js` | proxy Groq (coût/abus) | **FAIT** — 🚫 PUBLIC → rate-limit 20/min |
 
 ### Méthode recommandée (à froid, session dédiée)
 1. **Front d'abord** : le helper `src/lib/apiFetch.js` injecte déjà le Bearer pour `fetchJSON`/`fetchWithTimeout`. MAIS la plupart des appels admin utilisent `fetch` NU (ApprobationsTab, AgentsKanban, RevenueManagerPro…). → soit migrer ces appels vers `fetchJSON`, soit patcher `window.fetch` **uniquement dans le bundle admin** (PAS global — risque checkout Stripe sur le site public).

@@ -1024,7 +1024,7 @@ Retourne UN draft type "social_post" avec caption = article complet markdown.`;
 
   try {
     console.log(`[seo-article] Démarrage génération article : ${sujet.kw}`);
-    const r = await fetch(`${siteUrl}/api/agents-run`, {
+    const r = await fetch(`${siteUrl}/api/agents-run?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ agent: "seo-content-writer", brief }),
@@ -1745,7 +1745,7 @@ async function runEditorialDraftGen(env) {
       // Brief enrichi → community-manager
       const brief = `BRIEF CALENDRIER ÉDITORIAL — date=${new Date(e.scheduled_at*1000).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})}, bien=${e.bien_id}, thème=${e.theme}, variante=${e.variante}, format=${e.format}, photo=${e.photo_url}, CTA="${e.cta}". Génère UN draft social_post selon ce brief précis.`;
       try {
-        const runRes = await fetch(`${siteUrl}/api/agents-run`, {
+        const runRes = await fetch(`${siteUrl}/api/agents-run?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ agents: ["community-manager"], brief, calendar_id: e.id }),
@@ -1794,7 +1794,7 @@ async function runEditorialAutoPublish(env) {
         continue;
       }
       try {
-        const pubRes = await fetch(`${siteUrl}/api/agent-drafts?id=${e.draft_id}&action=publish`, {
+        const pubRes = await fetch(`${siteUrl}/api/agent-drafts?id=${e.draft_id}&action=publish&secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
           method: "PATCH",
         });
         const pubData = await pubRes.json();
@@ -1867,6 +1867,117 @@ async function runAgentsExecuteAndDigest(env) {
   } catch (err) { console.error("[agents-digest] échec:", err.message); }
 }
 
+// Refresh mensuel des avis voyageurs Airbnb : déclenche le scrape Apify (tous les
+// biens actifs) puis stocke en D1. Idempotent (ON CONFLICT DO NOTHING côté endpoint).
+async function runReviewRefresh(env) {
+  const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+  const secret = env.POSTSTAY_SECRET || "";
+  if (!secret) { console.log("[reviews] POSTSTAY_SECRET absent — skip"); return; }
+  try {
+    const ingest = await fetch(`${siteUrl}/api/voyageur-feedback?action=ingest&secret=${encodeURIComponent(secret)}`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ maxReviews: 50 }),
+    });
+    const ij = await ingest.json().catch(() => ({}));
+    if (!ij.runId) { console.log("[reviews] ingest sans runId:", JSON.stringify(ij).slice(0, 200)); return; }
+    console.log("[reviews] run démarré:", ij.runId);
+    // Poll collect jusqu'à SUCCEEDED (~96s max ; le run prend ~1 min).
+    for (let i = 0; i < 8; i++) {
+      await new Promise(r => setTimeout(r, 12000));
+      const col = await fetch(`${siteUrl}/api/voyageur-feedback?action=collect&runId=${ij.runId}&secret=${encodeURIComponent(secret)}`);
+      const cj = await col.json().catch(() => ({}));
+      if (cj.ok && typeof cj.stored === "number") { console.log(`[reviews] ✓ ${cj.stored} avis stockés (fetched ${cj.fetched})`); return; }
+      if (cj.status === "FAILED") { console.log("[reviews] run FAILED"); return; }
+    }
+    console.log(`[reviews] run pas encore terminé — collect manuel possible (runId ${ij.runId})`);
+  } catch (e) { console.error("[reviews] erreur:", e.message); }
+}
+
+// Santé du token Meta (META_PAGE_TOKEN, expire ~60j). Alerte email si invalide ou
+// expiration < 7j — comble le trou entre les rappels trimestriels.
+async function runTokenHealthCheck(env) {
+  const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+  try {
+    const r = await fetch(`${siteUrl}/api/social?action=status`);
+    const j = await r.json().catch(() => ({}));
+    const valid = j?.token?.isValid;
+    const expiresIn = j?.token?.expiresIn;
+    const soon = typeof expiresIn === "number" && expiresIn > 0 && expiresIn < 7 * 86400;
+    if (valid === false || soon) {
+      await sendEmail(env, {
+        to: env.NOTIFICATION_EMAIL || "contact@villamaryllis.com",
+        subject: valid === false ? "🚨 Token Meta INVALIDE — publication réseaux cassée" : "⚠️ Token Meta expire sous 7 jours",
+        html: `<p>Le token Meta (<code>META_PAGE_TOKEN</code>) ${valid === false ? "est <b>invalide</b> — Facebook/Instagram ne publient plus." : `expire dans ~${Math.round((expiresIn || 0) / 86400)} jours.`}</p>
+        <p>Régénérer : Graph API Explorer → token Page longue durée → mettre à jour <code>META_PAGE_TOKEN</code> (Cloudflare Pages <i>et</i> Worker). Détails : <code>docs/runbook-rotation-tokens.md</code>.</p>`,
+      });
+      console.log(`[token-health] ALERTE envoyée (valid=${valid}, expiresIn=${expiresIn})`);
+    } else {
+      console.log(`[token-health] OK (valid=${valid})`);
+    }
+  } catch (e) { console.error("[token-health] erreur:", e.message); }
+}
+
+// Rapport SEO hebdomadaire (Search Console) → email. Suit les impressions
+// commerciales vs marque + pages actives, pour mesurer la montée en référencement.
+async function runSeoReport(env) {
+  const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+  const secret = env.POSTSTAY_SECRET || "";
+  if (!secret) return;
+  try {
+    const r = await fetch(`${siteUrl}/api/seo-report?secret=${encodeURIComponent(secret)}`);
+    const d = await r.json().catch(() => ({}));
+    if (!d.ok) { console.log("[seo-report] indisponible:", JSON.stringify(d).slice(0, 200)); return; }
+    const org = d.organique || {};
+    const delta = org.deltaPct;
+    const arrow = delta == null ? "" : delta > 0 ? `▲ +${delta}%` : delta < 0 ? `▼ ${delta}%` : "= 0%";
+    const rows = (d.topPagesOrganique || []).map(p =>
+      `<tr${p.commercial ? ' style="background:#eef7ee"' : ''}><td style="padding:3px 8px">${p.page}${p.commercial ? " 💰" : ""}</td><td style="padding:3px 8px;text-align:right">${p.sessions}</td></tr>`).join("");
+    await sendEmail(env, {
+      to: env.NOTIFICATION_EMAIL || "contact@villamaryllis.com",
+      subject: `📈 SEO hebdo — ${org.sessions || 0} sessions organiques ${arrow}`,
+      html: `<div style="font-family:system-ui,sans-serif;color:#2c2c2c">
+        <h2 style="color:#0e3b3a">Suivi SEO hebdomadaire (trafic organique Google)</h2>
+        <ul>
+          <li><b>Sessions organiques</b> (7 derniers jours) : ${org.sessions || 0} ${arrow} <span style="color:#888">(vs ${org.sessionsPrec || 0} la semaine d'avant)</span></li>
+          <li><b>Sessions organiques sur les landing commerciales</b> (28 j) : ${d.pagesCommercialesOrganique28j || 0} <span style="color:#888">— l'indicateur clé, doit décoller</span></li>
+        </ul>
+        <h3 style="color:#0e3b3a">Top pages d'atterrissage organiques (28 j)</h3>
+        <p style="color:#888;font-size:12px;margin:0 0 8px">💰 = landing commerciale (objectif : les voir monter)</p>
+        <table style="border-collapse:collapse;font-size:13px"><tr style="background:#f5efe0"><th style="padding:3px 8px;text-align:left">Page</th><th style="padding:3px 8px">Sessions</th></tr>${rows}</table>
+        <p style="color:#888;font-size:12px;margin-top:16px">Source : GA4 (trafic réel). Objectif : voir le trafic organique grimper, surtout sur les pages 💰.</p>
+      </div>`,
+    });
+    console.log(`[seo-report] ✓ envoyé (${org.sessions} sessions org, ${d.pagesCommercialesOrganique28j} commercial 28j)`);
+  } catch (e) { console.error("[seo-report] erreur:", e.message); }
+}
+
+// 🐞 Triage hebdo des bugs — classe les bugs captés en prod, pousse au backlog, digest.
+async function runBugTriage(env) {
+  const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+  const secret = env.POSTSTAY_SECRET || "";
+  if (!secret) { console.log("[bug-triage] POSTSTAY_SECRET absent — skip"); return; }
+  try {
+    const r = await fetch(`${siteUrl}/api/bug-triage?secret=${encodeURIComponent(secret)}`);
+    const d = await r.json().catch(() => ({}));
+    if (!d.ok) { console.log("[bug-triage] indisponible:", JSON.stringify(d).slice(0, 200)); return; }
+    console.log(`[bug-triage] ✓ ${d.analyzed || 0} analysés, ${d.created || 0} backlog, ${d.ignored || 0} ignorés`);
+    // Pas de bruit si rien de neuf
+    if (!d.analyzed) return;
+    const summaryHtml = (d.summary || "").replace(/\n/g, "<br>");
+    const crit = /CRITIQUE/.test(d.summary || "");
+    await sendEmail(env, {
+      to: env.NOTIFICATION_EMAIL || "contact@villamaryllis.com",
+      subject: `🐞 Bugs hebdo — ${d.created || 0} au backlog${crit ? " ⚠️ CRITIQUE" : ""}`,
+      html: `<div style="font-family:system-ui,sans-serif;color:#2c2c2c">
+        <h2 style="color:#0e3b3a">Triage automatique des bugs (semaine)</h2>
+        <p style="font-size:14px;white-space:pre-line">${summaryHtml}</p>
+        <p style="color:#888;font-size:12px;margin-top:16px">Détail + captures dans l'admin → onglet 🐞 Bugs. Les bugs ont été classés et poussés au backlog par l'agent QA.</p>
+      </div>`,
+    });
+    // Alerte poussée immédiate si un bug critique a été détecté
+    if (crit) await sendWhatsApp(env, `🐞⚠️ Bug CRITIQUE détecté en prod cette semaine.\n${(d.summary || "").slice(0, 300)}\n→ admin / onglet Bugs`);
+  } catch (e) { console.error("[bug-triage] erreur:", e.message); }
+}
+
 export default {
   async scheduled(event, env, ctx) {
     const cron = event.cron;
@@ -1879,6 +1990,9 @@ export default {
         runPrixRecap(env),
         runRagIngest(env), // #2 RAG — rafraîchit l'index vectoriel chaque lundi
         runAgentsExecuteAndDigest(env), // L4 — agents-execute (auto drafts) puis digest hebdo
+        runTokenHealthCheck(env), // alerte si META_PAGE_TOKEN invalide/expire <7j
+        runSeoReport(env), // 📈 rapport SEO hebdo (Search Console) par email
+        runBugTriage(env), // 🐞 triage hebdo des bugs captés en prod → backlog + digest
       ]));
 
     } else if (cron === "0 1 1 * *") {
@@ -1888,6 +2002,7 @@ export default {
         runMonthlyExport(env, allEvents),
         runMonthlySeoArticle(env),
         runTokenRotationReminder(env), // arch-018 — n'agit qu'en jan/avr/juil/oct
+        runReviewRefresh(env), // refresh mensuel des avis Airbnb (scrape + D1)
       ]));
 
     } else if (cron === "0 12 * * *") {
@@ -1913,7 +2028,7 @@ export default {
 
           try {
             console.log("[agents-run] Démarrage analyse autonome 17 agents...");
-            const agentsRes = await fetch(`${siteUrl}/api/agents-run`, {
+            const agentsRes = await fetch(`${siteUrl}/api/agents-run?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ agents: "all" }),

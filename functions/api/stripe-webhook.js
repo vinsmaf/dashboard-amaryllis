@@ -288,7 +288,15 @@ export async function onRequestPost(context) {
         });
       } catch (e) { console.error("[webhook] alerte hôte groupe:", e.message); }
       await sendConfirmationToGuest(env, { bienNom: logements, voyageur, email: guestEmail, checkin, checkout, amount, bookingId: pi.id });
-      await ga4Event(env, "booking_completed", { bien_id: "groupe", booking_id: pi.id, value: pi?.amount ? pi.amount / 100 : 0, currency: "EUR", channel: "direct-groupe", checkin });
+      {
+        const grpValue = pi?.amount ? pi.amount / 100 : 0;
+        await ga4Event(env, "purchase", {
+          transaction_id: pi.id, value: grpValue, currency: "EUR",
+          items: [{ item_id: "groupe", item_name: logements || "Réservation groupe", price: grpValue, quantity: 1 }],
+          channel: "direct-groupe",
+        }, `booking-${pi.id}`);
+        await ga4Event(env, "booking_completed", { bien_id: "groupe", booking_id: pi.id, value: grpValue, currency: "EUR", channel: "direct-groupe", checkin });
+      }
       await storeDirectBooking(env, { paymentIntentId: pi.id, email: guestEmail, voyageur, bienId: "groupe", bienNom: logements, checkin, checkout });
       return json({ received: true, group: true });
     }
@@ -312,16 +320,29 @@ export async function onRequestPost(context) {
     // 2b. Stocke la résa DIRECTE en D1 → permet les emails pré-arrivée (J-3) et post-séjour (J+1)
     await storeDirectBooking(env, { paymentIntentId: pi.id, email: guestEmail, voyageur, bienId, bienNom, checkin, checkout });
 
-    // 3. GA4 server-side — event "booking_completed" (la conversion macro la plus précieuse)
+    // 3. GA4 server-side — fiable (immunisé au Consent Mode, contrairement au gtag client).
+    const piValue = pi?.amount ? pi.amount / 100 : 0;
+    const piCur = pi?.currency?.toUpperCase() || "EUR";
+    const txId = bookingId || pi.id;
+    // 3a. "purchase" : événement e-commerce STANDARD GA4 → à marquer comme conversion clé.
+    //     GA4 dédoublonne par transaction_id, donc cohabite sans risque avec le purchase client.
+    await ga4Event(env, "purchase", {
+      transaction_id: txId,
+      value: piValue,
+      currency: piCur,
+      items: [{ item_id: bienId || "unknown", item_name: bienNom || bienId || "Réservation directe", price: piValue, quantity: 1 }],
+      channel: meta.channel || "direct",
+    }, `booking-${txId}`);
+    // 3b. "booking_completed" : conservé pour l'historique / rapports existants.
     await ga4Event(env, "booking_completed", {
       bien_id: bienId || "unknown",
       booking_id: bookingId || "unknown",
-      value: pi?.amount ? pi.amount / 100 : 0,
-      currency: pi?.currency?.toUpperCase() || "EUR",
+      value: piValue,
+      currency: piCur,
       channel: meta.channel || "direct",
       checkin,
       checkout,
-    }, `booking-${bookingId || pi.id}`);
+    }, `booking-${txId}`);
 
     return json({ ok: true, type: event.type });
   }

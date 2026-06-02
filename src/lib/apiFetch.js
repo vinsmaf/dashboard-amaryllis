@@ -41,6 +41,15 @@ function withAuth(url, opts) {
   }
 }
 
+/**
+ * adminFetch — drop-in de `fetch` pour les appels admin : injecte automatiquement
+ * le Bearer de session (ldb_tok) sur les `/api/*` et retourne la Response brute
+ * (comme fetch). Pour les call-sites admin qui font `await fetch(...).json()`.
+ */
+export function adminFetch(url, opts = {}) {
+  return fetch(url, withAuth(url, opts));
+}
+
 export async function fetchWithTimeout(url, { timeout = 12000, ...opts } = {}) {
   // Respecte un signal externe éventuel tout en ajoutant le timeout
   const ctrl = new AbortController();

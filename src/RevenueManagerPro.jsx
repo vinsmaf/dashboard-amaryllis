@@ -157,7 +157,15 @@ function RevenueManagerPro() {
 
   const apiCall = useCallback(async (url, options = {}) => {
     try {
-      const res = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...options });
+      const tok = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('ldb_tok') : null;
+      const res = await fetch(url, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(tok ? { Authorization: 'Bearer ' + tok } : {}),
+          ...(options.headers || {}),
+        },
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return await res.json();
     } catch (e) {
@@ -310,7 +318,8 @@ function RevenueManagerPro() {
     setScrapeLoading(true);
     addLog('Lancement du scraping Apify…');
     try {
-      const raw = await fetch('/api/rm-scrape', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ property_id: selProp }) });
+      const _tok = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('ldb_tok') : null;
+      const raw = await fetch('/api/rm-scrape', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(_tok ? { Authorization: 'Bearer ' + _tok } : {}) }, body: JSON.stringify({ property_id: selProp }) });
       const res = await raw.json().catch(() => ({}));
       if (raw.ok && res?.ok) {
         addLog(`✓ Scraping lancé (${res.configs_triggered || 0} concurrents)`, 'success');

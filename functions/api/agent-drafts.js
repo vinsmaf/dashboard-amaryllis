@@ -5,11 +5,13 @@
 // PATCH ?id=N&action=approve|reject|publish → modifier le statut + exécuter
 // D1 binding : revenue_manager
 
+import { verifyBearer } from "./_adminauth.js";
+
 const CORS = {
   "Content-Type": "application/json",
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET,POST,PATCH,DELETE,OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "Content-Type,Authorization",
 };
 const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: CORS });
 
@@ -70,7 +72,10 @@ async function executeDraft(env, draft) {
 
   if (draft.type === "price_change") {
     // payload: { property_id, date, price, reason }
-    const r = await fetch(`${new URL(env.PAGES_URL || "https://villamaryllis.com").origin}/api/rm-overrides`, {
+    // Appel interne → authentifié via secret partagé (rm-overrides est admin-only).
+    const ovrUrl = `${new URL(env.PAGES_URL || "https://villamaryllis.com").origin}/api/rm-overrides`
+      + (env.POSTSTAY_SECRET ? `?secret=${encodeURIComponent(env.POSTSTAY_SECRET)}` : "");
+    const r = await fetch(ovrUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -102,6 +107,12 @@ async function executeDraft(env, draft) {
 export async function onRequest(context) {
   const { request, env } = context;
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
+
+  // sec : drafts + publish réseaux → admin (Bearer) OU secret partagé (cron Worker).
+  const _u = new URL(request.url);
+  const _secretOk = env.POSTSTAY_SECRET && _u.searchParams.get("secret") === env.POSTSTAY_SECRET;
+  const { ok: _adminOk } = await verifyBearer(request, env);
+  if (!_secretOk && !_adminOk) return json({ error: "Non autorisé" }, 401);
 
   const db = env.revenue_manager;
   if (!db) return json({ error: "D1 binding 'revenue_manager' not found" }, 503);
