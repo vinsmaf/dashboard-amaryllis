@@ -1,8 +1,12 @@
 # Optimisation Google Business Profile — 2 fiches existantes (juin 2026)
 
 > Décision : on garde **Villa Amaryllis** + **Résidence Amaryllis** (pas de nouvelle fiche Bellevue/Nogent).
-> Objectif : SEO local + conversion. Contenu prêt à coller. ⚠️ Nomenclature : « villa » = Amaryllis uniquement ; la Résidence regroupe des **logements** (studio/appartements), jamais « villas ».
+> Objectif : SEO local + conversion. ⚠️ Nomenclature : « villa » = Amaryllis uniquement ; la Résidence regroupe des **logements** (studio/appartements), jamais « villas ».
 > Avis : 44/44 répondus (02/06) ✅.
+>
+> ⚠️⚠️ **CONSTAT 02/06 (vérifié dans l'éditeur GBP)** : pour la catégorie **« Maison de vacances » (hébergement)**, Google **n'expose PAS de champ « Description »** ni la plupart des attributs (l'onglet « Plus » ne propose que des horaires + « Clientèle »). → Les descriptions ci-dessous **ne sont donc PAS applicables sur GBP** (elles restent utiles : elles sont déjà sur le site). **Les seuls leviers GBP réels = Posts + Photos + lien Site + Catégories (déjà OK).** Catégorie principale « Maison de vacances » confirmée sur les 2 fiches.
+>
+> 🟢 **À faire (rapide, manuel — l'icône « post » résiste à l'automatisation)** : sur business.google.com → ligne de la fiche → 3ᵉ icône (actualité) → coller le **Post Google** ci-dessous → ajouter 1 photo → Publier. Idem photos via la 2ᵉ icône (caméra).
 
 ---
 
