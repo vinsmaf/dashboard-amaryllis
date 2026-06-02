@@ -1,0 +1,42 @@
+name: Revue visuelle hebdo
+
+# Lance la revue visuelle (Playwright) chaque lundi 5h UTC — juste avant l'agent
+# de triage des bugs du Worker (6h UTC) pour que les problèmes détectés soient
+# classés et poussés au backlog dans la foulée. Déclenchable aussi à la main.
+
+on:
+  schedule:
+    - cron: "0 5 * * 1"   # lundi 05:00 UTC (1h Martinique / 7h Paris)
+  workflow_dispatch:        # bouton "Run workflow" dans l'onglet Actions
+
+jobs:
+  visual-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run visual review (→ inbox bugs)
+        env:
+          BASE_URL: https://villamaryllis.com
+        run: node scripts/visual-review.mjs --report
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-review-screenshots
+          path: bug-reports/
+          retention-days: 14
+          if-no-files-found: ignore
