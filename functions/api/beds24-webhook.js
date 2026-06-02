@@ -73,6 +73,13 @@ export async function onRequestPost(context) {
     return json({ error: "Unauthorized" }, 401);
   }
 
+  // ⚡ Anti double-réservation : purge IMMÉDIATE du cache de disponibilité Nogent.
+  // get-availability met la dispo Nogent en cache (KV) ; sans purge, le site
+  // pourrait vendre en direct des dates fraîchement réservées sur Booking.com
+  // pendant la durée du cache. On purge dès qu'une notif Beds24 arrive
+  // (création / modif / annulation), avant même de synchroniser le Sheet.
+  try { if (env.AVAIL_CACHE) await env.AVAIL_CACHE.delete("avail_nogent"); } catch (e) { console.warn("[beds24-webhook] purge cache:", e.message); }
+
   // ── Parser le payload Beds24 ──
   let payload;
   try { payload = rawBody ? JSON.parse(rawBody) : {}; }

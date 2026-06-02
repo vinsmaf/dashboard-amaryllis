@@ -128,10 +128,11 @@ export async function onRequest(context) {
       sources: { beds24: { ok: blocked.size >= 0, count: blocked.size } },
     };
 
-    // Store in KV cache (TTL 6 h — économise les écritures KV ; quota gratuit partagé
-    // avec patrimoine-dashboard. Une dispo ne change pas en 10 min.)
+    // Cache KV — TTL 1 h pour Nogent (réservable en direct via Beds24 temps réel) :
+    // borne la fenêtre de double-réservation à 1 h max même si le webhook Beds24
+    // n'est pas (encore) configuré. Le webhook purge ce cache à chaque résa → ~temps réel.
     if (env.AVAIL_CACHE) {
-      await env.AVAIL_CACHE.put(cacheKey, JSON.stringify(result), { expirationTtl: 21600 });
+      await env.AVAIL_CACHE.put(cacheKey, JSON.stringify(result), { expirationTtl: 3600 });
     }
 
     return json(result);
