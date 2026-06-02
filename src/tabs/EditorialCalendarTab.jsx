@@ -15,6 +15,7 @@ export default function EditorialCalendarTab() {
   const [toast, setToast]         = useState(null);
   const [filterBien, setFilterBien] = useState("");
   const [view, setView]           = useState("grid"); // "list" | "grid"
+  const [monthOffset, setMonthOffset] = useState(0); // navigation mois (0 = mois courant)
 
   async function load() {
     setLoading(true);
@@ -193,9 +194,9 @@ export default function EditorialCalendarTab() {
       ) : view === "grid" ? (
         /* ── VUE GRILLE MOIS ── */
         (() => {
-          // Construire une grille basée sur le premier jour du mois affiché (le mois du 1er entry)
-          const first = filtered[0];
-          const refDate = new Date(first.scheduled_at * 1000);
+          // Mois affiché = mois courant + offset de navigation (flèches ← →)
+          const nowD = new Date();
+          const refDate = new Date(Date.UTC(nowD.getUTCFullYear(), nowD.getUTCMonth() + monthOffset, 1));
           const monthStart = new Date(Date.UTC(refDate.getUTCFullYear(), refDate.getUTCMonth(), 1));
           const monthEnd   = new Date(Date.UTC(refDate.getUTCFullYear(), refDate.getUTCMonth() + 1, 0));
           const offset     = (monthStart.getUTCDay() + 6) % 7; // lundi=0
@@ -217,12 +218,23 @@ export default function EditorialCalendarTab() {
             cells.push({ day: d, date: key, entry: entryByDate[key] });
           }
 
-          const monthLabel = refDate.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+          // timeZone UTC : refDate est construit en UTC (comme la grille) — sans ça,
+          // en Martinique (UTC-4) le 1er du mois UTC bascule au mois précédent en local.
+          const monthLabel = refDate.toLocaleDateString("fr-FR", { month: "long", year: "numeric", timeZone: "UTC" });
           const dows = ["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"];
 
           return (
             <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: "#e2e8f0", marginBottom: 10, textTransform: "capitalize" }}>{monthLabel}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                <button onClick={() => setMonthOffset(o => o - 1)} title="Mois précédent"
+                  style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#cbd5e1", borderRadius: 6, width: 28, height: 28, cursor: "pointer", fontSize: 14 }}>←</button>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#e2e8f0", textTransform: "capitalize", minWidth: 150, textAlign: "center" }}>{monthLabel}</div>
+                <button onClick={() => setMonthOffset(o => o + 1)} title="Mois suivant"
+                  style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#cbd5e1", borderRadius: 6, width: 28, height: 28, cursor: "pointer", fontSize: 14 }}>→</button>
+                {monthOffset !== 0 && (
+                  <button onClick={() => setMonthOffset(0)} style={{ background: "transparent", border: "none", color: "#818cf8", fontSize: 11, cursor: "pointer", textDecoration: "underline" }}>aujourd'hui</button>
+                )}
+              </div>
               {/* Header DOW */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 6 }}>
                 {dows.map(d => (

@@ -512,7 +512,11 @@ function buildSeoBody({ h1, title, desc, routePath, intro = null, sections = [] 
   const sectionsHtml = (sections || [])
     .map(s => `<section><h2>${esc(s.h2)}</h2><p>${esc(s.body)}</p></section>`)
     .join("");
-  return `<div id="root"><div data-prerender-seo>` +
+  // ⚠️ Bloc masqué VISUELLEMENT (sr-only) mais présent dans le HTML : Googlebot le
+  //    lit (corps non vide), l'utilisateur ne le voit PLUS clignoter avant que le
+  //    bundle JS ne monte React (qui remplace #root). Corrige le « flash » au refresh.
+  const SEO_HIDDEN = "position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0";
+  return `<div id="root"><div data-prerender-seo style="${SEO_HIDDEN}">` +
     `<h1>${esc(heading)}</h1>` +
     introHtml +
     `<p>${esc(desc)}</p>` +
