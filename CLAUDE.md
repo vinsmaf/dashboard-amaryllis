@@ -154,6 +154,7 @@ All server-side logic lives in `functions/api/` (Cloudflare Pages Functions form
 | `/api/agents-stats` | GET | `agents-stats.js` | Observabilité (backlog, impacts, usage LLM 7j, qualité, plan modèles). |
 | `/api/client-errors` | POST/GET/PATCH | `client-errors.js` | Inbox bugs (table `client_errors`). POST **public** rate-limité (capteur JS `src/lib/bugCapture.js` + bouton `BugReporter.jsx`) ; GET/PATCH admin ou `?secret=`. PATCH `?id=` + `{tobacklog}` crée action `agent_actions`. Onglet 🐞 Bugs = `BugsTab.jsx`. |
 | `/api/bug-triage` | GET/POST | `bug-triage.js` | Agent triage hebdo : LLM classe gravité + ignore bruit → pousse au backlog + résumé. Cron Worker lundi `runBugTriage`. `?dry=1` simule. Revue visuelle proactive : `npm run visual-review` (`scripts/visual-review.mjs`, Playwright). |
+| `/api/code-review` | POST | `code-review.js` | Revue LLM **du diff** (callLLM tier smart) → findings bugs JSON. `?post=1` pousse dans l'inbox (dédup). Lancé par `deploy-pages.sh` (`scripts/code-review-diff.mjs`) à chaque déploiement si `POSTSTAY_SECRET` exporté. **Vérifs au moment du changement** : `deploy-pages.sh` fait aussi un crawl visuel en arrière-plan (post-smoke-test). `SKIP_BUG_CHECKS=1` pour désactiver. |
 | `/api/agents-eval` | GET | `agents-eval.js` | LLM-juge note les sorties (table `llm_evals`). |
 | `/api/agents-verify` | GET | `agents-verify.js` | Vérif adversariale (challenger Mistral) pour agents à enjeu → annote `notes ⚠️ VÉRIF`. |
 

@@ -125,3 +125,20 @@ if [[ "$SMOKE_FAIL" == "1" ]]; then
   exit 1
 fi
 echo "✅ Smoke test OK — déploiement sain"
+
+# ── Vérifs anti-bugs post-déploiement (non bloquantes) ───────────────────────
+# Déclenchées au MOMENT du changement (= ce déploiement), pas en boucle.
+#   1. Revue de code LLM du diff → inbox bugs (nécessite POSTSTAY_SECRET en env).
+#   2. Crawl visuel de la prod fraîche, en arrière-plan → inbox bugs.
+# Désactivable : SKIP_BUG_CHECKS=1 npm run deploy:pages
+if [[ "${SKIP_BUG_CHECKS:-0}" != "1" ]]; then
+  echo ""
+  echo "🐞 Vérifs anti-bugs (au moment du changement)…"
+  # 1. Revue de code du diff (non bloquant — ne fait jamais échouer le déploiement)
+  node scripts/code-review-diff.mjs || echo "   ⚠️  revue de code ignorée (erreur non bloquante)"
+  # 2. Crawl visuel de la prod, en arrière-plan (ne ralentit pas le déploiement)
+  if command -v node >/dev/null 2>&1; then
+    nohup node scripts/visual-review.mjs --report >/tmp/visual-review-last.log 2>&1 &
+    echo "   🔍 Crawl visuel lancé en arrière-plan → /tmp/visual-review-last.log (résultats dans l'onglet 🐞 Bugs)"
+  fi
+fi

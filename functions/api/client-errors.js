@@ -32,6 +32,7 @@ const NOISE = [
 ];
 const SCREENSHOT_MAX = 180_000; // ~180 Ko base64 max (downscalé côté client)
 
+export async function ensureClientErrorsTable(db) { return ensureTable(db); }
 async function ensureTable(db) {
   await db.exec(
     "CREATE TABLE IF NOT EXISTS client_errors (" +
@@ -72,6 +73,7 @@ function normalize(msg) {
     .slice(0, 200);
 }
 
+export async function clientErrorFingerprint(kind, msg, path) { return fingerprint(kind, msg, path); }
 async function fingerprint(kind, msg, path) {
   const data = `${kind}|${normalize(msg)}|${path || ""}`;
   const buf = await crypto.subtle.digest("SHA-1", new TextEncoder().encode(data));
