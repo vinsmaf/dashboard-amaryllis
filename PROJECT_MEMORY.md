@@ -127,7 +127,7 @@ Autres crons via le **Worker** (`workers/ical-sync`) : sync iCal horaire, drafts
 - Importer la conversion **`purchase`** (pas booking_completed) dans Google Ads + corriger funnel aveugle (GA4 conversions=0).
 - Vérifier crédit 400 € Google Ads → lancer campagne Brand/Search.
 - Réveiller le **SEO organique** (~5 sessions/mois pour 30+ guides = gisement gratuit).
-- Créer fiches GBP **Bellevue (Schœlcher) + Nogent** (kit prêt) → puis fournir leurs Place ID pour personnaliser les liens d'avis emails.
+- ⚠️ **Décision Vincent (02/06)** : NE PAS créer de fiches GBP Bellevue/Schœlcher ni Nogent pour l'instant. On garde les **2 fiches existantes** (Villa Amaryllis + Résidence Amaryllis), à optimiser si nécessaire. (Avis : 44/44 répondus le 02/06.)
 - Répondre à tous les avis Villa Amaryllis (1/20).
 - Valider docs compliance avec un avocat.
 - Plus tard : Meta Ads (option A), fiches Google Business Profile cluster.
