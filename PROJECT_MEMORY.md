@@ -123,7 +123,7 @@ Autres crons via le **Worker** (`workers/ical-sync`) : sync iCal horaire, drafts
 ## 9. À faire (côté Vincent / prochaines sessions)
 - **🔒 SÉCU (session dédiée)** : ajouter auth/rate-limit aux ~11 endpoints sensibles encore ouverts (liste + méthode dans `docs/audit-coherence-2026-06-01.md` §RESTANTS). Le helper `apiFetch` est prêt côté front. Faire endpoint par endpoint, tester l'admin + le checkout après chaque. NE PAS patcher `window.fetch` global.
 - **PRIORITÉ reprise 31/05** : finir le scrape avis Airbnb (run Apify `WMQVMTBpHdU9hyx6N` jamais terminé → relancer `/api/voyageur-feedback?action=ingest` puis `?action=collect`). Infra prête.
-- **Valider les recos pricing basse saison** dans l'admin (doc `docs/pricing-basse-saison-reco.md`) — rien n'a été appliqué.
+- ✅ **Prix basse saison VALIDÉS (02/06)** : Vincent a appliqué une grille juin sur les 3 sous-occupés — Zandoli 110/130€, Géko 110/130€, Mabouya 70/80€ (30/30 j chacun) ; Amaryllis (280-292€) et Schœlcher (90-93€) laissés au SEED. Conforme à la reco (sauf Zandoli volontairement plus bas que la reco 176€ — choix assumé de Vincent). **Point clos.**
 - Importer la conversion **`purchase`** (pas booking_completed) dans Google Ads + corriger funnel aveugle (GA4 conversions=0).
 - Vérifier crédit 400 € Google Ads → lancer campagne Brand/Search.
 - Réveiller le **SEO organique** (~5 sessions/mois pour 30+ guides = gisement gratuit).
