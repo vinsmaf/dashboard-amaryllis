@@ -35,6 +35,9 @@ import ApprobationsTab from "./tabs/ApprobationsTab.jsx";
 import EditorialCalendarTab from "./tabs/EditorialCalendarTab.jsx";
 import CroissanceTab from "./tabs/CroissanceTab.jsx";
 import SEOAuditTab from "./tabs/SEOAuditTab.jsx";
+import AvisTab from "./tabs/AvisTab.jsx";
+import BugReporter from "./components/BugReporter.jsx";
+import BugsTab from "./tabs/BugsTab.jsx";
 import { AppDataProvider } from "./AppDataContext.jsx";
 import { SEED_DAILY_PRICES, loadDailyPrices, saveDailyPrices, loadPriceOverrides, applyServerPriceOverrides } from "./seedPrices.js";
 import {
@@ -909,6 +912,16 @@ export default function App() {
   const [tab, setTabRaw] = useState(() => { try { return localStorage.getItem("admin_tab") || "planning"; } catch { return "planning"; } });
   const setTab = useCallback((t) => { setTabRaw(t); try { localStorage.setItem("admin_tab", t); } catch {} }, []);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [bugsBadge, setBugsBadge] = useState(0);
+  useEffect(() => {
+    if (!authed || role === "menage") return;
+    fetchJSON("/api/client-errors?stats=1", { timeout: 8000 })
+      .then(d => {
+        const n = (d?.groups || []).filter(g => g.status === "new").reduce((s, g) => s + (g.n || 0), 0);
+        setBugsBadge(n);
+      })
+      .catch(() => {});
+  }, [authed, role, tab]);
   const [biens, setBiens] = useState([...SEED_BIENS]);
   const [n, setN] = useState(N);
   const [sync, setSync] = useState({ status: "idle", msg: "Données locales" });
@@ -1226,6 +1239,7 @@ export default function App() {
         { id: "historique",  icon: "📈", label: "Historique" },
         { id: "analytics",   icon: "📊", label: "Analytics" },
         { id: "conversion",  icon: "💳", label: "Conversion" },
+        { id: "avis",        icon: "⭐", label: "Avis" },
       ],
     },
     {
@@ -1267,6 +1281,7 @@ export default function App() {
       id: "equipe", label: "Équipe",
       items: [
         { id: "agents", icon: "🤖", label: "Agents", badge: null },
+        { id: "bugs", icon: "🐞", label: "Bugs", badge: bugsBadge > 0 ? bugsBadge : null, badgeColor: "#ef4444" },
       ],
     },
   ];
@@ -1337,6 +1352,7 @@ export default function App() {
     <div style={{ minHeight: "100vh", background: "#0a0f1e", fontFamily: "system-ui,sans-serif", color: "#e2e8f0", display: "flex", flexDirection: "column" }}>
 
       <TodayBanner biens={biens} n={n} reservations={reservations} onTab={setTab} mob={mob} />
+      <BugReporter />
 
       <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
 
@@ -1473,6 +1489,7 @@ export default function App() {
             {tab === "devis"    && <DevisEditor />}
             {tab === "guides" && <GuideEditor mob={mob} />}
             {tab === "agents" && <AgentsKanban mob={mob} />}
+            {tab === "bugs" && <BugsTab />}
             {tab === "social"        && <SocialTab />}
             {tab === "approbations"  && <ApprobationsTab />}
             {tab === "editorial"     && <EditorialCalendarTab />}
@@ -1485,6 +1502,7 @@ export default function App() {
             {tab === "stocks"        && <StockTrackerTab />}
             {tab === "linge"         && <LingeTab />}
             {tab === "conversion"    && <ConversionTab />}
+            {tab === "avis"          && <AvisTab />}
             </LocalErrorBoundary>
           </div>
           </AppDataProvider>

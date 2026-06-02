@@ -34,3 +34,6 @@ dist-ssr
 
 # Variantes images responsive générées au build (web-010)
 public/photos/**/*-[0-9]*w.webp
+
+# Revue visuelle — screenshots locaux
+bug-reports/

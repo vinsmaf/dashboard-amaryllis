@@ -5,6 +5,11 @@ import './index.css'
 import './tokens.css'
 import { LangProvider } from './i18n.jsx'
 import { GUIDES_POI_SLUGS } from './data/guidesPoiSlugs.js'
+import { installBugCapture } from './lib/bugCapture.js'
+
+// Capteur de bugs auto-hébergé (→ /api/client-errors → onglet 🐞 Bugs).
+// Installé tôt pour attraper aussi les erreurs de boot. Indépendant de Sentry.
+installBugCapture()
 
 Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN || "",
