@@ -37,3 +37,6 @@ public/photos/**/*-[0-9]*w.webp
 
 # Revue visuelle — screenshots locaux
 bug-reports/
+
+# Secret local pour la revue de code au déploiement (NE PAS committer)
+.deploy.env

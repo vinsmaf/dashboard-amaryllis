@@ -134,6 +134,9 @@ echo "✅ Smoke test OK — déploiement sain"
 if [[ "${SKIP_BUG_CHECKS:-0}" != "1" ]]; then
   echo ""
   echo "🐞 Vérifs anti-bugs (au moment du changement)…"
+  # Charge le secret local (gitignoré) s'il existe → active la revue de code sans
+  # toucher à ~/.zshrc. Coller la valeur dans .deploy.env (cf. .deploy.env.example).
+  if [[ -f .deploy.env ]]; then set -a; source .deploy.env; set +a; fi
   # 1. Revue de code du diff (non bloquant — ne fait jamais échouer le déploiement)
   node scripts/code-review-diff.mjs || echo "   ⚠️  revue de code ignorée (erreur non bloquante)"
   # 2. Crawl visuel de la prod, en arrière-plan (ne ralentit pas le déploiement)
