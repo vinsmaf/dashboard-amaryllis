@@ -78,10 +78,12 @@ export function calcDateReco({
   signalMap,
   today,
   ownOccupancy = null,
+  bookedDates = null,
 }) {
   const dateObj = new Date(dateStr + "T00:00:00Z");
   const dow = dateObj.getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
   const leadTimeDays = Math.round((dateObj.getTime() - new Date(today + "T00:00:00Z").getTime()) / 86400000);
+  const isBooked = bookedDates && typeof bookedDates.has === "function" ? bookedDates.has(dateStr) : false;
   const isWeekend = dow === 5 || dow === 6 ? 1 : 0;
 
   // 1. Seasonal profile
@@ -244,7 +246,7 @@ export function calcDateReco({
   // 7b. Ajustement selon NOTRE occupation réelle (advisory — phase 2)
   let adjOccupancy = 0;
   let occInfo = null;
-  if (ownOccupancy) {
+  if (ownOccupancy && !isBooked) {
     occInfo = occupancyAdjustment({ rate30: ownOccupancy.rate30 ?? null, rate90: ownOccupancy.rate90 ?? null, leadTimeDays, basePriceCents: basePrice });
     if (occInfo.adjCents) {
       adjOccupancy += occInfo.adjCents;
@@ -296,11 +298,15 @@ export function calcDateReco({
   }
   premiumOpportunity = Math.max(0, Math.min(100, premiumOpportunity + (occInfo ? occInfo.premiumDelta : 0)));
 
+  // Date déjà vendue : pas de risque vacance ni d'opportunité (la reco devient indicative).
+  if (isBooked) { vacancyRisk = 0; premiumOpportunity = 0; }
+
   // 13. Alert flags
   const alertFlags = [];
   if (vacancyRisk > 70) alertFlags.push("vacancy_risk_high");
   if (premiumOpportunity > 70) alertFlags.push("premium_opportunity");
   if (leadTimeDays < 7 && vacancyRisk > 60) alertFlags.push("last_minute_unbooked");
+  if (isBooked) alertFlags.push("already_booked");
   if (occInfo && occInfo.label) alertFlags.push("own_" + occInfo.label);
   if (isHoliday) alertFlags.push(`holiday:${holidayName}`);
   if (isEvent) alertFlags.push(`event:${eventName}`);
@@ -313,6 +319,7 @@ export function calcDateReco({
   if (isHoliday) summary += `, ${holidayName}`;
   if (isEvent) summary += `, ${eventName}`;
   summary += `)`;
+  if (isBooked) summary += " 🔒 déjà réservé";
   if (vacancyRisk > 70) summary += " ⚠️ risque vacance";
   if (premiumOpportunity > 70) summary += " ✨ opportunité premium";
   if (occInfo && occInfo.label) summary += ` · occupation ${Math.round((occInfo.rate || 0) * 100)}% → ${occInfo.pct > 0 ? "+" : ""}${Math.round(occInfo.pct * 100)}%${occInfo.suggestMinStay ? " (min-stay réduit conseillé)" : ""}`;
@@ -435,6 +442,14 @@ async function handleCalculate(db, body) {
     ownOccupancy = { rate30: seenOcc["30d"] ?? null, rate90: seenOcc["90d"] ?? null };
   } catch {}
 
+  // Dates déjà réservées du bien (neutralise les recos sur ces dates) — fail-soft
+  let bookedDates = null;
+  try {
+    const av = await fetch(`https://villamaryllis.com/api/get-availability?bienId=${encodeURIComponent(property_id)}`);
+    const j = await av.json();
+    if (Array.isArray(j.blockedDates)) bookedDates = new Set(j.blockedDates);
+  } catch {}
+
   // Generate all dates from today to today+365
   const dates = [];
   const cur = new Date(today + "T00:00:00Z");
@@ -463,6 +478,7 @@ async function handleCalculate(db, body) {
       signalMap,
       today,
       ownOccupancy,
+      bookedDates,
     })
   );
 
