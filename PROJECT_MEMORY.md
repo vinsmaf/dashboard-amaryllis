@@ -30,7 +30,8 @@ Conciergerie + site de réservation directe pour **7 logements** (Martinique + N
 ## 2. URLs, comptes, déploiement
 - **Prod** : https://villamaryllis.com (Cloudflare Pages, projet **`dashboard-amaryllis`**, account `3c031c79a864a3e1f0d8c17c433b2247`). Alias : dashboard-amaryllis.pages.dev.
 - **Repo** : github.com/vinsmaf/dashboard-amaryllis · local `/Users/vincentsalomon/locatif-dashboard`.
-- **Déploiement** : `npm run deploy:pages` (build + déploie + **smoke test**). ⚠️ **JAMAIS** déployer sur `patrimoine-dashboard` (autre projet Claude, garde-fou dans `scripts/deploy-pages.sh`).
+- **Déploiement** : `npm run deploy:pages` = **gate tests vitest** (bloque si rouge, `SKIP_TESTS=1` pour bypass) → `wrangler pages deploy dist` → **smoke test** + revue code + crawl. ⚠️ **Ne build PAS** : il déploie `dist/` tel quel → **faire `npm run build` AVANT** (sinon dist périmé déployé). ⚠️ **JAMAIS** déployer sur `patrimoine-dashboard` (autre projet Claude, garde-fou dans `scripts/deploy-pages.sh`).
+- **Filet de tests (03/06, chantier 2 Robustesse)** : suite vitase **108 tests** ; gate au déploiement. Calculs argent voyageur extraits+testés : `src/utils/pricing.js` (getDiscount/discountLabel/computeStayTotal ← ex-PublicSite) + `pricing.test.js` ; `canauxCommissions.test.js` (taux canal/bien + net). Spec/plan : `docs/superpowers/{specs,plans}/2026-06-03-filet-tests-gate*`.
 - **Worker iCal** séparé : `npx wrangler deploy` (`amaryllis-ical-sync`).
 - **Mot de passe admin** : stocké côté user (localStorage `ldb_auth_v1`), non versionné. Auth serveur via `/api/admin-auth` (rate-limited, token signé).
 
