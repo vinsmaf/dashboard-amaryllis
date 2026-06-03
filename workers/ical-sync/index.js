@@ -2036,6 +2036,16 @@ export default {
         await runCautionAutoRelease(env);
         await runInventoryAlerts(env);
         await runDevisSoldeCron(env); // C2 — solde devis 2 fois : lien J-30 + relances J-25/J-20 + annulation J-15
+        // ── Contrôle de cohérence des réservations (chantier 2 Robustesse) ──
+        //    Détecte double-bookings / totaux aberrants / bien inconnu → inbox 🐞 Bugs + ntfy si critique.
+        try {
+          const siteCoh = env.SITE_URL || "https://villamaryllis.com";
+          const cohRes = await fetch(`${siteCoh}/api/coherence-check?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`);
+          const cohData = await cohRes.json().catch(() => ({}));
+          console.log(`[coherence] ✓ ${cohData.checked ?? "?"} résas · ${cohData.findings ?? 0} anomalies (${cohData.critical ?? 0} critiques)`);
+        } catch (e) {
+          console.error("[coherence] Cron error:", e.message);
+        }
         // ── Analyse autonome des 17 agents (GROQ_API_KEY requis dans les secrets CF Pages) ──
         if (env.GROQ_API_KEY) {
           const siteUrl = env.SITE_URL || "https://villamaryllis.com";
