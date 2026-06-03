@@ -2,39 +2,33 @@ import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import { BIENS as CANON } from "../data/biens.js";
 
-// Garde-fou anti-drift (chantier source unique — phase 1).
-// PublicSite.BIENS et les seeds de App.jsx ne sont PAS encore migrés vers le
-// canonique (src/data/biens.js). Ce test échoue si leurs FAITS NUMÉRIQUES
-// (prix, capacite) divergent du canonique.
+// Garde-fou source unique des biens (chantier source unique — phase 2).
 //
-// ⚠️ On ne compare QUE prix + capacite (faits stables qui causent de vrais bugs).
-// On NE compare PAS le `nom` : les noms d'affichage diffèrent légitimement
-// (« Studio Mabouya » canon vs « Mabouya » PublicSite, etc.).
+// Depuis la phase 2, PublicSite.BIENS ne stocke PLUS les FAITS en littéral :
+// prix/capacite/chambres/coords/rating/reviews/bookable viennent du canonique
+// (src/data/biens.js) via `...canonFacts(id)`. Ce test ne compare donc plus des
+// valeurs littérales (devenues absentes) mais garantit :
+//   (a) l'INTÉGRITÉ du canonique (types/bornes des faits cœur) ;
+//   (b) l'ANTI-RÉGRESSION : empêcher quelqu'un de re-coder un fait en dur dans
+//       le tableau `const BIENS = [...]` de PublicSite (la fusion doit rester
+//       la seule source des faits).
 //
-// Stratégie robuste : PublicSite.jsx / App.jsx importent du JSX/DOM et ne
-// s'importent pas proprement sous vitest node → on lit le SOURCE via
-// fs.readFileSync + extraction par regex, puis on compare au canonique.
+// Stratégie robuste : PublicSite.jsx importe du JSX/DOM et ne s'importe pas
+// proprement sous vitest node → on lit le SOURCE via fs.readFileSync + on borne
+// précisément le tableau BIENS, puis on inspecte par regex.
 
 function readSource(relPath) {
   return fs.readFileSync(new URL(relPath, import.meta.url), "utf8");
 }
 
-// Extrait le bloc texte de l'objet bien commençant à `id: "<id>"` dans le
-// tableau `const BIENS = [...]`. Le bloc va de la déclaration de l'id jusqu'à
-// l'id suivant (ou la fin du fichier), ce qui garantit qu'on ne lit pas le
-// prix/capacite d'un voisin.
-function blockForId(src, id) {
-  const start = src.indexOf(`id: "${id}"`);
+// Isole le bloc texte du tableau `const BIENS = [ ... ];` de PublicSite.
+// De l'index de `const BIENS = [` jusqu'à la première fermeture `\n];` qui suit.
+function biensArrayBlock(src) {
+  const start = src.indexOf("const BIENS = [");
   if (start === -1) return null;
-  // borne de fin = prochain `id: "..."` après start
-  const next = src.slice(start + 1).search(/id:\s*"[a-z]+"/);
-  const end = next === -1 ? src.length : start + 1 + next;
-  return src.slice(start, end);
-}
-
-function extractInt(block, key) {
-  const m = block.match(new RegExp(`${key}:\\s*(\\d+)`));
-  return m ? Number(m[1]) : null;
+  const end = src.indexOf("\n];", start);
+  if (end === -1) return null;
+  return src.slice(start, end + 3);
 }
 
 describe("biens — cohérence avec la source canonique", () => {
@@ -47,29 +41,55 @@ describe("biens — cohérence avec la source canonique", () => {
     ).toEqual(["amaryllis", "iguana"]);
   });
 
-  it("PublicSite.BIENS — prix & capacite collent au canonique", () => {
-    const src = readSource("../PublicSite.jsx");
-    const skipped = [];
+  it("intégrité du canonique — faits cœur valides pour les 7 biens", () => {
     for (const id of Object.keys(CANON)) {
-      const block = blockForId(src, id);
-      if (!block) {
-        skipped.push(id);
-        continue;
-      }
-      const prix = extractInt(block, "prix");
-      const capacite = extractInt(block, "capacite");
-      if (prix !== null) {
-        expect(prix, `prix PublicSite "${id}"`).toBe(CANON[id].prix);
-      }
-      if (capacite !== null) {
-        expect(capacite, `capacite PublicSite "${id}"`).toBe(CANON[id].capacite);
-      }
+      const b = CANON[id];
+
+      expect(typeof b.prix, `prix "${id}"`).toBe("number");
+      expect(b.prix, `prix "${id}"`).toBeGreaterThan(0);
+
+      expect(typeof b.capacite, `capacite "${id}"`).toBe("number");
+      expect(b.capacite, `capacite "${id}"`).toBeGreaterThanOrEqual(1);
+
+      expect(typeof b.chambres, `chambres "${id}"`).toBe("number");
+      expect(b.chambres, `chambres "${id}"`).toBeGreaterThanOrEqual(1);
+
+      expect(typeof b.coords.lat, `coords.lat "${id}"`).toBe("number");
+      expect(Number.isFinite(b.coords.lat), `coords.lat finite "${id}"`).toBe(true);
+      expect(typeof b.coords.lng, `coords.lng "${id}"`).toBe("number");
+      expect(Number.isFinite(b.coords.lng), `coords.lng finite "${id}"`).toBe(true);
+
+      expect(typeof b.rating, `rating "${id}"`).toBe("number");
+      expect(b.rating, `rating "${id}"`).toBeGreaterThanOrEqual(4);
+      expect(b.rating, `rating "${id}"`).toBeLessThanOrEqual(5);
+
+      expect(typeof b.reviews, `reviews "${id}"`).toBe("number");
+      expect(b.reviews, `reviews "${id}"`).toBeGreaterThanOrEqual(0);
+
+      expect(typeof b.bookable, `bookable "${id}"`).toBe("boolean");
+
+      expect(b.seoTitle.length, `seoTitle.length "${id}"`).toBeLessThanOrEqual(60);
+      expect(b.seoDesc.length, `seoDesc.length "${id}"`).toBeLessThanOrEqual(160);
     }
-    if (skipped.length) {
-      // eslint-disable-next-line no-console
-      console.warn(
-        `[biens-consistency] ids absents de PublicSite.BIENS (skip) : ${skipped.join(", ")}`
-      );
-    }
+  });
+
+  it("PublicSite.BIENS — aucun fait n'est ré-écrit en littéral (fusion canonique seule source)", () => {
+    const src = readSource("../PublicSite.jsx");
+    const bloc = biensArrayBlock(src);
+    expect(bloc, "tableau const BIENS = [...] introuvable dans PublicSite.jsx").not.toBeNull();
+
+    // La fusion doit câbler les 7 biens via ...canonFacts("<id>").
+    const canonFactsCount = (bloc.match(/canonFacts\(/g) || []).length;
+    expect(canonFactsCount, "appels canonFacts() dans BIENS").toBeGreaterThanOrEqual(7);
+
+    // Anti-régression : aucune clé de fait ne doit réapparaître en littéral
+    // dans le tableau BIENS. On exclut volontairement `rating:` (présent
+    // légitimement comme `note` mappé dans les sous-objets `avis`) en ne
+    // ciblant que les clés qui n'apparaissent JAMAIS dans les avis.
+    const residus = bloc.match(/\n\s+(prix|capacite|chambres|coords|reviews|bookable):/g);
+    expect(
+      residus,
+      `faits littéraux résiduels dans PublicSite.BIENS : ${residus ? residus.join(", ") : ""}`
+    ).toBeNull();
   });
 });
