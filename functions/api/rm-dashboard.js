@@ -91,6 +91,21 @@ export async function onRequest(context) {
 
     if (!propertyRes) return json({ error: "Property not found" }, 404);
 
+    // Occupation réelle — dernier snapshot 30d & 90d par bien
+    let occupancy = null;
+    try {
+      const { results } = await db
+        .prepare(
+          "SELECT period_type, occupancy_rate, nights_sold, nights_available, snapshot_date FROM rm_kpi_snapshots " +
+            "WHERE property_id=? AND period_type IN ('30d','90d') ORDER BY snapshot_date DESC"
+        )
+        .bind(property_id)
+        .all();
+      const seen = {};
+      for (const r of (results || [])) { if (!seen[r.period_type]) seen[r.period_type] = r; }
+      occupancy = { d30: seen["30d"] || null, d90: seen["90d"] || null };
+    } catch {}
+
     const recommendations = recoRes.results || [];
 
     // Compute KPIs from recommendations
@@ -140,6 +155,7 @@ export async function onRequest(context) {
         ...(kpiRes || {}),
       },
       market_signals: signalsSummary,
+      occupancy,
       all_properties: allPropsRes.results || [],
       generated_at: Date.now(),
     });

@@ -119,6 +119,7 @@ function RevenueManagerPro() {
   const [tab, setTab] = useState('dashboard');
   const [selProp, setSelProp] = useState('amaryllis');
   const [recos, setRecos] = useState([]);
+  const [occupancy, setOccupancy] = useState(null);
   const [signals, setSignals] = useState([]);
   const [competitors, setCompetitors] = useState([]);
   const [overrides, setOverrides] = useState([]);
@@ -183,6 +184,11 @@ function RevenueManagerPro() {
     setLoading(false);
   }, [selProp, calMonth, calYear, apiCall]);
 
+  const loadOccupancy = useCallback(async () => {
+    const data = await apiCall(`/api/rm-dashboard?property_id=${selProp}`);
+    setOccupancy(data?.occupancy || null);
+  }, [selProp, apiCall]);
+
   const loadSignals = useCallback(async () => {
     setSignalsLoading(true);
     const from = new Date().toISOString().slice(0, 10);
@@ -211,6 +217,7 @@ function RevenueManagerPro() {
 
   useEffect(() => {
     if (tab === 'calendar' || tab === 'dashboard') loadRecommendations();
+    if (tab === 'dashboard') loadOccupancy();
     if (tab === 'competitors') { loadCompetitors(); if (compSubTab === 'market') loadSignals(); }
     if (tab === 'rules') loadRules();
     if (tab === 'calendar') loadOverrides();
@@ -499,6 +506,14 @@ function RevenueManagerPro() {
               </>
             )}
           </div>
+
+          {/* Occupation réelle (dernier snapshot Worker) */}
+          {occupancy?.d30 && (
+            <div style={{ fontSize: 12, color: '#94a3b8', marginTop: -8, marginBottom: 20 }}>
+              Occupation réelle — 30j : <b style={{ color: '#e2e8f0' }}>{Math.round((occupancy.d30.occupancy_rate || 0) * 100)}%</b>
+              {occupancy.d90 && <> · 90j : <b style={{ color: '#e2e8f0' }}>{Math.round((occupancy.d90.occupancy_rate || 0) * 100)}%</b></>}
+            </div>
+          )}
 
           {/* Opportunities & Risks */}
           <div style={{ display: 'grid', gridTemplateColumns: mob ? '1fr' : '1fr 1fr', gap: 16 }}>
