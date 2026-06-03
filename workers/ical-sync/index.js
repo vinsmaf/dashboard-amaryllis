@@ -831,6 +831,45 @@ async function runWeeklyReport(env, allEvents) {
 }
 
 // ── Alertes sous-occupation ──────────────────────────────────────────────────
+// Persiste l'occupation forward (30j/90j) par bien dans rm_kpi_snapshots → le RM "voit"
+// enfin l'occupation réelle. Mirroir de src/utils/occupancy.js (garder synchro). Advisory only.
+async function runOccupancySnapshot(env, allEvents) {
+  if (!env.revenue_manager) { console.log("[occupancy] pas de binding D1 — skip"); return; }
+  const db = env.revenue_manager;
+  const todayStr = today();
+  const activeBiens = new Set(Object.keys(getAirbnbUrls(env)));
+  Object.keys(NOMS).forEach((id) => activeBiens.add(id)); // inclut nogent (Beds24)
+
+  function nightsBooked(bienId, fromStr, toStr) {
+    let n = 0;
+    for (const e of allEvents) {
+      if (e.bienId !== bienId || !e.checkin || !e.checkout) continue;
+      const start = e.checkin > fromStr ? e.checkin : fromStr;
+      const end   = e.checkout < toStr ? e.checkout : toStr;
+      if (end > start) n += diffDays(start, end);
+    }
+    return n;
+  }
+
+  let written = 0;
+  for (const bienId of activeBiens) {
+    for (const [period, horizon] of [["30d", 30], ["90d", 90]]) {
+      const to   = addDays(todayStr, horizon);
+      const sold = Math.min(horizon, nightsBooked(bienId, todayStr, to));
+      const rate = horizon > 0 ? sold / horizon : 0;
+      const id   = `${bienId}-${todayStr}-${period}`;
+      try {
+        await db.prepare(
+          "INSERT INTO rm_kpi_snapshots (id, property_id, snapshot_date, period_type, occupancy_rate, nights_sold, nights_available) " +
+          "VALUES (?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET occupancy_rate=excluded.occupancy_rate, nights_sold=excluded.nights_sold, nights_available=excluded.nights_available"
+        ).bind(id, bienId, todayStr, period, rate, sold, horizon).run();
+        written++;
+      } catch (e) { console.error(`[occupancy] ${bienId} ${period}: ${e.message}`); }
+    }
+  }
+  console.log(`[occupancy] snapshot écrit (${written} lignes, ${activeBiens.size} biens)`);
+}
+
 async function runOccupancyAlerts(env, allEvents) {
   const todayStr = today();
   const in14 = addDays(todayStr, 14);
@@ -2031,6 +2070,7 @@ export default {
         await runMonitor(env);
         await runReminders(env, allEvents, allEvents);
         await runOccupancyAlerts(env, allEvents);
+        await runOccupancySnapshot(env, allEvents); // persiste l'occupation réelle → rm_kpi_snapshots
         await runGapPricing(env, allEvents);
         await runYieldPricing(env, allEvents);
         await runCautionAutoRelease(env);
@@ -2217,6 +2257,10 @@ export default {
     }
     if (url.pathname === "/occupancy") {
       const { allEvents } = await runSync(env); await runOccupancyAlerts(env, allEvents);
+      return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
+    }
+    if (url.pathname === "/occupancy-snapshot") {
+      const { allEvents } = await runSync(env); await runOccupancySnapshot(env, allEvents);
       return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
     }
     if (url.pathname === "/monitor") {
