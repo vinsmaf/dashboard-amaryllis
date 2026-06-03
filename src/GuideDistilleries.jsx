@@ -18,6 +18,13 @@ const BASE  = "https://villamaryllis.com";
 
 const HERO_IMG = "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Rhum_J.M_distillery%2C_Macouba%2C_Martinique.jpg/960px-Rhum_J.M_distillery%2C_Macouba%2C_Martinique.jpg";
 
+// FAQ visible — IDENTIQUE au JSON-LD de functions/[slug].js (slug guide-distilleries-martinique).
+const FAQ = [
+  { q: "Quelles distilleries visiter en Martinique depuis Sainte-Luce ?", a: "Trois-Rivières est à 5 min de Sainte-Luce. À découvrir aussi : l'Habitation Clément (musée et jardins), Saint-James à Sainte-Marie, JM à Macouba et Depaz au pied de la Montagne Pelée." },
+  { q: "Le rhum martiniquais a-t-il une AOC ?", a: "Oui, le rhum agricole de Martinique bénéficie d'une AOC depuis 1996 : il est distillé à partir de pur jus de canne fraîche, et non de mélasse." },
+  { q: "Peut-on visiter les distilleries en une journée ?", a: "Oui, un circuit en une journée est possible. Les boutiques proposent dégustations et ventes directes ; pensez à un conducteur désigné." },
+];
+
 const badges = [
   { icon: "🥃", label: "AOC Martinique", must: true },
   { icon: "🌿", label: "Trois-Rivières à 5 min" },
@@ -391,6 +398,16 @@ export default function GuideDistilleries() {
             © {new Date().getFullYear()} Amaryllis Locations · <a href="/" style={{ color: "rgba(250,245,233,.35)", textDecoration: "none" }}>villamaryllis.com</a>
           </p>
         </div>
+        {/* FAQ visible (cohérence avec le JSON-LD) */}
+        <section style={{ maxWidth: 760, margin: "48px auto", padding: "0 24px" }}>
+          <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontWeight: 400, fontSize: 30, color: NAVY, textAlign: "center", margin: "0 0 24px" }}>Questions fréquentes</h2>
+          {FAQ.map((f, i) => (
+            <details key={i} style={{ borderTop: `1px solid ${SAND}`, padding: "14px 0" }}>
+              <summary style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 15, color: NAVY, cursor: "pointer" }}>{f.q}</summary>
+              <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 14, color: MUTED, lineHeight: 1.6, margin: "10px 0 0" }}>{f.a}</p>
+            </details>
+          ))}
+        </section>
         <MaillageCluster currentSlug="guide-distilleries-martinique" bienNames={BIEN_NAMES} />
       </div>
     </>

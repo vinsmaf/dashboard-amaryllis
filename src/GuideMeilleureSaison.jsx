@@ -17,6 +17,13 @@ const BASE  = "https://villamaryllis.com";
 
 const HERO_IMG = "https://villamaryllis.com/photos/amaryllis/01.webp";
 
+// FAQ visible — IDENTIQUE au JSON-LD de functions/[slug].js (slug meilleure-saison-martinique).
+const FAQ = [
+  { q: "Quelle est la meilleure période pour aller en Martinique ?", a: "La saison sèche (« carême »), de décembre à avril, offre une mer calme, peu de pluie et une excellente visibilité. Mars est souvent considéré comme le meilleur mois." },
+  { q: "Faut-il éviter la saison des pluies ?", a: "L'hivernage (juin à octobre) apporte des averses, surtout en septembre, pic de l'hivernage. Le risque cyclonique reste statistiquement faible mais existe." },
+  { q: "Peut-on partir en Martinique à Noël ?", a: "Oui, décembre marque le retour de la saison sèche : c'est une période idéale pour les fêtes, mais aussi la plus demandée." },
+];
+
 // Données météo Sainte-Luce par mois (moyennes observées sur 5 ans)
 const MOIS = [
   { id: "jan", label: "Jan", court: "Jan", tempAir: 27, tempMer: 26, pluie: 1, soleil: 8, vent: 4, note: "⭐⭐⭐⭐⭐", commentaire: "Saison sèche idéale. Mer calme, visibilité 25 m.", saison: "seche" },
@@ -355,6 +362,17 @@ export default function GuideMeilleureSaison() {
           </div>
 
         </div>
+
+        {/* FAQ visible (cohérence avec le JSON-LD) */}
+        <section style={{ maxWidth: 760, margin: "48px auto", padding: "0 24px" }}>
+          <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontWeight: 400, fontSize: 30, color: NAVY, textAlign: "center", margin: "0 0 24px" }}>Questions fréquentes</h2>
+          {FAQ.map((f, i) => (
+            <details key={i} style={{ borderTop: `1px solid ${SAND}`, padding: "14px 0" }}>
+              <summary style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 15, color: NAVY, cursor: "pointer" }}>{f.q}</summary>
+              <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 14, color: MUTED, lineHeight: 1.6, margin: "10px 0 0" }}>{f.a}</p>
+            </details>
+          ))}
+        </section>
 
         {/* FOOTER */}
         <footer style={{ background: NAVY, padding: "40px 24px", textAlign: "center" }}>

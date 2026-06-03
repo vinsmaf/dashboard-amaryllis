@@ -20,6 +20,13 @@ const HERO_IMG  = "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Acc
 const MARCHE_IMG = "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/Marche_couvert_de_la_Martinique.jpg/960px-Marche_couvert_de_la_Martinique.jpg";
 const FRUITS_IMG = "https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/Tropical_fruits.jpg/960px-Tropical_fruits.jpg";
 
+// FAQ visible — IDENTIQUE au JSON-LD de functions/[slug].js (slug guide-gastronomie-martinique).
+const FAQ = [
+  { q: "Quelles sont les spécialités à goûter en Martinique ?", a: "La langouste grillée et le blaff de poisson sont les deux incontournables. À découvrir aussi : accras de morue, colombo, et le ti-punch au rhum agricole." },
+  { q: "Où trouver de la langouste près de Sainte-Luce ?", a: "Plusieurs restaurants de Sainte-Luce et des environs servent la langouste grillée fraîche ; les marchés locaux comme celui du Marin (le samedi) sont aussi une bonne adresse." },
+  { q: "Qu'est-ce qu'un vrai ti-punch ?", a: "Le ti-punch se prépare avec du rhum agricole blanc AOC, un trait de sirop de canne et un zeste de citron vert. Chacun le dose « à sa main ». " },
+];
+
 const badges = [
   { icon: "🦞", label: "Langouste & blaff", must: true },
   { icon: "🥃", label: "Rhum agricole AOC", must: true },
@@ -397,6 +404,16 @@ export default function GuideGastronomie() {
             © {new Date().getFullYear()} Amaryllis Locations · <a href="/" style={{ color: "rgba(250,245,233,.35)", textDecoration: "none" }}>villamaryllis.com</a>
           </p>
         </div>
+        {/* FAQ visible (cohérence avec le JSON-LD) */}
+        <section style={{ maxWidth: 760, margin: "48px auto", padding: "0 24px" }}>
+          <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontWeight: 400, fontSize: 30, color: NAVY, textAlign: "center", margin: "0 0 24px" }}>Questions fréquentes</h2>
+          {FAQ.map((f, i) => (
+            <details key={i} style={{ borderTop: `1px solid ${SAND}`, padding: "14px 0" }}>
+              <summary style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 15, color: NAVY, cursor: "pointer" }}>{f.q}</summary>
+              <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 14, color: MUTED, lineHeight: 1.6, margin: "10px 0 0" }}>{f.a}</p>
+            </details>
+          ))}
+        </section>
         <MaillageCluster currentSlug="guide-gastronomie-martinique" bienNames={BIEN_NAMES} />
       </div>
     </>
