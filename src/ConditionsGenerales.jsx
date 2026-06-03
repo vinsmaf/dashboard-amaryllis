@@ -133,7 +133,7 @@ export default function ConditionsGenerales() {
               <Li><strong>Géko</strong> — Sainte-Luce, Martinique (97228)</Li>
               <Li><strong>Mabouya</strong> — Sainte-Luce, Martinique (97228)</Li>
               <Li><strong>Bellevue Schœlcher</strong> — Schœlcher, Martinique (97228)</Li>
-              <Li><strong>Villa Iguana</strong> — Sainte-Luce, Martinique (97228) — location longue durée uniquement</Li>
+              <Li><strong>Villa Iguana</strong> — Sainte-Luce, Martinique (97228)</Li>
               <Li><strong>Appartement Nogent</strong> — Nogent-sur-Marne, Île-de-France (94130)</Li>
             </Ul>
           </Section>
@@ -159,6 +159,7 @@ export default function ConditionsGenerales() {
             <P>Ne sont pas inclus : le ménage de fin de séjour (forfait indiqué à la réservation) et les consommations exceptionnelles.</P>
             <P><strong>Taxe de séjour :</strong> La taxe de séjour instituée par la commune du bien (Sainte-Luce, Schœlcher ou Nogent-sur-Marne) est due par le Voyageur conformément au Code général des collectivités territoriales. Pour les réservations via les plateformes (Airbnb, Booking.com), elle est collectée et reversée directement par celles-ci. Pour les <strong>réservations en direct</strong>, elle est facturée séparément, indiquée dans le récapitulatif de réservation, et reversée à la commune par le Propriétaire.</P>
             <P><strong>Moyen de paiement :</strong> Carte bancaire via Stripe (Visa, Mastercard, American Express). Les données de paiement sont traitées exclusivement par Stripe Inc. et ne sont pas stockées par Amaryllis Locations.</P>
+            <P><strong>Acompte et solde :</strong> Pour les réservations en direct, un <strong>acompte de 40 %</strong> du montant total est prélevé à la réservation pour la confirmer. Le <strong>solde de 60 %</strong> est prélevé automatiquement <strong>au plus tard 30 jours avant l'arrivée</strong>. Pour une réservation effectuée à moins de 30 jours de l'arrivée, la totalité est due immédiatement. À défaut de paiement du solde à l'échéance, la réservation peut être considérée comme annulée et l'acompte conservé (cf. conditions d'annulation).</P>
           </Section>
 
           <Section num="5" title="Caution (dépôt de garantie)">
@@ -221,6 +222,7 @@ export default function ConditionsGenerales() {
 
           <Section num="12" title="Protection des données personnelles">
             <P>Les données collectées lors de la réservation (nom, email, téléphone) sont utilisées exclusivement pour la gestion du séjour et ne sont pas cédées à des tiers. Le Voyageur dispose d'un droit d'accès, de rectification et de suppression à : <a href="mailto:contact@villamaryllis.com" style={{ color: CORAL }}>contact@villamaryllis.com</a>.</P>
+            <P>Les données sont conservées <strong>3 ans</strong> après le dernier contact (relation client) et <strong>10 ans</strong> pour les pièces comptables (art. L.123-22 du Code de commerce). Sous-traitants : Stripe (paiement), Beds24 (réservations), Cloudflare (hébergement), Google Workspace. En cas de désaccord, le Voyageur peut introduire une réclamation auprès de la <strong>CNIL</strong>.</P>
             <P>Pour plus d'informations : <a href="/politique-confidentialite" style={{ color: CORAL }}>politique de confidentialité</a>.</P>
           </Section>
 
