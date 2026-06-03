@@ -7,13 +7,20 @@
 // 2. Email à l'hôte (Resend) + push mobile (ntfy)
 // 3. Enregistre la résa en D1 (table direct_bookings) pour le dashboard
 
-const CORS = {
-  "Content-Type": "application/json",
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST,OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-};
-const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: CORS });
+// RGPD/sécu (finding F3) : origine restreinte aux domaines villamaryllis (plus de wildcard).
+const ALLOWED_ORIGINS = ["https://villamaryllis.com", "https://www.villamaryllis.com", "https://dashboard-amaryllis.pages.dev"];
+function corsHeaders(request) {
+  const origin = request?.headers?.get("Origin") || "";
+  const allowed = ALLOWED_ORIGINS.some(o => origin === o) || origin.endsWith(".dashboard-amaryllis.pages.dev");
+  return {
+    "Content-Type": "application/json",
+    "Access-Control-Allow-Origin": allowed ? origin : "https://villamaryllis.com",
+    "Access-Control-Allow-Methods": "POST,OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Vary": "Origin",
+  };
+}
+const json = (d, s = 200, request) => new Response(JSON.stringify(d), { status: s, headers: corsHeaders(request) });
 
 const DDL = `CREATE TABLE IF NOT EXISTS direct_bookings (
   payment_intent_id TEXT PRIMARY KEY,
@@ -71,8 +78,8 @@ async function sendNtfy(env, title, body) {
 
 export async function onRequest(context) {
   const { request, env } = context;
-  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
-  if (request.method !== "POST") return json({ error: "POST requis" }, 405);
+  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(request) });
+  if (request.method !== "POST") return json({ error: "POST requis" }, 405, request);
 
   const url0 = new URL(request.url);
   // Mode test : POST ?test=1 → envoie une alerte de démonstration (sans Stripe, sans D1)
@@ -81,7 +88,7 @@ export async function onRequest(context) {
       "<div style='font-family:Georgia,serif'><h2 style='color:#0e3b3a'>🧪 Test d'alerte</h2><p>Si vous lisez ceci, les notifications email de nouvelle réservation fonctionnent ✅</p></div>",
       "Test alerte réservation Amaryllis — si vous lisez ceci, l'email fonctionne.");
     const ntfySent = await sendNtfy(env, "🧪 Test alerte résa Amaryllis", "Test push — si vous voyez ça, ntfy fonctionne ✅");
-    return json({ test: true, emailSent, ntfySent });
+    return json({ test: true, emailSent, ntfySent }, 200, request);
   }
 
   const body = await request.json().catch(() => ({}));
@@ -89,17 +96,17 @@ export async function onRequest(context) {
 
   // ── 1. Vérification anti-spam : le paiement existe-t-il vraiment et est-il réussi ? ──
   const sk = env.STRIPE_SECRET_KEY;
-  if (!paymentIntentId || !sk) return json({ error: "paymentIntentId requis" }, 400);
+  if (!paymentIntentId || !sk) return json({ error: "paymentIntentId requis" }, 400, request);
   try {
     const r = await fetch(`https://api.stripe.com/v1/payment_intents/${encodeURIComponent(paymentIntentId)}`, {
       headers: { Authorization: `Bearer ${sk}` },
     });
     const pi = await r.json();
     if (!r.ok || pi.status !== "succeeded") {
-      return json({ error: "Paiement non confirmé", status: pi.status || "unknown" }, 402);
+      return json({ error: "Paiement non confirmé", status: pi.status || "unknown" }, 402, request);
     }
   } catch (e) {
-    return json({ error: "Vérification Stripe échouée: " + e.message }, 502);
+    return json({ error: "Vérification Stripe échouée: " + e.message }, 502, request);
   }
 
   // ── 2. Idempotence : ne pas notifier 2× le même paiement ──
@@ -108,7 +115,7 @@ export async function onRequest(context) {
     try {
       await db.prepare(DDL).run();
       const exists = await db.prepare("SELECT 1 FROM direct_bookings WHERE payment_intent_id = ?").bind(paymentIntentId).first();
-      if (exists) return json({ ok: true, already: true });
+      if (exists) return json({ ok: true, already: true }, 200, request);
       await db.prepare(
         "INSERT INTO direct_bookings (payment_intent_id, bien_nom, voyageur, total, depot, checkin, checkout) VALUES (?,?,?,?,?,?,?)"
       ).bind(paymentIntentId, bienNom, voyageur, Math.round(total), Math.round(depot), checkin, checkout).run();
@@ -134,5 +141,5 @@ export async function onRequest(context) {
   const emailSent = await sendEmail(env, titre, html, ligne);
   const ntfySent  = await sendNtfy(env, titre, ligne + "\n\n🚨 Bloquer les dates sur Airbnb + Booking");
 
-  return json({ ok: true, emailSent, ntfySent });
+  return json({ ok: true, emailSent, ntfySent }, 200, request);
 }

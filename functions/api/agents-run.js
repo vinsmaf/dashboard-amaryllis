@@ -14,6 +14,27 @@ import { ragBlock } from "./_rag.js"; // #2 RAG — grounding sur les vraies don
 
 // Agents "content" qui bénéficient du grounding sur les vraies données (avis/guides/drafts).
 const RAG_AGENTS = new Set(["community-manager", "seo-content-writer", "voyageur-research", "crm-manager", "commercial-publicite"]);
+
+// ── Inventaire des capacités DÉJÀ LIVRÉES (anti-doublon transverse) ──────────
+// Injecté dans CHAQUE prompt agent : ne JAMAIS reproposer la CRÉATION d'une de ces
+// briques (elles existent en prod). Seulement une AMÉLIORATION précise, en nommant
+// ce qui manque. ⚠️ À TENIR À JOUR à chaque feature livrée (réflexe de déploiement).
+const DEJA_EN_PLACE = `
+🚫 DÉJÀ EN PLACE EN PRODUCTION — NE PAS reproposer la création (uniquement une amélioration CONCRÈTE et précise, en nommant ce qui manque) :
+• Tracking/Analytics : GA4 branché (events view_item/begin_checkout/purchase enrichis bien_id + niveau_tarifaire) ; onglet Analytics ; conversion "purchase" importée dans Google Ads.
+• Revenus/Pilotage : Pilotage = CPA + commissions par canal (Airbnb 3%/15% PAR BIEN, Booking 17%, Direct 0%) ; Cockpit = RevPAR/ADR/Occupation par bien ; part directe par canal. Sheet "revenus locatif 2026" auto-rempli (montant/canal/nuits).
+• Réservations : Beds24 temps réel + webhook + anti-double-booking ; sync iCal Airbnb/Booking horaire ; onglet unique "Toutes les Réservations".
+• Paiement : Stripe (paiement + caution pré-autorisée + Checkout) ; alerte hôte post-paiement.
+• Emails voyageurs (résas DIRECTES) : pré-arrivée J-3, post-séjour J+1/J+3, relance panier — automatisés (cron), opt-out présents.
+• RGPD : rate-limiting, échappement HTML, CORS restreint, endpoint contacts-purge, registre des traitements.
+• Pricing : Revenue Manager (D1 : profils saisonniers, règles, recommandations, concurrents) + calendrier tarifs (reco only, Vincent valide).
+• SEO : meta runtime (functions/[slug].js fait foi) + prerender + sitemap + maillage interne + 5 landings + guides + JSON-LD.
+• Réseaux : calendrier éditorial D1 auto-publié FB+IG (cron) ; série de posts GBP ; avis Google répondus.
+• Qualité : capteur de bugs JS + inbox 🐞 + triage hebdo + crawl visuel + revue de code au déploiement.
+• Agents : ~35 agents + orchestrateur + déclencheurs + éval + vérif adversariale + AI-Ops + RAG.
+• Divers : chat IA, météo, géoloc, API avis Google.
+• Ads : kits Google Ads + Meta Ads RÉDIGÉS et prêts (ne PAS proposer de les "créer" — Vincent les lance lui-même).
+`;
 import { factCheckCaption, loadLearnedLessons } from "./_factcheck.js";
 
 import { verifyBearer } from "./_adminauth.js";
@@ -339,10 +360,11 @@ function keywordsSet(text) {
 
 async function findSimilarExistingAction(db, agentId, actionText) {
   try {
-    // Élargi : 500 entries, exclure seulement "fait"
+    // Dédup TRANSVERSE : compare à TOUTES les actions (tous agents) ET INCLUT les
+    // "fait" → écarte les doublons inter-agents ET le re-proposé déjà livré.
     const { results } = await db.prepare(
-      "SELECT id, action, status FROM agent_actions WHERE agent = ? AND status != 'fait' LIMIT 500"
-    ).bind(agentId).all();
+      "SELECT id, action, status FROM agent_actions LIMIT 1500"
+    ).all();
     const newKey      = normalizeForCompare(actionText);
     const newPrefix50 = newKey.slice(0, 50);
     const newKwSet    = keywordsSet(actionText);
@@ -649,7 +671,8 @@ TON DOMAINE D'EXPERTISE : ${agent.focus}
 
 FICHIERS CLÉS à analyser : ${agent.files_hint}
 ${skillSection}${liveSection}${ragSection}${memorySection}${feedbackSection}${outcomesSection}${historySection}
-MISSION : Identifie les actions concrètes NOUVELLES à réaliser dans ton domaine. Tiens compte de ce qui a déjà été fait ou identifié pour approfondir ton analyse et aller plus loin.
+${DEJA_EN_PLACE}
+MISSION : Identifie les actions concrètes NOUVELLES à réaliser dans ton domaine. Tiens compte de ce qui a déjà été fait ou identifié pour approfondir ton analyse et aller plus loin. Si une idée recoupe une capacité « DÉJÀ EN PLACE », ne la propose PAS — sauf amélioration précise et chiffrée (dis ce qui manque concrètement).
 
 📋 DONNÉES CANONIQUES PROPRIÉTÉS (NE JAMAIS INVENTER) :
 • Villa Amaryllis (Sainte-Luce, sur les hauteurs) : 280€/nuit · 8 pers · 3 chambres · 3,5 SDB · 4,94★ · vue mer 180° depuis les hauteurs (PAS bord de mer)

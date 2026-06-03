@@ -35,6 +35,9 @@ function doGet(e) {
   if (action === "fetchIcal") return fetchIcal_(e.parameter);
   if (action === "syncReservations") return syncReservations_(e.parameter);
   if (action === "importAllReservations") return importAllReservations_(e.parameter);
+  if (action === "revenus2026DryRun") return json_({ ok: true, preview: testRevenus2026_dryRun() });
+  if (action === "revenus2026Setup")  return json_(setupRevenus2026());
+  if (action === "revenus2026Sync")   return json_(syncRevenus2026());
   if (action === "sendCheckinAlerts") { sendCheckinAlerts_(); return json_({ ok: true }); }
   if (action === "setNtfyTopic") return setNtfyTopic_(e.parameter);
   if (action === "getConfig")    return getConfig_(e.parameter);
@@ -53,6 +56,14 @@ function doPost(e) {
   if (action === "setConfig")             return setConfig_(body);
   if (action === "read")                  return readAll_();
   if (action === "getConfig")             return getConfig_(body);
+  if (action === "revenus2026DryRun")     return json_({ ok: true, preview: testRevenus2026_dryRun() });
+  if (action === "revenus2026Setup")      return json_(setupRevenus2026());
+  if (action === "revenus2026Sync")       return json_(syncRevenus2026());
+  if (action === "revenus2026Status")     return json_(revenus2026Status_());
+  if (action === "revenus2026Recent")     return json_(revenus2026Recent_(body.n || 10));
+  if (action === "revenus2026Forget")     return json_(revenus2026Forget_(body.ids || ""));
+  if (action === "revenus2026FromMonth")  return json_(revenus2026FromMonth_(body.month || 7, !!body.apply, !!body.ignoreMemo));
+  if (action === "revenus2026Undo")       return json_(revenus2026Undo_(body.ids || ""));
 
   return json_({ error: "action POST inconnue: " + action });
 }
@@ -271,6 +282,8 @@ function addReservation_(p) {
     }
   }
   sheet.appendRow(row);
+  // Saisie directe → remplit aussitôt "revenus locatif 2026" (nouvelle résa uniquement)
+  try { syncRevenus2026(); } catch (e) {}
   return json_({ ok: true, action: "added" });
 }
 
@@ -526,5 +539,11 @@ function importAllReservations_(input) {
     );
   }
 
-  return json_({ ok: true, added: added, updated: updated, total: reservations.length });
+  // ── Auto-remplissage "revenus locatif 2026" (montant tous canaux + nb résa + nuits) ──
+  // Applique uniquement les NOUVELLES résas (le journal/baseline protège l'existant
+  // → jamais de double-comptage). Temps réel : webhook Beds24, sync horaire iCal, 📊.
+  var rev2026 = null;
+  try { rev2026 = syncRevenus2026(); } catch (eRev) { rev2026 = { error: String(eRev) }; }
+
+  return json_({ ok: true, added: added, updated: updated, total: reservations.length, rev2026: rev2026 });
 }

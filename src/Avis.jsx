@@ -221,7 +221,7 @@ function AvisJsonLd({ biens, avgRating, totalAvis }) {
         "url": `https://villamaryllis.com/${b.id}`,
         "aggregateRating": {
           "@type": "AggregateRating",
-          "ratingValue": b.rating.replace(",", "."),
+          "ratingValue": String(b.rating).replace(",", "."),
           "reviewCount": b.reviews || b.avis.length,
           "bestRating": "5",
           "worstRating": "1",
@@ -300,7 +300,7 @@ export default function Avis() {
   const avgRating = (() => {
     const { sumW, sumN } = BIENS_AVIS.reduce((acc, b) => {
       const n = b.reviews || b.avis.length;
-      const r = parseFloat(b.rating.replace(",", "."));
+      const r = parseFloat(String(b.rating).replace(",", "."));
       return { sumW: acc.sumW + r * n, sumN: acc.sumN + n };
     }, { sumW: 0, sumN: 0 });
     return (sumW / sumN).toFixed(2).replace(".", ",");

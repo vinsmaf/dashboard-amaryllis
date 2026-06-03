@@ -7,7 +7,8 @@
 // Dedoublonnage par ID (memoire)  chaque resa comptee 1 seule fois, meme si
 // elle apparait dans les deux onglets.
 //
-//   - Revenus  : canal DIRECT uniquement (brut = net). OTA = saisie manuelle.
+//   - Revenus  : TOUS canaux. Direct = net ; Airbnb/Booking = montant BRUT OTA
+//                (commission incluse) assume par Vincent (peut etre ajuste a la main).
 //   - Nb reservations + Nb nuits ("jours occupes") : TOUS canaux (hors blocages).
 //   - Resa a cheval sur 2 mois : nuits reparties par mois reel, montant prorata.
 //
@@ -80,8 +81,16 @@ function nightsByMonth2026_(ci, co) {
 function appendCell_(sheet, row, col, delta) {
   if (!delta) return;
   var cell = sheet.getRange(row, col), f = cell.getFormula();
-  if (f && f.charAt(0) === "=") { cell.setFormula(f + "+" + delta); }
-  else { var v = cell.getValue(); var base = (typeof v === "number" && !isNaN(v)) ? v : 0; cell.setValue(base + delta); }
+  if (f && f.charAt(0) === "=") {
+    // Feuille en locale FR : la formule utilise la VIRGULE décimale.
+    // delta JS ("636.81") doit être converti en "636,81" sinon #ERROR d'analyse.
+    var d = String(Math.round(Math.abs(delta) * 100) / 100).replace(".", ",");
+    cell.setFormula(f + (delta < 0 ? "-" : "+") + d);
+  } else {
+    var v = cell.getValue();
+    var base = (typeof v === "number" && !isNaN(v)) ? v : 0;
+    cell.setValue(Math.round((base + delta) * 100) / 100);
+  }
 }
 function isBlocage_(voy, statut, notes) {
   voy = String(voy || "").toLowerCase(); statut = String(statut || "").toLowerCase(); notes = String(notes || "").toLowerCase();
@@ -115,10 +124,11 @@ function applyOne_(row, C, dstSheet, dryRun) {
   }
   for (var m in nbm) {
     var month = parseInt(m, 10), col = month + 2, nightsM = nbm[m];
-    if (montant > 0 && ck === "direct") {
+    if (montant > 0) {
       var part = Math.round(montant * nightsM / totalN * 100) / 100;
-      changes.push({ bloc:"revenus", row:REV_ROWS[bienId].direct, col:col, delta:part });
-      if (!dryRun) appendCell_(dstSheet, REV_ROWS[bienId].direct, col, part);
+      var revRow = REV_ROWS[bienId][ck]; // ligne du canal réel (airbnb/booking/direct)
+      changes.push({ bloc:"revenus", row:revRow, col:col, delta:part });
+      if (!dryRun) appendCell_(dstSheet, revRow, col, part);
     }
     changes.push({ bloc:"nuits", row:NIGHTS_ROW[bienId], col:col, delta:nightsM });
     if (!dryRun) appendCell_(dstSheet, NIGHTS_ROW[bienId], col, nightsM);
@@ -201,4 +211,120 @@ function testRevenus2026_dryRun() {
   Logger.log("A TRAITER (nouvelles, non comptees) : " + preview.length);
   Logger.log(JSON.stringify(preview, null, 2));
   return preview;
+}
+
+// ── Diagnostic d'état (memo, trigger, source) ───────────────────────────────
+function revenus2026Status_() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var memo = ss.getSheetByName(MEMO_SHEET);
+  var memoCount = memo ? Math.max(0, memo.getLastRow() - 1) : 0;
+  var trig = 0;
+  try { trig = ScriptApp.getProjectTriggers().filter(function (t) { return t.getHandlerFunction() === "syncRevenus2026"; }).length; }
+  catch (e) { trig = -1; } // -1 = scope triggers indisponible dans ce contexte
+  var src = ss.getSheetByName(SRC_SHEET);
+  var srcCount = src ? Math.max(0, src.getLastRow() - 1) : 0;
+  var resa = ss.getSheetByName(RESA_SHEET);
+  var resaCount = resa ? Math.max(0, resa.getLastRow() - 1) : 0;
+  return { ok: true, memoIds: memoCount, triggerInstalled: trig > 0, triggers: trig,
+           toutesReservations: srcCount, reservationsDirectes: resaCount };
+}
+
+// ── Rattrapage : applique (ou prévisualise) les réservations dont l'ARRIVÉE est
+//    en 2026 au mois >= fromMonth. ignoreMemo=true → traite même les IDs déjà
+//    "baselinés" (à n'utiliser que si AUCUNE écriture auto n'a encore eu lieu sur
+//    ces mois, sinon double-comptage). apply=false → dry-run (n'écrit rien).
+function revenus2026FromMonth_(fromMonth, apply, ignoreMemo) {
+  fromMonth = parseInt(fromMonth, 10) || 7;
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var dst = ss.getSheetByName(DST_SHEET);
+  var memo = getMemoSheet_(ss), processed = ignoreMemo ? {} : readProcessed_(memo);
+  var preview = [], appliedIds = [];
+  var pairs = [[SRC_SHEET, COL_TOUTES], [RESA_SHEET, COL_RESA]];
+  pairs.forEach(function (pair) {
+    var sh = ss.getSheetByName(pair[0]); if (!sh || sh.getLastRow() < 2) return;
+    var C = pair[1];
+    var rows = sh.getRange(2, 1, sh.getLastRow() - 1, C.ncols).getValues();
+    rows.forEach(function (row) {
+      var id = String(row[C.id] || ""); if (!id) return;
+      if (!ignoreMemo && processed[id]) return;
+      var a = toNoonUTC_(row[C.arrivee]);
+      if (!a || a.getUTCFullYear() !== 2026 || (a.getUTCMonth() + 1) < fromMonth) return;
+      var ch = applyOne_(row, C, dst, !apply);
+      if (ch.length) {
+        preview.push({ id: id, src: pair[0], prop: row[C.prop], canal: row[C.canal],
+                       arrivee: String(row[C.arrivee]).slice(0, 10), changements: ch });
+        if (apply) appliedIds.push(id);
+      }
+      processed[id] = true; // évite de traiter 2x le même id entre les 2 onglets
+    });
+  });
+  if (apply && appliedIds.length) appendProcessed_(memo, appliedIds);
+  return { ok: true, fromMonth: fromMonth, mode: apply ? "applied" : "dry",
+           ignoreMemo: !!ignoreMemo, count: preview.length, preview: preview };
+}
+
+// ── Dernières réservations de "Toutes les Réservations" (inspection / test) ──
+function revenus2026Recent_(n) {
+  n = parseInt(n, 10) || 10;
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sh = ss.getSheetByName(SRC_SHEET); if (!sh || sh.getLastRow() < 2) return { ok: true, rows: [] };
+  var memo = getMemoSheet_(ss), processed = readProcessed_(memo);
+  var last = sh.getLastRow(), C = COL_TOUTES;
+  // Le haut de l'onglet = arrivées les plus récentes (tri arrivée décroissante) →
+  // c'est là que se trouve une nouvelle résa pour un séjour à venir.
+  var ncols = Math.max(C.ncols, 13); // inclure "Modifié le" (col M = index 12)
+  var rows = sh.getRange(2, 1, Math.min(n, last - 1), ncols).getValues();
+  var fmt = function (v) {
+    if (v instanceof Date) return v.getUTCFullYear() + "-" + ("0" + (v.getUTCMonth() + 1)).slice(-2) + "-" + ("0" + v.getUTCDate()).slice(-2);
+    return String(v || "").slice(0, 10);
+  };
+  var out = rows.map(function (r) {
+    var id = String(r[C.id] || "");
+    return { id: id, prop: r[C.prop], voyageur: r[C.voy], canal: r[C.canal],
+             arrivee: fmt(r[C.arrivee]), depart: fmt(r[C.depart]),
+             montant: r[C.montant], statut: r[C.statut], modifie: fmt(r[12]),
+             dejaTraite: !!processed[id] };
+  });
+  return { ok: true, lus: out.length, rows: out };
+}
+
+// ── "Oublier" un ou plusieurs IDs du journal (pour rejouer une résa en test) ──
+function revenus2026Forget_(idsCsv) {
+  var ids = String(idsCsv || "").split(",").map(function (s) { return s.trim(); }).filter(Boolean);
+  if (!ids.length) return { ok: false, error: "aucun id" };
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var memo = getMemoSheet_(ss);
+  var last = memo.getLastRow();
+  var removed = 0;
+  if (last > 1) {
+    var vals = memo.getRange(2, 1, last - 1, 1).getValues();
+    // reconstruire sans les ids ciblés
+    var keep = [];
+    vals.forEach(function (r) { var id = String(r[0] || ""); if (id && ids.indexOf(id) < 0) keep.push([id]); else if (id) removed++; });
+    memo.getRange(2, 1, last - 1, 1).clearContent();
+    if (keep.length) memo.getRange(2, 1, keep.length, 1).setValues(keep);
+  }
+  return { ok: true, removed: removed, ids: ids };
+}
+
+// ── ANNULER l'application d'une/des résa(s) : resoustrait exactement les deltas ──
+// (les ids restent dans le journal → ne seront pas ré-appliqués ensuite).
+function revenus2026Undo_(idsCsv) {
+  var ids = String(idsCsv || "").split(",").map(function (s) { return s.trim(); }).filter(Boolean);
+  if (!ids.length) return { ok: false, error: "aucun id" };
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var dst = ss.getSheetByName(DST_SHEET);
+  var done = [];
+  [[SRC_SHEET, COL_TOUTES], [RESA_SHEET, COL_RESA]].forEach(function (pair) {
+    var sh = ss.getSheetByName(pair[0]); if (!sh || sh.getLastRow() < 2) return;
+    var C = pair[1];
+    var rows = sh.getRange(2, 1, sh.getLastRow() - 1, C.ncols).getValues();
+    rows.forEach(function (row) {
+      var id = String(row[C.id] || ""); if (ids.indexOf(id) < 0) return;
+      var ch = applyOne_(row, C, dst, true); // dry → récupère les deltas
+      ch.forEach(function (c) { appendCell_(dst, c.row, c.col, -c.delta); });
+      done.push({ id: id, reversed: ch });
+    });
+  });
+  return { ok: true, undone: done };
 }

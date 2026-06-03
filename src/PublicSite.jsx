@@ -7,6 +7,10 @@ import { useLang, LangToggle } from "./i18n.jsx";
 import { Eyebrow, Display, Editorial, Button, RatingBadge, Icon, ThemeToggle, Chip, StateTile, RImg } from "./primitives.jsx";
 import { Curtain } from "./Curtain.jsx";
 import { getVariant, trackConversion } from "./utils/abTest.js";
+import MaillageCluster from "./components/seo/MaillageCluster.jsx";
+
+// Noms canoniques des biens pour le maillage interne SEO ("villa" = Amaryllis + Iguana uniquement).
+const BIEN_NAMES = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko", mabouya: "Studio Mabouya", schoelcher: "Bellevue Schœlcher", iguana: "Villa Iguana", nogent: "Appartement Nogent-sur-Marne" };
 
 // A/B test growth-001 : libellé du CTA réservation principal
 // Variante A (contrôle) = "RÉSERVER" · Variante B = "VÉRIFIER LES DISPOS"
@@ -14,6 +18,25 @@ const CTA_AB_VARIANT = getVariant("cta_label");
 const CTA_LABEL_FR = CTA_AB_VARIANT === "B" ? "VÉRIFIER LES DISPOS" : "RÉSERVER";
 const PropertyMap = lazy(() => import("./PropertyMap.jsx"));
 const VillaAmaryllisReel = lazy(() => import("./components/reel/VillaAmaryllisReel.jsx"));
+
+// data-049 — niveau tarifaire pour le tracking GA4 ROI (par bien + saison).
+// Saison Martinique : haute nov–avr, moyenne juil–août, basse mai/juin/sept/oct.
+// Repli sur la gamme de prix du bien si aucune date de séjour n'est connue.
+function niveauTarifaire(bien, checkinIso) {
+  if (checkinIso) {
+    const d = new Date(checkinIso);
+    if (!isNaN(d)) {
+      const m = d.getMonth() + 1;
+      if (m >= 11 || m <= 4) return "haute";
+      if (m === 7 || m === 8) return "moyenne";
+      return "basse";
+    }
+  }
+  const p = Number(bien?.prix) || 0;
+  if (p >= 250) return "premium";
+  if (p >= 150) return "intermediaire";
+  return "essentiel";
+}
 
 // ── Retry utility for availability fetch ────────────────────────
 async function fetchWithRetry(url, options = {}, retries = 3, delay = 800) {
@@ -1387,6 +1410,7 @@ function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) 
           sessionStorage.setItem(guardKey, "1");
           window.gtag("event", "purchase", {
             transaction_id: paymentIntent.id, currency: "EUR", value: amount,
+            bien_id: bien.id, niveau_tarifaire: niveauTarifaire(bien, localCheckin),
             items: [{ item_id: bien.id, item_name: bien.nom, price: bien.prix, quantity: nights || 1 }],
           });
         }
@@ -2062,6 +2086,8 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
             transaction_id: paymentIntent.id,
             currency: "EUR",
             value: total,
+            bien_id: bien.id,
+            niveau_tarifaire: niveauTarifaire(bien, checkin),
             items: [{ item_id: bien.id, item_name: bien.nom, price: bien.prix, quantity: nights }],
           });
         }
@@ -2324,7 +2350,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
                   <button
                     onClick={() => {
                       if (belowMin) return;
-                      if (window.gtag) window.gtag("event", "begin_checkout", { currency: "EUR", value: total, items: [{ item_id: bien.id, item_name: bien.nom, price: bien.prix, quantity: nights }] });
+                      if (window.gtag) window.gtag("event", "begin_checkout", { bien_id: bien.id, niveau_tarifaire: niveauTarifaire(bien, checkin), currency: "EUR", value: total, items: [{ item_id: bien.id, item_name: bien.nom, price: bien.prix, quantity: nights }] });
                       setStep(2);
                     }}
                     style={{ background: belowMin ? SAND : CORAL, color: "#fff", border: "none", padding: "14px 30px", borderRadius: 8, fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase", cursor: belowMin ? "not-allowed" : "pointer", boxShadow: belowMin ? "none" : "0 4px 20px rgba(196,114,84,0.35)", opacity: belowMin ? 0.6 : 1 }}
@@ -4698,6 +4724,9 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
 
       {/* ── FAQ chatbot flottant ── */}
       <FaqChatbot bien={bien} />
+
+      {/* ── Maillage interne SEO (hub & spoke) ── */}
+      <MaillageCluster bienId={bien.id} bienNames={BIEN_NAMES} />
     </div>
   );
 }
@@ -5684,7 +5713,7 @@ function GroupPaymentModal({ biens, checkin, checkout, guests, nights, total, on
         const guardKey = `ga_purchase_fired_${paymentIntent.id}`;
         if (!sessionStorage.getItem(guardKey)) {
           sessionStorage.setItem(guardKey, "1");
-          try { window.gtag("event", "purchase", { transaction_id: paymentIntent.id, currency: "EUR", value: total }); } catch { /* */ }
+          try { window.gtag("event", "purchase", { transaction_id: paymentIntent.id, currency: "EUR", value: total, bien_id: biens?.[0]?.id, niveau_tarifaire: niveauTarifaire(biens?.[0], checkin) }); } catch { /* */ }
         }
       }
       window.location.href = "/merci";
@@ -7124,6 +7153,35 @@ function HoverContact({ light = false, direction = "up", pill = false }) {
 }
 
 // ── Devis Page ───────────────────────────────────────────────────
+// Signature manuscrite « maison » (canvas) — cpw-101
+function SignaturePad({ onChange }) {
+  const ref = useRef(null);
+  const drawing = useRef(false);
+  useEffect(() => {
+    const c = ref.current; if (!c) return;
+    const ctx = c.getContext("2d");
+    ctx.lineWidth = 2.2; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = "#0e3b3a";
+    const pos = (e) => { const r = c.getBoundingClientRect(); return [(e.clientX - r.left) * (c.width / r.width), (e.clientY - r.top) * (c.height / r.height)]; };
+    const start = (e) => { drawing.current = true; const [x, y] = pos(e); ctx.beginPath(); ctx.moveTo(x, y); };
+    const move = (e) => { if (!drawing.current) return; const [x, y] = pos(e); ctx.lineTo(x, y); ctx.stroke(); e.preventDefault(); };
+    const end = () => { if (drawing.current) { drawing.current = false; onChange(c.toDataURL("image/png")); } };
+    c.addEventListener("pointerdown", start); c.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", end);
+    return () => { c.removeEventListener("pointerdown", start); c.removeEventListener("pointermove", move); window.removeEventListener("pointerup", end); };
+  }, [onChange]);
+  const clear = () => { const c = ref.current; if (c) c.getContext("2d").clearRect(0, 0, c.width, c.height); onChange(""); };
+  return (
+    <div>
+      <canvas ref={ref} width={480} height={150}
+        style={{ width: "100%", height: 150, background: "#fff", border: "1px dashed #94a3b8", borderRadius: 8, touchAction: "none", cursor: "crosshair" }} />
+      <button type="button" onClick={clear}
+        style={{ marginTop: 6, background: "transparent", border: "none", color: "#78716c", fontSize: 12, cursor: "pointer", textDecoration: "underline" }}>
+        Effacer la signature
+      </button>
+    </div>
+  );
+}
+
 function DevisPage() {
   const params = new URLSearchParams(window.location.search);
   // Décodage direct du payload ?d= (lien long)
@@ -7154,6 +7212,12 @@ function DevisPage() {
   const [step, setStep] = useState(1); // 1=paiement 2=caution 3=done
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState("");
+  // Contrat signé « maison » (cpw-101) — requis avant paiement
+  const [signed, setSigned] = useState(false);
+  const [signing, setSigning] = useState(false);
+  const [signName, setSignName] = useState("");
+  const [accepted, setAccepted] = useState(false);
+  const [sigData, setSigData] = useState("");
 
   const appearance = { theme: "stripe", variables: { colorPrimary: CORAL, borderRadius: "8px", colorBackground: CREAM, colorText: NAVY } };
 
@@ -7210,9 +7274,29 @@ function DevisPage() {
   }, [stripe, data]); // data peut arriver en async pour les liens courts /r/{code}
 
   useEffect(() => {
-    if (step === 1 && elements) { const pe = elements.getElement("payment"); if (pe) pe.mount("#dp-pay"); }
+    if (step === 1 && signed && elements) { const pe = elements.getElement("payment"); if (pe) pe.mount("#dp-pay"); }
     if (step === 2 && depElements) { const pe = depElements.getElement("payment"); if (pe) pe.mount("#dp-dep"); }
-  }, [step, elements, depElements]);
+  }, [step, signed, elements, depElements]);
+
+  async function handleSign() {
+    if (!accepted || signName.trim().length < 2 || !sigData) {
+      setError("Renseignez votre nom, signez, et cochez l'acceptation."); return;
+    }
+    setSigning(true); setError("");
+    try {
+      const res = await fetch("/api/sign-contract", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bienId: data.bienId, bienNom: data.bienNom, checkin: data.checkin, checkout: data.checkout,
+          voyageur: data.voyageur, email: data.email, total: data.total,
+          nom: signName, signature: sigData, accepted: true,
+        }),
+      });
+      const j = await res.json();
+      if (!res.ok || !j.ok) throw new Error(j.error || "Erreur lors de la signature");
+      setSigned(true);
+    } catch (e) { setError(e.message); } finally { setSigning(false); }
+  }
 
   async function handlePay() {
     if (!stripe || !elements) return;
@@ -7296,8 +7380,35 @@ function DevisPage() {
           {data.depot > 0 && <div style={{ marginTop: 10, padding: "8px 12px", background: "rgba(245,158,11,0.08)", borderRadius: 8, fontSize: 12, color: "#92400e" }}>🔒 Dépôt de garantie {fmtEur(data.depot)} — bloqué mais non débité</div>}
         </div>
 
-        {step === 1 && (
+        {/* Étape contrat + signature — requis avant paiement (cpw-101) */}
+        {step === 1 && !signed && (
           <>
+            <div style={{ background: CREAM, borderRadius: 14, padding: "20px 24px", marginBottom: 20, border: "1px solid rgba(0,0,0,0.08)" }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>Contrat de location</div>
+              <div style={{ fontSize: 13, color: "#44403c", lineHeight: 1.7, marginBottom: 14 }}>
+                En signant, vous confirmez votre réservation de <strong>{data.bienNom || data.bienId}</strong> du <strong>{data.checkin}</strong> au <strong>{data.checkout}</strong> pour <strong>{fmtEur(data.total)}</strong>{data.depot > 0 ? ` (+ dépôt de garantie ${fmtEur(data.depot)} pré-autorisé)` : ""}, et acceptez le contrat de location meublé de tourisme et les <a href="/conditions-generales" target="_blank" rel="noopener noreferrer" style={{ color: CORAL }}>conditions générales</a> (règlement intérieur, conditions d'annulation, dépôt de garantie).
+              </div>
+              <label style={{ fontSize: 12, fontWeight: 700, color: NAVY, display: "block", marginBottom: 6 }}>Nom et prénom du signataire</label>
+              <input type="text" value={signName} onChange={e => setSignName(e.target.value)} placeholder="ex : Jean Dupont"
+                style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid rgba(0,0,0,0.15)", fontSize: 14, boxSizing: "border-box", marginBottom: 12, fontFamily: "Georgia,serif" }} />
+              <label style={{ fontSize: 12, fontWeight: 700, color: NAVY, display: "block", marginBottom: 6 }}>Signature manuscrite</label>
+              <SignaturePad onChange={setSigData} />
+              <label style={{ display: "flex", alignItems: "flex-start", gap: 8, marginTop: 14, fontSize: 13, color: "#44403c", cursor: "pointer" }}>
+                <input type="checkbox" checked={accepted} onChange={e => setAccepted(e.target.checked)} style={{ marginTop: 3 }} />
+                <span>J'ai lu et j'accepte le contrat de location et les conditions générales.</span>
+              </label>
+            </div>
+            {error && <div style={{ color: "#dc2626", fontSize: 13, marginBottom: 12 }}>⚠ {error}</div>}
+            <button onClick={handleSign} disabled={signing || !accepted || !sigData || signName.trim().length < 2}
+              style={{ width: "100%", padding: "14px", borderRadius: 10, border: "none", background: (signing || !accepted || !sigData || signName.trim().length < 2) ? "#94a3b8" : NAVY, color: "#fff", fontSize: 15, fontWeight: 700, cursor: (signing || !accepted || !sigData) ? "default" : "pointer" }}>
+              {signing ? "⏳ Signature…" : "✍️ Signer et continuer vers le paiement"}
+            </button>
+          </>
+        )}
+
+        {step === 1 && signed && (
+          <>
+            <div style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.3)", borderRadius: 10, padding: "10px 14px", marginBottom: 16, fontSize: 13, color: "#047857" }}>✓ Contrat signé par {signName}. Vous pouvez régler votre séjour.</div>
             <div style={{ background: CREAM, borderRadius: 14, padding: "20px 24px", marginBottom: 20, border: "1px solid rgba(0,0,0,0.08)" }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 14, textTransform: "uppercase", letterSpacing: 1 }}>Paiement du séjour</div>
               <div id="dp-pay" />
@@ -7871,7 +7982,7 @@ export default function PublicSite() {
               ...(bien.rating ? {
                 "aggregateRating": {
                   "@type": "AggregateRating",
-                  "ratingValue": bien.rating.replace(",", "."),
+                  "ratingValue": String(bien.rating).replace(",", "."),
                   "reviewCount": bien.reviews || 1,
                   "bestRating": "5",
                   "worstRating": "1"
@@ -7937,6 +8048,7 @@ export default function PublicSite() {
 
       // GA4 — vue fiche villa (funnel : view_item → begin_checkout → purchase)
       if (window.gtag) window.gtag("event", "view_item", {
+        bien_id: bien.id, niveau_tarifaire: niveauTarifaire(bien),
         item_list_id: "villas",
         items: [{ item_id: bien.id, item_name: bien.nom, item_category: bien.lieu?.split(",")[0]?.trim() || "Martinique", price: bien.prix || 0, currency: "EUR" }],
       });
@@ -8067,6 +8179,8 @@ export default function PublicSite() {
           window.gtag("event", "view_item", {
             currency: "EUR",
             value: withPrice.prix || 0,
+            bien_id: match.id,
+            niveau_tarifaire: niveauTarifaire(withPrice),
             items: [{
               item_id: match.id,
               item_name: match.nom,
@@ -8401,6 +8515,8 @@ export default function PublicSite() {
           </div>
           <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: plagesFaq.map(f => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })) }) }} />
         </section>
+
+        <MaillageCluster currentSlug="plus-belles-plages-sud-martinique" bienNames={BIEN_NAMES} />
 
         <FooterSection />
         <FooterBottomBar />

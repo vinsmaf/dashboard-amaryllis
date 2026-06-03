@@ -82,6 +82,9 @@ export async function onRequestPost(context) {
     nights    = null,
     beds24Id  = "",
     type      = "total",           // "acompte" | "solde" | "total"
+    totalAmount = null,            // centimes — total du séjour (si acompte/solde)
+    soldeAmount = null,            // centimes — solde restant dû (si acompte)
+    pct         = null,            // % de l'acompte (ex: 40) — affichage
   } = body;
 
   if (!amount || amount < 500)    return json({ error: "Montant minimum 5€ (500 centimes)" }, 400);
@@ -90,7 +93,8 @@ export async function onRequestPost(context) {
   if (!checkin || !checkout)      return json({ error: "checkin et checkout requis" }, 400);
 
   // ── Label du type de paiement ─────────────────────────────────────────────
-  const typeLabel = type === "acompte" ? "Acompte (30%)"
+  const pctTxt = pct ? ` ${pct}%` : "";
+  const typeLabel = type === "acompte" ? `Acompte${pctTxt}`
                   : type === "solde"   ? "Solde restant"
                   : "Paiement intégral";
 
@@ -155,6 +159,9 @@ export async function onRequestPost(context) {
     "metadata[voyageur]":  voyageur,
     "metadata[beds24Id]":  beds24Id,
     "metadata[type]":      type,
+    "metadata[total]":     String(totalAmount || amount),
+    "metadata[solde]":     String(soldeAmount || 0),
+    "metadata[email]":     email || "",
   });
 
   // Pré-remplir l'email si fourni
@@ -174,6 +181,30 @@ export async function onRequestPost(context) {
   } catch (err) {
     return json({ error: `Stripe payment_link error: ${err.message}` }, 502);
   }
+
+  // ── Persistance D1 (best-effort) : trace le devis pour le suivi du solde ──
+  // Permet au cron J-30 d'envoyer le lien de solde + relances. Non bloquant.
+  try {
+    const db = env.revenue_manager;
+    if (db && type === "acompte") {
+      await db.prepare(`CREATE TABLE IF NOT EXISTS devis_paiements (
+        id TEXT PRIMARY KEY, bien_id TEXT, voyageur TEXT, email TEXT,
+        checkin TEXT, checkout TEXT,
+        total INTEGER, acompte INTEGER, solde INTEGER,
+        type TEXT, status TEXT,
+        solde_link TEXT, solde_link_sent_at INTEGER,
+        beds24_id TEXT, created_at INTEGER NOT NULL DEFAULT (unixepoch())
+      )`).run();
+      await db.prepare(`INSERT OR REPLACE INTO devis_paiements
+        (id, bien_id, voyageur, email, checkin, checkout, total, acompte, solde, type, status, beds24_id, created_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,unixepoch())`
+      ).bind(
+        link.id, bienId, voyageur, email, checkin, checkout,
+        Math.round(totalAmount || amount), Math.round(amount), Math.round(soldeAmount || 0),
+        type, "acompte_attente", beds24Id
+      ).run();
+    }
+  } catch (e) { /* non bloquant */ }
 
   return json({
     ok:            true,

@@ -1,6 +1,10 @@
 // Page /meilleure-saison-martinique — SEO TOFU 5000+ req/mois — traf-008
 
 import SEOMeta from "./SEOMeta.jsx";
+import MaillageCluster from "./components/seo/MaillageCluster.jsx";
+
+// Noms canoniques des biens pour le maillage interne SEO ("villa" = Amaryllis + Iguana uniquement).
+const BIEN_NAMES = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko", mabouya: "Studio Mabouya", schoelcher: "Bellevue Schœlcher", iguana: "Villa Iguana", nogent: "Appartement Nogent-sur-Marne" };
 
 const NAVY  = "#0e3b3a";
 const IVORY = "#faf5e9";
@@ -370,6 +374,7 @@ export default function GuideMeilleureSaison() {
           <p style={{ color: "rgba(250,245,233,0.3)", fontFamily: "'Jost', sans-serif", fontSize: 11, margin: 0 }}>© {new Date().getFullYear()} Résidence Amaryllis · Sainte-Luce, Martinique</p>
         </footer>
 
+        <MaillageCluster currentSlug="meilleure-saison-martinique" bienNames={BIEN_NAMES} />
       </div>
     </>
   );

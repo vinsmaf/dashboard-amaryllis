@@ -84,6 +84,23 @@ Autres crons via le **Worker** (`workers/ical-sync`) : sync iCal horaire, drafts
 
 ---
 
+## 4bis. Auto-remplissage « revenus locatif 2026 » — ACTIVÉ 02/06
+- **Fichier** : `appscript/REVENUS_AUTO_2026.gs` (même projet clasp que SCRIPT_SHEETS, scriptId `1PJVUdEra…`). Remplit la grille `revenus locatif 2026` à partir de l'onglet **« Toutes les Réservations »** (+ « réservations » legacy).
+- **Ce qu'il écrit, par bien × canal (air bnb/booking/direct) × mois d'arrivée** :
+  - **Montant €** sur la ligne du canal (TOUS canaux ; Direct = net, **Airbnb/Booking = brut OTA assumé**). ⚠️ **Airbnb iCal ne transmet pas le prix → montant = 0** (seuls nb résa + nuits se remplissent pour Airbnb ; € réel uniquement Booking via Beds24 + Direct).
+  - **Nb réservations** (bloc lignes 35-64) sur le canal.
+  - **Nb nuits** = ligne « jours occupés » (1/bien : nogent 68, amaryllis 75, iguana 81, geko 87, zandoli 93, mabouya 99, schoelcher 105).
+  - Séjour à cheval sur 2 mois : **nuits réparties au mois réel, montant au prorata**. Blocages (« not available »/« bloqué ») exclus.
+  - Lignes *total* + grands totaux (32/33/64) = **formules** → mises à jour automatiquement, ne PAS y écrire.
+- **Mapping lignes** (col = mois+2, C=janv…N=déc) : REV_ROWS / CNT_ROWS / NIGHTS_ROW dans le fichier. Vérifié visuellement 02/06.
+- **Anti-doublon** : journal masqué **`rev2026_traites`** (1 ligne/id déjà compté). **Baseline déjà posée** = les ~21 résas existantes sont marquées « comptées » → jamais re-ajoutées (préserve l'historique manuel jan-juin).
+- **Déclenchement TEMPS RÉEL** (pas de trigger temporisé — `ScriptApp` indispo via web app/502) : `syncRevenus2026()` est appelé en fin d'`importAllReservations_` (webhook Beds24 + sync horaire iCal + 📊) **et** d'`addReservation_` (saisie directe). Chaque nouvelle résa se remplit aussitôt, une seule fois.
+- **⚠️ CHANGEMENT DE MÉTHODE (décidé par Vincent 02/06)** : il **n'entre plus les NOUVELLES réservations à la main** dans la grille → l'auto s'en charge (sinon doublon). Le passé/manuel reste intact.
+- **Limite** : append-only → une **annulation** ne retire pas auto la valeur (à corriger à la main, ou via `revenus2026Undo`).
+- **Actions de maintenance** (via `/api/sheets-proxy` POST `{action}`) : `revenus2026Status` (journal/source), `revenus2026Recent` (n dernières), `revenus2026DryRun` (en attente, n'écrit rien), `revenus2026Sync` (applique les pending), `revenus2026Forget {ids}` (sort un id du journal), `revenus2026Undo {ids}` (resoustrait les deltas d'une résa), `revenus2026FromMonth {month,apply,ignoreMemo}` (rattrapage mois). `setupRevenus2026()` (baseline+trigger 15 min) = **uniquement depuis l'éditeur Apps Script** (scope ScriptApp).
+
+---
+
 ## 5. Pièges connus (footguns) — lire avant SEO/résa/réseaux
 1. **SEO meta fiches = DOUBLE SOURCE.** `functions/[slug].js` (HTMLRewriter runtime) **écrase** `scripts/prerender.mjs`. Éditer les DEUX, la vérité = la fonction. Title ≤60c, desc ≤158c. `functions/[slug].js` a sa propre table `BIENS` (prix codés en dur, à synchroniser).
 2. **Réservations** : un seul onglet Sheet « Toutes les Réservations », action `importAllReservations`. `importBeds24` et l'onglet « Réservations Nogent » n'existent plus. Comparaisons d'id en `String`.

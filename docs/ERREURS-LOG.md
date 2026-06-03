@@ -108,3 +108,31 @@
 - **Front** : nouveau wrapper `adminFetch` dans `src/lib/apiFetch.js` (drop-in de fetch + Bearer) appliqué aux 6 tabs admin (RevenueManagerPro via `apiCall`, AgentsKanban, OrchestratorTab, ApprobationsTab, SEOAuditTab, CroissanceTab, EditorialCalendarTab). **PAS de patch `window.fetch` global** (garde-fou E5/E9 respecté).
 - ⚠️ **GARDE-FOU ORDRE DE DÉPLOIEMENT** : quand on sécurise un endpoint appelé par un cron Worker, **déployer le Worker D'ABORD** (`npm run deploy:worker`, qui envoie le secret) **PUIS** Pages (`npm run deploy:pages`, qui exige l'auth). L'inverse = fenêtre où les crons tombent en 401.
 - Vérifié : 401 anonyme + mauvais secret sur les 11 ; 200 avec token admin sur ical-config/rm-scrape/rm-overrides/agents-actions/agent-drafts ; flux public (chat/beds24) intact.
+
+## 2026-06-02 — Double-comptage en testant l'auto-remplissage revenus 2026
+**Erreur** : pour tester `REVENUS_AUTO_2026`, j'ai « sorti » une résa déjà comptée du journal (`revenus2026Forget`) puis l'ai ré-appliquée → la case Geko/direct/juillet (déjà saisie manuellement par Vincent à 1900 €) est passée à 2850 € (résa comptée en trop). Vincent l'a vu immédiatement.
+**Cause** : Vincent remplit la grille À LA MAIN, y compris les résas futures. Toute résa déjà dans la grille est donc « déjà comptée » ; la ré-appliquer = doublon.
+**Correctif** : `revenus2026Undo` (resoustrait les deltas exacts) → retour à 1900 €. Puis décision : Vincent ARRÊTE la saisie manuelle des nouvelles résas, l'auto (baseline + journal) ne traite QUE les nouvelles.
+**Garde-fou** : ne JAMAIS `Forget`+`Sync` une résa déjà reflétée manuellement. Pour un test, utiliser une résa réellement nouvelle, ou `DryRun` (n'écrit rien). Toujours capturer la valeur AVANT et confirmer le delta attendu.
+
+## 2026-06-02 — #ERROR formule : séparateur décimal point vs virgule (revenus 2026)
+**Erreur** : en appliquant une résa Booking (636,81 €) sur une cellule déjà en FORMULE `=471,68+437,79`, `appendCell_` a écrit `=471,68+437,79+636.81` (point JS) → la feuille est en **locale FR (virgule décimale)** → **#ERROR! « Erreur d'analyse de formule »** (cellule + total en cascade).
+**Cause** : `String(delta)` en JS donne "636.81" (point) ; dans une formule fr, le point casse l'analyse. Les deltas ENTIERS (+1 résa, +5 nuits) passaient car pas de décimale.
+**Correctif** : `appendCell_` convertit désormais `delta` en virgule : `String(...).replace(".", ",")` + gère le signe (`+`/`-`). Réparé la cellule à la main (`=...+636,81`). Déployé @31.
+**Garde-fou** : tout code Apps Script qui ÉCRIT une formule numérique dans ce classeur (locale FR) doit utiliser la **virgule** décimale. Préférer `setValue(nombre)` quand l'historique en formule n'est pas requis.
+
+## 2026-06-02 — Faux « bug » commission Airbnb 3% vs 15% (NE PAS re-corriger)
+**Erreur** : j'ai pris le 3% (CanalLivePerf) vs 15% (bloc 2025) pour une incohérence et tout unifié à 15%/16%. **C'EST FAUX.**
+**Réalité (Vincent)** : Airbnb a 2 modèles de frais selon l'annonce → **3%** (frais partagés) pour **Géko, Zandoli, Mabouya, Bellevue/Schœlcher** ; **15%** (frais hôte simplifié) pour **Villa Amaryllis**. **Booking 17% partout.** (Iguana/Nogent : à confirmer.)
+**Correctif** : commission calculée PAR BIEN via `src/config/canauxCommissions.js` (`commissionTaux`, `airbnbComm`). Appliquée dans `CanalLivePerf` (par réservation) ET le bloc 2025 (par bien). Booking remis à 17%.
+**Garde-fou** : NE PAS unifier le taux Airbnb — il est volontairement variable par bien. Source de vérité = `canauxCommissions.js`.
+
+## 2026-06-02 — Cache empoisonné : bundle JS servi en HTML (site cassé) — RÉSOLU
+**Symptôme** : après déploiement, `villamaryllis.com/assets/index-XXXX.js` renvoyait `text/html` (le fallback SPA) avec `cache-control: immutable, max-age=1an` → `<script type=module>` charge du HTML → écran blanc pour une partie des visiteurs (selon le nœud edge).
+**Cause** : le `_redirects` a `/*  /index.html  200`. Tant que l'asset n'est pas propagé sur l'edge du domaine custom (fenêtre de quelques secondes/minutes après deploy), un GET sur `/assets/index-XXXX.js` tombe dans ce fallback → HTML 200, **mis en cache immutable sous le nom .js**. Le **smoke test** de `deploy-pages.sh` (curl du bundle ~6s après deploy) déclenchait lui-même l'empoisonnement.
+**Résolution immédiate** : faire tourner le hash de bundle (`window.__BUILD__` dans `main.jsx` — DOIT modifier le code minifié, un commentaire ne suffit pas car Vite le strippe → même hash) + laisser la propagation se terminer. L'ancien hash empoisonné devient orphelin (plus référencé par `/`, qui est servi DYNAMIC/frais). Vérifié 10/10 requêtes = JS.
+**Correctif durable** : le smoke test vérifie désormais le bundle avec un **cache-bust `?_smoke=ts`** (force un MISS → origine, sans polluer le cache du chemin canonique). 
+**Garde-fous** :
+  - Ne jamais considérer qu'un commentaire change le hash de bundle (Vite minifie) — il faut une instruction exécutable (`window.__BUILD__ = "..."`).
+  - Si un bundle est empoisonné : bumper `window.__BUILD__`, redéployer, attendre la propagation, vérifier en boucle (10×) le content-type. À défaut, purger le cache Cloudflare (nécessite un token API Cache Purge, non dispo en local).
+  - `cache-bust ?v=` sur l'asset → teste l'ORIGINE (toujours JS si le déploiement est sain) vs le cache (peut être empoisonné).

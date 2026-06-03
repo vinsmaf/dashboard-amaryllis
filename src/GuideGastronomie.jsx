@@ -2,6 +2,10 @@
 // Cuisine créole, restaurants & marchés depuis Sainte-Luce
 
 import SEOMeta from "./SEOMeta.jsx";
+import MaillageCluster from "./components/seo/MaillageCluster.jsx";
+
+// Noms canoniques des biens pour le maillage interne SEO ("villa" = Amaryllis + Iguana uniquement).
+const BIEN_NAMES = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko", mabouya: "Studio Mabouya", schoelcher: "Bellevue Schœlcher", iguana: "Villa Iguana", nogent: "Appartement Nogent-sur-Marne" };
 
 const NAVY  = "#0e3b3a";
 const IVORY = "#faf5e9";
@@ -393,6 +397,7 @@ export default function GuideGastronomie() {
             © {new Date().getFullYear()} Amaryllis Locations · <a href="/" style={{ color: "rgba(250,245,233,.35)", textDecoration: "none" }}>villamaryllis.com</a>
           </p>
         </div>
+        <MaillageCluster currentSlug="guide-gastronomie-martinique" bienNames={BIEN_NAMES} />
       </div>
     </>
   );

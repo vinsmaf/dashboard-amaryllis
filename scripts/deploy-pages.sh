@@ -58,9 +58,13 @@ for route in "/" "/amaryllis" "/admin"; do
 done
 
 # 2. Le bundle JS référencé dans l'HTML est servi en JS (pas HTML = empoisonnement)
+#    ⚠️ Vérif de l'ORIGINE via cache-bust (?_smoke=) : un GET sur le chemin canonique
+#    AVANT propagation edge déclenche le fallback /* /index.html 200, et Cloudflare
+#    CACHE ce HTML en immutable sous le nom .js (auto-empoisonnement du smoke test).
+#    Le cache-bust force un MISS vers l'origine sans polluer le cache du vrai chemin.
 INDEX_JS=$(curl -s "$DOMAIN/" | grep -oE 'assets/index-[A-Za-z0-9_-]+\.js' | head -1)
 if [[ -n "$INDEX_JS" ]]; then
-  CT=$(curl -s -o /dev/null -w "%{content_type}" "$DOMAIN/$INDEX_JS")
+  CT=$(curl -s -o /dev/null -w "%{content_type}" "$DOMAIN/$INDEX_JS?_smoke=$(date +%s)")
   if [[ "$CT" == *"javascript"* ]]; then
     echo "   ✅ Bundle $INDEX_JS servi en JS"
   else

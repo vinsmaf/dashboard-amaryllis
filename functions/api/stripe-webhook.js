@@ -357,6 +357,27 @@ export async function onRequestPost(context) {
     const meta = session?.metadata || {};
 
     const type = meta.type;
+
+    // ── Acompte / solde (Payment Links devis) → maj statut devis_paiements ──
+    if (type === "acompte" || type === "solde") {
+      // id du devis = lien d'acompte (= row id). Pour le solde, le cron a mis devisId.
+      const devisId = type === "solde" ? (meta.devisId || session.payment_link) : session.payment_link;
+      const db = env.revenue_manager;
+      if (db && devisId) {
+        try {
+          await db.prepare("UPDATE devis_paiements SET status=? WHERE id=?")
+            .bind(type === "acompte" ? "acompte_paye" : "solde_paye", devisId).run();
+        } catch (e) { console.warn("[webhook] devis_paiements update:", e.message); }
+      }
+      const bienNom = NOMS[meta.bienId] || meta.bienId || "?";
+      const montant = session.amount_total ? `${(session.amount_total / 100).toFixed(0)} €` : "?";
+      await sendEmail(env, {
+        subject: `💶 ${type === "acompte" ? "Acompte" : "Solde"} payé — ${bienNom} (${meta.voyageur || "voyageur"})`,
+        html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px"><h2 style="color:#0e3b3a">💶 ${type === "acompte" ? "Acompte reçu" : "Solde reçu — séjour soldé ✅"}</h2><p><strong>${bienNom}</strong> — ${meta.voyageur || "voyageur"}<br>${meta.checkin || "?"} → ${meta.checkout || "?"}<br>Montant : <strong>${montant}</strong></p></div>`,
+      }).catch(() => {});
+      return json({ ok: true, type, devis: devisId });
+    }
+
     if (type !== "caution") return json({ ok: true, ignored: true });
 
     const bienId   = meta.bienId   || "?";

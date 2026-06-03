@@ -1844,6 +1844,21 @@ async function runTokenRotationReminder(env) {
 
 // ── Exports Cloudflare Worker ────────────────────────────────────────────────
 // ── Ingestion RAG hebdomadaire (rafraîchit l'index vectoriel Vectorize) ──────
+// C2 — Solde des devis payés en 2 fois : lien de solde à J-30, relances J-25/J-20,
+// annulation auto J-15. (Logique dans /api/devis-solde-cron ; ici on le déclenche.)
+async function runDevisSoldeCron(env) {
+  const secret = env.POSTSTAY_SECRET || env.PRIX_RECAP_SECRET || "";
+  if (!secret) { console.log("[devis-solde] secret absent — skip"); return; }
+  const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+  try {
+    const r = await fetch(`${siteUrl}/api/devis-solde-cron?secret=${encodeURIComponent(secret)}`);
+    const j = await r.json().catch(() => ({}));
+    console.log(`[devis-solde] ${j.ok ? "OK" : "KO"} — scanned=${j.scanned ?? "?"} actions=${(j.actions || []).length}`);
+  } catch (e) {
+    console.error("[devis-solde] error:", e.message);
+  }
+}
+
 async function runRagIngest(env) {
   try {
     if (!env.POSTSTAY_SECRET) { console.log("[rag] POSTSTAY_SECRET absent — skip"); return; }
@@ -2020,6 +2035,7 @@ export default {
         await runYieldPricing(env, allEvents);
         await runCautionAutoRelease(env);
         await runInventoryAlerts(env);
+        await runDevisSoldeCron(env); // C2 — solde devis 2 fois : lien J-30 + relances J-25/J-20 + annulation J-15
         // ── Analyse autonome des 17 agents (GROQ_API_KEY requis dans les secrets CF Pages) ──
         if (env.GROQ_API_KEY) {
           const siteUrl = env.SITE_URL || "https://villamaryllis.com";

@@ -16,6 +16,8 @@ export default function DevisEditor() {
     fraisMenage: "",
     avecDepot: true,
     depotCustom: "",
+    acompte: false,
+    acomptePct: 40,
   });
   const [link, setLink] = useState("");
   const [copied, setCopied] = useState(false);
@@ -32,6 +34,12 @@ export default function DevisEditor() {
   const depot   = form.avecDepot
     ? (parseFloat(form.depotCustom) || bien?.depot || 0)
     : 0;
+
+  // Acompte / solde — % éditable (défaut 40 → solde 60)
+  const acompteOn  = form.acompte;
+  const acomptePct = Math.min(100, Math.max(1, parseFloat(form.acomptePct) || 40));
+  const acompteEur = acompteOn ? Math.round(total * acomptePct / 100) : total;
+  const soldeEur   = acompteOn ? total - acompteEur : 0;
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -76,15 +84,18 @@ export default function DevisEditor() {
           Authorization: "Bearer " + (sessionStorage.getItem("ldb_tok") || ""),
         },
         body: JSON.stringify({
-          amount:    Math.round(total * 100), // centimes
-          bienId:    form.bienId,
-          bienNom:   bien?.nom || form.bienId,
-          checkin:   form.checkin,
-          checkout:  form.checkout,
-          voyageur:  form.voyageur,
-          email:     form.email,
+          amount:      Math.round(acompteEur * 100), // centimes (acompte ou total)
+          bienId:      form.bienId,
+          bienNom:     bien?.nom || form.bienId,
+          checkin:     form.checkin,
+          checkout:    form.checkout,
+          voyageur:    form.voyageur,
+          email:       form.email,
           nights,
-          type:      "total",
+          type:        acompteOn ? "acompte" : "total",
+          pct:         acompteOn ? acomptePct : null,
+          totalAmount: Math.round(total * 100),
+          soldeAmount: acompteOn ? Math.round(soldeEur * 100) : 0,
         }),
       });
       const data = await res.json();
@@ -197,6 +208,28 @@ export default function DevisEditor() {
             </div>
           )}
         </div>
+
+        {/* Acompte / solde — % éditable (cpw-100) */}
+        <div style={{ marginTop: 12, padding: "14px 16px", background: "rgba(124,58,237,0.06)", borderRadius: 10, border: "1px solid rgba(124,58,237,0.2)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: form.acompte ? 12 : 0 }}>
+            <input type="checkbox" id="acompte" checked={form.acompte} onChange={e => set("acompte", e.target.checked)} style={{ width: 16, height: 16, cursor: "pointer" }} />
+            <label htmlFor="acompte" style={{ fontSize: 13, color: "#a78bfa", fontWeight: 600, cursor: "pointer" }}>
+              💸 Paiement en 2 fois (acompte maintenant + solde à J-30)
+            </label>
+          </div>
+          {form.acompte && (
+            <div style={{ display: "flex", gap: 20, flexWrap: "wrap", alignItems: "flex-end" }}>
+              <div>
+                <label style={{ ...label, color: "#a78bfa" }}>Acompte (%)</label>
+                <input type="number" min="1" max="100" value={form.acomptePct} onChange={e => set("acomptePct", e.target.value)} style={{ ...inp, width: 90 }} />
+              </div>
+              {total > 0 && <>
+                <div><span style={{ fontSize: 11, color: "#a78bfa" }}>Acompte à payer maintenant</span><br /><span style={{ fontSize: 18, fontWeight: 700, color: "#a78bfa" }}>{acompteEur.toLocaleString("fr-FR")} €</span></div>
+                <div><span style={{ fontSize: 11, color: "#64748b" }}>Solde ({100 - acomptePct}%) — à J-30</span><br /><span style={{ fontSize: 16, fontWeight: 700, color: "#cbd5e1" }}>{soldeEur.toLocaleString("fr-FR")} €</span></div>
+              </>}
+            </div>
+          )}
+        </div>
       </div>
 
       {total > 0 && (
@@ -260,7 +293,7 @@ export default function DevisEditor() {
       )}
       {stripeLink && (
         <div style={{ ...card, borderColor: "#7c3aed", marginBottom: 12 }}>
-          <div style={{ fontSize: 11, color: "#a78bfa", fontWeight: 600, marginBottom: 8 }}>💳 Lien Stripe prêt — paiement direct en {(total).toLocaleString("fr-FR")} €</div>
+          <div style={{ fontSize: 11, color: "#a78bfa", fontWeight: 600, marginBottom: 8 }}>💳 Lien Stripe prêt — {acompteOn ? `acompte ${acomptePct}% = ${acompteEur.toLocaleString("fr-FR")} € (solde ${soldeEur.toLocaleString("fr-FR")} € à J-30)` : `paiement direct ${total.toLocaleString("fr-FR")} €`}</div>
           <div style={{ background: "#0f172a", borderRadius: 8, padding: "10px 14px", fontSize: 11, color: "#c4b5fd", wordBreak: "break-all", marginBottom: 10 }}>{stripeLink}</div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button onClick={copyStripe} style={{ padding: "7px 14px", borderRadius: 8, border: "none", background: stripeCopied ? "#10b981" : "#7c3aed", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>

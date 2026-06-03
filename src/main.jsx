@@ -7,6 +7,9 @@ import { LangProvider } from './i18n.jsx'
 import { GUIDES_POI_SLUGS } from './data/guidesPoiSlugs.js'
 import { installBugCapture } from './lib/bugCapture.js'
 
+// Tag de build (force un nouveau hash de bundle quand nécessaire — survit à la minification)
+if (typeof window !== "undefined") window.__BUILD__ = "c2c3-tunnel-devis-2026-06-02";
+
 // Capteur de bugs auto-hébergé (→ /api/client-errors → onglet 🐞 Bugs).
 // Installé tôt pour attraper aussi les erreurs de boot. Indépendant de Sentry.
 installBugCapture()

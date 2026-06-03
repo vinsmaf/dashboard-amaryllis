@@ -8,14 +8,17 @@ import { ResponsiveContainer, BarChart, LineChart, ComposedChart, PieChart, Pie,
 import { MOIS, TT, REVENUS_CANAL_2025, CHARGES_2025, POSTES_CHARGES, fmt, fmtK } from "../App.jsx";
 import { sumN, avgN } from "../utils/calculations.js";
 import { useAppData } from "../AppDataContext.jsx";
+import { commissionTaux, airbnbComm, BOOKING_COMM } from "../config/canauxCommissions.js";
 
 // ── CanalLivePerf — uniquement utilisé par Pilotage ──────────────────────────
 function CanalLivePerf({ biens, reservations, mob }) {
+  // Commission calculée PAR réservation (taux Airbnb variable selon le bien :
+  // 3% Géko/Zandoli/Mabouya/Bellevue, 15% Villa ; Booking 17% ; Direct 0%).
   const CANAL_CONF = {
-    airbnb:       { label: "Airbnb",       color: "#FF5A5F", comm: 0.03  },
-    booking:      { label: "Booking.com",  color: "#0ea5e9", comm: 0.15  },
-    direct:       { label: "Direct",       color: "#10b981", comm: 0     },
-    beds24:       { label: "Beds24",       color: "#a855f7", comm: 0     },
+    airbnb:       { label: "Airbnb",       color: "#FF5A5F" },
+    booking:      { label: "Booking.com",  color: "#0ea5e9" },
+    direct:       { label: "Direct",       color: "#10b981" },
+    beds24:       { label: "Beds24",       color: "#a855f7" },
   };
   const normalize = c => {
     if (!c) return "autre";
@@ -31,21 +34,23 @@ function CanalLivePerf({ biens, reservations, mob }) {
   reservations.forEach(r => {
     if (!r.montant || r.montant <= 0 || !r.checkin || !r.checkout) return;
     const canal = normalize(r.canal);
-    if (!stats[canal]) stats[canal] = { count: 0, brut: 0, nights: 0 };
+    if (!stats[canal]) stats[canal] = { count: 0, brut: 0, nights: 0, commission: 0 };
     const ci = new Date(r.checkin + "T12:00:00Z"), co = new Date(r.checkout + "T12:00:00Z");
     const nights = Math.max(1, Math.round((co - ci) / 86400000));
     stats[canal].count++;
     stats[canal].brut += r.montant;
     stats[canal].nights += nights;
+    stats[canal].commission += r.montant * commissionTaux(canal, r.bienId); // per-bien Airbnb
   });
 
   const rows = Object.entries(stats)
     .map(([canal, s]) => {
-      const conf = CANAL_CONF[canal] || { label: canal, color: "#64748b", comm: 0 };
-      const commission = Math.round(s.brut * conf.comm);
+      const conf = CANAL_CONF[canal] || { label: canal, color: "#64748b" };
+      const commission = Math.round(s.commission);
       const net = s.brut - commission;
       const adr = s.nights > 0 ? Math.round(s.brut / s.nights) : 0;
-      return { canal, ...conf, ...s, commission, net, adr };
+      const comm = s.brut > 0 ? commission / s.brut : 0; // taux effectif (Airbnb = mix 3%/15%)
+      return { canal, ...conf, ...s, commission, net, adr, comm };
     })
     .sort((a, b) => b.brut - a.brut);
 
@@ -122,19 +127,20 @@ export default function Pilotage() {
 
   // ===== CANAUX =====
   const canalTotaux = { airbnb: 0, booking: 0, direct: 0, parking: 0 };
-  Object.values(REVENUS_CANAL_2025).forEach(b => {
+  let airbnbCommission2025 = 0; // Airbnb : taux PAR BIEN (3% vs 15%)
+  Object.entries(REVENUS_CANAL_2025).forEach(([bienId, b]) => {
     canalTotaux.airbnb += b.airbnb;
     canalTotaux.booking += b.booking;
     canalTotaux.direct += b.direct;
     canalTotaux.parking += b.parking || 0;
+    airbnbCommission2025 += (b.airbnb || 0) * airbnbComm(bienId);
   });
   const totalCanal = canalTotaux.airbnb + canalTotaux.booking + canalTotaux.direct + canalTotaux.parking;
 
-  // Commissions estimées
-  const COMMISSIONS = { airbnb: 0.15, booking: 0.17, direct: 0, parking: 0 };
+  // Commissions estimées — Airbnb per-bien (3%/15%), Booking 17% partout
   const commissionParCanal = {
-    airbnb: canalTotaux.airbnb * COMMISSIONS.airbnb,
-    booking: canalTotaux.booking * COMMISSIONS.booking,
+    airbnb: airbnbCommission2025,
+    booking: canalTotaux.booking * BOOKING_COMM,
     direct: 0,
     parking: 0,
   };

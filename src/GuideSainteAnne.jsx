@@ -1,6 +1,10 @@
 // Guide Sainte-Anne Martinique — /guide-sainte-anne — v2 immersif
 
 import SEOMeta from "./SEOMeta.jsx";
+import MaillageCluster from "./components/seo/MaillageCluster.jsx";
+
+// Noms canoniques des biens pour le maillage interne SEO ("villa" = Amaryllis + Iguana uniquement).
+const BIEN_NAMES = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko", mabouya: "Studio Mabouya", schoelcher: "Bellevue Schœlcher", iguana: "Villa Iguana", nogent: "Appartement Nogent-sur-Marne" };
 import WikiImg from "./WikiImg.jsx";
 
 const NAVY  = "#0e3b3a";
@@ -313,6 +317,7 @@ export default function GuideSainteAnne() {
             <span style={{ fontSize: 11, opacity: 0.7 }}>Photos © Wikimedia Commons (CC BY-SA)</span>
           </p>
         </div>
+        <MaillageCluster currentSlug="guide-sainte-anne" bienNames={BIEN_NAMES} />
       </div>
     </>
   );
