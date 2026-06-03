@@ -53,9 +53,12 @@ export async function onRequest(context) {
 
   const llm = await callLLM(env, { tier: "smart", messages: prompt, logSource: "code-review", timeoutMs: 30000 });
   let findings = extractJsonArray(llm.text) || [];
-  // Normalise + borne
+  // Normalise + borne. Exclut les verdicts "pas de bug" que le LLM met parfois
+  // dans un finding au lieu de renvoyer un tableau vide (bruit dans l'inbox).
+  const NO_BUG_RE = /aucun bug|aucune? (erreur|anomalie)|no bug|rien à signaler|pas de bug|r\.?a\.?s/i;
   findings = findings
     .filter(f => f && (f.title || f.detail))
+    .filter(f => !NO_BUG_RE.test(`${f.title || ""} ${f.detail || ""}`))
     .slice(0, 15)
     .map(f => ({
       file: String(f.file || "?").slice(0, 120),
