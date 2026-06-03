@@ -22,4 +22,9 @@ export const GUIDES_POI_SLUGS = [
   "/guide-ou-loger-martinique-secteur",
   "/guide-que-faire-nogent-sur-marne",
   "/guide-ou-dormir-est-paris-nogent",
+  "/guide-martinique-en-couple-sud",
+  "/guide-itineraire-une-semaine-sud-martinique",
+  "/guide-snorkeling-tortues-martinique",
+  "/guide-budget-vacances-martinique",
+  "/guide-nogent-guinguettes-bord-de-marne",
 ];

@@ -240,6 +240,26 @@ export default function GuideActivites() {
             <a href="/guide-hub" style={{ padding: "12px 24px", border: `1px solid ${SAND}`, borderRadius: 8, textDecoration: "none", color: NAVY, fontSize: 13, letterSpacing: "0.08em" }}>← Guide Sainte-Luce</a>
             <a href="/guide-proximite" style={{ padding: "12px 24px", border: `1px solid ${SAND}`, borderRadius: 8, textDecoration: "none", color: NAVY, fontSize: 13, letterSpacing: "0.08em" }}>Activités proches de la villa →</a>
           </div>
+
+          {/* FAQ visible (mêmes Q/R que le JSON-LD FAQPage de functions/[slug].js) */}
+          <div style={{ marginTop: 64 }}>
+            <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 22, letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY, marginBottom: 20 }}>
+              Questions fréquentes
+            </h2>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {[
+                { q: "Quelles sont les activités incontournables à Sainte-Luce ?", a: "Les plages (Anse Corps de Garde, Anse Mabouya, Gros Raisin), une sortie bateau ou kayak dans la baie, le snorkeling et la plongée vers le Rocher du Diamant, la visite des distilleries (Trois-Rivières, La Mauny) et la forêt de Montravail." },
+                { q: "Y a-t-il des activités gratuites à Sainte-Luce ?", a: "Oui : les plages et la baignade sont gratuites, tout comme les sentiers de la forêt de Montravail. Plusieurs distilleries proposent une visite libre gratuite avec dégustation." },
+                { q: "Que faire à Sainte-Luce en famille ?", a: "Les plages calmes et peu profondes conviennent aux enfants ; une sortie en bateau, le snorkeling près du bord et la découverte d'une distillerie complètent facilement une journée en famille." },
+                { q: "Sainte-Luce est-elle bien placée pour visiter le Sud de la Martinique ?", a: "Oui, Sainte-Luce est centrale dans le Sud : Le Diamant, Sainte-Anne et les Salines, ou encore les Trois-Îlets sont à environ 20 à 40 minutes de route." },
+              ].map((f) => (
+                <details key={f.q} style={{ background: "#fff", border: `1px solid ${SAND}`, borderRadius: 10, padding: "16px 20px" }}>
+                  <summary style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 15, color: NAVY, cursor: "pointer", listStyle: "none" }}>{f.q}</summary>
+                  <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 17, lineHeight: 1.75, color: TEXT, margin: "12px 0 0" }}>{f.a}</p>
+                </details>
+              ))}
+            </div>
+          </div>
         </div>
 
         <div style={{ background: NAVY, padding: "24px", textAlign: "center" }}>

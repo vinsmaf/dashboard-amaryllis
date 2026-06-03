@@ -20,6 +20,8 @@ export const CLUSTER_GUIDES = {
     "guide-martinique-en-famille-sud",
     "guide-sainte-luce-jour-de-pluie",
     "guide-se-deplacer-martinique-sud",
+    "guide-martinique-en-couple-sud",
+    "guide-snorkeling-tortues-martinique",
   ],
   "diamant": [
     "guide-plongee-martinique",
@@ -34,10 +36,13 @@ export const CLUSTER_GUIDES = {
     "guide-saint-pierre-martinique",
     "guide-francois-martinique",
     "guide-ou-loger-martinique-secteur",
+    "guide-itineraire-une-semaine-sud-martinique",
+    "guide-budget-vacances-martinique",
   ],
   "nogent": [
     "guide-que-faire-nogent-sur-marne",
     "guide-ou-dormir-est-paris-nogent",
+    "guide-nogent-guinguettes-bord-de-marne",
   ],
 };
 
@@ -77,4 +82,9 @@ export const GUIDE_LABELS = {
   "guide-ou-loger-martinique-secteur": "Où loger en Martinique",
   "guide-que-faire-nogent-sur-marne": "Que faire à Nogent-sur-Marne",
   "guide-ou-dormir-est-paris-nogent": "Où dormir à l'est de Paris",
+  "guide-martinique-en-couple-sud": "Martinique en couple (Sud)",
+  "guide-itineraire-une-semaine-sud-martinique": "Itinéraire d'une semaine (Sud)",
+  "guide-snorkeling-tortues-martinique": "Nager avec les tortues",
+  "guide-budget-vacances-martinique": "Budget vacances Martinique",
+  "guide-nogent-guinguettes-bord-de-marne": "Guinguettes & bords de Marne",
 };

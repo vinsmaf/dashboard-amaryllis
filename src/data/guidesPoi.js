@@ -953,6 +953,255 @@ export const GUIDES_POI = [
     ],
     "depuisNosVillas": "Notre appartement de standing à Nogent-sur-Marne — jardin, bord de Marne, Paris en 20 min par le RER A — est une alternative calme aux hôtels parisiens.",
     "ctaLabel": "Voir notre appartement de Nogent"
+  },
+  {
+    "id": "couple-sud",
+    "slug": "/guide-martinique-en-couple-sud",
+    "metaTitle": "Martinique en couple : escapade Sud",
+    "metaDescription": "Plages intimes, couchers de soleil et dîners en amoureux dans le Sud de la Martinique. Escapade romantique, avec le studio Mabouya et son jacuzzi privatif.",
+    "h1": "La Martinique en couple : escapade romantique dans le Sud",
+    "intro": "Vous rêvez d'une parenthèse à deux loin de l'agitation ? Le Sud de la Martinique réunit tout ce qu'il faut pour une escapade romantique : criques discrètes, couchers de soleil sur la mer des Caraïbes, tables conviviales au bord de l'eau et soirées au calme. Voici nos suggestions pour transformer votre séjour en moment d'exception, avec un atout précieux côté hébergement : le studio Mabouya et son jacuzzi privatif face à la mer.",
+    "sections": [
+      {
+        "h2": "Des plages intimes pour s'isoler à deux",
+        "body": "Le Sud abrite de petites anses à l'écart des grandes plages familiales. Du côté de Sainte-Luce, des criques bordées de cocotiers se prêtent à une baignade tranquille et à une serviette posée à l'ombre. Plus à l'ouest, les anses des Trois-Îlets et du Diamant offrent des recoins où l'on se sent presque seuls au monde, surtout tôt le matin ou en semaine. Pour un moment vraiment au calme, privilégiez les heures creuses : la lumière y est plus douce et l'ambiance feutrée, idéale pour une parenthèse en amoureux."
+      },
+      {
+        "h2": "Couchers de soleil sur la mer des Caraïbes",
+        "body": "Exposée à l'ouest, la côte sud caraïbe offre des couchers de soleil mémorables. Installez-vous sur une plage face au large, un verre à la main, et regardez le ciel s'embraser au-dessus de l'eau. Les pontons et terrasses du secteur des Trois-Îlets et du Marin sont parfaits pour ce rituel du soir. Pensez à arriver un peu en avance pour choisir votre place : le crépuscule sous les tropiques est bref mais intense, et l'instant se savoure sans se presser, à deux."
+      },
+      {
+        "h2": "Dîners et soirées en amoureux",
+        "body": "Le Sud ne manque pas d'adresses pour un dîner à deux : tables créoles, poissons grillés au bord de l'eau, ti-punch en terrasse face aux voiliers. Le front de mer du Marin et les bourgs de Sainte-Luce et des Trois-Îlets concentrent une belle variété de restaurants, du repas décontracté au dîner plus soigné. Réservez en haute saison, surtout le week-end. Après le dîner, rien n'empêche de prolonger la soirée tranquillement chez vous, à l'écart du bruit, pour profiter pleinement du calme antillais."
+      },
+      {
+        "h2": "Le studio Mabouya et son jacuzzi privatif vue mer",
+        "body": "Pour une escapade à deux, l'hébergement fait toute la différence. Le studio Mabouya, à Sainte-Luce, dispose d'un jacuzzi privatif avec vue sur la mer : l'endroit idéal pour terminer la journée après une plage ou un dîner. Pensé pour un couple, ce cocon intime conjugue confort et intimité, sans vis-à-vis. C'est l'atout d'un séjour romantique réussi : un bain à remous rien que pour vous, face à l'horizon, au coucher du soleil ou sous les étoiles."
+      }
+    ],
+    "pratique": {
+      "acces": "Base idéale à Sainte-Luce, dans le Sud caraïbe ; plages, restaurants et points de vue accessibles en voiture en 10 à 30 min.",
+      "duree": "Une escapade de 3 à 5 jours suffit pour profiter des plages, d'un dîner et de couchers de soleil.",
+      "tarif": "Plages et points de vue gratuits ; prévoir un budget restaurants et activités selon vos envies.",
+      "meilleurMoment": "La saison sèche (décembre à avril) pour le beau temps ; fin de journée pour les couchers de soleil.",
+      "conseil": "Réservez votre table en haute saison et privilégiez les plages tôt le matin pour plus d'intimité."
+    },
+    "faq": [
+      {
+        "q": "Quel est le meilleur secteur de la Martinique pour un séjour en couple ?",
+        "a": "Le Sud caraïbe, autour de Sainte-Luce, des Trois-Îlets et du Diamant, réunit plages intimes, couchers de soleil et restaurants au bord de l'eau, dans une ambiance plus calme que le Nord."
+      },
+      {
+        "q": "Où voir un beau coucher de soleil en Martinique ?",
+        "a": "La côte sud caraïbe, exposée à l'ouest, est idéale. Les plages et terrasses des Trois-Îlets, du Marin et du Diamant offrent une vue dégagée sur la mer au crépuscule."
+      },
+      {
+        "q": "Existe-t-il un logement avec jacuzzi privatif dans le Sud ?",
+        "a": "Oui. Le studio Mabouya, à Sainte-Luce, dispose d'un jacuzzi privatif avec vue sur la mer, pensé pour un couple en quête d'intimité."
+      }
+    ],
+    "depuisNosVillas": "Le Studio Mabouya, avec son jacuzzi privatif vue mer, est notre adresse des amoureux à Sainte-Luce ; nos autres logements raviront aussi les couples en quête de calme.",
+    "ctaLabel": "Voir nos logements"
+  },
+  {
+    "id": "itineraire-semaine-sud",
+    "slug": "/guide-itineraire-une-semaine-sud-martinique",
+    "metaTitle": "Une semaine dans le Sud : itinéraire",
+    "metaDescription": "Itinéraire jour par jour pour une semaine dans le Sud de la Martinique au départ de Sainte-Luce : plages, distilleries, randonnée, le Diamant et mer.",
+    "h1": "Une semaine dans le Sud de la Martinique : itinéraire jour par jour",
+    "intro": "Vous disposez de sept jours pour découvrir le Sud de la Martinique et ne savez pas par où commencer ? Voici un programme type au départ de Sainte-Luce, central et bien placé pour rayonner. Plages, distilleries, randonnée, villages de pêcheurs et excursion en mer : cet itinéraire équilibre découvertes et moments de détente, tout en vous laissant la liberté d'adapter le rythme à vos envies.",
+    "sections": [
+      {
+        "h2": "Jours 1 et 2 : arrivée et plages de Sainte-Luce",
+        "body": "Posez vos valises à Sainte-Luce et prenez le temps de vous acclimater. Le premier jour, profitez des plages du bourg et des criques alentour, parfaites pour une première baignade dans une eau calme. Le deuxième jour, explorez le littoral à pied ou en voiture, repérez vos spots favoris et goûtez à la cuisine créole locale. C'est aussi l'occasion de faire vos courses et de prendre le rythme antillais, sans précipitation, avant des journées plus actives."
+      },
+      {
+        "h2": "Jours 3 et 4 : distilleries et villages du Sud",
+        "body": "Le troisième jour, partez à la rencontre du rhum agricole martiniquais : plusieurs distilleries du Sud se visitent et proposent des dégustations dans un cadre verdoyant. Le quatrième jour, mettez le cap sur les villages côtiers : le Marin et sa grande marina, Sainte-Anne et ses plages, ou les Anses-d'Arlet et leurs eaux limpides. Alternez visites culturelles, marchés colorés et pauses baignade. Prévoyez un conducteur sobre lors des dégustations et roulez aux heures fraîches."
+      },
+      {
+        "h2": "Jours 5 et 6 : randonnée et le Diamant",
+        "body": "Le cinquième jour, chaussez vos baskets pour une randonnée : le Sud offre des sentiers littoraux accessibles, comme la trace des Caps, avec de belles vues sur la mer. Partez tôt, emportez de l'eau et un chapeau. Le sixième jour, rejoignez Le Diamant : la grande plage face au célèbre Rocher, et le Mémorial Cap 110 à l'Anse Caffard pour un moment plus contemplatif. La combinaison nature, plage et mémoire compose une journée riche et variée."
+      },
+      {
+        "h2": "Jour 7 : excursion en mer et détente",
+        "body": "Pour clôturer la semaine, embarquez pour une sortie en mer depuis le Marin : fonds blancs, snorkeling et baignade en pleine eau. De nombreux prestataires proposent des sorties à la journée, à réserver à l'avance en haute saison. Si vous préférez le calme, gardez ce dernier jour pour une plage favorite et un dîner face au coucher de soleil. Vous repartirez avec un bel aperçu de la diversité du Sud martiniquais."
+      }
+    ],
+    "pratique": {
+      "acces": "Point de départ à Sainte-Luce ; une voiture de location est recommandée pour rayonner dans tout le Sud.",
+      "duree": "7 jours pleins, modulables selon votre rythme et vos centres d'intérêt.",
+      "tarif": "Plages et randonnées gratuites ; prévoir un budget pour la location de voiture, les distilleries et l'excursion en mer.",
+      "meilleurMoment": "La saison sèche (décembre à avril) pour des conditions optimales sur les routes, les sentiers et en mer.",
+      "conseil": "Réservez votre excursion en mer et vos visites de distillerie à l'avance, et planifiez les randonnées tôt le matin."
+    },
+    "faq": [
+      {
+        "q": "Une semaine suffit-elle pour visiter le Sud de la Martinique ?",
+        "a": "Oui. Sept jours permettent de combiner plages, distilleries, une randonnée, la découverte des villages et une excursion en mer, sans courir, en gardant du temps pour se reposer."
+      },
+      {
+        "q": "Faut-il louer une voiture pour cet itinéraire ?",
+        "a": "C'est fortement recommandé. Les transports en commun sont limités, et une voiture vous permet de rejoindre librement plages, distilleries, sentiers et villages depuis Sainte-Luce."
+      },
+      {
+        "q": "Pourquoi choisir Sainte-Luce comme point de départ ?",
+        "a": "Sainte-Luce est central dans le Sud : on rejoint facilement le Marin, Sainte-Anne, le Diamant, les Trois-Îlets et les distilleries, ce qui limite les trajets quotidiens."
+      }
+    ],
+    "depuisNosVillas": "Basés à Sainte-Luce, au cœur du Sud, nos logements sont le camp de base idéal pour cet itinéraire d'une semaine.",
+    "ctaLabel": "Voir nos logements"
+  },
+  {
+    "id": "snorkeling-tortues",
+    "slug": "/guide-snorkeling-tortues-martinique",
+    "metaTitle": "Nager avec les tortues (Sud)",
+    "metaDescription": "Nager avec les tortues en Martinique depuis la plage, sans club : Anse Dufour et Anse Noire. Spots, sécurité et conseils pour les observer en les respectant.",
+    "h1": "Nager avec les tortues en Martinique (Sud)",
+    "intro": "Observer une tortue marine évoluer sous l'eau est l'un des grands émerveillements d'un séjour en Martinique. Bonne nouvelle : dans le Sud, certains spots se découvrent en snorkeling, directement depuis la plage, sans bouteille ni club de plongée. Voici où aller, comment vous y prendre en sécurité, et surtout comment observer ces animaux protégés en les respectant, pour préserver ce moment pour tous.",
+    "sections": [
+      {
+        "h2": "Anse Dufour et Anse Noire : deux spots accessibles",
+        "body": "Sur la commune des Anses-d'Arlet, l'Anse Dufour et l'Anse Noire voisine sont réputées pour la présence de tortues vertes qui viennent brouter les herbiers près du rivage. On y accède facilement et l'on entre dans l'eau directement depuis la plage, palmes-masque-tuba aux pieds. Les deux anses sont séparées par un court sentier. L'Anse Noire, au sable plus sombre, abrite aussi de jolis poissons. Arrivez tôt : le stationnement est limité et la fréquentation monte vite en journée."
+      },
+      {
+        "h2": "Snorkeling depuis la plage, sans club ni bouteille",
+        "body": "Ici, pas besoin de réserver une plongée : un simple équipement de snorkeling suffit. Nagez calmement le long de l'herbier, là où les tortues s'alimentent, en gardant la tête sous l'eau pour repérer leur silhouette. Pensez à louer ou apporter masque, tuba et palmes. Une combinaison fine ou un tee-shirt anti-UV protège du soleil pendant que vous flottez en surface. Ce snorkeling est à distinguer de la plongée en bouteille, qui nécessite un club et un encadrement : ici, tout se fait en autonomie, en surface."
+      },
+      {
+        "h2": "Observer les tortues sans les déranger",
+        "body": "Les tortues marines sont des espèces protégées. Gardez vos distances : ne les touchez jamais, ne les poursuivez pas et ne leur barrez pas la route vers la surface, où elles doivent respirer. Restez en surface, mouvements lents, sans les encercler. Ne les nourrissez pas et ne soulevez pas le sable. Évitez les crèmes solaires non respectueuses des récifs au profit d'une protection mécanique (tee-shirt). En adoptant ces gestes, vous profitez du spectacle sans stresser l'animal et vous préservez le site."
+      },
+      {
+        "h2": "Sécurité en mer pour le snorkeling",
+        "body": "Même près du bord, quelques précautions s'imposent. Vérifiez les conditions et la météo avant d'entrer, et restez attentif au courant et au vent. Idéalement, ne nagez pas seul et signalez votre présence avec une bouée de snorkeling visible. Surveillez le passage des bateaux dans les zones de mouillage et restez dans les espaces réservés à la baignade. Sortez si vous vous sentez fatigué. Avec un peu d'attention, le snorkeling reste une activité douce, accessible à toute la famille."
+      }
+    ],
+    "pratique": {
+      "acces": "Anse Dufour et Anse Noire, aux Anses-d'Arlet, à environ 40 min de route de Sainte-Luce par la côte caraïbe.",
+      "duree": "Une demi-journée pour profiter du snorkeling et des deux anses voisines.",
+      "tarif": "Accès aux plages gratuit ; location d'équipement de snorkeling à prévoir si besoin.",
+      "meilleurMoment": "Tôt le matin, pour une mer plus calme, une eau claire, moins de monde et un stationnement plus facile.",
+      "conseil": "Gardez vos distances avec les tortues et privilégiez une protection solaire mécanique (tee-shirt anti-UV) plutôt qu'une crème."
+    },
+    "faq": [
+      {
+        "q": "Où nager avec les tortues en Martinique sans plongée ?",
+        "a": "L'Anse Dufour et l'Anse Noire, aux Anses-d'Arlet, permettent d'observer des tortues en snorkeling directement depuis la plage, sans bouteille ni club, avec un simple masque-tuba-palmes."
+      },
+      {
+        "q": "Est-on sûr de voir des tortues ?",
+        "a": "Les tortues sont fréquentes dans ces anses où elles broutent les herbiers, mais leur présence n'est jamais garantie. Tôt le matin et par mer calme, les chances sont meilleures."
+      },
+      {
+        "q": "Peut-on toucher ou nourrir les tortues ?",
+        "a": "Non. Ce sont des espèces protégées. Il ne faut ni les toucher, ni les nourrir, ni les poursuivre. Gardez vos distances et restez en surface pour ne pas les empêcher de respirer."
+      },
+      {
+        "q": "Quel équipement faut-il pour le snorkeling ?",
+        "a": "Un masque, un tuba et des palmes suffisent. Une protection solaire mécanique (tee-shirt anti-UV) et, idéalement, une bouée de signalisation rendent la sortie plus sûre et plus confortable."
+      }
+    ],
+    "depuisNosVillas": "Depuis nos logements de Sainte-Luce, les plus beaux spots de snorkeling du Sud sont à portée de route.",
+    "ctaLabel": "Voir nos logements"
+  },
+  {
+    "id": "budget-martinique",
+    "slug": "/guide-budget-vacances-martinique",
+    "metaTitle": "Budget vacances en Martinique",
+    "metaDescription": "Combien prévoir pour des vacances en Martinique ? Vol, logement, voiture, repas, activités : guide budget et astuces pour économiser en réservant en direct.",
+    "h1": "Budget vacances en Martinique : combien prévoir ?",
+    "intro": "Combien coûtent des vacances en Martinique ? La réponse dépend de la saison, de la durée et de votre style de voyage, mais quelques grands postes reviennent toujours : le vol, le logement, la voiture, les repas et les activités. Voici un guide clair pour estimer votre budget et l'optimiser, notamment en réservant votre hébergement en direct, sans frais d'agence ni commission d'OTA.",
+    "sections": [
+      {
+        "h2": "Vol et transport vers la Martinique",
+        "body": "Le billet d'avion représente souvent le premier poste de dépense depuis la métropole. Les tarifs varient fortement selon la période : ils grimpent pendant les vacances scolaires et la haute saison touristique (décembre à avril), et baissent en intersaison. Réserver plusieurs mois à l'avance et rester flexible sur les dates aide à trouver de meilleurs prix. Sur place, prévoyez aussi le trajet entre l'aéroport (près de Fort-de-France) et votre logement dans le Sud, en voiture de location ou en navette."
+      },
+      {
+        "h2": "Logement : le poste où l'on économise le plus",
+        "body": "L'hébergement pèse lourd dans le budget, mais c'est aussi là que se trouvent les plus belles économies. Les plateformes de réservation (OTA) ajoutent généralement des frais de service au prix de la nuit. En réservant en direct auprès du propriétaire, vous évitez ces frais d'agence et la commission est supprimée, ce qui peut alléger sensiblement la facture sur un séjour d'une semaine ou plus. Un logement équipé d'une cuisine permet en prime de réduire le budget repas en cuisinant sur place."
+      },
+      {
+        "h2": "Voiture, repas et courses",
+        "body": "La location de voiture est quasi indispensable pour explorer le Sud : comptez-la sur toute la durée du séjour, carburant en sus. Côté repas, les écarts sont importants : un repas au restaurant revient plus cher que des plats préparés maison à partir de produits du marché et des supermarchés locaux. Alterner restaurants et cuisine sur place est un bon compromis. Les marchés offrent fruits, épices et poissons à prix raisonnables, tout en faisant partie de l'expérience martiniquaise."
+      },
+      {
+        "h2": "Activités et loisirs",
+        "body": "Beaucoup des plus belles expériences sont gratuites : plages, randonnées, points de vue et baignades ne coûtent rien. Le budget activités dépend surtout des sorties payantes que vous choisissez : excursion en mer, visite de distillerie avec dégustation, location de matériel nautique ou plongée. Listez vos envies en amont et réservez les sorties prisées à l'avance en haute saison. En combinant activités gratuites et quelques sorties marquantes, vous maîtrisez ce poste sans vous priver."
+      }
+    ],
+    "pratique": {
+      "acces": "Aéroport Aimé Césaire près de Fort-de-France ; comptez environ 40 min de route jusqu'au Sud (Sainte-Luce).",
+      "duree": "Un séjour d'une à deux semaines permet d'amortir le vol et de profiter pleinement.",
+      "tarif": "Budget très variable selon la saison ; les principaux postes sont vol, logement, voiture, repas et activités.",
+      "meilleurMoment": "L'intersaison offre des tarifs plus doux que la haute saison (décembre à avril) tout en gardant un beau climat.",
+      "conseil": "Réservez votre logement en direct pour éviter les frais d'agence, et choisissez un hébergement avec cuisine pour réduire le budget repas."
+    },
+    "faq": [
+      {
+        "q": "Quel budget prévoir pour une semaine en Martinique ?",
+        "a": "Le budget dépend de la saison et du style de voyage. Les postes à prévoir sont le vol, le logement, la location de voiture, les repas et les activités ; réserver tôt et en intersaison réduit la note."
+      },
+      {
+        "q": "Comment économiser sur le logement en Martinique ?",
+        "a": "Réserver en direct auprès du propriétaire évite les frais de service des plateformes. Un logement avec cuisine permet aussi de cuisiner et de réduire le budget restaurants."
+      },
+      {
+        "q": "La voiture de location est-elle indispensable ?",
+        "a": "Pour explorer le Sud librement, oui. Les transports en commun sont limités ; une voiture donne accès aux plages, distilleries, sentiers et villages, et fait partie du budget à anticiper."
+      }
+    ],
+    "depuisNosVillas": "Réserver nos logements en direct, sans frais d'agence, est l'un des leviers les plus simples pour alléger le budget de votre séjour.",
+    "ctaLabel": "Voir nos logements en direct"
+  },
+  {
+    "id": "nogent-guinguettes",
+    "slug": "/guide-nogent-guinguettes-bord-de-marne",
+    "metaTitle": "Guinguettes & bords de Marne, Nogent",
+    "metaDescription": "L'esprit guinguette et les bords de Marne à Nogent-sur-Marne : balades, Île de Beauté, ambiance et accès. Le charme des bords de l'eau aux portes de Paris.",
+    "h1": "Guinguettes et bords de Marne à Nogent-sur-Marne",
+    "intro": "À quelques minutes de Paris, Nogent-sur-Marne cultive un art de vivre au bord de l'eau hérité des fameuses guinguettes. Promenades le long de la Marne, terrasses animées, accordéon et ambiance bon enfant : l'esprit guinguette y est toujours bien vivant. Voici de quoi profiter de ce charme fluvial le temps d'un séjour, entre détente au bord de l'eau et escapades faciles vers la capitale.",
+    "sections": [
+      {
+        "h2": "L'esprit guinguette, une tradition vivante",
+        "body": "Les bords de Marne ont vu naître la grande tradition des guinguettes, ces lieux de bal et de fête au bord de l'eau popularisés dès la fin du XIXe siècle. Nogent-sur-Marne et ses environs en restent un haut lieu : on y retrouve l'ambiance conviviale d'autrefois, entre musette, danse et déjeuners en terrasse face à la rivière. C'est une parenthèse hors du temps, parfaite pour un week-end ou une halte gourmande, où l'on goûte à un Paris populaire et joyeux, les pieds presque dans l'eau."
+      },
+      {
+        "h2": "Balades au bord de la Marne",
+        "body": "Le long de la Marne, les berges aménagées invitent à la promenade à pied ou à vélo. On y croise des pêcheurs, des rameurs et des familles, dans un décor de saules et de pavillons. La rivière se prête aussi aux activités nautiques douces et aux croisières-promenades selon la saison. Quelques kilomètres suffisent pour s'évader, respirer et profiter d'un cadre verdoyant, à contre-courant de l'agitation parisienne. Le matin et en fin de journée, la lumière sur l'eau rend la balade particulièrement agréable."
+      },
+      {
+        "h2": "L'Île de Beauté et les recoins de charme",
+        "body": "Face à Nogent, l'Île de Beauté est l'un de ces lieux qui incarnent le charme des bords de Marne. Reliée à la berge, elle offre un cadre paisible apprécié des promeneurs et porte encore la mémoire des guinguettes d'antan. Tout autour, le quartier du Port et les rives invitent à flâner, à s'attabler en terrasse et à observer la vie fluviale. Ces recoins, à taille humaine, donnent au séjour une douceur particulière, à la fois champêtre et urbaine."
+      },
+      {
+        "h2": "Accès et ambiance aux portes de Paris",
+        "body": "Le grand atout de Nogent-sur-Marne, c'est sa proximité immédiate avec Paris. Le RER A relie le secteur au centre de la capitale en une vingtaine de minutes, ce qui permet d'alterner détente au bord de l'eau et visites parisiennes. On profite ainsi du meilleur des deux mondes : le calme des berges et l'ambiance guinguette d'un côté, l'effervescence parisienne de l'autre, sans les contraintes de logement du centre. Un point de chute idéal pour un séjour équilibré."
+      }
+    ],
+    "pratique": {
+      "acces": "À Nogent-sur-Marne, en bord de Marne ; RER A jusqu'au centre de Paris en une vingtaine de minutes.",
+      "duree": "Une demi-journée pour les berges et les guinguettes, davantage en combinant avec des sorties parisiennes.",
+      "tarif": "Promenades et berges gratuites ; consommations en guinguette et croisières selon les établissements et la saison.",
+      "meilleurMoment": "Du printemps à l'automne, par beau temps, pour profiter des terrasses et des bords de l'eau.",
+      "conseil": "Privilégiez les beaux jours et le week-end pour l'ambiance guinguette, et combinez avec une escapade dans Paris via le RER A."
+    },
+    "faq": [
+      {
+        "q": "Y a-t-il encore des guinguettes à Nogent-sur-Marne ?",
+        "a": "Oui, les bords de Marne autour de Nogent perpétuent la tradition des guinguettes, avec terrasses, musique et déjeuners au bord de l'eau, surtout à la belle saison."
+      },
+      {
+        "q": "Comment rejoindre Paris depuis Nogent-sur-Marne ?",
+        "a": "Le RER A relie le secteur au centre de Paris en une vingtaine de minutes, ce qui rend Nogent idéal pour combiner détente au bord de la Marne et visites parisiennes."
+      },
+      {
+        "q": "Que faire au bord de la Marne à Nogent ?",
+        "a": "On peut s'y promener à pied ou à vélo le long des berges, profiter des guinguettes et terrasses, découvrir l'Île de Beauté et, selon la saison, faire une croisière-promenade."
+      }
+    ],
+    "depuisNosVillas": "Notre appartement à Nogent-sur-Marne, à deux pas des bords de Marne, est le point de chute parfait pour profiter de l'esprit guinguette.",
+    "ctaLabel": "Voir notre appartement de Nogent"
   }
 ];
 
