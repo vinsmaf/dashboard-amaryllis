@@ -29,6 +29,11 @@ const NOISE = [
   /Failed to fetch.*chrome-extension/i,
   /Load failed$/i, // souvent requêtes annulées (navigation)
   /Java(Script)? exception.*instagram|fbav|fb_iab/i,
+  // Artefacts navigateurs in-app / autofill iOS-WebKit (gestionnaires de mots de passe,
+  // navigateurs Facebook/Instagram) — variables injectées hors de notre code.
+  /_AutofillCallbackHandler/i,
+  /webkit\.messageHandlers/i,
+  /Can't find variable: (_Autofill|webkit|gmo|__gCrWeb|instantSearch)/i,
 ];
 const SCREENSHOT_MAX = 180_000; // ~180 Ko base64 max (downscalé côté client)
 
