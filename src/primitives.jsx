@@ -4,6 +4,9 @@
  * Consomme les tokens CSS de src/tokens.css (--c-*, --font-*, etc.)
  */
 import { useState, useEffect } from "react";
+// Manifeste des largeurs réellement générées par image (scripts/gen-image-variants.mjs).
+// Évite que srcset propose un -1200w.webp inexistant (→ 404 = SPA HTML 200 = image cassée).
+import IMAGE_VARIANTS from "./data/imageVariants.json";
 
 // ── <Eyebrow> — petit titre en majuscules corail ───────────────────────────
 export function Eyebrow({ children, color = "coral", tracking = "0.45em", style }) {
@@ -334,11 +337,16 @@ export function FlowMark({ size = 40, color = "var(--c-coral, #c47254)", gold = 
 // /photos/.../XX-1600w.webp renvoie la SPA (HTML) en HTTP 200 → sur écran large/retina
 // la hero pioche ce candidat et reçoit du HTML au lieu d'une image = photo cassée.
 const _VARIANT_WIDTHS = [480, 800, 1200];
+// Largeurs disponibles pour une image : depuis le manifeste si connu, sinon défaut.
+function variantWidths(src) {
+  return IMAGE_VARIANTS[src] || _VARIANT_WIDTHS;
+}
 export function cfImg(src, w, quality = 85) { // quality conservé pour compat d'appel
   if (!src || src.startsWith("http")) return src;
   if (!/\.webp$/i.test(src)) return src;
   if (/-\d+w\.webp$/i.test(src)) return src; // déjà une variante
-  const target = _VARIANT_WIDTHS.find(x => x >= w) || _VARIANT_WIDTHS[_VARIANT_WIDTHS.length - 1];
+  const widths = variantWidths(src);
+  const target = widths.find(x => x >= w) || widths[widths.length - 1];
   return src.replace(/\.webp$/i, `-${target}w.webp`);
 }
 
@@ -368,8 +376,9 @@ export function RImg({ src, alt, sizes = "100vw", className, style, loading = "l
 
   if (!isHero) injectShimmerOnce();
 
-  const qualityMap = { 480: 75, 800: 85, 1200: 85 };
-  const srcset = [480, 800, 1200].map(w => `${cfImg(src, w, qualityMap[w])} ${w}w`).join(", ");
+  // srcset bâti UNIQUEMENT à partir des largeurs réellement générées (manifeste) → aucun candidat 404.
+  const widths = variantWidths(src);
+  const srcset = widths.map(w => `${cfImg(src, w)} ${w}w`).join(", ");
 
   const shimmerStyle = loaded ? {} : {
     background: "linear-gradient(90deg,var(--c-sand,#e0d4bc) 25%,var(--c-cream,#f4ecdc) 50%,var(--c-sand,#e0d4bc) 75%)",
@@ -386,9 +395,10 @@ export function RImg({ src, alt, sizes = "100vw", className, style, loading = "l
       className={className}
       onLoad={() => setLoaded(true)}
       onError={(e) => {
-        // Fallback : sort du shimmer et charge le chemin direct si cdn-cgi échoue (local dev ou CDN fail)
+        // Filet de sécurité : tout candidat qui échoue → on retombe sur l'original plein format
+        // (qui existe toujours), sans srcset. Évite la photo cassée (ex. variante manquante).
         setLoaded(true);
-        if (e.currentTarget.src.includes("/cdn-cgi/")) {
+        if (e.currentTarget.getAttribute("src") !== src) {
           e.currentTarget.removeAttribute("srcset");
           e.currentTarget.src = src;
         }

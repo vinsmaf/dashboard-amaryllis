@@ -15,7 +15,8 @@
  */
 import sharp from "sharp";
 import { readdir, stat, writeFile, unlink } from "node:fs/promises";
-import { join, dirname, basename } from "node:path";
+import { existsSync } from "node:fs";
+import { join, dirname, basename, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -43,6 +44,7 @@ async function fresh(srcPath, outPath) {
 }
 
 let generated = 0, skipped = 0, dropped = 0, originals = 0;
+const manifest = {}; // "/photos/x/02.webp" -> [480, 800] (largeurs réellement disponibles)
 for await (const src of walk(PHOTOS_DIR)) {
   originals++;
   const dir = dirname(src);
@@ -65,6 +67,14 @@ for await (const src of walk(PHOTOS_DIR)) {
       dropped++;
     }
   }
+  // Manifeste : largeurs dont le fichier existe RÉELLEMENT sur le disque (anti-404 srcset).
+  const rel = "/photos/" + src.slice(PHOTOS_DIR.length + 1).split(sep).join("/");
+  const avail = WIDTHS.filter(w => existsSync(join(dir, `${name}-${w}w.webp`)));
+  if (avail.length) manifest[rel] = avail;
 }
 
-console.log(`🖼  Variantes images : ${originals} originaux · ${generated} générées · ${skipped} à jour · ${dropped} ignorées (>= original)`);
+// Écrit le manifeste consommé par <RImg> (src/primitives.jsx) — bundlé par vite.
+const sortedManifest = Object.fromEntries(Object.keys(manifest).sort().map(k => [k, manifest[k]]));
+await writeFile(join(ROOT, "src", "data", "imageVariants.json"), JSON.stringify(sortedManifest, null, 0) + "\n");
+
+console.log(`🖼  Variantes images : ${originals} originaux · ${generated} générées · ${skipped} à jour · ${dropped} ignorées (>= original) · manifeste ${Object.keys(manifest).length} images`);
