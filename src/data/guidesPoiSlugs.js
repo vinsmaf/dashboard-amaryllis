@@ -16,4 +16,10 @@ export const GUIDES_POI_SLUGS = [
   "/guide-anse-couleuvre-martinique",
   "/guide-grand-riviere-martinique",
   "/guide-le-carbet-martinique",
+  "/guide-martinique-en-famille-sud",
+  "/guide-sainte-luce-jour-de-pluie",
+  "/guide-se-deplacer-martinique-sud",
+  "/guide-ou-loger-martinique-secteur",
+  "/guide-que-faire-nogent-sur-marne",
+  "/guide-ou-dormir-est-paris-nogent",
 ];

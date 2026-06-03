@@ -17,6 +17,9 @@ export const CLUSTER_GUIDES = {
     "guide-distilleries-martinique",
     "guide-gastronomie-martinique",
     "meilleure-saison-martinique",
+    "guide-martinique-en-famille-sud",
+    "guide-sainte-luce-jour-de-pluie",
+    "guide-se-deplacer-martinique-sud",
   ],
   "diamant": [
     "guide-plongee-martinique",
@@ -30,8 +33,12 @@ export const CLUSTER_GUIDES = {
     "guide-trois-ilets",
     "guide-saint-pierre-martinique",
     "guide-francois-martinique",
+    "guide-ou-loger-martinique-secteur",
   ],
-  "nogent": [],
+  "nogent": [
+    "guide-que-faire-nogent-sur-marne",
+    "guide-ou-dormir-est-paris-nogent",
+  ],
 };
 
 export const CLUSTER_BIENS = {
@@ -64,4 +71,10 @@ export const GUIDE_LABELS = {
   "guide-trois-ilets": "Les Trois-Îlets",
   "guide-saint-pierre-martinique": "Saint-Pierre & la Pelée",
   "guide-francois-martinique": "Le François & fonds blancs",
+  "guide-martinique-en-famille-sud": "Martinique en famille (Sud)",
+  "guide-sainte-luce-jour-de-pluie": "Sainte-Luce un jour de pluie",
+  "guide-se-deplacer-martinique-sud": "Se déplacer dans le Sud",
+  "guide-ou-loger-martinique-secteur": "Où loger en Martinique",
+  "guide-que-faire-nogent-sur-marne": "Que faire à Nogent-sur-Marne",
+  "guide-ou-dormir-est-paris-nogent": "Où dormir à l'est de Paris",
 };

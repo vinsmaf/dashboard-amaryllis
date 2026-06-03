@@ -635,6 +635,324 @@ export const GUIDES_POI = [
     ],
     "depuisNosVillas": "Depuis nos villas de Sainte-Luce, Le Carbet est à environ 1h10 de route sur la côte nord-Caraïbe. Nous vous suggérons d'y consacrer une demi-journée, idéalement couplée à la visite voisine de Saint-Pierre pour une immersion complète dans l'histoire du nord.",
     "ctaLabel": "Découvrir nos villas"
+  },
+  {
+    "id": "famille-sud",
+    "slug": "/guide-martinique-en-famille-sud",
+    "metaTitle": "Martinique en famille : que faire (Sud)",
+    "metaDescription": "Plages calmes, activités enfants et baignade sûre : notre guide pour des vacances réussies en famille dans le Sud de la Martinique, autour de Sainte-Luce.",
+    "h1": "La Martinique en famille : nos idées dans le Sud avec des enfants",
+    "intro": "Partir en Martinique avec des enfants, c'est l'assurance de journées simples et heureuses : une mer chaude, peu de profondeur, des plages bordées de raisiniers et un rythme tranquille. Le Sud de l'île, autour de Sainte-Luce, concentre ce qu'il faut pour voyager sereinement en famille. Voici nos repères pour des baignades sûres, des activités à hauteur d'enfant et des logements pensés pour les tribus.",
+    "sections": [
+      {
+        "h2": "Des plages calmes et peu profondes",
+        "body": "Le Sud est idéal pour les jeunes enfants car ses plages descendent en pente douce, avec une eau souvent tiède et peu agitée. Les anses de Sainte-Luce, comme Gros Raisins ou Corps de Garde, offrent du sable fin et des zones où l'on a pied longtemps. Plus à l'est, la grande plage de Sainte-Anne et les Salines séduisent les familles par leur étendue et leur ombre naturelle sous les cocotiers et raisiniers. Prévoyez chapeaux, lycras anti-UV et chaussures d'eau : le soleil tape fort et quelques fonds rocheux abritent oursins. Arriver tôt vous garantit une place à l'ombre et une mer encore très calme."
+      },
+      {
+        "h2": "Des activités à hauteur d'enfant",
+        "body": "Au-delà de la plage, le Sud regorge d'activités adaptées aux familles. Une sortie en bateau vers les fonds blancs, ces hauts-fonds où l'on se baigne en pleine mer, émerveille petits et grands. Les balades en kayak transparent dans la mangrove, les fermes pédagogiques et la découverte des iguanes ravissent les enfants curieux. Pour une journée nature, la presqu'île et ses sentiers faciles permettent de marcher sans difficulté. Le marché de Sainte-Luce, coloré et animé, est aussi une jolie sortie sensorielle : fruits tropicaux à goûter, épices à sentir, jus de canne pressé devant vous."
+      },
+      {
+        "h2": "Baignade et sécurité : nos conseils",
+        "body": "La baignade reste un plaisir simple à condition de rester vigilant. Privilégiez les plages abritées du Sud, où les vagues sont modérées, et évitez la côte atlantique au vent, plus exposée aux courants. Surveillez toujours les enfants de près : peu de plages martiniquaises sont surveillées par des maîtres-nageurs. Baignez-vous aux heures les moins chaudes, hydratez-vous souvent et renouvelez la crème solaire après chaque bain. Méfiez-vous des mancenilliers, ces arbres au tronc souvent marqué d'un trait rouge, dont la sève et les fruits sont toxiques : ne vous abritez jamais dessous en cas de pluie."
+      },
+      {
+        "h2": "Nos logements adaptés aux familles",
+        "body": "Voyager avec des enfants demande de l'espace et du confort. Plusieurs de nos logements à Sainte-Luce conviennent particulièrement aux familles : la Villa Amaryllis et la Villa Iguana offrent plusieurs chambres, une piscine et un grand extérieur où les enfants jouent en sécurité. Le logement Zandoli et le cocon Géko constituent de bonnes bases pour une famille plus restreinte, tandis que le studio Mabouya, avec son jacuzzi, séduit les couples avec un bébé. Tous sont situés dans le Sud, à quelques minutes des plages calmes, des commerces et des activités enfants."
+      }
+    ],
+    "pratique": {
+      "acces": "Base idéale à Sainte-Luce (Sud), à quelques minutes des plages familiales ; environ 40 min de l'aéroport Aimé Césaire.",
+      "duree": "Une à deux semaines pour profiter sans courir, en alternant plage, mer et nature.",
+      "tarif": "Activités famille variables : sortie bateau de l'ordre de quelques dizaines d'euros par personne, plages et marché gratuits.",
+      "meilleurMoment": "Saison sèche (décembre à avril) pour une mer calme et un ciel dégagé ; tôt le matin pour la baignade.",
+      "conseil": "Emportez lycras anti-UV, chaussures d'eau et chapeaux : le soleil tropical est intense même par temps couvert."
+    },
+    "faq": [
+      {
+        "q": "Quelles plages choisir en Martinique avec de jeunes enfants ?",
+        "a": "Privilégiez les plages du Sud, peu profondes et abritées : les anses de Sainte-Luce, la plage de Sainte-Anne ou les Salines. L'eau y est chaude et calme, idéale pour les petits."
+      },
+      {
+        "q": "La baignade est-elle dangereuse en Martinique pour les enfants ?",
+        "a": "Sur la côte caraïbe du Sud, la mer est généralement calme et sûre. Peu de plages sont surveillées, surveillez donc vos enfants de près et évitez la côte atlantique, plus exposée aux courants."
+      },
+      {
+        "q": "Que faire avec des enfants en Martinique en dehors de la plage ?",
+        "a": "Sorties en bateau vers les fonds blancs, kayak transparent dans la mangrove, fermes pédagogiques, observation des iguanes et visite des marchés colorés sont autant d'activités appréciées des familles."
+      },
+      {
+        "q": "Vos logements conviennent-ils aux familles ?",
+        "a": "Oui. La Villa Amaryllis et la Villa Iguana, avec plusieurs chambres et piscine, accueillent volontiers les familles. Le logement Zandoli et le cocon Géko conviennent aux familles plus restreintes."
+      }
+    ],
+    "depuisNosVillas": "Nos logements de Sainte-Luce, dans le Sud, sont idéalement placés pour des vacances en famille : plages calmes à quelques minutes, piscines privatives et espace pour les enfants.",
+    "ctaLabel": "Voir nos logements"
+  },
+  {
+    "id": "sainte-luce-pluie",
+    "slug": "/guide-sainte-luce-jour-de-pluie",
+    "metaTitle": "Sainte-Luce sous la pluie : que faire",
+    "metaDescription": "Une averse en Martinique ? Découvrez quoi faire à Sainte-Luce et dans le Sud quand il pleut : musées, distilleries couvertes, marché, spa et bonnes adresses.",
+    "h1": "Que faire à Sainte-Luce et dans le Sud quand il pleut",
+    "intro": "En Martinique, la pluie tombe souvent en grains : intense puis vite passée, laissant place au soleil. Mais quand une averse s'installe, pas question de gâcher la journée. Le Sud de l'île ne manque pas d'options à l'abri, du rhum à déguster aux musées en passant par un moment de détente au spa. Voici nos idées pour transformer un jour gris en belle parenthèse.",
+    "sections": [
+      {
+        "h2": "Distilleries et dégustations à l'abri",
+        "body": "Un jour de pluie est l'occasion idéale de comprendre le rhum agricole martiniquais, fierté de l'île. Plusieurs distilleries du Sud et du centre se visitent en grande partie sous abri : ateliers, chais et espaces de dégustation vous accueillent au sec. Vous y découvrez le parcours de la canne au verre, des cuves aux fûts de vieillissement, avant une dégustation commentée. C'est aussi le moment de rapporter quelques bouteilles introuvables ailleurs. Visites généralement ouvertes en journée ; renseignez-vous en amont sur les jours d'accueil, certaines fermant le dimanche."
+      },
+      {
+        "h2": "Musées, mémoire et culture créole",
+        "body": "La pluie invite à la culture. Le Sud et le centre de la Martinique proposent plusieurs lieux couverts pour comprendre l'île : sites de mémoire de l'esclavage, écomusées retraçant la vie d'antan, maisons de la canne ou de la banane. Ces visites, souvent abritées ou semi-couvertes, donnent de la profondeur à votre séjour et plaisent autant aux adultes qu'aux adolescents. Comptez une à deux heures par site. Prévoyez de vérifier les horaires à l'avance, car certains musées ferment en début de semaine ou ajustent leurs créneaux hors saison."
+      },
+      {
+        "h2": "Marché couvert, artisanat et shopping",
+        "body": "Quand le ciel se charge, cap sur les marchés et les boutiques. Le marché de Sainte-Luce, animé et coloré, permet de flâner entre épices, fruits, confitures et objets d'artisanat tout en restant en partie à l'abri. Pour une sortie plus longue, les galeries et centres commerciaux du Marin ou de Fort-de-France offrent de quoi s'occuper plusieurs heures. C'est le bon moment pour préparer vos souvenirs : sachets d'épices à colombo, sirops de canne, rhums arrangés, vannerie et bijoux en graines locales font des cadeaux authentiques à rapporter."
+      },
+      {
+        "h2": "Spa, détente et pause gourmande",
+        "body": "Un jour de pluie est aussi une invitation à ralentir. Offrez-vous un soin ou un massage dans l'un des spas du Sud, ou profitez simplement du jacuzzi de votre logement, comme celui du studio Mabouya, pour une parenthèse cocooning pendant l'averse. Côté table, les restaurants du Marin et des bourgs alentour vous accueillent pour un déjeuner créole prolongé, accras, colombo et poisson grillé face à la marina. Une averse devient alors le prétexte parfait pour savourer la lenteur antillaise, un ti-punch à la main, en attendant le retour du soleil."
+      }
+    ],
+    "pratique": {
+      "acces": "Toutes ces options sont à 10 à 40 min de Sainte-Luce, point de départ central dans le Sud.",
+      "duree": "De une à deux heures par visite ; une demi-journée complète en enchaînant plusieurs lieux couverts.",
+      "tarif": "Distilleries souvent gratuites à la visite, musées de l'ordre de 5-15 €, spa selon prestation.",
+      "meilleurMoment": "Toute la journée ; la pluie martiniquaise tombe souvent par grains courts, gardez de la souplesse.",
+      "conseil": "Vérifiez les jours d'ouverture à l'avance : plusieurs musées et distilleries ferment le dimanche ou en début de semaine."
+    },
+    "faq": [
+      {
+        "q": "Pleut-il beaucoup en Martinique ?",
+        "a": "La pluie tombe surtout en grains courts et intenses, particulièrement en saison humide (juin à novembre). Elle laisse vite place au soleil ; une averse gâche rarement toute une journée."
+      },
+      {
+        "q": "Que faire à Sainte-Luce quand il pleut ?",
+        "a": "Visiter une distillerie couverte, découvrir un musée ou un site de mémoire, flâner au marché, faire du shopping au Marin, ou s'offrir un spa ou un déjeuner créole prolongé."
+      },
+      {
+        "q": "Les distilleries se visitent-elles par temps de pluie ?",
+        "a": "Oui, l'essentiel des visites (chais, ateliers, dégustation) se fait à l'abri. Vérifiez simplement les jours d'ouverture, certaines distilleries fermant le dimanche."
+      },
+      {
+        "q": "Y a-t-il des activités couvertes pour les enfants un jour de pluie ?",
+        "a": "Oui : écomusées, maisons de la canne ou de la banane, marchés couverts et certains centres commerciaux occupent agréablement les enfants à l'abri pendant une averse."
+      }
+    ],
+    "depuisNosVillas": "Basés à Sainte-Luce, nos logements vous gardent au cœur du Sud : les options à l'abri (distilleries, marché, musées) restent toutes à portée, même sous la pluie.",
+    "ctaLabel": "Voir nos logements"
+  },
+  {
+    "id": "se-deplacer-sud",
+    "slug": "/guide-se-deplacer-martinique-sud",
+    "metaTitle": "Se déplacer dans le Sud Martinique",
+    "metaDescription": "Voiture, taxico ou bus ? Notre guide pour se déplacer dans le Sud de la Martinique : distances depuis Sainte-Luce, location, conseils et bons réflexes.",
+    "h1": "Se déplacer dans le Sud de la Martinique : nos conseils pratiques",
+    "intro": "Pour profiter pleinement du Sud de la Martinique, mieux vaut anticiper vos déplacements. Entre plages éloignées, distilleries dans les hauteurs et bourgs animés, l'île se savoure au volant ou au gré des transports locaux. Voici nos repères honnêtes sur la voiture, les taxicos et les distances, pour circuler sereinement depuis Sainte-Luce.",
+    "sections": [
+      {
+        "h2": "La voiture de location, reine de l'île",
+        "body": "En Martinique, la voiture reste de loin le moyen le plus pratique pour explorer le Sud à votre rythme. Les plages les plus belles, les distilleries et les sentiers se trouvent rarement desservis par les transports en commun. De nombreux loueurs sont présents à l'aéroport et dans les bourgs ; réservez à l'avance en haute saison, car la demande est forte de décembre à avril. Le réseau routier est correct, mais attendez-vous à des routes sinueuses dans les hauteurs et à des embouteillages aux abords de Fort-de-France aux heures de pointe. Une petite citadine suffit pour le Sud ; conduite à droite, comme en métropole."
+      },
+      {
+        "h2": "Taxicos, bus et taxis",
+        "body": "Si vous préférez ne pas conduire, plusieurs solutions existent. Les taxicos, ces minibus collectifs, relient les bourgs entre eux et vers Fort-de-France pour quelques euros, mais leurs horaires sont souples et les liaisons s'arrêtent en fin d'après-midi. Le réseau de bus s'est modernisé autour de l'agglomération de Fort-de-France, moins dans le Sud rural. Les taxis classiques sont fiables mais plus coûteux, surtout le soir et les jours fériés où des majorations s'appliquent. Pour des trajets ponctuels, ils dépannent bien ; pour un séjour entier, ils reviennent vite cher comparé à une location."
+      },
+      {
+        "h2": "Distances depuis Sainte-Luce",
+        "body": "Sainte-Luce est idéalement placée pour rayonner dans le Sud. Comptez environ 12 minutes pour la marina du Marin, 20 minutes pour Sainte-Anne et ses plages, 22 minutes pour Le Diamant, et 35 à 40 minutes pour les Trois-Îlets ou Fort-de-France. Les Salines, plage emblématique de l'île, sont à une trentaine de minutes. Pour le Nord et ses paysages (Montagne Pelée, jardins, distilleries du Nord-Caraïbe), prévoyez 1 h à 1 h 30 de route : c'est faisable à la journée, mais partez tôt. Ces durées s'allongent aux heures de pointe et lors des trajets vers ou depuis Fort-de-France."
+      },
+      {
+        "h2": "Nos bons réflexes pour circuler",
+        "body": "Quelques habitudes facilitent la vie sur place. Faites le plein régulièrement, les stations se raréfiant dans les hauteurs et le Nord. Téléchargez vos cartes hors ligne, car le réseau mobile faiblit dans certaines zones. Évitez de laisser des objets visibles dans la voiture sur les parkings de plage. Anticipez les embouteillages du matin et du soir autour de Fort-de-France, et privilégiez les départs matinaux pour les longues excursions. Enfin, roulez prudemment sur les routes de montagne, souvent étroites et humides. Avec ces réflexes, le Sud se parcourt facilement et chaque journée se transforme en petite expédition."
+      }
+    ],
+    "pratique": {
+      "acces": "Point de départ : Sainte-Luce, dans le Sud, à environ 40 min de l'aéroport Aimé Césaire.",
+      "duree": "Sud accessible en 10 à 40 min ; Nord à 1 h - 1 h 30, à la journée.",
+      "tarif": "Location à partir de l'ordre de 30-50 € / jour selon saison ; taxico quelques euros ; taxi nettement plus cher.",
+      "meilleurMoment": "Partez tôt pour les longues excursions et évitez les abords de Fort-de-France aux heures de pointe.",
+      "conseil": "Réservez votre voiture bien à l'avance en haute saison (décembre-avril) et téléchargez vos cartes hors ligne."
+    },
+    "faq": [
+      {
+        "q": "Faut-il louer une voiture en Martinique ?",
+        "a": "Pour explorer le Sud librement, oui : la voiture est de loin le moyen le plus pratique. Les plus belles plages et distilleries sont mal desservies par les transports en commun."
+      },
+      {
+        "q": "Peut-on se déplacer sans voiture dans le Sud ?",
+        "a": "C'est possible avec les taxicos (minibus collectifs) et les taxis, mais les liaisons sont limitées et s'arrêtent en fin d'après-midi. Pour un séjour entier, la location reste plus souple."
+      },
+      {
+        "q": "Combien de temps de Sainte-Luce aux plages du Sud ?",
+        "a": "Comptez environ 20 min pour Sainte-Anne, 30 min pour Les Salines, 22 min pour Le Diamant et 12 min pour la marina du Marin."
+      },
+      {
+        "q": "Conduit-on à droite en Martinique ?",
+        "a": "Oui, comme en France métropolitaine. Le réseau est correct mais attendez-vous à des routes sinueuses dans les hauteurs et à des embouteillages près de Fort-de-France."
+      }
+    ],
+    "depuisNosVillas": "Depuis nos logements de Sainte-Luce, vous rayonnez facilement dans tout le Sud ; un parking sur place facilite la location de voiture.",
+    "ctaLabel": "Voir nos logements"
+  },
+  {
+    "id": "ou-loger-secteur",
+    "slug": "/guide-ou-loger-martinique-secteur",
+    "metaTitle": "Où loger en Martinique : quel secteur",
+    "metaDescription": "Sud, Trois-Îlets ou Nord ? Notre guide pour choisir où loger en Martinique selon votre voyage, et pourquoi le Sud autour de Sainte-Luce séduit autant.",
+    "h1": "Où loger en Martinique : quel secteur choisir pour votre séjour",
+    "intro": "Choisir son secteur d'hébergement conditionne tout votre séjour en Martinique. Plages, ambiance, distances : chaque partie de l'île a sa personnalité. Faut-il poser ses valises au Sud, dans la station balnéaire des Trois-Îlets, ou dans le Nord plus sauvage ? Voici un tour d'horizon honnête pour vous aider à choisir selon votre voyage, votre rythme et vos envies.",
+    "sections": [
+      {
+        "h2": "Le Sud : plages, soleil et vie tranquille",
+        "body": "Le Sud, autour de Sainte-Luce, Sainte-Anne et du Marin, concentre les plus belles plages de l'île et le climat le plus sec. C'est le secteur le plus ensoleillé, idéal pour qui vient chercher la mer turquoise, la baignade facile et une ambiance détendue. Les commerces, restaurants et activités nautiques y sont nombreux, sans la foule des grandes stations. Les distances vers les sites du Sud sont courtes, et le Nord reste accessible à la journée. C'est notre secteur de prédilection : un bon équilibre entre nature, plages et praticité, parfait pour les familles, les couples et les amateurs de farniente comme de découverte."
+      },
+      {
+        "h2": "Les Trois-Îlets : l'ambiance balnéaire animée",
+        "body": "Face à Fort-de-France, les Trois-Îlets forment la principale zone touristique de la Martinique, avec la Pointe du Bout, l'Anse Mitan et l'Anse à l'Âne. On y trouve hôtels, marinas, golf, restaurants et vie nocturne, ainsi qu'une navette maritime pratique pour rejoindre Fort-de-France sans la voiture. C'est un choix cohérent si vous aimez l'animation, les infrastructures touristiques et la proximité de la capitale. En contrepartie, les plages y sont plus modestes et plus fréquentées que dans le Sud, et l'ambiance plus urbaine. Un bon compromis pour un premier séjour qui mêle plage, sorties et culture."
+      },
+      {
+        "h2": "Le Nord : nature, montagne et authenticité",
+        "body": "Le Nord de la Martinique offre un tout autre visage : Montagne Pelée, forêt tropicale, jardins luxuriants, plages de sable noir et villages de pêcheurs préservés. C'est le secteur des randonneurs, des amoureux de nature et de ceux qui cherchent l'authenticité loin des foules. La météo y est plus humide et la mer souvent plus agitée, moins propice à la baignade tranquille. Les distances vers les plages du Sud sont longues. Loger au Nord se justifie surtout pour un séjour axé randonnée et nature, ou en complément de quelques nuits, plutôt que comme base unique pour des vacances balnéaires."
+      },
+      {
+        "h2": "Notre conseil : le Sud, et nos logements à Sainte-Luce",
+        "body": "Pour un premier séjour ou des vacances équilibrées, nous recommandons le Sud : du soleil, de belles plages, des distances courtes et le reste de l'île à portée de journée. C'est précisément pourquoi nos logements sont installés à Sainte-Luce. Selon votre groupe, vous y trouverez la Villa Amaryllis et la Villa Iguana pour les familles et tribus avec piscine, le logement Zandoli et le cocon Géko pour des séjours plus intimes, ou le studio Mabouya et son jacuzzi pour les couples. Une base unique dans le Sud vous évite de déménager tout en gardant l'île entière accessible."
+      }
+    ],
+    "pratique": {
+      "acces": "Sud (Sainte-Luce) à environ 40 min de l'aéroport ; Trois-Îlets à 45 min ; Nord à 1 h ou plus.",
+      "duree": "Une base unique pour 1 à 2 semaines suffit dans le Sud, l'île se parcourant à la journée.",
+      "tarif": "Logements du Sud de l'ordre de 100 à 280 € / nuit selon le bien et la saison.",
+      "meilleurMoment": "Saison sèche (décembre à avril) pour le climat le plus ensoleillé, particulièrement marqué dans le Sud.",
+      "conseil": "Évitez de multiplier les bases : une seule adresse dans le Sud limite les déménagements tout en gardant tout accessible."
+    },
+    "faq": [
+      {
+        "q": "Quel est le meilleur secteur où loger en Martinique ?",
+        "a": "Pour un premier séjour balnéaire, le Sud (autour de Sainte-Luce) offre le meilleur équilibre : plus belles plages, climat le plus sec, distances courtes et reste de l'île accessible à la journée."
+      },
+      {
+        "q": "Vaut-il mieux loger dans le Sud ou aux Trois-Îlets ?",
+        "a": "Le Sud séduit par ses plages et sa tranquillité ; les Trois-Îlets par l'animation, les infrastructures et la proximité de Fort-de-France. Le Sud convient mieux à qui cherche plage et calme."
+      },
+      {
+        "q": "Faut-il loger au Nord de la Martinique ?",
+        "a": "Le Nord est idéal pour la randonnée et la nature, mais plus humide, avec une mer agitée et des plages du Sud éloignées. Il convient surtout en complément ou pour un séjour axé montagne."
+      },
+      {
+        "q": "Peut-on visiter toute l'île depuis le Sud ?",
+        "a": "Oui. Depuis Sainte-Luce, le Sud est à portée immédiate et le Nord se visite à la journée (1 h à 1 h 30 de route). Une base unique dans le Sud évite de déménager."
+      }
+    ],
+    "depuisNosVillas": "Nous avons fait le choix du Sud : Sainte-Luce et ses hauteurs offrent calme, vue mer et proximité des plus belles plages. Découvrez nos logements.",
+    "ctaLabel": "Voir nos logements en Martinique"
+  },
+  {
+    "id": "nogent-que-faire",
+    "slug": "/guide-que-faire-nogent-sur-marne",
+    "metaTitle": "Que faire à Nogent-sur-Marne",
+    "metaDescription": "Guinguettes, bords de Marne, Bois de Vincennes et marchés : notre guide des choses à faire à Nogent-sur-Marne, aux portes de Paris via le RER A.",
+    "h1": "Que faire à Nogent-sur-Marne et sur les bords de Marne",
+    "intro": "À quelques minutes de Paris en RER, Nogent-sur-Marne cultive un art de vivre rare en région parisienne : les bords de Marne, les guinguettes et une atmosphère de villégiature qui a inspiré peintres et impressionnistes. Entre balades au fil de l'eau, escapades dans le Bois de Vincennes et marchés gourmands, voici nos idées pour profiter pleinement de Nogent et de ses environs.",
+    "sections": [
+      {
+        "h2": "Les bords de Marne et les guinguettes",
+        "body": "Les bords de Marne sont l'âme de Nogent. On y flâne le long des quais arborés, on loue un canoë ou un pédalo, et l'on s'attable dans l'une des guinguettes qui ont fait la réputation de la vallée. Cette tradition festive du bal au bord de l'eau, popularisée au début du XXe siècle, reste vivante : musique, danse et cuisine de terroir au fil de l'eau. Les berges se prêtent aussi à la promenade à vélo ou à pied, jusqu'à l'île de Beauté ou vers Joinville. Au printemps et en été, c'est le rendez-vous favori des familles et des amoureux de plein air."
+      },
+      {
+        "h2": "Le Bois de Vincennes tout proche",
+        "body": "À deux pas de Nogent, le Bois de Vincennes déploie ses centaines d'hectares de verdure, l'un des plus vastes espaces verts de la région parisienne. On y court, on y pédale et l'on s'y promène autour du lac des Minimes, où l'on peut canoter. Le Parc floral, le Château de Vincennes et son donjon médiéval, ou encore le Parc zoologique de Paris se trouvent à portée immédiate. C'est l'échappée nature idéale pour une demi-journée en famille, sans quitter les portes de Paris. Pique-nique, jeux pour enfants et grands espaces font du bois un prolongement naturel d'un séjour à Nogent."
+      },
+      {
+        "h2": "Marchés, patrimoine et art de vivre",
+        "body": "Nogent séduit par son atmosphère de petite ville chic et conviviale. Son marché couvert, l'un des plus beaux de l'est parisien, regorge de produits frais et de spécialités : c'est l'endroit idéal pour composer un panier de guinguette ou un dîner du soir. Le centre-ville, avec ses commerces, ses terrasses et son architecture de villégiature, invite à la flânerie. Les amateurs d'histoire apprécieront le pavillon Baltard, vestige des anciennes halles de Paris remontées à Nogent, qui accueille aujourd'hui spectacles et événements. Une ville à taille humaine, où il fait bon vivre au quotidien comme le temps d'un séjour."
+      },
+      {
+        "h2": "Paris à portée immédiate",
+        "body": "L'un des grands atouts de Nogent est sa proximité avec Paris. Le RER A relie la ville au centre de la capitale en une vingtaine de minutes, avec plusieurs liaisons par heure : Châtelet, le Louvre, les Champs-Élysées ou la gare de Lyon sont à portée immédiate. Vous profitez ainsi de la culture et de l'effervescence parisiennes le jour, puis retrouvez le calme des bords de Marne le soir. Disneyland Paris et l'aéroport sont également accessibles sans détour par Paris intra-muros. Cette situation fait de Nogent une base maligne pour visiter Paris autrement, loin de l'agitation et des tarifs du centre."
+      }
+    ],
+    "pratique": {
+      "acces": "Nogent-sur-Marne, à l'est de Paris ; RER A jusqu'au centre de Paris en environ 20 min, plusieurs liaisons par heure.",
+      "duree": "Un week-end pour les bords de Marne et le bois ; davantage en combinant avec des visites à Paris.",
+      "tarif": "Bords de Marne et bois gratuits ; locations de canoë, marché et guinguettes selon consommation.",
+      "meilleurMoment": "Du printemps à l'automne pour les guinguettes et les balades au bord de l'eau ; week-ends animés.",
+      "conseil": "Profitez des bords de Marne en matinée ou en fin de journée, plus calmes, et réservez votre table en guinguette le week-end."
+    },
+    "faq": [
+      {
+        "q": "Que faire à Nogent-sur-Marne le week-end ?",
+        "a": "Flâner sur les bords de Marne, déjeuner en guinguette, faire du canoë, se promener au Bois de Vincennes, visiter le marché couvert et le pavillon Baltard, ou rejoindre Paris en RER."
+      },
+      {
+        "q": "Combien de temps de Nogent à Paris ?",
+        "a": "Le RER A relie Nogent au centre de Paris en une vingtaine de minutes, avec plusieurs liaisons par heure. Châtelet, le Louvre ou la gare de Lyon sont rapidement accessibles."
+      },
+      {
+        "q": "Y a-t-il encore des guinguettes à Nogent ?",
+        "a": "Oui, la tradition des guinguettes au bord de la Marne reste vivante, surtout du printemps à l'automne : musique, danse et cuisine de terroir au fil de l'eau."
+      },
+      {
+        "q": "Le Bois de Vincennes est-il proche de Nogent ?",
+        "a": "Oui, il est tout proche. On y rejoint facilement le lac des Minimes, le Parc floral, le Château de Vincennes ou le zoo de Paris pour une échappée nature."
+      }
+    ],
+    "depuisNosVillas": "Notre appartement à Nogent-sur-Marne, à deux pas des bords de Marne et du RER A, est le pied-à-terre idéal pour explorer l'est parisien.",
+    "ctaLabel": "Voir notre appartement de Nogent"
+  },
+  {
+    "id": "nogent-ou-dormir",
+    "slug": "/guide-ou-dormir-est-paris-nogent",
+    "metaTitle": "Où dormir à l'est de Paris : Nogent",
+    "metaDescription": "Alternative aux hôtels parisiens : dormez à Nogent-sur-Marne, au calme au bord de la Marne, à 20 min de Paris en RER A. Notre guide et notre appartement.",
+    "h1": "Où dormir à l'est de Paris : l'option Nogent-sur-Marne",
+    "intro": "Visiter Paris sans subir les tarifs et l'agitation du centre, c'est possible en posant ses valises à l'est, à Nogent-sur-Marne. À une vingtaine de minutes de la capitale en RER, cette ville des bords de Marne offre le calme, la verdure et un vrai art de vivre, tout en gardant Paris à portée immédiate. Voici pourquoi Nogent est une base maligne, et comment notre appartement s'y inscrit.",
+    "sections": [
+      {
+        "h2": "Une alternative maligne aux hôtels parisiens",
+        "body": "Se loger en plein cœur de Paris a un coût et un revers : prix élevés, chambres souvent exiguës et bruit constant. Choisir Nogent-sur-Marne, c'est gagner en espace, en tranquillité et souvent en budget, sans renoncer à la capitale. Vous profitez d'un vrai quartier vivant, de commerces de proximité et d'un environnement résidentiel apaisant, là où un hôtel parisien vous enferme dans un mouchoir de poche. Pour un séjour de plusieurs nuits, un appartement à Nogent offre une autonomie précieuse : cuisine équipée, espace pour une famille, et le sentiment d'habiter la ville plutôt que d'y être de passage."
+      },
+      {
+        "h2": "Paris en 20 minutes par le RER A",
+        "body": "Le principal atout de Nogent tient en deux lettres : RER. La ligne A relie Nogent au centre de Paris en une vingtaine de minutes, avec plusieurs liaisons par heure du matin au soir. Vous rejoignez Châtelet, le Louvre, les Champs-Élysées ou la gare de Lyon sans changement compliqué. Disneyland Paris est également sur la ligne A, accessible sans passer par le centre. Cette connexion directe transforme Nogent en pied-à-terre idéal : vous explorez Paris la journée, puis rentrez le soir loin de la foule, retrouver le calme des bords de Marne et une nuit reposante."
+      },
+      {
+        "h2": "Le calme des bords de Marne",
+        "body": "Dormir à Nogent, c'est s'offrir un cadre que Paris intra-muros ne peut proposer : les bords de Marne, leurs quais arborés, leurs guinguettes et leur atmosphère de villégiature. Après une journée de visites, rien de tel qu'une promenade au fil de l'eau ou un dîner en terrasse face à la rivière. La ville, à taille humaine, conjugue verdure, marché couvert et proximité immédiate du Bois de Vincennes. C'est l'équilibre parfait pour qui veut visiter Paris sans renoncer au repos : l'énergie de la capitale le jour, la douceur d'une ville d'eau le soir, à seulement quelques stations de RER."
+      },
+      {
+        "h2": "Notre appartement à Nogent",
+        "body": "Pour vivre cette expérience, nous vous accueillons dans notre appartement de Nogent-sur-Marne, à deux pas des bords de Marne et du RER. Pensé pour un séjour confortable, qu'il s'agisse de visiter Paris, de venir pour un événement ou de faire étape avant un départ, il offre un espace fonctionnel et une situation idéale. Vous profitez du calme du quartier, de la proximité des commerces et de la connexion rapide à la capitale. C'est notre seule adresse en région parisienne, complémentaire de nos logements en Martinique : une base douce à l'est de Paris, loin de l'agitation des hôtels du centre."
+      }
+    ],
+    "pratique": {
+      "acces": "Appartement à Nogent-sur-Marne, à deux pas du RER A ; centre de Paris en environ 20 min, plusieurs liaisons par heure.",
+      "duree": "Idéal pour un week-end ou un séjour de plusieurs nuits à la découverte de Paris.",
+      "tarif": "Notre appartement de Nogent à partir de l'ordre de 85 € / nuit selon la période.",
+      "meilleurMoment": "Toute l'année ; du printemps à l'automne, les bords de Marne et les guinguettes ajoutent au charme.",
+      "conseil": "Réservez tôt lors des grands événements parisiens (salons, périodes de fêtes), où l'hébergement se tend vite."
+    },
+    "faq": [
+      {
+        "q": "Est-ce une bonne idée de dormir à Nogent pour visiter Paris ?",
+        "a": "Oui. Nogent offre plus d'espace, de calme et souvent un meilleur budget que le centre de Paris, tout en restant à une vingtaine de minutes de la capitale par le RER A."
+      },
+      {
+        "q": "Combien de temps de Nogent au centre de Paris ?",
+        "a": "Environ 20 minutes par le RER A, avec plusieurs liaisons par heure. Châtelet, le Louvre ou la gare de Lyon sont accessibles sans changement compliqué."
+      },
+      {
+        "q": "Peut-on rejoindre Disneyland depuis Nogent ?",
+        "a": "Oui, Disneyland Paris est desservi par le RER A, la même ligne que Nogent, sans avoir à traverser Paris intra-muros."
+      },
+      {
+        "q": "Pourquoi loger à l'est de Paris plutôt qu'au centre ?",
+        "a": "Pour gagner en calme, en espace et souvent en budget, profiter des bords de Marne et du Bois de Vincennes, tout en gardant Paris à portée immédiate par le RER."
+      }
+    ],
+    "depuisNosVillas": "Notre appartement de standing à Nogent-sur-Marne — jardin, bord de Marne, Paris en 20 min par le RER A — est une alternative calme aux hôtels parisiens.",
+    "ctaLabel": "Voir notre appartement de Nogent"
   }
 ];
 

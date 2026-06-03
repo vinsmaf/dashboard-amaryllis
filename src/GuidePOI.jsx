@@ -3,8 +3,11 @@
 // Contenu : src/data/guidesPoi.js (rédigé par l'agent seo-content-writer).
 
 import SEOMeta from "./SEOMeta.jsx";
+import MaillageCluster from "./components/seo/MaillageCluster.jsx";
 import { GUIDES_POI } from "./data/guidesPoi.js";
 import { GUIDE_PHOTOS } from "./data/guidePhotos.js";
+
+const BIEN_NAMES = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko", mabouya: "Studio Mabouya", schoelcher: "Bellevue Schœlcher", iguana: "Villa Iguana", nogent: "Appartement Nogent-sur-Marne" };
 
 const NAVY = "#0e3b3a", CORAL = "#c47254", GOLD = "#c9a673";
 const IVORY = "#faf5e9", CREAM = "#f4ecdc", SAND = "#e0d4bc", MUTED = "#7a6b5a";
@@ -178,6 +181,8 @@ export default function GuidePOI() {
           </div>
         )}
       </main>
+
+      <MaillageCluster currentSlug={(guide.slug || "").replace(/^\//, "")} bienNames={BIEN_NAMES} />
 
       {/* CTA */}
       <section className="gp-cta">
