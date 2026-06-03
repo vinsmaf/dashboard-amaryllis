@@ -108,6 +108,77 @@ Pouvez-vous me préciser :
 Je reviens vers vous dans les plus brefs délais.
 Vincent`,
     },
+
+    // —— Réclamations (cf. docs/crm/templates-reclamations.md) ——
+    reclamAccuse: {
+      label: "📩 Réclam · Accusé",
+      fn: (r, b) =>
+`Bonjour ${r?.voyageur?.split(" ")[0] || ""},
+
+Merci de nous avoir signalé ce point concernant ${b?.nom || "votre logement"}. Je comprends que cela puisse être contrariant, et je vous remercie de nous en faire part directement — cela nous permet d'agir vite.
+
+Je prends votre message en charge personnellement. Je reviens vers vous très rapidement avec une solution.
+
+À tout de suite,
+Vincent`,
+    },
+    reclamPrecisions: {
+      label: "❓ Réclam · Précisions",
+      fn: (r, b) =>
+`Bonjour ${r?.voyageur?.split(" ")[0] || ""},
+
+Pour résoudre cela au plus vite, pourriez-vous me préciser quelques éléments ?
+
+• La nature exacte du problème et depuis quand vous le constatez
+• Une photo si possible (cela aide beaucoup le technicien)
+• Si cela affecte votre confort dès maintenant ou si nous avons un peu de temps
+
+Dès votre retour, j'organise l'intervention. Je reste joignable sur WhatsApp en attendant.
+
+Merci,
+Vincent`,
+    },
+    reclamResolution: {
+      label: "✅ Réclam · Résolution",
+      fn: (r, b) =>
+`Bonjour ${r?.voyageur?.split(" ")[0] || ""},
+
+Le problème est désormais résolu — [détail de l'action menée]. Pouvez-vous me confirmer que tout est rentré dans l'ordre de votre côté ?
+
+Je vous présente mes excuses pour ce désagrément. Ce n'est pas le séjour que nous voulions vous offrir à ${b?.nom || "notre logement"}, et je vous remercie de votre patience.
+
+N'hésitez pas si le moindre point reste à régler — je reste à votre entière disposition.
+
+Bien à vous,
+Vincent`,
+    },
+    reclamGeste: {
+      label: "🎁 Réclam · Geste",
+      fn: (r, b) =>
+`Bonjour ${r?.voyageur?.split(" ")[0] || ""},
+
+Encore une fois, je suis sincèrement désolé pour le désagrément qui a perturbé votre séjour à ${b?.nom || "notre logement"}. Vous avez été d'une grande compréhension, et je tiens à ce que cela ne reste pas sans suite.
+
+Pour me faire pardonner, je vous offre [geste — ex. remboursement d'une nuit / -20% sur votre prochain séjour avec le code EXCUSE-[CODE] / une nuit offerte lors de votre retour].
+
+J'espère sincèrement avoir l'occasion de vous accueillir à nouveau dans de meilleures conditions.
+
+Avec toutes mes excuses,
+Vincent`,
+    },
+    reclamCloture: {
+      label: "🤝 Réclam · Clôture",
+      fn: (r, b) =>
+`Bonjour ${r?.voyageur?.split(" ")[0] || ""},
+
+Je suis ravi que tout soit rentré dans l'ordre. Merci encore pour votre patience et votre bienveillance.
+
+Si vous repensez à un séjour, sachez que nos anciens voyageurs bénéficient d'un tarif privilégié en réservation directe sur villamaryllis.com. Ce sera un plaisir de vous accueillir à nouveau et de vous montrer le meilleur de ${b?.nom || "nos logements"}.
+
+Au plaisir de vous revoir,
+Vincent
+Amaryllis Locations · villamaryllis.com · +33 6 10 88 07 72`,
+    },
   };
 
   const upcoming = reservations
