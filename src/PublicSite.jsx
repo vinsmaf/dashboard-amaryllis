@@ -3468,14 +3468,24 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
             padding: isMobile ? "12px 20px" : "10px 24px",
             animation: "fadeIn 0.2s ease",
           }}>
-            <div>
-              <span style={{ fontWeight: 700, color: NAVY, fontFamily: "'Jost', sans-serif", fontSize: 14 }}>{bien.nom}</span>
-              {!PRICE_HIDDEN.has(bien.id) && (
-                <>
-                  <span style={{ marginLeft: 12, color: CORAL, fontWeight: 700, fontSize: 14 }}>{bien.prix}€</span>
-                  <span style={{ color: MUTED, fontSize: 11, marginLeft: 4 }}>/nuit</span>
-                </>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+              {photos[0] && (
+                <img src={photos[0]} alt="" loading="lazy" style={{ width: 44, height: 44, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />
               )}
+              <div style={{ minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontWeight: 700, color: NAVY, fontFamily: "'Jost', sans-serif", fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{bien.nom}</span>
+                  {bien.rating && !isMobile && (
+                    <RatingBadge rating={bien.rating} count={bien.reviews} />
+                  )}
+                </div>
+                {!PRICE_HIDDEN.has(bien.id) && (
+                  <div>
+                    <span style={{ color: CORAL, fontWeight: 700, fontSize: 14 }}>{bien.prix}€</span>
+                    <span style={{ color: MUTED, fontSize: 11, marginLeft: 4 }}>/nuit</span>
+                  </div>
+                )}
+              </div>
             </div>
             <button data-cta-reservation data-cta-position="header" onClick={() => { trackConversion("cta_label", { position: "header" }); onBook(bien); }} style={{ background: CORAL, border: "none", color: "#fff", borderRadius: 8, padding: "9px 20px", fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, cursor: "pointer", letterSpacing: "0.05em" }}>
               {lang === "fr" ? `${CTA_LABEL_FR} →` : "BOOK →"}
@@ -3486,7 +3496,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
         {/* ── PHOTO SECTION ── */}
         {isMobile ? (
           /* Mobile: carousel */
-          <div style={{ position: "relative", height: "min(44vw, 200px)", background: "#061616", flexShrink: 0 }}>
+          <div style={{ position: "relative", height: "min(62vw, 320px)", background: "#061616", flexShrink: 0 }}>
             <div
               onClick={() => {
                 if (photos.length === 0) return;
@@ -3524,7 +3534,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
           <div style={{ display: "flex", flexDirection: "column", gap: 3, background: "#061616", flexShrink: 0 }}>
 
             {/* ── Rangée héro : photo pleine hauteur gauche + reel/grille droite ── */}
-            <div style={{ position: "relative", display: "flex", height: "clamp(170px, 24vh, 240px)", gap: 3 }}>
+            <div style={{ position: "relative", display: "flex", height: "clamp(300px, 45vh, 460px)", gap: 3 }}>
 
               {/* ── Photo principale — flex:1, prend tout l'espace restant ── */}
               <div
@@ -3561,9 +3571,9 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                 )}
 
                 {/* Overlay bas : titre + rating + capacité */}
-                <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "12px 18px", pointerEvents: "none" }}>
-                  <Eyebrow style={{ color: "rgba(255,255,255,0.65)", marginBottom: 2 }}>{bien.lieu}</Eyebrow>
-                  <Display as="h2" size="sm" color="#fff" style={{ marginBottom: 4 }}>{bien.nom}</Display>
+                <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "18px 24px", pointerEvents: "none" }}>
+                  <Eyebrow style={{ color: "rgba(255,255,255,0.65)", marginBottom: 4 }}>{bien.lieu}</Eyebrow>
+                  <Display as="h2" size="md" color="#fff" style={{ marginBottom: 8 }}>{bien.nom}</Display>
                   {bien.rating && (
                     <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
                       <a href={`/avis?bien=${bien.id}`} style={{ textDecoration: "none" }}><RatingBadge rating={bien.rating} count={bien.reviews} dark /></a>
@@ -3655,7 +3665,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
 
             {/* ── Filmstrip photos sous le héro (amaryllis desktop uniquement) ── */}
             {bien.id === "amaryllis" && photos.length > 1 && (
-              <div style={{ display: "flex", height: 64, gap: 3, overflow: "hidden" }}>
+              <div style={{ display: "flex", height: 110, gap: 3, overflow: "hidden" }}>
                 {photos.slice(1, 5).map((src, i) => (
                   <div
                     key={src}
