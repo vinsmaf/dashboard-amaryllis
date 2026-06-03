@@ -2,71 +2,41 @@
 // Intercepts property and guide URLs to inject SEO meta tags server-side
 // so Googlebot sees correct title/description/og without waiting for JS execution
 
+import { BIENS as CANON, isMartinique } from "../src/data/biens.js";
+
 const BASE = "https://villamaryllis.com";
 
-const BIENS = {
+// Faits cœur (nom/prix/lieu/rating/reviews/seoTitle/seoDesc/bookable) → source unique
+// `src/data/biens.js` (CANON). Seuls `desc` (texte long marketing) et `amenities`
+// n'existent pas dans le canonique en phase 1 : conservés ici à l'identique.
+const BIEN_EXTRA = {
   amaryllis: {
-    nom: "Villa Amaryllis",
-    lieu: "Sainte-Luce, Martinique",
-    prix: 280,
     desc: "Perchée sur les hauteurs de Sainte-Luce, la Villa Amaryllis offre une piscine à débordement eau salée (4×7 m), une terrasse de 100 m² face à la mer des Caraïbes et un jardin tropical luxuriant. 3 chambres climatisées, 8 personnes. Réservation directe sans frais.",
     amenities: ["Piscine à débordement eau salée", "Vue mer 180°", "Terrasse 100 m²", "Wifi Starlink", "Parking", "3 chambres climatisées"],
-    rating: "4.94",
-    reviews: 33,
   },
   zandoli: {
-    nom: "Zandoli",
-    lieu: "Sainte-Luce, Martinique",
-    prix: 220,
     desc: "Villa contemporaine nichée dans un jardin luxuriant à Sainte-Luce, avec piscine privative à cascade, mezzanine, vue mer et terrasse au coucher du soleil. WiFi Starlink, Netflix, lave-linge. 5 personnes.",
     amenities: ["Piscine privative avec cascade", "Mezzanine", "Vue mer", "Jardin tropical", "Wifi Starlink", "Netflix"],
-    rating: "4.5",
-    reviews: 16,
   },
   iguana: {
-    nom: "Villa Iguana",
-    lieu: "Sainte-Luce, Martinique",
-    prix: 180,
     desc: "Villa sur deux niveaux dans la résidence Amaryllis à Sainte-Luce, avec piscine eau salée, vue sur le Rocher du Diamant et jardin fleuri. 2 chambres, 6 personnes, parking privatif.",
     amenities: ["Piscine eau salée", "Vue Diamant", "Vue mer", "Wifi Starlink", "Parking"],
-    rating: "4.92",
-    reviews: 25,
   },
   geko: {
-    nom: "Géko",
-    lieu: "Sainte-Luce, Martinique",
-    prix: 150,
     desc: "Cocon tropical avec piscine privative à cascade et jardin luxuriant au sein de la résidence Amaryllis à Sainte-Luce. Climatisation, cuisine extérieure, barbecue. À 7 min des plages. 4 personnes.",
     amenities: ["Piscine privative avec cascade", "Jardin tropical", "Climatisation", "Cuisine extérieure"],
-    rating: "4.83",
-    reviews: 24,
   },
   mabouya: {
-    nom: "Mabouya — Studio jacuzzi vue mer",
-    lieu: "Sainte-Luce, Martinique",
-    prix: 110,
     desc: "Studio romantique avec jacuzzi privatif et vue mer enchanteresse à flanc de colline à Sainte-Luce. Jardin fleuri, terrasse privée, calme absolu. Idéal pour un séjour en couple dès 110€/nuit.",
     amenities: ["Jacuzzi privatif", "Vue mer", "Jardin fleuri", "Terrasse privée"],
-    rating: "4.55",
-    reviews: 11,
   },
   schoelcher: {
-    nom: "Bellevue — Schœlcher",
-    lieu: "Schœlcher, Martinique",
-    prix: 100,
     desc: "Appartement de standing au dernier étage avec vue panoramique sur la mer des Caraïbes et la baie de Fort-de-France depuis Schœlcher. Brise marine, calme, à 5 min des plages. Dès 100€/nuit.",
     amenities: ["Vue panoramique mer", "Dernier étage", "Résidence sécurisée", "Parking"],
-    rating: "4.8",
-    reviews: 30,
   },
   nogent: {
-    nom: "Appartement aux Portes de Paris",
-    lieu: "Nogent-sur-Marne, Île-de-France",
-    prix: 85,
     desc: "Appartement calme à Nogent-sur-Marne, à 15 minutes du centre de Paris en RER A. Idéal pour séjours professionnels et touristiques en Île-de-France. WiFi, tout équipé. Dès 85€/nuit.",
     amenities: ["15 min Paris RER A", "Wifi", "Calme", "Tout équipé"],
-    rating: "4.85",
-    reviews: 12,
   },
 };
 
@@ -116,17 +86,6 @@ const GUIDE_PROXIMITE = {
   desc: "Les meilleures adresses à moins de 15 min de la résidence Amaryllis : Anse Corps de Garde, Forêt de Montravail, distillerie Trois-Rivières, tortues marines.",
   image: `${BASE}/photos/amaryllis/01.webp`,
   url: `${BASE}/guide-proximite`,
-};
-
-// traf-013/019/025 — titres ≤60c (mot-clé en tête) + descriptions ≤158c (prix gardé en desc + JSON-LD)
-const SEO = {
-  amaryllis:  { title: "Villa Amaryllis Sainte-Luce — piscine vue mer Martinique", desc: "Villa Amaryllis à Sainte-Luce : piscine à débordement, vue Caraïbes 180°, 3 chambres, 8 personnes. Dès 280€/nuit en direct, sans frais Airbnb." },
-  zandoli:    { title: "Zandoli Sainte-Luce — logement piscine cascade Martinique", desc: "Zandoli à Sainte-Luce : piscine privative à cascade, mezzanine, jardin tropical. 5 personnes. Dès 220€/nuit en réservation directe." },
-  iguana:     { title: "Villa Iguana Martinique — vue Rocher du Diamant", desc: "Villa Iguana à Sainte-Luce : piscine eau salée, vue panoramique sur le Rocher du Diamant. 6 personnes. Réservation directe propriétaire." },
-  geko:       { title: "Géko Sainte-Luce — cocon piscine cascade Martinique", desc: "Cocon Géko à Sainte-Luce : piscine privative à cascade, jardin tropical, sur les hauteurs. 4 personnes. Dès 150€/nuit en réservation directe." },
-  mabouya:    { title: "Studio Mabouya Martinique — jacuzzi privatif vue mer", desc: "Studio Mabouya à Sainte-Luce : seul jacuzzi privatif vue mer de la résidence. Idéal couple, terrasse privée, plages à 5 min. Dès 110€/nuit." },
-  schoelcher: { title: "Bellevue Schœlcher — appart vue baie Fort-de-France", desc: "Appartement Bellevue à Schœlcher : vue sur la baie de Fort-de-France, 2 personnes, à 10 min du centre. Réservation directe dès 100€/nuit." },
-  nogent:     { title: "Appart Nogent-sur-Marne — bord de Marne, Paris 20 min", desc: "Appartement de standing à Nogent-sur-Marne : jardin privatif, home cinéma, bord de Marne. RER A, Paris en 20 min. Dès 85€/nuit en direct." },
 };
 
 const GROUP_STAY = {
@@ -294,17 +253,22 @@ export async function onRequest(context) {
   const slug = params.slug;
 
   // Handle property pages
-  if (BIENS[slug]) {
-    const bien = BIENS[slug];
+  if (CANON[slug]) {
+    const bien = CANON[slug];
+    const extra = BIEN_EXTRA[slug];
+    // Le canonique stocke la commune seule ; recompose le lieu complet attendu par
+    // les anciens usages ("Sainte-Luce, Martinique" / "Nogent-sur-Marne, Île-de-France").
+    const lieuFull = `${bien.lieu}, ${isMartinique(bien) ? "Martinique" : "Île-de-France"}`;
     const url = `${BASE}/${slug}`;
     const image = `${BASE}/photos/${slug}/01.webp`;
-    const title = SEO[slug]?.title || `${bien.nom} — Location ${bien.lieu} à partir de ${bien.prix}€/nuit`;
-    const desc = SEO[slug]?.desc || (bien.desc.slice(0, 155) + (bien.desc.length > 155 ? "…" : ""));
+    const title = bien.seoTitle || `${bien.nom} — Location ${lieuFull} à partir de ${bien.prix}€/nuit`;
+    const desc = bien.seoDesc || (extra.desc.slice(0, 155) + (extra.desc.length > 155 ? "…" : ""));
 
     // Compteur/note d'avis DYNAMIQUES depuis D1 (avis réels non masqués) → toujours
     // à jour sans re-synchroniser les 5 sources. Fallback sur la valeur codée (iguana/
     // nogent sans scrape, ou erreur D1) : ne casse jamais la page.
-    let ratingValue = bien.rating, reviewCount = bien.reviews;
+    // rating canonique = NUMBER → String() pour le format ratingValue du JSON-LD.
+    let ratingValue = String(bien.rating), reviewCount = bien.reviews;
     let reviewLd = [];
     try {
       const db = context.env && context.env.revenue_manager;
@@ -335,7 +299,7 @@ export async function onRequest(context) {
       "@id": url,
       "name": bien.nom,
       "url": url,
-      "description": bien.desc,
+      "description": extra.desc,
       "image": image,
       "priceRange": `À partir de ${bien.prix}€/nuit`,
       "aggregateRating": {
@@ -347,11 +311,11 @@ export async function onRequest(context) {
       ...(reviewLd.length ? { "review": reviewLd } : {}),
       "address": {
         "@type": "PostalAddress",
-        "addressLocality": bien.lieu.split(",")[0]?.trim(),
-        "addressRegion": bien.lieu.includes("Martinique") ? "Martinique" : "Île-de-France",
+        "addressLocality": lieuFull.split(",")[0]?.trim(),
+        "addressRegion": lieuFull.includes("Martinique") ? "Martinique" : "Île-de-France",
         "addressCountry": "FR",
       },
-      "amenityFeature": bien.amenities.map(a => ({
+      "amenityFeature": extra.amenities.map(a => ({
         "@type": "LocationFeatureSpecification",
         "name": a,
       })),
