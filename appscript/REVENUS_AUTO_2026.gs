@@ -152,16 +152,33 @@ function appendProcessed_(memo, ids) {
   memo.getRange(memo.getLastRow()+1, 1, ids.length, 1).setValues(ids.map(function(id){ return [id]; }));
 }
 
+// Clé de dédoublonnage par contenu (mirroir src/utils/resaDedup.js) — auto-suffisant (nd_ inline
+// pour ne pas dépendre d'un normDate_ partagé entre fichiers du projet GAS).
+function contentKeyRow_(row, C) {
+  function nd_(v) {
+    if (v == null) return "";
+    if (v instanceof Date && !isNaN(v)) {
+      return v.getUTCFullYear() + "-" + String(v.getUTCMonth() + 1).padStart(2, "0") + "-" + String(v.getUTCDate()).padStart(2, "0");
+    }
+    return String(v).slice(0, 10);
+  }
+  var bienId = BIEN_BY_LABEL[String(row[C.prop] || "").toLowerCase().trim()] || String(row[C.prop] || "").toLowerCase().trim();
+  return bienId + "|" + nd_(row[C.arrivee]) + "|" + nd_(row[C.depart]);
+}
+
 // Scanne un onglet : applique les resas non encore traitees (ou les liste si dryRun)
 function scanSheet_(ss, name, C, dst, processed, newIds, dryRun, preview) {
   var sh = ss.getSheetByName(name); if (!sh) return;
   var last = sh.getLastRow(); if (last < 2) return;
   var rows = sh.getRange(2, 1, last - 1, C.ncols).getValues();
   rows.forEach(function(row) {
-    var id = String(row[C.id] || ""); if (!id || processed[id]) return;
+    var id = String(row[C.id] || "");
+    var ck = contentKeyRow_(row, C);
+    if ((!id && !ck) || processed[id] || processed[ck]) return; // dedup par id OU clé-contenu
     var ch = applyOne_(row, C, dst, dryRun);
-    processed[id] = true;            // dedup (memoire)  aussi entre les 2 onglets
-    if (!dryRun) newIds.push(id);
+    processed[id] = true;
+    if (ck) processed[ck] = true;     // idempotence par contenu (même séjour, id différent)
+    if (!dryRun) { if (id) newIds.push(id); if (ck) newIds.push(ck); }
     else if (ch.length) preview.push({ id:id, src:name, prop:row[C.prop], canal:row[C.canal], arrivee:String(row[C.arrivee]).slice(0,10), changements:ch });
   });
 }
@@ -179,18 +196,21 @@ function syncRevenus2026() {
 }
 
 //  Installation 1 fois : baseline (marque l'existant des 2 onglets, SANS appliquer) + trigger 
-function baselineSheet_(ss, name, processed, baseline) {
+function baselineSheet_(ss, name, C, processed, baseline) {
   var sh = ss.getSheetByName(name); if (!sh || sh.getLastRow() < 2) return;
-  sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues().forEach(function(r) {
-    var id = String(r[0] || ""); if (id && !processed[id]) { processed[id] = true; baseline.push(id); }
+  sh.getRange(2, 1, sh.getLastRow() - 1, C.ncols).getValues().forEach(function(r) {
+    var id = String(r[C.id] || "");
+    var ck = contentKeyRow_(r, C);
+    if (id && !processed[id]) { processed[id] = true; baseline.push(id); }
+    if (ck && !processed[ck]) { processed[ck] = true; baseline.push(ck); }
   });
 }
 function setupRevenus2026() {
   var ss = SpreadsheetApp.openById(SHEET_ID);
   var memo = getMemoSheet_(ss), processed = readProcessed_(memo);
   var baseline = [];
-  baselineSheet_(ss, SRC_SHEET,  processed, baseline);
-  baselineSheet_(ss, RESA_SHEET, processed, baseline);
+  baselineSheet_(ss, SRC_SHEET,  COL_TOUTES, processed, baseline);
+  baselineSheet_(ss, RESA_SHEET, COL_RESA,   processed, baseline);
   appendProcessed_(memo, baseline);
 
   ScriptApp.getProjectTriggers().forEach(function(t){ if (t.getHandlerFunction() === "syncRevenus2026") ScriptApp.deleteTrigger(t); });
