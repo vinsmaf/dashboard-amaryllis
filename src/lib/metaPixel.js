@@ -4,7 +4,7 @@
 //
 // ⚠️ RENSEIGNER META_PIXEL_ID : Meta Events Manager → Sources de données → ton Pixel →
 //    l'ID est le nombre de ~15-16 chiffres affiché en haut. (C'est public, pas un secret.)
-export const META_PIXEL_ID = "";
+export const META_PIXEL_ID = "714189639771397";
 
 let _loaded = false;
 
