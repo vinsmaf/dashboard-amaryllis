@@ -272,8 +272,8 @@ const ROUTES = [
   },
   {
     path: "/guide-arlet",
-    title: "Guide Anses d'Arlet Martinique — Tortues marines | Amaryllis",
-    desc:  "Les Anses d'Arlet (25 min de Sainte-Luce) : nager avec des tortues marines garanties tôt le matin. Village de pêcheurs, snorkeling, restaurants.",
+    title: "Guide Anses-d'Arlet Martinique — Tortues | Amaryllis",
+    desc:  "Les Anses-d'Arlet (25 min de Sainte-Luce) : nager avec des tortues marines garanties tôt le matin. Village de pêcheurs, snorkeling, restaurants.",
     image: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2d/Grande_Anse_d%27_Arlet_%2847001622912%29.jpg/960px-Grande_Anse_d%27_Arlet_%2847001622912%29.jpg",
   },
   {
@@ -366,8 +366,8 @@ const ROUTES = [
   },
   {
     path: "/guide-saint-pierre-martinique",
-    title: "Saint-Pierre Martinique — Pompéi des Caraïbes | Amaryllis",
-    desc:  "Visitez Saint-Pierre, la ville fantôme de Martinique : ruines de 1902, épaves de plongée uniques, musée Perret. Guide complet depuis Sainte-Luce (1h).",
+    title: "Saint-Pierre Martinique — Pompéi des Caraïbes",
+    desc:  "Visitez Saint-Pierre, la ville fantôme de Martinique : ruines de 1902, épaves de plongée uniques, musée Frank Perret. Guide depuis Sainte-Luce (1h).",
     image: `${BASE}/photos/amaryllis/01.webp`,
   },
   {
@@ -384,7 +384,7 @@ const ROUTES = [
   },
   {
     path: "/guide-plongee-martinique",
-    title: "Plongée Martinique — Épaves, Snorkeling, Tortues | Amaryllis",
+    title: "Plongée Martinique — Épaves & tortues | Amaryllis",
     desc:  "Meilleurs spots de plongée et snorkeling en Martinique : épaves de Saint-Pierre, tortues d'Arlet, Rocher du Diamant. Guide complet depuis Sainte-Luce.",
     image: `${BASE}/photos/amaryllis/01.webp`,
   },

@@ -137,6 +137,121 @@ const SCHOELCHER_APPART = {
   url: `${BASE}/location-appartement-vue-mer-schoelcher`,
 };
 
+// ── Guides destination/hub non couverts par les constantes ci-dessus ──────────
+// title ≤60c (mot-clé en tête), desc ≤158c. Contenu FIDÈLE aux composants
+// (src/Guide*.jsx). FAQ factuelle. Mappés vers un handler générique (Article +
+// FAQPage + BreadcrumbList). Garder cohérent avec scripts/prerender.mjs (ROUTES).
+const WIKI_ARLET = "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2d/Grande_Anse_d%27_Arlet_%2847001622912%29.jpg/960px-Grande_Anse_d%27_Arlet_%2847001622912%29.jpg";
+const GUIDE_META = {
+  "guide-distilleries-martinique": {
+    title: "Distilleries de Rhum Martinique — AOC | Amaryllis",
+    desc: "Visitez les meilleures distilleries de rhum agricole AOC en Martinique : JM, Clément, Saint-James, Depaz, Trois-Rivières. Guide depuis Sainte-Luce.",
+    faq: [
+      { q: "Quelles distilleries visiter en Martinique depuis Sainte-Luce ?", a: "Trois-Rivières est à 5 min de Sainte-Luce. À découvrir aussi : l'Habitation Clément (musée et jardins), Saint-James à Sainte-Marie, JM à Macouba et Depaz au pied de la Montagne Pelée." },
+      { q: "Le rhum martiniquais a-t-il une AOC ?", a: "Oui, le rhum agricole de Martinique bénéficie d'une AOC depuis 1996 : il est distillé à partir de pur jus de canne fraîche, et non de mélasse." },
+      { q: "Peut-on visiter les distilleries en une journée ?", a: "Oui, un circuit en une journée est possible. Les boutiques proposent dégustations et ventes directes ; pensez à un conducteur désigné." },
+    ],
+  },
+  "guide-gastronomie-martinique": {
+    title: "Gastronomie Martinique — Cuisine Créole | Amaryllis",
+    desc: "Saveurs créoles martiniquaises : langouste, blaff, ti-punch, accras. Marchés locaux, restaurants à Sainte-Luce. Guide gastronomique complet.",
+    faq: [
+      { q: "Quelles sont les spécialités à goûter en Martinique ?", a: "La langouste grillée et le blaff de poisson sont les deux incontournables. À découvrir aussi : accras de morue, colombo, et le ti-punch au rhum agricole." },
+      { q: "Où trouver de la langouste près de Sainte-Luce ?", a: "Plusieurs restaurants de Sainte-Luce et des environs servent la langouste grillée fraîche ; les marchés locaux comme celui du Marin (le samedi) sont aussi une bonne adresse." },
+      { q: "Qu'est-ce qu'un vrai ti-punch ?", a: "Le ti-punch se prépare avec du rhum agricole blanc AOC, un trait de sirop de canne et un zeste de citron vert. Chacun le dose « à sa main ». " },
+    ],
+  },
+  "guide-plongee-martinique": {
+    title: "Plongée Martinique — Épaves & tortues | Amaryllis",
+    desc: "Meilleurs spots de plongée et snorkeling en Martinique : épaves de Saint-Pierre, tortues d'Arlet, Rocher du Diamant. Guide complet depuis Sainte-Luce.",
+    faq: [
+      { q: "Où voir des tortues en Martinique ?", a: "Aux Anses-d'Arlet (Anse Dufour et Anse Noire), les tortues marines sont quasi garanties en snorkeling, idéalement tôt le matin et sans équipement lourd." },
+      { q: "Que sont les épaves de Saint-Pierre ?", a: "Lors de l'éruption de la Montagne Pelée en 1902, plusieurs navires ont coulé en rade de Saint-Pierre. Ces épaves forment aujourd'hui un site de plongée unique aux Caraïbes." },
+      { q: "Le Rocher du Diamant est-il accessible en plongée ?", a: "Oui, mais c'est un site réservé aux plongeurs confirmés (faune pélagique, courants). Des clubs PADI/FFESSM organisent les sorties." },
+    ],
+  },
+  "guide-randonnees-martinique": {
+    title: "Randonnées Martinique — Pelée & Caravelle | Amaryllis",
+    desc: "Meilleures randonnées en Martinique : Montagne Pelée (1397 m), presqu'île de la Caravelle, forêt tropicale. Niveaux débutant à expert. Depuis Sainte-Luce.",
+    faq: [
+      { q: "Quelles sont les meilleures randonnées en Martinique ?", a: "La Montagne Pelée (1 397 m) pour les sportifs, la réserve naturelle de la Caravelle et son château Dubuc pour tous, et la Forêt de Montravail à 10 min de Sainte-Luce." },
+      { q: "Y a-t-il une randonnée facile près de Sainte-Luce ?", a: "Oui, la Forêt de Montravail est à 10 minutes : sentiers ombragés en forêt tropicale, accessibles en famille." },
+      { q: "L'ascension de la Montagne Pelée est-elle difficile ?", a: "C'est une randonnée exigeante (dénivelé important, météo changeante au sommet). Partez tôt, bien équipé, par temps dégagé." },
+    ],
+  },
+  "guide-trois-ilets": {
+    title: "Guide Les Trois-Îlets Martinique — Pagerie | Amaryllis",
+    desc: "Guide Trois-Îlets depuis Sainte-Luce (35 min) : Musée de la Pagerie (naissance de Joséphine), village créole, marina face à Fort-de-France.",
+    faq: [
+      { q: "Que visiter aux Trois-Îlets ?", a: "Le Musée de la Pagerie (lieu de naissance de l'impératrice Joséphine), le village créole et sa marina, et les plages de l'Anse Mitan et de l'Anse à l'Âne." },
+      { q: "À quelle distance sont les Trois-Îlets de Sainte-Luce ?", a: "Environ 35 minutes en voiture depuis Sainte-Luce. La commune fait face à Fort-de-France, accessible aussi par navette maritime." },
+    ],
+  },
+  "guide-saint-pierre-martinique": {
+    title: "Saint-Pierre Martinique — Pompéi des Caraïbes",
+    desc: "Visitez Saint-Pierre, la ville fantôme de Martinique : ruines de 1902, épaves de plongée uniques, musée Frank Perret. Guide depuis Sainte-Luce (1h).",
+    faq: [
+      { q: "Pourquoi Saint-Pierre est appelée la Pompéi des Caraïbes ?", a: "L'éruption de la Montagne Pelée le 8 mai 1902 a détruit la ville en quelques minutes. Les ruines visibles aujourd'hui témoignent de cette catastrophe." },
+      { q: "Que voir à Saint-Pierre ?", a: "Les ruines de la ville, le musée Frank Perret (vulcanologie et mémoire de 1902), et les épaves sous-marines, site de plongée exceptionnel." },
+      { q: "À quelle distance est Saint-Pierre de Sainte-Luce ?", a: "Environ 1 heure de route, le long de la côte caraïbe au nord de Fort-de-France." },
+    ],
+  },
+  "guide-francois-martinique": {
+    title: "Le François Martinique — Fonds Blancs | Amaryllis",
+    desc: "Découvrez les Fonds Blancs du François : piscines naturelles, sable blanc immergé, ti-punch en mer. Guide complet depuis Sainte-Luce (35 min).",
+    faq: [
+      { q: "Que sont les Fonds Blancs du François ?", a: "Des hauts-fonds de sable blanc immergés au large du François : on s'y baigne dans une eau peu profonde et turquoise, souvent lors d'une sortie en bateau avec ti-punch." },
+      { q: "Quelle spécialité goûter au François ?", a: "Le chatrou (poulpe) et la langouste fraîche sont les spécialités locales. Le marché aux poissons est une bonne adresse." },
+      { q: "Que faire d'autre au François ?", a: "Du kayak ou du paddle dans la mangrove, et la visite des fonds blancs en bateau. La commune est à environ 35 min de Sainte-Luce." },
+    ],
+  },
+  "guide-arlet": {
+    title: "Guide Anses-d'Arlet Martinique — Tortues | Amaryllis",
+    desc: "Les Anses-d'Arlet (25 min de Sainte-Luce) : nager avec des tortues marines garanties tôt le matin. Village de pêcheurs, snorkeling, restaurants.",
+    image: WIKI_ARLET,
+    faq: [
+      { q: "Peut-on nager avec des tortues aux Anses-d'Arlet ?", a: "Oui, c'est le must absolu : les tortues marines sont quasi garanties en snorkeling, surtout tôt le matin avant l'affluence." },
+      { q: "À quelle distance sont les Anses-d'Arlet de Sainte-Luce ?", a: "Environ 25 minutes en voiture. Le village de pêcheurs et sa plage avec l'église face à la mer sont emblématiques." },
+    ],
+  },
+  "meilleure-saison-martinique": {
+    title: "Meilleure saison Martinique — Quand partir ? | Amaryllis",
+    desc: "Quand partir en Martinique ? Mois par mois : météo, mer, pluies, activités. Saison sèche déc–avr vs hivernage juin–oct. Avis d'un hôte local.",
+    faq: [
+      { q: "Quelle est la meilleure période pour aller en Martinique ?", a: "La saison sèche (« carême »), de décembre à avril, offre une mer calme, peu de pluie et une excellente visibilité. Mars est souvent considéré comme le meilleur mois." },
+      { q: "Faut-il éviter la saison des pluies ?", a: "L'hivernage (juin à octobre) apporte des averses, surtout en septembre, pic de l'hivernage. Le risque cyclonique reste statistiquement faible mais existe." },
+      { q: "Peut-on partir en Martinique à Noël ?", a: "Oui, décembre marque le retour de la saison sèche : c'est une période idéale pour les fêtes, mais aussi la plus demandée." },
+    ],
+  },
+  "reservation-directe-martinique": {
+    title: "Réservation directe Martinique — Sans frais | Amaryllis",
+    desc: "Réservez vos villas en Martinique en direct, sans frais Airbnb ni Booking : −15% en moyenne, contact hôte, paiement Stripe sécurisé. Dès 85€/nuit.",
+    faq: [
+      { q: "Pourquoi réserver en direct plutôt que par Airbnb ou Booking ?", a: "La réservation directe supprime les frais de service des plateformes (jusqu'à −15% en moyenne), avec un contact direct avec l'hôte et les mêmes garanties." },
+      { q: "Le paiement en direct est-il sécurisé ?", a: "Oui, les paiements sont traités par Stripe, plateforme de paiement sécurisée. Une caution peut être demandée par pré-autorisation." },
+      { q: "Quelle est la politique d'annulation ?", a: "Les conditions d'annulation sont précisées dans les CGV et lors de la réservation. Contactez l'hôte pour toute question sur vos dates." },
+    ],
+  },
+  "sainte-luce-martinique": {
+    title: "Location villa Sainte-Luce Martinique — piscine & vue mer",
+    desc: "Louez une villa à Sainte-Luce, Martinique : piscine privée, vue mer, dès 110€/nuit en direct sans frais. Plages, activités et conseils de vos hôtes.",
+    image: `${BASE}/photos/iguana/01.webp`,
+    faq: [
+      { q: "Pourquoi choisir Sainte-Luce pour ses vacances en Martinique ?", a: "Sainte-Luce, dans le sud de la Martinique, offre des plages de sable blanc (Gros Raisin, Corps de Garde), des fonds marins pour le snorkeling et une position centrale pour explorer le sud." },
+      { q: "Quels logements proposez-vous à Sainte-Luce ?", a: "Plusieurs villas et logements sur les hauteurs de Sainte-Luce : Amaryllis (piscine à débordement), Zandoli, Géko et le studio Mabouya, tous avec vue mer ou jardin tropical." },
+      { q: "Les plages sont-elles loin des logements ?", a: "Les plages de Sainte-Luce sont accessibles en quelques minutes en voiture depuis les hauteurs où se situent les logements." },
+    ],
+  },
+  "guide-hub": {
+    title: "Que faire dans le Sud de la Martinique | Amaryllis",
+    desc: "Le guide de nos hôtes à Sainte-Luce : coups de cœur, guides de destination par zone et conseils d'initiés pour le Sud de la Martinique.",
+    faq: [
+      { q: "Que faire dans le Sud de la Martinique ?", a: "Les Salines à Sainte-Anne, nager avec les tortues aux Anses-d'Arlet, plonger face au Rocher du Diamant, visiter les Trois-Îlets : tout est à moins de 30 min de Sainte-Luce." },
+      { q: "Quels sont les coups de cœur de vos hôtes ?", a: "Les plages secrètes, la distillerie Trois-Rivières et les sentiers tropicaux des environs, testés et approuvés par vos hôtes." },
+    ],
+  },
+};
+
 function escHtml(s) {
   return String(s)
     .replace(/&/g, "&amp;")
@@ -446,6 +561,53 @@ export async function onRequest(context) {
     const resp = await context.next();
     const html = await resp.text();
     return new Response(injectMeta(html, meta, ldJson), {
+      status: 200,
+      headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=3600" },
+    });
+  }
+
+  // Handler générique — guides destination/hub (table GUIDE_META).
+  // Construit Article + FAQPage + BreadcrumbList (Guides → page), puis renvoie
+  // via le MÊME mécanisme que les handlers voisins (context.next + injectMeta).
+  if (GUIDE_META[slug]) {
+    const g = GUIDE_META[slug];
+    const url = `${BASE}/${slug}`;
+    const image = g.image || `${BASE}/photos/amaryllis/01.webp`;
+    const ld = [
+      {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": g.title,
+        "description": g.desc,
+        "url": url,
+        "image": image,
+        "author": { "@id": `${BASE}/#organization` },
+        "publisher": { "@id": `${BASE}/#organization` },
+      },
+    ];
+    if (g.faq && g.faq.length) {
+      ld.push({
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": g.faq.map(({ q, a }) => ({
+          "@type": "Question",
+          "name": q,
+          "acceptedAnswer": { "@type": "Answer", "text": a },
+        })),
+      });
+    }
+    ld.push({
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Guides", "item": `${BASE}/guide-hub` },
+        { "@type": "ListItem", "position": 2, "name": g.title, "item": url },
+      ],
+    });
+    const meta = buildMeta(g.title, g.desc, url, image);
+    const resp = await context.next();
+    const html = await resp.text();
+    return new Response(injectMeta(html, meta, JSON.stringify(ld)), {
       status: 200,
       headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=3600" },
     });
