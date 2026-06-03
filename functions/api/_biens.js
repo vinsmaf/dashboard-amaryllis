@@ -5,18 +5,29 @@
 //    vers ce module reste à faire (footgun CLAUDE.md #1) — ici on couvre le côté AGENTS.
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Seuls ces 2 biens sont des « villas » (les autres : logement/cocon/studio/appartement).
-export const VILLAS = ["amaryllis", "iguana"];
+// Consomme la source canonique (src/data/biens.js) pour les faits cœur des 7 biens,
+// et conserve localement le texte de grounding LLM (equip/interdit) injecté dans les prompts.
+// Interface inchangée pour agents-run.js : nom/type/capacite/chambres/prix/lieu/equip/interdit.
+import { BIENS as CANON, VILLAS as CANON_VILLAS } from "../../src/data/biens.js";
 
-export const BIENS = {
-  amaryllis:  { nom: "Villa Amaryllis", type: "villa", capacite: 8, chambres: 3, prix: 280, lieu: "Sainte-Luce", equip: "piscine à débordement eau salée 4×7 m", interdit: "PAS de jacuzzi" },
-  iguana:     { nom: "Villa Iguana", type: "villa", capacite: 6, chambres: 2, prix: 180, lieu: "Sainte-Luce", equip: "piscine eau salée non chlorée", interdit: "PAS de débordement, PAS de jacuzzi" },
-  zandoli:    { nom: "Zandoli", type: "logement", capacite: 5, prix: 220, lieu: "Sainte-Luce", equip: "piscine privative avec cascade (eau classique)", interdit: "PAS eau salée" },
-  geko:       { nom: "Géko", type: "cocon", capacite: 4, prix: 150, lieu: "Sainte-Luce", equip: "piscine privative avec cascade (eau classique)", interdit: "PAS eau salée" },
-  mabouya:    { nom: "Mabouya", type: "studio", capacite: 2, prix: 110, lieu: "Sainte-Luce", equip: "jacuzzi privatif vue mer", interdit: "AUCUNE piscine" },
-  schoelcher: { nom: "Bellevue", type: "appartement de standing", prix: 100, lieu: "Schœlcher", equip: "vue panoramique baie", interdit: "AUCUNE piscine, AUCUN jacuzzi" },
-  nogent:     { nom: "Appartement Nogent", type: "appartement", prix: 85, lieu: "Nogent-sur-Marne", equip: "jardin + terrasse", interdit: "AUCUNE piscine, AUCUN jacuzzi" },
+// Seuls ces 2 biens sont des « villas » (les autres : logement/cocon/studio/appartement).
+export const VILLAS = CANON_VILLAS;
+
+// Texte de grounding LLM (équipements autorisés / interdits) — conservé verbatim ici.
+const GROUNDING = {
+  amaryllis:  { equip: "piscine à débordement eau salée 4×7 m", interdit: "PAS de jacuzzi" },
+  iguana:     { equip: "piscine eau salée non chlorée", interdit: "PAS de débordement, PAS de jacuzzi" },
+  zandoli:    { equip: "piscine privative avec cascade (eau classique)", interdit: "PAS eau salée" },
+  geko:       { equip: "piscine privative avec cascade (eau classique)", interdit: "PAS eau salée" },
+  mabouya:    { equip: "jacuzzi privatif vue mer", interdit: "AUCUNE piscine" },
+  schoelcher: { equip: "vue panoramique baie", interdit: "AUCUNE piscine, AUCUN jacuzzi" },
+  nogent:     { equip: "jardin + terrasse", interdit: "AUCUNE piscine, AUCUN jacuzzi" },
 };
+
+export const BIENS = Object.fromEntries(Object.values(CANON).map(b => [b.id, {
+  nom: b.nom, type: b.type, capacite: b.capacite, chambres: b.chambres,
+  prix: b.prix, lieu: b.lieu, ...GROUNDING[b.id],
+}]));
 
 // Bloc règles géo + équipements injecté tel quel dans le prompt des agents.
 // (texte historique conservé verbatim pour ne pas altérer le comportement des agents)
