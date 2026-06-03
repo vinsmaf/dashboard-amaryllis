@@ -1,0 +1,40 @@
+name: CI — Tests & Build
+
+# Filet anti-régression : à chaque push/PR sur main, lance la suite vitest + valide
+# que tout compile (front + prerender + Functions). Complète le gate de deploy-pages.sh
+# (qui ne tourne qu'au déploiement) — ici on attrape les régressions dès le commit.
+# NB : `npm run lint` n'est PAS inclus (code historique = 557 erreurs eslint ; nettoyage séparé).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Tests (vitest)
+        run: npm run test:run
+
+      - name: Build front (compile check)
+        run: npx vite build
+
+      - name: Prerender (valide imports src/ + JSON-LD)
+        run: node scripts/prerender.mjs
+
+      - name: Build Functions (valide imports Functions ← src/)
+        run: npx wrangler pages functions build --outdir /tmp/fn-build
