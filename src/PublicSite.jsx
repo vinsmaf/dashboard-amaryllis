@@ -3486,7 +3486,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
         {/* ── PHOTO SECTION ── */}
         {isMobile ? (
           /* Mobile: carousel */
-          <div style={{ position: "relative", height: "min(55vw, 280px)", background: "#061616", flexShrink: 0 }}>
+          <div style={{ position: "relative", height: "min(44vw, 200px)", background: "#061616", flexShrink: 0 }}>
             <div
               onClick={() => {
                 if (photos.length === 0) return;
@@ -3524,7 +3524,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
           <div style={{ display: "flex", flexDirection: "column", gap: 3, background: "#061616", flexShrink: 0 }}>
 
             {/* ── Rangée héro : photo pleine hauteur gauche + reel/grille droite ── */}
-            <div style={{ position: "relative", display: "flex", height: "clamp(220px, 32vh, 320px)", gap: 3 }}>
+            <div style={{ position: "relative", display: "flex", height: "clamp(170px, 24vh, 240px)", gap: 3 }}>
 
               {/* ── Photo principale — flex:1, prend tout l'espace restant ── */}
               <div
@@ -3561,9 +3561,9 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                 )}
 
                 {/* Overlay bas : titre + rating + capacité */}
-                <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "16px 22px", pointerEvents: "none" }}>
-                  <Eyebrow style={{ color: "rgba(255,255,255,0.65)", marginBottom: 4 }}>{bien.lieu}</Eyebrow>
-                  <Display as="h2" size="md" color="#fff" style={{ marginBottom: 6 }}>{bien.nom}</Display>
+                <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "12px 18px", pointerEvents: "none" }}>
+                  <Eyebrow style={{ color: "rgba(255,255,255,0.65)", marginBottom: 2 }}>{bien.lieu}</Eyebrow>
+                  <Display as="h2" size="sm" color="#fff" style={{ marginBottom: 4 }}>{bien.nom}</Display>
                   {bien.rating && (
                     <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
                       <a href={`/avis?bien=${bien.id}`} style={{ textDecoration: "none" }}><RatingBadge rating={bien.rating} count={bien.reviews} dark /></a>
@@ -3655,7 +3655,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
 
             {/* ── Filmstrip photos sous le héro (amaryllis desktop uniquement) ── */}
             {bien.id === "amaryllis" && photos.length > 1 && (
-              <div style={{ display: "flex", height: 96, gap: 3, overflow: "hidden" }}>
+              <div style={{ display: "flex", height: 64, gap: 3, overflow: "hidden" }}>
                 {photos.slice(1, 5).map((src, i) => (
                   <div
                     key={src}
