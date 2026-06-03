@@ -860,9 +860,9 @@ async function runOccupancySnapshot(env, allEvents) {
       const id   = `${bienId}-${todayStr}-${period}`;
       try {
         await db.prepare(
-          "INSERT INTO rm_kpi_snapshots (id, property_id, snapshot_date, period_type, occupancy_rate, nights_sold, nights_available) " +
-          "VALUES (?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET occupancy_rate=excluded.occupancy_rate, nights_sold=excluded.nights_sold, nights_available=excluded.nights_available"
-        ).bind(id, bienId, todayStr, period, rate, sold, horizon).run();
+          "INSERT INTO rm_kpi_snapshots (id, property_id, snapshot_date, period_type, occupancy_rate, nights_sold, nights_available, calculated_at) " +
+          "VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET occupancy_rate=excluded.occupancy_rate, nights_sold=excluded.nights_sold, nights_available=excluded.nights_available, calculated_at=excluded.calculated_at"
+        ).bind(id, bienId, todayStr, period, rate, sold, horizon, Math.floor(Date.now() / 1000)).run();
         written++;
       } catch (e) { console.error(`[occupancy] ${bienId} ${period}: ${e.message}`); }
     }
