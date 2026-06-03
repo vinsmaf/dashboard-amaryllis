@@ -109,7 +109,8 @@ Autres crons via le **Worker** (`workers/ical-sync`) : sync iCal horaire, drafts
 - **FAQ visible** : `<details>` sur guide-distilleries/gastronomie/meilleure-saison (miroir JSON-LD).
 - **Sitemap** : hubs à priority 0.9.
 - ⚠️ Les guides ont `Cache-Control: max-age=3600` → après deploy, l'edge sert l'ancien HTML ~1h ; vérifier l'origine via cache-bust `?v=ts`.
-- **LOT 2 (à faire)** : nouveaux guides longue-traîne (≈6-8, forte intention locale) + étoffer hub Nogent + ajouter `faq:[]` aux guides sans (activites-sainte-luce). 1 lot = 1 spec.
+- **LOT 2 livré 02/06** : 6 nouveaux guides longue-traîne via le système data-driven **`GUIDES_POI`** (`src/data/guidesPoi.js` + `guidesPoiSlugs.js` + template `GuidePOI.jsx`) : `guide-martinique-en-famille-sud`, `guide-sainte-luce-jour-de-pluie`, `guide-se-deplacer-martinique-sud`, `guide-ou-loger-martinique-secteur`, `guide-que-faire-nogent-sur-marne`, `guide-ou-dormir-est-paris-nogent`. Rattachés aux clusters (sainte-luce/sejour/nogent → **cluster Nogent désormais peuplé**). `MaillageCluster` ajouté à `GuidePOI.jsx` (bonus : tous les POI). **Bonus** : JSON-LD **Article + Breadcrumb** ajouté à TOUS les guides POI (`buildArticleLd` dans prerender ; avant : seul le VacationRental accueil par défaut). 56 routes prérendues. Vérifié live (titre/Article/FAQ/Breadcrumb/maillage). **Créer un nouveau guide POI = ajouter 1 objet dans guidesPoi.js + son slug + son cluster** (le prerender génère meta+JSON-LD+sitemap auto).
+- **LOT 3 (à faire)** : ajouter `faq:[]` à activites-sainte-luce ; nouveaux guides selon données GSC à J+30 ; backlinks/off-page.
 
 ---
 
