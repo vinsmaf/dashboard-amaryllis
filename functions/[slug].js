@@ -103,6 +103,12 @@ const GUIDE_ACTIVITES = {
   desc: "Les 10 activités incontournables à Sainte-Luce : plage, mangrove, bateau, plongée au Rocher du Diamant, distilleries. Guide rédigé par vos hôtes.",
   image: `${BASE}/photos/amaryllis/01.webp`,
   url: `${BASE}/activites-sainte-luce`,
+  faq: [
+    { q: "Quelles sont les activités incontournables à Sainte-Luce ?", a: "Les plages (Anse Corps de Garde, Anse Mabouya, Gros Raisin), une sortie bateau ou kayak dans la baie, le snorkeling et la plongée vers le Rocher du Diamant, la visite des distilleries (Trois-Rivières, La Mauny) et la forêt de Montravail." },
+    { q: "Y a-t-il des activités gratuites à Sainte-Luce ?", a: "Oui : les plages et la baignade sont gratuites, tout comme les sentiers de la forêt de Montravail. Plusieurs distilleries proposent une visite libre gratuite avec dégustation." },
+    { q: "Que faire à Sainte-Luce en famille ?", a: "Les plages calmes et peu profondes conviennent aux enfants ; une sortie en bateau, le snorkeling près du bord et la découverte d'une distillerie complètent facilement une journée en famille." },
+    { q: "Sainte-Luce est-elle bien placée pour visiter le Sud de la Martinique ?", a: "Oui, Sainte-Luce est centrale dans le Sud : Le Diamant, Sainte-Anne et les Salines, ou encore les Trois-Îlets sont à environ 20 à 40 minutes de route." },
+  ],
 };
 
 const GUIDE_PROXIMITE = {
@@ -459,16 +465,26 @@ export async function onRequest(context) {
   // Handle /activites-sainte-luce
   if (slug === "activites-sainte-luce") {
     const g = GUIDE_ACTIVITES;
-    const ldJson = JSON.stringify({
-      "@context": "https://schema.org",
-      "@type": "Article",
-      "headline": g.title,
-      "description": g.desc,
-      "url": g.url,
-      "image": g.image,
-      "author": { "@id": `${BASE}/#organization` },
-      "publisher": { "@id": `${BASE}/#organization` },
-    });
+    const ldJson = JSON.stringify([
+      {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": g.title,
+        "description": g.desc,
+        "url": g.url,
+        "image": g.image,
+        "author": { "@id": `${BASE}/#organization` },
+        "publisher": { "@id": `${BASE}/#organization` },
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": (g.faq || []).map(f => ({
+          "@type": "Question", "name": f.q,
+          "acceptedAnswer": { "@type": "Answer", "text": f.a },
+        })),
+      },
+    ]);
     const meta = buildMeta(g.title, g.desc, g.url, g.image);
     const resp = await context.next();
     const html = await resp.text();
