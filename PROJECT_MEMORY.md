@@ -101,6 +101,18 @@ Autres crons via le **Worker** (`workers/ical-sync`) : sync iCal horaire, drafts
 
 ---
 
+## 4ter. Programme SEO « Hub & Spoke » — LOT 1 livré 02/06
+- **Spec/plan** : `docs/superpowers/specs/2026-06-02-seo-hub-spoke-guides-design.md` + `docs/superpowers/plans/2026-06-02-seo-hub-spoke-guides.md`. Baseline : `docs/seo/baseline-2026-06-02.md` (revue J+30/J+60).
+- **Clusters** : `src/data/seoClusters.js` = source unique (4 hubs : sainte-luce, diamant, sejour, nogent → guides + biens). `clusterForGuide(slug)` / `clusterForBien(id)`.
+- **Maillage** : composant `src/components/seo/MaillageCluster.jsx` (client, câblé 12 guides + fiches biens) **ET** maillage **pré-rendu crawlable** dans `scripts/prerender.mjs` (`buildSeoBody` → nav « À lire aussi »/« Où loger »). ⚠️ Le composant React seul ne suffit pas (curl ne voit que le HTML statique) → c'est le prerender qui porte le SEO.
+- **Meta runtime + JSON-LD** : 12 guides ont meta (title ≤60c) + JSON-LD **Article + FAQPage + BreadcrumbList** via la table `GUIDE_META` dans `functions/[slug].js` (handler générique ; `onRequest` n'a pas de whitelist → fallback `context.next()`). Prerender synchronisé. Helpers : `src/lib/seo/jsonld.js`.
+- **FAQ visible** : `<details>` sur guide-distilleries/gastronomie/meilleure-saison (miroir JSON-LD).
+- **Sitemap** : hubs à priority 0.9.
+- ⚠️ Les guides ont `Cache-Control: max-age=3600` → après deploy, l'edge sert l'ancien HTML ~1h ; vérifier l'origine via cache-bust `?v=ts`.
+- **LOT 2 (à faire)** : nouveaux guides longue-traîne (≈6-8, forte intention locale) + étoffer hub Nogent + ajouter `faq:[]` aux guides sans (activites-sainte-luce). 1 lot = 1 spec.
+
+---
+
 ## 5. Pièges connus (footguns) — lire avant SEO/résa/réseaux
 1. **SEO meta fiches = DOUBLE SOURCE.** `functions/[slug].js` (HTMLRewriter runtime) **écrase** `scripts/prerender.mjs`. Éditer les DEUX, la vérité = la fonction. Title ≤60c, desc ≤158c. `functions/[slug].js` a sa propre table `BIENS` (prix codés en dur, à synchroniser).
 2. **Réservations** : un seul onglet Sheet « Toutes les Réservations », action `importAllReservations`. `importBeds24` et l'onglet « Réservations Nogent » n'existent plus. Comparaisons d'id en `String`.
