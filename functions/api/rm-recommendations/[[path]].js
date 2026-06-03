@@ -1,5 +1,6 @@
 // Cloudflare Pages Function — /api/rm-recommendations
 // CRUD + full pricing engine for Revenue Manager recommendations
+import { occupancyAdjustment } from "../../../src/utils/rmOccupancyAdjust.js";
 
 const CORS = {
   "Content-Type": "application/json",
@@ -76,6 +77,7 @@ export function calcDateReco({
   eventsForDate,
   signalMap,
   today,
+  ownOccupancy = null,
 }) {
   const dateObj = new Date(dateStr + "T00:00:00Z");
   const dow = dateObj.getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
@@ -239,11 +241,22 @@ export function calcDateReco({
     }
   }
 
+  // 7b. Ajustement selon NOTRE occupation réelle (advisory — phase 2)
+  let adjOccupancy = 0;
+  let occInfo = null;
+  if (ownOccupancy) {
+    occInfo = occupancyAdjustment({ rate30: ownOccupancy.rate30 ?? null, rate90: ownOccupancy.rate90 ?? null, leadTimeDays, basePriceCents: basePrice });
+    if (occInfo.adjCents) {
+      adjOccupancy += occInfo.adjCents;
+      factors.push({ type: "own_occupancy", adj: occInfo.adjCents, label: occInfo.label, rate: occInfo.rate });
+    }
+  }
+
   // 8. Gap fill (not implemented at this level — would need calendar data)
   // adjGapFill stays 0
 
   // 9. Final price computation
-  let finalPrice = basePrice + adjWeekend + adjHoliday + adjEvent + adjLeadTime + adjMarket + adjGapFill;
+  let finalPrice = basePrice + adjWeekend + adjHoliday + adjEvent + adjLeadTime + adjMarket + adjGapFill + adjOccupancy;
 
   // Override price wins if set
   const effectivePrice = overridePriceCents !== null ? overridePriceCents : finalPrice;
@@ -270,7 +283,7 @@ export function calcDateReco({
   } else if (signal && signal.availability_rate !== null) {
     vacancyRisk = Math.round((signal.availability_rate || 0.5) * 40);
   }
-  vacancyRisk = Math.max(0, Math.min(100, vacancyRisk));
+  vacancyRisk = Math.max(0, Math.min(100, vacancyRisk + (occInfo ? occInfo.vacancyDelta : 0)));
 
   // 12. Premium opportunity
   let premiumOpportunity = 0;
@@ -281,13 +294,14 @@ export function calcDateReco({
   } else if (signal) {
     premiumOpportunity = Math.max(0, (signal.premium_opportunity || 0));
   }
-  premiumOpportunity = Math.max(0, Math.min(100, premiumOpportunity));
+  premiumOpportunity = Math.max(0, Math.min(100, premiumOpportunity + (occInfo ? occInfo.premiumDelta : 0)));
 
   // 13. Alert flags
   const alertFlags = [];
   if (vacancyRisk > 70) alertFlags.push("vacancy_risk_high");
   if (premiumOpportunity > 70) alertFlags.push("premium_opportunity");
   if (leadTimeDays < 7 && vacancyRisk > 60) alertFlags.push("last_minute_unbooked");
+  if (occInfo && occInfo.label) alertFlags.push("own_" + occInfo.label);
   if (isHoliday) alertFlags.push(`holiday:${holidayName}`);
   if (isEvent) alertFlags.push(`event:${eventName}`);
 
@@ -301,6 +315,7 @@ export function calcDateReco({
   summary += `)`;
   if (vacancyRisk > 70) summary += " ⚠️ risque vacance";
   if (premiumOpportunity > 70) summary += " ✨ opportunité premium";
+  if (occInfo && occInfo.label) summary += ` · occupation ${Math.round((occInfo.rate || 0) * 100)}% → ${occInfo.pct > 0 ? "+" : ""}${Math.round(occInfo.pct * 100)}%${occInfo.suggestMinStay ? " (min-stay réduit conseillé)" : ""}`;
 
   const now = Date.now();
 
@@ -409,6 +424,17 @@ async function handleCalculate(db, body) {
   const signalMap = {};
   for (const s of signals) signalMap[s.signal_date] = s;
 
+  // Notre occupation réelle (dernier snapshot 30d/90d) — phase 2 : alimente le moteur
+  let ownOccupancy = null;
+  try {
+    const { results: occRows } = await db.prepare(
+      "SELECT period_type, occupancy_rate FROM rm_kpi_snapshots WHERE property_id=? AND period_type IN ('30d','90d') ORDER BY snapshot_date DESC"
+    ).bind(property_id).all();
+    const seenOcc = {};
+    for (const r of (occRows || [])) { if (!(r.period_type in seenOcc)) seenOcc[r.period_type] = r.occupancy_rate; }
+    ownOccupancy = { rate30: seenOcc["30d"] ?? null, rate90: seenOcc["90d"] ?? null };
+  } catch {}
+
   // Generate all dates from today to today+365
   const dates = [];
   const cur = new Date(today + "T00:00:00Z");
@@ -436,6 +462,7 @@ async function handleCalculate(db, body) {
       eventsForDate: eventsByDate[dateStr] || [],
       signalMap,
       today,
+      ownOccupancy,
     })
   );
 
