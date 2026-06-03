@@ -7,6 +7,7 @@ import { useLang, LangToggle } from "./i18n.jsx";
 import { Eyebrow, Display, Editorial, Button, RatingBadge, Icon, ThemeToggle, Chip, StateTile, RImg } from "./primitives.jsx";
 import { Curtain } from "./Curtain.jsx";
 import { getVariant, trackConversion } from "./utils/abTest.js";
+import { getDiscount, discountLabel } from "./utils/pricing.js";
 import MaillageCluster from "./components/seo/MaillageCluster.jsx";
 import { BIENS as CANON, isMartinique as isMartiniqueCanon } from "./data/biens.js";
 
@@ -58,18 +59,7 @@ async function fetchWithRetry(url, options = {}, retries = 3, delay = 800) {
 }
 
 // ── Brand palette (from logos.jsx) ──────────────────────────────
-// Remises par durée de séjour (appliquées sur le sous-total)
-function getDiscount(nights) {
-  if (nights >= 28) return 0.15; // -15% pour 28+ nuits
-  if (nights >= 14) return 0.10; // -10% pour 14+ nuits
-  if (nights >= 7)  return 0.05; // -5%  pour 7+  nuits
-  return 0;
-}
-function discountLabel(nights) {
-  if (nights >= 28) return "mensuel";
-  if (nights >= 14) return "2 semaines";
-  return "semaine";
-}
+// Remises par durée de séjour : getDiscount / discountLabel importés depuis ./utils/pricing.js
 
 // Valeurs par défaut — surchargées par la config admin (séjour minimum)
 const MIN_NIGHTS_DEFAULT = {
