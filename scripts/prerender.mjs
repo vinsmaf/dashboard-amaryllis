@@ -379,6 +379,23 @@ const ROUTES = [
     image: `${BASE}/photos/amaryllis/01.webp`,
   },
 
+  /* ── Partenaires & bonnes adresses ── */
+  {
+    path: "/nos-partenaires",
+    title: "Nos partenaires en Martinique — Amaryllis",
+    desc:  "Nos adresses locales de confiance pour votre séjour en Martinique : rhum, plongée, tables créoles, bien-être et mobilité. Sélectionnées par vos hôtes Amaryllis.",
+    image: `${BASE}/photos/amaryllis/01.webp`,
+    h1:    "Nos partenaires & bonnes adresses en Martinique",
+    intro: "Nous sélectionnons pour nos voyageurs des adresses locales de confiance et travaillons avec des prestataires sérieux : découvertes & rhum, mer & plongée, saveurs créoles, bien-être et mobilité.",
+    sections: [
+      { h2: "Découvertes & rhum", body: "Les distilleries de rhum agricole AOC du Sud (Trois-Rivières, La Mauny) et les grandes maisons de l'île (Clément, Depaz) pour des visites et dégustations mémorables." },
+      { h2: "Mer & plongée", body: "Les clubs de plongée de Sainte-Luce et des Anses-d'Arlet, les sorties bateau et catamaran vers les fonds blancs, et la location de kayaks et paddle." },
+      { h2: "Saveurs créoles", body: "Les tables de bord de mer de Sainte-Luce, les tables des Anses-d'Arlet et les marchés locaux pour goûter la cuisine martiniquaise authentique." },
+      { h2: "Bien-être & services", body: "Conciergerie et accueil personnalisé, massage et soins à domicile, chef à domicile, ménage et blanchisserie assurés par des prestataires locaux de confiance." },
+      { h2: "Mobilité", body: "Les loueurs de voiture locaux, transferts aéroport et location de scooter pour explorer la Martinique en toute liberté." },
+    ],
+  },
+
   /* ── Nouveaux guides destinations ── */
   {
     path: "/guide-distilleries-martinique",
@@ -763,6 +780,7 @@ const SITEMAP_META = {
   "/reservation-directe-martinique": { priority: "0.8",  changefreq: "monthly" },
   "/seminaires":                     { priority: "0.75", changefreq: "monthly" },
   "/location-villa-martinique-piscine": { priority: "0.95", changefreq: "monthly" },
+  "/nos-partenaires":                { priority: "0.6",  changefreq: "monthly" },
 };
 
 const today = new Date().toISOString().slice(0, 10);
