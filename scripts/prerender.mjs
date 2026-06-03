@@ -112,6 +112,33 @@ function buildFAQLd(faqs) {
   }, null, 2);
 }
 
+// JSON-LD Article + fil d'Ariane pour les guides POI (remplace le ld-main par
+// défaut, qui décrirait sinon la page d'accueil). Améliore la sémantique guide.
+function buildArticleLd(g) {
+  const url = `${BASE}${g.slug}`;
+  const ORG = { "@type": "Organization", "name": "Amaryllis Locations", "url": BASE };
+  return JSON.stringify([
+    {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": g.h1 || g.metaTitle,
+      "description": g.metaDescription,
+      "image": [g.photo || `${BASE}/photos/amaryllis/01.webp`],
+      "author": ORG,
+      "publisher": ORG,
+      "mainEntityOfPage": url,
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Guides Martinique", "item": `${BASE}/guide-hub` },
+        { "@type": "ListItem", "position": 2, "name": g.h1 || g.metaTitle, "item": url },
+      ],
+    },
+  ], null, 2);
+}
+
 // FAQ par bien — 5 questions stratégiques par propriété pour décrocher
 // les rich snippets "People also ask" dans Google FR.
 const FAQS_PAR_BIEN = {
@@ -430,6 +457,7 @@ const ROUTES = [
     h1:    g.h1 || null,
     intro: g.intro || null,
     sections: (g.sections || []).map(s => ({ h2: s.h2, body: s.body })),
+    jsonld: buildArticleLd(g),
     faqld: buildFAQLd(g.faq || []),
   })),
 ];
