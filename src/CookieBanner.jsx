@@ -2,6 +2,7 @@
 // Affiché sur toutes les pages tant que le visiteur n'a pas fait son choix.
 // Stockage : localStorage["amaryllis-cookie-consent"] = "granted" | "denied"
 import { useState, useEffect } from "react";
+import { loadMetaPixel } from "./lib/metaPixel.js";
 
 const STORAGE_KEY = "amaryllis-cookie-consent";
 const CORAL = "var(--c-coral)";
@@ -21,6 +22,7 @@ function grantConsent() {
     localStorage.setItem(STORAGE_KEY, "granted");
     localStorage.setItem(STORAGE_KEY + "_ts", String(Date.now()));
   } catch {}
+  loadMetaPixel(); // Pixel Meta chargé seulement après le « oui » (RGPD)
 }
 
 function denyConsent() {

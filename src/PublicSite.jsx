@@ -8,6 +8,7 @@ import { Eyebrow, Display, Editorial, Button, RatingBadge, Icon, ThemeToggle, Ch
 import { Curtain } from "./Curtain.jsx";
 import { getVariant, trackConversion } from "./utils/abTest.js";
 import { getDiscount, discountLabel } from "./utils/pricing.js";
+import { mpTrack } from "./lib/metaPixel.js";
 import MaillageCluster from "./components/seo/MaillageCluster.jsx";
 import { BIENS as CANON, isMartinique as isMartiniqueCanon } from "./data/biens.js";
 
@@ -1377,6 +1378,7 @@ function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) 
             bien_id: bien.id, niveau_tarifaire: niveauTarifaire(bien, localCheckin),
             items: [{ item_id: bien.id, item_name: bien.nom, price: bien.prix, quantity: nights || 1 }],
           });
+          mpTrack("Purchase", { value: amount, currency: "EUR", content_ids: [bien.id], content_type: "product" });
         }
       }
       window.location.href = "/merci";
@@ -2054,6 +2056,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
             niveau_tarifaire: niveauTarifaire(bien, checkin),
             items: [{ item_id: bien.id, item_name: bien.nom, price: bien.prix, quantity: nights }],
           });
+          mpTrack("Purchase", { value: total, currency: "EUR", content_ids: [bien.id], content_type: "product" });
         }
       }
       // Notifier l'hôte des upsells sélectionnés
@@ -2315,6 +2318,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
                     onClick={() => {
                       if (belowMin) return;
                       if (window.gtag) window.gtag("event", "begin_checkout", { bien_id: bien.id, niveau_tarifaire: niveauTarifaire(bien, checkin), currency: "EUR", value: total, items: [{ item_id: bien.id, item_name: bien.nom, price: bien.prix, quantity: nights }] });
+                      mpTrack("InitiateCheckout", { value: total, currency: "EUR", content_ids: [bien.id], content_type: "product" });
                       setStep(2);
                     }}
                     style={{ background: belowMin ? SAND : CORAL, color: "#fff", border: "none", padding: "14px 30px", borderRadius: 8, fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase", cursor: belowMin ? "not-allowed" : "pointer", boxShadow: belowMin ? "none" : "0 4px 20px rgba(196,114,84,0.35)", opacity: belowMin ? 0.6 : 1 }}
@@ -5688,6 +5692,7 @@ function GroupPaymentModal({ biens, checkin, checkout, guests, nights, total, on
         if (!sessionStorage.getItem(guardKey)) {
           sessionStorage.setItem(guardKey, "1");
           try { window.gtag("event", "purchase", { transaction_id: paymentIntent.id, currency: "EUR", value: total, bien_id: biens?.[0]?.id, niveau_tarifaire: niveauTarifaire(biens?.[0], checkin) }); } catch { /* */ }
+          mpTrack("Purchase", { value: total, currency: "EUR", content_ids: (biens || []).map(b => b.id), content_type: "product" });
         }
       }
       window.location.href = "/merci";
@@ -8026,6 +8031,7 @@ export default function PublicSite() {
         item_list_id: "villas",
         items: [{ item_id: bien.id, item_name: bien.nom, item_category: bien.lieu?.split(",")[0]?.trim() || "Martinique", price: bien.prix || 0, currency: "EUR" }],
       });
+      mpTrack("ViewContent", { content_ids: [bien.id], content_name: bien.nom, content_type: "product", value: bien.prix || 0, currency: "EUR" });
 
       if (!BOOKING_DISABLED.has(bien.id)) fetchAvailability(bien.id);
     } else {

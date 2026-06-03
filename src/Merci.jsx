@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { mpTrack } from "./lib/metaPixel.js";
 
 const STRIPE_PK = "pk_live_51QAsyQDstT3IRAj26eVHpBuMZI8UllaKGCCJUNAW5O9BfC3NqzVJwhrgfF0VndNMWPph0vijKomm24OwrTXCG58N00Co6GOWh1";
 
@@ -92,6 +93,7 @@ export default function MerciPage() {
         currency: "EUR",
         value: storedAmt || 0,
       });
+      mpTrack("Purchase", { value: storedAmt || 0, currency: "EUR" });
     }
   }, []);
 

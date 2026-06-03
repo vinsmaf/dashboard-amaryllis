@@ -6,13 +6,17 @@ import './tokens.css'
 import { LangProvider } from './i18n.jsx'
 import { GUIDES_POI_SLUGS } from './data/guidesPoiSlugs.js'
 import { installBugCapture } from './lib/bugCapture.js'
+import { initMetaPixelIfConsented } from './lib/metaPixel.js'
 
 // Tag de build (force un nouveau hash de bundle quand nécessaire — survit à la minification)
-if (typeof window !== "undefined") window.__BUILD__ = "c2c3-tunnel-devis-2026-06-02";
+if (typeof window !== "undefined") window.__BUILD__ = "meta-pixel-2026-06-03";
 
 // Capteur de bugs auto-hébergé (→ /api/client-errors → onglet 🐞 Bugs).
 // Installé tôt pour attraper aussi les erreurs de boot. Indépendant de Sentry.
 installBugCapture()
+
+// Meta Pixel — chargé seulement si le consentement RGPD a déjà été accordé (sinon attend le bandeau).
+initMetaPixelIfConsented()
 
 Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN || "",
