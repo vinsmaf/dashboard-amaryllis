@@ -43,6 +43,15 @@ if [[ "${SKIP_TESTS:-0}" != "1" ]]; then
   echo ""
 fi
 
+# ── 0b. BUILD — garantit que dist/ = la source qu'on vient de tester ──────────
+#    (gen-image-variants + vite build + prerender). SKIP_BUILD=1 pour redéployer
+#    un dist déjà construit. set -e → un build qui échoue annule le déploiement.
+if [[ "${SKIP_BUILD:-0}" != "1" ]]; then
+  echo "📦 Build (images + vite + prerender)…"
+  npm run build
+  echo ""
+fi
+
 echo "🚀 Déploiement → projet Cloudflare Pages '$PROJECT_NAME' (villamaryllis.com)"
 echo ""
 
