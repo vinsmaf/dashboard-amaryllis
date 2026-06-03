@@ -416,6 +416,18 @@ function sendNtfyPush_(title, body) {
 // Format unifié : iCal (Airbnb/Booking/Direct) + Beds24 (toutes propriétés)
 // Colonnes : A=ID  B=Propriété  C=Voyageur  D=Canal  E=Arrivée  F=Départ
 //            G=Nuits  H=Montant(€)  I=Statut  J=Voyageurs  K=Notes  L=Source  M=Modifié le
+// ── Clé de dédoublonnage par contenu (mirroir src/utils/resaDedup.js — garder synchro) ──
+function normDate_(v) {
+  if (v == null) return "";
+  if (v instanceof Date && !isNaN(v)) {
+    return v.getUTCFullYear() + "-" + String(v.getUTCMonth() + 1).padStart(2, "0") + "-" + String(v.getUTCDate()).padStart(2, "0");
+  }
+  return String(v).slice(0, 10);
+}
+function dedupKey_(bienId, checkin, checkout) {
+  return String(bienId || "").toLowerCase().trim() + "|" + normDate_(checkin) + "|" + normDate_(checkout);
+}
+
 function importAllReservations_(input) {
   // Accepte :
   //   – un tableau direct (appel interne)
@@ -451,12 +463,19 @@ function importAllReservations_(input) {
 
   var NCOLS = 15;
 
-  // Index des IDs existants
+  // Index des lignes existantes — par ID ET par clé-contenu (bien|checkin|checkout)
   var lastRow = sheet.getLastRow();
-  var existingIds = {};
+  var existingIds = {}, existingByContent = {};
+  var LABEL_TO_BIENID = { "T2 Nogent":"nogent", "Villa Amaryllis":"amaryllis", "Villa Iguana":"iguana", "Geko":"geko", "Zandoli":"zandoli", "Mabouya":"mabouya", "T2 Schoelcher":"schoelcher" };
   if (lastRow > 1) {
-    var ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
-    ids.forEach(function(row, i) { if (row[0]) existingIds[String(row[0])] = i + 2; });
+    var existRows = sheet.getRange(2, 1, lastRow - 1, 6).getValues(); // ID, Propriété, Voyageur, Canal, Arrivée, Départ
+    existRows.forEach(function(er, i) {
+      var rowNum = i + 2;
+      if (er[0]) existingIds[String(er[0])] = rowNum;
+      var bId = LABEL_TO_BIENID[er[1]] || String(er[1] || "").toLowerCase();
+      var ck = dedupKey_(bId, er[4], er[5]);
+      if (ck && ck !== "||") existingByContent[ck] = rowNum;
+    });
   }
 
   var BIEN_LABELS = {
@@ -505,13 +524,17 @@ function importAllReservations_(input) {
       r.email    || "",
     ];
 
-    var existingRow = existingIds[id];
+    var contentK = dedupKey_(r.bienId, r.checkin || r.arrival, r.checkout || r.departure);
+    var existingRow = existingIds[id] || (contentK && contentK !== "||" ? existingByContent[contentK] : null);
     if (existingRow) {
       sheet.getRange(existingRow, 1, 1, NCOLS).setValues([row]);
+      existingIds[id] = existingRow;
+      if (contentK && contentK !== "||") existingByContent[contentK] = existingRow;
       updated++;
     } else {
       sheet.appendRow(row);
       existingIds[id] = sheet.getLastRow();
+      if (contentK && contentK !== "||") existingByContent[contentK] = sheet.getLastRow();
       added++;
       if (r.montant > 0 || r.price > 0) newResaLines.push(bienLabel + " · " + (r.voyageur || r.guestName || "?") + " · " + (r.checkin || r.arrival) + " · " + (r.montant || r.price || "?") + "€");
     }
