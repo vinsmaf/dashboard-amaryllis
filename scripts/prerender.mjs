@@ -33,6 +33,70 @@ const BASE    = "https://villamaryllis.com";
 const DIST    = path.resolve("dist");
 const TMPL    = fs.readFileSync(path.join(DIST, "index.html"), "utf8");
 
+/* ── Bloc @graph des 7 VacationRental (head, ex-statique index.html) ──────
+   Faits ← canonique src/data/biens.js. Contenu SEO (amenityFeature/horaires)
+   = carte locale ci-dessous (n'existe que pour ce bloc, ne drift nulle part). */
+const RENTAL_CONTENT = {
+  amaryllis:  { checkin: "16:00", checkout: "11:00", pets: true,  amenities: ["Piscine à débordement eau salée", "Vue mer 180°", "Terrasse 100 m²", "WiFi Starlink", "Parking", "Climatisation"] },
+  zandoli:    { checkin: "16:00", checkout: "11:00", pets: false, amenities: ["Piscine privative avec cascade", "Mezzanine", "Jardin tropical", "WiFi", "Climatisation"] },
+  iguana:     { checkin: "16:00", checkout: "11:00", pets: false, amenities: ["Piscine eau salée", "Vue Rocher du Diamant", "WiFi", "Climatisation"] },
+  geko:       { checkin: "16:00", checkout: "11:00", pets: false, amenities: ["Piscine privative avec cascade", "Jardin tropical", "WiFi", "Climatisation"] },
+  mabouya:    { checkin: "16:00", checkout: "11:00", pets: false, amenities: ["Jacuzzi privatif", "Terrasse vue mer", "WiFi", "Climatisation"] },
+  schoelcher: { checkin: "16:00", checkout: "11:00", pets: false, amenities: ["Vue baie Fort-de-France", "WiFi", "Climatisation"] },
+  nogent:     { checkin: "15:00", checkout: "11:00", pets: false, amenities: ["WiFi", "Parking"] },
+};
+
+function rentalNode(id) {
+  const b = CANON[id];
+  const mq = isMartinique(b);
+  const c = RENTAL_CONTENT[id] || { checkin: "16:00", checkout: "11:00", pets: false, amenities: [] };
+  const url = `${BASE}/${id}`;
+  const amenityFeature = c.amenities.map(name => ({ "@type": "LocationFeatureSpecification", name, value: true }));
+  return {
+    "@type": "VacationRental",
+    "@id": `${url}#rental`,
+    "name": b.nom,
+    "url": url,
+    "identifier": id,
+    "description": b.seoDesc,
+    "image": (b.photos || []).slice(0, 8).map(p => `${BASE}${p}`),
+    "numberOfRooms": b.chambres,
+    "occupancy": { "@type": "QuantitativeValue", "maxValue": b.capacite },
+    "checkinTime": c.checkin,
+    "checkoutTime": c.checkout,
+    ...(c.pets ? { "petsAllowed": true } : {}),
+    "amenityFeature": amenityFeature,
+    "geo": { "@type": "GeoCoordinates", "latitude": b.coords.lat, "longitude": b.coords.lng },
+    "containsPlace": {
+      "@type": "Accommodation",
+      "additionalType": "EntirePlace",
+      "numberOfBedrooms": b.chambres,
+      "occupancy": { "@type": "QuantitativeValue", "maxValue": b.capacite },
+      "amenityFeature": amenityFeature,
+    },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": String(b.rating).replace(",", "."),
+      "reviewCount": String(b.reviews),
+      "bestRating": "5",
+      "worstRating": "1",
+    },
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": b.lieu,
+      "addressRegion": mq ? "Martinique" : "Île-de-France",
+      "postalCode": b.postal,
+      "addressCountry": mq ? "MQ" : "FR",
+    },
+  };
+}
+
+function buildRentalsGraph() {
+  const graph = { "@context": "https://schema.org", "@graph": Object.keys(CANON).map(rentalNode) };
+  return `<script type="application/ld+json">\n${JSON.stringify(graph)}\n    </script>`;
+}
+const RENTALS_GRAPH = buildRentalsGraph();
+
 /* ── JSON-LD VacationRental par propriété ───────────────────────────── */
 function buildVacationRentalLd({ id, nom, desc, prix, capacite, chambres, rating, reviews, coords, photos = [], isMartinique = true, bookable = true }) {
   const url = `${BASE}/${id}`;
@@ -610,6 +674,9 @@ function buildSeoBody({ h1, title, desc, routePath, intro = null, sections = [] 
 function patchHtml(tmpl, { path: routePath, title, desc, image, h1 = null, intro = null, sections = [], noindex = false, jsonld = null, faqld = null, lang = "fr", lcpPreload = false }) {
   const url = `${BASE}${routePath}`;
   let html = tmpl;
+
+  // Bloc @graph des 7 VacationRental (généré depuis le canonique) — remplace le marqueur statique.
+  html = html.replace("<!--SEO_RENTALS_GRAPH-->", RENTALS_GRAPH);
 
   /* Corps SEO fallback dans #root (remplacé par React au runtime) */
   html = html.replace(/<div id="root">\s*<\/div>/, buildSeoBody({ h1, title, desc, routePath, intro, sections }));
