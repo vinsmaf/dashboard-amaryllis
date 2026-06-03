@@ -11,6 +11,7 @@
 import fs   from "node:fs";
 import path from "node:path";
 import { GUIDES_POI } from "../src/data/guidesPoi.js";
+import { CLUSTER_GUIDES, CLUSTER_BIENS, GUIDE_LABELS, clusterForGuide, clusterForBien } from "../src/data/seoClusters.js";
 
 const BASE    = "https://villamaryllis.com";
 const DIST    = path.resolve("dist");
@@ -484,6 +485,8 @@ const NAV_BIENS = [
   ["/geko", "Géko"], ["/mabouya", "Studio Mabouya"], ["/schoelcher", "Bellevue Schœlcher"],
   ["/nogent", "Appartement Nogent"],
 ];
+// id bien → nom (pour le maillage cluster pré-rendu)
+const BIEN_ID_NAMES = Object.fromEntries(NAV_BIENS.map(([p, n]) => [p.slice(1), n]));
 
 // Landing commerciales — maillées dans le corps prérendu (dé-orpheline pour le crawl).
 const NAV_LANDINGS = [
@@ -515,6 +518,22 @@ function buildSeoBody({ h1, title, desc, routePath, intro = null, sections = [] 
   // ⚠️ Bloc masqué VISUELLEMENT (sr-only) mais présent dans le HTML : Googlebot le
   //    lit (corps non vide), l'utilisateur ne le voit PLUS clignoter avant que le
   //    bundle JS ne monte React (qui remplace #root). Corrige le « flash » au refresh.
+  // Maillage cluster (hub & spoke) — liens internes guides + biens CRAWLABLES dans
+  // le HTML statique (le composant React MaillageCluster ne sert qu'après hydratation).
+  const slug = (routePath || "").replace(/^\//, "");
+  const isBien  = BIEN_ID_NAMES[slug] != null;
+  const isGuide = Object.values(CLUSTER_GUIDES).some((arr) => arr.includes(slug));
+  let maillageHtml = "";
+  if (isBien || isGuide) {
+    const cluster = isBien ? clusterForBien(slug) : clusterForGuide(slug);
+    const gLinks = (CLUSTER_GUIDES[cluster] || []).filter((s) => s !== slug)
+      .map((s) => `<a href="/${s}">${esc(GUIDE_LABELS[s] || s)}</a>`).join(" · ");
+    const bLinks = (CLUSTER_BIENS[cluster] || []).filter((id) => id !== slug)
+      .map((id) => `<a href="/${id}">${esc(BIEN_ID_NAMES[id] || id)}</a>`).join(" · ");
+    if (gLinks) maillageHtml += `<nav aria-label="À lire aussi">${gLinks}</nav>`;
+    if (bLinks) maillageHtml += `<nav aria-label="Où loger dans le secteur">${bLinks}</nav>`;
+  }
+
   const SEO_HIDDEN = "position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0";
   return `<div id="root"><div data-prerender-seo style="${SEO_HIDDEN}">` +
     `<h1>${esc(heading)}</h1>` +
@@ -523,6 +542,7 @@ function buildSeoBody({ h1, title, desc, routePath, intro = null, sections = [] 
     sectionsHtml +
     `<nav aria-label="Nos locations"><a href="/">Accueil</a> · ${links} · <a href="/explorer">Guides Martinique</a></nav>` +
     `<nav aria-label="Locations en Martinique">${landingLinks}</nav>` +
+    maillageHtml +
     `</div></div>`;
 }
 
