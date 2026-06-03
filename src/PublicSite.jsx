@@ -8,6 +8,7 @@ import { Eyebrow, Display, Editorial, Button, RatingBadge, Icon, ThemeToggle, Ch
 import { Curtain } from "./Curtain.jsx";
 import { getVariant, trackConversion } from "./utils/abTest.js";
 import MaillageCluster from "./components/seo/MaillageCluster.jsx";
+import { BIENS as CANON, isMartinique as isMartiniqueCanon } from "./data/biens.js";
 
 // Noms canoniques des biens pour le maillage interne SEO ("villa" = Amaryllis + Iguana uniquement).
 const BIEN_NAMES = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko", mabouya: "Studio Mabouya", schoelcher: "Bellevue Schœlcher", iguana: "Villa Iguana", nogent: "Appartement Nogent-sur-Marne" };
@@ -242,12 +243,26 @@ const DEPOSIT_AMOUNTS = {
 
 const AB = "https://a0.muscache.com/im/pictures/";
 
+// Faits partagés tirés du canonique (source unique). N'inclut PAS `nom` (display PublicSite conservé).
+function canonFacts(id) {
+  const c = CANON[id];
+  return {
+    prix: c.prix,
+    capacite: c.capacite,
+    chambres: c.chambres,
+    lieu: `${c.lieu}, ${isMartiniqueCanon(c) ? "Martinique" : "Île-de-France"}`,
+    coords: c.coords,
+    rating: String(c.rating).replace(".", ","),
+    reviews: c.reviews,
+    bookable: c.bookable,
+  };
+}
+
 const BIENS = [
   {
     id: "amaryllis",
     nom: "Villa Amaryllis",
     airbnbTitle: "Villa Amaryllis - Luxe & sérénité Vue Mer, Piscine",
-    lieu: "Sainte-Luce, Martinique",
     tag: "⭐ Coup de cœur Airbnb",
     tagEn: "⭐ Airbnb Guest Favourite",
     desc: "Perchée sur les hauteurs de Sainte-Luce, bercée par les alizés et le parfum des fleurs tropicales, la Villa Amaryllis vous invite à un séjour d'exception. Dès l'arrivée, vous êtes accueillis dans un univers élégant et chaleureux, pensé dans les moindres détails pour que vos vacances soient reposantes et inoubliables. Notre équipe sur place, attentionnée et discrète, veille à ce que chaque instant soit parfait.",
@@ -270,13 +285,8 @@ const BIENS = [
         { label: "Support", texte: "Notre équipe est joignable 24h/24 en cas d'urgence ou de besoin particulier." },
       ]},
     ],
-    prix: 280,
-    capacite: 8,
-    chambres: 3,
     lits: 3,
     sdb: "3,5",
-    rating: "4,94",
-    reviews: 33,
     couleur: "#e91e8c",
     photos: [
       "/photos/amaryllis/10.webp",  // hero — vue grand angle villa+piscine (agent photographe)
@@ -302,7 +312,6 @@ const BIENS = [
       "/photos/amaryllis/21.webp",
       "/photos/amaryllis/22.webp",
     ],
-    coords: { lat: 14.4732, lng: -60.9196 },
     mapsEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3863.107902087125!2d-60.943493625540455!3d14.478492985993562!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8c4021b8748ab759%3A0x99f47752da739a0a!2svilla%20Amaryllis!5e0!3m2!1sfr!2sfr!4v1779046798123!5m2!1sfr!2sfr",
     amenities: ["Piscine à débordement eau salée", "Vue océan", "Wifi Starlink", "Parking", "Animaux OK"],
     amenitiesEn: ["Salt-water infinity pool", "Ocean view", "Starlink WiFi", "Parking", "Pets welcome"],
@@ -311,12 +320,12 @@ const BIENS = [
       { nom: "James K.", pays: "🇬🇧", note: 5, texte: "Stunning villa with incredible Caribbean views. The salt water infinity pool is exceptional. Best Airbnb we've ever stayed in — period.", date: "Mars 2025" },
       { nom: "Marie-Claire D.", pays: "🇫🇷", note: 5, texte: "Séjour magique en famille. La terrasse de 100m² face à la mer est un rêve éveillé. Tout était impeccable, de l'accueil aux moindres détails de décoration.", date: "Fév. 2025" },
     ],
+    ...canonFacts("amaryllis"),
   },
   {
     id: "zandoli",
     nom: "Zandoli",
     airbnbTitle: "Zandoli : détente tropicale, piscine, jardin, vue mer",
-    lieu: "Sainte-Luce, Martinique",
     tag: null,
     desc: "Bienvenue à Zandoli, cocon tropical niché au cœur d'un jardin luxuriant sur les hauteurs paisibles de Sainte-Luce. Réveillez-vous face à la mer des Caraïbes dans cet appartement lumineux et décoré avec soin. Plages de sable blanc, distilleries et randonnées à proximité vous invitent à vivre l'expérience martiniquaise authentique. Après vos escapades, admirez le coucher de soleil et laissez la brise chaude et le chant des oiseaux vous bercer.",
     descEn: "Welcome to Zandoli, a tropical cocoon nestled in a lush garden on the peaceful heights of Sainte-Luce. Wake up facing the Caribbean Sea in this bright, tastefully decorated apartment. White sand beaches, rum distilleries and hiking trails invite you to experience authentic Martinique. After your adventures, admire the sunset and let the warm breeze and birdsong soothe you.",
@@ -337,13 +346,8 @@ const BIENS = [
         { label: "Accès", texte: "Le logement comporte des marches ou escaliers. Accueil en personne par l'équipe Amaryllis." },
       ]},
     ],
-    prix: 220,
-    capacite: 5,
-    chambres: 2,
     lits: 3,
     sdb: "1",
-    rating: "4,5",
-    reviews: 16,
     couleur: "#06b6d4",
     photos: [
       "/photos/zandoli/01.webp",
@@ -362,7 +366,6 @@ const BIENS = [
       "/photos/zandoli/14.webp",
       "/photos/zandoli/15.webp",
     ],
-    coords: { lat: 14.4725, lng: -60.9201 },
     mapsEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3862.822862640186!2d-60.92853662554015!3d14.49485608597908!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8c4021b73b656873%3A0xdb94b0a0ad33a741!2sresidence%20Amaryllis!5e0!3m2!1sfr!2sfr!4v1779046858310!5m2!1sfr!2sfr",
     amenities: ["Piscine privée", "Vue mer", "Wifi Starlink", "Netflix/Disney+", "Lave-linge", "Jardin", "Animaux OK"],
     amenitiesEn: ["Private pool", "Sea view", "Starlink WiFi", "Netflix/Disney+", "Washer", "Garden", "Pets welcome"],
@@ -371,12 +374,12 @@ const BIENS = [
       { nom: "Thomas & Ana", pays: "🇩🇪", note: 5, texte: "Wunderbar! Tropical garden, private pool, sea view — everything we dreamed of. Very clean and well-equipped. We'll be back next winter.", date: "Janv. 2025" },
       { nom: "Camille R.", pays: "🇫🇷", note: 4, texte: "Très bel appartement, bien équipé et bien situé. La mezzanine est idéale pour les enfants. Netflix et lave-linge ont été très appréciés.", date: "Déc. 2024" },
     ],
+    ...canonFacts("zandoli"),
   },
   {
     id: "iguana",
     nom: "Villa Iguana",
     airbnbTitle: "Villa Iguana, vue mer et rocher du Diamant, piscine",
-    lieu: "Sainte-Luce, Martinique",
     tag: null,
     desc: "La Villa Iguana possède une piscine d'eau salée — la seule de la résidence. Nager dedans, c'est nager dans la mer : pas de chlore, une eau douce et vivante, le même effet bienfaisant que l'océan. Depuis la terrasse, la vue embrasse le Rocher du Diamant et la mer des Caraïbes. Un cadre rare, sur les hauteurs de Sainte-Luce.",
     descEn: "Villa Iguana features a saltwater pool — the only one in the residence. Swimming in it feels like swimming in the sea: no chlorine, soft living water, the same restorative effect as the ocean itself. The terrace frames a direct view of Diamond Rock and the Caribbean. A rare setting on the heights of Sainte-Luce.",
@@ -398,13 +401,8 @@ const BIENS = [
         { label: "Connexion", texte: "Wifi Starlink dans toute la propriété." },
       ]},
     ],
-    prix: 180,
-    capacite: 6,
-    chambres: 2,
     lits: 3,
     sdb: "1",
-    rating: "4,75",
-    reviews: 4,
     couleur: "#22c55e",
     photos: [
       "/photos/iguana/01.webp",
@@ -423,7 +421,6 @@ const BIENS = [
       "/photos/iguana/14.webp",
       "/photos/iguana/15.webp",
     ],
-    coords: { lat: 14.4718, lng: -60.9188 },
     mapsEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3862.822862640186!2d-60.92853662554015!3d14.49485608597908!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8c4021b73b656873%3A0xdb94b0a0ad33a741!2sresidence%20Amaryllis!5e0!3m2!1sfr!2sfr!4v1779046858310!5m2!1sfr!2sfr",
     amenities: ["Piscine eau salée", "Vue Diamant", "Vue océan", "Wifi Starlink", "Parking", "Animaux OK"],
     amenitiesEn: ["Saltwater pool", "Diamond Rock view", "Ocean view", "Starlink WiFi", "Parking", "Pets welcome"],
@@ -432,12 +429,12 @@ const BIENS = [
       { nom: "Rachel T.", pays: "🇬🇧", note: 5, texte: "What a view! Waking up to see the Diamond Rock every morning was magical. The saltwater pool felt like swimming in the sea itself. Perfect.", date: "Mars 2025" },
       { nom: "Laurent D.", pays: "🇫🇷", note: 5, texte: "Superbe villa avec une vue panoramique exceptionnelle. Très calme, très propre. La terrasse est parfaite pour les levers de soleil. Je recommande vivement.", date: "Fév. 2025" },
     ],
+    ...canonFacts("iguana"),
   },
   {
     id: "geko",
     nom: "Géko",
     airbnbTitle: "Géko, détente, zen, piscine & jardin tropical",
-    lieu: "Sainte-Luce, Martinique",
     tag: null,
     desc: "Bienvenue à Géko, votre refuge paisible au sein de la résidence fleurie Amaryllis sur les hauteurs de Sainte-Luce. Laissez-vous séduire par le jardin tropical luxuriant, la piscine rafraîchissante et la douce brise des alizés. À seulement 7 minutes des plages de sable blanc et du bourg animé de Sainte-Luce, Géko offre un séjour alliant confort moderne, nature apaisante et découverte authentique de la Martinique. Un cocon tropical où chaque détail est pensé pour votre confort et votre bien-être.",
     descEn: "Welcome to Géko, your peaceful retreat within the flower-filled Amaryllis residence on the heights of Sainte-Luce. Let yourself be seduced by the lush tropical garden, refreshing pool and gentle trade winds. Just 7 minutes from white sand beaches and the lively village of Sainte-Luce, Géko blends modern comfort, soothing nature and authentic Martinique discovery. A tropical cocoon where every detail is designed for your comfort and well-being.",
@@ -457,13 +454,8 @@ const BIENS = [
         { label: "Connexion", texte: "Wifi haut débit Starlink dans toute la propriété." },
       ]},
     ],
-    prix: 150,
-    capacite: 4,
-    chambres: 1,
     lits: 2,
     sdb: "1",
-    rating: "4,83",
-    reviews: 24,
     couleur: "#f59e0b",
     photos: [
       "/photos/geko/01.webp",
@@ -482,7 +474,6 @@ const BIENS = [
       "/photos/geko/14.webp",
       "/photos/geko/15.webp",
     ],
-    coords: { lat: 14.4729, lng: -60.9194 },
     mapsEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3862.822862640186!2d-60.92853662554015!3d14.49485608597908!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8c4021b73b656873%3A0xdb94b0a0ad33a741!2sresidence%20Amaryllis!5e0!3m2!1sfr!2sfr!4v1779046858310!5m2!1sfr!2sfr",
     amenities: ["Piscine privée", "Jardin tropical", "Climatisation", "Wifi Starlink", "Lave-linge", "Animaux OK"],
     amenitiesEn: ["Private pool", "Tropical garden", "Air conditioning", "Starlink WiFi", "Washer", "Pets welcome"],
@@ -491,12 +482,12 @@ const BIENS = [
       { nom: "Marco F.", pays: "🇮🇹", note: 5, texte: "Piccolo paradiso caraibico! Il giardino tropicale è stupendo, la piscina fresca e pulita. Posizione tranquilla a pochi minuti dalla spiaggia. Torneremo!", date: "Avr. 2025" },
       { nom: "Nathalie C.", pays: "🇫🇷", note: 5, texte: "Refuge parfait pour se ressourcer. Jardin luxuriant, piscine fraîche, tout était propre et bien équipé. L'hôte répond très rapidement. Parfait !", date: "Mars 2025" },
     ],
+    ...canonFacts("geko"),
   },
   {
     id: "mabouya",
     nom: "Studio Mabouya",
     airbnbTitle: "Studio Mabouya — Jacuzzi privatif · Vue mer · Escapade romantique",
-    lieu: "Sainte-Luce, Martinique",
     tag: "❤️ Escapade romantique",
     tagEn: "❤️ Romantic Escape",
     desc: "Le seul studio de la résidence avec jacuzzi privatif — rien que pour vous deux. Imaginez une soirée dans votre bain bouillonnant, face à la mer des Caraïbes, dans un jardin fleuri où il fait nuit noire et étoilé. Mabouya, c'est l'adresse secrète des couples en Martinique : intimité totale, calme absolu, plages à 5 minutes. À partir de 110 €/nuit en réservation directe.",
@@ -518,13 +509,8 @@ const BIENS = [
         { label: "Équipements inclus", texte: "Linge de maison, produits d'accueil et wifi Starlink fournis." },
       ]},
     ],
-    prix: 110,
-    capacite: 2,
-    chambres: 1,
     lits: 1,
     sdb: "1",
-    rating: "4,55",
-    reviews: 11,
     couleur: "#ec4899",
     photos: [
       "/photos/mabouya/01.webp",
@@ -540,7 +526,6 @@ const BIENS = [
       "/photos/mabouya/11.webp",
       "/photos/mabouya/12.webp",
     ],
-    coords: { lat: 14.4741, lng: -60.9209 },
     mapsEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3862.822862640186!2d-60.92853662554015!3d14.49485608597908!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8c4021b73b656873%3A0xdb94b0a0ad33a741!2sresidence%20Amaryllis!5e0!3m2!1sfr!2sfr!4v1779046858310!5m2!1sfr!2sfr",
     amenities: ["Jacuzzi privatif 🛁", "Vue mer Caraïbes", "Terrasse privée", "Jardin fleuri tropical", "Barbecue charbon", "Wifi Starlink", "Parking privé", "Animaux OK"],
     amenitiesEn: ["Private jacuzzi 🛁", "Caribbean sea view", "Private terrace", "Tropical flower garden", "Charcoal BBQ", "Starlink WiFi", "Private parking", "Pets welcome"],
@@ -549,12 +534,12 @@ const BIENS = [
       { nom: "Sarah W.", pays: "🇺🇸", note: 5, texte: "Hidden gem! The private jacuzzi with ocean views made every evening unforgettable. The flowering garden is gorgeous. Perfect romantic escape.", date: "Mars 2025" },
       { nom: "Jean-Paul M.", pays: "🇫🇷", note: 4, texte: "Très beau logement avec un jacuzzi privatif et une vue mer agréable. Jardin entretenu, hôte sympathique. Idéal pour un séjour en couple.", date: "Fév. 2025" },
     ],
+    ...canonFacts("mabouya"),
   },
   {
     id: "schoelcher",
     nom: "Bellevue",
     airbnbTitle: "Appartement de standing calme, splendide vue mer",
-    lieu: "Schœlcher, Martinique",
     tag: null,
     desc: "Imaginez… Au réveil, depuis la terrasse, une vue imprenable sur la mer des Caraïbes, la baie de Fort-de-France et les Trois-Îlets. Situé dans un quartier calme de Schœlcher, cet appartement de standing vous offre un cadre idéal pour découvrir le nord de la Martinique. À 1 minute à pied d'un petit centre commercial, et à 5 minutes en voiture des plages, Bellevue combine tranquillité et proximité de tout. Dernier étage d'une résidence sécurisée : brise marine, calme absolu et couchers de soleil inoubliables.",
     descEn: "Imagine… waking up on your terrace to sweeping views of the Caribbean Sea, the Bay of Fort-de-France and the Trois-Îlets. Located in a quiet neighbourhood of Schœlcher, this upscale apartment is an ideal base to explore northern Martinique. A 1-minute walk from shops and 5 minutes by car from the beaches, Bellevue combines tranquility with having everything nearby. Top floor of a secure residence: sea breeze, absolute calm and unforgettable sunsets.",
@@ -575,13 +560,8 @@ const BIENS = [
         { label: "Connexion", texte: "Wifi haut débit dans tout l'appartement." },
       ]},
     ],
-    prix: 100,
-    capacite: 2,
-    chambres: 1,
     lits: 1,
     sdb: "1",
-    rating: "4,8",
-    reviews: 30,
     couleur: "#8b5cf6",
     photos: [
       "/photos/schoelcher/01.webp",
@@ -600,7 +580,6 @@ const BIENS = [
       "/photos/schoelcher/14.webp",
       "/photos/schoelcher/15.webp",
     ],
-    coords: { lat: 14.6121, lng: -61.0887 },
     mapsEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2905.414139928121!2d-61.10181910968834!3d14.634222460364626!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8c6aa753fde6522f%3A0x414570ed7905d25c!2sR%C3%A9sidence%20Belle%20Vue!5e0!3m2!1sfr!2sfr!4v1779047169810!5m2!1sfr!2sfr",
     amenities: ["Vue baie", "Terrasse", "TV HD", "Wifi", "Parking", "Animaux OK"],
     amenitiesEn: ["Bay view", "Terrace", "HD TV", "WiFi", "Parking", "Pets welcome"],
@@ -609,12 +588,12 @@ const BIENS = [
       { nom: "Dirk H.", pays: "🇳🇱", note: 5, texte: "Amazing view over the bay! The apartment is quiet, clean and has everything you need. Great location to explore the north of Martinique. Highly recommended.", date: "Mars 2025" },
       { nom: "Monique R.", pays: "🇫🇷", note: 5, texte: "Logement de standing avec une vue exceptionnelle. Hôte très accueillant et réactif. La terrasse face à la baie est un vrai bonheur le matin.", date: "Fév. 2025" },
     ],
+    ...canonFacts("schoelcher"),
   },
   {
     id: "nogent",
     nom: "Appartement aux Portes de Paris",
     airbnbTitle: "Appartement de standing avec jardin, proche Paris",
-    lieu: "Nogent-sur-Marne, Île-de-France",
     tag: "🗼 Aux portes de Paris",
     tagEn: "🗼 At the Gates of Paris",
     desc: "Laissez-vous séduire par un appartement élégant, niché au sein d'une résidence luxueuse aux portes de Paris. Havre de paix alliant calme, confort et style — parfait pour des voyageurs en quête d'évasion urbaine sans sacrifier la quiétude. Ce T2 de 39 m² baigné de lumière naturelle à Nogent-sur-Marne, à seulement quelques minutes de Paris, a été pensé dans les moindres détails pour rendre votre séjour absolument magique.",
@@ -637,13 +616,8 @@ const BIENS = [
         { label: "Connexion", texte: "Wifi ultra-rapide dans tout l'appartement." },
       ]},
     ],
-    prix: 85,
-    capacite: 2,
-    chambres: 1,
     lits: 1,
     sdb: "1",
-    rating: 4.8,
-    reviews: 18,
     couleur: "#6366f1",
     photos: [
       "/photos/nogent/01.webp",
@@ -668,7 +642,6 @@ const BIENS = [
       "/photos/nogent/20.webp",
     ],
     useBeds24: true, // Réservation via notre API beds24-create (plus d'iframe)
-    coords: { lat: 48.8374, lng: 2.4836 },
     mapsEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d463.17188664330297!2d2.4757244130102185!3d48.83615034492648!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x47e60d41b4fd90d1%3A0x4f6c2445f955ea44!2s21%20Gd%20Rue%20Charles%20de%20Gaulle%2C%2094130%20Nogent-sur-Marne!5e0!3m2!1sfr!2sfr!4v1779047281540!5m2!1sfr!2sfr",
     amenities: ["Bord de Marne 🚶", "Jardin privé 🌿", "RER A → Paris 20 min", "Home cinéma", "Climatisation", "Barbecue", "Parking sécurisé", "Wifi ultra-rapide"],
     amenitiesEn: ["Riverside 🚶", "Private garden 🌿", "RER A → Paris 20 min", "Home cinema", "Air conditioning", "BBQ", "Secure parking", "Fast WiFi"],
@@ -676,6 +649,7 @@ const BIENS = [
       { nom: "Aurélie F.", pays: "🇫🇷", note: 5, texte: "Appartement lumineux et très bien décoré au bord de la Marne. Calme absolu tout en étant à 20 min de Paris. Le jardin est charmant. Parfait pour se ressourcer.", date: "Avr. 2025" },
       { nom: "Oliver M.", pays: "🇬🇧", note: 5, texte: "Lovely flat with a garden right by the river. Peaceful, well-decorated and only 20 minutes from central Paris. The host was very welcoming and helpful.", date: "Mars 2025" },
     ],
+    ...canonFacts("nogent"),
   },
 ];
 
