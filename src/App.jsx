@@ -16,6 +16,7 @@ import Tarifs from "./tabs/Tarifs.jsx";
 import AnalyticsTab from "./tabs/AnalyticsTab.jsx";
 import MinNightsConfig from "./tabs/MinNightsConfig.jsx";
 import Pilotage from "./tabs/Pilotage.jsx";
+import CpaCanalTab from "./tabs/CpaCanalTab.jsx";
 import CalendrierTarifs from "./tabs/CalendrierTarifs.jsx";
 import Beds24Admin from "./tabs/Beds24Admin.jsx";
 import LivretQR from "./tabs/LivretQR.jsx";
@@ -1247,6 +1248,7 @@ export default function App() {
       items: [
         { id: "charges",     icon: "💰", label: "Charges" },
         { id: "pilotage",    icon: "💼", label: "Pilotage" },
+        { id: "cpa-canal",   icon: "💸", label: "CPA canal" },
         { id: "cautions",    icon: "🔒", label: "Cautions" },
       ],
     },
@@ -1475,6 +1477,7 @@ export default function App() {
             {tab === "previsionnel" && <Previsionnel />}
             {tab === "charges" && <Charges />}
             {tab === "pilotage" && <Pilotage />}
+            {tab === "cpa-canal" && <CpaCanalTab />}
             {tab === "historique" && <Historique />}
             {tab === "revenue"  && <RevenueManagerPro />}
             {tab === "tarifs" && <Tarifs />}

@@ -21,8 +21,8 @@ export async function onRequestGet(context) {
   try {
     const token = await getAccessToken(clientEmail, privateKey);
 
-    // Exécuter 5 rapports en parallèle (data-006 : ajout conversions par bien)
-    const [overview, pages, countries, sources, devices, bienConversions] = await Promise.all([
+    // Exécuter les rapports en parallèle (data-006 : conversions par bien ; data-046 : funnel events)
+    const [overview, pages, countries, sources, devices, bienConversions, funnel] = await Promise.all([
       runReport(token, propertyId, {
         dimensions:  [{ name: "date" }],
         metrics:     [{ name: "sessions" }, { name: "totalUsers" }, { name: "screenPageViews" }, { name: "bounceRate" }, { name: "averageSessionDuration" }],
@@ -69,6 +69,19 @@ export async function onRequestGet(context) {
         },
         orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
       }),
+      // data-046 : funnel events (view_item → begin_checkout → purchase) — global (non ventilé bien)
+      // Pas de dimension custom bien_id ici → fonctionne sans déclaration GA4 préalable.
+      runReport(token, propertyId, {
+        dimensions:  [{ name: "eventName" }],
+        metrics:     [{ name: "eventCount" }],
+        dateRanges:  [{ startDate: "30daysAgo", endDate: "today" }],
+        dimensionFilter: {
+          filter: {
+            fieldName: "eventName",
+            inListFilter: { values: ["view_item", "begin_checkout", "purchase", "generate_lead"] },
+          },
+        },
+      }),
     ]);
 
     // traf-011 : stale-while-revalidate — sert le cache pendant le refresh background
@@ -80,6 +93,7 @@ export async function onRequestGet(context) {
       sources:          parseReport(sources),
       devices:          parseReport(devices),
       bienConversions:  parseReport(bienConversions), // data-006
+      funnel:           parseReport(funnel),           // data-046
     }), {
       headers: {
         "Content-Type": "application/json",

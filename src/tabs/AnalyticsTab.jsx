@@ -93,6 +93,15 @@ export default function AnalyticsTab() {
     .slice(0, 12);
   const maxPage = Math.max(...topPages.map(p => p.sessions), 1);
 
+  // ── Funnel de conversion (data-046) ──
+  const funnel = data.funnel || [];
+  const sumEvent = (name) => funnel.filter(r => r.eventName === name).reduce((s, r) => s + (r.eventCount || 0), 0);
+  const fVi = sumEvent("view_item"), fBc = sumEvent("begin_checkout"), fPu = sumEvent("purchase"), fLead = sumEvent("generate_lead");
+  const tauxBC = fVi ? Math.round(fBc / fVi * 100) : 0;
+  const tauxPU = fBc ? Math.round(fPu / fBc * 100) : 0;
+  const tauxGlobal = fVi ? (fPu / fVi * 100).toFixed(1) : "0";
+  const hasFunnel = (fVi + fBc + fPu + fLead) > 0;
+
   // ── Top pays ──
   const topCountries = (data.countries || []).slice(0, 6);
   const maxCountry = Math.max(...topCountries.map(c => c.sessions || 0), 1);
@@ -136,6 +145,38 @@ export default function AnalyticsTab() {
         <KPI label="Rebond"     value={Math.round(cur.bounceRate * 100)} suffix="%" color="#f59e0b" />
         <KPI label="Durée moy." value={cur.avgDuration} color="#ec4899" suffix="" />
       </div>
+
+      {/* Tunnel de conversion (data-046) */}
+      {hasFunnel && (
+        <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 13, padding: mob ? 12 : 18, marginBottom: 16 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "#94a3b8", marginBottom: 12 }}>🛒 Tunnel de conversion — 30j</div>
+          <div style={{ display: "flex", alignItems: "stretch", gap: 8, flexWrap: mob ? "wrap" : "nowrap" }}>
+            {[
+              { label: "view_item", desc: "Fiche vue", v: fVi, color: "#0ea5e9" },
+              { taux: tauxBC, label: "begin_checkout", desc: "Checkout", v: fBc, color: "#f59e0b" },
+              { taux: tauxPU, label: "purchase", desc: "Achat", v: fPu, color: "#10b981" },
+            ].map((step, i) => (
+              <div key={step.label} style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: mob ? "100%" : 0 }}>
+                {i > 0 && (
+                  <div style={{ fontSize: 11, color: "#64748b", whiteSpace: "nowrap", fontFamily: "var(--font-mono)" }}>
+                    → {step.taux}%
+                  </div>
+                )}
+                <div style={{ flex: 1, background: "rgba(255,255,255,0.03)", border: `1px solid ${step.color}33`, borderRadius: 10, padding: "10px 12px" }}>
+                  <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>{step.desc}</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: step.color, fontFamily: "var(--font-mono)" }}>{fmt2(step.v)}</div>
+                  <div style={{ fontSize: 9, color: "#475569", marginTop: 2 }}>{step.label}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ fontSize: 10, color: "#64748b", marginTop: 10 }}>
+            Conversion globale view_item → purchase : <strong style={{ color: "#10b981" }}>{tauxGlobal}%</strong>
+            {fLead > 0 && <> · {fmt2(fLead)} leads (generate_lead)</>}
+            . Funnel global GA4 (ventilation par bien possible une fois la dimension custom bien_id déclarée — voir data-049).
+          </div>
+        </div>
+      )}
 
       {/* Graphe sessions / jour */}
       {overviewByDate.length > 0 && (
