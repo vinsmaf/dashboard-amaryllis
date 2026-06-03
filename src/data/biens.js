@@ -3,8 +3,10 @@
 // Pur (aucune dépendance React/JSX/DOM/import.meta) → importable par React, par les
 // Cloudflare Pages Functions et par le script prerender (Node).
 // Nomenclature : "villa" = Amaryllis + Iguana UNIQUEMENT. Iguana = bookable:false (longue durée).
-// ⚠️ rating/reviews Iguana (4.92/25) et Nogent (4.85/12) : valeurs unifiées depuis
-//    functions/[slug].js — à confirmer par Vincent (prerender divergeait : 4.75/42 et 4.8/18).
+// rating/reviews : valeurs alignées sur ce que le site public montre déjà (src/PublicSite.jsx),
+// la source vue par les clients (pure unification, zéro changement visible). Les anciennes valeurs
+// divergentes de functions/[slug].js (iguana 4.92/25) et prerender (iguana 42 avis) étaient
+// minoritaires/incohérentes. ⚠️ Les vrais chiffres d'avis restent à confirmer par Vincent.
 
 export const BIENS = {
   amaryllis: {
@@ -26,7 +28,7 @@ export const BIENS = {
   iguana: {
     id: "iguana", nom: "Villa Iguana", type: "villa",
     prix: 180, capacite: 6, chambres: 2, lieu: "Sainte-Luce", postal: "97228",
-    coords: { lat: 14.4725, lng: -60.9192 }, rating: 4.92, reviews: 25, bookable: false,
+    coords: { lat: 14.4725, lng: -60.9192 }, rating: 4.75, reviews: 4, bookable: false,
     photos: ["/photos/iguana/01.webp","/photos/iguana/02.webp","/photos/iguana/03.webp","/photos/iguana/04.webp"],
     seoTitle: "Villa Iguana Martinique — vue Rocher du Diamant",
     seoDesc: "Villa Iguana à Sainte-Luce : piscine eau salée, vue panoramique sur le Rocher du Diamant. 6 personnes. Réservation directe propriétaire.",
@@ -58,7 +60,7 @@ export const BIENS = {
   nogent: {
     id: "nogent", nom: "Appartement Nogent-sur-Marne", type: "appartement",
     prix: 85, capacite: 2, chambres: 1, lieu: "Nogent-sur-Marne", postal: "94130",
-    coords: { lat: 48.8374, lng: 2.4836 }, rating: 4.85, reviews: 12, bookable: true,
+    coords: { lat: 48.8374, lng: 2.4836 }, rating: 4.8, reviews: 18, bookable: true,
     photos: ["/photos/nogent/01.webp","/photos/nogent/02.webp","/photos/nogent/03.webp","/photos/nogent/04.webp","/photos/nogent/05.webp","/photos/nogent/06.webp"],
     seoTitle: "Appart Nogent-sur-Marne — bord de Marne, Paris 20 min",
     seoDesc: "Appartement de standing à Nogent-sur-Marne : jardin privatif, home cinéma, bord de Marne. RER A, Paris en 20 min. Dès 85€/nuit en direct.",
