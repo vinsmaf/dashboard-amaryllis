@@ -133,7 +133,7 @@ export default function ConditionsGenerales() {
               <Li><strong>Géko</strong> — Sainte-Luce, Martinique (97228)</Li>
               <Li><strong>Mabouya</strong> — Sainte-Luce, Martinique (97228)</Li>
               <Li><strong>Bellevue Schœlcher</strong> — Schœlcher, Martinique (97228)</Li>
-              <Li><strong>Villa Iguana</strong> — Sainte-Luce, Martinique (97228)</Li>
+              <Li><strong>Villa Iguana</strong> — Sainte-Luce, Martinique (97228) — location longue durée uniquement</Li>
               <Li><strong>Appartement Nogent</strong> — Nogent-sur-Marne, Île-de-France (94130)</Li>
             </Ul>
           </Section>
