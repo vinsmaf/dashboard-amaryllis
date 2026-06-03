@@ -136,3 +136,7 @@
   - Ne jamais considérer qu'un commentaire change le hash de bundle (Vite minifie) — il faut une instruction exécutable (`window.__BUILD__ = "..."`).
   - Si un bundle est empoisonné : bumper `window.__BUILD__`, redéployer, attendre la propagation, vérifier en boucle (10×) le content-type. À défaut, purger le cache Cloudflare (nécessite un token API Cache Purge, non dispo en local).
   - `cache-bust ?v=` sur l'asset → teste l'ORIGINE (toujours JS si le déploiement est sain) vs le cache (peut être empoisonné).
+
+## 2026-06-03 — Statut Villa Iguana : LONGUE DURÉE uniquement (ne pas "corriger")
+**Fait confirmé par Vincent** : Villa Iguana = **Sainte-Luce, résidence Amaryllis** (PAS Le Diamant — vue seulement) ET **location longue durée uniquement** (`bookable:false`, pas de réservation court séjour). Un sous-agent juriste avait supposé "saisonnier" et retiré la mention "longue durée" des CGV → annulé. Cohérence : fiche PublicSite + prerender (bookable:false) + CGV disent tous "longue durée uniquement".
+**Garde-fou** : ne pas activer la réservation court séjour d'Iguana ni retirer "longue durée" sans confirmation de Vincent.
