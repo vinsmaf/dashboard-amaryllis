@@ -31,6 +31,18 @@ if [[ "$(basename "$(pwd)")" != "locatif-dashboard" ]]; then
   sleep 5
 fi
 
+# ── 0. GATE TESTS — barrière dure : aucun déploiement si la suite vitest échoue ──
+if [[ "${SKIP_TESTS:-0}" != "1" ]]; then
+  echo "🧪 Tests unitaires (gate)…"
+  if ! npm run test:run >/tmp/vitest-gate.log 2>&1; then
+    echo "❌ Tests en échec — déploiement ANNULÉ. Détail :"
+    tail -30 /tmp/vitest-gate.log
+    exit 1
+  fi
+  echo "   ✅ Suite de tests verte"
+  echo ""
+fi
+
 echo "🚀 Déploiement → projet Cloudflare Pages '$PROJECT_NAME' (villamaryllis.com)"
 echo ""
 
