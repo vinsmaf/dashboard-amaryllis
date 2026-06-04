@@ -24,3 +24,50 @@ export function absUrl(path) {
   const base = "https://villamaryllis.com";
   return path.startsWith("http") ? path : base + (path.startsWith("/") ? path : "/" + path);
 }
+
+export function buildSlides(guide, params = {}) {
+  const g = guide || {};
+  const pid = g.property_id || "amaryllis";
+  const slides = [];
+
+  // 1. Bienvenue
+  const welcomeTitle = params.guest
+    ? `Bienvenue ${params.guest} 👋`
+    : `Bienvenue à ${g.property_name || "votre logement"} 👋`;
+  const welcomeSub = params.guest && params.du
+    ? `Votre séjour du ${params.du}${params.au ? ` au ${params.au}` : ""}`
+    : (g.tagline || "");
+  slides.push({ id: "welcome", title: welcomeTitle, subtitle: welcomeSub,
+    body: g.welcome_message || "", signature: g.host_signature || "" });
+
+  // 2. WiFi (sauté si pas de SSID)
+  if (g.wifi_ssid) {
+    slides.push({ id: "wifi", title: "Connectez-vous au WiFi",
+      ssid: g.wifi_ssid, password: g.wifi_password || "",
+      qr: wifiQrPayload(g.wifi_ssid, g.wifi_password) });
+  }
+
+  // 3. Guide & bonnes adresses (QR -> guide complet sur le téléphone)
+  slides.push({ id: "guide", title: "Le meilleur autour de vous",
+    subtitle: "Plages, distilleries, tables créoles…",
+    qr: absUrl(`/bienvenue/${pid}`), qrLabel: "Ouvrir le guide complet" });
+
+  // 4. Services & extras (vitrine en Phase 1 ; QR -> contact hôte)
+  const contact = g.contacts || {};
+  const wa = contact.whatsapp ? `https://wa.me/${String(contact.whatsapp).replace(/[^0-9]/g, "")}` : absUrl(`/${pid}`);
+  slides.push({ id: "services", title: "Envie d'un petit plus ?",
+    subtitle: "Départ tardif · ménage · bouteille de planteur maison…",
+    qr: wa, qrLabel: "Demandez à votre hôte" });
+
+  // 5. Infos pratiques
+  slides.push({ id: "practical", title: "Bon à savoir",
+    checkout: g.checkout_time || "", contact,
+    qr: wa, qrLabel: "Contacter l'hôte" });
+
+  // 6. Revenez en direct
+  slides.push({ id: "rebook", title: "Revenez quand vous voulez",
+    subtitle: "Réservez en direct — jusqu'à 15 % de moins que sur les plateformes",
+    qr: absUrl(`/${pid}`), qrLabel: "villamaryllis.com" });
+
+  return slides;
+}
