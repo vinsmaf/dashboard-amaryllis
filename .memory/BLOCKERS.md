@@ -11,6 +11,9 @@
 - **Monter la couverture de tests** (118 → +), priorité sur la zone à risque (miroirs, RM).
 - 🤝 **CHANTIER COMMUN — drift des miroirs GAS/Worker** : 1 solution, 2 repos. **Coordination** : locatif conçoit le test de cohérence des miroirs (extrait la fonction des 2 côtés + compare la logique normalisée), puis partage le pattern à patrimoine. (Voir aussi la dette ci-dessous.)
 
+## 🟡 Tracking `purchase` — 16 begin_checkout / 0 purchase sur 30j (data-049, 2026-06-04)
+- GA4 30j : **240 view_item → 16 begin_checkout → 0 purchase → 1 generate_lead**. Donc `revenue`/`byBien`/`byChannel.revenu` du nouveau dashboard restent à 0. **Deux hypothèses** : (a) aucune résa **directe** ce mois (les résas OTA Airbnb/Booking ne passent pas par notre checkout → normal qu'il n'y ait pas de `purchase`) ; (b) trou de tracking : l'event `purchase` ne se déclenche pas sur `/merci` après paiement Stripe. **Débloque** : demander à Vincent s'il a eu des résas **directes** sur 30j. Si oui → auditer le firing de `purchase` (page `/merci`, `src/lib/` gtag/metaPixel, webhook Stripe). Si non → RAS, c'est attendu. ⚠️ Important car c'est la conversion **Principale** de Google Ads : si elle ne remonte pas, l'optim Ads est aveugle.
+
 ## 🟡 Findings audit 2026-06-04 (skill auditeur — rapport `docs/_audits/AUDIT-2026-06-04.md`)
 - **Doc périmée « 557 erreurs eslint ».** CLAUDE.md + PROJECT_MEMORY justifient l'exclusion du lint par ~557 erreurs ; `npm run lint` mesure aujourd'hui **0 erreur / ~17-19 warnings**. **Débloque** : corriger le wording (et envisager de réintégrer le lint au gate puisqu'il est propre).
 - **Prix en dur dans la prose marketing.** Les champs `desc` de `functions/[slug].js` écrivent « dès 110€/nuit » en texte libre (pas le champ prix, donc pas de bug de calcul, mais drift si le tarif change). **Débloque** : harmoniser à la main au prochain changement de prix.

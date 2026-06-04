@@ -5,6 +5,20 @@
 
 ---
 
+## 2026-06-04 (4) — Dashboard Analytics business (data-049) déployé
+**1 déploiement prod. Onglet `/admin` Analytics enrichi de KPIs business.**
+
+- **Backend `functions/api/analytics.js`** : 3 rapports GA4 ajoutés au `Promise.all`, chacun isolé via nouveau wrapper **`runReportSafe`** (try/catch → `null` si échec, `parseReport(null)=[]` → une carte vide ne casse jamais le reste du dashboard) :
+  - `revenue` — `totalRevenue` 30j (€).
+  - `byBien` — `customEvent:bien_id` × {eventCount, totalRevenue}, filtre `eventName=purchase`.
+  - `byChannel` — `sessionDefaultChannelGroup` × {sessions, ecommercePurchases, totalRevenue}.
+- **Front `src/tabs/AnalyticsTab.jsx`** : import `getBien`, 3 sections style sombre — KPIs (Revenu 30j · Panier moyen · Taux de conversion) ; tableau **par bien** (barres, fallback « 24-48h » si dim pas propagée) ; tableau **par canal** (canal/sessions/résas/revenu = lecture ROI pub). Accès `data.revenue[0]` blindé (`&&`).
+- **Vérif live `/api/analytics`** : `byChannel` ✅ 6 canaux (dont **Paid Search 1** = 1ʳᵉ session Google Ads) ; `revenue`/`byBien` vides = **0 purchase sur 30j** (funnel 240 view_item → 16 begin_checkout → **0 purchase**). Déploiement sain (tests/build/smoke OK, audit invariants 🟢).
+- **⚠️ Signal à creuser** : 16 begin_checkout mais 0 purchase trackés sur 30j → soit aucune résa directe ce mois, soit trou de tracking `purchase` côté confirmation Stripe (`/merci`). À vérifier si Vincent a eu des résas directes. (→ BLOCKERS)
+- Revue de code a flaggé « gestion d'erreur insuffisante » dans analytics.js = **faux positif** (`runReportSafe` blinde justement chaque rapport).
+
+**Commits** : `feat(analytics): dashboard business`. **À suivre** : trou purchase/Stripe ; byBien se peuple sous 24-48h.
+
 ## 2026-06-04 (3) — Lancement acquisition (Google Ads LIVE) + étanchéité tracking + CI verte
 **Commits `347f4b3` → `21ceab3`. 1 déploiement prod (fix consentement) — le reste docs/config/CI/GA4.**
 
