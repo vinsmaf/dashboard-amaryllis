@@ -33,9 +33,12 @@ npm run lint          # ESLint
 npm run preview       # Serve the dist/ build locally
 npm run deploy:pages  # Deploy to Cloudflare Pages → dashboard-amaryllis (villamaryllis.com)
 npm run deploy:worker # Deploy the iCal sync Worker (amaryllis-ical-sync)
+npm run test          # Vitest en watch
+npm run test:run      # Vitest one-shot (utilisé par le gate de déploiement + la CI)
+npm run visual-review # Crawl Playwright (débordement/sticky) → screenshots bug-reports/
 ```
 
-There are no tests. No single-test command exists.
+**Tests :** suite **vitest** (~148 tests, `npm run test:run`). Lancer un seul fichier : `npx vitest run src/utils/pricing.test.js`. Le gate de `scripts/deploy-pages.sh` **bloque le déploiement si les tests sont rouges** (bypass d'urgence `SKIP_TESTS=1` ; `SKIP_BUILD=1` saute le build). La CI GitHub (`.github/workflows/ci.yml`) rejoue `test:run` + build + prerender sur chaque push/PR `main`. **Lint exclu de la CI** (code historique = ~557 erreurs eslint, nettoyage = chantier séparé). Voir la section « Source unique des biens & filet qualité » ci-dessous.
 
 For local dev with backend functions (iCal proxy, Sheets proxy, Beds24), use `npm run dev:cf`. Copy `.dev.vars.example` to `.dev.vars` and fill in the secrets — wrangler reads this file automatically.
 
@@ -199,6 +202,18 @@ Environment secrets are set in Cloudflare Pages dashboard (production) or `.dev.
 
 Deploy separately: `wrangler deploy` from project root.
 
+### Source unique des biens & filet qualité (ajouté 06/2026)
+
+**`src/data/biens.js` = source unique des FAITS des 7 biens** (module pur, importable par les 3 runtimes : Functions, prerender Node, front Vite). Champs : `id/nom/type/prix/capacite/chambres/lieu/postal/coords/rating/reviews/bookable/photos/seoTitle/seoDesc` + helpers `ALL_BIENS`/`VILLAS`/`getBien`/`isMartinique`. Consommé par `functions/[slug].js` (meta+JSON-LD fiches), `scripts/prerender.mjs` (meta + `@graph` VacationRental via `buildRentalsGraph`), `functions/api/_biens.js` (faits + grounding agents) et `PublicSite.jsx` (`canonFacts()` spread les faits ; le display riche reste local). Import depuis `src/` validé au bundling esbuild des Functions. Garde-fou : `src/__tests__/biens-consistency.test.js`. **Nomenclature : seuls Amaryllis & Iguana = « villas »** ; Iguana `bookable:false` (bail long).
+
+**Pattern « logique pure testée + miroir GAS/Worker »** : la logique métier est extraite dans `src/utils/*.js` avec tests vitest, puis **dupliquée à l'identique** inline dans Apps Script (clasp) ou le Worker (esbuild) qui ne peuvent pas importer de modules Node. ⚠️ Garder les miroirs synchronisés. Modules concernés : `pricing.js` (remises/total séjour), `coherenceRules.js` (`checkReservations`), `resaDedup.js` (dédup `bienId|checkin|checkout`), `occupancy.js`, `rmOccupancyAdjust.js`.
+
+**Contrôles de cohérence** : `/api/coherence-check?secret=POSTSTAY_SECRET` (`?dry=1` simule) lit `direct_bookings`, écrit les anomalies (dates invalides / total aberrant / bien inconnu / double-booking) dans l'inbox `client_errors` (`kind:"coherence"`, onglet 🐞 Bugs) + push ntfy si critique. **Cron quotidien greffé dans le Worker** (`0 9 * * *`), pas sur cron-job.org.
+
+**Occupation réelle → Revenue Manager** : le Worker calcule l'occupation forward 30j/90j par bien (`runOccupancySnapshot`) et la persiste dans D1 `rm_kpi_snapshots` (`period_type` '30d'/'90d', `calculated_at` NOT NULL). `functions/api/rm-recommendations/[[path]].js` (`calcDateReco`) ajuste le prix conseillé selon notre propre occupation (`ownOccupancy`, barème `rmOccupancyAdjust.js`) et **neutralise les dates déjà vendues** (`bookedDates` → flag `already_booked`, vacancy_risk=0). **Advisory only** (Vincent publie ; RM ne change jamais un prix tout seul). Trigger manuel : `GET <worker>/occupancy-snapshot?token=<WORKER_SECRET>`.
+
+**Tracking pub** : `src/lib/metaPixel.js` (Meta Pixel `714189639771397`, **consent-gated RGPD** comme GA4 — chargé après acceptation cookies via `CookieBanner.jsx`). Events miroir de GA4 : `ViewContent`/`InitiateCheckout`/`Purchase`. ⚠️ **Tout domaine tiers de tracking doit être ajouté au CSP de `public/_headers`** sinon silencieusement bloqué (le Pixel ET des endpoints GA4 régionaux l'étaient avant le fix : `connect.facebook.net`, `*.google-analytics.com`, `stats.g.doubleclick.net`).
+
 ### Data Sources
 
 All financial data flows from a single Google Sheets file (ID: `1xuhU0KraEMxF9NAWO5MKEt23JI_V8mnNnWktzHy6q2U`). The bridge is a Google Apps Script deployed as a web app — its URL is stored as `APPS_SCRIPT_URL`. The source for the Apps Script is `SCRIPT_SHEETS.gs`.
@@ -260,7 +275,7 @@ Le `<title>` / `<meta description>` / `og:*` / JSON-LD des **fiches villas et de
 curl -s https://villamaryllis.com/mabouya | grep -oE "<title>[^<]*</title>"
 ```
 - Cibles SEO : **title ≤ 60c**, **meta description ≤ 158c** (au-delà → tronqué en SERP).
-- ⚠️ `functions/[slug].js` a sa **propre table `BIENS`** (nom, prix, desc, rating) **dupliquée** de `PublicSite.jsx` / `prerender.mjs` — prix codés en dur (280, 220, …), pas lus depuis l'admin Tarifs. Mettre à jour les 2-3 endroits si un prix change.
+- ✅ **Plus de prix codés en dur (depuis 03/06)** : `functions/[slug].js`, `scripts/prerender.mjs`, `functions/api/_biens.js` et `PublicSite.jsx` lisent désormais **la source unique `src/data/biens.js`** (cf. section « Source unique des biens & filet qualité »). **Changer un fait d'un bien (prix/capacité/coords/note) = éditer `src/data/biens.js` uniquement.** Seul le contenu SEO riche (amenityFeature du rich snippet) reste dans la carte `RENTAL_CONTENT` de `prerender.mjs`.
 
 ### 2. Réservations — UN SEUL onglet Sheet : « Toutes les Réservations »
 
