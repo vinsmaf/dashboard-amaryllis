@@ -28,7 +28,7 @@
 - **Liste négatifs « Négatifs globaux Amaryllis » (120 mots)** appliquée aux 2 campagnes. Conversion GA4 `purchase` = Principale.
 - ✅ **Fix consentement déployé** : double-bannière supprimée (inline PublicSite neutralisée) + `index.html` restaure les 4 signaux → **`ad_storage=granted` confirmé live** (les conversions remontent bien à Google Ads ; Meta Pixel charge). Commit consent.
 - 📌 **À surveiller** : (a) sous 2-3 j → C1 *Termes de recherche* → ajouter négatifs hors-sujet ; (b) ne pas juger avant ~1 semaine (apprentissage) ; (c) bascule objectif « Ventes » + retargeting en septembre.
-- 📌 **Actions Vincent** : (1) **vérifier domaine Resend `mail.villamaryllis.com`** (sinon email confirmation voyageur ne part pas — n'impacte ni débit ni tracking) ; (2) créer les **2 dims GA4** (`bien_id`, `niveau_tarifaire`) ; (3) **Meta Ads** (campagne Découverte, runbook §B) reste à lancer.
+- 📌 **Actions Vincent** : (1) **vérifier domaine Resend `mail.villamaryllis.com`** (sinon email confirmation voyageur ne part pas — n'impacte ni débit ni tracking) ; (2) ✅ **2 dims GA4 créées 2026-06-04** (`bien_id` + `niveau_tarifaire`, portée Événement, propriété amaryllis p538182418) ; (3) **Meta Ads** (campagne Découverte, runbook §B) reste à lancer.
 - 📌 **Backlog tech (non urgent)** : routes explicites des 3 landings dans `main.jsx` (marchent via fallback `KNOWN` aujourd'hui).
 
 ## 🔴 Actions humaines (hors dashboard) en attente
