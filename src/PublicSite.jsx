@@ -7446,7 +7446,12 @@ function writeConsent(value) {
 }
 
 function CookieBanner() {
-  const [visible, setVisible] = useState(() => readConsent() === null);
+  // DÉSACTIVÉE (2026-06-04) : la bannière globale `src/CookieBanner.jsx` (montée
+  // dans main.jsx) fait foi — elle accorde ad_storage + Meta Pixel. L'ancienne
+  // bannière inline n'accordait qu'analytics_storage → ad_storage restait denied
+  // → conversions Google Ads perdues. On la neutralise (jamais visible) pour
+  // supprimer la double-bannière sans toucher aux 4 points de rendu.
+  const [visible, setVisible] = useState(false);
 
   function accept() {
     writeConsent("granted");

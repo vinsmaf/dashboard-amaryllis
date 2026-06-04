@@ -199,10 +199,25 @@
     <script>
       gtag('js', new Date());
       gtag('config', 'G-N9BM709ZBL');
-      // Restaurer consentement enregistré (CNIL — max 13 mois)
+      // Restaurer consentement enregistré (CNIL — max 13 mois) AVANT React,
+      // pour qu'un visiteur revenant ait tout de suite ad_storage=granted
+      // (sinon les premiers hits partent en denied → conversions Google Ads perdues).
       (function() {
         var CONSENT_TTL = 395 * 24 * 60 * 60 * 1000;
         try {
+          // Source de vérité = la bannière globale (src/CookieBanner.jsx)
+          var v = localStorage.getItem("amaryllis-cookie-consent");
+          var ts = parseInt(localStorage.getItem("amaryllis-cookie-consent_ts") || "0", 10);
+          if (v === "granted" && (!ts || Date.now() - ts <= CONSENT_TTL)) {
+            gtag("consent", "update", {
+              analytics_storage: "granted",
+              ad_storage: "granted",
+              ad_user_data: "granted",
+              ad_personalization: "granted",
+            });
+            return;
+          }
+          // Repli legacy (ancienne bannière inline = analytics seul)
           var raw = localStorage.getItem("amaryllis_consent_v2");
           if (raw) {
             var parsed = JSON.parse(raw);
