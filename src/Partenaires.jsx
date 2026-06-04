@@ -16,10 +16,11 @@ const SECTIONS = [
     titre: "Découvertes & rhum",
     intro: "Le rhum agricole AOC est l'âme de la Martinique. Voici les maisons que nous conseillons à nos voyageurs.",
     items: [
-      { nom: "Distillerie Trois-Rivières", url: "https://www.troisrivieresrhum.com", desc: "À quelques minutes de Sainte-Luce, l'un des domaines les plus emblématiques du Sud, avec son célèbre moulin." },
-      { nom: "Maison La Mauny", url: "https://www.maisonlamauny.com", desc: "À Rivière-Pilote, voisine immédiate de nos logements : visite du domaine en « Ti Train » et dégustation de rhums vieux primés." },
+      { nom: "Maison La Mauny", url: "https://www.maisonlamauny.com", desc: "À Rivière-Pilote, la plus proche de nos logements : visite du domaine en « Ti Train » et dégustation de rhums vieux primés." },
+      { nom: "Distillerie Trois-Rivières", url: "https://www.troisrivieresrhum.com", desc: "À quelques minutes, à Sainte-Luce même, l'un des domaines les plus emblématiques du Sud, avec son célèbre moulin." },
       { nom: "Habitation Clément", url: "https://www.fondation-clement.org", desc: "Au François, un parcours mêlant rhum, art contemporain et jardin botanique d'exception." },
       { nom: "Distillerie Depaz", url: "https://depaz.fr", desc: "Au pied de la Montagne Pelée à Saint-Pierre, un cadre spectaculaire pour les amateurs de rhums vieux." },
+      { nom: "Distillerie Neisson", url: "https://neisson.com", desc: "Au Carbet, distillerie familiale réputée (rhums AOC médaillés), au nord près de Saint-Pierre." },
     ],
   },
   {
