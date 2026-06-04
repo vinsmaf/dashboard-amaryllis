@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { ResponsiveContainer, ComposedChart, BarChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import { TT } from "../App.jsx";
 import { useAppData } from "../AppDataContext.jsx";
+import { getBien } from "../data/biens.js";
 
 export default function AnalyticsTab() {
   const { mob } = useAppData();
@@ -102,6 +103,21 @@ export default function AnalyticsTab() {
   const tauxGlobal = fVi ? (fPu / fVi * 100).toFixed(1) : "0";
   const hasFunnel = (fVi + fBc + fPu + fLead) > 0;
 
+  // ── Business : revenu, panier moyen, taux de conversion (data-049) ──
+  const totalRevenue = (data.revenue && data.revenue[0] && data.revenue[0].totalRevenue) || 0;
+  const panierMoyen = fPu > 0 ? totalRevenue / fPu : 0;
+  const tauxConv = cur.sessions > 0 ? (fPu / cur.sessions * 100) : 0;
+  const fmtEur = n => Math.round(n).toLocaleString("fr-FR") + " €";
+  // ── Réservations + revenu par bien (data-049) ──
+  const byBien = (data.byBien || [])
+    .map(r => ({ id: r["customEvent:bien_id"], resas: r.eventCount || 0, revenu: r.totalRevenue || 0 }))
+    .filter(b => b.id && b.id !== "(not set)");
+  const maxBienRevenu = Math.max(...byBien.map(b => b.revenu), 1);
+  // ── Acquisition : sessions + résas + revenu par canal (data-049) ──
+  const byChannel = (data.byChannel || [])
+    .map(r => ({ canal: r.sessionDefaultChannelGroup || "(autre)", sessions: r.sessions || 0, resas: r.ecommercePurchases || 0, revenu: r.totalRevenue || 0 }));
+  const maxChanSess = Math.max(...byChannel.map(c => c.sessions), 1);
+
   // ── Top pays ──
   const topCountries = (data.countries || []).slice(0, 6);
   const maxCountry = Math.max(...topCountries.map(c => c.sessions || 0), 1);
@@ -146,6 +162,21 @@ export default function AnalyticsTab() {
         <KPI label="Durée moy." value={cur.avgDuration} color="#ec4899" suffix="" />
       </div>
 
+      {/* KPIs business (data-049) — revenu, panier, conversion */}
+      <div style={{ display: "grid", gridTemplateColumns: mob ? "repeat(3,1fr)" : "repeat(3,1fr)", gap: 10, marginBottom: 20 }}>
+        {[
+          { label: "Revenu 30j", value: fmtEur(totalRevenue), color: "#10b981" },
+          { label: "Panier moyen", value: fPu > 0 ? fmtEur(panierMoyen) : "—", color: "#0ea5e9" },
+          { label: "Taux de conversion", value: tauxConv.toFixed(2) + " %", color: "#a855f7", sub: `${fmt2(fPu)} achats / ${fmt2(cur.sessions)} sessions` },
+        ].map(k => (
+          <div key={k.label} style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${k.color}33`, borderRadius: 12, padding: "12px 14px" }}>
+            <div style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{k.label}</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: k.color, fontFamily: "var(--font-mono)" }}>{k.value}</div>
+            {k.sub && <div style={{ fontSize: 9, color: "#475569", marginTop: 3 }}>{k.sub}</div>}
+          </div>
+        ))}
+      </div>
+
       {/* Tunnel de conversion (data-046) */}
       {hasFunnel && (
         <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 13, padding: mob ? 12 : 18, marginBottom: 16 }}>
@@ -173,8 +204,62 @@ export default function AnalyticsTab() {
           <div style={{ fontSize: 10, color: "#64748b", marginTop: 10 }}>
             Conversion globale view_item → purchase : <strong style={{ color: "#10b981" }}>{tauxGlobal}%</strong>
             {fLead > 0 && <> · {fmt2(fLead)} leads (generate_lead)</>}
-            . Funnel global GA4 (ventilation par bien possible une fois la dimension custom bien_id déclarée — voir data-049).
+            . Funnel global GA4.
           </div>
+        </div>
+      )}
+
+      {/* Réservations + revenu PAR BIEN (data-049, dim custom bien_id) */}
+      <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 13, padding: mob ? 12 : 18, marginBottom: 16 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: "#94a3b8", marginBottom: 12 }}>🏠 Réservations & revenu par bien — 30j</div>
+        {byBien.length === 0 ? (
+          <div style={{ fontSize: 11, color: "#64748b" }}>Aucune réservation ventilée par bien sur la période. <span style={{ color: "#475569" }}>(La dimension <code>bien_id</code> vient d'être créée — les données se remplissent sous ~24-48h.)</span></div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {byBien.map(b => {
+              const nom = getBien(b.id)?.nom || b.id;
+              const pct = Math.round(b.revenu / maxBienRevenu * 100);
+              return (
+                <div key={b.id}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 3 }}>
+                    <span style={{ color: "#e2e8f0" }}>{nom}</span>
+                    <span style={{ color: "#10b981", fontFamily: "var(--font-mono)", fontWeight: 600 }}>{fmtEur(b.revenu)} <span style={{ color: "#64748b", fontSize: 10 }}>· {fmt2(b.resas)} résa</span></span>
+                  </div>
+                  <div style={{ height: 5, background: "rgba(255,255,255,0.05)", borderRadius: 3 }}>
+                    <div style={{ width: `${pct}%`, height: "100%", background: "#10b981", borderRadius: 3 }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* D'où viennent les résas — PAR CANAL (data-049) */}
+      {byChannel.length > 0 && (
+        <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 13, padding: mob ? 12 : 18, marginBottom: 16 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "#94a3b8", marginBottom: 12 }}>📈 D'où viennent les visiteurs & les réservations — 30j</div>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+            <thead>
+              <tr style={{ color: "#64748b", textAlign: "left" }}>
+                <th style={{ padding: "4px 6px", fontWeight: 500 }}>Canal</th>
+                <th style={{ padding: "4px 6px", fontWeight: 500, textAlign: "right" }}>Sessions</th>
+                <th style={{ padding: "4px 6px", fontWeight: 500, textAlign: "right" }}>Résas</th>
+                <th style={{ padding: "4px 6px", fontWeight: 500, textAlign: "right" }}>Revenu</th>
+              </tr>
+            </thead>
+            <tbody>
+              {byChannel.map(c => (
+                <tr key={c.canal} style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+                  <td style={{ padding: "7px 6px", color: "#e2e8f0" }}>{c.canal}</td>
+                  <td style={{ padding: "7px 6px", textAlign: "right", color: "#0ea5e9", fontFamily: "var(--font-mono)" }}>{fmt2(c.sessions)}</td>
+                  <td style={{ padding: "7px 6px", textAlign: "right", color: c.resas > 0 ? "#10b981" : "#475569", fontFamily: "var(--font-mono)" }}>{fmt2(c.resas)}</td>
+                  <td style={{ padding: "7px 6px", textAlign: "right", color: c.revenu > 0 ? "#10b981" : "#475569", fontFamily: "var(--font-mono)" }}>{c.revenu > 0 ? fmtEur(c.revenu) : "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div style={{ fontSize: 10, color: "#64748b", marginTop: 8 }}>« Paid Search » = Google Ads · « Paid Social » = Meta · « Organic » = SEO · « Direct » = accès direct. C'est ici que tu verras le ROI de tes pubs.</div>
         </div>
       )}
 

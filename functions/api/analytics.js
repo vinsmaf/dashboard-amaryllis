@@ -22,7 +22,7 @@ export async function onRequestGet(context) {
     const token = await getAccessToken(clientEmail, privateKey);
 
     // Exécuter les rapports en parallèle (data-006 : conversions par bien ; data-046 : funnel events)
-    const [overview, pages, countries, sources, devices, bienConversions, funnel] = await Promise.all([
+    const [overview, pages, countries, sources, devices, bienConversions, funnel, revenue, byBien, byChannel] = await Promise.all([
       runReport(token, propertyId, {
         dimensions:  [{ name: "date" }],
         metrics:     [{ name: "sessions" }, { name: "totalUsers" }, { name: "screenPageViews" }, { name: "bounceRate" }, { name: "averageSessionDuration" }],
@@ -82,6 +82,29 @@ export async function onRequestGet(context) {
           },
         },
       }),
+      // data-049 : revenu total 30j (€) — somme des "value" des events purchase
+      runReportSafe(token, propertyId, {
+        metrics:    [{ name: "totalRevenue" }],
+        dateRanges: [{ startDate: "30daysAgo", endDate: "today" }],
+      }),
+      // data-049 : réservations + revenu PAR BIEN (dim custom bien_id, créée 2026-06-04 ;
+      //            se remplit sous ~24-48h, vide avant — non bloquant grâce à runReportSafe)
+      runReportSafe(token, propertyId, {
+        dimensions: [{ name: "customEvent:bien_id" }],
+        metrics:    [{ name: "eventCount" }, { name: "totalRevenue" }],
+        dateRanges: [{ startDate: "30daysAgo", endDate: "today" }],
+        dimensionFilter: { filter: { fieldName: "eventName", stringFilter: { value: "purchase" } } },
+        orderBys:   [{ metric: { metricName: "eventCount" }, desc: true }],
+        limit:      20,
+      }),
+      // data-049 : sessions + réservations + revenu PAR CANAL d'acquisition
+      runReportSafe(token, propertyId, {
+        dimensions: [{ name: "sessionDefaultChannelGroup" }],
+        metrics:    [{ name: "sessions" }, { name: "ecommercePurchases" }, { name: "totalRevenue" }],
+        dateRanges: [{ startDate: "30daysAgo", endDate: "today" }],
+        orderBys:   [{ metric: { metricName: "sessions" }, desc: true }],
+        limit:      12,
+      }),
     ]);
 
     // traf-011 : stale-while-revalidate — sert le cache pendant le refresh background
@@ -94,6 +117,9 @@ export async function onRequestGet(context) {
       devices:          parseReport(devices),
       bienConversions:  parseReport(bienConversions), // data-006
       funnel:           parseReport(funnel),           // data-046
+      revenue:          parseReport(revenue),          // data-049 : revenu total €
+      byBien:           parseReport(byBien),           // data-049 : résas + revenu / bien
+      byChannel:        parseReport(byChannel),        // data-049 : résas + revenu / canal
     }), {
       headers: {
         "Content-Type": "application/json",
@@ -121,6 +147,14 @@ async function runReport(token, propertyId, body) {
     throw new Error(`GA4 API ${res.status}: ${txt.slice(0, 200)}`);
   }
   return res.json();
+}
+
+// Variante tolérante : un rapport secondaire (revenu/par bien/par canal) qui échoue
+// — ex. dimension custom pas encore propagée, métrique indisponible — renvoie null
+// au lieu de faire planter tout le dashboard. parseReport(null) → [].
+async function runReportSafe(token, propertyId, body) {
+  try { return await runReport(token, propertyId, body); }
+  catch { return null; }
 }
 
 function parseReport(raw) {
