@@ -5,6 +5,20 @@
 
 ---
 
+## 2026-06-04 (7) — Écran TV : Phases 2 (ventes additionnelles) & 3 (images de secours) livrées
+**Vente de services additionnels via QR/Stripe + images d'accueil statiques. Plusieurs déploiements.**
+
+- **Phase 2 — VENTES ADDITIONNELLES (revenu)** :
+  - **Catalogue `extras[]`** par logement dans le livret (3 services : départ tardif/arrivée anticipée, ménage suppl., bouteille de planteur 15€). ⚠️ Prix late/ménage = **placeholders à ajuster par Vincent** (admin).
+  - **Éditeur admin** : onglet **Services** dans `LivretEditor` (label/prix/desc/kind, ajout/suppr) — sauvegarde via le POST /api/guides existant.
+  - **Page publique `/services/<bien>`** (`src/Services.jsx`, mobile, surface site) : liste les services → bouton Payer.
+  - **Endpoint `/api/service-checkout`** : PUBLIC mais **prix validé CÔTÉ SERVEUR** depuis le catalogue (anti-fraude testé ✅) → crée un **lien Stripe** (product+price+payment_link, pattern de create-payment-link). QR du slide TV « Services » → cette page.
+  - **Webhook hôte** : branche `type==="service"` dans `stripe-webhook.js` (checkout.session.completed) → **email hôte** + table D1 `service_orders`.
+  - ⚠️ **Stripe LIVE = argent réel** : Vincent doit faire un **test d'achat** (planteur 15€) avant de compter dessus. Lien Stripe créé OK en test (buy.stripe.com).
+- **Phase 3 — IMAGES DE SECOURS** : `scripts/gen-tv-screens.mjs` (Playwright) capture le slide d'accueil figé (`?tv=1&slide=0`) en **PNG 1920×1080** par logement → `public/tv/<bien>.png` (servies live). Pour TV sans navigateur / économiseur d'écran. Régénérer : `npm run gen:tv-screens`.
+- **Bandeau cookies masqué en mode kiosque** (`?tv=1`) — il polluait l'écran TV + les images.
+- **⚠️ Faille toujours ouverte** : `POST /api/guides` sans auth (tâche spawné) — d'autant plus important maintenant que le catalogue de PRIX y transite.
+
 ## 2026-06-04 (6) — Écran d'accueil TV des logements — Phase 1 livrée (subagent-driven)
 **1 chantier produit (brainstorm→spec→plan→implé). Déployé + vérifié live.**
 
