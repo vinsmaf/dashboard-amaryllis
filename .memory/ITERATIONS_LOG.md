@@ -5,6 +5,12 @@
 
 ---
 
+## 2026-06-04 (8) — Améliorations conversion/revenu : tracking purchase + upsell pré-arrivée
+- **#1 Tracking `purchase` RÉPARÉ** (cause du « 0 purchase » alors que résas directes existaient) : `confirmPayment` redirige toujours vers `/merci` (3DS) où **gtag pas encore chargé** au mount → event perdu. Fix `Merci.jsx` : **retry jusqu'à gtag prêt** (~10s) + dédup + **vrai montant** via `pending_purchase` (sessionStorage, posé au `begin_checkout` dans PublicSite). Débloque l'optim Google Ads (conversion Principale) + l'Analytics. ⚠️ à confirmer sur la prochaine vraie résa directe. Leçon dans LEARNINGS.
+- **#2 Upsell services dans l'email pré-arrivée** : section « Offrez-vous un petit plus » + CTA → `/services/<bien>` dans `public/email-templates/pre-arrivee.html` + var `services_url` (send-prearrivee.js). + `send-guest-email.js` fetch template avec **cache-bust** (l'edge CF fige le `.html` ; l'email utilise l'URL propre qui sert bien la nouvelle version — vérifié).
+- **#3 Moteur d'avis Google = DÉJÀ EXISTANT** : `send-poststay.js` envoie J+3 lien Google review par bien (Place IDs Amaryllis/Résidence) + NPS. Schœlcher/Nogent → `/avis` interne (pas de GBP dédié = cohérent). Rien à coder ; juste vérifier le cron cron-job.org.
+- **Quirk cache** : l'URL `/x.html` directe peut rester figée à l'edge CF malgré `no-cache`, alors que l'URL propre `/x` sert la dernière version. Toujours vérifier via l'URL réellement consommée.
+
 ## 2026-06-04 (7) — Écran TV : Phases 2 (ventes additionnelles) & 3 (images de secours) livrées
 **Vente de services additionnels via QR/Stripe + images d'accueil statiques. Plusieurs déploiements.**
 
