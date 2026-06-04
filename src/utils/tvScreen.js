@@ -59,9 +59,12 @@ export function buildSlides(guide, params = {}) {
     subtitle: "Départ tardif · ménage · bouteille de planteur maison…",
     qr: wa, qrLabel: "Demandez à votre hôte" });
 
-  // 5. Infos pratiques
+  // 5. Infos pratiques (arrivée / départ + teaser départ tardif → vente additionnelle)
   slides.push({ id: "practical", title: "Bon à savoir",
-    checkout: g.checkout_time || "", contact,
+    checkin: g.checkin_time || "17h",
+    checkout: g.checkout_time || "12h",
+    lateCheckout: "Envie de prolonger ? Un départ tardif est possible selon disponibilité — demandez-le-nous.",
+    contact,
     qr: wa, qrLabel: "Contacter l'hôte" });
 
   // 6. Revenez en direct

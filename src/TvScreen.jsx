@@ -55,6 +55,7 @@ export default function TvScreen({ slides = [], colors = {}, pid = "amaryllis" }
 
   const s = slides[i] || {};
   const bg = heroPhoto;
+  const cornerQr = !!s.qr && s.id !== "wifi"; // QR en bas-droite → réserver cette colonne au texte
 
   /* styles */
   const eyebrow = { fontFamily: DISPLAY, fontWeight: 600, fontSize: "clamp(13px,1.25vw,21px)", letterSpacing: "0.42em", textTransform: "uppercase", color: BRAND.gold, margin: 0 };
@@ -93,7 +94,7 @@ export default function TvScreen({ slides = [], colors = {}, pid = "amaryllis" }
       </div>
 
       {/* ── Contenu (animé à chaque slide) ── */}
-      <div key={`c-${i}`} style={{ position: "absolute", inset: 0, padding: "13vh 6vw 12vh", display: "flex", flexDirection: "column", justifyContent: "flex-end", animation: "tvFadeUp 0.9s cubic-bezier(.2,.7,.2,1) both" }}>
+      <div key={`c-${i}`} style={{ position: "absolute", inset: 0, padding: `13vh ${cornerQr ? "32vw" : "6vw"} 13vh 6vw`, display: "flex", flexDirection: "column", justifyContent: "flex-end", animation: "tvFadeUp 0.9s cubic-bezier(.2,.7,.2,1) both" }}>
         {s.eyebrow && <p style={eyebrow}>{s.eyebrow}</p>}
         <h1 style={h1}>{s.title}</h1>
         {s.subtitle && <div style={subtitle}>{s.subtitle}</div>}
@@ -111,9 +112,19 @@ export default function TvScreen({ slides = [], colors = {}, pid = "amaryllis" }
           </div>
         )}
 
-        {/* Pratique */}
-        {s.id === "practical" && s.checkout && (
-          <div style={body}>🔴 Départ avant <b style={{ color: "#fff", fontStyle: "normal" }}>{s.checkout}</b>{s.contact?.host_name ? ` · Votre hôte : ${s.contact.host_name}` : ""}</div>
+        {/* Pratique : arrivée / départ + teaser départ tardif */}
+        {s.id === "practical" && (
+          <div style={{ marginTop: "3vh", display: "flex", flexDirection: "column", gap: "1.8vh" }}>
+            <div style={{ display: "flex", gap: "4vw", flexWrap: "wrap" }}>
+              <div><div style={fieldLabel}>🟢 Arrivée</div><div style={{ ...fieldValue, fontFamily: DISPLAY, fontWeight: 300 }}>à partir de {s.checkin}</div></div>
+              <div><div style={fieldLabel}>🔴 Départ</div><div style={{ ...fieldValue, fontFamily: DISPLAY, fontWeight: 300 }}>avant {s.checkout}</div></div>
+            </div>
+            {s.lateCheckout && (
+              <div style={{ ...glass, padding: "2vh 2.4vw", marginTop: "1vh", maxWidth: "36ch" }}>
+                <span style={{ fontFamily: SERIF, fontStyle: "italic", fontSize: "clamp(18px,1.8vw,30px)", color: BRAND.ivory }}>💛 {s.lateCheckout}</span>
+              </div>
+            )}
+          </div>
         )}
 
         {s.body && s.id !== "wifi" && <div style={body}>{s.body}</div>}
