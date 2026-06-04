@@ -345,6 +345,13 @@
       "price": 15,
       "desc": "Notre planteur de bienvenue maison, à savourer ou emporter.",
       "kind": "immediat"
+    },
+    {
+      "id": "nespresso",
+      "label": "Étui de capsules Nespresso",
+      "price": 10,
+      "desc": "Un étui de capsules pour votre machine Nespresso.",
+      "kind": "immediat"
     }
   ]
 }
