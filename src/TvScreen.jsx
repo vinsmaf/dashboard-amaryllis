@@ -57,9 +57,10 @@ export default function TvScreen({ slides = [], colors = {}, pid = "amaryllis" }
 
   /* styles */
   const eyebrow = { fontFamily: DISPLAY, fontWeight: 600, fontSize: "clamp(13px,1.25vw,21px)", letterSpacing: "0.42em", textTransform: "uppercase", color: BRAND.gold, margin: 0 };
-  const h1 = { fontFamily: DISPLAY, fontWeight: 200, fontSize: "clamp(46px,7vw,124px)", lineHeight: 0.98, letterSpacing: "0.01em", color: "#fff", margin: "1.4vh 0 0", textShadow: "0 4px 40px rgba(0,0,0,0.5)" };
-  const subtitle = { fontFamily: SERIF, fontStyle: "italic", fontWeight: 500, fontSize: "clamp(22px,2.7vw,46px)", color: BRAND.ivory, opacity: 0.95, margin: "2.4vh 0 0", lineHeight: 1.3 };
-  const body = { fontFamily: SERIF, fontStyle: "italic", fontSize: "clamp(19px,2vw,34px)", lineHeight: 1.5, color: BRAND.ivory, opacity: 0.92, margin: "3vh 0 0", maxWidth: "34ch" };
+  const h1 = { fontFamily: DISPLAY, fontWeight: 200, fontSize: "clamp(42px,6vw,104px)", lineHeight: 0.98, letterSpacing: "0.01em", color: "#fff", margin: "1.2vh 0 0", textShadow: "0 4px 40px rgba(0,0,0,0.5)" };
+  const subtitle = { fontFamily: SERIF, fontStyle: "italic", fontWeight: 500, fontSize: "clamp(20px,2.4vw,42px)", color: BRAND.ivory, opacity: 0.95, margin: "1.8vh 0 0", lineHeight: 1.3 };
+  const body = { fontFamily: SERIF, fontStyle: "italic", fontSize: "clamp(18px,1.85vw,32px)", lineHeight: 1.45, color: BRAND.ivory, opacity: 0.92, margin: "2vh 0 0", maxWidth: "40ch",
+    display: "-webkit-box", WebkitLineClamp: 5, WebkitBoxOrient: "vertical", overflow: "hidden" };
   const signature = { fontFamily: SERIF, fontStyle: "italic", fontSize: "clamp(18px,1.7vw,30px)", color: BRAND.gold, margin: "3vh 0 0" };
   const glass = { background: "rgba(10,22,18,0.42)", backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)", border: "1px solid rgba(255,255,255,0.16)", borderRadius: 24, padding: "3vh 3vw" };
   const fieldLabel = { fontFamily: DISPLAY, fontSize: "clamp(13px,1.2vw,20px)", letterSpacing: "0.2em", textTransform: "uppercase", color: BRAND.gold, opacity: 0.85 };
@@ -88,7 +89,7 @@ export default function TvScreen({ slides = [], colors = {}, pid = "amaryllis" }
       </div>
 
       {/* ── Contenu (animé à chaque slide) ── */}
-      <div key={`c-${i}`} style={{ position: "absolute", inset: 0, padding: "6vh 6vw 9vh", display: "flex", flexDirection: "column", justifyContent: "center", animation: "tvFadeUp 0.9s cubic-bezier(.2,.7,.2,1) both" }}>
+      <div key={`c-${i}`} style={{ position: "absolute", inset: 0, padding: "13vh 6vw 12vh", display: "flex", flexDirection: "column", justifyContent: "flex-end", animation: "tvFadeUp 0.9s cubic-bezier(.2,.7,.2,1) both" }}>
         {s.eyebrow && <p style={eyebrow}>{s.eyebrow}</p>}
         <h1 style={h1}>{s.title}</h1>
         {s.subtitle && <div style={subtitle}>{s.subtitle}</div>}
