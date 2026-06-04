@@ -27,7 +27,7 @@ export default function Services() {
         body: JSON.stringify({ bien, serviceId }),
       });
       const d = await r.json();
-      if (d.ok && d.url) { window.location.href = d.url; return; }
+      if (d.ok && d.url) { window.location.assign(d.url); return; }
       setErr(d.error || "Paiement indisponible pour le moment.");
     } catch { setErr("Connexion impossible. Réessayez."); }
     setBusy(null);
