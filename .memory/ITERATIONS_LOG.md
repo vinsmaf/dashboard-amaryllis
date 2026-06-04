@@ -5,6 +5,22 @@
 
 ---
 
+## 2026-06-04 (3) — Lancement acquisition (Google Ads LIVE) + étanchéité tracking + CI verte
+**Commits `347f4b3` → `21ceab3`. 1 déploiement prod (fix consentement) — le reste docs/config/CI/GA4.**
+
+- **Google Ads LANCÉ** (pilotage navigateur, Vincent fait les clics money) :
+  - **C1 « Offre Groupe Sainte-Luce »** (campaignId 23904365229) : Recherche seule, 8 €/j, CPC max 0,80 €, France/FR, landing `/location-groupe-sainte-luce`, 13 mots-clés, RSA 7 titres/3 desc.
+  - **C2 « Brand »** (campaignId 23913930124) : 2 €/j, CPC max 0,40 € (~0,11 € réel), landing `/`, 7 mots-clés marque, 6 titres/2 desc.
+  - **Liste « Négatifs globaux Amaryllis » (120 mots)** créée + appliquée aux 2 campagnes. Conversion GA4 `purchase` = Principale (déjà importée le 02/06).
+- **Pré-flight vérifié (audit code + live)** : tunnel résa 🟢 (Stripe LIVE, gestion d'erreur robuste, idempotent, /merci+purchase, testé) ; landings 🟢 ; **GA4 🟡→🟢 après fix**.
+- **🔴→🟢 Fix consentement déployé** (commit consent) : 2 bannières cookies coexistaient ; l'inline PublicSite n'accordait qu'`analytics_storage` → conversions Google Ads perdues. Bannière inline neutralisée (globale fait foi) + `index.html` restaure les 4 signaux. **Vérifié LIVE** : 1 seule bannière, `ad_storage=granted` après accept, Meta Pixel charge.
+- **2 dimensions GA4 créées** (pilotage) : `bien_id` + `niveau_tarifaire` (Événement, propriété amaryllis p538182418).
+- **CI GitHub réparée** : échouait depuis qu'on pousse souvent — `wrangler ≥4.94` exige **Node ≥22**, CI était en Node 20 (étape Build Functions). Fix `node-version: "22"` → run vert. N'a jamais impacté la prod. (LEARNINGS + technique de lecture du log CI via navigateur.)
+- **ADR-011 rédigé** (matin) : éliminer le drift des miroirs GAS/Worker (hybride import Worker + codegen GAS + test parité) — *Proposé*, pas implémenté.
+- **Meta Ads reporté** : bon compte = « Amaryllis corp » act 853205825762332 (paiement à finaliser) ; DIMA 308 restreint ; clics bloqués sur adsmanager → mode guidé. Détails BLOCKERS.
+
+**Décisions** → ADR-011 (specs). **Fixes** → consent (prod), CI node22. **À suivre** : Meta (guidé, après paiement), Resend domaine, surveiller search terms C1 sous 2-3 j.
+
 ## 2026-06-04 (2) — Système mémoire complet + audit + synchro inter-projets
 **Commits `de21941` → `949bf6b` (locatif) + `6e218bc` (patrimoine, charte). Doc/config/mémoire only — AUCUN déploiement.**
 
