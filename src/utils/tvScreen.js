@@ -30,14 +30,14 @@ export function buildSlides(guide, params = {}) {
   const pid = g.property_id || "amaryllis";
   const slides = [];
 
-  // 1. Bienvenue
-  const welcomeTitle = params.guest
-    ? `Bienvenue ${params.guest} 👋`
-    : `Bienvenue à ${g.property_name || "votre logement"} 👋`;
+  // 1. Bienvenue — eyebrow « Bienvenue » + titre = prénom OU nom du logement
+  // (évite le souci grammatical « à la Villa / au Studio »).
+  const welcomeTitle = params.guest || g.property_name || "votre logement";
   const welcomeSub = params.guest && params.du
     ? `Votre séjour du ${params.du}${params.au ? ` au ${params.au}` : ""}`
     : (g.tagline || "");
-  slides.push({ id: "welcome", title: welcomeTitle, subtitle: welcomeSub,
+  slides.push({ id: "welcome", eyebrow: params.guest ? "Bienvenue chez vous" : "Bienvenue",
+    title: welcomeTitle, subtitle: welcomeSub,
     body: g.welcome_message || "", signature: g.host_signature || "" });
 
   // 2. WiFi (sauté si pas de SSID)

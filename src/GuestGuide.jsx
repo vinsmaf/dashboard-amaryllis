@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import TvScreen from './TvScreen.jsx';
+import { parseTvParams, buildSlides } from './utils/tvScreen.js';
 
 /* ─── Palette par logement ─────────────────────────────────────── */
 const PROP_COLORS = {
@@ -133,6 +135,7 @@ function Section({ section, accent, defaultOpen = false }) {
 /* ─── Page principale ──────────────────────────────────────────── */
 export default function GuestGuide() {
   const propertyId = window.location.pathname.split('/bienvenue/')[1]?.replace(/\/$/, '') || 'amaryllis';
+  const tvParams = parseTvParams(window.location.search);
   const [guide, setGuide] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -161,6 +164,10 @@ export default function GuestGuide() {
       <div style={{ color: '#64748b', fontSize: 14, textAlign: 'center' }}>{error}</div>
     </div>
   );
+
+  if (tvParams.tv) {
+    return <TvScreen slides={buildSlides(guide, tvParams)} colors={colors} pid={propertyId} />;
+  }
 
   const pageUrl = window.location.href;
 
