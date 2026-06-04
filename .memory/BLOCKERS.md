@@ -3,6 +3,10 @@
 > Ce qui reviendra nous embêter si on ne le documente pas. Format : statut · sujet · ce qui débloque.
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 
+## 🟡 Findings audit 2026-06-04 (skill auditeur — rapport `docs/_audits/AUDIT-2026-06-04.md`)
+- **Doc périmée « 557 erreurs eslint ».** CLAUDE.md + PROJECT_MEMORY justifient l'exclusion du lint par ~557 erreurs ; `npm run lint` mesure aujourd'hui **0 erreur / ~17-19 warnings**. **Débloque** : corriger le wording (et envisager de réintégrer le lint au gate puisqu'il est propre).
+- **Prix en dur dans la prose marketing.** Les champs `desc` de `functions/[slug].js` écrivent « dès 110€/nuit » en texte libre (pas le champ prix, donc pas de bug de calcul, mais drift si le tarif change). **Débloque** : harmoniser à la main au prochain changement de prix.
+
 ## 🟡 Dettes techniques latentes (cassera si on oublie le contexte)
 - **Drift du pattern miroir GAS/Worker.** `src/utils/{pricing,coherenceRules,resaDedup,occupancy,rmOccupancyAdjust}.js` sont **dupliqués à la main** dans `appscript/*.gs` et `workers/ical-sync/index.js` (impossible d'importer un module Node là-bas). Modifier l'util sans répercuter le miroir = bug silencieux non couvert par les tests. **Débloque** : checklist « j'ai touché un util → ai-je mis à jour le(s) miroir(s) ? » ; à terme, un test qui compare les deux implémentations.
 - **Doublons de docs à arbitrer (créés avant la décision contraire de Vincent).**
