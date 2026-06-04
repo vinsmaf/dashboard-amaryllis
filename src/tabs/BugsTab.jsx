@@ -22,6 +22,7 @@ const fmtDate = (ts) => ts ? new Date(ts * 1000).toLocaleString("fr-FR", { day: 
 
 export default function BugsTab() {
   const [items, setItems] = useState([]);
+  const [err, setErr] = useState(null);
   const [loading, setLoading] = useState(true);
   const [fStatus, setFStatus] = useState("new");
   const [fKind, setFKind] = useState("");
@@ -35,8 +36,8 @@ export default function BugsTab() {
     if (fStatus) qs.set("status", fStatus);
     if (fKind) qs.set("kind", fKind);
     fetchJSON(`/api/client-errors?${qs}`, { timeout: 10000 })
-      .then(d => setItems(d?.items || []))
-      .catch(() => setItems([]))
+      .then(d => { setItems(d?.items || []); setErr(null); })
+      .catch(e => { setItems([]); if (e?.status !== 401) setErr(e?.message || "Erreur de chargement"); })
       .finally(() => setLoading(false));
   }, [fStatus, fKind]);
   useEffect(() => { load(); }, [load]);
@@ -84,6 +85,7 @@ export default function BugsTab() {
       </div>
 
       {loading ? <div style={{ color: "#64748b", fontSize: 13 }}>Chargement…</div>
+        : err ? <div style={{ color: "#f87171", fontSize: 13, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 8, padding: "12px 14px" }}>⚠️ Erreur de chargement : {err}. <button onClick={load} style={{ ...chip(false), marginLeft: 6 }}>Réessayer</button></div>
         : items.length === 0 ? <div style={{ color: "#22c55e", fontSize: 14, padding: "20px 0" }}>✓ Aucun bug dans ce filtre.</div>
         : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>

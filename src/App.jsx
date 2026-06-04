@@ -798,7 +798,7 @@ function FAB({ onTab }) {
 const PWD_KEY = "ldb_auth_v1";
 const VALID_HASH = "8e4b1a3d9f2c6e7b0a5d3f8c2e1b9a4d"; // sha-lite placeholder
 
-function PasswordGate({ onAuth }) {
+function PasswordGate({ onAuth, expired }) {
   const [val, setVal] = useState("");
   const [err, setErr] = useState(false);
   const [errMsg, setErrMsg] = useState("Mot de passe incorrect");
@@ -842,6 +842,7 @@ function PasswordGate({ onAuth }) {
         <div style={{ fontSize: 32, marginBottom: 10 }}>🔒</div>
         <div style={{ fontSize: 20, fontWeight: 800, color: "#e2e8f0", marginBottom: 4 }}>Locatif Dashboard</div>
         <div style={{ fontSize: 12, color: "#64748b", marginBottom: 24 }}>Accès sécurisé</div>
+        {expired && <div style={{ fontSize: 12, color: "#fbbf24", background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.25)", borderRadius: 8, padding: "8px 10px", marginBottom: 16, lineHeight: 1.4 }}>Session expirée — reconnecte-toi pour recharger les données.</div>}
         <input
           type="password"
           value={val}
@@ -914,6 +915,22 @@ export default function App() {
   const setTab = useCallback((t) => { setTabRaw(t); try { localStorage.setItem("admin_tab", t); } catch {} }, []);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [bugsBadge, setBugsBadge] = useState(0);
+  const [authExpired, setAuthExpired] = useState(false);
+  // Session admin expirée (token 401) → rouvrir la porte au lieu d'afficher des
+  // onglets vides en silence. L'utilisateur retape le mot de passe → token frais.
+  useEffect(() => {
+    function onUnauth() {
+      try {
+        sessionStorage.removeItem(PWD_KEY);
+        sessionStorage.removeItem("ldb_tok");
+        sessionStorage.removeItem("admin_role");
+      } catch {}
+      setAuthExpired(true);
+      setAuthed(false);
+    }
+    window.addEventListener("admin-unauthorized", onUnauth);
+    return () => window.removeEventListener("admin-unauthorized", onUnauth);
+  }, []);
   useEffect(() => {
     if (!authed || role === "menage") return;
     fetchJSON("/api/client-errors?stats=1", { timeout: 8000 })
@@ -1187,7 +1204,7 @@ export default function App() {
     fetch(`${scriptUrl}?${p}`, { redirect: "follow" }).catch(() => {});
   }, [scriptUrl]);
 
-  if (!authed) return <PasswordGate onAuth={(r) => { setAuthed(true); setRole(r || "admin"); }} />;
+  if (!authed) return <PasswordGate expired={authExpired} onAuth={(r) => { setAuthExpired(false); setAuthed(true); setRole(r || "admin"); }} />;
 
   const ytd = biens.reduce((s, b) => s + sumN(b.revenus, n), 0);
   const cf = biens.reduce((s, b) => s + sumN(b.cashflow, n), 0);

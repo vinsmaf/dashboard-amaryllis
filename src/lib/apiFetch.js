@@ -46,8 +46,22 @@ function withAuth(url, opts) {
  * le Bearer de session (ldb_tok) sur les `/api/*` et retourne la Response brute
  * (comme fetch). Pour les call-sites admin qui font `await fetch(...).json()`.
  */
+// Sur un 401 d'un appel admin /api/*, prévient l'app pour rouvrir la connexion
+// (token de session expiré/invalide) → évite l'écran « liste vide » silencieux.
+function notifyUnauthorized(url) {
+  try {
+    const isInternal = typeof url === "string" && url.includes("/api/");
+    if (isInternal && typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("admin-unauthorized"));
+    }
+  } catch {}
+}
+
 export function adminFetch(url, opts = {}) {
-  return fetch(url, withAuth(url, opts));
+  return fetch(url, withAuth(url, opts)).then((res) => {
+    if (res && res.status === 401) notifyUnauthorized(url);
+    return res;
+  });
 }
 
 export async function fetchWithTimeout(url, { timeout = 12000, ...opts } = {}) {
@@ -71,6 +85,7 @@ export async function fetchWithTimeout(url, { timeout = 12000, ...opts } = {}) {
     clearTimeout(timer);
   }
   if (!res.ok) {
+    if (res.status === 401) notifyUnauthorized(url);
     let detail = "";
     try { detail = (await res.clone().text() || "").slice(0, 140); } catch {}
     throw new ApiError(

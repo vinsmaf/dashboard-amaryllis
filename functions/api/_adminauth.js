@@ -52,8 +52,10 @@ function resolveSecret(env) {
   return env.ADMIN_PASSWORD || env.ADMIN_PWD || "";
 }
 
-// Émet un token signé pour un rôle donné. ttlSec par défaut : 12 h.
-export async function signSession(role, env, ttlSec = 12 * 3600) {
+// Émet un token signé pour un rôle donné. ttlSec par défaut : 7 jours
+// (12 h était trop court → onglets admin « vides » dès expiration ; le 401 force
+//  désormais une ré-auth propre côté front, ce TTL réduit juste la fréquence).
+export async function signSession(role, env, ttlSec = 7 * 24 * 3600) {
   const secret = resolveSecret(env);
   if (!secret) throw new Error("Secret admin non configuré");
   const payload = b64urlEncode(JSON.stringify({ r: role, e: Math.floor(Date.now() / 1000) + ttlSec }));
