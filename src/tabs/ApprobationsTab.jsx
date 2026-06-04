@@ -14,6 +14,7 @@ export default function ApprobationsTab() {
   const [toast, setToast]       = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editPayload, setEditPayload] = useState(null);
+  const [pickerBien, setPickerBien] = useState("amaryllis");
 
   async function loadDrafts() {
     setLoading(true);
@@ -225,6 +226,42 @@ export default function ApprobationsTab() {
                           style={{ width: "100%", marginTop: 8, background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#e2e8f0", fontSize: 11, padding: "8px 10px", fontFamily: "inherit", boxSizing: "border-box" }}
                         />
                       )}
+                      {isEditing && (
+                        <div style={{ marginTop: 10, padding: 10, background: "#0f172a", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8" }}>📷 Changer la photo</span>
+                            <select
+                              value={pickerBien}
+                              onChange={e => setPickerBien(e.target.value)}
+                              style={{ background: "#1e293b", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, color: "#e2e8f0", fontSize: 11, padding: "4px 8px", fontFamily: "inherit", cursor: "pointer" }}
+                            >
+                              {["amaryllis","zandoli","iguana","geko","mabouya","schoelcher","nogent"].map(b => (
+                                <option key={b} value={b}>{b}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4 }}>
+                            {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, "0")).map(nn => {
+                              const fullUrl = `https://villamaryllis.com/photos/${pickerBien}/${nn}.webp`;
+                              const selected = editing.imageUrl === fullUrl;
+                              return (
+                                <img
+                                  key={nn}
+                                  src={`/photos/${pickerBien}/${nn}-480w.webp`}
+                                  alt=""
+                                  onClick={() => setEditPayload({ ...editing, imageUrl: fullUrl })}
+                                  onError={e => { e.target.style.display = "none"; }}
+                                  style={{
+                                    width: 68, height: 68, flexShrink: 0, objectFit: "cover", borderRadius: 8, cursor: "pointer",
+                                    border: selected ? "2px solid #6366f1" : "2px solid transparent",
+                                    boxShadow: selected ? "0 0 0 2px rgba(99,102,241,0.35)" : "none",
+                                  }}
+                                />
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                       <div style={{ display: "flex", gap: 6, marginTop: 8, fontSize: 10, color: "#64748b" }}>
                         {(payload.channels || ["ig","fb"]).map(c => (
                           <span key={c} style={{ padding: "2px 8px", borderRadius: 10, background: "rgba(255,255,255,0.05)" }}>
@@ -290,7 +327,7 @@ export default function ApprobationsTab() {
                         <button disabled={acting === d.id} onClick={() => act(d.id, "improve")} style={btnStyle("#f59e0b", true, acting === d.id)} title="Régénérer en intégrant les retours des agents pour viser 100/100">
                           {acting === d.id ? "..." : "🎯 Améliorer (viser 100/100)"}
                         </button>
-                        <button onClick={() => { setEditingId(d.id); setEditPayload(payload); }} style={btnStyle("#64748b", true)}>✏️ Modifier</button>
+                        <button onClick={() => { setEditingId(d.id); setEditPayload(payload); setPickerBien(payload.imageUrl?.match(/photos\/([a-z]+)/)?.[1] || "amaryllis"); }} style={btnStyle("#64748b", true)}>✏️ Modifier</button>
                         <button onClick={() => act(d.id, "reject")} style={btnStyle("#ef4444", true)}>🚫 Rejeter</button>
                       </>
                     )}
