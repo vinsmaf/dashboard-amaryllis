@@ -93,9 +93,12 @@ const CSS = `
 
   .pt-hero { background: linear-gradient(135deg, ${NAVY} 0%, #16524f 55%, #1d6b5f 100%); padding: 56px 24px 52px; }
   .pt-hero-inner { max-width: 760px; margin: 0 auto; }
-  .pt-eyebrow { font-size: 10px; font-weight: 200; letter-spacing: .45em; text-transform: uppercase; color: ${CORAL}; margin: 0 0 16px; }
-  .pt-h1 { font-weight: 200; font-size: clamp(28px, 5vw, 46px); line-height: 1.1; letter-spacing: .04em; color: ${IVORY}; margin: 0 0 20px; }
-  .pt-lead { font-family: 'Cormorant Garamond', serif; font-size: 20px; line-height: 1.65; color: rgba(250,245,233,.85); margin: 0; }
+  /* ⚠️ Scopé sous .pt-hero (spécificité 0,2,0) pour battre la règle globale
+     [data-surface="site"] h1 { color: var(--fg-1) } (0,1,1) qui rendait le titre
+     navy foncé invisible sur le hero vert foncé. Ne pas dé-scoper. */
+  .pt-hero .pt-eyebrow { font-size: 10px; font-weight: 200; letter-spacing: .45em; text-transform: uppercase; color: ${CORAL}; margin: 0 0 16px; }
+  .pt-hero .pt-h1 { font-weight: 200; font-size: clamp(28px, 5vw, 46px); line-height: 1.1; letter-spacing: .04em; color: ${IVORY}; margin: 0 0 20px; }
+  .pt-hero .pt-lead { font-family: 'Cormorant Garamond', serif; font-size: 20px; line-height: 1.65; color: rgba(250,245,233,.85); margin: 0; }
 
   .pt-main { max-width: 760px; margin: 0 auto; padding: 48px 24px 0; }
 
