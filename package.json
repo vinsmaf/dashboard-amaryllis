@@ -16,7 +16,8 @@
     "visual-review": "node scripts/visual-review.mjs",
     "deploy:script": "clasp push --force",
     "deploy:worker": "wrangler deploy",
-    "deploy:pages": "bash scripts/deploy-pages.sh"
+    "deploy:pages": "bash scripts/deploy-pages.sh",
+    "gen:tv-screens": "node scripts/gen-tv-screens.mjs"
   },
   "dependencies": {
     "@sentry/react": "^10.53.1",
