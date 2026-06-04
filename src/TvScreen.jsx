@@ -58,13 +58,13 @@ export default function TvScreen({ slides = [], colors = {}, pid = "amaryllis" }
 
   /* styles */
   const eyebrow = { fontFamily: DISPLAY, fontWeight: 600, fontSize: "clamp(13px,1.25vw,21px)", letterSpacing: "0.42em", textTransform: "uppercase", color: BRAND.gold, margin: 0 };
-  const h1 = { fontFamily: DISPLAY, fontWeight: 200, fontSize: "clamp(42px,6vw,104px)", lineHeight: 0.98, letterSpacing: "0.01em", color: "#fff", margin: "1.2vh 0 0", textShadow: "0 4px 40px rgba(0,0,0,0.5)" };
+  const h1 = { fontFamily: DISPLAY, fontWeight: 300, fontSize: "clamp(42px,6vw,104px)", lineHeight: 0.98, letterSpacing: "0.01em", color: "#fff", margin: "1.2vh 0 0", textShadow: "0 2px 24px rgba(0,0,0,0.85), 0 1px 2px rgba(0,0,0,0.7)" };
   const subtitle = { fontFamily: SERIF, fontStyle: "italic", fontWeight: 500, fontSize: "clamp(20px,2.4vw,42px)", color: BRAND.ivory, opacity: 0.95, margin: "1.8vh 0 0", lineHeight: 1.3 };
   const body = { fontFamily: SERIF, fontStyle: "italic", fontSize: "clamp(18px,1.85vw,32px)", lineHeight: 1.45, color: BRAND.ivory, opacity: 0.92, margin: "2vh 0 0", maxWidth: "40ch",
     display: "-webkit-box", WebkitLineClamp: 5, WebkitBoxOrient: "vertical", overflow: "hidden" };
   const signature = { fontFamily: SERIF, fontStyle: "italic", fontSize: "clamp(18px,1.7vw,30px)", color: BRAND.gold, margin: "3vh 0 0" };
-  const glass = { background: "rgba(255,255,255,0.10)", backdropFilter: "blur(20px) saturate(1.2)", WebkitBackdropFilter: "blur(20px) saturate(1.2)", border: "1px solid rgba(255,255,255,0.30)", borderRadius: 24, padding: "3vh 3vw", boxShadow: "0 24px 70px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.25)" };
-  const fieldLabel = { fontFamily: DISPLAY, fontSize: "clamp(13px,1.2vw,20px)", letterSpacing: "0.2em", textTransform: "uppercase", color: BRAND.gold, opacity: 0.85 };
+  const glass = { background: "rgba(255,255,255,0.15)", backdropFilter: "blur(22px) saturate(1.3) brightness(1.15)", WebkitBackdropFilter: "blur(22px) saturate(1.3) brightness(1.15)", border: "1px solid rgba(255,255,255,0.38)", borderRadius: 24, padding: "3vh 3vw", boxShadow: "0 24px 70px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.35)" };
+  const fieldLabel = { fontFamily: DISPLAY, fontSize: "clamp(13px,1.2vw,20px)", letterSpacing: "0.2em", textTransform: "uppercase", color: "#e7c98a" };
   const fieldValue = { fontFamily: "ui-monospace, 'JetBrains Mono', monospace", fontWeight: 600, fontSize: "clamp(30px,4vw,68px)", color: "#fff", lineHeight: 1.1, marginTop: "0.6vh" };
 
   return (
