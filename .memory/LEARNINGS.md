@@ -4,7 +4,9 @@
 > Le journal d'erreurs exhaustif reste `../docs/ERREURS-LOG.md`.
 
 ## Inventaire des capacités (skills/agents)
-- **Un `grep` par mots-clés sur `~/.claude/skills/` ne suffit PAS à inventorier les skills disponibles.** La skill `/cloture-session` existait déjà mais vivait hors de ce dossier → mon grep a conclu à tort « ça n'existe pas ». **La prochaine fois : consulter la LISTE des skills disponibles (system-reminder / Skill tool) avant de déclarer qu'une capacité manque, et avant d'en construire une nouvelle.**
+- **⚠️ ERREUR RÉPÉTÉE 3× DANS LA MÊME SESSION (2026-06-04).** J'ai conclu « ça n'existe pas » pour `/cloture-session`, PUIS `/auditeur`, PUIS `/consolidation` — les trois existaient déjà — parce que je grepais `~/.claude/skills/` au lieu de **lire la LISTE des skills disponibles** (system-reminder / Skill tool). Le grep ne voit pas les skills hébergées ailleurs. **RÈGLE DURE : avant de dire qu'une capacité manque OU d'en construire une, TOUJOURS scanner la liste des skills disponibles.** (Cf. RECALL.md, ligne « Skills / capacités ».)
+- **Une skill (LLM) ne peut pas être appelée depuis bash.** Pour automatiser au déploiement un audit/une consolidation, il faut une **version déterministe en script** (`scripts/audit-invariants.mjs`) ; la skill reste pour le riche manuel. Pattern : skill = jugement piloté ; script = invariants déterministes greffés au gate.
+- **Un hook `SessionStart` dans un repo sans `.claude/settings.json` préexistant ne se charge qu'après `/hooks` ou un redémarrage** (le watcher ne surveillait pas `.claude/` au démarrage). Le hook est correct, mais inerte la 1ʳᵉ fois.
 
 ## Édition de fichiers
 - **Un linter modifie les fichiers entre `Read` et `Edit`** (vu sur `PROJECT_MEMORY.md` : Edit a échoué « file modified since read »). **La prochaine fois : re-`Read` juste avant l'`Edit` sur les gros fichiers .md, ou faire l'edit immédiatement après le read.**

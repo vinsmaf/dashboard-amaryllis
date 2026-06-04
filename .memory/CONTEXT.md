@@ -25,6 +25,11 @@ Amaryllis (**villa**, 280€, 8p) · Iguana (**villa**, 180€, 6p, `bookable:fa
 ## Chantiers récents livrés (juin 2026, tous déployés)
 Source unique des biens (ph1-3) · Robustesse (filet tests+gate+CI, cohérence, imports idempotents) · Occupation réelle→RM (ph1 snapshot, ph2 reco, dates réservées neutralisées) · Meta Pixel + fix CSP · Runbook lancement Ads · Gouvernance doc (CLAUDE.md actualisé, docs/INDEX.md, index ADR, PROJECT_MEMORY 52→35KB, `.memory/`).
 
+## Système mémoire & rituels (mis en place 2026-06-04)
+**3 niveaux étanches** : stockage (PROJECT_MEMORY/docs/git) · rappel (hook SessionStart → `scripts/session-context.mjs` + `RECALL.md`) · décision (`ADR.md` + `DECISIONS.md`).
+**4 rituels** : `/cloture-session` (capture) · `/auditeur` + `audit-invariants.mjs` au deploy (constat) · `/consolidation` (jardinage hebdo) · hook SessionStart (rappel auto).
+**Standard commun aux 2 projets** : `docs/OPERATING-MODEL.md` (identique locatif ↔ patrimoine-dashboard).
+
 ## Prochaine session
 **Demain matin** : lancement Google Ads + Meta Ads pas-à-pas (`docs/marketing/RUNBOOK-lancement.md`), Vincent aux commandes.
 
