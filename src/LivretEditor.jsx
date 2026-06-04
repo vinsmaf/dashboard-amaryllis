@@ -133,6 +133,41 @@ function SectionEditor({ section, onChange, onDelete, onUp, onDown }) {
   );
 }
 
+/* ─── Éditeur de services additionnels (extras) ─────────── */
+const EXTRA_KINDS = [
+  { value: "sur-demande", label: "Sur demande" },
+  { value: "immediat",    label: "Immédiat" },
+];
+
+function ExtrasEditor({ extras, onChange }) {
+  const upd = (i, extra) => onChange(extras.map((e, j) => j === i ? extra : e));
+  const del = (i) => onChange(extras.filter((_, j) => j !== i));
+  const add = () => onChange([...extras, { id: `svc-${Date.now()}`, label: "", price: 0, desc: "", kind: "sur-demande" }]);
+
+  return (
+    <div>
+      {extras.map((e, i) => (
+        <div key={e.id || i} style={{ ...S.card, padding: "10px 12px", marginBottom: 8 }}>
+          <div style={{ ...S.grid2, marginBottom: 8 }}>
+            <input style={S.input} placeholder="Label (ex: Ménage supplémentaire)" value={e.label || ""} onChange={ev => upd(i, { ...e, label: ev.target.value })} />
+            <input type="number" style={S.input} placeholder="Prix (€)" value={e.price ?? ""} onChange={ev => upd(i, { ...e, price: ev.target.value === "" ? 0 : Number(ev.target.value) })} />
+          </div>
+          <div style={{ marginBottom: 8 }}>
+            <textarea style={{ ...S.textarea, minHeight: 60 }} placeholder="Description courte" value={e.desc || ""} onChange={ev => upd(i, { ...e, desc: ev.target.value })} />
+          </div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between" }}>
+            <select style={{ ...S.input, width: "auto" }} value={e.kind || "sur-demande"} onChange={ev => upd(i, { ...e, kind: ev.target.value })}>
+              {EXTRA_KINDS.map(k => <option key={k.value} value={k.value}>{k.label}</option>)}
+            </select>
+            <button style={S.btn("#ef4444")} onClick={() => del(i)}>Supprimer</button>
+          </div>
+        </div>
+      ))}
+      <button style={S.btn("#0ea5e9")} onClick={add}>+ Ajouter un service</button>
+    </div>
+  );
+}
+
 /* ─── Éditeur de contacts ───────────────────────────────── */
 function ContactEditor({ contacts, onChange }) {
   const upd = (i, contact) => onChange(contacts.map((c, j) => j === i ? contact : c));
@@ -248,6 +283,7 @@ export default function LivretEditor() {
   const TABS = [
     { id: "infos",    label: "Infos & accueil" },
     { id: "sections", label: `Sections (${guide?.sections?.length ?? 0})` },
+    { id: "services", label: `Services (${guide?.extras?.length ?? 0})` },
     { id: "contacts", label: "Contacts" },
     { id: "qr",       label: "QR Code" },
   ];
@@ -414,6 +450,20 @@ export default function LivretEditor() {
               >
                 + Ajouter une section
               </button>
+            </div>
+          )}
+
+          {/* ── TAB : Services ── */}
+          {activeTab === "services" && (
+            <div>
+              <div style={{ fontSize: 11, color: "#475569", marginBottom: 14, lineHeight: 1.5 }}>
+                Ces services apparaissent sur l'écran TV et la page de paiement <code style={{ color: "#0ea5e9" }}>/services</code>. Prix en € TTC.<br />
+                ‹sur-demande› = confirmé par l'hôte après paiement (late check-out, ménage) ; ‹immediat› = livrable tout de suite (planteur).
+              </div>
+              <ExtrasEditor
+                extras={guide.extras || []}
+                onChange={extras => upd("extras", extras)}
+              />
             </div>
           )}
 
