@@ -12,6 +12,13 @@
 4. **Périmètre** : `.memory/*` (nouveau), pointeurs depuis `PROJECT_MEMORY.md`.
 5. **Statut** : **acté** (Vincent a choisi « 1 fichier unique » mais le standard `.memory/` retenu pour aligner les 2 projets — à confirmer s'il préfère vraiment le fichier plat).
 
+## ADR-S-003 · 2026-06-04 · Auditeur = skill manuelle + script déterministe non bloquant au deploy
+1. **Choix** : 2 niveaux d'audit. (a) skill **`auditeur`** (LLM, manuelle, audit riche avec escalation `.memory/`) ; (b) **`scripts/audit-invariants.mjs`** déterministe greffé dans `deploy-pages.sh` (post-smoke), **non bloquant** (exit 0 toujours), écrit `docs/_audits/AUDIT-latest.md`.
+2. **Alternatives refusées** : appeler la skill LLM depuis bash (impossible) ; rendre l'audit **bloquant** au deploy (risque de faux FAIL qui bloque une prod saine — refusé par Vincent, « non-bloquant »).
+3. **Conséquences attendues** : chaque déploiement vérifie les invariants d'archi (source unique, miroirs, CSP, meta, mémoire) sans jamais bloquer ; rapport rolling gitignoré ; les rapports datés manuels restent suivis. Réintégration au gate bloquant possible plus tard si les verdicts s'avèrent fiables.
+4. **Périmètre** : `scripts/audit-invariants.mjs` (nouveau), `scripts/deploy-pages.sh` (bloc non-bloquant + `SKIP_AUDIT`), `.gitignore`, CLAUDE.md.
+5. **Statut** : **acté** (testé : verdict 🟢 PASS, exit 0).
+
 ## ADR-S-002 · 2026-06-04 · Gouvernance doc : index + ADR formalisés + PROJECT_MEMORY dégraissé
 1. **Choix** : corriger CLAUDE.md (suppression du faux « There are no tests »), créer `docs/INDEX.md` (carte de ~47 docs) et `docs/superpowers/specs/README.md` (index ADR 001→010 avec statut), extraire le journal historique de PROJECT_MEMORY (52KB→35KB) vers `docs/_archive/`.
 2. **Alternatives refusées** : laisser PROJECT_MEMORY grossir indéfiniment ; garder les ADR implicites (specs non indexés, statut illisible).

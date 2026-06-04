@@ -40,3 +40,6 @@ bug-reports/
 
 # Secret local pour la revue de code au déploiement (NE PAS committer)
 .deploy.env
+
+# Rapport d'audit rolling auto (régénéré à chaque deploy) — les rapports datés restent suivis
+docs/_audits/AUDIT-latest.md

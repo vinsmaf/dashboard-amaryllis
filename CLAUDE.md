@@ -315,5 +315,6 @@ Infra : `src/utils/abTest.js` — `getVariant("nom_test")` (cookie 50/50 + GA4 `
 ### 6. Déploiement & vérif
 
 - `npm run deploy:pages` rebuild + déploie + **smoke test** (home/villa/admin, bundle JS, kill-switch SW, anti-asset-gelé `/guide-hub`, API `get-config`/`social`, `sitemap.xml`, meta prérendue). Échec smoke = exit 1.
+- **Audit d'invariants au déploiement** (non bloquant) : `scripts/audit-invariants.mjs` (post-smoke) vérifie source unique des biens, miroirs GAS/Worker, CSP vs tracking, longueurs meta, mémoire `.memory/` → verdict 🟢/🟡/🔴 + rapport `docs/_audits/AUDIT-latest.md` (gitignoré). **Ne bloque jamais** (`SKIP_AUDIT=1` pour désactiver). Pour un audit riche piloté : skill **`auditeur`** (manuelle).
 - Le **Worker** se déploie séparément : `npx wrangler deploy`.
 - Après tout changement SEO/résa/réseaux : **vérifier en live** (curl + endpoints), le build local ne reflète pas l'injection runtime.

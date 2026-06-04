@@ -164,6 +164,11 @@ if [[ "${SKIP_BUG_CHECKS:-0}" != "1" ]]; then
   if [[ -f .deploy.env ]]; then set -a; source .deploy.env; set +a; fi
   # 1. Revue de code du diff (non bloquant — ne fait jamais échouer le déploiement)
   node scripts/code-review-diff.mjs || echo "   ⚠️  revue de code ignorée (erreur non bloquante)"
+  # 1b. Audit d'invariants d'archi (source unique des biens, miroirs, CSP, meta, mémoire)
+  #     Déterministe + NON BLOQUANT (exit 0 toujours). SKIP_AUDIT=1 pour désactiver.
+  if [[ "${SKIP_AUDIT:-0}" != "1" ]]; then
+    node scripts/audit-invariants.mjs || echo "   ⚠️  audit invariants ignoré (erreur non bloquante)"
+  fi
   # 2. Crawl visuel de la prod, en arrière-plan (ne ralentit pas le déploiement)
   if command -v node >/dev/null 2>&1; then
     nohup node scripts/visual-review.mjs --report >/tmp/visual-review-last.log 2>&1 &
