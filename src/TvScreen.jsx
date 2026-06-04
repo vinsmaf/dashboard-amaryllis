@@ -36,7 +36,9 @@ export default function TvScreen({ slides, colors }) {
     color: "#fff", fontFamily: "system-ui, -apple-system, sans-serif",
     display: "flex", flexDirection: "column", justifyContent: "center", cursor: "none",
   };
-  const H1 = { fontSize: "clamp(34px, 5.5vw, 84px)", fontWeight: 800, lineHeight: 1.05, margin: 0, letterSpacing: "-0.02em" };
+  // color en inline OBLIGATOIRE : sinon la règle globale [data-surface="site"] h1
+  // { color: var(--fg-1) } (navy) écrase l'héritage #fff → titre invisible sur fond sombre.
+  const H1 = { fontSize: "clamp(34px, 5.5vw, 84px)", fontWeight: 800, lineHeight: 1.05, margin: 0, letterSpacing: "-0.02em", color: "#fff" };
   const SUB = { fontSize: "clamp(20px, 2.4vw, 40px)", color: light, opacity: 0.9, marginTop: "2vh", fontWeight: 500 };
   const BODY = { fontSize: "clamp(18px, 2vw, 34px)", lineHeight: 1.5, marginTop: "3vh", maxWidth: "60ch", opacity: 0.95 };
 
