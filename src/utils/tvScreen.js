@@ -59,7 +59,7 @@ export function buildSlides(guide, params = {}) {
   const wa = contact.whatsapp ? `https://wa.me/${String(contact.whatsapp).replace(/[^0-9]/g, "")}` : absUrl(`/${pid}`);
   slides.push({ id: "services", title: "Envie d'un petit plus ?",
     subtitle: "Départ tardif · ménage · bouteille de planteur maison…",
-    qr: wa, qrLabel: "Demandez à votre hôte" });
+    qr: absUrl(`/services/${pid}`), qrLabel: "Réserver en 2 clics" });
 
   // 5. Infos pratiques (arrivée / départ + teaser départ tardif → vente additionnelle)
   slides.push({ id: "practical", title: "Bon à savoir",

@@ -72,6 +72,7 @@ const NotFound                 = lazy(() => import('./NotFound.jsx'))
 import CookieBanner from './CookieBanner.jsx'
 import ChatWidget from './ChatWidget.jsx'
 const GuestGuide      = lazy(() => import('./GuestGuide.jsx'))
+const Services        = lazy(() => import('./Services.jsx'))
 const Merci           = lazy(() => import('./Merci.jsx'))
 const Links           = lazy(() => import('./Links.jsx'))
 const StoriesTemplate = lazy(() => import('./StoriesTemplate.jsx'))
@@ -268,6 +269,8 @@ if (!isKnown) {
   Component = Merci;
 } else if (path.startsWith("/bienvenue")) {
   Component = GuestGuide;
+} else if (path.startsWith("/services/")) {
+  Component = Services;
 } else if (path === "/stories-template") {
   Component = StoriesTemplate;
 } else if (path === "/guide-menage") {
