@@ -74,14 +74,16 @@ export default function TvScreen({ slides = [], colors = {}, pid = "amaryllis" }
       {/* ── Fond photo Ken Burns (remonté à chaque slide via key) ── */}
       <div key={`bg-${i}`} style={{ position: "absolute", inset: 0, animation: "tvKen 22s ease-out forwards, tvFadeIn 1.2s ease both",
         backgroundImage: `url(${bg})`, backgroundSize: "cover", backgroundPosition: "center",
-        filter: "brightness(0.62) saturate(1.08) contrast(1.02)" }} />
+        filter: "saturate(1.1) contrast(1.03)" }} />
       {/* fallback couleur si la photo manque */}
       <div style={{ position: "absolute", inset: 0, background: `linear-gradient(135deg, ${colors.dark || BRAND.navy} 0%, #06100c 100%)`, zIndex: -1 }} />
 
-      {/* ── Voile dégradé (lisibilité texte en bas-gauche) ── */}
+      {/* ── Voile dégradé : fort à GAUCHE (contenu toujours lisible) + bas ── */}
       <div style={{ position: "absolute", inset: 0, background:
-        "linear-gradient(105deg, rgba(6,16,12,0.92) 0%, rgba(6,16,12,0.74) 34%, rgba(6,16,12,0.30) 62%, rgba(6,16,12,0.55) 100%)" }} />
-      <div style={{ position: "absolute", inset: 0, boxShadow: "inset 0 0 220px 60px rgba(0,0,0,0.55)" }} />
+        "linear-gradient(90deg, rgba(5,13,10,0.95) 0%, rgba(5,13,10,0.86) 34%, rgba(5,13,10,0.30) 66%, rgba(5,13,10,0.20) 100%)" }} />
+      <div style={{ position: "absolute", inset: 0, background:
+        "linear-gradient(0deg, rgba(5,13,10,0.78) 0%, rgba(5,13,10,0.10) 38%, rgba(5,13,10,0) 60%)" }} />
+      <div style={{ position: "absolute", inset: 0, boxShadow: "inset 0 0 240px 70px rgba(0,0,0,0.5)" }} />
 
       {/* ── Lockup marque ── */}
       <div style={{ position: "absolute", top: "5.5vh", left: "6vw", display: "flex", alignItems: "center", gap: 16 }}>
