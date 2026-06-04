@@ -2317,8 +2317,11 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
                   <button
                     onClick={() => {
                       if (belowMin) return;
-                      if (window.gtag) window.gtag("event", "begin_checkout", { bien_id: bien.id, niveau_tarifaire: niveauTarifaire(bien, checkin), currency: "EUR", value: total, items: [{ item_id: bien.id, item_name: bien.nom, price: bien.prix, quantity: nights }] });
+                      const ckItems = [{ item_id: bien.id, item_name: bien.nom, price: bien.prix, quantity: nights }];
+                      if (window.gtag) window.gtag("event", "begin_checkout", { bien_id: bien.id, niveau_tarifaire: niveauTarifaire(bien, checkin), currency: "EUR", value: total, items: ckItems });
                       mpTrack("InitiateCheckout", { value: total, currency: "EUR", content_ids: [bien.id], content_type: "product" });
+                      // Contexte pour le purchase fiable sur /merci après redirection 3DS
+                      try { sessionStorage.setItem("pending_purchase", JSON.stringify({ value: total, bien_id: bien.id, niveau_tarifaire: niveauTarifaire(bien, checkin), items: ckItems })); } catch { /* */ }
                       setStep(2);
                     }}
                     style={{ background: belowMin ? SAND : CORAL, color: "#fff", border: "none", padding: "14px 30px", borderRadius: 8, fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase", cursor: belowMin ? "not-allowed" : "pointer", boxShadow: belowMin ? "none" : "0 4px 20px rgba(196,114,84,0.35)", opacity: belowMin ? 0.6 : 1 }}
