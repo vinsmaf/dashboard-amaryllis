@@ -8,6 +8,10 @@
 - **Une skill (LLM) ne peut pas être appelée depuis bash.** Pour automatiser au déploiement un audit/une consolidation, il faut une **version déterministe en script** (`scripts/audit-invariants.mjs`) ; la skill reste pour le riche manuel. Pattern : skill = jugement piloté ; script = invariants déterministes greffés au gate.
 - **Un hook `SessionStart` dans un repo sans `.claude/settings.json` préexistant ne se charge qu'après `/hooks` ou un redémarrage** (le watcher ne surveillait pas `.claude/` au démarrage). Le hook est correct, mais inerte la 1ʳᵉ fois.
 
+## CSS / design — collision avec la règle globale `[data-surface="site"] h1`
+- **Le CSS global `index.css` impose `[data-surface="site"] h1 { color: var(--fg-1) }` (navy foncé), spécificité (0,1,1).** Une page custom avec son propre `<style>` qui colore son titre de hero via une simple classe `.x-h1 { color: IVORY }` (0,1,0) **PERD** → titre navy foncé invisible sur hero sombre (vécu sur `/nos-partenaires` 2026-06-04). **Règle : tout h1 clair de hero doit soit être en `style={{ color: ... }}` inline (spécificité max), soit scopé `.x-hero .x-h1` (0,2,0) (+ `!important` au besoin), comme le fait déjà `GuidePOI` (`.gp-hero .gp-h1 !important`).** Les guides en inline-style sont safe ; vérifier toute NOUVELLE page custom à hero sombre.
+- **Débogage contraste = inspecter le *computed style* dans le navigateur, pas deviner.** `getComputedStyle(el).color` + énumérer `document.styleSheets` (selectorText + style.color) révèle la règle gagnante en 30s. Plus fiable que lire le source.
+
 ## Édition de fichiers
 - **Un linter modifie les fichiers entre `Read` et `Edit`** (vu sur `PROJECT_MEMORY.md` : Edit a échoué « file modified since read »). **La prochaine fois : re-`Read` juste avant l'`Edit` sur les gros fichiers .md, ou faire l'edit immédiatement après le read.**
 - **Le quoting shell casse sur les apostrophes françaises** dans un `node -e '...'` (l'apostrophe de « L'état » ferme le quote). **La prochaine fois : écrire le script Node dans un fichier `/tmp/*.js` puis `node fichier.js`, plutôt que `-e` inline.**
