@@ -167,6 +167,19 @@ export default function LivretEditor() {
   const [dirty, setDirty]   = useState(false);
   const [activeTab, setActiveTab] = useState("infos");
 
+  // ── Générateur d'URL écran TV (prénom + dates optionnels) ──
+  const [tvGuest, setTvGuest] = useState("");
+  const [tvDu, setTvDu]       = useState("");
+  const [tvAu, setTvAu]       = useState("");
+  const [tvCopied, setTvCopied] = useState(false);
+  const tvUrl = (() => {
+    const q = new URLSearchParams({ tv: "1" });
+    if (tvGuest.trim()) q.set("guest", tvGuest.trim());
+    if (tvDu.trim())    q.set("du", tvDu.trim());
+    if (tvAu.trim())    q.set("au", tvAu.trim());
+    return `https://villamaryllis.com/bienvenue/${propId}?${q}`;
+  })();
+
   const prop = PROPERTIES.find(p => p.id === propId) || PROPERTIES[0];
 
   /* ── Chargement ── */
@@ -440,6 +453,45 @@ export default function LivretEditor() {
                 Ouvrir le livret →
               </a>
               <button onClick={() => window.print()} style={S.btn("#64748b")}>🖨 Imprimer le QR</button>
+
+              {/* ── Générateur d'URL écran TV ── */}
+              <div style={{ ...S.card, marginTop: 24, textAlign: "left", maxWidth: 560, marginLeft: "auto", marginRight: "auto" }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#f1f5f9", marginBottom: 4 }}>
+                  📺 Générer l'URL écran TV
+                </div>
+                <div style={{ fontSize: 11, color: "#64748b", marginBottom: 14 }}>
+                  Ouvrez cette URL dans le navigateur de la TV. Laissez les champs vides pour un accueil générique.
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 12 }}>
+                  <Field label="Prénom (optionnel)">
+                    <Input value={tvGuest} onChange={setTvGuest} placeholder="Vincent" />
+                  </Field>
+                  <Field label="Du (optionnel)">
+                    <Input value={tvDu} onChange={setTvDu} placeholder="05-06" />
+                  </Field>
+                  <Field label="Au (optionnel)">
+                    <Input value={tvAu} onChange={setTvAu} placeholder="12-06" />
+                  </Field>
+                </div>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <input
+                    style={{ ...S.input, flex: 1, fontFamily: "monospace", fontSize: 12 }}
+                    value={tvUrl}
+                    readOnly
+                    onFocus={e => e.target.select()}
+                  />
+                  <button
+                    style={S.btn("#0ea5e9")}
+                    onClick={() => {
+                      navigator.clipboard.writeText(tvUrl);
+                      setTvCopied(true);
+                      setTimeout(() => setTvCopied(false), 1800);
+                    }}
+                  >
+                    {tvCopied ? "✓ Copié" : "📋 Copier"}
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </>
