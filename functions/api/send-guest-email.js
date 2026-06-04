@@ -28,7 +28,13 @@ export async function sendGuestEmail(env, origin, { template, to, subject, vars 
   if (!env.RESEND_API_KEY) return { ok: false, error: "RESEND_API_KEY manquante" };
 
   // Pages fait du "clean URL" (/x.html → /x) ; on cible directement l'URL propre.
-  const tplRes = await fetch(`${origin}/email-templates/${template}`, { redirect: "follow" });
+  // Cache-bust + bypass cache CF : l'edge peut servir un template figé malgré no-cache
+  // → on garantit la dernière version au moment de l'envoi.
+  const tplRes = await fetch(`${origin}/email-templates/${template}?cb=${Date.now()}`, {
+    redirect: "follow",
+    cache: "no-store",
+    cf: { cacheTtl: 0, cacheEverything: false },
+  });
   if (!tplRes.ok) return { ok: false, error: `template introuvable (${tplRes.status})` };
   const raw = await tplRes.text();
   const html = fillTemplate(raw, vars);
