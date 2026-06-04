@@ -21,7 +21,7 @@
 
 ---
 
-### Post 3 — Studio Mabouya (couple / jacuzzi) → fiche Résidence
+### Post 3 — Studio Mabouya (couple / jacuzzi) → fiche Résidence ✅ (publié le 04/06, carrousel 4 photos)
 > 💚 Escapade en amoureux en Martinique ? Le studio Mabouya, son jacuzzi privatif et son jardin fleuri sont faits pour vous. Calme absolu, plage d'Anse Mabouya à 5 min : l'adresse des couples à Sainte-Luce. Réservez en direct sur villamaryllis.com — sans frais, contact direct avec l'hôte.
 
 **Bouton :** Réserver → `https://villamaryllis.com/mabouya`
