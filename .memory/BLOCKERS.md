@@ -28,6 +28,9 @@
 - **PROJECT_MEMORY.md gonflait (52KB)** → dégraissé à 35KB, journal archivé.
 - **Pas d'index in-repo des docs / ADR non formalisés** → `docs/INDEX.md` + `docs/superpowers/specs/README.md` créés.
 
+## ✅ À VÉRIFIER une fois — hook SessionStart actif ?
+- **Vérifier que le rappel mémoire s'est bien injecté au démarrage** (hook SessionStart, ADR-S-004). **Auto-vérifiant** : si le hook marche, ce texte (`🧠 RAPPEL MÉMOIRE …`) est apparu en haut de session via `scripts/session-context.mjs`. Si tu ne l'as PAS vu → le hook ne s'est pas chargé : Vincent doit ouvrir `/hooks` une fois ou redémarrer Claude Code. ➡️ **Claude : à la prochaine session, confirme à Vincent que l'injection a eu lieu, puis retire cette ligne.**
+
 ## ⏳ Décisions différées — à RAPPELER à Vincent quand le déclencheur est atteint
 - **Passer l'audit d'invariants BLOQUANT au deploy** (aujourd'hui non-bloquant, ADR-S-003).
   - **Déclencheur (déterministe)** : `scripts/audit-invariants.mjs` a tourné sur **≥5 déploiements** consécutifs avec **0 faux 🔴** (aucun FAIL qui se révèle erroné). Idéalement après avoir aussi corrigé les 2 findings 🟡 ouverts (doc « 557 erreurs » + prix en prose).
