@@ -38,8 +38,9 @@ function Qr({ value, size = 200, caption }) {
 
 const SLIDE_MS = 13000;
 
-export default function TvScreen({ slides = [], colors = {}, pid = "amaryllis" }) {
-  const [i, setI] = useState(0);
+export default function TvScreen({ slides = [], colors = {}, pid = "amaryllis", start = null }) {
+  const frozen = start != null;
+  const [i, setI] = useState(frozen ? Math.max(0, Math.min(start, slides.length - 1)) : 0);
   const [paused, setPaused] = useState(false);
   const accent = colors.mid || BRAND.coral;
 
@@ -48,10 +49,10 @@ export default function TvScreen({ slides = [], colors = {}, pid = "amaryllis" }
   const heroPhoto = `/photos/${pid}/01.webp`;
 
   useEffect(() => {
-    if (paused || slides.length <= 1) return undefined;
+    if (frozen || paused || slides.length <= 1) return undefined;
     const t = setInterval(() => setI((p) => (p + 1) % slides.length), SLIDE_MS);
     return () => clearInterval(t);
-  }, [paused, slides.length]);
+  }, [frozen, paused, slides.length]);
 
   const s = slides[i] || {};
   const bg = heroPhoto;

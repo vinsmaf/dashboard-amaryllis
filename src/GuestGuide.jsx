@@ -183,7 +183,7 @@ export default function GuestGuide() {
       du: tvParams.du || autoCtx?.du || null,
       au: tvParams.au || autoCtx?.au || null,
     };
-    return <TvScreen slides={buildSlides(guide, tvMerged)} colors={colors} pid={propertyId} />;
+    return <TvScreen slides={buildSlides(guide, tvMerged)} colors={colors} pid={propertyId} start={tvParams.slide} />;
   }
 
   const pageUrl = window.location.href;

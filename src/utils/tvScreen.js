@@ -4,11 +4,13 @@
 export function parseTvParams(search) {
   const q = new URLSearchParams(search || "");
   const clean = (v) => { const s = (v || "").trim(); return s.length ? s : null; };
+  const slideN = (() => { const n = parseInt(q.get("slide"), 10); return Number.isInteger(n) && n >= 0 ? n : null; })();
   return {
     tv: q.get("tv") === "1",
     guest: clean(q.get("guest")),
     du: clean(q.get("du")),
     au: clean(q.get("au")),
+    slide: slideN, // fige l'écran sur ce slide (0-based) ; null = diaporama normal
   };
 }
 

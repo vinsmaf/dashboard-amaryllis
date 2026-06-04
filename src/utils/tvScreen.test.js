@@ -8,7 +8,11 @@ describe("parseTvParams", () => {
   });
   it("détecte tv=1 et extrait guest/du/au", () => {
     const p = parseTvParams("?tv=1&guest=Vincent&du=05-06&au=12-06");
-    expect(p).toEqual({ tv: true, guest: "Vincent", du: "05-06", au: "12-06" });
+    expect(p).toEqual({ tv: true, guest: "Vincent", du: "05-06", au: "12-06", slide: null });
+  });
+  it("extrait le slide à figer", () => {
+    expect(parseTvParams("?tv=1&slide=3").slide).toBe(3);
+    expect(parseTvParams("?tv=1").slide).toBeNull();
   });
   it("guest absent => null, tv quand même true", () => {
     const p = parseTvParams("?tv=1");
