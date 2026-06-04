@@ -8,7 +8,8 @@
 
 ## Mode d'emploi (à lire avant d'envoyer)
 
-1. **Personnaliser tous les `[crochets]`** : `[Prénom]`/`[Nom]` du destinataire, `[email]`, `[titre/URL de l'article]`, `[nom du créateur]`, `[n° de déclaration une fois obtenu]`. Ne pas envoyer un email qui contient encore un crochet.
+1. **Personnaliser tous les `[crochets]`** : `[Prénom]`/`[Nom]` du destinataire, `[email]`, `[titre/URL de l'article]`, `[nom du créateur]`. Ne pas envoyer un email qui contient encore un crochet.
+   ⚠️ **Statut déclaration (maj 2026-06-04)** : les logements ne sont **pas encore déclarés ni classés** en meublé de tourisme → les emails n'affirment AUCUN classement/déclaration (on ne garde que la note voyageurs 4,8★, réelle). Une fois la **déclaration en mairie (cerfa 14004)** faite, on pourra l'ajouter ; le **classement (étoiles)** ouvrirait l'abattement micro-BIC 71 % + est souvent requis par les OT/CMT pour être listé.
 2. **Envoyer depuis l'adresse pro** : `contact@villamaryllis.com` (pas une adresse perso) — crédibilité + délivrabilité.
 3. **Ne pas inventer** de noms/adresses : si tu n'as pas le contact nominatif, utilise le formulaire public de la cible ou une formule neutre (« Bonjour, »).
 4. **Varier les ancres de lien** : chaque email propose 2-3 variantes d'ancre. Ne jamais utiliser 100 % « Amaryllis Locations ». Alterner avec « location villa Sainte-Luce », « villamaryllis.com », « hébergements de vacances à Sainte-Luce »…
@@ -32,7 +33,7 @@ Bonjour [Prénom / « Madame, Monsieur »],
 
 Nous gérons **Amaryllis Locations**, un ensemble de 7 hébergements de vacances en Martinique (Sainte-Luce et Schœlcher), commercialisés en réservation directe sur [villamaryllis.com](https://villamaryllis.com).
 
-Nous souhaiterions figurer dans votre annuaire officiel des hébergements touristiques de l'île. Nos logements sont notés en moyenne **4,8★** par les voyageurs et déclarés en meublé de tourisme [n° de déclaration une fois obtenu].
+Nous souhaiterions figurer dans votre annuaire officiel des hébergements touristiques de l'île. Nos logements sont notés en moyenne **4,8★** par les voyageurs .
 
 Pourriez-vous m'indiquer la marche à suivre (formulaire, label, pièces à fournir) ? Je reste à votre disposition pour transmettre photos HD et descriptifs.
 
@@ -55,7 +56,7 @@ Acteur local de l'hébergement à **Sainte-Luce**, nous proposons plusieurs loge
 
 Nous aimerions être référencés parmi les hébergements recommandés sur le site de l'Office. Nos voyageurs nous notent **4,8★** en moyenne, et nous orientons systématiquement nos clients vers les activités et commerçants du Sud.
 
-Quelle est la procédure pour créer une fiche hébergement ? Logements déclarés en meublé de tourisme [n° de déclaration une fois obtenu].
+Quelle est la procédure pour créer une fiche hébergement ? (Déclaration en meublé de tourisme en cours de finalisation.)
 
 Merci d'avance, et au plaisir d'échanger avec vous.
 
