@@ -12,6 +12,10 @@
 - **Un linter modifie les fichiers entre `Read` et `Edit`** (vu sur `PROJECT_MEMORY.md` : Edit a échoué « file modified since read »). **La prochaine fois : re-`Read` juste avant l'`Edit` sur les gros fichiers .md, ou faire l'edit immédiatement après le read.**
 - **Le quoting shell casse sur les apostrophes françaises** dans un `node -e '...'` (l'apostrophe de « L'état » ferme le quote). **La prochaine fois : écrire le script Node dans un fichier `/tmp/*.js` puis `node fichier.js`, plutôt que `-e` inline.**
 
+## Admin / auth (onglets vides = bug récurrent résolu 2026-06-04)
+- **Onglets admin (🐞 Bugs, backlog agents) « vides » sans message = token de session expiré → 401 silencieux.** Le token signé (`_adminauth.js`) avait un TTL de **12 h** ; passé ce délai, tous les GET admin renvoient 401, mais le front faisait `.catch(()=>setItems([]))` → liste vide trompeuse (la porte admin restait « ok » côté client). **Fix structurel anti-récurrence** : tout 401 sur `/api/*` (dans `apiFetch.js`, couvre `fetchJSON` + `adminFetch`) émet un event `admin-unauthorized` → `App.jsx` purge la session + rouvre `PasswordGate` (« Session expirée ») → ré-auth → token frais → onglets repeuplés (auto-réparant). + TTL 12h→7j + erreurs visibles dans les onglets.
+- **Règle** : un GET admin qui peut 401 ne doit JAMAIS afficher une liste vide en silence — soit forcer la ré-auth, soit afficher l'erreur. Token en `sessionStorage` = perdu à la fermeture d'onglet (re-login attendu) ; ne pas confondre avec la porte mot de passe.
+
 ## CI / outillage
 - **`wrangler ≥ 4.94` exige Node ≥ 22.** La CI GitHub était en Node 20 → l'étape `wrangler pages functions build` plantait (exit 1) **uniquement en CI** (local en Node 22 = OK). Fix : `node-version: "22"` dans `.github/workflows/ci.yml`. **Garder la version Node de la CI alignée sur l'env de dev.**
 - **La CI ne tournait quasi jamais** (on pousse rarement sur GitHub car CF Pages = upload direct) → une casse latente n'est visible qu'au moment où on se met à pousser souvent. Pousser régulièrement = détecter tôt.
