@@ -22,6 +22,15 @@
   - `docs/google-business-profiles-kit.md` propose de créer 2 fiches GBP Bellevue/Nogent → **contredit** la décision du 02/06 de NE PAS créer de nouvelles fiches. **Débloque** : décision Vincent → archiver les 2 dans `docs/_archive/`.
 - **Lint exclu de la CI** (~557 erreurs eslint sur code historique). La CI ne protège pas contre les régressions de style/no-undef. **Débloque** : chantier de nettoyage eslint dédié, puis réintégrer le lint au gate.
 
+## 🟢 Google Ads LANCÉ (2026-06-04) — suivi
+- **C1 « Offre Groupe Sainte-Luce »** (campaignId **23904365229**) : 8 €/j, CPC max 0,80 €, landing `/location-groupe-sainte-luce`, 13 mots-clés, 7 titres/3 desc.
+- **C2 « Brand »** (campaignId **23913930124**) : 2 €/j, CPC max 0,40 € (~0,11 € réel), landing `/`, 7 mots-clés marque, 6 titres/2 desc.
+- **Liste négatifs « Négatifs globaux Amaryllis » (120 mots)** appliquée aux 2 campagnes. Conversion GA4 `purchase` = Principale.
+- ✅ **Fix consentement déployé** : double-bannière supprimée (inline PublicSite neutralisée) + `index.html` restaure les 4 signaux → **`ad_storage=granted` confirmé live** (les conversions remontent bien à Google Ads ; Meta Pixel charge). Commit consent.
+- 📌 **À surveiller** : (a) sous 2-3 j → C1 *Termes de recherche* → ajouter négatifs hors-sujet ; (b) ne pas juger avant ~1 semaine (apprentissage) ; (c) bascule objectif « Ventes » + retargeting en septembre.
+- 📌 **Actions Vincent** : (1) **vérifier domaine Resend `mail.villamaryllis.com`** (sinon email confirmation voyageur ne part pas — n'impacte ni débit ni tracking) ; (2) créer les **2 dims GA4** (`bien_id`, `niveau_tarifaire`) ; (3) **Meta Ads** (campagne Découverte, runbook §B) reste à lancer.
+- 📌 **Backlog tech (non urgent)** : routes explicites des 3 landings dans `main.jsx` (marchent via fallback `KNOWN` aujourd'hui).
+
 ## 🔴 Actions humaines (hors dashboard) en attente
 - **Déclarations meublé de tourisme** (🔴 urgent, jusqu'à 12 500€ d'enjeu) — Vincent, voir `docs/legal/plan-action-declarations.md`.
 - **Confirmer le report « HTTP 401 sur /admin »** (~18:00 le 03/06) — probablement auth transitoire ; Vincent confirme si reproductible.
