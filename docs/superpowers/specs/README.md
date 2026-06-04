@@ -14,6 +14,7 @@ Convention : chaque fichier `specs/*-design.md` est une **décision d'architectu
 | ADR-008 | 2026-06-03 | Imports réservations idempotents + audit locale FR — dédup par clé-contenu `bienId\|checkin\|checkout` (`resaDedup.js`) miroitée dans le GAS (import + REVENUS_AUTO) | ✅ Implémenté | [plan](../plans/2026-06-03-imports-idempotents.md) |
 | ADR-009 | 2026-06-03 | Occupation réelle → Revenue Manager, phase 1 (voir) — `occupancy.js` pur + `runOccupancySnapshot` Worker peuple `rm_kpi_snapshots` (30j/90j) + affichage RM | ✅ Implémenté · Complété par ADR-010 | [plan](../plans/2026-06-03-occupation-rm-phase1.md) |
 | ADR-010 | 2026-06-03 | Occupation réelle → moteur de reco RM, phase 2 (agir) — `rmOccupancyAdjust.js` (barème occupation) injecté dans `calcDateReco`, advisory, prix clampé `[min,max]` | ✅ Implémenté | [plan](../plans/2026-06-03-occupation-rm-phase2.md) |
+| ADR-011 | 2026-06-04 | Éliminer le drift des miroirs de logique pure — **hybride** : Worker importe `src/utils` (esbuild bundle), GAS généré depuis le module pur (`gen-gas-shared.mjs`), test de parité en filet | 📝 Proposé | _à écrire (writing-plans)_ |
 
 ## Notes
 
