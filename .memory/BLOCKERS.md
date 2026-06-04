@@ -3,6 +3,14 @@
 > Ce qui reviendra nous embêter si on ne le documente pas. Format : statut · sujet · ce qui débloque.
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 
+## 🔄 Ports entrants de synchro — À FAIRE ICI (côté locatif) — cf. `docs/OPERATING-MODEL.md` §8
+> Répartition actée 2026-06-04 : patrimoine fait ses ports de son côté ; **ces items sont le périmètre de locatif**.
+- **Carte source-de-vérité déclarative** (inspiré `PATRIMOINE_SOURCE`) : formaliser quels champs sont canoniques (`src/data/biens.js`) vs pilotés Sheet, au lieu du seed ad-hoc dans `App.jsx`. **Débloque** : un module `src/data/biensSource.js` (par champ : `canon` vs `sheet`) + test d'invariant.
+- **Réintégrer le lint au gate** : `npm run lint` = 0 erreur aujourd'hui → l'ajouter à `deploy-pages.sh` (et/ou la CI), corriger la mention « 557 ». Lié au déclencheur « audit bloquant ».
+- **Keepalive proactif des tokens fragiles** (inspiré finary-keepalive) : cron qui ping + alerte avant expiration de `META_PAGE_TOKEN` (~60j) / Beds24. **Débloque** : un cron Worker + email/ntfy si proche expiration.
+- **Monter la couverture de tests** (118 → +), priorité sur la zone à risque (miroirs, RM).
+- 🤝 **CHANTIER COMMUN — drift des miroirs GAS/Worker** : 1 solution, 2 repos. **Coordination** : locatif conçoit le test de cohérence des miroirs (extrait la fonction des 2 côtés + compare la logique normalisée), puis partage le pattern à patrimoine. (Voir aussi la dette ci-dessous.)
+
 ## 🟡 Findings audit 2026-06-04 (skill auditeur — rapport `docs/_audits/AUDIT-2026-06-04.md`)
 - **Doc périmée « 557 erreurs eslint ».** CLAUDE.md + PROJECT_MEMORY justifient l'exclusion du lint par ~557 erreurs ; `npm run lint` mesure aujourd'hui **0 erreur / ~17-19 warnings**. **Débloque** : corriger le wording (et envisager de réintégrer le lint au gate puisqu'il est propre).
 - **Prix en dur dans la prose marketing.** Les champs `desc` de `functions/[slug].js` écrivent « dès 110€/nuit » en texte libre (pas le champ prix, donc pas de bug de calcul, mais drift si le tarif change). **Débloque** : harmoniser à la main au prochain changement de prix.
