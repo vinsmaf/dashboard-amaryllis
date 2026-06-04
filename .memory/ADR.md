@@ -12,6 +12,13 @@
 4. **Périmètre** : `.memory/*` (nouveau), pointeurs depuis `PROJECT_MEMORY.md`.
 5. **Statut** : **acté** (Vincent a choisi « 1 fichier unique » mais le standard `.memory/` retenu pour aligner les 2 projets — à confirmer s'il préfère vraiment le fichier plat).
 
+## ADR-S-006 · 2026-06-04 · Standard de fonctionnement commun aux 2 projets (synchro)
+1. **Choix** : formaliser UN mode de fonctionnement partagé entre `locatif-dashboard` et `patrimoine-dashboard` dans une charte identique **`docs/OPERATING-MODEL.md`** (mémoire 8 fichiers, 3 niveaux étanches, 4 rituels, discipline deploy, principes données, boucle de session, matrice de conformité, backlog de synchro). Pollinisation croisée : locatif a adopté `RECALL.md`/`DECISIONS.md` (de patrimoine) ; patrimoine recevra le hook SessionStart + INDEX + dégraissage (de locatif).
+2. **Alternatives refusées** : laisser les 2 projets diverger (chacun réinvente ses rituels) ; un seul repo « maître » imposé à l'autre (perd les forces propres de chacun).
+3. **Conséquences attendues** : un seul standard à apprendre, répliqué dans les 2 repos ; la matrice de conformité (§7 de la charte) trace les écarts restants ; toute évolution du standard se réplique des deux côtés.
+4. **Périmètre** : `docs/OPERATING-MODEL.md` (identique ici et dans patrimoine), `.memory/RECALL.md` + `.memory/DECISIONS.md` (déjà créés), `.memory/INDEX.md` (référence les 8 fichiers).
+5. **Statut** : **acté** (charte écrite + miroitée). Ports restants suivis dans BLOCKERS (backlog de synchro).
+
 ## ADR-S-005 · 2026-06-04 · Consolidation mémoire périodique = cron + filet SessionStart (ceinture + bretelles)
 1. **Choix** : entretien périodique de `.memory/` via la skill `/consolidation` (fusionne/archive/promeut/réorganise), déclenchée par DEUX mécanismes complémentaires : (a) **cron** routine `/schedule` hebdo (lundi ~6h Martinique, mode *propose sans committer*) ; (b) **filet SessionStart** : `session-context.mjs` nudge si dernière consolidation > 7 j (lit `.memory/.last-consolidation`, sinon retombe sur « Dernière MAJ » de CONTEXT).
 2. **Alternatives refusées** : tout miser sur le cron (backend claude.ai des routines était KO le 2026-06-04 → fragile) ; tout miser sur le nudge (semi-auto, ne fire qu'au démarrage de session).

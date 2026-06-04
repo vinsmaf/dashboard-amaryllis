@@ -17,6 +17,7 @@
 | **[ITERATIONS_LOG.md](./ITERATIONS_LOG.md)** | Journal des sessions (rolling) | Pour retracer l'historique récent |
 
 ## Archives profondes (référence, pas à relire intégralement)
+- `../docs/OPERATING-MODEL.md` — **charte de fonctionnement COMMUNE aux 2 projets** (mémoire, rituels, deploy, matrice de conformité, backlog de synchro). Identique dans patrimoine-dashboard.
 - `../CLAUDE.md` — **référence architecture/technique** (stack, endpoints, footguns, conventions).
 - `../PROJECT_MEMORY.md` — mémoire long terme (état, secrets, crons, IDs, contraintes Vincent, backlog).
 - `../docs/INDEX.md` — carte d'indexation de toute la doc (~47 fichiers).
