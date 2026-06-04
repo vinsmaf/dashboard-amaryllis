@@ -99,6 +99,7 @@ try {
 } catch {}
 const params = new URLSearchParams(window.location.search);
 const cautionParam = params.get("caution"); // "ok" | "cancelled"
+const tvMode = params.get("tv") === "1"; // écran TV kiosque → pas de bandeau cookies
 
 // ── GA4 — delegated event listeners (couvre tous les éléments présents et futurs) ──
 // Helpers
@@ -308,7 +309,7 @@ createRoot(document.getElementById('root')).render(
       <LangProvider>
         <Suspense fallback={<div style={{ minHeight: "100vh", background: "#0e3b3a" }} />}>
           {cautionParam ? <CautionPage status={cautionParam} /> : <Component />}
-          {!cautionParam && !path.startsWith("/admin") && <CookieBanner />}
+          {!cautionParam && !tvMode && !path.startsWith("/admin") && <CookieBanner />}
           {!cautionParam && !path.startsWith("/admin") && !path.startsWith("/landing") && !path.startsWith("/bienvenue") && <ChatWidget />}
         </Suspense>
       </LangProvider>
