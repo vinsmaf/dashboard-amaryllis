@@ -30,6 +30,7 @@ import StockTrackerTab from "./tabs/StockTrackerTab.jsx";
 import LingeTab from "./tabs/LingeTab.jsx";
 import InventaireTab from "./tabs/InventaireTab.jsx";
 import ConversionTab from "./tabs/ConversionTab.jsx";
+import ServiceOrdersTab from "./tabs/ServiceOrdersTab.jsx";
 import OrchestratorTab from "./tabs/OrchestratorTab.jsx";
 import SocialTab from "./tabs/SocialTab.jsx";
 import ApprobationsTab from "./tabs/ApprobationsTab.jsx";
@@ -1257,6 +1258,7 @@ export default function App() {
         { id: "historique",  icon: "📈", label: "Historique" },
         { id: "analytics",   icon: "📊", label: "Analytics" },
         { id: "conversion",  icon: "💳", label: "Conversion" },
+        { id: "ventes",      icon: "🛎️", label: "Ventes" },
         { id: "avis",        icon: "⭐", label: "Avis" },
       ],
     },
@@ -1522,6 +1524,7 @@ export default function App() {
             {tab === "stocks"        && <StockTrackerTab />}
             {tab === "linge"         && <LingeTab />}
             {tab === "conversion"    && <ConversionTab />}
+            {tab === "ventes"        && <ServiceOrdersTab />}
             {tab === "avis"          && <AvisTab />}
             </LocalErrorBoundary>
           </div>
