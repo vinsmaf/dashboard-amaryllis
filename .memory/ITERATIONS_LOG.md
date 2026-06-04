@@ -5,6 +5,18 @@
 
 ---
 
+## 2026-06-04 (5) — SEO hors-page : diagnostic Search Console + exécution Top 5 (pilotage navigateur)
+**3 déploiements prod (page partenaires + fix contraste). Beaucoup de prépa contenu + pilotage navigateur.**
+
+- **🔑 DIAGNOSTIC SEARCH CONSOLE (le constat structurant)** : sur ~2 sem de données, **17 clics / 289 impressions / position moyenne 5,8 / CTR 5,9%**. **Seules 3 pages reçoivent des impressions** (accueil 165, /amaryllis 166, le reste ~0) → les 47 guides + 5 landings sont indexés mais **invisibles**. ~65% des requêtes = marque. Seul générique qui décolle : « location sainte luce martinique » (11 impr). **CONCLUSION : le SEO technique est déjà bon ; le goulot = AUTORITÉ DE DOMAINE (backlinks/citations/GBP), PAS du contenu.** → EN + nouveau contenu = prématurés tant que l'autorité ne monte pas.
+- **Vérif état SEO technique = TOUT déjà en place** (l'audit Explore initial était FAUX, lu sur les sources au lieu du live) : sitemap 63 URLs (POI inclus), JSON-LD Article+Breadcrumb+FAQPage sur destinations ET POI, maillage landings fait. Rien à reconstruire.
+- **Page `/nos-partenaires`** : enrichie (5 liens sortants distilleries **vérifiés par recherche web** : La Mauny 1ère car la + proche, Trois-Rivières, Clément, Depaz, Neisson) + **désorphelinée** (lien header site-wide). Bug contraste hero corrigé (titre navy invisible → scopé `.pt-hero`). 3 déploiements.
+- **Kits off-page préparés** (agents traffic-manager/commercial/seo) : `plan-execution-semaine1`, `emails-prospection-institutionnels` (6 emails, recipients trouvés : web@martiniquetourisme.com, bienvenue@mairie-sainte-luce.fr ; OT = tél 0596625353), `press-kit`. ⚠️ Emails corrigés : logements **pas encore déclarés ni classés** → retirer toute mention déclaration/classement.
+- **Plan déclaration/classement MAJ** (agent juriste, sur l'existant `docs/legal/plan-action-declarations.md`) : 6 meublés (Iguana exclue=bail long), loi Le Meur, classement Atout France, micro-BIC. ⚠️ Spécificités légales à CONFIRMER (mairie/expert-comptable).
+- **Top 5 exécuté en partie (pilotage navigateur, Vincent fait comptes/clics)** : ✅ **Post GBP « Studio Mabouya » PUBLIÉ** sur fiche Résidence (carrousel 4 photos exportées en JPEG dans ~/Downloads). ⏸️ Bing : import a pris la fiche *patrimoine* par erreur (Amaryllis sous le MÊME compte vinsmaf@gmail.com → reprenable). ⏸️ Apple Business Connect : produit séparé de Business Manager, URL rebondit → à faire via iPhone Plans. 📧 3 emails prêts (Vincent envoie). ⬜ PagesJaunes/Petit Futé (Vincent).
+
+**Commits** : analytics→partenaires→fix contraste + docs marketing/legal + mémoire. **À suivre** : Vincent exécute citations + envoie emails ; reprendre Bing/Apple ; contrôle C1 Ads.
+
 ## 2026-06-04 (4) — Dashboard Analytics business (data-049) déployé
 **1 déploiement prod. Onglet `/admin` Analytics enrichi de KPIs business.**
 

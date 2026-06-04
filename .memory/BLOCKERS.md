@@ -3,6 +3,17 @@
 > Ce qui reviendra nous embêter si on ne le documente pas. Format : statut · sujet · ce qui débloque.
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 
+## 🟡 SEO hors-page — autorité de domaine = LE levier (diagnostic Search Console 2026-06-04)
+- **Le SEO technique est bon (position 5,8) mais le site manque d'autorité** → seules 3 pages reçoivent des impressions (accueil, /amaryllis), les 47 guides + 5 landings ~0. **Ne PAS produire de contenu/EN tant que l'autorité ne monte pas** : produire ferait juste plus de pages à 0 impression. **Débloque** : exécution des citations + netlinking + GBP (kits prêts), puis mesurer dans 4-8 sem (Search Console → Liens → domaines référents).
+- **Citations off-page — état d'exécution (Top 5 « semaine 1 »)** :
+  - ✅ **Post GBP « Studio Mabouya » publié** 04/06 (fiche Résidence, 4 photos). Les **3 fiches GBP (patrimoine + Villa Amaryllis + Résidence) sont sous vinsmaf@gmail.com** (vérifié).
+  - ⏸️ **Bing Places** : l'import Google a pris la fiche **diversifiersonpatrimoine** (mauvaise) ; Villa Amaryllis pas dans l'index Bing. **Débloque** : reprendre l'ajout des 2 fiches Amaryllis (même compte Google) via « Ajouter une entreprise » → import Google en sélectionnant les bonnes, ou création manuelle (NAP prêt, vérif par courrier = lent).
+  - ⏸️ **Apple Business Connect** : produit SÉPARÉ de l'Apple Business Manager (org « Amaryllis » existe déjà) ; businessconnect.apple.com rebondit sur business.apple.com + 404. **Débloque** : revendiquer la fiche depuis **iPhone app Plans** (« Revendiquer cette entreprise »), ou Business Connect avec Apple ID dédié.
+  - 📧 **3 emails institutionnels prêts** (`docs/marketing/emails-prospection-institutionnels-2026-06.md`) : CMT `web@martiniquetourisme.com`, Mairie `bienvenue@mairie-sainte-luce.fr` (à confirmer), OT Sainte-Luce **tél 0596 62 53 53** (pas d'email public). Vincent envoie.
+  - ⬜ PagesJaunes + Petit Futé (création de compte = Vincent).
+- ⚠️ **Logements PAS encore déclarés ni classés** → les emails/citations ne doivent affirmer aucun classement (seule la note voyageurs 4,8★ est réelle). Cf. plan `docs/legal/plan-action-declarations.md` (déclaration mairie = prérequis OT/CMT + urgent légal).
+- **Limite du pilotage navigateur** : la plupart des citations = **création de compte** (prohibé pour Claude) + saisie/soumission de formulaire (mains de Vincent). Claude prépare (NAP, textes, navigation) ; Vincent exécute. Le post GBP a marché car l'accès existait déjà.
+
 ## 🔄 Ports entrants de synchro — À FAIRE ICI (côté locatif) — cf. `docs/OPERATING-MODEL.md` §8
 > Répartition actée 2026-06-04 : patrimoine fait ses ports de son côté ; **ces items sont le périmètre de locatif**.
 - **Carte source-de-vérité déclarative** (inspiré `PATRIMOINE_SOURCE`) : formaliser quels champs sont canoniques (`src/data/biens.js`) vs pilotés Sheet, au lieu du seed ad-hoc dans `App.jsx`. **Débloque** : un module `src/data/biensSource.js` (par champ : `canon` vs `sheet`) + test d'invariant.
