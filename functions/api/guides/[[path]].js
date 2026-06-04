@@ -1,13 +1,15 @@
 // Cloudflare Pages Function — /api/guides
 // Lit depuis D1 (revenue_manager) avec fallback vers /public/guides/{id}.json
 // GET  /api/guides?property_id=xxx  → retourne le guide
-// POST /api/guides                   → body: { property_id, guide } — sauvegarde en D1
+// POST /api/guides                   → body: { property_id, guide } — sauvegarde en D1 (AUTH admin requise)
+
+import { verifyBearer } from "../_adminauth.js";
 
 const CORS = {
   "Content-Type": "application/json",
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: CORS });
 
@@ -67,8 +69,11 @@ export async function onRequest(context) {
     return json({ ok: true, guide, source });
   }
 
-  // ── POST ────────────────────────────────────────────────────────────────────
+  // ── POST (AUTH admin requise — écrit le contenu public des livrets/prix) ─────
   if (request.method === "POST") {
+    const { ok } = await verifyBearer(request, env);
+    if (!ok) return json({ error: "Non autorisé" }, 401);
+
     const db = env.revenue_manager;
     if (!db) return json({ error: "D1 binding not found" }, 503);
 

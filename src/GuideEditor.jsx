@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { adminFetch } from './lib/apiFetch.js';
 
 const PROPERTIES = [
   { id: 'amaryllis',  label: 'Amaryllis',  emoji: '🌺' },
@@ -206,7 +207,7 @@ export default function GuideEditor({ mob }) {
   const save = async () => {
     setSaving(true);
     try {
-      const r = await fetch('/api/guides', {
+      const r = await adminFetch('/api/guides', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ property_id: propId, guide }),

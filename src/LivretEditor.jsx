@@ -2,6 +2,7 @@
 // Charge depuis /api/guides?property_id=xxx, sauvegarde via POST /api/guides
 
 import { useState, useEffect, useCallback } from "react";
+import { adminFetch } from "./lib/apiFetch.js";
 
 /* ─── Styles ───────────────────────────────────────────────── */
 const S = {
@@ -260,7 +261,7 @@ export default function LivretEditor() {
   const save = async () => {
     setStatus("saving");
     try {
-      const r = await fetch("/api/guides", {
+      const r = await adminFetch("/api/guides", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ property_id: propId, guide }),

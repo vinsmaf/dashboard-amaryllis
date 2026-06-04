@@ -387,6 +387,16 @@ export async function onRequestPost(context) {
           <p><strong>${label}</strong> — <strong>${amount}</strong><br>Logement : <strong>${bienNom}</strong>${contact ? `<br>Note du voyageur : ${contact}` : ""}${email ? `<br>Email : ${email}` : ""}</p>
           <p style="font-size:13px;color:#7a6b5a">À honorer auprès du voyageur. Détails dans Stripe + admin.</p></div>`,
       }).catch(() => {});
+      // Push mobile instantané (ntfy)
+      try {
+        if (env.NTFY_TOPIC) {
+          await fetch(`https://ntfy.sh/${env.NTFY_TOPIC}`, {
+            method: "POST",
+            headers: { Title: `Service vendu — ${label}`, Tags: "money_with_wings", Priority: "high" },
+            body: `${bienNom} · ${amount}${contact ? ` · ${contact}` : ""}`,
+          });
+        }
+      } catch { /* non bloquant */ }
       return json({ ok: true, type: "service" });
     }
 
