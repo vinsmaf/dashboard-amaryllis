@@ -16,10 +16,10 @@ const SECTIONS = [
     titre: "Découvertes & rhum",
     intro: "Le rhum agricole AOC est l'âme de la Martinique. Voici les maisons que nous conseillons à nos voyageurs.",
     items: [
-      { nom: "Distillerie Trois-Rivières", desc: "À quelques minutes de Sainte-Luce, l'un des domaines les plus emblématiques du Sud, avec son célèbre moulin." },
-      { nom: "Distillerie La Mauny", desc: "À Rivière-Pilote, voisine immédiate de nos logements : visite du domaine et dégustation de rhums vieux primés." },
-      { nom: "Habitation Clément", desc: "Au François, un parcours mêlant rhum, art contemporain et jardin botanique d'exception." },
-      { nom: "Distillerie Depaz", desc: "Au pied de la Montagne Pelée à Saint-Pierre, un cadre spectaculaire pour les amateurs de rhums vieux." },
+      { nom: "Distillerie Trois-Rivières", url: "https://www.troisrivieresrhum.com", desc: "À quelques minutes de Sainte-Luce, l'un des domaines les plus emblématiques du Sud, avec son célèbre moulin." },
+      { nom: "Maison La Mauny", url: "https://www.maisonlamauny.com", desc: "À Rivière-Pilote, voisine immédiate de nos logements : visite du domaine en « Ti Train » et dégustation de rhums vieux primés." },
+      { nom: "Habitation Clément", url: "https://www.fondation-clement.org", desc: "Au François, un parcours mêlant rhum, art contemporain et jardin botanique d'exception." },
+      { nom: "Distillerie Depaz", url: "https://depaz.fr", desc: "Au pied de la Montagne Pelée à Saint-Pierre, un cadre spectaculaire pour les amateurs de rhums vieux." },
     ],
   },
   {
@@ -103,6 +103,9 @@ const CSS = `
   .pt-section-intro { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 18px; line-height: 1.55; color: ${MUTED}; margin: 0 0 22px; padding-left: 14px; border-left: 3px solid ${CORAL}; }
   .pt-item { background: #fff; border: 1px solid ${SAND}; border-radius: 12px; padding: 18px 22px; margin-bottom: 12px; }
   .pt-item-nom { font-weight: 600; font-size: 15px; color: ${NAVY}; margin: 0 0 5px; }
+  .pt-item-link { color: ${CORAL}; text-decoration: none; border-bottom: 1px solid transparent; transition: border-color .18s; }
+  .pt-item-link:hover { border-bottom-color: ${CORAL}; }
+  .pt-item-link span { font-size: 11px; opacity: .7; }
   .pt-item-desc { font-size: 15px; line-height: 1.6; color: ${TEXT}; margin: 0; }
 
   .pt-partner { background: ${CREAM}; border: 1px solid ${SAND}; border-left: 4px solid ${GOLD}; border-radius: 0 16px 16px 0; padding: 30px 30px; margin: 8px 0 48px; }
@@ -174,7 +177,13 @@ export default function Partenaires() {
             <p className="pt-section-intro">{sec.intro}</p>
             {sec.items.map((it) => (
               <div key={it.nom} className="pt-item">
-                <p className="pt-item-nom">{it.nom}</p>
+                <p className="pt-item-nom">
+                  {it.url ? (
+                    <a className="pt-item-link" href={it.url} target="_blank" rel="noopener noreferrer">
+                      {it.nom} <span aria-hidden>↗</span>
+                    </a>
+                  ) : it.nom}
+                </p>
                 <p className="pt-item-desc">{it.desc}</p>
               </div>
             ))}

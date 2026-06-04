@@ -8595,6 +8595,12 @@ export default function PublicSite() {
               >
                 Avis
               </a>
+              <a href="/nos-partenaires" style={{ fontSize: 12, fontFamily: "'Jost', sans-serif", fontWeight: 300, color: "rgba(250,245,233,0.6)", textDecoration: "none", letterSpacing: "0.08em", whiteSpace: "nowrap", display: window.innerWidth < 860 ? "none" : "block", transition: "color 0.2s" }}
+                onMouseEnter={e => e.currentTarget.style.color = "var(--c-ivory)"}
+                onMouseLeave={e => e.currentTarget.style.color = "rgba(250,245,233,0.6)"}
+              >
+                Bonnes adresses
+              </a>
               <LangToggle />
               <ThemeToggle inline />
               {/* CTA Contact — pill */}
