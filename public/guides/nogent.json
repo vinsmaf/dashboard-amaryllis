@@ -358,6 +358,20 @@
       "price": 10,
       "desc": "Un étui de capsules pour votre machine Nespresso.",
       "kind": "immediat"
+    },
+    {
+      "id": "champagne",
+      "label": "Champagne + fruits frais à l'arrivée",
+      "price": 50,
+      "desc": "Une bouteille de champagne et une coupelle de fruits frais pour fêter votre arrivée.",
+      "kind": "sur-demande"
+    },
+    {
+      "id": "kit-bebe",
+      "label": "Kit bébé (lit parapluie + chaise haute)",
+      "price": 20,
+      "desc": "Lit parapluie et chaise haute installés pour la durée de votre séjour.",
+      "kind": "sur-demande"
     }
   ]
 }
