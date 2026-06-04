@@ -28,5 +28,11 @@
 - **PROJECT_MEMORY.md gonflait (52KB)** → dégraissé à 35KB, journal archivé.
 - **Pas d'index in-repo des docs / ADR non formalisés** → `docs/INDEX.md` + `docs/superpowers/specs/README.md` créés.
 
+## ⏳ Décisions différées — à RAPPELER à Vincent quand le déclencheur est atteint
+- **Passer l'audit d'invariants BLOQUANT au deploy** (aujourd'hui non-bloquant, ADR-S-003).
+  - **Déclencheur (déterministe)** : `scripts/audit-invariants.mjs` a tourné sur **≥5 déploiements** consécutifs avec **0 faux 🔴** (aucun FAIL qui se révèle erroné). Idéalement après avoir aussi corrigé les 2 findings 🟡 ouverts (doc « 557 erreurs » + prix en prose).
+  - **Action quand atteint** : dans `scripts/deploy-pages.sh`, sortir `audit-invariants.mjs` du bloc non-bloquant et faire `node scripts/audit-invariants.mjs || exit 1` (ou ajouter un flag `--strict` au script qui `exit 1` sur FAIL). Mettre à jour ADR-S-003 + CLAUDE.md.
+  - **Qui rappelle** : la skill `/audit` et `/cloture-session` doivent surfacer cette ligne tant qu'elle est ouverte. ➡️ **Claude : signaler ce rappel dès que tu constates ≥5 deploys propres.**
+
 ## 📌 Prochaine session (demain matin)
 - **Lancement Google Ads + Meta Ads pas-à-pas** : runbook `docs/marketing/RUNBOOK-lancement.md` ouvert, Vincent connecté à Google Ads (226-428-3778) + Meta Business Manager. **Vincent fait les clics, Claude guide.** Bloquant Google : importer la conversion `purchase` (PAS `booking_completed`) avant toute dépense.
