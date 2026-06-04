@@ -139,6 +139,7 @@ export default function GuestGuide() {
   const [guide, setGuide] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [autoCtx, setAutoCtx] = useState(null); // contexte séjour auto (mode TV)
 
   const colors = PROP_COLORS[propertyId] || PROP_COLORS.amaryllis;
   const { dark, mid: accent } = colors;
@@ -150,6 +151,15 @@ export default function GuestGuide() {
       .catch(() => setError('Erreur de chargement'))
       .finally(() => setLoading(false));
   }, [propertyId]);
+
+  // Mode TV sans prénom explicite → récupère la résa en cours (dates + prénom si dispo).
+  useEffect(() => {
+    if (!tvParams.tv || tvParams.guest) return;
+    fetch(`/api/tv-context?p=${propertyId}`)
+      .then(r => r.json())
+      .then(d => { if (d && (d.guest || d.du)) setAutoCtx(d); })
+      .catch(() => {});
+  }, [propertyId, tvParams.tv, tvParams.guest]);
 
   if (loading) return (
     <div style={{ minHeight: '100vh', background: dark, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -166,7 +176,14 @@ export default function GuestGuide() {
   );
 
   if (tvParams.tv) {
-    return <TvScreen slides={buildSlides(guide, tvParams)} colors={colors} pid={propertyId} />;
+    // L'URL prime ; sinon on complète avec la résa en cours (auto).
+    const tvMerged = {
+      ...tvParams,
+      guest: tvParams.guest || autoCtx?.guest || null,
+      du: tvParams.du || autoCtx?.du || null,
+      au: tvParams.au || autoCtx?.au || null,
+    };
+    return <TvScreen slides={buildSlides(guide, tvMerged)} colors={colors} pid={propertyId} />;
   }
 
   const pageUrl = window.location.href;
