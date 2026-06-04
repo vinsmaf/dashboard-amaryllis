@@ -387,5 +387,28 @@
       "a": "Vincent est joignable par WhatsApp au +33 6 10 88 07 72 — réponse garantie sous 1 heure en saison haute. Pour les urgences médicales, appelez le 15 (SAMU) ou le 112. La pharmacie de Sainte-Luce (0596 62 50 12) est ouverte du lundi au samedi, et la Clinique Sainte-Marie au Lamentin assure les urgences 24h/24 (0596 57 37 37)."
     }
   ],
-  "updated_at": "2026-05-21"
+  "updated_at": "2026-05-21",
+  "extras": [
+    {
+      "id": "late-early",
+      "label": "Départ tardif / arrivée anticipée",
+      "price": 80,
+      "desc": "Selon disponibilité — profitez du logement quelques heures de plus.",
+      "kind": "sur-demande"
+    },
+    {
+      "id": "menage-suppl",
+      "label": "Ménage supplémentaire",
+      "price": 90,
+      "desc": "Un ménage en cours de séjour, à la demande.",
+      "kind": "sur-demande"
+    },
+    {
+      "id": "planteur",
+      "label": "Bouteille de planteur maison",
+      "price": 15,
+      "desc": "Notre planteur de bienvenue maison, à savourer ou emporter.",
+      "kind": "immediat"
+    }
+  ]
 }
