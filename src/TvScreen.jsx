@@ -43,8 +43,9 @@ export default function TvScreen({ slides = [], colors = {}, pid = "amaryllis" }
   const [paused, setPaused] = useState(false);
   const accent = colors.mid || BRAND.coral;
 
-  // Fonds photo (rotation sur 6 clichés du logement) — fallback gradient si absent.
-  const photos = ["01", "02", "03", "04", "05", "06"].map((n) => `/photos/${pid}/${n}.webp`);
+  // Fond = photo « hero » (01), la plus soignée/lumineuse du logement, sur TOUS les slides
+  // (fiabilité visuelle : certaines photos d'intérieur sont trop sombres pour servir de fond).
+  const heroPhoto = `/photos/${pid}/01.webp`;
 
   useEffect(() => {
     if (paused || slides.length <= 1) return undefined;
@@ -53,7 +54,7 @@ export default function TvScreen({ slides = [], colors = {}, pid = "amaryllis" }
   }, [paused, slides.length]);
 
   const s = slides[i] || {};
-  const bg = photos[i % photos.length];
+  const bg = heroPhoto;
 
   /* styles */
   const eyebrow = { fontFamily: DISPLAY, fontWeight: 600, fontSize: "clamp(13px,1.25vw,21px)", letterSpacing: "0.42em", textTransform: "uppercase", color: BRAND.gold, margin: 0 };
