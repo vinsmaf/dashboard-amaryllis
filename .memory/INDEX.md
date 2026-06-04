@@ -12,6 +12,8 @@
 | **[ADR.md](./ADR.md)** | Décisions structurantes datées (5 lignes : choix / alternatives / conséquences / périmètre / statut) | Avant de toucher l'archi/les données |
 | **[LEARNINGS.md](./LEARNINGS.md)** | Enseignements réutilisables (pièges déjà rencontrés) | Avant d'agir sur un sujet à risque |
 | **[BLOCKERS.md](./BLOCKERS.md)** | Frictions / dettes / points bloquants + statut | Pour savoir ce qui attend quoi/qui |
+| **[RECALL.md](./RECALL.md)** | Rappel contextuel : quoi se rappeler avant de toucher un domaine (niv.2) | **Avant d'agir sur un domaine** |
+| **[DECISIONS.md](./DECISIONS.md)** | Moteur de décision : critères déterministes par type de décision (niv.3) | Avant de trancher |
 | **[ITERATIONS_LOG.md](./ITERATIONS_LOG.md)** | Journal des sessions (rolling) | Pour retracer l'historique récent |
 
 ## Archives profondes (référence, pas à relire intégralement)
