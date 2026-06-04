@@ -12,6 +12,13 @@
 4. **Périmètre** : `.memory/*` (nouveau), pointeurs depuis `PROJECT_MEMORY.md`.
 5. **Statut** : **acté** (Vincent a choisi « 1 fichier unique » mais le standard `.memory/` retenu pour aligner les 2 projets — à confirmer s'il préfère vraiment le fichier plat).
 
+## ADR-S-005 · 2026-06-04 · Consolidation mémoire périodique = cron + filet SessionStart (ceinture + bretelles)
+1. **Choix** : entretien périodique de `.memory/` via la skill `/consolidation` (fusionne/archive/promeut/réorganise), déclenchée par DEUX mécanismes complémentaires : (a) **cron** routine `/schedule` hebdo (lundi ~6h Martinique, mode *propose sans committer*) ; (b) **filet SessionStart** : `session-context.mjs` nudge si dernière consolidation > 7 j (lit `.memory/.last-consolidation`, sinon retombe sur « Dernière MAJ » de CONTEXT).
+2. **Alternatives refusées** : tout miser sur le cron (backend claude.ai des routines était KO le 2026-06-04 → fragile) ; tout miser sur le nudge (semi-auto, ne fire qu'au démarrage de session).
+3. **Conséquences attendues** : la mémoire est jardinée même si l'un des deux canaux tombe. **⚠️ Convention : à CHAQUE exécution de `/consolidation`, écrire la date du jour (AAAA-MM-JJ) dans `.memory/.last-consolidation`** pour réarmer le compteur du nudge.
+4. **Périmètre** : `scripts/session-context.mjs` (nudge), `.memory/.last-consolidation` (marqueur, amorcé 2026-06-04), routine `/schedule` (à créer — cf. BLOCKERS, bloquée backend).
+5. **Statut** : filet **acté** (testé : 0 nudge à J0, nudge à J+30) ; cron **en attente** (relancer `/schedule`).
+
 ## ADR-S-004 · 2026-06-04 · Rappel mémoire automatique = hook SessionStart (niveau 2 étanche)
 1. **Choix** : un hook **`SessionStart`** (`.claude/settings.json` projet) exécute `scripts/session-context.mjs`, qui injecte au démarrage de chaque session l'état frais (`.memory/CONTEXT.md`) + les rappels ouverts (`.memory/BLOCKERS.md`). Transforme le « rappel » de convention en **mécanisme**.
 2. **Alternatives refusées** : compter sur Claude pour ouvrir `.memory/INDEX.md` (non fiable, déjà oublié 2× cette session) ; mettre le rappel dans CLAUDE.md (statique, ne reflète pas l'état frais).
