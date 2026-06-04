@@ -58,16 +58,24 @@ Ordre et activation des slides **configurables** (un slide vide/sans données es
 
 ## 5. Phase 2 — Ventes additionnelles (le levier revenu)
 
-### 5.1 Catalogue de services (données)
-- Nouveau champ `extras[]` dans le guide JSON par bien (éditable via `LivretEditor`) :
+### 5.1 Catalogue de services (données) — prix PAR LOGEMENT, éditables dans une page admin dédiée
+
+**Constat existant** : aucun frais de ménage canonique n'est stocké (saisi à la main dans `DevisEditor`, placeholder « ex: 80 ») ; les suppléments départ tardif/arrivée anticipée existent **en dur dans le texte** de `PublicSite.jsx` (« supplément 80 € » pour un bien, « 50 € » pour un autre). → Le **catalogue de services devient la source unique** de ces prix, par logement.
+
+- Nouveau champ `extras[]` dans le guide JSON par bien (ou table D1 dédiée `property_services`), **édité via une page/onglet admin dédié « Services / Extras »** (pas noyé dans LivretEditor) :
   ```json
   "extras": [
-    { "id": "late-checkout", "label": "Départ tardif (jusqu'à 15h)", "price": 30, "desc": "Profitez du logement quelques heures de plus." },
-    { "id": "menage-suppl", "label": "Ménage supplémentaire", "price": 45, "desc": "Un ménage en cours de séjour." },
-    { "id": "chef", "label": "Chef à domicile (soirée créole)", "price": 120, "desc": "Un dîner préparé sur place." }
+    { "id": "late-early", "label": "Départ tardif / arrivée anticipée", "price": 80, "desc": "Selon disponibilité — quelques heures de plus dans le logement.", "type": "sur-demande" },
+    { "id": "menage-suppl", "label": "Ménage supplémentaire", "price": 60, "desc": "Un ménage en cours de séjour (tarif = frais de ménage du logement).", "type": "sur-demande" },
+    { "id": "planteur", "label": "Bouteille de planteur maison", "price": 15, "desc": "Notre planteur de bienvenue, à emporter.", "type": "immédiat" }
   ]
   ```
-- Prix en € TTC, par logement (un même service peut avoir un prix différent selon le bien).
+- **Catalogue initial validé Vincent** (extensible, on en ajoutera d'autres ensuite) :
+  1. **Départ tardif / arrivée anticipée** — prix **par logement**, à définir en admin (reprendre les valeurs actuelles : ~80 € Amaryllis, ~50 € autres ; à confirmer bien par bien).
+  2. **Ménage supplémentaire** — prix = **frais de ménage du logement** (pas de source canonique → saisi en admin par logement).
+  3. **Bouteille de planteur maison** — **15 €** (défaut commun, surchargeable par logement).
+- Prix en € TTC, par logement. `type` : `immédiat` (produit livrable, ex. planteur) vs `sur-demande` (soumis à dispo, ex. late check-out, chef) → wording différent sur `/services` (« réservation sous réserve de confirmation »).
+- **Dette à résorber** (cohérence) : une fois le catalogue en place, faire lire à `PublicSite.jsx` le supplément late-checkout depuis cette source unique au lieu du texte en dur (évite le drift de prix). Hors périmètre Phase 2 strict, à noter.
 
 ### 5.2 Parcours d'achat (la TV = vitrine, le téléphone = caisse)
 1. Slide 4 affiche les services + un **QR → `/services/<bien>`** (page mobile).
