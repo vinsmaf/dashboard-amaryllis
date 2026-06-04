@@ -358,6 +358,38 @@ export async function onRequestPost(context) {
 
     const type = meta.type;
 
+    // ── Service additionnel payé (écran TV / page /services) → notif hôte + D1 ──
+    if (type === "service") {
+      const bienNom = meta.bienNom || NOMS[meta.bienId] || meta.bienId || "?";
+      const label   = meta.serviceLabel || "Service";
+      const amount  = session.amount_total ? `${(session.amount_total / 100).toFixed(0)} €` : "?";
+      const contact = meta.contact || "";
+      const email   = session.customer_details?.email || meta.email || "";
+      try {
+        const db = env.revenue_manager;
+        if (db) {
+          await db.prepare(`CREATE TABLE IF NOT EXISTS service_orders (
+            id TEXT PRIMARY KEY, bien_id TEXT, bien_nom TEXT, service_id TEXT, service_label TEXT,
+            amount INTEGER, contact TEXT, email TEXT, status TEXT,
+            created_at INTEGER NOT NULL DEFAULT (unixepoch()))`).run();
+          await db.prepare(`INSERT OR REPLACE INTO service_orders
+            (id, bien_id, bien_nom, service_id, service_label, amount, contact, email, status)
+            VALUES (?,?,?,?,?,?,?,?,?)`).bind(
+            session.id, meta.bienId || "?", bienNom, meta.serviceId || "?", label,
+            session.amount_total || 0, contact, email, "paye"
+          ).run();
+        }
+      } catch (e) { console.warn("[webhook] service_orders:", e.message); }
+      await sendEmail(env, {
+        subject: `🛎️ Service vendu — ${label} · ${bienNom} (${amount})`,
+        html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px">
+          <h2 style="color:#0e3b3a">🛎️ Nouveau service payé</h2>
+          <p><strong>${label}</strong> — <strong>${amount}</strong><br>Logement : <strong>${bienNom}</strong>${contact ? `<br>Note du voyageur : ${contact}` : ""}${email ? `<br>Email : ${email}` : ""}</p>
+          <p style="font-size:13px;color:#7a6b5a">À honorer auprès du voyageur. Détails dans Stripe + admin.</p></div>`,
+      }).catch(() => {});
+      return json({ ok: true, type: "service" });
+    }
+
     // ── Acompte / solde (Payment Links devis) → maj statut devis_paiements ──
     if (type === "acompte" || type === "solde") {
       // id du devis = lien d'acompte (= row id). Pour le solde, le cron a mis devisId.
