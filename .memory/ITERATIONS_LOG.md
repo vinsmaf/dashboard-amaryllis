@@ -5,6 +5,14 @@
 
 ---
 
+## 2026-06-04 (6) — Écran d'accueil TV des logements — Phase 1 livrée (subagent-driven)
+**1 chantier produit (brainstorm→spec→plan→implé). Déployé + vérifié live.**
+
+- **Brainstorm → spec → plan** : `docs/superpowers/specs/2026-06-04-tv-welcome-screen-design.md` + `plans/2026-06-04-tv-welcome-screen-phase1.md`. S'appuie sur l'existant `/bienvenue/<bien>` (`GuestGuide` + guides JSON). 3 phases : écran TV (P1, fait) · ventes additionnelles Stripe via QR (P2, attend prix par logement) · images de secours (P3).
+- **Phase 1 implémentée en subagent-driven (6 tâches, ~5 sous-agents)** : `src/utils/tvScreen.js` (pur, **12 tests vitest**) + `src/TvScreen.jsx` (diaporama plein écran, QR via lib `qrcode`, system-ui, overscan) + bascule `?tv=1` dans `GuestGuide` + helper admin « Générer l'URL TV » dans `LivretEditor` (onglet QR, variable `propId`). Déployé, **vérifié live** (`/bienvenue/mabouya?tv=1` générique + `?guest=&du=&au=` perso) : diaporama OK, QR scannables.
+- **🐛 3ᵉ occurrence du bug `[data-surface="site"] h1`** : le `<h1>` du TvScreen ne fixait pas `color` inline → titre navy invisible sur fond sombre (même sur `/bienvenue`). Corrigé (`color:#fff` inline). **Le code du plan lui-même contenait le piège** → leçon renforcée.
+- **Polish optionnel non bloquant** : « Bienvenue à Studio Mabouya » (gram. « au Studio » / « à la Villa ») — article à gérer dans `buildSlides` un jour.
+
 ## 2026-06-04 (5) — SEO hors-page : diagnostic Search Console + exécution Top 5 (pilotage navigateur)
 **3 déploiements prod (page partenaires + fix contraste). Beaucoup de prépa contenu + pilotage navigateur.**
 
