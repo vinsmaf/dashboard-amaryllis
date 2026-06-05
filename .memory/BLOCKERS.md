@@ -14,6 +14,13 @@
 - ⚠️ **Logements PAS encore déclarés ni classés** → les emails/citations ne doivent affirmer aucun classement (seule la note voyageurs 4,8★ est réelle). Cf. plan `docs/legal/plan-action-declarations.md` (déclaration mairie = prérequis OT/CMT + urgent légal).
 - **Limite du pilotage navigateur** : la plupart des citations = **création de compte** (prohibé pour Claude) + saisie/soumission de formulaire (mains de Vincent). Claude prépare (NAP, textes, navigation) ; Vincent exécute. Le post GBP a marché car l'accès existait déjà.
 
+## 🟢 Meta Ads — PRÊT À LANCER (Vincent lance demain, 2026-06-05)
+- **Tout préparé** : plan complet `docs/marketing/campagne-meta-ads-2026-06.md` + checklist 1 page `docs/marketing/meta-lancement-checklist.md` + **visuels** dans `~/Downloads/meta-ads/` (amaryllis-premium + mabouya-couple).
+- **Tracking OK** (prérequis §7 levé) : Meta Pixel `714189639771397` + event `Purchase` valeur € (fiabilisé 04/06). Confirmé côté Meta (notice rétention audience purchase = events remontent). CAPI = bonus non fait.
+- **Compte** : « Amaryllis corp » `act_853205825762332` (business 609408700286001) — actif. ⚠️ **BLOQUEUR restant = moyen de paiement** à confirmer + poser une limite de compte (Vincent).
+- **Campagne à monter** : C1-TOFU objectif **Trafic**, ABO, 2 ad sets — A1 Amaryllis 5€/j (audience A) `/amaryllis` + A2 Mabouya 5€/j (audience B couple) `/mabouya` = 10€/j. Copy = angles 1 & 2 du doc.
+- ⚠️ **Meta bloque le pilotage navigateur** sur adsmanager.facebook.com (clics/screenshots = `permission_required`, navigate hang ; `get_page_text` marche en lecture seule). → **Mode guidé/self-serve obligatoire** : Claude ne peut PAS construire la campagne, Vincent la monte (checklist prête).
+
 ## 🔄 Ports entrants de synchro — À FAIRE ICI (côté locatif) — cf. `docs/OPERATING-MODEL.md` §8
 > Répartition actée 2026-06-04 : patrimoine fait ses ports de son côté ; **ces items sont le périmètre de locatif**.
 - **Carte source-de-vérité déclarative** (inspiré `PATRIMOINE_SOURCE`) : formaliser quels champs sont canoniques (`src/data/biens.js`) vs pilotés Sheet, au lieu du seed ad-hoc dans `App.jsx`. **Débloque** : un module `src/data/biensSource.js` (par champ : `canon` vs `sheet`) + test d'invariant.
