@@ -83,5 +83,22 @@ Les libellés « dès X€ » sont **plus chers que le vrai tarif** sur presque 
 
 Fichiers à modifier lors de l'alignement : `src/data/biens.js` (`prix` + `seoDesc`), `src/GuideVillaPiscine.jsx`, `src/GuideExplorer.jsx`, `src/GuideProximite.jsx`, `src/GuideActivites.jsx`, `src/Faq.jsx`. Puis `npm run deploy:pages`.
 
-## 6. À vérifier (point ouvert)
-Les overrides de prix de l'onglet Tarifs vivent en **localStorage** (navigateur admin). **Vérifier** que les vrais tarifs sont bien propagés aux **visiteurs publics** (via overrides serveur), sinon un visiteur verrait le `SEED_DAILY_PRICES` (périmé) au lieu du vrai prix. Si écart → câbler une source serveur unique des prix journaliers.
+## 6. 🔴 Bug structurel identifié (à corriger — chantier dédié)
+
+Le « Prix de base — site public » (onglet Tarifs, `src/tabs/Tarifs.jsx`) **n'est pas qu'une accroche** :
+1. Il alimente les **périodes saisonnières** : `prix effectif = prix de base × multiplicateur saison` (`effectivePrice`).
+2. **Collision de clé localStorage** : le « Prix de base » et les prix journaliers écrivent **tous deux** dans `localStorage["amaryllis_prices"]` avec des **formats incompatibles** :
+   - Prix de base → `{ bienId: 220 }` (nombre)
+   - Prix journaliers → `{ bienId: { "AAAA-MM-JJ": 130 } }` (objet par date)
+   → ils **s'écrasent mutuellement** selon la dernière sauvegarde. C'est la **cause racine** de la confusion (et d'un éventuel écart prix admin vs prix vu par un visiteur public).
+
+**Cible propre (validée avec Vincent — Option « supprimer le Prix de base ») :**
+- « Prix de base » + saisons deviennent un **GÉNÉRATEUR** qui remplit le **calendrier journalier** (clé dédiée, format unique `{bienId:{date:prix}}`).
+- **Source unique** = les prix journaliers. L'accroche « dès X€ » = **min des prix journaliers** (calculé, plus de champ éditable séparé).
+- `biens.js prix` = fallback SEO uniquement, aligné sur le min réel + test de cohérence.
+- Séparer les clés localStorage (base vs journalier) ou supprimer la clé base.
+
+⚠️ Money-critical → **à faire en chantier dédié avec tests vitest + gate**, pas en édition à chaud.
+
+## 7. À vérifier aussi
+Les prix journaliers réels vivent en **localStorage** (navigateur admin) + publiés serveur (`/api/site-config`). Vérifier que les vrais tarifs sont bien **propagés aux visiteurs publics** (sinon un visiteur voit `SEED_DAILY_PRICES`, périmé). À régler dans le même chantier (source serveur unique des prix journaliers).
