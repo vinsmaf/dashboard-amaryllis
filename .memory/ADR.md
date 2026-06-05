@@ -5,6 +5,27 @@
 
 ---
 
+## ADR-S-008 · 2026-06-04 · Écran d'accueil TV = mode kiosk de `/bienvenue` (réutilise les livrets)
+1. **Choix** : écran TV des logements = **mode `?tv=1` du livret existant** (`GuestGuide` → `TvScreen.jsx`, diaporama plein écran : accueil perso, WiFi, guide, services, infos, rebook), data depuis les **guides JSON** (D1). Perso auto via `/api/tv-context` (résa en cours : prénom+dates si directe, dates seules si OTA). Fond = photo hero (01) du bien. Param `?slide=N` (fige un slide : revue/preview/images Phase 3).
+2. **Alternatives refusées** : app native tvOS/Android TV (trop lourd) ; rotation de photos 02+ (trop sombres → illisible) ; perso 100% manuelle (moins « waouh »).
+3. **Conséquences attendues** : 1 URL par bien sur n'importe quelle TV à navigateur ; pousse le trafic vers le site (QR guide/site/services) ; images de secours générées (`scripts/gen-tv-screens.mjs` → `public/tv/<bien>.png`).
+4. **Périmètre** : `src/TvScreen.jsx`, `src/utils/tvScreen.js` (+tests), `src/GuestGuide.jsx`, `functions/api/tv-context.js`, `scripts/gen-tv-screens.mjs`. Spec `docs/superpowers/specs/2026-06-04-tv-welcome-screen-design.md`.
+5. **Statut** : **acté & déployé** (Phases 1-3). Action Vincent : mots de passe WiFi réels.
+
+## ADR-S-009 · 2026-06-04 · Ventes additionnelles = QR → page `/services/<bien>` → Stripe (prix validé serveur)
+1. **Choix** : vendre des services (départ tardif, ménage, planteur 15€, Nespresso 10€, champagne, kit plage/bébé) via **catalogue `extras[]` par livret** (éditable admin onglet Services), page publique `/services/<bien>`, paiement **Stripe Payment Link** créé par `/api/service-checkout` qui **valide le prix CÔTÉ SERVEUR** (anti-fraude). Webhook `type=service` → email + ntfy hôte + D1 `service_orders` (onglet admin Ventes).
+2. **Alternatives refusées** : paiement sur la TV elle-même (TV = vitrine, téléphone = caisse) ; prix envoyés par le client (fraude) ; objectif « achat immédiat » seulement (gardé `sur-demande` vs `immediat`).
+3. **Conséquences attendues** : revenu additionnel par voyageur, mesurable ; ⚠️ **Stripe LIVE = argent réel** (test requis avant de s'appuyer dessus) ; prix late/ménage = placeholders à régler en admin.
+4. **Périmètre** : `functions/api/service-checkout.js`, `stripe-webhook.js` (branche service), `src/Services.jsx`, `src/tabs/ServiceOrdersTab.jsx`, `functions/api/service-orders.js`, `LivretEditor` (onglet Services), catalogue dans `public/guides/*.json` + D1.
+5. **Statut** : **acté & déployé**. Aussi poussé en email pré-arrivée (upsell). Action Vincent : prix réels + 1 achat test.
+
+## ADR-S-010 · 2026-06-04 · `POST /api/guides` désormais authentifié (verifyBearer)
+1. **Choix** : le POST qui écrit le contenu public des livrets/prix en D1 exige l'**auth admin** (`verifyBearer`) ; GET reste public ; `LivretEditor`/`GuideEditor` passent par `adminFetch` (token).
+2. **Alternatives refusées** : laisser le POST ouvert (faille : n'importe qui modifiait le contenu voyageur + les prix services).
+3. **Conséquences attendues** : ⚠️ **on ne peut plus pousser le catalogue en D1 par script/curl** → tout ajout/prix de service se fait désormais **dans l'admin** (onglet Services). Sécurité > commodité.
+4. **Périmètre** : `functions/api/guides/[[path]].js`, `src/LivretEditor.jsx`, `src/GuideEditor.jsx`.
+5. **Statut** : **acté & déployé** (vérifié live : POST sans auth = 401, GET = 200).
+
 ## ADR-S-001 · 2026-06-04 · Rituel de clôture = skill `/cloture-session` + système `.memory/`
 1. **Choix** : capturer la mémoire de fin de session via une **skill déclenchée manuellement** (`/cloture-session`), qui écrit dans un dossier `.memory/` indexé (CONTEXT/ADR/LEARNINGS/BLOCKERS/ITERATIONS_LOG), calqué sur patrimoine-dashboard.
 2. **Alternatives refusées** : (a) un **agent autonome** qui devinerait « la session est finie » → mauvais timing, écarté ; (b) **regonfler PROJECT_MEMORY.md** qu'on venait de dégraisser → écarté ; (c) 1 seul fichier `docs/JOURNAL-SESSIONS.md` → remplacé par le standard `.memory/` déjà éprouvé sur l'autre projet (cohérence inter-projets).

@@ -17,13 +17,14 @@ Amaryllis (**villa**, 280€, 8p) · Iguana (**villa**, 180€, 6p, `bookable:fa
 **Seuls Amaryllis & Iguana = « villas ».** Source unique des faits : `src/data/biens.js`.
 
 ## Où on en est (cap)
-- **Problème n°1 = famine de trafic** (~5 visiteurs/j, SEO organique ~5 sessions/mois). Priorité acquisition.
-- **Architecture/gouvernance : assainie** cette session (source unique des biens, tests+gate+CI, cohérence auto, occupation→RM, mémoire `.memory/` + index docs).
-- **Revenue Manager = RECO uniquement** (Claude ne change jamais un prix lui-même).
-- **Emails voyageurs = résas DIRECTES (Stripe) only.**
+- **Problème n°1 = famine de trafic** (~5 visiteurs/j ; Search Console : pos. moy. 5,8 mais ~289 impr/3 mois, autorité de domaine faible → SEO technique bon mais peu vu). Levier = autorité hors-page (citations/netlinking/GBP) + paid (Google Ads live, Meta demain), PAS plus de contenu.
+- **Diagnostic conversion** : 240 view_item → 16 begin_checkout → purchase (tracking réparé le 04/06, à confirmer sur la prochaine résa directe).
+- **Revenue Manager = RECO uniquement** ; **Emails voyageurs = résas DIRECTES (Stripe) only** ; **Claude prépare, Vincent lance/paie/publie** (Ads, GBP, comptes).
+- **Stripe LIVE = argent réel** (services additionnels) → tester avant de s'appuyer dessus.
 
 ## Chantiers récents livrés (juin 2026, tous déployés)
-Source unique des biens (ph1-3) · Robustesse (filet tests+gate+CI, cohérence, imports idempotents) · Occupation réelle→RM (ph1 snapshot, ph2 reco, dates réservées neutralisées) · Meta Pixel + fix CSP · Runbook lancement Ads · Gouvernance doc (CLAUDE.md actualisé, docs/INDEX.md, index ADR, PROJECT_MEMORY 52→35KB, `.memory/`).
+Source unique des biens (ph1-3) · Robustesse (tests+gate+CI, cohérence, imports idempotents) · Occupation→RM · Meta Pixel + CSP · Gouvernance doc + `.memory/`.
+**04/06 (grosse journée)** : dashboard Analytics business (data-049) · diagnostic SEO Search Console + kits off-page (citations/emails/press-kit) · **écran TV premium par logement** (`/bienvenue/<bien>?tv=1` : accueil perso via `/api/tv-context`, WiFi+QR, guide, services, infos, rebook + images de secours `public/tv/`) · **moteur de ventes additionnelles** (7 services QR→Stripe prix validé serveur, éditeur admin onglet Services, notif hôte email+ntfy, onglet admin Ventes, upsell email pré-arrivée) · **tracking purchase réparé** (gtag pas prêt après redirect 3DS) · sélecteur photo dans approbations réseaux · **sécurité `POST /api/guides`** (auth) · Google Ads suivi+ménage · **Meta prêt à lancer demain** (tracking OK, visuels+checklist, bloqueur=paiement).
 
 ## Système mémoire & rituels (mis en place 2026-06-04)
 **3 niveaux étanches** : stockage (PROJECT_MEMORY/docs/git) · rappel (hook SessionStart → `scripts/session-context.mjs` + `RECALL.md`) · décision (`ADR.md` + `DECISIONS.md`).
