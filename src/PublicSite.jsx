@@ -224,7 +224,7 @@ const WA_MSG_DEFAULT = encodeURIComponent("Bonjour, je souhaite obtenir des info
 
 const DEPOSIT_AMOUNTS = {
   amaryllis: 1500,
-  zandoli:   700,
+  zandoli:   500,
   iguana:    500,
   geko:      500,
   mabouya:   500,
@@ -331,7 +331,7 @@ const BIENS = [
         { label: "Check-in / Check-out", texte: "Check-in à partir de 17h, check-out avant 12h. Early/late possible selon disponibilité (supplément 50 €)." },
         { label: "Fumeurs", texte: "Non-fumeur à l'intérieur. Autorisé sur la terrasse et dans le jardin." },
         { label: "Stationnement", texte: "Une place de parking intérieur sécurisé réservée." },
-        { label: "Dépôt de garantie", texte: "700 € en cas de dommages constatés après le départ." },
+        { label: "Dépôt de garantie", texte: "500 € en cas de dommages constatés après le départ." },
         { label: "Capacité", texte: "4 voyageurs inclus dans le tarif de base. Possibilité d'accueillir 1 voyageur supplémentaire avec un supplément de 30 € par nuit." },
         { label: "Connexion", texte: "Wifi Starlink dans toute la propriété. Espace de travail dédié inclus." },
         { label: "Accès", texte: "Le logement comporte des marches ou escaliers. Accueil en personne par l'équipe Amaryllis." },

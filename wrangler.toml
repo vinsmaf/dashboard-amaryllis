@@ -5,7 +5,7 @@ compatibility_flags = ["nodejs_compat"]
 
 [triggers]
 crons = [
-  "0 * * * *",   # Sync iCal + publication auto éditoriale due — toutes les heures
+  "*/15 * * * *", # Sync iCal (résas Airbnb/Booking → Sheet) + publication auto éditoriale — toutes les 15 min
   "0 9 * * *",   # Audit + rappels + alertes + agents IA — chaque jour à 9h UTC (5h MQ)
   "0 12 * * *",  # Génération drafts éditoriaux J+2 — chaque jour à 12h UTC (8h MQ)
   "0 6 * * 1",   # Rapport hebdomadaire — lundi 6h UTC (2h Martinique / 8h Paris)

@@ -302,6 +302,31 @@ async function sendNouvellesResas(env, nouvelles) {
       </div>
     `),
   });
+
+  // Notification push temps réel (ntfy) — en plus de l'email
+  if (env.NTFY_TOPIC) {
+    try {
+      const lignes = nouvelles.map(e => {
+        const n = diffDays(e.checkin, e.checkout);
+        const c = e.canal === "airbnb" ? "Airbnb" : e.canal === "booking" ? "Booking" : (e.canal || "Direct");
+        return `${e.nom} · ${formatDate(e.checkin)}→${formatDate(e.checkout)} (${n} nuit${n > 1 ? "s" : ""}) · ${c}`;
+      }).join("\n");
+      await fetch(`https://ntfy.sh/${env.NTFY_TOPIC}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Title": `🌺 ${nouvelles.length} nouvelle${nouvelles.length > 1 ? "s" : ""} réservation${nouvelles.length > 1 ? "s" : ""}`,
+          "Priority": "high",
+          "Tags": "tada,calendar",
+          "Click": `${env.SITE_URL || "https://villamaryllis.com"}/admin`,
+        },
+        body: lignes,
+      });
+      console.log("[ntfy] ✓ notif nouvelle réservation envoyée");
+    } catch (e) {
+      console.error("[ntfy] notif résa erreur:", e.message);
+    }
+  }
 }
 
 // ── Rappels hôte (J-3 / J-1 / J+1 / J+2 avis / J-7 direct) ─────────────────
@@ -1296,13 +1321,19 @@ async function pushToSheets(env, allEvents) {
     canal: e.canal, checkin: e.checkin, checkout: e.checkout,
     montant: e.montant, fromIcal: true, notes: "",
   }));
+  // ⚠️ Apps Script SUPPRIME le body des POST (bug redirect Google) → on passe par
+  //    /api/sheets-proxy qui envoie en GET paginé (forwardChunked). Le POST direct
+  //    vers APPS_SCRIPT_URL n'écrivait JAMAIS rien dans le Sheet (body perdu).
   try {
-    await fetch(env.APPS_SCRIPT_URL, {
+    const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+    const r = await fetch(`${siteUrl}/api/sheets-proxy`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "X-Script-Url": env.APPS_SCRIPT_URL },
       body: JSON.stringify({ action: "importAllReservations", reservations }),
     });
-    console.log(`[sheets] ${reservations.length} réservations pushées`);
+    const d = await r.json().catch(() => ({}));
+    console.log(`[sheets] push via proxy — ok=${d.ok} added=${d.added ?? "?"} updated=${d.updated ?? "?"} (${reservations.length} envoyées)`);
+    if (d.errors) console.error("[sheets] erreurs chunks:", JSON.stringify(d.errors));
   } catch (e) {
     console.error("[sheets] Erreur:", e.message);
   }

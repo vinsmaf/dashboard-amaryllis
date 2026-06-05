@@ -4,7 +4,10 @@
 //
 // ⚠️ RENSEIGNER META_PIXEL_ID : Meta Events Manager → Sources de données → ton Pixel →
 //    l'ID est le nombre de ~15-16 chiffres affiché en haut. (C'est public, pas un secret.)
-export const META_PIXEL_ID = "714189639771397";
+// 2026-06-05 : aligné sur le dataset du compte pub « Amaryllis corp » (act 853205825762332,
+// Business 609408700286001) pour que les events on-site alimentent CE pixel → mesure + audiences
+// retargeting utilisables par la campagne Meta. (Ancien ID 714189639771397 = autre Business.)
+export const META_PIXEL_ID = "1648064656415946";
 
 let _loaded = false;
 
