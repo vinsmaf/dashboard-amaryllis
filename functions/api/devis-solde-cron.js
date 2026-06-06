@@ -62,7 +62,7 @@ async function sendMail(env, to, subject, html) {
     const r = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: resendFrom(env, "Amaryllis <contact@villamaryllis.com>"), to: [to], subject, html }),
+      body: JSON.stringify({ from: resendFrom(env), to: [to], subject, html }),
     });
     return r.ok;
   } catch { return false; }

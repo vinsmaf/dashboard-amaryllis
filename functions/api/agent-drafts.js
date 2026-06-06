@@ -92,7 +92,7 @@ async function executeDraft(env, draft) {
       method: "POST",
       headers: { "Authorization": `Bearer ${resend}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from: resendFrom(env, "Amaryllis <noreply@villamaryllis.com>"),
+        from: resendFrom(env),
         to: payload.to,
         subject: payload.subject,
         html: payload.html,

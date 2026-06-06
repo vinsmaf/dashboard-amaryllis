@@ -123,7 +123,7 @@ async function sendEmail(env, { subject, html, to }) {
     method: "POST",
     headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      from: resendFrom(env, "Amaryllis <notifications@villamaryllis.com>"),
+      from: resendFrom(env),
       to: Array.isArray(recipient) ? recipient : String(recipient).split(",").map(s => s.trim()).filter(Boolean),
       subject,
       html,

@@ -46,7 +46,7 @@ export async function onRequest(context) {
         method: "POST",
         headers: { "Authorization": `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          from: resendFrom(env, "Amaryllis <notifications@villamaryllis.com>"),
+          from: resendFrom(env),
           to: [env.NOTIFICATION_EMAIL || "vinsmaf@hotmail.com"],
           subject: "📊 Digest agents Amaryllis — semaine",
           text,

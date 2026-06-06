@@ -56,7 +56,7 @@ async function sendEmail(env, subject, html, text) {
       method: "POST",
       headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from: resendFrom(env, "Amaryllis <notifications@villamaryllis.com>"),
+        from: resendFrom(env),
         to, subject, html, text,
       }),
     });

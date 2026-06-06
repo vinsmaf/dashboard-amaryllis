@@ -203,7 +203,7 @@ export async function onRequestGet(context) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from:    resendFrom(env, "Amaryllis <notifications@villamaryllis.com>"),
+        from:    resendFrom(env),
         to:      [menageEmail],
         subject,
         html,

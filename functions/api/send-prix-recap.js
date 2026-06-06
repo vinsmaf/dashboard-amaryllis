@@ -100,7 +100,7 @@ export async function onRequestGet(context) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: resendFrom(context.env, "Amaryllis <notifications@villamaryllis.com>"),
+        from: resendFrom(context.env),
         to: [toEmail],
         subject: `📅 Rappel prix Airbnb — ${new Date().toLocaleDateString("fr-FR")}`,
         html: buildHtml(),

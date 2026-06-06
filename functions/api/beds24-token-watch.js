@@ -99,7 +99,7 @@ export async function onRequestGet(context) {
         method: "POST",
         headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          from: resendFrom(env, "Amaryllis <notifications@villamaryllis.com>"),
+          from: resendFrom(env),
           to: notifTo,
           subject: "🔴 URGENT — Token Beds24 invalide ou expiré",
           html: buildAlertHtml({ expiresInDays: 0, expiresAt: "DÉJÀ EXPIRÉ", tokenPreview: token.slice(0, 8) + "…" }),
@@ -132,7 +132,7 @@ export async function onRequestGet(context) {
         method: "POST",
         headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          from: resendFrom(env, "Amaryllis <notifications@villamaryllis.com>"),
+          from: resendFrom(env),
           to: notifTo,
           subject: `${urgencyLabel} Token Beds24 expire dans ${expiresInDays}j — action requise`,
           html: buildAlertHtml({ expiresInDays, expiresAt, tokenPreview }),

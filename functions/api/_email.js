@@ -11,7 +11,7 @@
 // resendFrom() valide donc la présence d'un vrai domaine FQDN dans RESEND_FROM ;
 // sinon il retombe sur `fallback` (par défaut une adresse @villamaryllis.com vérifiée).
 // Toujours passer un fallback en @villamaryllis.com (jamais @mail.villamaryllis.com).
-export function resendFrom(env, fallback = "Amaryllis <notifications@villamaryllis.com>") {
+export function resendFrom(env, fallback = "Amaryllis <contact@villamaryllis.com>") {
   const f = env && env.RESEND_FROM;
   return (f && /@[a-z0-9-]+(\.[a-z0-9-]+)+/i.test(f)) ? f : fallback;
 }

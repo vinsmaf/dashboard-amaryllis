@@ -102,7 +102,7 @@ export async function onRequestPost(context) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: resendFrom(context.env, "Amaryllis <contact@villamaryllis.com>"),
+        from: resendFrom(context.env),
         to: toEmail,
         reply_to: email,
         subject: `[Amaryllis] Message de ${nom}${bienLabel}`,

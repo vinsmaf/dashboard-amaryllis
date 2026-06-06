@@ -187,7 +187,7 @@ async function sendWhatsApp(env, text) {
 // ex "Amaryllis <notifications@>") faisait rejeter TOUS les emails par Resend
 // ("Domain not verified"). On valide donc la présence d'un domaine FQDN ; sinon on
 // retombe sur l'adresse vérifiée en dur. Robuste quelle que soit la valeur d'env.
-const VERIFIED_FROM = "Amaryllis <notifications@villamaryllis.com>";
+const VERIFIED_FROM = "Amaryllis <contact@villamaryllis.com>";
 function resendFrom(env) {
   const f = env && env.RESEND_FROM;
   return (f && /@[a-z0-9-]+(\.[a-z0-9-]+)+/i.test(f)) ? f : VERIFIED_FROM;

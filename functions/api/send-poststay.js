@@ -264,7 +264,7 @@ export async function onRequestGet(context) {
         method: "POST",
         headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          from:    resendFrom(env, "Amaryllis Locations <notifications@villamaryllis.com>"),
+          from:    resendFrom(env),
           to:      [b.email],
           subject,
           html,
