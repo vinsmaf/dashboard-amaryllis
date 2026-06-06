@@ -183,12 +183,21 @@ async function sendWhatsApp(env, text) {
   }
 }
 
+// Adresse expéditeur vérifiée. ⚠️ Une variable RESEND_FROM cassée (domaine manquant,
+// ex "Amaryllis <notifications@>") faisait rejeter TOUS les emails par Resend
+// ("Domain not verified"). On valide donc la présence d'un domaine FQDN ; sinon on
+// retombe sur l'adresse vérifiée en dur. Robuste quelle que soit la valeur d'env.
+const VERIFIED_FROM = "Amaryllis <notifications@mail.villamaryllis.com>";
+function resendFrom(env) {
+  const f = env && env.RESEND_FROM;
+  return (f && /@[a-z0-9-]+(\.[a-z0-9-]+)+/i.test(f)) ? f : VERIFIED_FROM;
+}
+
 // ── Email via Resend ─────────────────────────────────────────────────────────
 async function sendEmail(env, { to, subject, html }) {
   if (!env.RESEND_API_KEY) return;
   const dest = to || env.NOTIFICATION_EMAIL || "contact@villamaryllis.com";
-  // RESEND_FROM = adresse expéditeur vérifiée dans Resend (ex: notifications@mail.villamaryllis.com)
-  const fromAddr = env.RESEND_FROM || "Amaryllis <notifications@mail.villamaryllis.com>";
+  const fromAddr = resendFrom(env);
   const r = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { "Authorization": `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
@@ -1298,7 +1307,7 @@ async function runMonthlyExport(env, allEvents) {
     method: "POST",
     headers: { "Authorization": `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      from: env.RESEND_FROM || "Amaryllis <notifications@mail.villamaryllis.com>",
+      from: resendFrom(env),
       to: String(env.NOTIFICATION_EMAIL || "contact@villamaryllis.com").split(",").map(s => s.trim()).filter(Boolean),
       subject: `📊 Rapport ${label} — ${totalCA.toLocaleString("fr-FR")}€ · ${totalNuits}n · ${tauxOcc}% occ.`,
       html,
@@ -1778,7 +1787,7 @@ async function runPrixRecap(env) {
     method: "POST",
     headers: { "Authorization": `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      from: env.RESEND_FROM || "Amaryllis <notifications@mail.villamaryllis.com>",
+      from: resendFrom(env),
       to: [dest],
       subject: `📅 Rappel prix Airbnb — ${new Date().toLocaleDateString("fr-FR")}`,
       html,
@@ -2228,7 +2237,7 @@ export default {
 </html>`;
 
               const toEmail = env.NOTIFICATION_EMAIL || "contact@villamaryllis.com";
-              const fromAddr = env.RESEND_FROM || "Amaryllis <notifications@mail.villamaryllis.com>";
+              const fromAddr = resendFrom(env);
 
               const r = await fetch("https://api.resend.com/emails", {
                 method: "POST",
