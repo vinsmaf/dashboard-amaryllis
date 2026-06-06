@@ -15,6 +15,52 @@ export default function ApprobationsTab() {
   const [editingId, setEditingId] = useState(null);
   const [editPayload, setEditPayload] = useState(null);
   const [pickerBien, setPickerBien] = useState("amaryllis");
+  // 🚫 Mots/expressions interdits (apprentissage agents)
+  const [lessons, setLessons]   = useState([]);
+  const [showBanned, setShowBanned] = useState(false);
+  const [banTerm, setBanTerm]   = useState("");
+  const [banReason, setBanReason] = useState("");
+  const [banBien, setBanBien]   = useState("");
+
+  const BIENS = ["amaryllis", "zandoli", "iguana", "geko", "mabouya", "schoelcher", "nogent"];
+
+  async function loadLessons() {
+    try {
+      const r = await adminFetch("/api/agent-lessons");
+      const d = await r.json();
+      setLessons(d.lessons || []);
+    } catch { /* silencieux */ }
+  }
+
+  async function addLesson(term, reason = "", bien_id = "") {
+    const t = (term || "").trim();
+    if (!t) return;
+    try {
+      const r = await adminFetch("/api/agent-lessons", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ term: t, reason: reason.trim() || undefined, bien_id: bien_id || undefined }),
+      });
+      const d = await r.json();
+      if (d.ok) {
+        setToast({ message: `🚫 « ${t} » banni — les agents l'éviteront`, success: true });
+        setBanTerm(""); setBanReason(""); setBanBien("");
+        loadLessons();
+      } else {
+        setToast({ error: d.error || "Échec ajout" });
+      }
+    } catch (e) { setToast({ error: e.message }); }
+    finally { setTimeout(() => setToast(null), 3500); }
+  }
+
+  async function delLesson(id) {
+    try {
+      await adminFetch(`/api/agent-lessons?id=${id}`, { method: "DELETE" });
+      loadLessons();
+    } catch (e) { setToast({ error: e.message }); }
+  }
+
+  useEffect(() => { loadLessons(); }, []);
 
   async function loadDrafts() {
     setLoading(true);
@@ -107,6 +153,61 @@ export default function ApprobationsTab() {
             {f.label}{filter !== f.id && counts[f.id] > 0 ? ` (${counts[f.id]})` : ""}
           </button>
         ))}
+      </div>
+
+      {/* 🚫 Panneau Mots / expressions interdits — apprentissage des agents */}
+      <div style={{ marginBottom: 16, background: "#1e293b", border: "1px solid rgba(239,68,68,0.18)", borderRadius: 12, overflow: "hidden" }}>
+        <button onClick={() => setShowBanned(s => !s)} style={{
+          width: "100%", textAlign: "left", padding: "12px 16px", background: "transparent", border: "none", cursor: "pointer",
+          color: "#e2e8f0", fontSize: 13, fontWeight: 700, display: "flex", justifyContent: "space-between", alignItems: "center",
+        }}>
+          <span>🚫 Mots / expressions interdits {lessons.length > 0 && <span style={{ color: "#ef4444" }}>({lessons.length})</span>}</span>
+          <span style={{ color: "#64748b", fontSize: 11 }}>{showBanned ? "▲ masquer" : "▼ gérer"}</span>
+        </button>
+
+        {showBanned && (
+          <div style={{ padding: "0 16px 16px" }}>
+            <div style={{ fontSize: 11, color: "#64748b", marginBottom: 10 }}>
+              Saisis un mot/expression que les agents ne doivent <strong>jamais</strong> écrire. Il est injecté dans leurs prompts (évité dès la rédaction) <em>et</em> bloqué au fact-check.
+            </div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
+              <input
+                value={banTerm} onChange={e => setBanTerm(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") addLesson(banTerm, banReason, banBien); }}
+                placeholder="mot ou expression (ex. « paradisiaque »)"
+                style={{ flex: "2 1 220px", minWidth: 180, padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#0f172a", color: "#e2e8f0", fontSize: 12 }}
+              />
+              <input
+                value={banReason} onChange={e => setBanReason(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") addLesson(banTerm, banReason, banBien); }}
+                placeholder="raison (optionnel)"
+                style={{ flex: "2 1 180px", minWidth: 140, padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#0f172a", color: "#e2e8f0", fontSize: 12 }}
+              />
+              <select value={banBien} onChange={e => setBanBien(e.target.value)}
+                style={{ flex: "1 1 120px", padding: "8px 10px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#0f172a", color: "#e2e8f0", fontSize: 12 }}>
+                <option value="">Tous les biens</option>
+                {BIENS.map(b => <option key={b} value={b}>{b}</option>)}
+              </select>
+              <button onClick={() => addLesson(banTerm, banReason, banBien)} disabled={!banTerm.trim()} style={btnStyle("#ef4444", false, !banTerm.trim())}>🚫 Bannir</button>
+            </div>
+
+            {lessons.length === 0 ? (
+              <div style={{ fontSize: 11, color: "#475569", fontStyle: "italic" }}>Aucun mot interdit pour l'instant.</div>
+            ) : (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {lessons.map(l => (
+                  <span key={l.id} title={l.reason || ""} style={{
+                    display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 8px 4px 10px", borderRadius: 16,
+                    background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.25)", color: "#fca5a5", fontSize: 11, fontWeight: 600,
+                  }}>
+                    {l.term || l.pattern}{l.bien_id ? <em style={{ color: "#fbbf24", fontStyle: "normal" }}> · {l.bien_id}</em> : null}
+                    <button onClick={() => delLesson(l.id)} title="Supprimer" style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 13, lineHeight: 1, padding: 0 }}>×</button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {toast && (
@@ -300,8 +401,14 @@ export default function ApprobationsTab() {
                         <div style={{ padding: "10px 14px", background: "rgba(239,68,68,0.08)", borderTop: "1px solid rgba(239,68,68,0.2)" }}>
                           <div style={{ fontSize: 11, fontWeight: 700, color: "#ef4444", marginBottom: 6 }}>🚫 Fact-check échec — phrases interdites détectées :</div>
                           {r.fact_check.errors.map((err, i) => (
-                            <div key={i} style={{ fontSize: 10, color: "#fca5a5", marginBottom: 3 }}>
-                              <strong>"{err.phrase}"</strong> — {err.reason}
+                            <div key={i} style={{ fontSize: 10, color: "#fca5a5", marginBottom: 3, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                              <span><strong>"{err.phrase}"</strong> — {err.reason}</span>
+                              {err.phrase && (
+                                <button onClick={() => addLesson(err.phrase, err.reason)} title="Bannir cette expression pour les futurs contenus"
+                                  style={{ fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 10, border: "1px solid rgba(239,68,68,0.4)", background: "transparent", color: "#ef4444", cursor: "pointer" }}>
+                                  🚫 bannir
+                                </button>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -329,6 +436,12 @@ export default function ApprobationsTab() {
                         </button>
                         <button onClick={() => { setEditingId(d.id); setEditPayload(payload); setPickerBien(payload.imageUrl?.match(/photos\/([a-z]+)/)?.[1] || "amaryllis"); }} style={btnStyle("#64748b", true)}>✏️ Modifier</button>
                         <button onClick={() => act(d.id, "reject")} style={btnStyle("#ef4444", true)}>🚫 Rejeter</button>
+                        <input
+                          placeholder="🚫 bannir un mot…"
+                          title="Tape (ou colle) un mot/expression vu dans ce texte pour l'interdire aux agents"
+                          onKeyDown={e => { if (e.key === "Enter" && e.target.value.trim()) { addLesson(e.target.value); e.target.value = ""; } }}
+                          style={{ flex: "1 1 150px", minWidth: 130, padding: "6px 10px", borderRadius: 8, border: "1px solid rgba(239,68,68,0.3)", background: "#0f172a", color: "#e2e8f0", fontSize: 11 }}
+                        />
                       </>
                     )}
                   </div>

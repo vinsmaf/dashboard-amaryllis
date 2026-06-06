@@ -486,7 +486,19 @@ Ces 3 points sont validés par les agents traffic-manager + seo-content-writer.`
 };
 
 // ── Prompt template pour chaque agent ────────────────────────────────────────
-function buildPrompt(agent, history = [], memories = [], recentDrafts = [], brief = "", liveSection = "", feedbackSection = "", outcomesSection = "", ragSection = "") {
+// Rend la liste des mots/expressions interdits (table agent_lessons) pour l'injecter
+// EN AMONT dans le prompt — les agents les évitent à la génération (pas juste détectés après).
+function renderBannedSection(lessons = []) {
+  if (!lessons.length) return "";
+  const lines = lessons.slice(0, 60).map(l => {
+    const w = l.term || l.pattern;
+    const scope = l.bien_id ? ` [uniquement ${l.bien_id}]` : "";
+    return `• « ${w} »${scope}${l.reason ? ` — ${l.reason}` : ""}`;
+  }).join("\n");
+  return `\n🚫 MOTS / EXPRESSIONS STRICTEMENT INTERDITS (ne JAMAIS les écrire, ni une variante proche) :\n${lines}\n`;
+}
+
+function buildPrompt(agent, history = [], memories = [], recentDrafts = [], brief = "", liveSection = "", feedbackSection = "", outcomesSection = "", ragSection = "", bannedSection = "") {
   // Sépare l'historique par statut pour donner du contexte à l'agent
   const done    = history.filter(h => h.status === "fait");
   const blocked = history.filter(h => h.status === "bloqué");
@@ -670,7 +682,7 @@ Retourne UN SEUL JSON :
 TON DOMAINE D'EXPERTISE : ${agent.focus}
 
 FICHIERS CLÉS à analyser : ${agent.files_hint}
-${skillSection}${liveSection}${ragSection}${memorySection}${feedbackSection}${outcomesSection}${historySection}
+${skillSection}${liveSection}${ragSection}${bannedSection}${memorySection}${feedbackSection}${outcomesSection}${historySection}
 ${DEJA_EN_PLACE}
 MISSION : Identifie les actions concrètes NOUVELLES à réaliser dans ton domaine. Tiens compte de ce qui a déjà été fait ou identifié pour approfondir ton analyse et aller plus loin. Si une idée recoupe une capacité « DÉJÀ EN PLACE », ne la propose PAS — sauf amélioration précise et chiffrée (dis ce qui manque concrètement).
 
@@ -1103,6 +1115,15 @@ export async function onRequest(context) {
   } catch {}
   const liveSection = renderLiveSection(liveCtx, prevSnapshot);
 
+  // Mots/expressions interdits (curatés depuis l'onglet Approbations) → injectés dans chaque prompt.
+  let bannedSection = "";
+  try {
+    const { results: lessons } = await db.prepare(
+      "SELECT pattern, reason, bien_id, term FROM agent_lessons ORDER BY created_at DESC LIMIT 60"
+    ).all();
+    bannedSection = renderBannedSection(lessons || []);
+  } catch {}
+
   // ── Attribution causale : capture la série KPI + mesure les outcomes mûrs ──
   const kpiResult = await captureKpiHistory(db, env, request).catch(() => ({ n: 0, revDiag: "throw" }));
   const kpiCaptured = kpiResult.n;
@@ -1154,7 +1175,7 @@ export async function onRequest(context) {
         max_tokens: 4096, // débridé (était 2048) — réponses agents plus complètes
         temperature: 0.3,
         logSource: `agent:${agent.id}`, // prompt-004 — journalise la sortie en D1
-        messages: [{ role: "user", content: buildPrompt(agent, history, memories, recentDrafts, body.brief || "", liveSection, feedbackSection, outcomesSection, ragSection) }],
+        messages: [{ role: "user", content: buildPrompt(agent, history, memories, recentDrafts, body.brief || "", liveSection, feedbackSection, outcomesSection, ragSection, bannedSection) }],
       });
 
       if (!llmResult.ok) {

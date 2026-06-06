@@ -1,17 +1,23 @@
 // Cloudflare Pages Function — /api/agent-lessons
-// Stockage des "leçons apprises" par les agents IA.
-// Chaque leçon = un pattern regex à interdire avec sa raison.
-// Les leçons sont chargées par agents-run.js et utilisées comme fact-check.
+// Stockage des "leçons apprises" / mots-expressions interdits par les agents IA.
+// Chaque leçon = un mot/expression interdit (term lisible) + un pattern regex dérivé + sa raison.
+// Les leçons sont :
+//   1) injectées EN AMONT dans le prompt de génération (agents-run.js → renderBannedSection)
+//      → les agents évitent ces termes dès la rédaction ;
+//   2) utilisées en fact-check APRÈS génération (loadLearnedLessons → factCheckCaption).
 //
-// GET    → liste les leçons
-// POST   { pattern, reason, bien_id? } → ajoute une leçon
-// DELETE ?id=N → supprime une leçon
+// GET    → liste les leçons (admin OU ?secret=)
+// POST   { term, reason?, bien_id? }  → ajoute (term littéral converti en regex sûre) [admin]
+//        (rétro-compat : { pattern, reason } accepté tel quel)
+// DELETE ?id=N → supprime [admin]
+
+import { verifyBearer } from "./_adminauth.js";
 
 const CORS = {
   "Content-Type": "application/json",
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://villamaryllis.com",
   "Access-Control-Allow-Methods": "GET,POST,DELETE,OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "Content-Type,Authorization",
 };
 const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: CORS });
 
@@ -27,8 +33,13 @@ CREATE INDEX IF NOT EXISTS idx_lessons_bien ON agent_lessons(bien_id);
 `;
 
 async function ensureTable(db) {
-  try { for (const s of DDL.split(";").filter(Boolean)) await db.prepare(s).run(); } catch {}
+  try { for (const s of DDL.split(";").filter(s => s.trim())) await db.prepare(s).run(); } catch {}
+  // Migration : colonne `term` (mot/expression lisible saisi par l'admin) — ignore si déjà présente.
+  try { await db.prepare("ALTER TABLE agent_lessons ADD COLUMN term TEXT").run(); } catch {}
 }
+
+// Échappe un mot/expression littéral pour en faire une regex sûre (anti-injection regex).
+function escapeRegex(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
 
 export async function onRequest(context) {
   const { request, env } = context;
@@ -39,37 +50,49 @@ export async function onRequest(context) {
   await ensureTable(db);
 
   const url = new URL(request.url);
+  const secretOk = env.POSTSTAY_SECRET && url.searchParams.get("secret") === env.POSTSTAY_SECRET;
+  const { ok: adminOk } = await verifyBearer(request, env);
+  const authed = secretOk || adminOk;
 
-  // ── GET — liste des leçons ────────────────────────────────────────────
+  // ── GET — liste des leçons (réservée admin/secret) ────────────────────
   if (request.method === "GET") {
+    if (!authed) return json({ error: "Non autorisé" }, 401);
     try {
       const { results } = await db.prepare(
-        "SELECT id, pattern, reason, bien_id, created_at FROM agent_lessons ORDER BY created_at DESC LIMIT 200"
+        "SELECT id, pattern, reason, bien_id, term, created_at FROM agent_lessons ORDER BY created_at DESC LIMIT 200"
       ).all();
       return json({ lessons: results || [], total: (results || []).length });
     } catch (e) { return json({ error: e.message }, 500); }
   }
 
-  // ── POST — ajouter une leçon ──────────────────────────────────────────
+  // ── POST — ajouter un mot/expression interdit (admin) ─────────────────
   if (request.method === "POST") {
+    if (!authed) return json({ error: "Non autorisé" }, 401);
     const body = await request.json().catch(() => ({}));
-    const { pattern, reason, bien_id } = body;
-    if (!pattern || !reason) return json({ error: "pattern + reason requis" }, 400);
+    let { term, pattern, reason, bien_id } = body;
 
-    // Validation : la regex doit être compilable
+    term = (term || "").trim();
+    pattern = (pattern || "").trim();
+    // Mode simple (recommandé) : un terme littéral → regex échappée.
+    if (term && !pattern) pattern = escapeRegex(term);
+    if (!pattern) return json({ error: "term (mot/expression) requis" }, 400);
+    if (!reason || !String(reason).trim()) reason = term ? `Mot interdit : « ${term} »` : "Interdit (saisi manuellement)";
+
+    // Validation : la regex finale doit être compilable.
     try { new RegExp(pattern, "i"); }
-    catch (e) { return json({ error: `regex invalide: ${e.message}` }, 400); }
+    catch (e) { return json({ error: `motif invalide: ${e.message}` }, 400); }
 
     try {
       const r = await db.prepare(
-        "INSERT INTO agent_lessons (pattern, reason, bien_id) VALUES (?, ?, ?)"
-      ).bind(pattern, reason, bien_id || null).run();
+        "INSERT INTO agent_lessons (pattern, reason, bien_id, term) VALUES (?, ?, ?, ?)"
+      ).bind(pattern, String(reason).trim(), bien_id || null, term || null).run();
       return json({ ok: true, id: r.meta?.last_row_id });
     } catch (e) { return json({ error: e.message }, 500); }
   }
 
-  // ── DELETE ────────────────────────────────────────────────────────────
+  // ── DELETE (admin) ────────────────────────────────────────────────────
   if (request.method === "DELETE") {
+    if (!authed) return json({ error: "Non autorisé" }, 401);
     const id = parseInt(url.searchParams.get("id"));
     if (!id) return json({ error: "id requis" }, 400);
     try {
