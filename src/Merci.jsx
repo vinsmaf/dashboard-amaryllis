@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { mpTrack } from "./lib/metaPixel.js";
+import { ssGet, ssSet, ssRemove } from "./lib/safeStorage.js";
 
 const STRIPE_PK = "pk_live_51QAsyQDstT3IRAj26eVHpBuMZI8UllaKGCCJUNAW5O9BfC3NqzVJwhrgfF0VndNMWPph0vijKomm24OwrTXCG58N00Co6GOWh1";
 
@@ -31,9 +32,9 @@ export default function MerciPage() {
   const params = new URLSearchParams(window.location.search);
   const depositDone = params.get("deposit") === "1";
   const paymentRedirected = !!params.get("payment_intent");
-  const depositCs = sessionStorage.getItem("deposit_cs");
-  const depositAmt = Number(sessionStorage.getItem("deposit_amt") || 0);
-  const depositBien = sessionStorage.getItem("deposit_bien") || "";
+  const depositCs = ssGet("deposit_cs");
+  const depositAmt = Number(ssGet("deposit_amt") || 0);
+  const depositBien = ssGet("deposit_bien", "") || "";
 
   const [stripe, setStripe] = useState(null);
   const [elements, setElements] = useState(null);
@@ -70,11 +71,11 @@ export default function MerciPage() {
   // Deposit completed → clear sessionStorage
   useEffect(() => {
     if (depositDone) {
-      sessionStorage.removeItem("deposit_cs");
-      sessionStorage.removeItem("deposit_amt");
-      sessionStorage.removeItem("deposit_bien");
-      sessionStorage.removeItem("deposit_checkin");
-      sessionStorage.removeItem("deposit_checkout");
+      ssRemove("deposit_cs");
+      ssRemove("deposit_amt");
+      ssRemove("deposit_bien");
+      ssRemove("deposit_checkin");
+      ssRemove("deposit_checkout");
     }
   }, [depositDone]);
 
@@ -87,24 +88,24 @@ export default function MerciPage() {
     const status = params.get("redirect_status");
     if (status && status !== "succeeded") return; // paiement non abouti
     const guardKey = `ga_purchase_fired_${pi}`;
-    if (pi && sessionStorage.getItem(guardKey)) return;
+    if (pi && ssGet(guardKey)) return;
 
     // Contexte stocké avant la redirection (montant RÉEL du séjour + bien + items)
     let ctx = {};
-    try { ctx = JSON.parse(sessionStorage.getItem("pending_purchase") || "{}"); } catch { /* */ }
-    const value = Number(ctx.value || ctx.amount || sessionStorage.getItem("deposit_amt") || 0);
+    try { ctx = JSON.parse(ssGet("pending_purchase", "{}") || "{}"); } catch { /* */ }
+    const value = Number(ctx.value || ctx.amount || ssGet("deposit_amt") || 0);
 
     let tries = 0;
     const fire = () => {
       if (!window.gtag) { if (tries++ < 25) { setTimeout(fire, 400); } return; } // attend gtag (max ~10s)
-      if (pi) sessionStorage.setItem(guardKey, "1");
+      if (pi) ssSet(guardKey, "1");
       const payload = { transaction_id: pi, currency: "EUR", value };
       if (ctx.bien_id) payload.bien_id = ctx.bien_id;
       if (ctx.niveau_tarifaire) payload.niveau_tarifaire = ctx.niveau_tarifaire;
       if (Array.isArray(ctx.items)) payload.items = ctx.items;
       try { window.gtag("event", "purchase", payload); } catch { /* */ }
       try { mpTrack("Purchase", { value, currency: "EUR", ...(ctx.bien_id ? { content_ids: [ctx.bien_id], content_type: "product" } : {}) }); } catch { /* */ }
-      try { sessionStorage.removeItem("pending_purchase"); } catch { /* */ }
+      ssRemove("pending_purchase");
     };
     fire();
   }, []);

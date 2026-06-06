@@ -9,6 +9,7 @@ import { Curtain } from "./Curtain.jsx";
 import { getVariant, trackConversion } from "./utils/abTest.js";
 import { getDiscount, discountLabel } from "./utils/pricing.js";
 import { mpTrack } from "./lib/metaPixel.js";
+import { ssGet, ssSet } from "./lib/safeStorage.js";
 import MaillageCluster from "./components/seo/MaillageCluster.jsx";
 import { BIENS as CANON, isMartinique as isMartiniqueCanon } from "./data/biens.js";
 
@@ -1993,11 +1994,11 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
         });
         const dd = await dr.json();
         if (!dd.error && dd.clientSecret) {
-          sessionStorage.setItem("deposit_cs", dd.clientSecret);
-          sessionStorage.setItem("deposit_amt", String(depositAmt));
-          sessionStorage.setItem("deposit_bien", bien.nom);
-          sessionStorage.setItem("deposit_checkin", checkin || "");
-          sessionStorage.setItem("deposit_checkout", checkout || "");
+          ssSet("deposit_cs", dd.clientSecret);
+          ssSet("deposit_amt", String(depositAmt));
+          ssSet("deposit_bien", bien.nom);
+          ssSet("deposit_checkin", checkin || "");
+          ssSet("deposit_checkout", checkout || "");
         }
       }
 
@@ -7244,9 +7245,9 @@ function DevisPage() {
           });
           const dj = await dr.json();
           if (!dj.error && dj.clientSecret) {
-            sessionStorage.setItem("deposit_cs", dj.clientSecret);
-            sessionStorage.setItem("deposit_amt", String(data.depot));
-            sessionStorage.setItem("deposit_bien", data.bienNom || data.bienId);
+            ssSet("deposit_cs", dj.clientSecret);
+            ssSet("deposit_amt", String(data.depot));
+            ssSet("deposit_bien", data.bienNom || data.bienId);
           }
         }
         const el = stripe.elements({ clientSecret: json.clientSecret, appearance });
@@ -7732,7 +7733,7 @@ export default function PublicSite() {
   const [priceOverrides, setPriceOverrides] = useState(loadPriceOverrides);
   const [curtainDone, setCurtainDone] = useState(false);
   const [showExitIntent, setShowExitIntent] = useState(false);
-  const exitShown = useRef(!!sessionStorage.getItem("amaryllis_exit_shown"));
+  const exitShown = useRef(!!ssGet("amaryllis_exit_shown"));
   const [compareIds, setCompareIds] = useState(new Set());
   const [showComparator, setShowComparator] = useState(false);
   const [recentlyViewed, setRecentlyViewed] = useState(() => {
