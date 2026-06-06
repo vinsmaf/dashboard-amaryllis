@@ -3,6 +3,18 @@
 > Pièges déjà rencontrés + comment les éviter. 1 entrée = 1 leçon actionnable « la prochaine fois ».
 > Le journal d'erreurs exhaustif reste `../docs/ERREURS-LOG.md`.
 
+## 💶 Prix : SOURCE UNIQUE = prix journaliers (onglet Tarifs) — 2026-06-05
+- **À ne PLUS refaire : faire un devis / lire un prix depuis `biens.js prix` ou l'accroche « dès X€ ».** Ce sont des AFFICHAGES, pas le prix facturé. Le prix réel = les **prix journaliers** (`loadDailyPrices()` = `SEED_DAILY_PRICES` + overrides serveur `/api/site-config?type=prices`) que lit le tunnel. **Devis juste = lien tunnel `…/<bien>?checkin=&checkout=` OU onglet Tarifs OU onglet Devis.** Réf : `docs/PRICING.md`.
+- **Cause racine du bug « 2 prix différents » (résolu 2026-06-05)** : un 2ᵉ prix éditable « Prix de base — site public » était fusionné côté public dans `localStorage["amaryllis_prices"]` avec un **format incompatible** (`{bienId:nombre}` vs `{bienId:{date:prix}}`) → collision. **Fix : champ supprimé ; accroche = AUTO (min des prix journaliers, bornée par `biens.js prix`) ; `biens.js prix` = plancher réel + fallback SEO.** Source unique = le calendrier des tarifs.
+- **`biens.js prix` = le PLANCHER réel** (min des tarifs), pas un nombre marketing. À ré-aligner si les tarifs changent fortement (sinon le SEO « dès X€ » dérive).
+
+## 🔄 Sync iCal → Sheet & notifications (Worker amaryllis-ical-sync) — 2026-06-05
+- **🔴 Apps Script SUPPRIME le body des POST (bug redirect Google).** Tout `fetch(APPS_SCRIPT_URL,{method:"POST",body})` direct n'écrit RIEN. Le Worker `pushToSheets` faisait ça → résas iCal jamais écrites dans le Sheet. **Règle : pour écrire dans le Sheet, TOUJOURS via `/api/sheets-proxy` (forwardChunked = GET paginé), jamais POST direct.**
+- **Cron iCal : horaire → toutes les 15 min** (`*/15 * * * *`) ; le `else` du handler `scheduled()` l'attrape.
+- **Notif nouvelle résa = email (Resend) + push (ntfy)** : push ntfy AJOUTÉ dans `sendNouvellesResas` (avant : email seul). `NTFY_TOPIC` = `amaryllis-alertes-7r4k9`. Tél doit être abonné au topic + push OS autorisé.
+- **iCal Airbnb/Booking ne transmet NI nom NI montant** → résa « Voyageur » / 0 € ; montant saisi ensuite (sauf Nogent = Beds24).
+- **CLI wrangler instable ici** (`kv get/delete`, `tail` plantent) → pour tester un cron, **poller** (ntfy `/json?poll=1`, dashboard Resend) plutôt que manipuler le KV.
+
 ## Inventaire des capacités (skills/agents)
 - **⚠️ ERREUR RÉPÉTÉE 3× DANS LA MÊME SESSION (2026-06-04).** J'ai conclu « ça n'existe pas » pour `/cloture-session`, PUIS `/auditeur`, PUIS `/consolidation` — les trois existaient déjà — parce que je grepais `~/.claude/skills/` au lieu de **lire la LISTE des skills disponibles** (system-reminder / Skill tool). Le grep ne voit pas les skills hébergées ailleurs. **RÈGLE DURE : avant de dire qu'une capacité manque OU d'en construire une, TOUJOURS scanner la liste des skills disponibles.** (Cf. RECALL.md, ligne « Skills / capacités ».)
 - **Une skill (LLM) ne peut pas être appelée depuis bash.** Pour automatiser au déploiement un audit/une consolidation, il faut une **version déterministe en script** (`scripts/audit-invariants.mjs`) ; la skill reste pour le riche manuel. Pattern : skill = jugement piloté ; script = invariants déterministes greffés au gate.

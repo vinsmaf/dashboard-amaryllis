@@ -5,6 +5,14 @@
 
 ---
 
+## 2026-06-05 — Sync résa iCal fiabilisée + refonte prix (source unique) + Meta/devis
+- **🔴 Bug sync résa Airbnb/Booking RÉSOLU** : `pushToSheets` (Worker) POSTait direct vers Apps Script → **body supprimé** (bug redirect Google) → résas jamais écrites dans le Sheet. Fix : routage via `/api/sheets-proxy` (forwardChunked). + cron **15 min** (au lieu de 60) + **notif push ntfy** sur nouvelle résa (avant : email seul). Worker `amaryllis-ical-sync` redéployé. Résa Géko 5-7/06 vérifiée dans admin+Sheet.
+- **💶 Refonte prix — SOURCE UNIQUE** : supprimé le 2ᵉ prix éditable « Prix de base — site public » (collision clé `amaryllis_prices` format nombre vs {date:prix} = cause des « 2 prix différents »). Accroche « dès X€ » = **AUTO** (min des prix journaliers, bornée par `biens.js prix`). Planchers réels alignés partout (fiches+guides+FAQ+SEO) : **Zandoli 110, Géko 110, Mabouya 70, Schœlcher 90, Nogent 90** (Amaryllis 280). `docs/PRICING.md` créé. Déployé prod, vérifié live.
+- Caution Zandoli 700→500 ; pixel Meta aligné (`1648064656415946`, dataset compte pub) ; `scripts/gen-social-ads.mjs` (rendu PNG des maquettes sociales Claude Design → 12 créas).
+- **Meta Ads** : campagne C1 montée (Trafic, ABO, A1 Amaryllis · France Martinique incluse · 30-65 · intérêts) — bloquée par le **bug asset-label IA Advantage+** (#2446173) → annonce à refaire en image simple. **Google Ads C1** : 15 mots-clés « expression » ajoutés (les exacts ultra-niche = 0 impression).
+- Commits jusqu'à **a2658cf** (main, poussé GitHub). **161 tests verts**, audit 🟢.
+- ⏳ Reste : valider l'alerte auto nouvelle-résa (email Resend + push) sur la prochaine vraie résa ; finir l'annonce Meta A1+A2 ; déclaration meublé mairie (Vincent).
+
 ## 2026-06-04 (8) — Améliorations conversion/revenu : tracking purchase + upsell pré-arrivée
 - **#1 Tracking `purchase` RÉPARÉ** (cause du « 0 purchase » alors que résas directes existaient) : `confirmPayment` redirige toujours vers `/merci` (3DS) où **gtag pas encore chargé** au mount → event perdu. Fix `Merci.jsx` : **retry jusqu'à gtag prêt** (~10s) + dédup + **vrai montant** via `pending_purchase` (sessionStorage, posé au `begin_checkout` dans PublicSite). Débloque l'optim Google Ads (conversion Principale) + l'Analytics. ⚠️ à confirmer sur la prochaine vraie résa directe. Leçon dans LEARNINGS.
 - **#2 Upsell services dans l'email pré-arrivée** : section « Offrez-vous un petit plus » + CTA → `/services/<bien>` dans `public/email-templates/pre-arrivee.html` + var `services_url` (send-prearrivee.js). + `send-guest-email.js` fetch template avec **cache-bust** (l'edge CF fige le `.html` ; l'email utilise l'URL propre qui sert bien la nouvelle version — vérifié).
