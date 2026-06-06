@@ -194,7 +194,7 @@ async function sendEmail(env, { to, subject, html }) {
     headers: { "Authorization": `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       from: fromAddr,
-      to: [dest],
+      to: String(dest).split(",").map(s => s.trim()).filter(Boolean), // multi-destinataires (hotmail + gmail)
       subject,
       html,
     }),
@@ -1299,7 +1299,7 @@ async function runMonthlyExport(env, allEvents) {
     headers: { "Authorization": `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       from: env.RESEND_FROM || "Amaryllis <notifications@mail.villamaryllis.com>",
-      to: [env.NOTIFICATION_EMAIL || "contact@villamaryllis.com"],
+      to: String(env.NOTIFICATION_EMAIL || "contact@villamaryllis.com").split(",").map(s => s.trim()).filter(Boolean),
       subject: `📊 Rapport ${label} — ${totalCA.toLocaleString("fr-FR")}€ · ${totalNuits}n · ${tauxOcc}% occ.`,
       html,
       attachments: [{
