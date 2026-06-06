@@ -30,6 +30,7 @@ export async function sendGuestEmail(env, origin, { template, to, subject, vars 
   // Pages fait du "clean URL" (/x.html → /x) ; on cible directement l'URL propre.
   // Cache-bust + bypass cache CF : l'edge peut servir un template figé malgré no-cache
   // → on garantit la dernière version au moment de l'envoi.
+  try {
   const tplRes = await fetch(`${origin}/email-templates/${template}?cb=${Date.now()}`, {
     redirect: "follow",
     cache: "no-store",
@@ -54,6 +55,11 @@ export async function sendGuestEmail(env, origin, { template, to, subject, vars 
     return { ok: false, error: `Resend ${r.status}: ${err.slice(0, 120)}` };
   }
   return { ok: true };
+  } catch (e) {
+    // Une sous-requête (template / Resend) qui throw ne doit jamais faire planter
+    // l'appelant (ex. cron relance-panier qui renvoyait 500 sur 1 seul échec réseau).
+    return { ok: false, error: `exception: ${e.message}` };
+  }
 }
 
 export async function onRequestPost(context) {

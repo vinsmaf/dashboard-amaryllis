@@ -65,6 +65,7 @@ export async function onRequestGet(context) {
 
     let sent = 0, failed = 0, convertis = 0;
     for (const c of results || []) {
+     try {
       // Exclure les paniers finalement payés (présents dans direct_bookings).
       const paye = await db.prepare(
         "SELECT 1 FROM direct_bookings WHERE payment_intent_id = ? OR (email = ? AND checkin = ?) LIMIT 1"
@@ -99,6 +100,10 @@ export async function onRequestGet(context) {
         console.error(`[relance-panier] échec ${c.email}: ${r.error}`);
         failed++;
       }
+     } catch (e) {
+       console.error(`[relance-panier] exception panier ${c.email || c.rid}: ${e.message}`);
+       failed++;
+     }
     }
     return json({ ok: true, candidats: (results || []).length, sent, failed, convertis });
   } catch (e) {
