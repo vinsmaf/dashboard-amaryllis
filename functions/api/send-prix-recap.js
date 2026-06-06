@@ -1,3 +1,4 @@
+import { resendFrom } from "./_email.js";
 // Cloudflare Pages Function — /api/send-prix-recap
 // Envoie un récap email hebdomadaire des prix + liens Airbnb via Resend
 // Appel protégé par ?secret=PRIX_RECAP_SECRET
@@ -99,7 +100,7 @@ export async function onRequestGet(context) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: context.env.RESEND_FROM || "Amaryllis <notifications@mail.villamaryllis.com>",
+        from: resendFrom(context.env, "Amaryllis <notifications@villamaryllis.com>"),
         to: [toEmail],
         subject: `📅 Rappel prix Airbnb — ${new Date().toLocaleDateString("fr-FR")}`,
         html: buildHtml(),

@@ -1,3 +1,4 @@
+import { resendFrom } from "./_email.js";
 // Cloudflare Pages Function — POST /api/stripe-webhook
 // Reçoit les événements Stripe et notifie l'hôte par email
 //
@@ -122,7 +123,7 @@ async function sendEmail(env, { subject, html, to }) {
     method: "POST",
     headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      from: env.RESEND_FROM || "Amaryllis <notifications@mail.villamaryllis.com>",
+      from: resendFrom(env, "Amaryllis <notifications@villamaryllis.com>"),
       to: Array.isArray(recipient) ? recipient : String(recipient).split(",").map(s => s.trim()).filter(Boolean),
       subject,
       html,

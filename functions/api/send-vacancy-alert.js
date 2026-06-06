@@ -1,3 +1,4 @@
+import { resendFrom } from "./_email.js";
 // Cloudflare Pages Function — GET /api/send-vacancy-alert
 // rev-007 : Alerte vacance locative J+14 à J+30
 //
@@ -237,7 +238,7 @@ export async function onRequestGet(context) {
       method: "POST",
       headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from:     env.RESEND_FROM || "Amaryllis <notifications@villamaryllis.com>",
+        from:     resendFrom(env, "Amaryllis <notifications@villamaryllis.com>"),
         to:       notifTo,
         subject,
         html,

@@ -1,3 +1,4 @@
+import { resendFrom } from "./_email.js";
 // Cloudflare Pages Function — POST /api/sign-contract (cpw-101, phase C3)
 // Signature électronique « maison » du contrat de location : on stocke la
 // signature manuscrite (PNG dataURL), le nom, l'acceptation, + horodatage et IP
@@ -58,7 +59,7 @@ export async function onRequestPost(context) {
         method: "POST",
         headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          from: env.RESEND_FROM || "Amaryllis <contact@villamaryllis.com>",
+          from: resendFrom(env, "Amaryllis <contact@villamaryllis.com>"),
           to: [(env.NOTIFICATION_EMAIL || "contact@villamaryllis.com").split(",")[0].trim()],
           subject: `✍️ Contrat signé — ${bienNom || bienId} (${nom.trim()})`,
           html: `<div style="font-family:sans-serif"><h3>Contrat de location signé</h3><p><strong>${bienNom || bienId}</strong><br>Signataire : ${nom.trim()}<br>Voyageur : ${voyageur || "—"} · ${email || "—"}<br>Séjour : ${checkin} → ${checkout}<br>IP : ${ip}</p></div>`,

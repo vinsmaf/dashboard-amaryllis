@@ -1,3 +1,4 @@
+import { resendFrom } from "./_email.js";
 // Cloudflare Pages Function — GET /api/send-poststay
 // crm-006 : Email post-séjour J+3 — demande d'avis Google + NPS 1 question
 //
@@ -263,7 +264,7 @@ export async function onRequestGet(context) {
         method: "POST",
         headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          from:    env.RESEND_FROM || "Amaryllis Locations <notifications@mail.villamaryllis.com>",
+          from:    resendFrom(env, "Amaryllis Locations <notifications@villamaryllis.com>"),
           to:      [b.email],
           subject,
           html,

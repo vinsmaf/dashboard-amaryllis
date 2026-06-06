@@ -1,3 +1,4 @@
+import { resendFrom } from "./_email.js";
 // functions/api/agents-digest.js
 // L4 — Digest hebdo de l'état des agents (drafts prêts, file à valider, bloquées, fait).
 // Auth ?secret=POSTSTAY_SECRET. Best-effort email (Resend) + push (ntfy).
@@ -45,7 +46,7 @@ export async function onRequest(context) {
         method: "POST",
         headers: { "Authorization": `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          from: env.RESEND_FROM || "Amaryllis <notifications@mail.villamaryllis.com>",
+          from: resendFrom(env, "Amaryllis <notifications@villamaryllis.com>"),
           to: [env.NOTIFICATION_EMAIL || "vinsmaf@hotmail.com"],
           subject: "📊 Digest agents Amaryllis — semaine",
           text,

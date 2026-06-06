@@ -1,3 +1,4 @@
+import { resendFrom } from "./_email.js";
 import { rateLimit } from './_ratelimit.js';
 
 const ALLOWED_ORIGINS = ["https://villamaryllis.com", "https://www.villamaryllis.com", "https://dashboard-amaryllis.pages.dev"];
@@ -101,7 +102,7 @@ export async function onRequestPost(context) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: context.env.RESEND_FROM || "Amaryllis <contact@villamaryllis.com>",
+        from: resendFrom(context.env, "Amaryllis <contact@villamaryllis.com>"),
         to: toEmail,
         reply_to: email,
         subject: `[Amaryllis] Message de ${nom}${bienLabel}`,

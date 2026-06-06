@@ -1,3 +1,4 @@
+import { resendFrom } from "./_email.js";
 // Cloudflare Pages Function — GET /api/send-menage-alert
 // log-005 : Alerte automatique prestataire ménage J-2 avant arrivée
 //
@@ -202,7 +203,7 @@ export async function onRequestGet(context) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from:    env.RESEND_FROM || "Amaryllis <notifications@mail.villamaryllis.com>",
+        from:    resendFrom(env, "Amaryllis <notifications@villamaryllis.com>"),
         to:      [menageEmail],
         subject,
         html,

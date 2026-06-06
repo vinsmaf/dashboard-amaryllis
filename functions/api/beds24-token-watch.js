@@ -1,3 +1,4 @@
+import { resendFrom } from "./_email.js";
 // Cloudflare Pages Function — GET /api/beds24-token-watch
 // web-009 : Surveillance quotidienne du token Beds24 V2
 //
@@ -98,7 +99,7 @@ export async function onRequestGet(context) {
         method: "POST",
         headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          from: env.RESEND_FROM || "Amaryllis <notifications@villamaryllis.com>",
+          from: resendFrom(env, "Amaryllis <notifications@villamaryllis.com>"),
           to: notifTo,
           subject: "🔴 URGENT — Token Beds24 invalide ou expiré",
           html: buildAlertHtml({ expiresInDays: 0, expiresAt: "DÉJÀ EXPIRÉ", tokenPreview: token.slice(0, 8) + "…" }),
@@ -131,7 +132,7 @@ export async function onRequestGet(context) {
         method: "POST",
         headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          from: env.RESEND_FROM || "Amaryllis <notifications@villamaryllis.com>",
+          from: resendFrom(env, "Amaryllis <notifications@villamaryllis.com>"),
           to: notifTo,
           subject: `${urgencyLabel} Token Beds24 expire dans ${expiresInDays}j — action requise`,
           html: buildAlertHtml({ expiresInDays, expiresAt, tokenPreview }),

@@ -1,3 +1,4 @@
+import { resendFrom } from "./_email.js";
 // Cloudflare Pages Function — /api/agent-drafts
 // Système de brouillons générés par les agents IA, en attente d'approbation humaine
 // GET   ?status=pending|approved|... → liste les drafts
@@ -91,7 +92,7 @@ async function executeDraft(env, draft) {
       method: "POST",
       headers: { "Authorization": `Bearer ${resend}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from: env.RESEND_FROM || "Amaryllis <noreply@villamaryllis.com>",
+        from: resendFrom(env, "Amaryllis <noreply@villamaryllis.com>"),
         to: payload.to,
         subject: payload.subject,
         html: payload.html,

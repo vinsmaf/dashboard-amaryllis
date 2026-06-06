@@ -1,3 +1,4 @@
+import { resendFrom } from "./_email.js";
 // Cloudflare Pages Function — POST /api/notify-booking
 // Alerte fiable de NOUVELLE RÉSERVATION DIRECTE, déclenchée côté client juste
 // après un paiement Stripe réussi (indépendant de la config webhook Stripe).
@@ -55,7 +56,7 @@ async function sendEmail(env, subject, html, text) {
       method: "POST",
       headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from: env.RESEND_FROM || "Amaryllis <notifications@villamaryllis.com>",
+        from: resendFrom(env, "Amaryllis <notifications@villamaryllis.com>"),
         to, subject, html, text,
       }),
     });

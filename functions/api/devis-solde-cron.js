@@ -1,3 +1,4 @@
+import { resendFrom } from "./_email.js";
 // Cloudflare Pages Function — GET /api/devis-solde-cron (cpw-100, phase C2)
 // Cron quotidien (cron-job.org) : gère le SOLDE des devis payés en 2 fois.
 //   • J-30 (ou après) : crée le lien Stripe du solde + l'envoie par email au voyageur.
@@ -61,7 +62,7 @@ async function sendMail(env, to, subject, html) {
     const r = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: env.RESEND_FROM || "Amaryllis <contact@villamaryllis.com>", to: [to], subject, html }),
+      body: JSON.stringify({ from: resendFrom(env, "Amaryllis <contact@villamaryllis.com>"), to: [to], subject, html }),
     });
     return r.ok;
   } catch { return false; }

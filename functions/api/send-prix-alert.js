@@ -1,3 +1,4 @@
+import { resendFrom } from "./_email.js";
 // Cloudflare Pages Function — POST /api/send-prix-alert
 // Envoie un email + push ntfy quand des prix sont sous le seuil minimum
 // Appelé depuis CalendrierTarifs (App.jsx) via useEffect
@@ -108,7 +109,7 @@ async function sendEmail(env, bienNom, dates, minPrice, year) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: context.env.RESEND_FROM || "Amaryllis <notifications@villamaryllis.com>",
+        from: resendFrom(context.env, "Amaryllis <notifications@villamaryllis.com>"),
         to: dest.split(",").map(s => s.trim()).filter(Boolean),
         subject: `⚠️ ${dates.length} prix sous seuil — ${bienNom}`,
         html,
