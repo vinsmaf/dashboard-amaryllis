@@ -54,3 +54,10 @@
 
 ## Gouvernance mémoire
 - **3 niveaux de mémoire à ne pas confondre** : `.memory/` (vive, curatée, début de session) · `PROJECT_MEMORY.md` (long terme détaillé) · `docs/` (livrables + index). Garder chacun dans son rôle ; archiver le journal daté dans `docs/_archive/` quand il dépasse ~10 entrées.
+
+## 2026-06-05 — Emails Worker silencieusement cassés (RESEND_FROM)
+- **Symptôme** : push ntfy reçu mais AUCUN email d'alerte résa (ni rappels prix, ni digest). Le Worker ne plante pas si Resend refuse → échec invisible.
+- **Cause racine** : `env.RESEND_FROM` du Worker valait `Amaryllis <notifications@>` (domaine manquant) → Resend rejette tout avec « Domain not verified ». Le log Resend (request body) montre le `from` exact = clé du diagnostic.
+- **Piège #1** : `wrangler secret put RESEND_FROM` n'a PAS corrigé → une **variable texte définie dans le dashboard Cloudflare prime sur le secret** du même nom. Ne pas supposer que le secret gagne.
+- **Leçon** : ne jamais faire confiance à une var d'env d'adresse email. Valider le format dans le code et retomber sur une valeur vérifiée en dur. Pattern appliqué : `resendFrom(env)` (regex domaine FQDN sinon `VERIFIED_FROM`). Robuste quelle que soit la conf.
+- **Diagnostic email** : toujours lire le **request body du log Resend** (montre `from`/`to`/erreur réels) — la dashboard "Loading…" ment, le log dit la vérité.
