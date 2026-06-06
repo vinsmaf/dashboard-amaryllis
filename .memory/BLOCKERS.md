@@ -80,3 +80,8 @@
 
 ## 📌 Prochaine session (demain matin)
 - **Lancement Google Ads + Meta Ads pas-à-pas** : runbook `docs/marketing/RUNBOOK-lancement.md` ouvert, Vincent connecté à Google Ads (226-428-3778) + Meta Business Manager. **Vincent fait les clics, Claude guide.** Bloquant Google : importer la conversion `purchase` (PAS `booking_completed`) avant toute dépense.
+
+## 2026-06-05 (suite)
+- 🟡 **Var dashboard Cloudflare `RESEND_FROM` du Worker = cassée** (`Amaryllis <notifications@>`, domaine manquant). Contournée par `resendFrom(env)` (code robuste, emails repartent). **Débloque** : Vincent corrige/supprime la variable dans le dashboard Worker `amaryllis-ical-sync` → conf propre. Non urgent.
+- 🟡 **19 findings « [revue code] » LLM en statut `new`** dans l'inbox 🐞 Bugs (GuestGuide/TvScreen/Merci/Services/apiFetch…). Avis statiques authentiques, 1× chacun, à arbitrer un jour. **Débloque** : passe de revue dédiée (option A proposée, non retenue ce jour).
+- 🟡 **Règle de cohérence faux positif** : `coherenceRules.js` flag `total < caution` comme « montant aberrant » (ex. Zandoli court séjour : total 340€ < caution 500€ = légitime). **Débloque** : décision Vincent d'assouplir la règle (mirrorée 3× : utils+GAS+Worker).

@@ -1,13 +1,13 @@
 # CONTEXT — État courant (locatif-dashboard)
 
-> Snapshot condensé de l'état réel. **À mettre à jour à CHAQUE session.** Dernière MAJ : **2026-06-04**.
+> Snapshot condensé de l'état réel. **À mettre à jour à CHAQUE session.** Dernière MAJ : **2026-06-05**.
 
 ## Le projet
 Conciergerie + site de réservation directe pour **7 logements** (Martinique + Nogent-sur-Marne).
 Site public marketing **villamaryllis.com** + dashboard `/admin` privé. Opéré par **Vincent Salomon**.
 Prod : https://villamaryllis.com (Cloudflare Pages, projet **`dashboard-amaryllis`**). Repo : `github.com:vinsmaf/dashboard-amaryllis` (`main`).
 
-**Stack** : React 19 + Vite · Cloudflare Pages Functions (`functions/api/*.js`, `functions/[slug].js`) · Worker `amaryllis-ical-sync` (crons) · D1 `revenue_manager` · KV `ICAL_STORE` · Google Apps Script (clasp) · Stripe · Beds24 (V2, Nogent propId 158192) · Resend · ntfy · GA4 (G-N9BM709ZBL) · Meta Pixel (714189639771397).
+**Stack** : React 19 + Vite · Cloudflare Pages Functions (`functions/api/*.js`, `functions/[slug].js`) · Worker `amaryllis-ical-sync` (crons) · D1 `revenue_manager` · KV `ICAL_STORE` · Google Apps Script (clasp) · Stripe · Beds24 (V2, Nogent propId 158192) · Resend · ntfy · GA4 (G-N9BM709ZBL) · Meta Pixel (**1648064656415946**, aligné dataset compte pub). Emails Worker via `resendFrom(env)` (from vérifié robuste).
 
 **Tests** : suite **vitest ~148 tests** (`npm run test:run`). **Gate obligatoire** dans `scripts/deploy-pages.sh` (test → build → deploy → smoke ; bypass `SKIP_TESTS=1`/`SKIP_BUILD=1`). CI GitHub rejoue test+build+prerender (lint exclu).
 **Deploy** : `npm run deploy:pages` UNIQUEMENT (jamais `patrimoine-dashboard`). Worker : `npx wrangler deploy`. ⚠️ CF Pages = upload direct, pas git-connecté.

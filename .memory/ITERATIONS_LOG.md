@@ -5,6 +5,13 @@
 
 ---
 
+## 2026-06-05 (suite) — Emails Worker réparés + passe bugs admin + feature « mots interdits »
+- **📧 Emails Worker RÉPARÉS** : `RESEND_FROM` du Worker valait `Amaryllis <notifications@>` (domaine manquant) → Resend rejetait TOUS les emails (alertes résa, rappels prix, digest) silencieusement ; le push ntfy passait → fausse impression que « ça marche ». Le `wrangler secret put` n'a rien changé (var texte dashboard prime). Fix code `resendFrom(env)` (valide FQDN sinon `VERIFIED_FROM`). **Confirmé reçu par Vincent.** Commit 50b4da1.
+- **🐞 Passe sur les bugs admin** : 1 vrai bug runtime corrigé+déployé = chunk périmé post-deploy (handler `vite:preloadError` + filet, `src/main.jsx`, commit c82607b). Inbox triée : 3 timeouts crawler + 2 faux positifs SSR/window → `ignored` ; chunk → `fixed`. Restent 19 findings code authentiques en `new`.
+- **🧠 Feature « mots/expressions interdits » (onglet Approbations)** : panneau liste + bannissement inline → D1 `agent_lessons` (+ champ `term`) → **injectés en amont dans le prompt des agents** (`renderBannedSection`) + fact-check. Endpoint `agent-lessons` sécurisé (auth admin). Boucle d'apprentissage : Vincent bannit → agents plus précis. Commit 6c1d0c2. Cf ADR-S-011.
+- **161 tests verts**, build OK, smoke OK, audit 🟢. Commits jusqu'à **6c1d0c2** (main).
+- ⏳ Reste : nettoyer var dashboard `RESEND_FROM` (cosmétique) ; refaire campagne Meta (demain) ; 19 findings code à arbitrer ; règle cohérence faux positif à assouplir si voulu.
+
 ## 2026-06-05 — Sync résa iCal fiabilisée + refonte prix (source unique) + Meta/devis
 - **🔴 Bug sync résa Airbnb/Booking RÉSOLU** : `pushToSheets` (Worker) POSTait direct vers Apps Script → **body supprimé** (bug redirect Google) → résas jamais écrites dans le Sheet. Fix : routage via `/api/sheets-proxy` (forwardChunked). + cron **15 min** (au lieu de 60) + **notif push ntfy** sur nouvelle résa (avant : email seul). Worker `amaryllis-ical-sync` redéployé. Résa Géko 5-7/06 vérifiée dans admin+Sheet.
 - **💶 Refonte prix — SOURCE UNIQUE** : supprimé le 2ᵉ prix éditable « Prix de base — site public » (collision clé `amaryllis_prices` format nombre vs {date:prix} = cause des « 2 prix différents »). Accroche « dès X€ » = **AUTO** (min des prix journaliers, bornée par `biens.js prix`). Planchers réels alignés partout (fiches+guides+FAQ+SEO) : **Zandoli 110, Géko 110, Mabouya 70, Schœlcher 90, Nogent 90** (Amaryllis 280). `docs/PRICING.md` créé. Déployé prod, vérifié live.

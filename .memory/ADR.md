@@ -5,6 +5,13 @@
 
 ---
 
+## ADR-S-011 · 2026-06-05 · Accès `sessionStorage`/`localStorage` toujours gardés (helper `safeStorage`)
+1. **Choix** : tout accès web-storage passe par `src/lib/safeStorage.js` (`ssGet`/`ssSet`/`ssRemove`, try/catch). Un accès nu en render plante toute la page si le stockage est bloqué (navigation privée stricte / cookies refusés / iframe sandbox → `SecurityError`).
+2. **Alternatives refusées** : try/catch inline partout (verbeux, oublié sur les accès render-time) ; ne rien faire (crash silencieux de `/merci` post-paiement + page réservation pour une frange d'utilisateurs).
+3. **Conséquences** : nouveau réflexe — ne JAMAIS écrire `sessionStorage.x()` nu, surtout au niveau render (top de composant, `useRef(!!sessionStorage…)`). Reste ~15 accès non critiques dans `PublicSite.jsx` (guards GA/caches, souvent déjà en `catch`) à migrer au fil de l'eau (cf. BLOCKERS).
+4. **Périmètre** : `src/lib/safeStorage.js` (nouveau), `src/Merci.jsx` (tous accès), `src/PublicSite.jsx` (render-time L7735 + écritures flux dépôt).
+5. **Statut** : ✅ acté & commité (`06f7783`). 161 tests verts. Déploiement à faire (`npm run deploy:pages`).
+
 ## ADR-S-008 · 2026-06-04 · Écran d'accueil TV = mode kiosk de `/bienvenue` (réutilise les livrets)
 1. **Choix** : écran TV des logements = **mode `?tv=1` du livret existant** (`GuestGuide` → `TvScreen.jsx`, diaporama plein écran : accueil perso, WiFi, guide, services, infos, rebook), data depuis les **guides JSON** (D1). Perso auto via `/api/tv-context` (résa en cours : prénom+dates si directe, dates seules si OTA). Fond = photo hero (01) du bien. Param `?slide=N` (fige un slide : revue/preview/images Phase 3).
 2. **Alternatives refusées** : app native tvOS/Android TV (trop lourd) ; rotation de photos 02+ (trop sombres → illisible) ; perso 100% manuelle (moins « waouh »).
@@ -67,3 +74,17 @@
 3. **Conséquences attendues** : un dev (ou agent) sans contexte retrouve n'importe quel doc en 5 s ; PROJECT_MEMORY reste lean en préservant secrets/footguns/contraintes ; les décisions d'archi ont un statut traçable.
 4. **Périmètre** : `CLAUDE.md`, `docs/INDEX.md`, `docs/superpowers/specs/README.md`, `PROJECT_MEMORY.md`, `docs/_archive/PROJECT_MEMORY-journal-2026-05.md`. Commit `347f4b3`.
 5. **Statut** : **acté + poussé** sur origin/main (docs-only, aucun déploiement).
+
+## ADR-S-011 · 2026-06-05 · Mots/expressions interdits curatés → boucle d'apprentissage agents
+1. **Choix** : l'admin bannit des mots/expressions depuis l'onglet **Approbations** (panneau liste + bannissement inline 1-clic sur phrases fact-check + champ par draft). Stockés en D1 `agent_lessons` (nouveau champ `term` lisible + `pattern` regex échappé + `reason` + `bien_id` optionnel). Doublement utilisés : **(1) injectés EN AMONT dans le prompt de génération** (`renderBannedSection` → `buildPrompt`) pour éviter le terme dès la rédaction, **(2) fact-check APRÈS** (inchangé).
+2. **Alternatives refusées** : saisie de regex par l'utilisateur (trop technique → on convertit le mot littéral) ; uniquement fact-check post-génération (ne « rend pas les agents plus précis », corrige après coup) ; portée toujours globale (gardé le ciblage par bien optionnel).
+3. **Conséquences attendues** : plus Vincent bannit, plus les sorties agents sont propres (posts/emails/SEO). ⚠️ liste injectée dans CHAQUE prompt agent (coût tokens si elle explose → cap 60 entrées). `agent-lessons` POST/DELETE désormais **auth admin** (avant : ouvert).
+4. **Périmètre** : `functions/api/agent-lessons.js` (term + escapeRegex + auth), `functions/api/agents-run.js` (`renderBannedSection`, `bannedSection` dans `buildPrompt`), `src/tabs/ApprobationsTab.jsx`. D1 `agent_lessons.term`.
+5. **Statut** : **acté & déployé** (commit 6c1d0c2). Utilisable immédiatement.
+
+## ADR-S-012 · 2026-06-05 · Ne jamais faire confiance à une var d'env d'adresse email (valider en code)
+1. **Choix** : l'adresse expéditeur Resend du Worker passe par `resendFrom(env)` qui **valide la présence d'un domaine FQDN** dans `RESEND_FROM` ; sinon retombe sur `VERIFIED_FROM` en dur (`notifications@mail.villamaryllis.com`). Appliqué aux 5 points d'envoi du Worker.
+2. **Alternatives refusées** : corriger seulement la valeur de la variable (un `wrangler secret put` n'écrase PAS une var texte dashboard du même nom → inefficace) ; hardcoder partout sans override possible (perte de flexibilité).
+3. **Conséquences attendues** : tous les emails Worker (alertes résa, rappels prix, digest IA) partent quoi qu'il arrive ; robustesse contre une conf cassée. Pattern réutilisable pour toute var sensible.
+4. **Périmètre** : `workers/ical-sync/index.js` (`resendFrom`/`VERIFIED_FROM`).
+5. **Statut** : **acté & déployé** (commit 50b4da1). Reste : nettoyer la var dashboard `RESEND_FROM` cassée (cosmétique, cf BLOCKERS).
