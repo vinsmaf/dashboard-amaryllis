@@ -59,6 +59,12 @@ Sentry.init({
     "Java object is gone",
     "Error invoking postMessage",
     "navigation_performance_logger",
+    // Navigateur in-app Facebook/iOS — script injecté par Meta qui tente d'appeler
+    // le bridge iOS WKWebView (window.webkit.messageHandlers) non disponible dans ce contexte.
+    // Ce n'est pas du code Amaryllis — faux positif 100% lié au navigateur Facebook sur iPhone.
+    /window\.webkit\.messageHandlers/,
+    /undefined is not an object.*webkit\.messageHandlers/,
+    /sendDataToNative/,
   ],
 })
 
