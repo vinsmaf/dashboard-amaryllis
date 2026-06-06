@@ -11,33 +11,18 @@ export default function Tarifs() {
   const { reservations = [] } = useAppData();
   const [prices, setPrices] = useState(() => {
     try {
-      const stored = JSON.parse(localStorage.getItem("amaryllis_prices") || "{}");
-      return Object.fromEntries(Object.keys(DEFAULT_PRIX).map(id => [id, stored[id] ?? DEFAULT_PRIX[id]]));
+      const stored = JSON.parse(localStorage.getItem("amaryllis_base_preview") || "{}");
+      return Object.fromEntries(Object.keys(DEFAULT_PRIX).map(id => [id, (typeof stored[id] === "number" ? stored[id] : DEFAULT_PRIX[id])]));
     } catch { return { ...DEFAULT_PRIX }; }
   });
   const [saved, setSaved] = useState(false);
   const [published, setPublished] = useState(null); // null | "pub" | "err"
 
-  // Au chargement : récupère les prix de base DEPUIS LE SERVEUR (source partagée)
-  // → un autre PC voit les prix synchronisés, pas seulement le localStorage local.
-  useEffect(() => {
-    let alive = true;
-    fetch("/api/site-config?type=base_prices")
-      .then(r => r.json())
-      .then(d => {
-        const cfg = (d && d.config) || {};
-        if (!alive || !cfg || typeof cfg !== "object" || !Object.keys(cfg).length) return;
-        setPrices(p => {
-          const merged = { ...p };
-          Object.keys(DEFAULT_PRIX).forEach(id => { if (cfg[id] != null) merged[id] = cfg[id]; });
-          try { localStorage.setItem("amaryllis_prices", JSON.stringify(merged)); } catch {}
-          window.dispatchEvent(new Event("amaryllis_prices_updated"));
-          return merged;
-        });
-      })
-      .catch(() => {});
-    return () => { alive = false; };
-  }, []);
+  // [2026-06] Le « prix de base » ne pilote plus le site public : l'accroche
+  // « dès X€ » est calculée à partir des prix journaliers (source unique).
+  // Cette barre reste un aperçu interne (base × saisons). On ne charge donc plus
+  // base_prices depuis le serveur et on n'écrit plus dans amaryllis_prices
+  // (qui appartient aux prix journaliers) → fin de la collision de clé.
 
   // ── Seasonal periods ──
   const [seasons, setSeasons] = useState(() => {
@@ -86,22 +71,12 @@ export default function Tarifs() {
   }
 
   async function save() {
-    localStorage.setItem("amaryllis_prices", JSON.stringify(prices));
-    window.dispatchEvent(new Event("amaryllis_prices_updated"));
+    // Aperçu interne uniquement : stocké dans une clé dédiée (PAS amaryllis_prices,
+    // PAS de publication serveur) → n'affecte ni les prix journaliers ni le site public.
+    localStorage.setItem("amaryllis_base_preview", JSON.stringify(prices));
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
-    // Synchronisation SERVEUR → prix visibles par TOUS (autres appareils + visiteurs).
-    setPublished("pushing");
-    try {
-      const r = await fetch("/api/site-config", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "base_prices", config: prices }),
-      });
-      const d = await r.json();
-      setPublished(d.ok ? "pub" : "err");
-    } catch { setPublished("err"); }
-    setTimeout(() => setPublished(null), 4000);
+    setPublished(null);
   }
 
   // helper: is a date within a season?
@@ -126,8 +101,8 @@ export default function Tarifs() {
       {/* ── Prix de base (barre compacte) ── */}
       <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 12, padding: "14px 18px", marginBottom: 28 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "#e2e8f0" }}>Prix de base — site public</div>
-          <div style={{ fontSize: 11, color: "#475569" }}>« À partir de X€ / nuit »</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#e2e8f0" }}>Prix de base — aperçu interne</div>
+          <div style={{ fontSize: 11, color: "#475569" }}>N'affecte PAS le site. L'accroche « dès X€ » = min des prix journaliers (auto). Les prix facturés = le calendrier ci-dessous.</div>
           <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
             {published === "pushing" && <span style={{ fontSize: 11, color: "#94a3b8" }}>⏳ Publication…</span>}
             {published === "pub" && <span style={{ fontSize: 11, color: "#34d399" }}>🌐 Publié en ligne (visible partout)</span>}

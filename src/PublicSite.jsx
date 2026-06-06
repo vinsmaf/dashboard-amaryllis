@@ -2778,7 +2778,10 @@ function BienCard({ bien, onDetail, onBook, isFavorite = false, onToggleFavorite
         const ds = d.toISOString().slice(0, 10);
         const p = map[ds]; if (p !== undefined && p < min) min = p;
       }
-      return min === Infinity ? bien.prix : min;
+      // Plancher canonique (biens.js = min réel) comme borne : l'accroche n'est
+      // jamais au-dessus du vrai prix plancher, même avant le chargement des
+      // overrides serveur → cohérence garantie avec les guides/SEO.
+      return Math.min(min === Infinity ? bien.prix : min, bien.prix || Infinity);
     } catch { return bien.prix; }
   }, [bien.id, bien.prix]);
 
@@ -7799,24 +7802,11 @@ export default function PublicSite() {
       .catch(() => {});
   }, []);
 
-  // Charger les PRIX DE BASE (« à partir de X€/nuit ») depuis le serveur → synchro
-  // multi-appareils : un visiteur voit les prix de base publiés par l'admin, pas
-  // seulement ceux du localStorage local. Source partagée = /api/site-config base_prices.
-  useEffect(() => {
-    fetch("/api/site-config?type=base_prices")
-      .then(r => r.json())
-      .then(d => {
-        const cfg = d && d.config;
-        if (cfg && typeof cfg === "object" && Object.keys(cfg).length) {
-          try {
-            const cur = JSON.parse(localStorage.getItem("amaryllis_prices") || "{}");
-            localStorage.setItem("amaryllis_prices", JSON.stringify({ ...cur, ...cfg }));
-          } catch {}
-          setPriceOverrides(loadPriceOverrides());
-        }
-      })
-      .catch(() => {});
-  }, []);
+  // [supprimé 2026-06] L'ancien « prix de base » (site-config base_prices) était
+  // fusionné ici dans amaryllis_prices avec un format incompatible (nombre vs
+  // {date:prix}) → collision/corruption. Source unique désormais = prix journaliers
+  // (site-config type=prices, chargés ci-dessus). L'accroche « dès X€ » est calculée
+  // (min des prix journaliers) — voir docs/PRICING.md.
 
   // ── Sync tarifs Beds24 → localStorage (Nogent uniquement, TTL 1h) ──────────
   // Beds24 est la source de vérité pour les prix. Toute modification dans Beds24

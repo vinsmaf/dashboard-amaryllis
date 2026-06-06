@@ -42,11 +42,11 @@ const MUTED = "#7a6b5a";
 /* ─── Villas sur la carte (Martinique uniquement) ───────────── */
 const VILLAS = [
   { id:"amaryllis",  nom:"Villa Amaryllis", coords:[14.4732,-60.9196], couleur:"#10b981", prix:280, photo:"/photos/amaryllis/01.webp"  },
-  { id:"zandoli",    nom:"Zandoli",         coords:[14.4725,-60.9201], couleur:"#3b82f6", prix:220, photo:"/photos/zandoli/01.webp"    },
-  { id:"geko",       nom:"Géko",            coords:[14.4718,-60.9188], couleur:"#f59e0b", prix:140, photo:"/photos/geko/01.webp"       },
-  { id:"mabouya",    nom:"Mabouya",         coords:[14.4729,-60.9194], couleur:"#ec4899", prix:110, photo:"/photos/mabouya/01.webp"    },
+  { id:"zandoli",    nom:"Zandoli",         coords:[14.4725,-60.9201], couleur:"#3b82f6", prix:110, photo:"/photos/zandoli/01.webp"    },
+  { id:"geko",       nom:"Géko",            coords:[14.4718,-60.9188], couleur:"#f59e0b", prix:110, photo:"/photos/geko/01.webp"       },
+  { id:"mabouya",    nom:"Mabouya",         coords:[14.4729,-60.9194], couleur:"#ec4899", prix:70, photo:"/photos/mabouya/01.webp"    },
   { id:"iguana",     nom:"Villa Iguana",    coords:[14.4741,-60.9209], couleur:"#6366f1", prix:null, photo:"/photos/iguana/01.webp"    },
-  { id:"schoelcher", nom:"Bellevue",        coords:[14.6121,-61.0887], couleur:"#8b5cf6", prix:95,  photo:"/photos/schoelcher/01.webp" },
+  { id:"schoelcher", nom:"Bellevue",        coords:[14.6121,-61.0887], couleur:"#8b5cf6", prix:90,  photo:"/photos/schoelcher/01.webp" },
 ];
 
 /* ─── Données destinations ────────────────────────────────────────────────

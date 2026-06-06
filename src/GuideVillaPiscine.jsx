@@ -18,7 +18,7 @@ const HERO_IMG = `${BASE}/photos/amaryllis/02.webp`;
 const FAQ_ITEMS = [
   {
     q: "Quelle villa choisir à la Martinique avec piscine privée ?",
-    a: "Cela dépend de votre groupe et de votre budget. Pour 8 personnes avec piscine à débordement eau salée et vue mer 180°, la Villa Amaryllis (à partir de 280 €/nuit) est notre propriété phare. Pour 5 personnes avec piscine privative à cascade et un excellent rapport confort/prix, Zandoli propose une mezzanine et vue mer dès 220 €/nuit. Les couples trouveront leur bonheur chez Mabouya (jacuzzi privatif, à partir de 110 €/nuit) ou Géko (piscine privative à cascade, 150 €/nuit pour 4 personnes). Pour une piscine eau salée unique et vue Rocher du Diamant, Iguana (180 €/nuit, 6 personnes).",
+    a: "Cela dépend de votre groupe et de votre budget. Pour 8 personnes avec piscine à débordement eau salée et vue mer 180°, la Villa Amaryllis (à partir de 280 €/nuit) est notre propriété phare. Pour 5 personnes avec piscine privative à cascade et un excellent rapport confort/prix, Zandoli propose une mezzanine et vue mer dès 110 €/nuit. Les couples trouveront leur bonheur chez Mabouya (jacuzzi privatif, à partir de 70 €/nuit) ou Géko (piscine privative à cascade, 110 €/nuit pour 4 personnes). Pour une piscine eau salée unique et vue Rocher du Diamant, Iguana (180 €/nuit, 6 personnes).",
   },
   {
     q: "Quelle est la meilleure saison pour louer une villa avec piscine en Martinique ?",
@@ -64,7 +64,7 @@ const VILLAS = [
     chambres: "3 chambres",
     piscine: "Piscine privée chauffée",
     vue: "Vue mer",
-    prix: "À partir de 220 €/nuit",
+    prix: "À partir de 110 €/nuit",
     highlight: false,
     photo: "/photos/zandoli/01.webp",
     equip: ["Piscine chauffée", "Vue mer", "Jardin tropical", "Cuisine équipée", "WiFi", "Parking privé"],
@@ -77,7 +77,7 @@ const VILLAS = [
     chambres: "2 chambres",
     piscine: "Piscine privée",
     vue: "Jardin tropical",
-    prix: "À partir de 150 €/nuit",
+    prix: "À partir de 110 €/nuit",
     highlight: false,
     photo: "/photos/geko/01.webp",
     equip: ["Piscine privée", "Jardin tropical", "Terrasse couverte", "Cuisine équipée", "WiFi", "Climatisation"],
@@ -90,7 +90,7 @@ const VILLAS = [
     chambres: "1 chambre",
     piscine: "Jacuzzi privatif",
     vue: "Vue mer",
-    prix: "À partir de 110 €/nuit",
+    prix: "À partir de 70 €/nuit",
     highlight: false,
     photo: "/photos/mabouya/01.webp",
     equip: ["Jacuzzi privatif", "Vue mer", "Terrasse privée", "Cuisine équipée", "WiFi", "Climatisation"],
@@ -331,7 +331,7 @@ export default function GuideVillaPiscine() {
       <style dangerouslySetInnerHTML={{ __html: css }} />
       <SEOMeta
         title="Location Villa Martinique avec Piscine — Réservation Directe | Amaryllis"
-        description="4 villas avec piscine privée à Sainte-Luce, Martinique. Piscine à débordement vue mer, jacuzzi privatif, piscine chauffée. À partir de 110 €/nuit. Réservation directe, sans frais de service."
+        description="4 villas avec piscine privée à Sainte-Luce, Martinique. Piscine à débordement vue mer, jacuzzi privatif, piscine chauffée. À partir de 70 €/nuit. Réservation directe, sans frais de service."
         canonical="/location-villa-martinique-piscine"
         image={HERO_IMG}
         type="article"
@@ -500,10 +500,10 @@ export default function GuideVillaPiscine() {
               </div>
               {[
                 { name: "Villa Amaryllis", cap: "8 pers.", piscine: "Débordement eau salée 4×7 m", vue: "180° Caraïbes", prix: "dès 280 €" },
-                { name: "Zandoli",   cap: "5 pers.", piscine: "Privative à cascade",          vue: "Mer + jardin",   prix: "dès 220 €" },
+                { name: "Zandoli",   cap: "5 pers.", piscine: "Privative à cascade",          vue: "Mer + jardin",   prix: "dès 110 €" },
                 { name: "Villa Iguana",    cap: "6 pers.", piscine: "Eau salée non chlorée",        vue: "Rocher Diamant", prix: "dès 180 €" },
-                { name: "Géko",      cap: "4 pers.", piscine: "Privative à cascade",          vue: "Jardin tropical",prix: "dès 150 €" },
-                { name: "Studio Mabouya",  cap: "2 pers.", piscine: "Jacuzzi privatif",             vue: "Mer terrasse",   prix: "dès 110 €" },
+                { name: "Géko",      cap: "4 pers.", piscine: "Privative à cascade",          vue: "Jardin tropical",prix: "dès 110 €" },
+                { name: "Studio Mabouya",  cap: "2 pers.", piscine: "Jacuzzi privatif",             vue: "Mer terrasse",   prix: "dès 70 €" },
               ].map(row => (
                 <div key={row.name} className="gvp-compare-row">
                   <div className="gvp-compare-cell name">{row.name}</div>
@@ -522,7 +522,7 @@ export default function GuideVillaPiscine() {
               <strong style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, color: NAVY }}>Pour un groupe de 5 personnes avec budget maîtrisé :</strong> Zandoli est le choix le plus cohérent. Sa piscine chauffée garantit une température parfaite même en décembre-janvier, et la vue mer n'a rien à envier à Amaryllis.
             </p>
             <p className="gvp-body">
-              <strong style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, color: NAVY }}>Pour un couple en voyage romantique :</strong> Mabouya est taillée pour vous. Son jacuzzi privatif avec vue mer, sa terrasse intime et son tarif accessible (dès 110 €/nuit) en font l'adresse la plus demandée pour les lunes de miel. Géko conviendra aux familles de 4 personnes cherchant calme et verdure sans sacrifier la piscine.
+              <strong style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, color: NAVY }}>Pour un couple en voyage romantique :</strong> Mabouya est taillée pour vous. Son jacuzzi privatif avec vue mer, sa terrasse intime et son tarif accessible (dès 70 €/nuit) en font l'adresse la plus demandée pour les lunes de miel. Géko conviendra aux familles de 4 personnes cherchant calme et verdure sans sacrifier la piscine.
             </p>
           </div>
 
@@ -661,7 +661,7 @@ export default function GuideVillaPiscine() {
               Votre villa avec piscine<br />vous attend en Martinique
             </h2>
             <p style={{ color: "rgba(250,245,233,0.65)", fontSize: 16, maxWidth: 520, margin: "0 auto 32px", lineHeight: 1.7, fontFamily: "'Cormorant Garamond', Georgia, serif", fontStyle: "italic" }}>
-              Quatre propriétés avec piscine privée, à partir de 110 €/nuit. Réservez directement — vos hôtes vous répondent sous une heure sur WhatsApp.
+              Quatre propriétés avec piscine privée, à partir de 70 €/nuit. Réservez directement — vos hôtes vous répondent sous une heure sur WhatsApp.
             </p>
             <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
               <a href="/" style={{

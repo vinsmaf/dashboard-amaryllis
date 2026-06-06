@@ -51,8 +51,8 @@ const CATEGORIES = [
       {
         q: "Quel est le prix d'une villa avec piscine ?",
         a: <>
-          <p>Nos villas avec piscine vont <strong>de 140€/nuit</strong> (Géko, T2 avec piscine privée) <strong>jusqu'à 280€/nuit</strong> pour la Villa Amaryllis (piscine à débordement + vue mer + 3 chambres).</p>
-          <p>Le studio Mabouya avec jacuzzi privé démarre à 110€/nuit — la meilleure entrée romantique du catalogue.</p>
+          <p>Nos villas avec piscine vont <strong>de 110€/nuit</strong> (Géko, T2 avec piscine privée) <strong>jusqu'à 280€/nuit</strong> pour la Villa Amaryllis (piscine à débordement + vue mer + 3 chambres).</p>
+          <p>Le studio Mabouya avec jacuzzi privé démarre à 70€/nuit — la meilleure entrée romantique du catalogue.</p>
         </>,
       },
       {
@@ -461,7 +461,7 @@ export default function Faq() {
         "@type": "FAQPage",
         "mainEntity": [
           { "@type": "Question", "name": "Comment réserver une villa en Martinique sans passer par Airbnb ?", "acceptedAnswer": { "@type": "Answer", "text": "Directement sur villamaryllis.com. Sélectionnez votre villa, choisissez vos dates et payez par carte (Stripe sécurisé). Vous économisez les frais de service jusqu'à 14% et bénéficiez d'un contact direct avec l'hôte. Réservation aussi possible par WhatsApp au +33 6 10 88 07 72." } },
-          { "@type": "Question", "name": "Quel est le prix d'une villa avec piscine en Martinique ?", "acceptedAnswer": { "@type": "Answer", "text": "Nos villas avec piscine vont de 150€/nuit (Géko, piscine privative à cascade) jusqu'à 280€/nuit pour la Villa Amaryllis (piscine à débordement eau salée, vue mer 180°, 3 chambres). Zandoli (220€) a aussi sa propre piscine privative à cascade. Iguana (180€) propose la seule piscine eau salée non chlorée de la résidence. Le studio Mabouya avec jacuzzi privatif démarre à 110€/nuit." } },
+          { "@type": "Question", "name": "Quel est le prix d'une villa avec piscine en Martinique ?", "acceptedAnswer": { "@type": "Answer", "text": "Nos villas avec piscine vont de 110€/nuit (Géko, piscine privative à cascade) jusqu'à 280€/nuit pour la Villa Amaryllis (piscine à débordement eau salée, vue mer 180°, 3 chambres). Zandoli (110€) a aussi sa propre piscine privative à cascade. Iguana (180€) propose la seule piscine eau salée non chlorée de la résidence. Le studio Mabouya avec jacuzzi privatif démarre à 70€/nuit." } },
           { "@type": "Question", "name": "Quelle est la politique d'annulation ?", "acceptedAnswer": { "@type": "Answer", "text": "Annulation gratuite jusqu'à 7 jours avant l'arrivée, remboursement intégral. Entre J-7 et J-2 : 50% remboursé. Moins de 48h : pas de remboursement, mais report possible. En cas de vigilance cyclonique orange ou rouge : remboursement 100%." } },
           { "@type": "Question", "name": "Faut-il louer une voiture pour séjourner en Martinique ?", "acceptedAnswer": { "@type": "Answer", "text": "Oui, en Martinique les transports en commun sont quasi-inexistants. Nous recommandons des loueurs locaux fiables qui livrent à la villa pour environ 280€/semaine. Pour notre appartement à Nogent-sur-Marne, le RER A est à 10 minutes à pied." } },
           { "@type": "Question", "name": "Quel est le montant de la caution pour une villa ?", "acceptedAnswer": { "@type": "Answer", "text": "Entre 500€ et 1 500€ selon la villa. La caution est uniquement pré-autorisée sur votre carte (jamais débitée) et libérée automatiquement 3 jours après votre départ si la villa est rendue en bon état." } },

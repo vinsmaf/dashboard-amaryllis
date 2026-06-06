@@ -212,11 +212,11 @@ export default function GuideActivites() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 10 }}>
               {[
                 { id: "amaryllis", name: "Villa Amaryllis", desc: "8 pers. · Piscine à débordement · Vue mer · À partir de 280€/nuit" },
-                { id: "zandoli",   name: "Zandoli",         desc: "5 pers. · Piscine privée · Vue mer · À partir de 220€/nuit" },
+                { id: "zandoli",   name: "Zandoli",         desc: "5 pers. · Piscine privée · Vue mer · À partir de 110€/nuit" },
                 { id: "iguana",    name: "Villa Iguana",    desc: "Piscine eau salée · Vue Diamant · Location longue durée" },
-                { id: "geko",      name: "Géko",            desc: "4 pers. · Piscine · Jardin · À partir de 150€/nuit" },
-                { id: "mabouya",   name: "Mabouya",         desc: "2 pers. · Jacuzzi privatif · À partir de 110€/nuit" },
-                { id: "schoelcher",name: "Bellevue",        desc: "4 pers. · Vue baie Fort-de-France · À partir de 100€/nuit" },
+                { id: "geko",      name: "Géko",            desc: "4 pers. · Piscine · Jardin · À partir de 110€/nuit" },
+                { id: "mabouya",   name: "Mabouya",         desc: "2 pers. · Jacuzzi privatif · À partir de 70€/nuit" },
+                { id: "schoelcher",name: "Bellevue",        desc: "4 pers. · Vue baie Fort-de-France · À partir de 90€/nuit" },
               ].map(v => (
                 <a key={v.id} href={`/${v.id}`} style={{ display: "flex", flexDirection: "column", background: "#fff", border: `1px solid ${SAND}`, borderRadius: 10, padding: "14px 16px", textDecoration: "none" }}>
                   <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 13, color: NAVY, marginBottom: 3 }}>{v.name} ›</div>
