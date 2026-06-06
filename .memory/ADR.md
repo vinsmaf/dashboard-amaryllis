@@ -5,7 +5,7 @@
 
 ---
 
-## ADR-S-011 · 2026-06-05 · Accès `sessionStorage`/`localStorage` toujours gardés (helper `safeStorage`)
+## ADR-S-013 · 2026-06-05 · Accès `sessionStorage`/`localStorage` toujours gardés (helper `safeStorage`)
 1. **Choix** : tout accès web-storage passe par `src/lib/safeStorage.js` (`ssGet`/`ssSet`/`ssRemove`, try/catch). Un accès nu en render plante toute la page si le stockage est bloqué (navigation privée stricte / cookies refusés / iframe sandbox → `SecurityError`).
 2. **Alternatives refusées** : try/catch inline partout (verbeux, oublié sur les accès render-time) ; ne rien faire (crash silencieux de `/merci` post-paiement + page réservation pour une frange d'utilisateurs).
 3. **Conséquences** : nouveau réflexe — ne JAMAIS écrire `sessionStorage.x()` nu, surtout au niveau render (top de composant, `useRef(!!sessionStorage…)`). Reste ~15 accès non critiques dans `PublicSite.jsx` (guards GA/caches, souvent déjà en `catch`) à migrer au fil de l'eau (cf. BLOCKERS).

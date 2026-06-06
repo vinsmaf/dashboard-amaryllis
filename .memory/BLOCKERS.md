@@ -36,6 +36,12 @@
 - **Doc périmée « 557 erreurs eslint ».** CLAUDE.md + PROJECT_MEMORY justifient l'exclusion du lint par ~557 erreurs ; `npm run lint` mesure aujourd'hui **0 erreur / ~17-19 warnings**. **Débloque** : corriger le wording (et envisager de réintégrer le lint au gate puisqu'il est propre).
 - **Prix en dur dans la prose marketing.** Les champs `desc` de `functions/[slug].js` écrivent « dès 110€/nuit » en texte libre (pas le champ prix, donc pas de bug de calcul, mais drift si le tarif change). **Débloque** : harmoniser à la main au prochain changement de prix.
 
+## 🟡 Bugs remontés (inbox 🐞) — restants après la passe 2026-06-05
+- **`sessionStorage` non gardé restant dans `PublicSite.jsx` (~15 accès)** → 🟡 partiellement contourné. Les CRITIQUES (render-time L7735 + écritures flux dépôt) sont corrigés (helper `safeStorage`, ADR-S-013). Restent des guards GA/tracking + caches (`deposit_cs` getItem ~L2013/7305, guardKeys, `wx_sl`…), souvent déjà en `catch` ou dans des effets (pas de crash render). **Débloque** : migrer le reste vers `ssGet/ssSet` au prochain passage sur le fichier.
+- **`coherence/total_aberrant` [2×] — résa Laurent Maignan : total=340€ < dépôt=500€** → 🔴 **donnée**, pas code. Détecté par `/api/coherence-check` sur `direct_bookings`. **Débloque** : Vincent vérifie/corrige la résa (total ou dépôt saisi à l'envers) puis passe le bug en « corrigé » dans l'onglet 🐞.
+- **`report` "HTTP 401 sur /admin"** → ✅ non-bug : expiration normale du token de session (géré par `apiFetch.notifyUnauthorized`). À marquer « ignoré » dans l'inbox.
+- **Findings `[revue code]` (LLM `/api/code-review`)** : cluster `GuestGuide.jsx` (5) + `service-checkout.js` = **faux positifs vérifiés** (code déjà gardé). Les autres (Faq/Services/TvScreen/analytics…) non vérifiés un par un → probablement bruit, à traiter en lot « ignoré » sauf re-signalement.
+
 ## 🟡 Dettes techniques latentes (cassera si on oublie le contexte)
 - **Drift du pattern miroir GAS/Worker.** `src/utils/{pricing,coherenceRules,resaDedup,occupancy,rmOccupancyAdjust}.js` sont **dupliqués à la main** dans `appscript/*.gs` et `workers/ical-sync/index.js` (impossible d'importer un module Node là-bas). Modifier l'util sans répercuter le miroir = bug silencieux non couvert par les tests. **Débloque** : checklist « j'ai touché un util → ai-je mis à jour le(s) miroir(s) ? » ; à terme, un test qui compare les deux implémentations.
 - **Doublons de docs à arbitrer (créés avant la décision contraire de Vincent).**

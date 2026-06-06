@@ -5,6 +5,11 @@
 
 ---
 
+## 2026-06-05 (soir) — 2ᵉ passe sur l'inbox bugs (🐞) + robustesse sessionStorage (ADR-S-013)
+- **Re-triage des 19 findings restés en `new`** (lus en read-only via `wrangler d1 execute revenue_manager`). La majorité des `[revue code]` (agent LLM `/api/code-review`) = **faux positifs vérifiés** : cluster `GuestGuide.jsx` (null-deref) déjà gardé par `if (loading) return` + `if (error || !guide) return` ; `service-checkout.js` déjà en try/catch complet. Leçon : **relire le code avant de "corriger" un finding LLM**.
+- **Vrai bug corrigé** : `sessionStorage` nu → `SecurityError` si stockage bloqué → **crash render** de `/merci` (post-paiement) et de la page réservation (`PublicSite` L7735). Helper `src/lib/safeStorage.js` (`ssGet/ssSet/ssRemove`) sur Merci.jsx (tous accès) + chemins critiques PublicSite (render-time + écritures dépôt). **161 tests verts**, commit `06f7783`. ⏳ **Déploiement à faire** (`npm run deploy:pages`).
+- **Restant (BLOCKERS 🟡)** : ~15 accès sessionStorage non critiques (PublicSite) à migrer ; bug **data** `coherence/total_aberrant` (résa Laurent Maignan total<dépôt) → Vincent à vérifier ; 401 admin = non-bug (token expiré, géré).
+
 ## 2026-06-05 (suite) — Emails Worker réparés + passe bugs admin + feature « mots interdits »
 - **📧 Emails Worker RÉPARÉS** : `RESEND_FROM` du Worker valait `Amaryllis <notifications@>` (domaine manquant) → Resend rejetait TOUS les emails (alertes résa, rappels prix, digest) silencieusement ; le push ntfy passait → fausse impression que « ça marche ». Le `wrangler secret put` n'a rien changé (var texte dashboard prime). Fix code `resendFrom(env)` (valide FQDN sinon `VERIFIED_FROM`). **Confirmé reçu par Vincent.** Commit 50b4da1.
 - **🐞 Passe sur les bugs admin** : 1 vrai bug runtime corrigé+déployé = chunk périmé post-deploy (handler `vite:preloadError` + filet, `src/main.jsx`, commit c82607b). Inbox triée : 3 timeouts crawler + 2 faux positifs SSR/window → `ignored` ; chunk → `fixed`. Restent 19 findings code authentiques en `new`.

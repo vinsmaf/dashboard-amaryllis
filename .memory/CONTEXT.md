@@ -1,6 +1,6 @@
 # CONTEXT — État courant (locatif-dashboard)
 
-> Snapshot condensé de l'état réel. **À mettre à jour à CHAQUE session.** Dernière MAJ : **2026-06-05**.
+> Snapshot condensé de l'état réel. **À mettre à jour à CHAQUE session.** Dernière MAJ : **2026-06-05** (2ᵉ passe bugs inbox ; helper `safeStorage` ADR-S-013, 161 tests verts, à déployer).
 
 ## Le projet
 Conciergerie + site de réservation directe pour **7 logements** (Martinique + Nogent-sur-Marne).
