@@ -98,30 +98,12 @@ export default function Tarifs() {
   return (
     <div style={{ padding: "16px 0" }}>
 
-      {/* ── Prix de base (barre compacte) ── */}
-      <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 12, padding: "14px 18px", marginBottom: 28 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "#e2e8f0" }}>Prix de base — aperçu interne</div>
-          <div style={{ fontSize: 11, color: "#475569" }}>N'affecte PAS le site. L'accroche « dès X€ » = min des prix journaliers (auto). Les prix facturés = le calendrier ci-dessous.</div>
-          <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
-            {published === "pushing" && <span style={{ fontSize: 11, color: "#94a3b8" }}>⏳ Publication…</span>}
-            {published === "pub" && <span style={{ fontSize: 11, color: "#34d399" }}>🌐 Publié en ligne (visible partout)</span>}
-            {published === "err" && <span style={{ fontSize: 11, color: "#fca5a5" }}>⚠️ Sync serveur échouée — réessaie</span>}
-            <button onClick={save} disabled={published === "pushing"} style={{ padding: "6px 14px", borderRadius: 7, border: "none", background: saved ? "#10b981" : "#2563eb", color: "#fff", fontWeight: 600, fontSize: 11, cursor: published === "pushing" ? "default" : "pointer", opacity: published === "pushing" ? 0.6 : 1, transition: "background 0.25s" }}>{saved ? "✓ Enregistré & publié" : "💾 Enregistrer & publier"}</button>
-          </div>
-        </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {Object.keys(DEFAULT_PRIX).map(id => (
-            <div key={id} style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: "7px 10px", border: `1px solid ${prices[id] !== DEFAULT_PRIX[id] ? "#f59e0b33" : "rgba(255,255,255,0.06)"}` }}>
-              <span style={{ fontSize: 11, color: "#94a3b8", whiteSpace: "nowrap" }}>{BIEN_LABELS[id].replace("Villa ", "").replace("T2 ", "")}</span>
-              <input
-                type="number" min="0" value={prices[id] ?? ""}
-                onChange={e => setPrices(p => ({ ...p, [id]: parseInt(e.target.value) || 0 }))}
-                style={{ width: 60, padding: "4px 6px", textAlign: "right", background: "#0f172a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, color: "#e2e8f0", fontSize: 12, outline: "none" }}
-              />
-              <span style={{ fontSize: 10, color: "#475569" }}>€</span>
-            </div>
-          ))}
+      {/* ── Info source unique des prix (le champ « prix de base » éditable a été supprimé) ── */}
+      <div style={{ background: "rgba(37,99,235,0.08)", border: "1px solid rgba(37,99,235,0.25)", borderRadius: 12, padding: "12px 18px", marginBottom: 24, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <span style={{ fontSize: 18 }}>💶</span>
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#e2e8f0" }}>Une seule source de prix : le calendrier ci-dessous</div>
+          <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>Les prix facturés ET l'accroche « à partir de X€ » du site (= prix le plus bas) viennent automatiquement du calendrier. Rien d'autre à régler.</div>
         </div>
       </div>
 
