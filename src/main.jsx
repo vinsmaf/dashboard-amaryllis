@@ -11,6 +11,32 @@ import { initMetaPixelIfConsented } from './lib/metaPixel.js'
 // Tag de build (force un nouveau hash de bundle quand nécessaire — survit à la minification)
 if (typeof window !== "undefined") window.__BUILD__ = "meta-pixel-2026-06-03";
 
+// Auto-récupération des "chunks périmés" : après un déploiement, l'ancien index.html
+// (en cache navigateur) référence des bundles dont le hash n'est plus servi → l'import
+// dynamique échoue ("Failed to fetch dynamically imported module") = page blanche.
+// On recharge la page une fois pour récupérer la version fraîche. Garde anti-boucle :
+// au plus 1 reload / 30 s (si ça échoue encore, c'est un vrai problème réseau, on laisse).
+if (typeof window !== "undefined") {
+  const RELOAD_TS_KEY = "amaryllis_chunk_reload_ts";
+  const recoverFromStaleChunk = (ev) => {
+    let last = 0;
+    try { last = Number(sessionStorage.getItem(RELOAD_TS_KEY)) || 0; } catch {}
+    if (Date.now() - last < 30000) return; // déjà tenté très récemment → on évite la boucle
+    try { sessionStorage.setItem(RELOAD_TS_KEY, String(Date.now())); } catch {}
+    if (ev && typeof ev.preventDefault === "function") ev.preventDefault();
+    window.location.reload();
+  };
+  // Événement officiel de Vite quand un preload de module échoue.
+  window.addEventListener("vite:preloadError", recoverFromStaleChunk);
+  // Filet : certains échecs de chunk remontent en promesse rejetée sans passer par l'event Vite.
+  window.addEventListener("unhandledrejection", (e) => {
+    const msg = String((e && e.reason && e.reason.message) || (e && e.reason) || "");
+    if (/Failed to fetch dynamically imported module|error loading dynamically imported module|Importing a module script failed/i.test(msg)) {
+      recoverFromStaleChunk();
+    }
+  });
+}
+
 // Capteur de bugs auto-hébergé (→ /api/client-errors → onglet 🐞 Bugs).
 // Installé tôt pour attraper aussi les erreurs de boot. Indépendant de Sentry.
 installBugCapture()
