@@ -4,6 +4,7 @@
 // Clic sur un email → ouvre EmailDrawer.
 import { useState, useEffect } from "react";
 import EmailDrawer from "./EmailDrawer.jsx";
+import EmailComposer from "./EmailComposer.jsx";
 
 function formatDateShort(ts) {
   if (!ts) return "—";
@@ -15,6 +16,7 @@ export default function ResaEmailList({ bookingId, email }) {
   const [emails, setEmails] = useState([]);
   const [loading, setLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [composerOpen, setComposerOpen] = useState(false);
 
   useEffect(() => {
     if (!bookingId && !email) { setLoading(false); return; }
@@ -55,6 +57,12 @@ export default function ResaEmailList({ bookingId, email }) {
               Voir tout →
             </button>
           )}
+          {email && (
+            <button onClick={() => setComposerOpen(true)}
+              style={{ padding: "2px 8px", borderRadius: 5, border: "none", background: "#10b981", color: "#fff", fontSize: 10, fontWeight: 600, cursor: "pointer" }}>
+              ✉ Nouveau
+            </button>
+          )}
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 180, overflowY: "auto" }}>
           {emails.slice(0, 6).map(e => (
@@ -75,6 +83,14 @@ export default function ResaEmailList({ bookingId, email }) {
       </div>
       {drawerOpen && email && (
         <EmailDrawer toEmail={email} onClose={() => setDrawerOpen(false)} />
+      )}
+      {composerOpen && email && (
+        <EmailComposer
+          isOpen={composerOpen}
+          onClose={() => setComposerOpen(false)}
+          defaultTo={email}
+          defaultBookingId={bookingId}
+        />
       )}
     </>
   );

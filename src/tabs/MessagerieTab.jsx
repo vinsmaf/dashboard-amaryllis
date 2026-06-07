@@ -3,6 +3,7 @@
 // ⚠️ Aucune opération top-level sur imports App.jsx (règle .memory/LEARNINGS.md 2026-06-07).
 import { useState, useEffect, useMemo } from "react";
 import EmailDrawer from "./messagerie/EmailDrawer.jsx";
+import EmailComposer from "./messagerie/EmailComposer.jsx";
 
 function formatDate(ts) {
   if (!ts) return "—";
@@ -22,6 +23,8 @@ export default function MessagerieTab() {
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
   const [selectedEmail, setSelectedEmail] = useState(null);
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [composerPrefill, setComposerPrefill] = useState({});
 
   useEffect(() => {
     const token = sessionStorage.getItem("ldb_tok") || localStorage.getItem("admin_token") || "";
@@ -35,6 +38,20 @@ export default function MessagerieTab() {
       .then(d => setClients(d.clients || []))
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    const handler = () => {
+      const token = sessionStorage.getItem("ldb_tok") || localStorage.getItem("admin_token") || "";
+      fetch("/api/emails-log?group=clients", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+        .then(r => r.json())
+        .then(d => setClients(d.clients || []))
+        .catch(() => {});
+    };
+    window.addEventListener("amaryllis_emails_log_updated", handler);
+    return () => window.removeEventListener("amaryllis_emails_log_updated", handler);
   }, []);
 
   const filtered = useMemo(() => {
@@ -57,8 +74,14 @@ export default function MessagerieTab() {
         <input
           type="text" placeholder="Rechercher email, sujet, bien…"
           value={search} onChange={e => setSearch(e.target.value)}
-          style={{ marginLeft: "auto", padding: "8px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#0f172a", color: "#e2e8f0", fontSize: 12, outline: "none", minWidth: 240 }}
+          style={{ padding: "8px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#0f172a", color: "#e2e8f0", fontSize: 12, outline: "none", minWidth: 240 }}
         />
+        <button
+          onClick={() => { setComposerPrefill({}); setComposerOpen(true); }}
+          style={{ marginLeft: "auto", padding: "8px 14px", borderRadius: 8, border: "none", background: "#10b981", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
+        >
+          ✉ Nouveau mail
+        </button>
       </div>
 
       {loading && <div style={{ fontSize: 12, color: "#64748b" }}>Chargement des conversations…</div>}
@@ -113,8 +136,30 @@ export default function MessagerieTab() {
       </div>
 
       {selectedEmail && (
-        <EmailDrawer toEmail={selectedEmail} onClose={() => setSelectedEmail(null)} />
+        <EmailDrawer
+          toEmail={selectedEmail}
+          onClose={() => setSelectedEmail(null)}
+          onCompose={(email) => {
+            const client = clients.find(c => c.to_email === email) || {};
+            setSelectedEmail(null);
+            setComposerPrefill({
+              to: email,
+              booking_id: client.booking_id || null,
+              bien_id: client.bien_id || null,
+            });
+            setComposerOpen(true);
+          }}
+        />
       )}
+      <EmailComposer
+        isOpen={composerOpen}
+        onClose={() => setComposerOpen(false)}
+        defaultTo={composerPrefill.to || ""}
+        defaultBookingId={composerPrefill.booking_id || null}
+        defaultBienId={composerPrefill.bien_id || null}
+        defaultPrenom={composerPrefill.prenom || ""}
+        defaultBienNom={composerPrefill.bien_nom || ""}
+      />
     </div>
   );
 }

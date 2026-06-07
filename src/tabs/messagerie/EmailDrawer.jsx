@@ -9,7 +9,7 @@ function formatDate(ts) {
   return d.toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
-export default function EmailDrawer({ toEmail, onClose }) {
+export default function EmailDrawer({ toEmail, onClose, onCompose }) {
   const [emails, setEmails] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(null);
@@ -65,10 +65,18 @@ export default function EmailDrawer({ toEmail, onClose }) {
             <div style={{ fontSize: 11, color: "#64748b" }}>📧 Fil emails</div>
             <div style={{ fontSize: 14, fontWeight: 700, marginTop: 2, wordBreak: "break-all" }}>{toEmail}</div>
           </div>
-          <button onClick={onClose}
-            style={{ padding: "6px 12px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.12)", background: "transparent", color: "#94a3b8", fontSize: 12, cursor: "pointer" }}>
-            Fermer ✕
-          </button>
+          <div style={{ display: "flex", gap: 8 }}>
+            {onCompose && (
+              <button onClick={() => onCompose(toEmail)}
+                style={{ padding: "6px 12px", borderRadius: 7, border: "none", background: "#10b981", color: "#fff", fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
+                ✉ Nouveau mail
+              </button>
+            )}
+            <button onClick={onClose}
+              style={{ padding: "6px 12px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.12)", background: "transparent", color: "#94a3b8", fontSize: 12, cursor: "pointer" }}>
+              Fermer ✕
+            </button>
+          </div>
         </div>
 
         {loading && <div style={{ fontSize: 12, color: "#64748b" }}>Chargement…</div>}
