@@ -35,12 +35,24 @@ export async function onRequest(context) {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   if (request.method !== "POST") return json({ error: "POST requis" }, 405);
 
+  try {
   // Auth
   const url = new URL(request.url);
   const secret = url.searchParams.get("secret");
   const secretOk = env.POSTSTAY_SECRET && secret === env.POSTSTAY_SECRET;
   const { ok: adminOk } = await verifyBearer(request, env);
   if (!secretOk && !adminOk) return json({ error: "Non autorisé" }, 401);
+
+  // Mode diagnostic : retourne info env sans appeler Resend ni D1
+  if (url.searchParams.get("diag") === "1") {
+    return json({
+      ok: true,
+      has_resend_key: !!env.RESEND_API_KEY,
+      resend_key_prefix: env.RESEND_API_KEY ? String(env.RESEND_API_KEY).slice(0, 6) : null,
+      has_d1: !!env.revenue_manager,
+      has_poststay_secret: !!env.POSTSTAY_SECRET,
+    });
+  }
 
   if (!env.RESEND_API_KEY) return json({ error: "RESEND_API_KEY manquante" }, 503);
   const db = env.revenue_manager;
@@ -155,4 +167,7 @@ export async function onRequest(context) {
     filter_to: filterTo,
     samples: importedDetails.slice(0, 5),
   });
+  } catch (err) {
+    return json({ error: "Crash interne", message: err?.message || String(err), stack: (err?.stack || "").slice(0, 600) }, 500);
+  }
 }
