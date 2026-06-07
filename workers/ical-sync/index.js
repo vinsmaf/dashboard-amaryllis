@@ -1630,6 +1630,22 @@ async function runYieldPricing(env, allEvents) {
   const in7      = addDays(todayStr, 7);
   const yieldPrices = {}; // { bienId: { date: pct } }
 
+  // ── Charger les price_min depuis D1 (plancher absolu par bien) ──────────────
+  const priceMinMap = {}; // { bienId: { priceMin, basePriceLow } }
+  try {
+    const db = env.revenue_manager;
+    if (db) {
+      const { results: props } = await db.prepare(
+        "SELECT id, price_min, base_price_low FROM rm_properties WHERE is_active = 1"
+      ).all();
+      for (const p of (props || [])) {
+        priceMinMap[p.id] = { priceMin: p.price_min || 0, basePriceLow: p.base_price_low || 0 };
+      }
+    }
+  } catch (e) {
+    console.log("[yield] Impossible de charger price_min depuis D1:", e.message);
+  }
+
   // Calculer occupation par bien sur 14j et 7j
   const occ14 = {}, occ7 = {};
   for (const e of allEvents) {
@@ -1677,14 +1693,38 @@ async function runYieldPricing(env, allEvents) {
       continue;
     }
 
-    // Sous-occupation sur 14j → appliquer remises
+    // Sous-occupation sur 14j → appliquer remises (avec respect du price_min)
     if (pct14 < 30) {
       if (!yieldPrices[bienId]) yieldPrices[bienId] = {};
       const reserved = reservedDates[bienId] || new Set();
+      const pmData = priceMinMap[bienId] || {};
+      const priceMinCents = pmData.priceMin || 0;
+      const basePriceCents = pmData.basePriceLow || 0;
+
       for (let d = 0; d < 14; d++) {
         const dateStr = addDays(todayStr, d);
         if (reserved.has(dateStr)) continue; // date occupée, skip
+
         const discount = d <= 4 ? 20 : 15;
+
+        // Vérifier que le prix après remise respecte le price_min
+        if (priceMinCents > 0 && basePriceCents > 0) {
+          const discountedCents = Math.round(basePriceCents * (1 - discount / 100));
+          if (discountedCents < priceMinCents) {
+            // Calculer la remise max qui respecte le plancher
+            const maxDiscountPct = Math.floor((1 - priceMinCents / basePriceCents) * 100);
+            if (maxDiscountPct <= 0) {
+              console.log(`[yield] ${bienId} ${dateStr} — prix après remise (${discountedCents/100}€) < price_min (${priceMinCents/100}€), remise annulée`);
+              continue; // Plancher déjà atteint, pas de remise
+            }
+            // Appliquer une remise réduite qui respecte le plancher
+            console.log(`[yield] ${bienId} ${dateStr} — remise plafonnée à ${maxDiscountPct}% (price_min ${priceMinCents/100}€)`);
+            yieldPrices[bienId][dateStr] = maxDiscountPct;
+            totalAdjusted++;
+            continue;
+          }
+        }
+
         yieldPrices[bienId][dateStr] = discount;
         totalAdjusted++;
       }

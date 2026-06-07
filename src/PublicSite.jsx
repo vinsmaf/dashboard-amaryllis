@@ -1894,23 +1894,50 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
     };
   }, [bien.id]);
 
-  // Remises gap depuis le worker (trous de calendrier)
+  // Remises gap depuis le worker (trous de calendrier) — avec respect du price_min
   useEffect(() => {
     fetch("https://amaryllis-ical-sync.vinsmaf.workers.dev/gap-prices")
       .then(r => r.json())
       .then(data => {
         const bienGaps = data[bien.id] || {};
         if (Object.keys(bienGaps).length > 0) {
-          setGapDates(bienGaps);
-          setDailyPricesMap(prev => {
-            const base = { ...prev };
-            const seed = (() => { try { return loadDailyPrices()[bien.id] || {}; } catch { return {}; } })();
-            for (const [date, pct] of Object.entries(bienGaps)) {
-              const basePrice = seed[date] ?? bien.prix;
-              base[date] = Math.round(basePrice * (1 - pct / 100));
-            }
-            return base;
-          });
+          // Récupérer le price_min depuis rm-properties (public via endpoint /api/rm-properties sans auth = liste)
+          // Fallback sur bien.prixMin si disponible, sinon 0 (pas de plancher)
+          const applyGaps = (priceMinEuros) => {
+            const effectiveGaps = {};
+            setDailyPricesMap(prev => {
+              const base = { ...prev };
+              const seed = (() => { try { return loadDailyPrices()[bien.id] || {}; } catch { return {}; } })();
+              for (const [date, pct] of Object.entries(bienGaps)) {
+                const basePrice = seed[date] ?? bien.prix;
+                const discounted = Math.round(basePrice * (1 - pct / 100));
+                // Respecter le plancher
+                if (priceMinEuros > 0 && discounted < priceMinEuros) {
+                  // Réduire la remise affichée au maximum possible
+                  const effectivePct = Math.floor((1 - priceMinEuros / basePrice) * 100);
+                  if (effectivePct > 0) {
+                    base[date] = priceMinEuros;
+                    effectiveGaps[date] = effectivePct;
+                  }
+                  // sinon pas de remise visible (basePrice <= priceMin)
+                } else {
+                  base[date] = discounted;
+                  effectiveGaps[date] = pct;
+                }
+              }
+              return base;
+            });
+            if (Object.keys(effectiveGaps).length > 0) setGapDates(effectiveGaps);
+          };
+
+          // Essayer de charger le price_min depuis D1 (endpoint public)
+          fetch(`/api/rm-properties?id=${bien.id}`)
+            .then(r => r.ok ? r.json() : null)
+            .then(d => {
+              const pm = d?.property?.price_min;
+              applyGaps(pm ? Math.round(pm / 100) : 0);
+            })
+            .catch(() => applyGaps(0));
         }
       })
       .catch(() => {});
@@ -3226,23 +3253,36 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
     };
   }, [bien.id]);
 
-  // Récupérer les remises gap depuis le worker (trous de calendrier)
+  // Récupérer les remises gap depuis le worker (trous de calendrier) — avec plancher price_min
   useEffect(() => {
     fetch("https://amaryllis-ical-sync.vinsmaf.workers.dev/gap-prices")
       .then(r => r.json())
       .then(data => {
         const bienGaps = data[bien.id] || {};
         if (Object.keys(bienGaps).length > 0) {
-          setGapDates(bienGaps);
-          setDailyPricesMap(prev => {
-            const base = { ...prev };
-            const seed = (() => { try { return loadDailyPrices()[bien.id] || {}; } catch { return {}; } })();
-            for (const [date, pct] of Object.entries(bienGaps)) {
-              const basePrice = seed[date] ?? bien.prix;
-              base[date] = Math.round(basePrice * (1 - pct / 100));
-            }
-            return base;
-          });
+          const applyGaps = (priceMinEuros) => {
+            const effectiveGaps = {};
+            setDailyPricesMap(prev => {
+              const base = { ...prev };
+              const seed = (() => { try { return loadDailyPrices()[bien.id] || {}; } catch { return {}; } })();
+              for (const [date, pct] of Object.entries(bienGaps)) {
+                const basePrice = seed[date] ?? bien.prix;
+                const discounted = Math.round(basePrice * (1 - pct / 100));
+                if (priceMinEuros > 0 && discounted < priceMinEuros) {
+                  const effectivePct = Math.floor((1 - priceMinEuros / basePrice) * 100);
+                  if (effectivePct > 0) { base[date] = priceMinEuros; effectiveGaps[date] = effectivePct; }
+                } else {
+                  base[date] = discounted; effectiveGaps[date] = pct;
+                }
+              }
+              return base;
+            });
+            if (Object.keys(effectiveGaps).length > 0) setGapDates(effectiveGaps);
+          };
+          fetch(`/api/rm-properties?id=${bien.id}`)
+            .then(r => r.ok ? r.json() : null)
+            .then(d => applyGaps(d?.property?.price_min ? Math.round(d.property.price_min / 100) : 0))
+            .catch(() => applyGaps(0));
         }
       })
       .catch(() => {});

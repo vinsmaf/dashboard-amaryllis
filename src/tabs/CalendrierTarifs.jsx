@@ -8,6 +8,37 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { DEFAULT_PRIX, BIEN_LABELS, BIEN_IDS, PRIX_LIMITS, MOIS_CAL, CAL_BIEN_IDS, N } from "../App.jsx";
 import { loadDailyPrices, saveDailyPrices, applyServerPriceOverrides, loadPriceOverrides, SEED_DAILY_PRICES } from "../seedPrices.js";
 
+// ── Prix min/max dynamiques depuis D1 rm_properties ──────────────────────────
+// Cache en mémoire pour éviter les rechargements répétés
+let _limitsCache = null;
+async function fetchPrixLimits() {
+  if (_limitsCache) return _limitsCache;
+  try {
+    const token = sessionStorage.getItem("admin_token") || localStorage.getItem("admin_token");
+    const r = await fetch("/api/rm-properties", { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+    if (!r.ok) return null;
+    const data = await r.json();
+    const map = {};
+    for (const p of (data.properties || [])) {
+      map[p.id] = [
+        Math.round((p.price_min || 25) / 100),
+        Math.round((p.price_max || 900) / 100),
+      ];
+    }
+    _limitsCache = map;
+    return map;
+  } catch { return null; }
+}
+async function savePrixLimit(bienId, pMin, pMax, token) {
+  await fetch("/api/rm-properties", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ id: bienId, price_min: pMin * 100, price_max: pMax * 100 }),
+  });
+  // Invalider le cache
+  _limitsCache = null;
+}
+
 // ── Helpers locaux saisons ──────────────────────────────────────────────────
 const DEFAULT_SAISONS = [
   { id: "pic",    label: "Pic",          color: "#ef4444", months: [12, 1]  }, // Déc–Jan
@@ -43,6 +74,41 @@ export default function CalendrierTarifs({ reservations = [] }) {
   const [copieSource, setCopieSource] = useState("");
   const [copieFactor, setCopieFactor] = useState("100");
   const [saisons, setSaisons] = useState(loadSaisons);
+  // Prix min/max dynamiques (chargés depuis D1, fallback sur PRIX_LIMITS hardcodés)
+  const [prixLimits, setPrixLimits] = useState(PRIX_LIMITS);
+  const [limitsLoaded, setLimitsLoaded] = useState(false);
+  const [limitsSaving, setLimitsSaving] = useState(false);
+  const [limitsSaved, setLimitsSaved] = useState(false);
+  const [limitsEdit, setLimitsEdit] = useState({}); // { bienId: { min: string, max: string } }
+
+  useEffect(() => {
+    fetchPrixLimits().then(map => {
+      if (map) { setPrixLimits(map); setLimitsEdit({}); }
+      setLimitsLoaded(true);
+    });
+  }, []);
+
+  // Helper pour accéder aux limites du bien courant (D1 ou fallback hardcodé)
+  const getLimits = (id) => prixLimits[id] || PRIX_LIMITS[id] || [25, 900];
+
+  async function saveLimits() {
+    const token = sessionStorage.getItem("admin_token") || localStorage.getItem("admin_token");
+    if (!token) return;
+    setLimitsSaving(true);
+    const updates = Object.entries(limitsEdit).filter(([, v]) => v.dirty);
+    await Promise.all(updates.map(([id, v]) => {
+      const pMin = parseInt(v.min); const pMax = parseInt(v.max);
+      if (!pMin || !pMax || pMin >= pMax) return Promise.resolve();
+      return savePrixLimit(id, pMin, pMax, token).then(() => {
+        setPrixLimits(prev => ({ ...prev, [id]: [pMin, pMax] }));
+      });
+    }));
+    setLimitsEdit({});
+    setLimitsSaving(false);
+    setLimitsSaved(true);
+    setTimeout(() => setLimitsSaved(false), 2500);
+  }
+
   const [saisonPrix, setSaisonPrix] = useState(() => {
     const stored = loadSaisonPrix();
     // init prix par défaut basés sur DEFAULT_PRIX si pas encore défini
@@ -202,7 +268,7 @@ export default function CalendrierTarifs({ reservations = [] }) {
   // Applique toutes les règles saisonnières sur l'année courante pour le bien actif
   function applySaisons() {
     const bienPrices = { ...(daily[bienId] || {}) };
-    const [pMin, pMax] = PRIX_LIMITS[bienId] || [25, 900];
+    const [pMin, pMax] = getLimits(bienId);
     for (let m = 1; m <= 12; m++) {
       // Trouver la saison applicable
       const saison = saisons.find(s => {
@@ -225,7 +291,7 @@ export default function CalendrierTarifs({ reservations = [] }) {
     const factor = parseFloat(copieFactor) / 100;
     if (!factor || factor <= 0) return;
     const sourcePrices = daily[copieSource] || {};
-    const lim = PRIX_LIMITS[bienId] || [25, 900];
+    const lim = getLimits(bienId);
     const bienPrices = { ...(daily[bienId] || {}) };
     Object.entries(sourcePrices).forEach(([date, price]) => {
       // Ne copier que les dates de l'année affichée
@@ -240,7 +306,7 @@ export default function CalendrierTarifs({ reservations = [] }) {
 
   function applyBulk() {
     const price = parseInt(bulkPrice);
-    const [pMin, pMax] = PRIX_LIMITS[bienId] || [25, 900];
+    const [pMin, pMax] = getLimits(bienId);
     if (!price || price < pMin || price > pMax || selectedDates.size === 0) return;
     const bienPrices = { ...(daily[bienId] || {}) };
     for (const d of selectedDates) bienPrices[d] = price;
@@ -303,7 +369,7 @@ export default function CalendrierTarifs({ reservations = [] }) {
 
   // ── Alertes prix sous seuil ───────────────────────────────────────────────
   const belowMinDates = useMemo(() => {
-    const [pMin] = PRIX_LIMITS[bienId] || [25, 900];
+    const [pMin] = getLimits(bienId);
     const prices = daily[bienId] || {};
     return Object.entries(prices)
       .filter(([date, p]) => date.startsWith(String(calYear)) && typeof p === "number" && p < pMin)
@@ -319,7 +385,7 @@ export default function CalendrierTarifs({ reservations = [] }) {
   useEffect(() => {
     if (ntfyAlertSentRef.current || belowMinDates.length === 0) return;
     ntfyAlertSentRef.current = true;
-    const [pMin] = PRIX_LIMITS[bienId] || [25, 900];
+    const [pMin] = getLimits(bienId);
     // Appel serveur : email Resend + push ntfy (via NTFY_TOPIC secret)
     fetch("/api/send-prix-alert", {
       method: "POST",
@@ -411,7 +477,7 @@ export default function CalendrierTarifs({ reservations = [] }) {
           <span style={{ fontSize: 15 }}>⚠️</span>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: "#f87171", marginBottom: 4 }}>
-              {belowMinDates.length} date{belowMinDates.length > 1 ? "s" : ""} en dessous du minimum ({(PRIX_LIMITS[bienId] || [25])[0]}€) — {BIEN_LABELS[bienId]}
+              {belowMinDates.length} date{belowMinDates.length > 1 ? "s" : ""} en dessous du minimum ({getLimits(bienId)[0]}€) — {BIEN_LABELS[bienId]}
             </div>
             <div style={{ fontSize: 11, color: "#fca5a5", lineHeight: 1.8, display: "flex", flexWrap: "wrap", gap: "4px 12px" }}>
               {belowMinDates.slice(0, 14).map(({ date, price }) => {
@@ -432,7 +498,7 @@ export default function CalendrierTarifs({ reservations = [] }) {
           <>
             <span style={{ fontSize: 11, color: "#0ea5e9", fontWeight: 600 }}>{selectedDates.size} date{selectedDates.size > 1 ? "s" : ""} sélectionnée{selectedDates.size > 1 ? "s" : ""}</span>
             {(() => {
-              const [pMin, pMax] = PRIX_LIMITS[bienId] || [25, 900];
+              const [pMin, pMax] = getLimits(bienId);
               const pv = parseInt(bulkPrice);
               const outOfRange = bulkPrice !== "" && (!pv || pv < pMin || pv > pMax);
               const valid = bulkPrice !== "" && pv >= pMin && pv <= pMax;
@@ -482,12 +548,50 @@ export default function CalendrierTarifs({ reservations = [] }) {
         </div>
         {showSaisons && (
           <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, padding: "14px 16px" }}>
+
+            {/* ── Plancher & Plafond éditables ── */}
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 11, color: "#64748b", fontWeight: 600, minWidth: 90 }}>🔒 Plancher / Plafond</span>
+              {["min", "max"].map(key => {
+                const [pMin, pMax] = getLimits(bienId);
+                const current = key === "min" ? pMin : pMax;
+                const editing = limitsEdit[bienId]?.[key] ?? "";
+                const val = editing !== "" ? editing : String(current);
+                const label = key === "min" ? "Min €" : "Max €";
+                return (
+                  <div key={key} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                    <span style={{ fontSize: 10, color: "#475569" }}>{label}</span>
+                    <input
+                      type="number"
+                      value={val}
+                      onChange={e => {
+                        setLimitsEdit(prev => ({
+                          ...prev,
+                          [bienId]: { ...(prev[bienId] || { min: String(getLimits(bienId)[0]), max: String(getLimits(bienId)[1]) }), [key]: e.target.value, dirty: true },
+                        }));
+                      }}
+                      style={{ width: 70, padding: "4px 7px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.15)", background: "#0f172a", color: "#e2e8f0", fontSize: 12, outline: "none" }}
+                    />
+                  </div>
+                );
+              })}
+              {limitsEdit[bienId]?.dirty && (
+                <button onClick={saveLimits} disabled={limitsSaving}
+                  style={{ padding: "4px 12px", borderRadius: 7, border: "none", background: "#10b981", color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                  {limitsSaving ? "…" : "Sauvegarder"}
+                </button>
+              )}
+              {limitsSaved && !limitsEdit[bienId]?.dirty && (
+                <span style={{ fontSize: 11, color: "#10b981" }}>✓ Sauvegardé</span>
+              )}
+            </div>
+
             <div style={{ fontSize: 11, color: "#64748b", marginBottom: 12 }}>
               Définissez un prix par saison pour <strong style={{ color: "#94a3b8" }}>{BIEN_LABELS[bienId]}</strong>, puis cliquez "Appliquer" pour remplir tout le calendrier.
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10, marginBottom: 14 }}>
               {saisons.map(s => {
-                const [pMin, pMax] = PRIX_LIMITS[bienId] || [25, 900];
+                const [pMin, pMax] = getLimits(bienId);
                 const val = saisonPrix[s.id]?.[bienId] || "";
                 const pv = parseInt(val);
                 const outOfRange = val !== "" && (!pv || pv < pMin || pv > pMax);
@@ -521,7 +625,7 @@ export default function CalendrierTarifs({ reservations = [] }) {
             </div>
             <button
               onClick={applySaisons}
-              disabled={!saisons.some(s => { const v = parseInt(saisonPrix[s.id]?.[bienId]); const lim = PRIX_LIMITS[bienId]||[25,900]; return v >= lim[0] && v <= lim[1]; })}
+              disabled={!saisons.some(s => { const v = parseInt(saisonPrix[s.id]?.[bienId]); const lim = getLimits(bienId); return v >= lim[0] && v <= lim[1]; })}
               style={{ padding: "7px 20px", borderRadius: 8, border: "none", background: "#6366f1", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
               ⚡ Appliquer sur {calYear}
             </button>
@@ -573,7 +677,7 @@ export default function CalendrierTarifs({ reservations = [] }) {
                 <div style={{ fontSize: 10, color: "#475569" }}>
                   Copie les prix {calYear} de <strong style={{ color: "#94a3b8" }}>{BIEN_LABELS[copieSource]}</strong> → <strong style={{ color: "#94a3b8" }}>{BIEN_LABELS[bienId]}</strong>
                   {parseFloat(copieFactor) !== 100 ? ` × ${parseFloat(copieFactor)/100}` : ""}
-                  , clampé sur [{(PRIX_LIMITS[bienId]||[25,900])[0]}€–{(PRIX_LIMITS[bienId]||[25,900])[1]}€]
+                  , clampé sur [{(getLimits(bienId))[0]}€–{(getLimits(bienId))[1]}€]
                 </div>
               )}
               <button
