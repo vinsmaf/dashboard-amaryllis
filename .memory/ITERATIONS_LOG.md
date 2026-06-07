@@ -126,3 +126,22 @@
 **Décisions** → ADR-S-001 (rituel = skill + `.memory/`), ADR-S-002 (gouvernance doc). **Frictions notées** : drift pattern miroir, doublons docs GBP/Ads à archiver, lint hors CI.
 
 **À suivre** : lancement Google Ads + Meta Ads pas-à-pas (demain matin, Vincent aux commandes).
+
+## 2026-06-07 — Session Pub/Ads + iCal exports + Attribution tracking
+
+**Ce qui a été fait :**
+- Optimisation budgets publicitaires : €25/j → €18/j (Meta C1 €5→€3/j×3, Google C1 €8→€5/j)
+- Lancement Meta C2 MOFU : audience custom "visiteurs 30j" créée + ad set B1 publié (€2/j)
+- Correction 2 erreurs Meta (destination URL manquante C2, "New Traffic Ad" orphelin supprimé)
+- Implémentation iCal export RFC 5545 pour sync automatique Airbnb/Booking (7 biens)
+- Module trackingAttribution.js : capture UTM/fbclid/gclid → Stripe metadata first-click
+
+**Pourquoi :**
+- Aligner le budget pub au ROI réel vs commissions (€779/mois) — éviter margin squeeze
+- Retargeting MOFU pour convertir les visiteurs récents du site en réservations directes
+- iCal sync pour éviter les doubles réservations quand une résa directe est prise
+
+**Commits clés :**
+- `2f4d6da` — feat(pub): iCal export endpoints + tracking attribution + budgets ads optimisés (12 fichiers, 489 insertions)
+
+**État deploy :** 🟢 PASS (audit invariants OK) · 4 points code review en inbox bugs (1 haute, 1 moyenne, 2 basses)

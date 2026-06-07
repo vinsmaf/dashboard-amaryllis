@@ -88,3 +88,31 @@
 3. **Conséquences attendues** : tous les emails Worker (alertes résa, rappels prix, digest IA) partent quoi qu'il arrive ; robustesse contre une conf cassée. Pattern réutilisable pour toute var sensible.
 4. **Périmètre** : `workers/ical-sync/index.js` (`resendFrom`/`VERIFIED_FROM`).
 5. **Statut** : **acté & déployé** (commit 50b4da1). Reste : nettoyer la var dashboard `RESEND_FROM` cassée (cosmétique, cf BLOCKERS).
+
+## ADR-PUB-001 · 2026-06-07 · Budgets ads plafonnés à 70% des commissions mensuelles
+1. **Choix** : budget pub total ramené à €18/j (€540/mois) — Meta C1 €9/j + Meta C2 €2/j + Google €7/j. Critère : ne pas dépasser ~70% des commissions payées aux OTA (€779/mois).
+2. **Alternatives refusées** : maintenir €25/j (€750/mois) qui laissait seulement €29 de marge sur les commissions — quasi nul ; baisser à €12/j jugé insuffisant pour la phase d'apprentissage algo.
+3. **Conséquences attendues** : marge de sécurité €239/mois. Si 1 résa directe/mois convertie = ROI positif. Seuil à revoir haussièrement si CPA confirmé < €100/réservation après 4 semaines.
+4. **Périmètre** : Meta Ads Manager (A1/A2/A3 ad sets C1) + Google Ads (C1 Offre Groupe). Aucun code modifié.
+5. **Statut** : **acté** (budgets appliqués live, Processing → Active).
+
+## ADR-PUB-002 · 2026-06-07 · Meta C2 MOFU lancée — audience custom visiteurs 30j
+1. **Choix** : nouvelle campagne MOFU retargeting avec audience custom "Villa Amaryllis - Tous visiteurs site (30j)" (Pixel 714189639771397, fenêtre 30 jours), budget €2/j, destination https://villamaryllis.com.
+2. **Alternatives refusées** : réutiliser l'audience 180j existante (trop large pour du retargeting chaud) ; audience Lookalike FR 1% (TOFU, pas MOFU).
+3. **Conséquences attendues** : remarketing des visiteurs récents du site. Manque encore le créatif visuel (image villa + texte social proof). Annonce tourne avec texte seul dans l'immédiat.
+4. **Périmètre** : Meta Ads Manager campagne C2 — ad set B1, ad "B1 - Visitor Retargeting".
+5. **Statut** : **acté & publié** (status "Processing"). ⚠️ Créatif visuel manquant — à compléter.
+
+## ADR-ICAL-001 · 2026-06-07 · Export iCal RFC 5545 via /api/ical/[bien].ics
+1. **Choix** : endpoint Cloudflare Pages Function `functions/api/ical/[file].js` — extrait les `direct_bookings` D1, génère iCal RFC 5545 valide, protégé par secret `ICAL_EXPORT_SECRET`. Route dynamique `.ics` requis par Airbnb et Booking.com pour accepter l'import.
+2. **Alternatives refusées** : paramètre query `?bienId=` (refusé par les OTA car URL ne se termine pas en `.ics`) ; webhook push (trop complexe, les OTA tirent eux-mêmes le calendrier).
+3. **Conséquences attendues** : les réservations directes bloquent automatiquement les calendriers Airbnb/Booking. Les 7 biens ont chacun une URL pattern `/api/ical/[bien].ics?secret=e000748c...`.
+4. **Périmètre** : `functions/api/ical/[file].js` (nouveau), D1 `revenue_manager.direct_bookings`, secret `ICAL_EXPORT_SECRET` (Cloudflare).
+5. **Statut** : **acté & déployé** (commit 2f4d6da, testé live avec Mabouya/François Cambier).
+
+## ADR-TRACKING-001 · 2026-06-07 · Attribution first-click via trackingAttribution.js → Stripe metadata
+1. **Choix** : module `src/lib/trackingAttribution.js` — capture UTM/fbclid/gclid au premier clic de session (sessionStorage), injecte `channel/utm_source/utm_medium/utm_campaign` dans les metadata Stripe à chaque réservation directe.
+2. **Alternatives refusées** : last-click (écrase le clic pub par une navigation directe) ; server-side (pas d'accès aux params URL côté CF Function sans passer les headers).
+3. **Conséquences attendues** : chaque réservation Stripe a son origine (google/meta/direct). Permet de calculer le vrai ROAS par canal dans le dashboard admin.
+4. **Périmètre** : `src/lib/trackingAttribution.js` (nouveau), `src/App.jsx`/`src/main.jsx` (import + appel), `functions/api/notify-booking.js` (injection metadata).
+5. **Statut** : **acté & déployé** (commit 2f4d6da). À vérifier : metadata visibles dans Stripe Dashboard sur prochaine résa.

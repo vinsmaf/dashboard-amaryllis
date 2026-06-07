@@ -72,3 +72,12 @@
 - **`sessionStorage` peut JETER, pas seulement renvoyer null** : accéder à `window.sessionStorage` lève `SecurityError` quand le stockage est bloqué (navigation privée stricte, cookies tiers refusés, iframe sandbox). Un accès **au niveau render** (top de composant, `useRef(!!sessionStorage.getItem(...))`) = **white-screen de toute la page**. Les `localStorage` du projet étaient déjà en `catch {}` ; les `sessionStorage` avaient été oubliés. → helper `safeStorage` (ADR-S-013). Prochaine fois : tout web-storage gardé, surtout en render.
 - **Triage des `kind` de l'inbox** : `console`/`[revue code]` = LLM (à vérifier) ; `coherence` = `/api/coherence-check` sur `direct_bookings` = **vraie anomalie data** (ex. résa avec dépôt > total) à traiter côté résa, pas code ; `report` = remontée manuelle (bouton « Signaler un bug »).
 - **Un `report` "HTTP 401 sur /admin" n'est pas forcément un bug** : `apiFetch.js` gère déjà le 401 (`notifyUnauthorized` → ré-ouvre la connexion). C'est l'expiration normale du token de session admin, pas un crash.
+
+## 2026-06-07 — Ads + iCal + Attribution
+
+- **Budget Meta = ad set level, pas campagne** : avec 3 ad sets à €5/j chacun dans C1, le total était €15/j (pas €5/j). La prochaine fois : toujours vérifier combien d'ad sets actifs avant d'estimer le budget total.
+- **Créer l'audience custom AVANT l'ad set MOFU** : l'audience "visiteurs 30j" n'existait pas → tentative d'assignation échouée silencieusement. Ordre correct : Audiences Manager → Custom → Website → 30j → sauver → puis créer/modifier l'ad set.
+- **Google Ads en "apprentissage" ≠ dépense réelle = budget théorique** : C1 à €8/j n'a dépensé que €15 sur 30 jours (~€0.50/j réel). Baisser le budget théorique a peu d'impact immédiat. Laisser tourner 2-3 semaines avant d'optimiser.
+- **Erreur Meta "Required field: link" est au niveau AD (créatif), pas ad set** : chercher dans Edit Ad → section Destination → Website URL. Ne pas chercher dans les paramètres de l'ad set.
+- **iCal: les OTA (Airbnb, Booking) exigent que l'URL se termine par `.ics`** : un paramètre `?bienId=amaryllis` est refusé. Utiliser une route dynamique `[file].js` avec `params.file.replace('.ics', '')` est le bon pattern.
+- **Toujours tester le Pixel fbclid/gclid en sessionStorage avec navigation privée** : `sessionStorage` lève `SecurityError` en mode strict (ADR-S-013 déjà appliqué). `trackingAttribution.js` wrappé en `try/catch` — penser à le vérifier sur toute implémentation future de web-storage.

@@ -91,3 +91,11 @@
 - 🟡 **Var dashboard Cloudflare `RESEND_FROM` du Worker = cassée** (`Amaryllis <notifications@>`, domaine manquant). Contournée par `resendFrom(env)` (code robuste, emails repartent). **Débloque** : Vincent corrige/supprime la variable dans le dashboard Worker `amaryllis-ical-sync` → conf propre. Non urgent.
 - 🟡 **19 findings « [revue code] » LLM en statut `new`** dans l'inbox 🐞 Bugs (GuestGuide/TvScreen/Merci/Services/apiFetch…). Avis statiques authentiques, 1× chacun, à arbitrer un jour. **Débloque** : passe de revue dédiée (option A proposée, non retenue ce jour).
 - 🟡 **Règle de cohérence faux positif** : `coherenceRules.js` flag `total < caution` comme « montant aberrant » (ex. Zandoli court séjour : total 340€ < caution 500€ = légitime). **Débloque** : décision Vincent d'assouplir la règle (mirrorée 3× : utils+GAS+Worker).
+
+## 2026-06-07 — Post-deploy Pub/Ads
+
+- 🟡 **[haute] notify-booking.js : colonnes DB inexistantes** — le code review au deploy a signalé des `INSERT` avec des colonnes qui n'existent pas dans le schéma D1. **Débloque** : vérifier le schéma `direct_bookings` en D1 (wrangler d1 execute) et corriger le `INSERT`. Priorité : haute (risque de crash à chaque résa directe).
+- 🟡 **[moyenne] get-availability.js : bien_id hard-codé** — risque de retourner une dispo incorrecte pour un bien. **Débloque** : passer le `bien_id` en paramètre dynamique depuis l'appelant.
+- 🟡 **[basse] ical-export.js + ical/[file].js : pas de vérif null sur checkin/checkout** — une résa avec dates nulles en D1 casserait la génération iCal. **Débloque** : ajouter `WHERE checkin IS NOT NULL AND checkout IS NOT NULL` dans la requête D1 + guard côté format.
+- 🟡 **Meta C2 MOFU sans créatif visuel** — l'annonce tourne avec texte seul. **Débloque** : ajouter une image de villa (format 1080×1080 recommandé) + texte retargeting ("Vous avez visité Amaryllis...") dans l'ad B1.
+- 🟡 **Limite de dépense compte Meta €50** — alerte dans ~15 jours avec €540/mois de budget. **Débloque** : si campagnes performantes, relever la limite dans Meta Ads Manager → Paramètres du compte → Limite de dépense.
