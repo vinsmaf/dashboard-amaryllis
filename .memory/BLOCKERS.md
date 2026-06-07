@@ -99,3 +99,9 @@
 - 🟡 **[basse] ical-export.js + ical/[file].js : pas de vérif null sur checkin/checkout** — une résa avec dates nulles en D1 casserait la génération iCal. **Débloque** : ajouter `WHERE checkin IS NOT NULL AND checkout IS NOT NULL` dans la requête D1 + guard côté format.
 - 🟡 **Meta C2 MOFU sans créatif visuel** — l'annonce tourne avec texte seul. **Débloque** : ajouter une image de villa (format 1080×1080 recommandé) + texte retargeting ("Vous avez visité Amaryllis...") dans l'ad B1.
 - 🟡 **Limite de dépense compte Meta €50** — alerte dans ~15 jours avec €540/mois de budget. **Débloque** : si campagnes performantes, relever la limite dans Meta Ads Manager → Paramètres du compte → Limite de dépense.
+
+## 2026-06-07 (soir) — Redesign Tarifs : crash circularité, rollbacké
+
+- ✅ **Crash admin résolu par rollback** (commits b5e757c..c5e6007 revertés via 1b6dd02). Bundle live de nouveau = ancienne version stable.
+- 🟡 **Smoke test deploy-pages.sh à renforcer** : il vérifie que `/admin` HTTP 200 mais NE charge PAS le bundle JS et ne déclenche pas le render React. Conséquence : un import circulaire qui crash au runtime passe le smoke test sans alerte. **Débloque** : ajouter au script un appel Playwright headless qui ouvre `/admin`, attend la fin du `load`, et capture les `pageerror`/`console.error` (similaire à `scripts/visual-review.mjs` déjà existant mais ciblé sur `/admin` avec connexion auto).
+- 🟢 **Mémoire à jour** : LEARNINGS.md contient la règle « zéro top-level sur imports App.jsx » (voir entrée 2026-06-07 suite).

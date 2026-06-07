@@ -81,3 +81,14 @@
 - **Erreur Meta "Required field: link" est au niveau AD (créatif), pas ad set** : chercher dans Edit Ad → section Destination → Website URL. Ne pas chercher dans les paramètres de l'ad set.
 - **iCal: les OTA (Airbnb, Booking) exigent que l'URL se termine par `.ics`** : un paramètre `?bienId=amaryllis` est refusé. Utiliser une route dynamique `[file].js` avec `params.file.replace('.ics', '')` est le bon pattern.
 - **Toujours tester le Pixel fbclid/gclid en sessionStorage avec navigation privée** : `sessionStorage` lève `SecurityError` en mode strict (ADR-S-013 déjà appliqué). `trackingAttribution.js` wrappé en `try/catch` — penser à le vérifier sur toute implémentation future de web-storage.
+
+## 2026-06-07 (suite) — Crash admin sur redesign Tarifs (circularité top-level)
+
+- **Règle « zéro top-level » sur imports d'App.jsx** : tout `.filter()`, `.map()`, `Object.keys()` ou accès à un export d'App.jsx **DANS LE SCOPE MODULE** d'un fichier `src/tabs/*.jsx` = crash garanti à l'évaluation. App.jsx importe les onglets en haut (~ligne 15) AVANT d'exporter ses constantes (lignes 700+) → le module enfant voit `CAL_BIEN_IDS = undefined` et `.filter()` crash.  
+  ✅ Safe : `import { CAL_BIEN_IDS }` + utilisation **DANS** le composant (JSX/fonctions) → React n'évalue qu'au render, quand App.jsx a fini.  
+  ❌ Crash : `const FOO = CAL_BIEN_IDS.filter(...)` au top-level du module.  
+  La prochaine fois : si je dois dériver une constante depuis un import App.jsx, c'est **dans le composant** ou **via un getter lazy**, jamais au top-level. Le pattern existant (CalendrierTarifs.jsx) ne fait JAMAIS d'opération top-level sur ses imports — c'est pour ça qu'il marche.
+
+- **`npm run build` ne détecte PAS ce type de bug** : Vite/Rollup tree-shake et bundle sans exécuter React. Le crash se produit uniquement au runtime client. **Avant tout deploy d'un nouveau composant onglet, OBLIGATOIRE : `npm run dev` + ouvrir `/admin` dans Chrome avec console ouverte + cliquer sur l'onglet concerné.** Le smoke test deploy-pages.sh charge `/admin` mais ne déclenche pas le render React des onglets.
+
+- **L'inbox `client_errors` D1 est le vrai diagnostic post-deploy** : quand le user a dit « erreur sur l'admin », `wrangler d1 execute revenue-manager --remote --command="SELECT * FROM client_errors ORDER BY last_seen DESC LIMIT 5"` m'a donné le message exact en 5 secondes (`Cannot read properties of undefined (reading 'filter')`). Reflex à conserver : avant de paniquer/rollback, **interroger `client_errors`** pour avoir le vrai message capté côté navigateur.
