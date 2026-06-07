@@ -106,19 +106,12 @@ export async function onRequest(context) {
     const firstTo = toLower.split(",")[0].trim();
     const booking = bookingByEmail[firstTo];
 
-    // Fetch détail (HTML)
-    let html = "", text = "", subject = e.subject || e.last_event || "";
-    try {
-      const det = await fetch(`https://api.resend.com/emails/${e.id}`, {
-        headers: { Authorization: `Bearer ${env.RESEND_API_KEY}` },
-      });
-      if (det.ok) {
-        const detail = await det.json();
-        html = detail.html || "";
-        text = detail.text || "";
-        subject = detail.subject || subject;
-      }
-    } catch { /* best-effort */ }
+    // Ne pas fetch le HTML ici (trop coûteux en CPU/temps) — le HTML sera lazy-chargé
+    // par /api/emails-log?body=1&id=... si nécessaire (à implémenter en v2).
+    // On stocke juste les métadonnées (subject, to, from, date).
+    const html = null;
+    const text = null;
+    const subject = e.subject || e.last_event || "(sans sujet)";
 
     // INSERT
     try {
