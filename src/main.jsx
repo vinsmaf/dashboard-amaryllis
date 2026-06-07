@@ -30,12 +30,25 @@ if (typeof window !== "undefined") {
   // Événement officiel de Vite quand un preload de module échoue.
   window.addEventListener("vite:preloadError", recoverFromStaleChunk);
   // Filet : certains échecs de chunk remontent en promesse rejetée sans passer par l'event Vite.
+  // Regex étendue : couvre aussi les cas Safari (MIME type) et Cloudflare SPA fallback (HTML servi à la place du JS).
+  const STALE_CHUNK_PATTERNS = /Failed to fetch dynamically imported module|error loading dynamically imported module|Importing a module script failed|is not a valid JavaScript MIME type|'text\/html' is not a valid|expected a JavaScript module|Failed to load resource|Loading chunk \d+ failed|ChunkLoadError/i;
   window.addEventListener("unhandledrejection", (e) => {
     const msg = String((e && e.reason && e.reason.message) || (e && e.reason) || "");
-    if (/Failed to fetch dynamically imported module|error loading dynamically imported module|Importing a module script failed/i.test(msg)) {
+    if (STALE_CHUNK_PATTERNS.test(msg)) {
       recoverFromStaleChunk();
     }
   });
+  // Filet console.error : Safari peut logger l'erreur sans rejeter de promesse.
+  const _origError = console.error;
+  console.error = function (...args) {
+    try {
+      const msg = args.map(a => (a && a.message) ? a.message : (typeof a === "string" ? a : "")).join(" ");
+      if (STALE_CHUNK_PATTERNS.test(msg)) {
+        recoverFromStaleChunk();
+      }
+    } catch { /* noop */ }
+    return _origError.apply(console, args);
+  };
 }
 
 // Capteur de bugs auto-hébergé (→ /api/client-errors → onglet 🐞 Bugs).
