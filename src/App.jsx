@@ -13,6 +13,7 @@ import Charges from "./tabs/Charges.jsx";
 import MenageTab from "./tabs/MenageTab.jsx";
 import MessageTemplates from "./tabs/MessageTemplates.jsx";
 import Tarifs from "./tabs/Tarifs.jsx";
+import MessagerieTab from "./tabs/MessagerieTab.jsx";
 import AnalyticsTab from "./tabs/AnalyticsTab.jsx";
 import MinNightsConfig from "./tabs/MinNightsConfig.jsx";
 import Pilotage from "./tabs/Pilotage.jsx";
@@ -1271,6 +1272,7 @@ export default function App() {
         { id: "cockpit",     icon: "🎯", label: "Cockpit",     badge: cockpitAlerts > 0 ? "⚠" : null, badgeColor: "#ef4444" },
         { id: "revenue",     icon: "💡", label: "Revenue Mgr" },
         { id: "tarifs",      icon: "🏷️", label: "Tarifs" },
+        { id: "messagerie", icon: "📧", label: "Messagerie" },
       ],
     },
     {
@@ -1522,6 +1524,7 @@ export default function App() {
             {tab === "historique" && <Historique />}
             {tab === "revenue"  && <RevenueManagerPro />}
             {tab === "tarifs" && <Tarifs />}
+            {tab === "messagerie" && <MessagerieTab />}
             {tab === "analytics" && <AnalyticsTab />}
             {tab === "menage" && <MenageTab />}
             {tab === "prestataires"   && <Prestataires />}
