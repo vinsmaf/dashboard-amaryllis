@@ -67,6 +67,30 @@ function json(data, status = 200) {
   });
 }
 
+// ── direct_bookings D1 → dates bloquées (résas directes Stripe non sync iCal) ──
+// Sans ça, les résas Martinique payées en direct n'apparaissent ni au site public
+// ni à l'admin → double-booking garanti tant que Vincent n'a pas bloqué à la main.
+async function fetchDirectBlocked(env, bienId) {
+  if (!env.revenue_manager || !bienId) return new Set();
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const rows = await env.revenue_manager
+      .prepare("SELECT checkin, checkout FROM direct_bookings WHERE bien_id=? AND checkout>=?")
+      .bind(bienId, today).all();
+    const blocked = new Set();
+    for (const r of (rows?.results || [])) {
+      if (!r.checkin || !r.checkout) continue;
+      const cur = new Date(r.checkin   + "T12:00:00Z");
+      const end = new Date(r.checkout + "T12:00:00Z");
+      while (cur < end) {
+        blocked.add(cur.toISOString().slice(0, 10));
+        cur.setUTCDate(cur.getUTCDate() + 1);
+      }
+    }
+    return blocked;
+  } catch { return new Set(); }
+}
+
 // ── Beds24 : convertit les réservations en dates bloquées ─────────────────
 async function fetchBeds24Blocked(env) {
   const token = env.BEDS24_TOKEN;
@@ -122,10 +146,17 @@ export async function onRequest(context) {
     const cached = env.AVAIL_CACHE ? await env.AVAIL_CACHE.get(cacheKey, "json") : null;
     if (cached) return json({ ...cached, fromCache: true });
 
-    const blocked = await fetchBeds24Blocked(env);
+    const [blocked, directBlocked] = await Promise.all([
+      fetchBeds24Blocked(env),
+      fetchDirectBlocked(env, "nogent"),
+    ]);
+    const merged = new Set([...blocked, ...directBlocked]);
     const result = {
-      blockedDates: Array.from(blocked).sort(),
-      sources: { beds24: { ok: blocked.size >= 0, count: blocked.size } },
+      blockedDates: Array.from(merged).sort(),
+      sources: {
+        beds24: { ok: blocked.size >= 0, count: blocked.size },
+        direct: { ok: true, count: directBlocked.size },
+      },
     };
 
     // Cache KV — TTL 1 h pour Nogent (réservable en direct via Beds24 temps réel) :
@@ -168,21 +199,23 @@ export async function onRequest(context) {
     return json({ error: "Aucune URL iCal configurée pour ce bien" }, 404);
   }
 
-  const [airbnbText, bookingText] = await Promise.all([
+  const [airbnbText, bookingText, directBlocked] = await Promise.all([
     fetchIcal(airbnbUrl),
     fetchIcal(bookingUrl),
+    fetchDirectBlocked(env, bienId),
   ]);
 
   const airbnbBlocked  = airbnbText  ? parseIcal(airbnbText)  : new Set();
   const bookingBlocked = bookingText ? parseIcal(bookingText) : new Set();
 
-  const merged = new Set([...airbnbBlocked, ...bookingBlocked]);
+  const merged = new Set([...airbnbBlocked, ...bookingBlocked, ...directBlocked]);
 
   const result = {
     blockedDates: Array.from(merged).sort(),
     sources: {
       airbnb:  { ok: !!airbnbText,  count: airbnbBlocked.size },
       booking: { ok: !!bookingText, count: bookingBlocked.size, fromParam: !maps.booking[bienId] && !!bookingUrl },
+      direct:  { ok: true,          count: directBlocked.size },
     },
   };
 

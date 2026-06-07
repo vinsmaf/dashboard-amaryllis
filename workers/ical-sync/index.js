@@ -1322,6 +1322,32 @@ async function runMonthlyExport(env, allEvents) {
   else console.log(`[monthly] Rapport ${label} envoyé — ${events.length} réservations, ${totalCA}€, ${tauxOcc}% occ.`);
 }
 
+// ── direct_bookings D1 → format event (résas Stripe Martinique sans bookingId Beds24) ──
+// Sans ça, le cron iCal pousse 0 résa directe vers la Sheet → invisible côté admin/compta/revenus.
+// Le Worker hérite du binding D1 `revenue_manager` (cf. wrangler.toml).
+async function fetchDirectBookingsAsEvents(env) {
+  if (!env.revenue_manager) return [];
+  try {
+    const rows = await env.revenue_manager.prepare(
+      `SELECT payment_intent_id, bien_id, bien_nom, voyageur, total, depot, checkin, checkout
+       FROM direct_bookings
+       WHERE checkout >= date('now', '-90 days')`
+    ).all();
+    return (rows?.results || []).filter(r => r.bien_id && r.checkin && r.checkout).map(r => ({
+      uid:      "direct-" + r.payment_intent_id,  // pushToSheets utilise e.uid comme id
+      bienId:   r.bien_id,
+      voyageur: r.voyageur || "—",
+      canal:    "Direct",
+      checkin:  r.checkin,
+      checkout: r.checkout,
+      montant:  Math.round(r.total || 0),
+    }));
+  } catch (e) {
+    console.error("[direct-bookings] D1 read error:", e.message);
+    return [];
+  }
+}
+
 // ── Push vers Google Sheets ──────────────────────────────────────────────────
 async function pushToSheets(env, allEvents) {
   if (!env.APPS_SCRIPT_URL) return;
@@ -1377,10 +1403,19 @@ async function runSync(env) {
   const bookingFeeds  = Object.entries(bookingUrls).map(([id, url]) => syncFeed(env, id, url, "booking", allEvents, nouvelles));
   await Promise.all([...airbnbFeeds, ...bookingFeeds]);
 
+  // ── Ajouter les résas DIRECTES Stripe (D1) à allEvents avant push Sheets ──
+  // Auto-sync : toutes les 15 min, les direct_bookings remontent dans
+  // « Toutes les Réservations » → Revenus 2026 → admin Planning.
+  const directs = await fetchDirectBookingsAsEvents(env);
+  if (directs.length > 0) {
+    allEvents.push(...directs);
+    console.log(`[direct-bookings] ${directs.length} résa(s) directe(s) ajoutée(s) au push Sheets`);
+  }
+
   if (nouvelles.length > 0) await sendNouvellesResas(env, nouvelles);
   if (allEvents.length > 0) await pushToSheets(env, allEvents);
 
-  console.log(`[amaryllis-sync] Terminé — ${allEvents.length} evt, ${nouvelles.length} nouveaux`);
+  console.log(`[amaryllis-sync] Terminé — ${allEvents.length} evt (dont ${directs.length} direct), ${nouvelles.length} nouveaux`);
   return { allEvents, total: allEvents.length, nouvelles: nouvelles.length };
 }
 

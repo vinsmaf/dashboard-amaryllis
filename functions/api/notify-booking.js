@@ -93,7 +93,7 @@ export async function onRequest(context) {
   }
 
   const body = await request.json().catch(() => ({}));
-  const { paymentIntentId, bienNom = "?", voyageur = "", total = 0, checkin = "", checkout = "", depot = 0 } = body;
+  const { paymentIntentId, bienId = "", bienNom = "?", voyageur = "", total = 0, checkin = "", checkout = "", depot = 0, email = "" } = body;
 
   // ── 1. Vérification anti-spam : le paiement existe-t-il vraiment et est-il réussi ? ──
   const sk = env.STRIPE_SECRET_KEY;
@@ -117,9 +117,12 @@ export async function onRequest(context) {
       await db.prepare(DDL).run();
       const exists = await db.prepare("SELECT 1 FROM direct_bookings WHERE payment_intent_id = ?").bind(paymentIntentId).first();
       if (exists) return json({ ok: true, already: true }, 200, request);
+      // Inclut bien_id + email pour que get-availability bloque bien les dates au site public,
+      // et que les emails pré-arrivée / post-séjour partent (cf. send-prearrivee, send-poststay).
+      const prenom = String(voyageur || "").trim().split(/\s+/)[0] || "";
       await db.prepare(
-        "INSERT INTO direct_bookings (payment_intent_id, bien_nom, voyageur, total, depot, checkin, checkout) VALUES (?,?,?,?,?,?,?)"
-      ).bind(paymentIntentId, bienNom, voyageur, Math.round(total), Math.round(depot), checkin, checkout).run();
+        "INSERT INTO direct_bookings (payment_intent_id, bien_id, bien_nom, voyageur, prenom, email, total, depot, checkin, checkout) VALUES (?,?,?,?,?,?,?,?,?,?)"
+      ).bind(paymentIntentId, bienId || null, bienNom, voyageur, prenom, email || null, Math.round(total), Math.round(depot), checkin, checkout).run();
     } catch { /* non bloquant */ }
   }
 

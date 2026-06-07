@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from "react";
+import { getAttributionMetadata } from "./lib/trackingAttribution.js";
 import MerciPage from "./Merci.jsx";
 import { loadDailyPrices, applyServerPriceOverrides } from "./seedPrices.js";
 import SEOMeta from "./SEOMeta.jsx";
@@ -1327,6 +1328,7 @@ function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) 
             email:     form.email.trim(),
             beds24Id:  cd.bookingId,
             bookingId: cd.bookingId,
+            ...getAttributionMetadata(),
           },
         }),
       });
@@ -1980,7 +1982,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
       const res = await fetch("/api/create-payment-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: total * 100, currency: "eur", metadata: { bienId: bien.id, checkin, checkout, voyageur: `${form.prenom} ${form.nom}`, email: form.email, ...(upsellsStr ? { upsells: upsellsStr } : {}) } }),
+        body: JSON.stringify({ amount: total * 100, currency: "eur", metadata: { bienId: bien.id, checkin, checkout, voyageur: `${form.prenom} ${form.nom}`, email: form.email, ...(upsellsStr ? { upsells: upsellsStr } : {}), ...getAttributionMetadata() } }),
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
@@ -5670,7 +5672,7 @@ function GroupPaymentModal({ biens, checkin, checkout, guests, nights, total, on
 
       const res = await fetch("/api/create-payment-intent", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: total * 100, currency: "eur", metadata: { type: "group", bienId: "groupe", logements: logementsLabel, checkin, checkout, guests: String(guests), voyageur: `${form.prenom} ${form.nom}`.trim(), email: form.email } }),
+        body: JSON.stringify({ amount: total * 100, currency: "eur", metadata: { type: "group", bienId: "groupe", logements: logementsLabel, checkin, checkout, guests: String(guests), voyageur: `${form.prenom} ${form.nom}`.trim(), email: form.email, ...getAttributionMetadata() } }),
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
@@ -7233,7 +7235,7 @@ function DevisPage() {
         const res = await fetch("/api/create-payment-intent", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ amount: totalCents, currency: "eur", metadata: { bienId: data.bienId, checkin: data.checkin, checkout: data.checkout, voyageur: data.voyageur, email: data.email, type: "devis" } }),
+          body: JSON.stringify({ amount: totalCents, currency: "eur", metadata: { bienId: data.bienId, checkin: data.checkin, checkout: data.checkout, voyageur: data.voyageur, email: data.email, type: "devis", ...getAttributionMetadata() } }),
         });
         const json = await res.json();
         if (json.error) { setError(json.error); return; }
@@ -7295,11 +7297,16 @@ function DevisPage() {
     if (err) { setError(err.message); setPaying(false); return; }
     if (paymentIntent?.status === "succeeded") {
       // 🔔 Alerte hôte fiable (email + push) — déclenchée dès le paiement réussi
+      // ⚠️ keepalive:true OBLIGATOIRE : sans ça, le window.location.href = "/merci"
+      // ci-dessous annule la requête avant qu'elle parte → notif hôte JAMAIS envoyée.
+      // Bug historique 06/2026 (résa François Cambier 1233€ Mabouya : 0 notif reçue).
       fetch("/api/notify-booking", {
         method: "POST", headers: { "Content-Type": "application/json" },
+        keepalive: true,
         body: JSON.stringify({
           paymentIntentId: paymentIntent.id,
-          bienNom: data.bienNom || data.bienId, voyageur: data.voyageur,
+          bienId: data.bienId, bienNom: data.bienNom || data.bienId,
+          voyageur: data.voyageur, email: data.email,
           total: data.total, depot: data.depot, checkin: data.checkin, checkout: data.checkout,
         }),
       }).catch(() => {});

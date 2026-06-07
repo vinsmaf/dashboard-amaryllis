@@ -1090,6 +1090,28 @@ export default function App() {
           return merged;
         });
       }
+      // ── Fusionner les résas directes Stripe (D1 direct_bookings) ──
+      // Source isolée des iCal/Beds24 : sans ça les résas Stripe Martinique
+      // (sans bookingId Beds24) restent invisibles dans l'admin Planning.
+      try {
+        const tok = sessionStorage.getItem("ldb_tok") || "";
+        if (tok) {
+          const r = await fetch("/api/direct-bookings", { headers: { Authorization: "Bearer " + tok } });
+          if (r.ok) {
+            const j = await r.json();
+            if (Array.isArray(j.reservations) && j.reservations.length > 0) {
+              setReservations(current => {
+                const currentIds = new Set(current.map(x => String(x.id)));
+                const toAdd = j.reservations.filter(x => x.checkin && x.checkout && !currentIds.has(String(x.id)));
+                if (toAdd.length === 0) return current;
+                const merged = [...current, ...toAdd];
+                try { localStorage.setItem("reservations_v2", JSON.stringify(merged)); } catch {}
+                return merged;
+              });
+            }
+          }
+        }
+      } catch { /* non bloquant */ }
       setSync({ status: "ok", msg: `✓ ${f.lastSync}` });
     } catch (e) {
       setSync({ status: "error", msg: `⚠ ${e.message}` });

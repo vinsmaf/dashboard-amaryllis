@@ -7,6 +7,7 @@ import { LangProvider } from './i18n.jsx'
 import { GUIDES_POI_SLUGS } from './data/guidesPoiSlugs.js'
 import { installBugCapture } from './lib/bugCapture.js'
 import { initMetaPixelIfConsented } from './lib/metaPixel.js'
+import { captureAttribution } from './lib/trackingAttribution.js'
 
 // Tag de build (force un nouveau hash de bundle quand nécessaire — survit à la minification)
 if (typeof window !== "undefined") window.__BUILD__ = "meta-pixel-2026-06-03";
@@ -40,6 +41,7 @@ if (typeof window !== "undefined") {
 // Capteur de bugs auto-hébergé (→ /api/client-errors → onglet 🐞 Bugs).
 // Installé tôt pour attraper aussi les erreurs de boot. Indépendant de Sentry.
 installBugCapture()
+captureAttribution() // Capture fbclid/gclid/UTM dès l'arrivée → injectés dans metadata Stripe
 
 // Meta Pixel — chargé seulement si le consentement RGPD a déjà été accordé (sinon attend le bandeau).
 initMetaPixelIfConsented()
