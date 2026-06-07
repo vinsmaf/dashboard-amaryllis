@@ -1,4 +1,5 @@
 import { resendFrom } from "./_email.js";
+import { sendEmail as sendEmailHelper } from "./_sendEmail.js";
 // Cloudflare Pages Function — POST /api/notify-booking
 // Alerte fiable de NOUVELLE RÉSERVATION DIRECTE, déclenchée côté client juste
 // après un paiement Stripe réussi (indépendant de la config webhook Stripe).
@@ -40,28 +41,22 @@ const fmtDate = (iso) => {
   return `${d}/${m}/${y}`;
 };
 
-async function sendEmail(env, subject, html, text) {
+async function sendEmail(env, subject, html, text, ctx = {}) {
   if (!env.RESEND_API_KEY) return false;
-  // Destinataires : NOTIFICATION_EMAIL (liste séparée par virgules) si défini,
-  // sinon les 2 adresses de Vincent par défaut.
-  // NOTE : tant que le domaine n'est pas vérifié dans Resend, l'envoi via
-  // onboarding@resend.dev n'atteint QUE l'email du compte Resend (vinsmaf@hotmail.com).
-  // Pour ajouter contact@villamaryllis.com + un expéditeur brandé : vérifier le
-  // domaine sur resend.com/domains, puis définir RESEND_FROM + NOTIFICATION_EMAIL.
   const to = env.NOTIFICATION_EMAIL
     ? env.NOTIFICATION_EMAIL.split(",").map(s => s.trim()).filter(Boolean)
     : ["vinsmaf@hotmail.com", "contact@villamaryllis.com"];
-  try {
-    const r = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        from: resendFrom(env),
-        to, subject, html, text,
-      }),
-    });
-    return r.ok;
-  } catch { return false; }
+  const result = await sendEmailHelper(env, {
+    to,
+    subject,
+    html,
+    text,
+    template: "notify_booking_host",
+    category: "internal",
+    bien_id: ctx.bien_id || null,
+    booking_id: ctx.booking_id || null,
+  });
+  return result.ok;
 }
 
 async function sendNtfy(env, title, body) {
@@ -142,7 +137,7 @@ export async function onRequest(context) {
       🚨 Pense à <strong>bloquer ces dates sur Airbnb + Booking</strong> (pas de sync auto pour les villas Martinique).</p>
   </div>`;
 
-  const emailSent = await sendEmail(env, titre, html, ligne);
+  const emailSent = await sendEmail(env, titre, html, ligne, { booking_id: paymentIntentId, bien_id: bienId });
   const ntfySent  = await sendNtfy(env, titre, ligne + "\n\n🚨 Bloquer les dates sur Airbnb + Booking");
 
   return json({ ok: true, emailSent, ntfySent }, 200, request);

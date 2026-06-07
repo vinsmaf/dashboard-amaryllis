@@ -1,4 +1,5 @@
 import { resendFrom } from "./_email.js";
+import { sendEmail as sendEmailHelper } from "./_sendEmail.js";
 // Cloudflare Pages Function — POST /api/stripe-webhook
 // Reçoit les événements Stripe et notifie l'hôte par email
 //
@@ -113,25 +114,24 @@ async function verifyStripeSignature(body, sigHeader, secret) {
   return expected === sig;
 }
 
-async function sendEmail(env, { subject, html, to }) {
+async function sendEmail(env, { subject, html, to, booking_id, bien_id, category = "internal", template = "stripe_confirmation" }) {
   if (!env.RESEND_API_KEY) {
     console.error("[webhook] RESEND_API_KEY absent — email non envoyé");
     return;
   }
   const recipient = to || env.NOTIFICATION_EMAIL || "contact@villamaryllis.com";
-  const r = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      from: resendFrom(env),
-      to: Array.isArray(recipient) ? recipient : String(recipient).split(",").map(s => s.trim()).filter(Boolean),
-      subject,
-      html,
-    }),
+  const toArr = Array.isArray(recipient) ? recipient : String(recipient).split(",").map(s => s.trim()).filter(Boolean);
+  const result = await sendEmailHelper(env, {
+    to: toArr,
+    subject,
+    html,
+    template,
+    category,
+    booking_id: booking_id || null,
+    bien_id: bien_id || null,
   });
-  if (!r.ok) {
-    const err = await r.text().catch(() => "");
-    console.error(`[webhook] Resend erreur ${r.status}:`, err);
+  if (!result.ok) {
+    console.error(`[webhook] Resend erreur:`, result.error);
   }
 }
 
@@ -144,6 +144,10 @@ async function sendConfirmationToGuest(env, { bienNom, voyageur, email, checkin,
   await sendEmail(env, {
     to: email,
     subject: `✅ Réservation confirmée — ${bienNom}`,
+    booking_id: bookingId || null,
+    bien_id: null,
+    category: "client",
+    template: "stripe_confirmation",
     html: `
       <div style="font-family:'Helvetica Neue',Arial,sans-serif;max-width:580px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #e8e0d0">
         <!-- Header -->
@@ -273,6 +277,10 @@ export async function onRequestPost(context) {
       try {
         await sendEmail(env, {
           subject: `🚨 Résa GROUPÉE payée — BLOQUER les calendriers (${logements})`,
+          booking_id: pi.id,
+          bien_id: "groupe",
+          category: "internal",
+          template: "stripe_group_host",
           html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto">
             <h2 style="color:#0e3b3a">Réservation groupée payée ✅ — action requise</h2>
             <p style="font-size:14px;color:#b91c1c"><strong>Bloquez immédiatement</strong> les calendriers Airbnb/Booking des logements ci-dessous pour éviter une double réservation (ils ne se bloquent pas automatiquement) :</p>
@@ -383,6 +391,10 @@ export async function onRequestPost(context) {
       } catch (e) { console.warn("[webhook] service_orders:", e.message); }
       await sendEmail(env, {
         subject: `🛎️ Service vendu — ${label} · ${bienNom} (${amount})`,
+        booking_id: session.id,
+        bien_id: meta.bienId || null,
+        category: "internal",
+        template: "stripe_service_host",
         html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px">
           <h2 style="color:#0e3b3a">🛎️ Nouveau service payé</h2>
           <p><strong>${label}</strong> — <strong>${amount}</strong><br>Logement : <strong>${bienNom}</strong>${contact ? `<br>Note du voyageur : ${contact}` : ""}${email ? `<br>Email : ${email}` : ""}</p>
@@ -416,6 +428,10 @@ export async function onRequestPost(context) {
       const montant = session.amount_total ? `${(session.amount_total / 100).toFixed(0)} €` : "?";
       await sendEmail(env, {
         subject: `💶 ${type === "acompte" ? "Acompte" : "Solde"} payé — ${bienNom} (${meta.voyageur || "voyageur"})`,
+        booking_id: devisId || null,
+        bien_id: meta.bienId || null,
+        category: "internal",
+        template: "stripe_acompte_solde_host",
         html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px"><h2 style="color:#0e3b3a">💶 ${type === "acompte" ? "Acompte reçu" : "Solde reçu — séjour soldé ✅"}</h2><p><strong>${bienNom}</strong> — ${meta.voyageur || "voyageur"}<br>${meta.checkin || "?"} → ${meta.checkout || "?"}<br>Montant : <strong>${montant}</strong></p></div>`,
       }).catch(() => {});
       return json({ ok: true, type, devis: devisId });
@@ -434,6 +450,10 @@ export async function onRequestPost(context) {
 
     await sendEmail(env, {
       subject: `🔒 Caution sécurisée — ${bienNom} (${voyageur})`,
+      booking_id: session.id,
+      bien_id: bienId || null,
+      category: "internal",
+      template: "stripe_caution_host",
       html: `
         <div style="font-family:sans-serif;max-width:560px;margin:0 auto;background:#f8f5ef;padding:32px 24px;border-radius:12px">
           <h2 style="color:#0e3b3a;margin-top:0">🔒 Caution sécurisée</h2>

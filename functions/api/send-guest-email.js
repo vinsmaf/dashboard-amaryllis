@@ -1,4 +1,5 @@
 import { resendFrom } from "./_email.js";
+import { sendEmail as sendEmailHelper } from "./_sendEmail.js";
 // Cloudflare Pages Function — POST /api/send-guest-email
 // crm-010/016 — Envoi générique d'un email voyageur depuis un template HTML.
 //
@@ -41,21 +42,18 @@ export async function sendGuestEmail(env, origin, { template, to, subject, vars 
   const raw = await tplRes.text();
   const html = fillTemplate(raw, vars);
 
-  const r = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      from: resendFrom(env),
-      to: [to],
-      subject: subject || "Amaryllis Locations",
-      html,
-    }),
+  const result = await sendEmailHelper(env, {
+    to,
+    subject: subject || "Amaryllis Locations",
+    html,
+    template,
+    category: "client",
+    bien_id: vars.bien_id || null,
   });
-  if (!r.ok) {
-    const err = await r.text().catch(() => "");
-    return { ok: false, error: `Resend ${r.status}: ${err.slice(0, 120)}` };
+  if (!result.ok) {
+    return { ok: false, error: result.error || "Resend failed" };
   }
-  return { ok: true };
+  return { ok: true, id: result.resendId };
   } catch (e) {
     // Une sous-requête (template / Resend) qui throw ne doit jamais faire planter
     // l'appelant (ex. cron relance-panier qui renvoyait 500 sur 1 seul échec réseau).

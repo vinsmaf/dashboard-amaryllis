@@ -1,4 +1,5 @@
 import { resendFrom } from "./_email.js";
+import { sendEmail as sendEmailHelper } from "./_sendEmail.js";
 // Cloudflare Pages Function — GET /api/send-poststay
 // crm-006 : Email post-séjour J+3 — demande d'avis Google + NPS 1 question
 //
@@ -260,18 +261,18 @@ export async function onRequestGet(context) {
     }
 
     try {
-      const r = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          from:    resendFrom(env),
-          to:      [b.email],
-          subject,
-          html,
-          reply_to: "contact@villamaryllis.com",
-        }),
+      const result = await sendEmailHelper(env, {
+        to: b.email,
+        subject,
+        html,
+        reply_to: "contact@villamaryllis.com",
+        template: "poststay_voyageur",
+        category: "client",
+        bien_id: b.bienId || null,
+        booking_id: b.bookingId ? String(b.bookingId) : null,
       });
-      results.push({ bookingId: b.bookingId, email: b.email, status: r.ok ? "sent" : `error ${r.status}` });
+      const r = { ok: result.ok };
+      results.push({ bookingId: b.bookingId, email: b.email, status: r.ok ? "sent" : `error ${result.error}` });
     } catch (err) {
       results.push({ bookingId: b.bookingId, email: b.email, status: `error: ${err.message}` });
     }
