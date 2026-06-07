@@ -97,6 +97,24 @@ else
   SMOKE_FAIL=1
 fi
 
+# 2b. Anti-régression INC-2026-06-07 (chunk périmé) — un /assets/*.js INEXISTANT
+#     DOIT renvoyer un vrai HTTP 404 (Pages Function functions/assets/[[asset]].js),
+#     PAS le SPA fallback (HTTP 200 + text/html). Si on perd cette protection,
+#     les visiteurs avec un vieux index.html en cache navigateur voient une
+#     page blanche silencieuse après deploy (Failed to fetch dynamically imported module).
+SENTINEL_PATH="/assets/__sentinel-stale-$(date +%s).js"
+SENTINEL_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$DOMAIN$SENTINEL_PATH")
+SENTINEL_HEADER=$(curl -sI "$DOMAIN$SENTINEL_PATH" | grep -i "^x-stale-chunk:" | head -1)
+if [[ "$SENTINEL_STATUS" == "404" ]]; then
+  echo "   ✅ Chunk périmé simulé → HTTP 404 (anti-régression INC-2026-06-07)"
+else
+  echo "   ❌ Chunk périmé simulé → HTTP $SENTINEL_STATUS (devrait être 404 !)"
+  echo "      ⚠️  La Pages Function functions/assets/[[asset]].js ne s'applique pas."
+  echo "      ⚠️  Les visiteurs avec vieux index.html en cache verront une page blanche."
+  echo "      → Vérifier : ls functions/assets/[[asset]].js && grep 'x-stale-chunk' functions/assets/[[asset]].js"
+  SMOKE_FAIL=1
+fi
+
 # 3. Le Service Worker est bien le kill-switch (désinscription, pas de cache)
 if curl -s "$DOMAIN/sw.js" | grep -q "unregister"; then
   echo "   ✅ Service Worker = kill-switch (pas de cache HTML)"

@@ -105,3 +105,9 @@
 - ✅ **Crash admin résolu par rollback** (commits b5e757c..c5e6007 revertés via 1b6dd02). Bundle live de nouveau = ancienne version stable.
 - 🟡 **Smoke test deploy-pages.sh à renforcer** : il vérifie que `/admin` HTTP 200 mais NE charge PAS le bundle JS et ne déclenche pas le render React. Conséquence : un import circulaire qui crash au runtime passe le smoke test sans alerte. **Débloque** : ajouter au script un appel Playwright headless qui ouvre `/admin`, attend la fin du `load`, et capture les `pageerror`/`console.error` (similaire à `scripts/visual-review.mjs` déjà existant mais ciblé sur `/admin` avec connexion auto).
 - 🟢 **Mémoire à jour** : LEARNINGS.md contient la règle « zéro top-level sur imports App.jsx » (voir entrée 2026-06-07 suite).
+
+## 2026-06-07 (soir) — Chunk périmé v2 : RÉSOLU + smoke test renforcé
+
+- ✅ **Résolu** par `524fb3d` (Pages Function `functions/assets/[[asset]].js` + filet client renforcé) + le commit qui suit (smoke test sentinel + journalisation).
+- 🟡 **Cache CDN Cloudflare retient encore temporairement** les vieux chunks périmés avec leur ancien content-type `text/html` (cache immutable d'avant le fix). Pour les visiteurs qui hit ces caches, le filet client renforcé prend le relai et déclenche le reload. Le cache CDN expire naturellement avec TTL ou peut être purgé manuellement (token API Cache Purge).
+- 🟢 **Anti-régression** : `scripts/deploy-pages.sh` teste maintenant un sentinel `/assets/__sentinel-stale-{ts}.js` → si HTTP 200 au lieu de 404, le smoke fail. Empêche de redéployer sans la Pages Function.

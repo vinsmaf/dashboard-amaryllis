@@ -137,6 +137,26 @@
   - Si un bundle est empoisonné : bumper `window.__BUILD__`, redéployer, attendre la propagation, vérifier en boucle (10×) le content-type. À défaut, purger le cache Cloudflare (nécessite un token API Cache Purge, non dispo en local).
   - `cache-bust ?v=` sur l'asset → teste l'ORIGINE (toujours JS si le déploiement est sain) vs le cache (peut être empoisonné).
 
+## 2026-06-07 — Chunk périmé v2 : site cassé pour visiteurs avec vieux index.html en cache navigateur — RÉSOLU
+
+**Symptôme** : 30 min après un déploiement (commit `145b6a7` puis `cbe5952`), le site public devenait inaccessible pour des visiteurs déjà chargés avant deploy. Erreurs Sentry + capteur D1 : `"Failed to fetch dynamically imported module: .../assets/PublicSite-4t0jOPlk.js"` (chunk de l'AVANT-deploy) + `"'text/html' is not a valid JavaScript MIME type."` + `TypeError: undefined is not an object (evaluating 'e._result.default')` (React lazy/Suspense interne quand le module reçu est du HTML).
+
+**Cause** : extension du problème INC-2026-06-02 (cache empoisonné côté CDN). Cette fois c'est le **cache navigateur** d'un visiteur qui retient l'ancien `index.html` après un deploy. L'ancien `index.html` référence `PublicSite-OLDHASH.js` qui n'existe plus en statique → Cloudflare applique le SPA fallback (`/* → /index.html 200`) → renvoie HTML avec content-type `text/html` au lieu d'un vrai 404 JS → le navigateur dit "is not a valid JavaScript MIME type" → la promesse d'import dynamique se rejette, MAIS le filet `vite:preloadError` ne se déclenche pas toujours sur ce wording d'erreur précis (Safari/Chrome iOS notamment) → page blanche silencieuse.
+
+**Résolution immédiate** : 
+1. `functions/assets/[[asset]].js` (NOUVELLE Pages Function) : intercepte tous les `/assets/*`, laisse Cloudflare servir le fichier statique si présent, et **force un vrai HTTP 404 + content-type `text/plain` + header `x-stale-chunk: 1`** si le SPA fallback a renvoyé du `text/html` pour une extension `.js/.mjs/.css/.woff2/.map/...`. Le navigateur reçoit un VRAI 404 → `vite:preloadError` se déclenche → `window.location.reload()`.
+2. `src/main.jsx` : regex `STALE_CHUNK_PATTERNS` étendue (8 patterns au lieu de 3 — couvre Safari `is not a valid JavaScript MIME type`, `ChunkLoadError`, `Loading chunk N failed`, `expected a JavaScript module`, etc.) + filet supplémentaire qui monkey-patch `console.error` pour les cas où Safari logue l'erreur sans rejeter de promesse.
+
+**Garde-fous** :
+- ⚠️ La règle `/* /index.html 200` dans `_redirects` est nécessaire au SPA, mais **dangereuse sur `/assets/*`**. Le Pages Function intercepte ce cas — ne jamais le supprimer. Si on déplace la racine d'assets (`/static/` au lieu de `/assets/`), il faut adapter le path du `[[asset]].js`.
+- Le smoke test `deploy-pages.sh` doit tester un **chunk inexistant simulé** (`/assets/__sentinel-stale-${ts}.js`) après chaque deploy → doit renvoyer HTTP 404, pas 200+HTML. **Ajouté dans cette session.**
+- Le filet client ne doit JAMAIS être désactivé. Les patterns sont conservés dans une constante `STALE_CHUNK_PATTERNS` pour qu'on voie d'un coup d'œil ce qui est couvert.
+- En cas de re-occurrence : interroger `client_errors` (`kind='console'` + `msg LIKE '%MIME type%'`) pour confirmer la cause AVANT de rollback.
+
+**Commits** : `524fb3d` (fix infra Function + filet client) + le présent commit (renforcement smoke test + log).
+
+---
+
 ## 2026-06-03 — Statut Villa Iguana : LONGUE DURÉE uniquement (ne pas "corriger")
 **Fait confirmé par Vincent** : Villa Iguana = **Sainte-Luce, résidence Amaryllis** (PAS Le Diamant — vue seulement) ET **location longue durée uniquement** (`bookable:false`, pas de réservation court séjour). Un sous-agent juriste avait supposé "saisonnier" et retiré la mention "longue durée" des CGV → annulé. Cohérence : fiche PublicSite + prerender (bookable:false) + CGV disent tous "longue durée uniquement".
 **Garde-fou** : ne pas activer la réservation court séjour d'Iguana ni retirer "longue durée" sans confirmation de Vincent.

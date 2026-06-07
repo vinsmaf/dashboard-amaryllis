@@ -212,3 +212,23 @@
 - B — Auto relances paniers abandonnés (réutilise send-custom-email + promo-codes + templates)
 - C — Envoi en masse / segmentation
 - D — Tracking conversion (incrémente `used_count` au checkout quand code utilisé)
+
+## 2026-06-07 (soir) — Incident chunk périmé v2 résolu + journalisation
+
+**Symptôme** : site public cassé pour visiteurs avec vieux index.html en cache (erreurs Sentry + D1 : "Failed to fetch dynamically imported module", "is not a valid JavaScript MIME type", "TypeError e._result.default undefined"). Affecte iOS Safari/Chrome notamment.
+
+**Cause** : règle `_redirects` `/* /index.html 200` applique le SPA fallback sur `/assets/*.js` périmés → CF renvoie HTML avec content-type `text/html` au lieu d'un vrai 404 → erreur module silencieuse, filet `vite:preloadError` ne déclenche pas le reload.
+
+**Fix infra** (commit `524fb3d`) :
+- `functions/assets/[[asset]].js` : Pages Function catch-all qui force un vrai 404 + `x-stale-chunk: 1` sur les extensions JS/CSS/etc. servies en HTML.
+- `src/main.jsx` : regex `STALE_CHUNK_PATTERNS` étendue (8 patterns) + monkey-patch `console.error` pour Safari.
+
+**Renforcement smoke test deploy** (commit suivant) :
+- `scripts/deploy-pages.sh` teste un sentinel `/assets/__sentinel-stale-{ts}.js` → doit renvoyer HTTP 404. Si on perd la Pages Function lors d'un refactor futur, le deploy fail.
+
+**Documentation** :
+- `docs/ERREURS-LOG.md` entrée détaillée (référencée dans CLAUDE.md, à lire en début de session).
+- `.memory/LEARNINGS.md` règle "SPA fallback toxique sur /assets/*" + reflex diagnostic "is not a valid MIME type".
+- `.memory/BLOCKERS.md` ✅ résolu, garde-fou smoke test en place.
+
+**Suite** : reprendre le bug compositeur email (sujet pas pré-rempli + écran blanc aperçu).
