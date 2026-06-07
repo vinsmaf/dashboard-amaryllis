@@ -1,0 +1,110 @@
+// functions/api/emails-log.js
+// GET /api/emails-log?group=clients          → liste agrégée par destinataire
+// GET /api/emails-log?to=<email>             → fil d'un destinataire
+// GET /api/emails-log?booking_id=<id>        → fil d'une résa
+// GET /api/emails-log?body=1&id=<emailId>    → HTML complet d'un email
+//
+// Auth : Bearer admin OU ?secret=<POSTSTAY_SECRET>
+// Filtre toujours category='client' (les emails internes sont invisibles ici)
+
+import { verifyBearer } from "./_adminauth.js";
+
+const CORS = {
+  "Content-Type": "application/json",
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET,OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type,Authorization",
+};
+const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: CORS });
+
+export async function onRequest(context) {
+  const { request, env } = context;
+  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
+  if (request.method !== "GET") return json({ error: "GET requis" }, 405);
+
+  // Auth : admin OU secret
+  const url = new URL(request.url);
+  const secret = url.searchParams.get("secret");
+  const secretOk = env.POSTSTAY_SECRET && secret === env.POSTSTAY_SECRET;
+  const { ok: adminOk } = await verifyBearer(request, env);
+  if (!secretOk && !adminOk) return json({ error: "Non autorisé" }, 401);
+
+  const db = env.revenue_manager;
+  if (!db) return json({ error: "D1 indisponible" }, 503);
+
+  try {
+    // Mode body : HTML complet d'un email
+    if (url.searchParams.get("body") === "1") {
+      const id = url.searchParams.get("id");
+      if (!id) return json({ error: "id requis" }, 400);
+      const row = await db.prepare(
+        `SELECT id, to_email, from_email, subject, html, text, sent_at, status, error, template
+         FROM emails_log WHERE id = ? AND category = 'client'`
+      ).bind(id).first();
+      if (!row) return json({ error: "introuvable" }, 404);
+      return json({ email: row });
+    }
+
+    // Mode booking_id : tous les emails d'une résa
+    const bookingId = url.searchParams.get("booking_id");
+    if (bookingId) {
+      const { results } = await db.prepare(
+        `SELECT id, to_email, subject, template, status, sent_at, opened_at, clicked_at, bien_id, booking_id
+         FROM emails_log
+         WHERE booking_id = ? AND category = 'client'
+         ORDER BY sent_at DESC
+         LIMIT 100`
+      ).bind(bookingId).all();
+      return json({ emails: results || [] });
+    }
+
+    // Mode to : fil d'un destinataire
+    const to = url.searchParams.get("to");
+    if (to) {
+      const { results } = await db.prepare(
+        `SELECT id, to_email, subject, template, status, sent_at, opened_at, clicked_at, bien_id, booking_id
+         FROM emails_log
+         WHERE to_email = ? AND category = 'client'
+         ORDER BY sent_at DESC
+         LIMIT 100`
+      ).bind(to).all();
+      return json({ emails: results || [] });
+    }
+
+    // Mode group=clients : agrégat par destinataire
+    if (url.searchParams.get("group") === "clients") {
+      const { results } = await db.prepare(
+        `SELECT
+           to_email,
+           COUNT(*) as count,
+           MAX(sent_at) as last_sent,
+           MAX(bien_id) as bien_id,
+           MAX(booking_id) as booking_id
+         FROM emails_log
+         WHERE category = 'client'
+         GROUP BY to_email
+         ORDER BY last_sent DESC
+         LIMIT 200`
+      ).all();
+      // Pour chaque destinataire, fetch le sujet + statut du dernier email
+      const enriched = [];
+      for (const row of results || []) {
+        const last = await db.prepare(
+          `SELECT subject, status FROM emails_log
+           WHERE to_email = ? AND category = 'client'
+           ORDER BY sent_at DESC LIMIT 1`
+        ).bind(row.to_email).first();
+        enriched.push({
+          ...row,
+          last_subject: last?.subject || "",
+          last_status: last?.status || "",
+        });
+      }
+      return json({ clients: enriched });
+    }
+
+    return json({ error: "param requis : group=clients, to=, booking_id=, ou body=1&id=" }, 400);
+  } catch (e) {
+    return json({ error: e.message, stack: e.stack }, 500);
+  }
+}
