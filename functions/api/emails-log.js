@@ -38,10 +38,32 @@ export async function onRequest(context) {
       const id = url.searchParams.get("id");
       if (!id) return json({ error: "id requis" }, 400);
       const row = await db.prepare(
-        `SELECT id, to_email, from_email, subject, html, text, sent_at, status, error, template
+        `SELECT id, resend_id, to_email, from_email, subject, html, text, sent_at, status, error, template
          FROM emails_log WHERE id = ? AND category = 'client'`
       ).bind(id).first();
       if (!row) return json({ error: "introuvable" }, 404);
+
+      // Lazy-load HTML depuis Resend si NULL en D1 (emails importés rétroactivement
+      // ont html=NULL parce que le fetch détail a été désactivé pendant l'import).
+      // Cache le résultat en D1 pour les prochains accès.
+      if ((!row.html || row.html === "") && row.resend_id && env.RESEND_API_KEY) {
+        try {
+          const r = await fetch(`https://api.resend.com/emails/${row.resend_id}`, {
+            headers: { Authorization: `Bearer ${env.RESEND_API_KEY}` },
+          });
+          if (r.ok) {
+            const detail = await r.json();
+            row.html = detail.html || "";
+            row.text = detail.text || "";
+            // Cache en D1 (best-effort)
+            try {
+              await db.prepare(
+                "UPDATE emails_log SET html = ?, text = ? WHERE id = ?"
+              ).bind(row.html, row.text, row.id).run();
+            } catch (e) { console.error("[emails-log] cache html failed:", e?.message || e); }
+          }
+        } catch (e) { console.error("[emails-log] resend fetch failed:", e?.message || e); }
+      }
       return json({ email: row });
     }
 
