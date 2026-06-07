@@ -4,10 +4,10 @@ import { useState, useEffect, useMemo } from "react";
 import PromoCodeModal from "./PromoCodeModal.jsx";
 
 const TEMPLATES = [
-  { id: "",                 label: "Aucun (libre)",   file: null },
-  { id: "manual-decouverte", label: "Offre découverte", file: "manual-decouverte" },
-  { id: "manual-relance",    label: "Relance",           file: "manual-relance" },
-  { id: "manual-question",   label: "Question / Suivi",  file: "manual-question" },
+  { id: "",                  label: "Aucun (libre)",   file: null,                       subject: "" },
+  { id: "manual-decouverte", label: "Offre découverte", file: "manual-decouverte.html",  subject: "Une offre exclusive pour votre prochain séjour chez {{bien_nom}}" },
+  { id: "manual-relance",    label: "Relance",           file: "manual-relance.html",     subject: "On pense encore à vous — {{bien_nom}} vous attend" },
+  { id: "manual-question",   label: "Question / Suivi",  file: "manual-question.html",   subject: "Votre séjour chez {{bien_nom}} — une question ?" },
 ];
 
 function interpolate(html, vars) {
@@ -55,7 +55,7 @@ export default function EmailComposer({ isOpen, onClose, defaultTo, defaultBooki
       for (const r of results) cache[r.file] = r.html;
       setTemplateCache(cache);
     });
-    fetch(`/email-templates/_promo-block?cb=${Date.now()}`, { cache: "no-store" })
+    fetch(`/email-templates/_promo-block.html?cb=${Date.now()}`, { cache: "no-store" })
       .then(r => r.ok ? r.text() : "")
       .then(setPromoSnippet)
       .catch(() => setPromoSnippet(""));
@@ -73,13 +73,20 @@ export default function EmailComposer({ isOpen, onClose, defaultTo, defaultBooki
     promo_text: promoCode?.text || "",
   }), [defaultPrenom, defaultBienNom, defaultBienId, promoCode]);
 
-  // Quand on choisit un template → remplir le body avec son contenu
+  // Quand on choisit un template → remplir le body ET le sujet avec son contenu
   function applyTemplate(tplId) {
     setTemplateId(tplId);
     const tpl = TEMPLATES.find(t => t.id === tplId);
-    if (!tpl?.file) { setBody(""); return; }
+    if (!tpl?.file) { setBody(""); setSubject(""); return; }
     const raw = templateCache[tpl.file] || "";
     setBody(raw); // brut, l'aperçu fera l'interpolation
+    // Pré-remplir le sujet en interpolant les variables disponibles
+    if (tpl.subject) {
+      setSubject(interpolate(tpl.subject, {
+        bien_nom: defaultBienNom || "votre logement",
+        prenom: defaultPrenom || "",
+      }));
+    }
   }
 
   // HTML final pour aperçu + envoi (interpole variables + bloc promo)
