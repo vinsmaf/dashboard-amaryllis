@@ -65,6 +65,12 @@ export async function onRequest(context) {
     return json({ status, body: txt.slice(0, 2000) });
   }
 
+  // ⚠️ Prérequis : RESEND_API_KEY doit être de type "Full Access" pour permettre
+  // la lecture de l'historique. Si "Restricted" (sending only) → Resend renvoie
+  // un 401 "This API key is restricted to only send emails" et l'import échoue.
+  // Créer une clé Full Access sur https://resend.com/api-keys puis remplacer
+  // le secret RESEND_API_KEY dans Cloudflare Pages.
+
   if (!env.RESEND_API_KEY) return json({ error: "RESEND_API_KEY manquante" }, 503);
   const db = env.revenue_manager;
   if (!db) return json({ error: "D1 indisponible" }, 503);
