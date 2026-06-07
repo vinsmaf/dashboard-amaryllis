@@ -54,6 +54,17 @@ export async function onRequest(context) {
     });
   }
 
+  // Mode test Resend : 1 appel, pas de DB, retourne le JSON brut Resend
+  if (url.searchParams.get("test_resend") === "1") {
+    if (!env.RESEND_API_KEY) return json({ error: "no key" }, 503);
+    const r = await fetch("https://api.resend.com/emails?limit=10", {
+      headers: { Authorization: `Bearer ${env.RESEND_API_KEY}` },
+    });
+    const status = r.status;
+    const txt = await r.text();
+    return json({ status, body: txt.slice(0, 2000) });
+  }
+
   if (!env.RESEND_API_KEY) return json({ error: "RESEND_API_KEY manquante" }, 503);
   const db = env.revenue_manager;
   if (!db) return json({ error: "D1 indisponible" }, 503);
