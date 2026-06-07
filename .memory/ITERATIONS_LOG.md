@@ -145,3 +145,34 @@
 - `2f4d6da` — feat(pub): iCal export endpoints + tracking attribution + budgets ads optimisés (12 fichiers, 489 insertions)
 
 **État deploy :** 🟢 PASS (audit invariants OK) · 4 points code review en inbox bugs (1 haute, 1 moyenne, 2 basses)
+
+## 2026-06-07 (soir) — Messagerie admin niveau 1 déployée
+
+**Ce qui a été fait :**
+- Helper `_sendEmail.js` (envoi Resend + log D1 best-effort) avec 5 tests vitest verts
+- Endpoint `/api/emails-log` (auth Bearer admin OU `?secret=POSTSTAY_SECRET`)
+- Table D1 `emails_log` (migrations/0001) avec 17 colonnes + 3 index
+- Refactor 4 endpoints client critiques :
+  - `notify-booking.js` (alerte hôte) → `category: "internal"`, `template: "notify_booking_host"`
+  - `stripe-webhook.js` (confirmation client + 4 autres flows) → `category: "client"` ou `"internal"` selon le destinataire
+  - `send-guest-email.js` (couvre prearrivee + poststay côté voyageur via paramètre `template`) → `category: "client"`
+  - `send-poststay.js` (fetch direct restant) → `category: "client"`, `template: "poststay_voyageur"`
+- UI : onglet "📧 Messagerie" + `EmailDrawer` (iframe sandboxed) + `ResaEmailList` intégré dans la modale d'édition résa Planning (bookingId=`reservation_code`, email=`form.email`)
+
+**Pourquoi :** traçabilité complète de la relation client par email. Base pour le niveau 2 (boîte 2 voies IMAP/inbound) plus tard. Webhook Resend opens/clicks dans le backlog (colonnes `opened_at`/`clicked_at`/`bounced_at` déjà prêtes).
+
+**Garde-fous validés (leçons crash Tarifs) :**
+- Migration D1 AVANT refactor (pas d'INSERT failures)
+- Test runtime obligatoire via preview MCP avant deploy — onglet Messagerie + onglet Planning testés OK
+- Aucune opération top-level sur imports App.jsx
+- `vitest.config.js` étendu pour inclure `functions/api/*.test.js`
+
+**Tests :** 166/166 vitest verts (5 nouveaux + 161 existants) · Build OK · Audit invariants 🟢 PASS · Code review LLM : 0 bug détecté.
+
+**Commits :** 220fd6b (D1), 13f42d3 (helper), 3a86979 (endpoint), 84c7c92 (refactor 4), c660830 (UI), 145b6a7 (Planning).
+
+**Bundle live :** `index-B_oPTYj1.js` sur https://villamaryllis.com/admin
+
+**Vérification live :** endpoint répond 401 sans auth, table emails_log vide (0 lignes — attend les premiers envois post-deploy). Les prochains emails envoyés (post-séjour J+1, pré-arrivée J-3, confirmation Stripe, alerte notify-booking) seront tracés automatiquement.
+
+**Hors scope futur :** 11 autres endpoints (vague 2 : contact, sign-contract, alertes internes, Worker iCal) + webhook Resend opens/clicks.
