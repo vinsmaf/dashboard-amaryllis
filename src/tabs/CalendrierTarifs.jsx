@@ -195,6 +195,20 @@ export default function CalendrierTarifs({ reservations = [] }) {
       window.removeEventListener("amaryllis_prices_updated", refresh);
     };
   }, []);
+
+  // Saut depuis TarifsOverview : sélectionne le bien demandé
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.detail?.bienId && CAL_BIEN_IDS.includes(e.detail.bienId)) {
+        setBienId(e.detail.bienId);
+        setSelectedDates(new Set());
+        setBulkPrice("");
+      }
+    };
+    window.addEventListener("tarifs_jump_bien", handler);
+    return () => window.removeEventListener("tarifs_jump_bien", handler);
+  }, []);
+
   const getPrice = (date) => daily[bienId]?.[date] ?? null;
   const basePrice = DEFAULT_PRIX[bienId];
 
@@ -413,7 +427,7 @@ export default function CalendrierTarifs({ reservations = [] }) {
   }, [belowMinDates, bienId, calYear]);
 
   return (
-    <div>
+    <div id="calendrier-tarifs">
       {/* Tooltip custom */}
       {tooltip && (
         <div style={{
