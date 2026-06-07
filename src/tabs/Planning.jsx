@@ -23,6 +23,7 @@ import {
 } from "../App.jsx";
 import MinNightsConfig from "./MinNightsConfig.jsx";
 import Beds24Admin from "./Beds24Admin.jsx";
+import ResaEmailList from "./messagerie/ResaEmailList.jsx";
 import { sumN, avgN, addDays, diffDays, todayStr } from "../utils/calculations.js";
 import { loadDailyPrices } from "../seedPrices.js";
 import { useAppData } from "../AppDataContext.jsx";
@@ -863,6 +864,14 @@ export default function Planning() {
                 )}
               </div>
             ))}
+            {editId !== null && (
+              <div style={{ marginTop: 16 }}>
+                <ResaEmailList
+                  bookingId={form.reservation_code || undefined}
+                  email={form.email || undefined}
+                />
+              </div>
+            )}
             <div style={{ display: "flex", gap: 7, marginTop: 14 }}>
               <button onClick={saveForm} style={{ flex: 1, padding: "9px", borderRadius: 8, border: "none", background: "#0ea5e9", color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>{editId !== null ? "Enregistrer" : "Ajouter"}</button>
               <button onClick={() => { setShowForm(false); setEditId(null); setForm(EMPTY_FORM); }} style={{ padding: "9px 14px", borderRadius: 8, border: "1px solid #334155", background: "none", color: "#94a3b8", cursor: "pointer", fontSize: 13 }}>✕</button>
