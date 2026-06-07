@@ -176,3 +176,39 @@
 **Vérification live :** endpoint répond 401 sans auth, table emails_log vide (0 lignes — attend les premiers envois post-deploy). Les prochains emails envoyés (post-séjour J+1, pré-arrivée J-3, confirmation Stripe, alerte notify-booking) seront tracés automatiquement.
 
 **Hors scope futur :** 11 autres endpoints (vague 2 : contact, sign-contract, alertes internes, Worker iCal) + webhook Resend opens/clicks.
+
+## 2026-06-07 (suite soir) — Messagerie Feature A déployée — Compositeur + codes promo
+
+**Ce qui a été fait (8 tâches) :**
+- Table D1 `promo_codes` (10 colonnes + 2 index) — migrations/0002
+- Helper `_sanitizeHtml.js` + 5 tests vitest (strip script/onXXX/javascript:)
+- Endpoint `/api/promo-codes` — POST génère code unique (PREFIX-RANDOM, re-roll si collision), GET liste actifs
+- Endpoint `/api/send-custom-email` — envoi via helper `sendEmail`, rate limit 20/h/IP, sanitize HTML, log auto D1 avec `template="manual_custom|promo:CODE"` pour traçage
+- 4 templates HTML dans `public/email-templates/` : `manual-decouverte`, `manual-relance`, `manual-question` + snippet réutilisable `_promo-block` (style Amaryllis navy/coral/ivory)
+- UI `EmailComposer.jsx` (modal plein écran avec form 2 colonnes + aperçu iframe sandbox temps réel)
+- UI `PromoCodeModal.jsx` (mini modal génération code)
+- Boutons "✉ Nouveau mail" dans MessagerieTab + EmailDrawer + ResaEmailList (Planning)
+- Refresh auto Messagerie via event `amaryllis_emails_log_updated`
+
+**Tests :** 171/171 vitest verts (166 + 5 nouveaux) · Build OK · Audit invariants 🟢 PASS
+
+**Garde-fous respectés (leçons crash Tarifs) :**
+- Migration D1 AVANT endpoint qui écrit dedans
+- Test runtime via preview MCP avant deploy — composer ouvert, templates chargés, modal promo s'ouvre, 0 erreur console
+- Aucune opération top-level sur imports App.jsx
+- iframe sandbox pour preview (jamais dangerouslySetInnerHTML)
+- Auth Bearer admin sur tous les endpoints + secret POSTSTAY en fallback
+- Rate limit 20/h/IP via `_ratelimit.js`
+
+**Vérification live :**
+- `/api/promo-codes` sans auth → 401 ✓
+- `/api/promo-codes` POST avec secret → code généré `TEST-BDXU` (-10% Mabouya, 14 jours)
+- `/api/send-custom-email` sans auth → 401 ✓
+- Code test nettoyé proprement
+
+**Commits :** 3a3878e (D1), 5e3ef0d (sanitizer), 2034482 (promo-codes), bd9f9fb (send-custom-email), 25be915 (templates), 0734135 (UI composer+promo), f658f3e (boutons)
+
+**Prochaines features (backlog) :**
+- B — Auto relances paniers abandonnés (réutilise send-custom-email + promo-codes + templates)
+- C — Envoi en masse / segmentation
+- D — Tracking conversion (incrémente `used_count` au checkout quand code utilisé)
