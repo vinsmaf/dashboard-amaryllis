@@ -9,7 +9,10 @@
 // Auth : ?secret=<POSTSTAY_SECRET>
 // Cron-job.org : GET https://villamaryllis.com/api/send-relance-panier?secret=<SECRET> toutes les heures.
 //
-// Fenêtre : paniers créés il y a 3 h à 48 h (on ne relance ni trop tôt ni trop tard).
+// Séquence 2 relances :
+//   Relance 1 (J+1) : relance_sent=0 + panier âgé 3h–72h  → relance_sent=1
+//   Relance 2 (J+3) : relance_sent=1 + panier âgé 48h–96h → relance_sent=3
+// La fenêtre étendue à 72h évite de rater les paniers si le cron saute une heure.
 
 import { sendGuestEmail } from "./send-guest-email.js";
 
@@ -37,8 +40,12 @@ function lienReprise(c) {
   return `${SITE}/${bien}?${q.toString()}`;
 }
 
-const FENETRE_MIN = 3 * 3600;   // ≥ 3 h
-const FENETRE_MAX = 48 * 3600;  // ≤ 48 h
+// Relance 1 : 3h → 72h après création
+const R1_MIN = 3 * 3600;
+const R1_MAX = 72 * 3600;
+// Relance 2 : 48h → 96h après création (envoyée seulement si relance 1 déjà faite)
+const R2_MIN = 48 * 3600;
+const R2_MAX = 96 * 3600;
 
 export async function onRequestGet(context) {
   const { request, env } = context;
@@ -56,16 +63,25 @@ export async function onRequestGet(context) {
       guests TEXT, created_at INTEGER NOT NULL DEFAULT (unixepoch()),
       relance_sent INTEGER DEFAULT 0)`).run();
 
-    const { results } = await db.prepare(
+    // Candidats relance 1 : jamais relancés, dans la fenêtre 3h–72h
+    const { results: cands1 } = await db.prepare(
       `SELECT rowid AS rid, * FROM abandoned_carts
        WHERE relance_sent = 0 AND email IS NOT NULL AND email != ''
          AND created_at <= unixepoch() - ?
          AND created_at >= unixepoch() - ?`
-    ).bind(FENETRE_MIN, FENETRE_MAX).all();
+    ).bind(R1_MIN, R1_MAX).all();
+
+    // Candidats relance 2 : relance 1 déjà faite, dans la fenêtre 48h–96h
+    const { results: cands2 } = await db.prepare(
+      `SELECT rowid AS rid, * FROM abandoned_carts
+       WHERE relance_sent = 1 AND email IS NOT NULL AND email != ''
+         AND created_at <= unixepoch() - ?
+         AND created_at >= unixepoch() - ?`
+    ).bind(R2_MIN, R2_MAX).all();
 
     let sent = 0, failed = 0, convertis = 0;
-    for (const c of results || []) {
-     try {
+
+    async function envoyerRelance(c, relanceNum) {
       // Exclure les paniers finalement payés (présents dans direct_bookings).
       const paye = await db.prepare(
         "SELECT 1 FROM direct_bookings WHERE payment_intent_id = ? OR (email = ? AND checkin = ?) LIMIT 1"
@@ -73,17 +89,22 @@ export async function onRequestGet(context) {
       if (paye) {
         await db.prepare("UPDATE abandoned_carts SET relance_sent = 2 WHERE rowid = ?").bind(c.rid).run();
         convertis++;
-        continue;
+        return;
       }
 
       const bienNom = c.type === "group"
         ? (c.logements || "Résidence Amaryllis")
         : (NOMS[c.bien_id] || "votre logement");
 
+      // Relance 2 : sujet légèrement différent pour éviter les filtres anti-spam
+      const subject = relanceNum === 2
+        ? `${c.prenom ? c.prenom + ", " : ""}vos dates au ${bienNom} sont encore disponibles`
+        : `Votre séjour à ${bienNom} vous attend — finalisez en 2 minutes`;
+
       const r = await sendGuestEmail(env, url.origin, {
         template: "relance-panier",
         to: c.email,
-        subject: `Votre séjour à ${bienNom} vous attend — finalisez en 2 minutes`,
+        subject,
         vars: {
           prenom: c.prenom || "",
           bien_nom: bienNom,
@@ -94,18 +115,31 @@ export async function onRequestGet(context) {
         },
       });
       if (r.ok) {
-        await db.prepare("UPDATE abandoned_carts SET relance_sent = 1 WHERE rowid = ?").bind(c.rid).run();
+        // relance_sent=1 après R1, relance_sent=3 après R2 (2 = converti, réservé)
+        const nextStatus = relanceNum === 2 ? 3 : 1;
+        await db.prepare("UPDATE abandoned_carts SET relance_sent = ? WHERE rowid = ?").bind(nextStatus, c.rid).run();
         sent++;
       } else {
-        console.error(`[relance-panier] échec ${c.email}: ${r.error}`);
+        console.error(`[relance-panier] R${relanceNum} échec ${c.email}: ${r.error}`);
         failed++;
       }
-     } catch (e) {
-       console.error(`[relance-panier] exception panier ${c.email || c.rid}: ${e.message}`);
-       failed++;
-     }
     }
-    return json({ ok: true, candidats: (results || []).length, sent, failed, convertis });
+
+    for (const c of cands1 || []) {
+      try { await envoyerRelance(c, 1); }
+      catch (e) { console.error(`[relance-panier] R1 exception ${c.email || c.rid}: ${e.message}`); failed++; }
+    }
+    for (const c of cands2 || []) {
+      try { await envoyerRelance(c, 2); }
+      catch (e) { console.error(`[relance-panier] R2 exception ${c.email || c.rid}: ${e.message}`); failed++; }
+    }
+
+    return json({
+      ok: true,
+      candidats_r1: (cands1 || []).length,
+      candidats_r2: (cands2 || []).length,
+      sent, failed, convertis,
+    });
   } catch (e) {
     return json({ error: e.message }, 500);
   }
