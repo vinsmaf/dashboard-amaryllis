@@ -99,3 +99,10 @@
 - **Le filet `vite:preloadError` seul ne suffit pas.** Selon le navigateur (Safari iOS, Chrome Mobile), l'erreur n'arrive pas toujours sous forme de promesse rejetée. Compléter par : (a) un filet `unhandledrejection` avec une regex LARGE (8+ patterns incluant "is not a valid JavaScript MIME type"), (b) un monkey-patch `console.error` pour les cas où l'erreur est juste loguée. Centraliser les patterns dans une constante `STALE_CHUNK_PATTERNS`.
 - **Toute occurrence de "is not a valid JavaScript MIME type" dans `client_errors` = signal rouge** d'un SPA fallback sur asset. À reflexer comme diagnostic prioritaire avant de chercher ailleurs.
 - **Smoke test deploy doit tester un chunk SIMULÉ inexistant** (`/assets/__sentinel-stale-${ts}.js`) pour valider qu'on renvoie bien 404 (et pas 200+HTML). Sans ce sentinel, on peut casser la Pages Function `[[asset]].js` sans s'en apercevoir.
+
+## 2026-06-08 — Promo codes checkout : beds24Amount ≠ Martinique
+
+- **RÈGLE ABSOLUE : Beds24 = Nogent UNIQUEMENT.** (`MEMORY.md` project_beds24_scope.md). Les biens Martinique (amaryllis, zandoli, geko, mabouya, schoelcher) n'utilisent JAMAIS Beds24.
+- **beds24-create.js est appelé pour TOUS les biens** dans `handleBook()`. Pour les biens Martinique, `cd.price` vaut `localAmount` (fallback ligne 166-167 de beds24-create.js) = notre `computedTotal`. La variable `beds24Amount` est donc en réalité `computedTotal` pour Martinique.
+- **La logique promo est fonctionnellement correcte** (fallback → `amount` = `computedTotal` si `cd.price == 0`), mais le **nommage est trompeur**. À renommer `confirmedAmount` ou `chargeAmount` avec commentaire expliquant les deux cas.
+- **À fixer prochain chantier** : renommer `beds24Amount` → `chargeAmount` dans `handleBook()` + ajouter un commentaire inline « Nogent: prix Beds24 confirmé / Martinique: notre calcul local ».

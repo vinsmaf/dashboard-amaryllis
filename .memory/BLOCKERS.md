@@ -111,3 +111,14 @@
 - ✅ **Résolu** par `524fb3d` (Pages Function `functions/assets/[[asset]].js` + filet client renforcé) + le commit qui suit (smoke test sentinel + journalisation).
 - 🟡 **Cache CDN Cloudflare retient encore temporairement** les vieux chunks périmés avec leur ancien content-type `text/html` (cache immutable d'avant le fix). Pour les visiteurs qui hit ces caches, le filet client renforcé prend le relai et déclenche le reload. Le cache CDN expire naturellement avec TTL ou peut être purgé manuellement (token API Cache Purge).
 - 🟢 **Anti-régression** : `scripts/deploy-pages.sh` teste maintenant un sentinel `/assets/__sentinel-stale-{ts}.js` → si HTTP 200 au lieu de 404, le smoke fail. Empêche de redéployer sans la Pages Function.
+
+## 2026-06-08 — Rename beds24Amount → chargeAmount
+
+- 🟡 **[basse] `beds24Amount` dans `handleBook()` (PublicSite.jsx ~l.1339)** — nom trompeur : pour les biens Martinique la valeur = `computedTotal` (pas Beds24). Fonctionnellement correct (fallback géré dans beds24-create.js) mais source de confusion à la maintenance.
+- **Débloque** : renommer en `chargeAmount` + commentaire « Nogent : prix Beds24 confirmé / Martinique : calcul local ». 5 min de travail.
+- **Note** : Beds24 = Nogent UNIQUEMENT — **ne jamais créer de réservation Beds24 pour un bien Martinique**.
+
+## 2026-06-08 — Sentry : "Importing a module script failed" /amaryllis (19h08 UTC)
+
+- 🟡 **[à surveiller]** Facebook in-app browser (iPhone, iOS 18.5) via lien fbclid → `/amaryllis`. Erreur "Importing a module script failed" = signature du chunk périmé. Fix `[[asset]].js` est déployé ET smoke test sentinel valide → probablement un cache CDN résiduel ou cache navigateur Facebook.
+- **Débloque** : surveiller les 24h suivantes. Si l'erreur se répète sur d'autres users/sessions récentes (pas fbclid historique) → purger le cache CDN Cloudflare. Si isolé = bruit CDN résiduel.
