@@ -24,14 +24,23 @@ function corsHeaders(request) {
 }
 const json = (d, s = 200, request) => new Response(JSON.stringify(d), { status: s, headers: corsHeaders(request) });
 
+// DDL complet — doit rester en sync avec le schéma D1 de production.
+// Colonnes bien_id/prenom/email : nécessaires pour get-availability (blocage dispo)
+// et pour les séquences email pré-arrivée/post-séjour (send-prearrivee, send-poststay).
+// prearrivee_sent / poststay_sent : flags pour éviter les doublons de relance cron.
 const DDL = `CREATE TABLE IF NOT EXISTS direct_bookings (
   payment_intent_id TEXT PRIMARY KEY,
+  bien_id    TEXT,
   bien_nom   TEXT,
   voyageur   TEXT,
+  prenom     TEXT,
+  email      TEXT,
   total      INTEGER,
   depot      INTEGER,
   checkin    TEXT,
   checkout   TEXT,
+  prearrivee_sent INTEGER DEFAULT 0,
+  poststay_sent   INTEGER DEFAULT 0,
   created_at INTEGER NOT NULL DEFAULT (unixepoch())
 );`;
 
