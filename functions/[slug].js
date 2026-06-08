@@ -352,7 +352,7 @@ export async function onRequest(context) {
 
     return new Response(modified, {
       status: 200,
-      headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=3600" },
+      headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache" },
     });
   }
 
@@ -376,7 +376,7 @@ export async function onRequest(context) {
 
     return new Response(modified, {
       status: 200,
-      headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=3600" },
+      headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache" },
     });
   }
 
@@ -398,7 +398,7 @@ export async function onRequest(context) {
     const html = await resp.text();
     return new Response(injectMeta(html, meta, ldJson), {
       status: 200,
-      headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=3600" },
+      headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache" },
     });
   }
 
@@ -420,7 +420,7 @@ export async function onRequest(context) {
     const html = await resp.text();
     return new Response(injectMeta(html, meta, ldJson), {
       status: 200,
-      headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=3600" },
+      headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache" },
     });
   }
 
@@ -443,7 +443,7 @@ export async function onRequest(context) {
     const html = await resp.text();
     return new Response(injectMeta(html, meta, ldJson), {
       status: 200,
-      headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=3600" },
+      headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache" },
     });
   }
 
@@ -475,7 +475,7 @@ export async function onRequest(context) {
     const html = await resp.text();
     return new Response(injectMeta(html, meta, ldJson), {
       status: 200,
-      headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=3600" },
+      headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache" },
     });
   }
 
@@ -497,7 +497,7 @@ export async function onRequest(context) {
     const html = await resp.text();
     return new Response(injectMeta(html, meta, ldJson), {
       status: 200,
-      headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=3600" },
+      headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache" },
     });
   }
 
@@ -518,7 +518,7 @@ export async function onRequest(context) {
     const html = await resp.text();
     return new Response(injectMeta(html, meta, ldJson), {
       status: 200,
-      headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=3600" },
+      headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache" },
     });
   }
 
@@ -541,7 +541,7 @@ export async function onRequest(context) {
     const html = await resp.text();
     return new Response(injectMeta(html, meta, ldJson), {
       status: 200,
-      headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=3600" },
+      headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache" },
     });
   }
 
@@ -563,7 +563,7 @@ export async function onRequest(context) {
     const html = await resp.text();
     return new Response(injectMeta(html, meta, ldJson), {
       status: 200,
-      headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=3600" },
+      headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache" },
     });
   }
 
@@ -610,7 +610,7 @@ export async function onRequest(context) {
     const html = await resp.text();
     return new Response(injectMeta(html, meta, JSON.stringify(ld)), {
       status: 200,
-      headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "public, max-age=3600" },
+      headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache" },
     });
   }
 
