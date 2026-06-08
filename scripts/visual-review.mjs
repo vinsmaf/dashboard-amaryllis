@@ -33,7 +33,8 @@ const NOISE = [
   /Content Security Policy|Refused to (connect|load|execute)/i,
   /cloudflareinsights|google-analytics|googletagmanager|sentry\.io|doubleclick|facebook|connect\.facebook/i,
   /ERR_BLOCKED_BY_ORB|net::ERR_ABORTED|upload\.wikimedia/i,
-  /Failed to load resource.*\b40[34]\b/i, // favicon/analytics 403/404 tiers
+  /Failed to load resource.*\b40[34]\b/i,  // favicon/analytics 403/404 tiers
+  /Failed to load resource.*\b401\b/i,     // 401 attendu sur endpoints sans token (crawl anonyme)
   /ResizeObserver loop/i,
 ];
 const isNoise = (s) => NOISE.some(re => re.test(s));
