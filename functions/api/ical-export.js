@@ -68,6 +68,8 @@ export async function onRequestGet(context) {
         `SELECT payment_intent_id, voyageur, checkin, checkout
          FROM direct_bookings
          WHERE bien_id = ?
+           AND checkin  IS NOT NULL
+           AND checkout IS NOT NULL
          ORDER BY checkin ASC`
       )
       .bind(bienId)
@@ -90,6 +92,8 @@ export async function onRequestGet(context) {
   ];
 
   for (const row of rows) {
+    // Garde défensive : ne jamais générer un VEVENT sans dates (iCal invalide)
+    if (!row.checkin || !row.checkout) continue;
     const uid = `direct-${row.payment_intent_id}@villamaryllis.com`;
     const summary = `Réservation directe - ${row.voyageur ?? ""}`;
     const dtstart = toIcalDate(row.checkin);

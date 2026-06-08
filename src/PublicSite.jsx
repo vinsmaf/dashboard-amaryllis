@@ -1335,15 +1335,16 @@ function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) 
       setBookingId(cd.bookingId);
       bookingIdRef.current = cd.bookingId;
 
-      // 2. Prix : Beds24 si > 0, sinon notre calcul local — puis on applique le promo
-      const beds24Amount = cd.price > 0 ? Math.ceil(cd.price) : amount;
-      // Recalculer la remise promo sur le montant Beds24 (source de vérité)
+      // 2. Prix confirmé : Beds24 si Nogent (cd.price > 0), sinon calcul local Martinique
+      //    Beds24 = Nogent UNIQUEMENT — pour les biens Martinique cd.price = 0, fallback = amount
+      const chargeAmount = cd.price > 0 ? Math.ceil(cd.price) : amount;
+      // Recalculer la remise promo sur le montant confirmé
       const promoDeduct = promoData
         ? promoData.type === "percent"
-          ? Math.round(beds24Amount * promoData.value / 100)
-          : Math.min(promoData.value, beds24Amount)
+          ? Math.round(chargeAmount * promoData.value / 100)
+          : Math.min(promoData.value, chargeAmount)
         : 0;
-      const finalAmount = Math.max(50, beds24Amount - promoDeduct); // 50 cts minimum Stripe
+      const finalAmount = Math.max(50, chargeAmount - promoDeduct); // 50 cts minimum Stripe
       if (finalAmount !== amount) setAmount(finalAmount);
 
       // 3. Créer le PaymentIntent Stripe

@@ -78,6 +78,19 @@ for route in "/" "/amaryllis" "/admin"; do
   fi
 done
 
+# 1b. Playwright smoke /admin — vérifie que React monte sans pageerror ni chunk 404
+#     (un import circulaire passe le HTTP 200 ci-dessus mais crashe au runtime)
+if command -v node >/dev/null 2>&1; then
+  if node scripts/admin-smoke.mjs 2>&1; then
+    : # succès déjà loggué par le script
+  else
+    echo "   ❌ /admin — crash React détecté (voir ci-dessus)"
+    SMOKE_FAIL=1
+  fi
+else
+  echo "   ⚠️  node indisponible — admin-smoke ignoré"
+fi
+
 # 2. Le bundle JS référencé dans l'HTML est servi en JS (pas HTML = empoisonnement)
 #    ⚠️ Vérif de l'ORIGINE via cache-bust (?_smoke=) : un GET sur le chemin canonique
 #    AVANT propagation edge déclenche le fallback /* /index.html 200, et Cloudflare
