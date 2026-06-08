@@ -913,8 +913,29 @@ export const TRAVAUX_STATUS_LABELS = { todo: "À faire", en_cours: "En cours", d
 export default function App() {
   const [authed, setAuthed] = useState(() => sessionStorage.getItem(PWD_KEY) === "ok");
   const [role,   setRole]   = useState(() => sessionStorage.getItem("admin_role") || "admin");
-  const [tab, setTabRaw] = useState(() => { try { return localStorage.getItem("admin_tab") || "planning"; } catch { return "planning"; } });
-  const setTab = useCallback((t) => { setTabRaw(t); try { localStorage.setItem("admin_tab", t); } catch {} }, []);
+  // Tab state — priorité : hash URL (#planning) > localStorage > défaut
+  // Permet de bookmarker un onglet et de survivre à un F5.
+  const [tab, setTabRaw] = useState(() => {
+    try {
+      const hash = window.location.hash.slice(1);
+      return hash || localStorage.getItem("admin_tab") || "planning";
+    } catch { return "planning"; }
+  });
+  const setTab = useCallback((t) => {
+    setTabRaw(t);
+    try { localStorage.setItem("admin_tab", t); } catch {}
+    // Met à jour le hash sans créer d'entrée dans l'historique (replaceState)
+    window.history.replaceState(null, "", "/admin#" + t);
+  }, []);
+  // Sync retour arrière navigateur (hashchange déclenché par bouton Précédent)
+  useEffect(() => {
+    const onHash = () => {
+      const h = window.location.hash.slice(1);
+      if (h) setTabRaw(h);
+    };
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [bugsBadge, setBugsBadge] = useState(0);
   const [authExpired, setAuthExpired] = useState(false);
