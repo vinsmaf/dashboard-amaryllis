@@ -148,8 +148,9 @@ export default function EmailComposer({ isOpen, onClose, defaultTo, defaultBooki
   const canSend = to && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to) && subject.trim().length > 0 && body.trim().length > 0 && !sending;
 
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 250, display: "flex", justifyContent: "center", padding: 20, overflowY: "auto" }}>
-      <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: 1000, background: "#0f172a", color: "#e2e8f0", borderRadius: 14, boxShadow: "0 20px 60px rgba(0,0,0,0.6)", display: "flex", flexDirection: "column", maxHeight: "calc(100vh - 40px)" }}>
+    <>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 250, display: "flex", justifyContent: "center", padding: 20, overflowY: "auto" }}>
+      <div style={{ width: "100%", maxWidth: 1000, background: "#0f172a", color: "#e2e8f0", borderRadius: 14, boxShadow: "0 20px 60px rgba(0,0,0,0.6)", display: "flex", flexDirection: "column", maxHeight: "calc(100vh - 40px)" }}>
 
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 24px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
@@ -235,7 +236,7 @@ export default function EmailComposer({ isOpen, onClose, defaultTo, defaultBooki
           {/* Preview */}
           <div style={{ padding: "18px 20px", overflowY: "auto", background: "#f5ede0" }}>
             <div style={{ fontSize: 10, color: "#7a6b5a", marginBottom: 8, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>Aperçu</div>
-            <iframe sandbox="" srcDoc={finalHtml || "<div style='padding:20px;color:#999;font-family:sans-serif;'>L'aperçu apparaîtra ici…</div>"}
+            <iframe sandbox="allow-same-origin" srcDoc={finalHtml || "<div style='padding:20px;color:#999;font-family:sans-serif;'>L'aperçu apparaîtra ici…</div>"}
               style={{ width: "100%", height: "100%", minHeight: 480, border: "1px solid rgba(0,0,0,0.08)", borderRadius: 8, background: "#fff" }} />
           </div>
         </div>
@@ -251,14 +252,15 @@ export default function EmailComposer({ isOpen, onClose, defaultTo, defaultBooki
           </button>
         </div>
       </div>
-
-      <PromoCodeModal
-        isOpen={showPromoModal}
-        onClose={() => setShowPromoModal(false)}
-        defaultBienId={defaultBienId}
-        defaultForEmail={to}
-        onGenerated={handlePromoGenerated}
-      />
     </div>
+
+    <PromoCodeModal
+      isOpen={showPromoModal}
+      onClose={() => setShowPromoModal(false)}
+      defaultBienId={defaultBienId}
+      defaultForEmail={to}
+      onGenerated={handlePromoGenerated}
+    />
+    </>
   );
 }
