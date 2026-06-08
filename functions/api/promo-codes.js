@@ -12,6 +12,7 @@
 // Auth : Bearer admin OU ?secret=<POSTSTAY_SECRET>
 
 import { verifyBearer } from "./_adminauth.js";
+import { rateLimit } from "./_ratelimit.js";
 
 const CORS = {
   "Content-Type": "application/json",
@@ -54,6 +55,39 @@ export async function onRequest(context) {
   if (!db) return json({ error: "D1 indisponible" }, 503);
 
   try {
+    // ── Route publique : GET ?validate=CODE ─────────────────────────────────
+    // Valide un code depuis le widget de réservation (pas d'auth requise).
+    // Rate-limited : 10 validations/IP/minute pour limiter le brute-force.
+    if (request.method === "GET" && url.searchParams.get("validate")) {
+      const ip = request.headers.get("cf-connecting-ip") || "unknown";
+      const rl = await rateLimit(db, { key: `promo_validate:${ip}`, limit: 10, windowSec: 60 });
+      if (!rl.ok) return json({ error: "Trop de tentatives, réessayez dans 1 minute" }, 429);
+
+      const code = url.searchParams.get("validate").trim().toUpperCase();
+      const bienId = url.searchParams.get("bien_id") || null;
+      const now = Date.now();
+
+      const row = await db.prepare(
+        `SELECT code, type, value, bien_id, expires_at, max_uses, used_count
+         FROM promo_codes WHERE code = ? LIMIT 1`
+      ).bind(code).first();
+
+      if (!row) return json({ valid: false, error: "Code invalide" }, 404);
+      if (row.expires_at < now) return json({ valid: false, error: "Code expiré" }, 410);
+      if (row.used_count >= row.max_uses) return json({ valid: false, error: "Code déjà utilisé" }, 410);
+      // Si le code est restreint à un bien, vérifier
+      if (row.bien_id && bienId && row.bien_id !== bienId)
+        return json({ valid: false, error: "Code non valable pour ce logement" }, 409);
+
+      return json({
+        valid: true,
+        code: row.code,
+        type: row.type,       // "percent" | "amount_eur"
+        value: row.value,     // 5 (%) ou 50 (€)
+        bien_id: row.bien_id,
+      });
+    }
+
     if (request.method === "GET") {
       // Liste codes, optionnellement filtrés (actifs = non expirés + utilisables)
       const onlyActive = url.searchParams.get("active") === "1";

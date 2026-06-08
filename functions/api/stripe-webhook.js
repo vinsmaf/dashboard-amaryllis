@@ -353,6 +353,18 @@ export async function onRequestPost(context) {
       checkout,
     }, `booking-${txId}`);
 
+    // 4. Incrémenter le code promo s'il y en avait un (best-effort, n'échoue jamais)
+    if (meta.promo_code && env.revenue_manager) {
+      try {
+        await env.revenue_manager.prepare(
+          "UPDATE promo_codes SET used_count = used_count + 1 WHERE code = ? AND used_count < max_uses"
+        ).bind(meta.promo_code).run();
+        console.log(`[webhook] promo_code ${meta.promo_code} → used_count +1`);
+      } catch (e) {
+        console.error(`[webhook] erreur incrément promo_code:`, e.message);
+      }
+    }
+
     return json({ ok: true, type: event.type });
   }
 

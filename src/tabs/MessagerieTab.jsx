@@ -4,6 +4,7 @@
 import { useState, useEffect, useMemo } from "react";
 import EmailDrawer from "./messagerie/EmailDrawer.jsx";
 import EmailComposer from "./messagerie/EmailComposer.jsx";
+import BulkEmailModal from "./messagerie/BulkEmailModal.jsx";
 
 function formatDate(ts) {
   if (!ts) return "—";
@@ -25,6 +26,7 @@ export default function MessagerieTab() {
   const [selectedEmail, setSelectedEmail] = useState(null);
   const [composerOpen, setComposerOpen] = useState(false);
   const [composerPrefill, setComposerPrefill] = useState({});
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   useEffect(() => {
     const token = sessionStorage.getItem("ldb_tok") || localStorage.getItem("admin_token") || "";
@@ -76,12 +78,20 @@ export default function MessagerieTab() {
           value={search} onChange={e => setSearch(e.target.value)}
           style={{ padding: "8px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#0f172a", color: "#e2e8f0", fontSize: 12, outline: "none", minWidth: 240 }}
         />
-        <button
-          onClick={() => { setComposerPrefill({}); setComposerOpen(true); }}
-          style={{ marginLeft: "auto", padding: "8px 14px", borderRadius: 8, border: "none", background: "#10b981", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
-        >
-          ✉ Nouveau mail
-        </button>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+          <button
+            onClick={() => setBulkOpen(true)}
+            style={{ padding: "8px 14px", borderRadius: 8, border: "1px solid rgba(99,102,241,0.4)", background: "rgba(99,102,241,0.1)", color: "#a5b4fc", fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
+          >
+            📤 Envoi groupé
+          </button>
+          <button
+            onClick={() => { setComposerPrefill({}); setComposerOpen(true); }}
+            style={{ padding: "8px 14px", borderRadius: 8, border: "none", background: "#10b981", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
+          >
+            ✉ Nouveau mail
+          </button>
+        </div>
       </div>
 
       {loading && <div style={{ fontSize: 12, color: "#64748b" }}>Chargement des conversations…</div>}
@@ -160,6 +170,7 @@ export default function MessagerieTab() {
         defaultPrenom={composerPrefill.prenom || ""}
         defaultBienNom={composerPrefill.bien_nom || ""}
       />
+      <BulkEmailModal isOpen={bulkOpen} onClose={() => setBulkOpen(false)} />
     </div>
   );
 }

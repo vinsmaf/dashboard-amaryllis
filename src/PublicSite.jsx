@@ -1247,6 +1247,33 @@ function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) 
   const stripeAppearance = { theme: "stripe", variables: { colorPrimary: CORAL, borderRadius: "8px", colorBackground: CREAM, colorText: NAVY } };
 
   // ── Suivi réservation Beds24 (annulation si l'utilisateur ferme sans payer) ─
+  // ── Code promo ───────────────────────────────────────────────────────────
+  const [promoInput,   setPromoInput]   = useState("");
+  const [promoData,    setPromoData]    = useState(null);   // { code, type, value }
+  const [promoError,   setPromoError]   = useState("");
+  const [promoLoading, setPromoLoading] = useState(false);
+
+  async function validatePromo() {
+    const code = promoInput.trim().toUpperCase();
+    if (!code) return;
+    setPromoLoading(true); setPromoError("");
+    try {
+      const r = await fetch(`/api/promo-codes?validate=${encodeURIComponent(code)}&bien_id=${bien.id}`);
+      const d = await r.json();
+      if (d.valid) { setPromoData(d); setPromoError(""); }
+      else { setPromoData(null); setPromoError(d.error || "Code invalide"); }
+    } catch { setPromoData(null); setPromoError("Impossible de vérifier le code"); }
+    finally { setPromoLoading(false); }
+  }
+
+  // Réduction promo en €
+  const promoDiscountAmt = promoData
+    ? promoData.type === "percent"
+      ? Math.round(computedTotal * promoData.value / 100)
+      : Math.min(promoData.value, computedTotal)
+    : 0;
+  const finalTotal = computedTotal - promoDiscountAmt;
+
   const [bookingId,  setBookingId]  = useState(null);
   const [creating,   setCreating]   = useState(false);
   const [createErr,  setCreateErr]  = useState("");
@@ -1308,8 +1335,15 @@ function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) 
       setBookingId(cd.bookingId);
       bookingIdRef.current = cd.bookingId;
 
-      // 2. Prix : Beds24 si > 0, sinon notre calcul local
-      const finalAmount = cd.price > 0 ? Math.ceil(cd.price) : amount;
+      // 2. Prix : Beds24 si > 0, sinon notre calcul local — puis on applique le promo
+      const beds24Amount = cd.price > 0 ? Math.ceil(cd.price) : amount;
+      // Recalculer la remise promo sur le montant Beds24 (source de vérité)
+      const promoDeduct = promoData
+        ? promoData.type === "percent"
+          ? Math.round(beds24Amount * promoData.value / 100)
+          : Math.min(promoData.value, beds24Amount)
+        : 0;
+      const finalAmount = Math.max(50, beds24Amount - promoDeduct); // 50 cts minimum Stripe
       if (finalAmount !== amount) setAmount(finalAmount);
 
       // 3. Créer le PaymentIntent Stripe
@@ -1321,13 +1355,15 @@ function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) 
           currency:  "eur",
           bookingId: cd.bookingId,
           metadata: {
-            bienId:    bien.id,
-            checkin:   localCheckin,
-            checkout:  localCheckout,
-            voyageur:  `${form.prenom} ${form.nom}`.trim(),
-            email:     form.email.trim(),
-            beds24Id:  cd.bookingId,
-            bookingId: cd.bookingId,
+            bienId:      bien.id,
+            checkin:     localCheckin,
+            checkout:    localCheckout,
+            voyageur:    `${form.prenom} ${form.nom}`.trim(),
+            email:       form.email.trim(),
+            beds24Id:    cd.bookingId,
+            bookingId:   cd.bookingId,
+            promo_code:  promoData?.code || "",
+            promo_value: promoDeduct > 0 ? String(promoDeduct) : "",
             ...getAttributionMetadata(),
           },
         }),
@@ -1428,37 +1464,75 @@ function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) 
 
             {/* Récapitulatif tarif */}
             {datesOk ? (
-              <div style={{ background: "rgba(196,114,84,0.07)", border: `1px solid rgba(196,114,84,0.22)`, borderRadius: 11, padding: "14px 16px", marginBottom: 22 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: CORAL, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Votre séjour</div>
-                <div style={{ display: "flex", gap: 16, marginBottom: 10 }}>
-                  {[["Arrivée", localCheckin], ["Départ", localCheckout]].map(([l, v]) => (
-                    <div key={l} style={{ flex: 1 }}>
-                      <div style={{ fontSize: 10, color: MUTED, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 2 }}>{l}</div>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>{fmtDate(v)}</div>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 4, borderTop: `1px solid ${SAND}`, paddingTop: 10 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: MUTED }}>
-                    <span>Hébergement ({nights} nuit{nights > 1 ? "s" : ""}{nights > 0 && rawTotal > 0 ? ` · moy. ${Math.round(rawTotal / nights)} €/nuit` : ""})</span>
-                    <span>{rawTotal} €</span>
+              <>
+                {/* Récapitulatif prix */}
+                <div style={{ background: "rgba(196,114,84,0.07)", border: `1px solid rgba(196,114,84,0.22)`, borderRadius: 11, padding: "14px 16px", marginBottom: 22 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: CORAL, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Votre séjour</div>
+                  <div style={{ display: "flex", gap: 16, marginBottom: 10 }}>
+                    {[["Arrivée", localCheckin], ["Départ", localCheckout]].map(([l, v]) => (
+                      <div key={l} style={{ flex: 1 }}>
+                        <div style={{ fontSize: 10, color: MUTED, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 2 }}>{l}</div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>{fmtDate(v)}</div>
+                      </div>
+                    ))}
                   </div>
-                  {discountAmt > 0 && (
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#10b981" }}>
-                      <span>Remise séjour (−{Math.round(discountRate * 100)}%)</span>
-                      <span>−{discountAmt} €</span>
-                    </div>
-                  )}
-                  {fraisMenage > 0 && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4, borderTop: `1px solid ${SAND}`, paddingTop: 10 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: MUTED }}>
-                      <span>Frais de ménage</span><span>{fraisMenage} €</span>
+                      <span>Hébergement ({nights} nuit{nights > 1 ? "s" : ""}{nights > 0 && rawTotal > 0 ? ` · moy. ${Math.round(rawTotal / nights)} €/nuit` : ""})</span>
+                      <span>{rawTotal} €</span>
                     </div>
-                  )}
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 800, color: NAVY, borderTop: `1px solid ${SAND}`, paddingTop: 8, marginTop: 4 }}>
-                    <span>Total</span><span>{computedTotal} €</span>
+                    {discountAmt > 0 && (
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#10b981" }}>
+                        <span>Remise séjour (−{Math.round(discountRate * 100)}%)</span>
+                        <span>−{discountAmt} €</span>
+                      </div>
+                    )}
+                    {fraisMenage > 0 && (
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: MUTED }}>
+                        <span>Frais de ménage</span><span>{fraisMenage} €</span>
+                      </div>
+                    )}
+                    {promoDiscountAmt > 0 && (
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#10b981", fontWeight: 600 }}>
+                        <span>Code promo ({promoData.code})</span>
+                        <span>−{promoDiscountAmt} €</span>
+                      </div>
+                    )}
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 800, color: NAVY, borderTop: `1px solid ${SAND}`, paddingTop: 8, marginTop: 4 }}>
+                      <span>Total</span><span>{finalTotal} €</span>
+                    </div>
                   </div>
                 </div>
-              </div>
+
+                {/* Champ code promo */}
+                <div style={{ marginBottom: 18 }}>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <input
+                      value={promoInput}
+                      onChange={e => { setPromoInput(e.target.value.toUpperCase()); setPromoData(null); setPromoError(""); }}
+                      onKeyDown={e => e.key === "Enter" && validatePromo()}
+                      placeholder="Code promo (optionnel)"
+                      maxLength={20}
+                      style={{ ...inputStyle, flex: 1, fontSize: 13, letterSpacing: "0.05em" }}
+                    />
+                    <button
+                      onClick={validatePromo}
+                      disabled={!promoInput.trim() || promoLoading}
+                      style={{ padding: "10px 14px", borderRadius: 8, border: `1px solid ${SAND}`, background: IVORY, color: NAVY, fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
+                    >
+                      {promoLoading ? "…" : "Appliquer"}
+                    </button>
+                  </div>
+                  {promoData && (
+                    <div style={{ fontSize: 11, color: "#10b981", marginTop: 5, fontWeight: 600 }}>
+                      ✓ Code valide — {promoData.type === "percent" ? `−${promoData.value}%` : `−${promoData.value} €`} appliqué
+                    </div>
+                  )}
+                  {promoError && (
+                    <div style={{ fontSize: 11, color: "#e53e3e", marginTop: 5 }}>{promoError}</div>
+                  )}
+                </div>
+              </>
             ) : (
               /* Sélection des dates si non pré-remplies */
               <div style={{ marginBottom: 20 }}>
@@ -1523,7 +1597,7 @@ function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) 
               disabled={!formOk || creating}
               style={{ width: "100%", padding: "14px", borderRadius: 10, border: "none", background: formOk && !creating ? CORAL : SAND, color: formOk && !creating ? "#fff" : MUTED, fontWeight: 700, fontSize: 15, cursor: formOk && !creating ? "pointer" : "not-allowed", letterSpacing: "0.02em", transition: "background 0.2s" }}
             >
-              {creating ? "⏳ Création de la réservation…" : datesOk ? `Réserver et payer ${computedTotal} € →` : "Réserver →"}
+              {creating ? "⏳ Création de la réservation…" : datesOk ? `Réserver et payer ${finalTotal} € →` : "Réserver →"}
             </button>
             <div style={{ textAlign: "center", marginTop: 10, fontSize: 11, color: MUTED }}>🔒 Paiement sécurisé par Stripe · Réservation confirmée après paiement</div>
           </div>
