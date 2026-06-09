@@ -49,7 +49,7 @@ fi
 if [[ "${SKIP_LINT:-0}" != "1" ]]; then
   echo "🔍 Lint ESLint (delta baseline — interdit d'ajouter des erreurs)…"
   CHANGED=$(git diff --name-only HEAD 2>/dev/null; git diff --name-only 2>/dev/null)
-  CHANGED_JS=$(echo "$CHANGED" | grep -E '\.(js|jsx|ts|tsx)$' | sort -u | while IFS= read -r f; do [[ -f "$f" ]] && echo "$f"; done)
+  CHANGED_JS=$(echo "$CHANGED" | { grep -E '\.(js|jsx|ts|tsx)$' || true; } | sort -u | while IFS= read -r f; do [[ -f "$f" ]] && echo "$f"; done)
   if [[ -n "$CHANGED_JS" ]]; then
     LINT_FAIL=0
     LINT_NEW_ERRORS=""
