@@ -1409,6 +1409,19 @@ function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) 
     if (paymentIntent?.status === "succeeded") {
       paymentDoneRef.current = true;
       await confirmBeds24(bookingIdRef.current);
+      // Stocker pi dans pending_purchase pour que Merci.jsx fire l'event avec retry
+      // (failsafe : si page-unload tue le beacon gtag inline ci-dessous)
+      try {
+        const existing = JSON.parse(sessionStorage.getItem("pending_purchase") || "{}");
+        sessionStorage.setItem("pending_purchase", JSON.stringify({
+          ...existing,
+          pi: paymentIntent.id,
+          value: amount,
+          bien_id: bien.id,
+          niveau_tarifaire: niveauTarifaire(bien, localCheckin),
+          items: [{ item_id: bien.id, item_name: bien.nom, price: bien.prix, quantity: nights || 1 }],
+        }));
+      } catch { /* */ }
       if (window.gtag) {
         const guardKey = `ga_purchase_fired_${paymentIntent.id}`;
         if (!sessionStorage.getItem(guardKey)) {
@@ -2149,6 +2162,18 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
     if (error) { setPayError(error.message); setPaying(false); return; }
     // No redirect needed (non-3DS card) → proceed to deposit step or finish
     if (paymentIntent?.status === "succeeded") {
+      // Mettre à jour pending_purchase avec pi pour fallback Merci.jsx (race page-unload)
+      try {
+        const existing = JSON.parse(sessionStorage.getItem("pending_purchase") || "{}");
+        sessionStorage.setItem("pending_purchase", JSON.stringify({
+          ...existing,
+          pi: paymentIntent.id,
+          value: total,
+          bien_id: bien.id,
+          niveau_tarifaire: niveauTarifaire(bien, checkin),
+          items: [{ item_id: bien.id, item_name: bien.nom, price: bien.prix, quantity: nights }],
+        }));
+      } catch { /* */ }
       if (window.gtag) {
         const guardKey = `ga_purchase_fired_${paymentIntent.id}`;
         if (!sessionStorage.getItem(guardKey)) {
@@ -7411,6 +7436,16 @@ function DevisPage() {
     });
     if (err) { setError(err.message); setPaying(false); return; }
     if (paymentIntent?.status === "succeeded") {
+      // Stocker contexte pour Merci.jsx (tracking purchase fiable avec retry)
+      // ⚠️ Flux devis : pas de begin_checkout → pending_purchase créé ici (François Cambier fix)
+      try {
+        sessionStorage.setItem("pending_purchase", JSON.stringify({
+          pi: paymentIntent.id,
+          value: data.total,
+          bien_id: data.bienId,
+          items: [{ item_id: data.bienId, item_name: data.bienNom || data.bienId, price: data.total, quantity: 1 }],
+        }));
+      } catch { /* */ }
       // 🔔 Alerte hôte fiable (email + push) — déclenchée dès le paiement réussi
       // ⚠️ keepalive:true OBLIGATOIRE : sans ça, le window.location.href = "/merci"
       // ci-dessous annule la requête avant qu'elle parte → notif hôte JAMAIS envoyée.

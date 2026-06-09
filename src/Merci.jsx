@@ -79,27 +79,36 @@ export default function MerciPage() {
     }
   }, [depositDone]);
 
-  // Purchase event pour les paiements redirigés vers /merci.
-  // ⚠️ gtag est chargé de façon ASYNCHRONE après la redirection → on attend qu'il
-  // soit prêt (retry) avant de fire, sinon l'événement est perdu (cause du « 0 purchase »).
+  // Purchase event : couvre DEUX cas :
+  //   1. Paiement 3DS → Stripe redirige vers /merci?payment_intent=pi_xxx (paymentRedirected=true)
+  //   2. Paiement non-3DS → navigation directe à /merci, pending_purchase contient le pi
+  // ⚠️ gtag est chargé de façon ASYNCHRONE → on attend qu'il soit prêt (retry max ~10s).
+  // Guard key (sessionStorage) évite le double-fire si l'inline handler a déjà réussi.
   useEffect(() => {
-    if (!paymentRedirected || depositDone) return;
+    if (depositDone) return;
+
     const pi = params.get("payment_intent");
     const status = params.get("redirect_status");
-    if (status && status !== "succeeded") return; // paiement non abouti
-    const guardKey = `ga_purchase_fired_${pi}`;
-    if (pi && ssGet(guardKey)) return;
+    if (paymentRedirected && status && status !== "succeeded") return; // 3DS échoué
 
-    // Contexte stocké avant la redirection (montant RÉEL du séjour + bien + items)
+    // Contexte stocké avant la redirection (montant RÉEL + bien + items + pi non-3DS)
     let ctx = {};
     try { ctx = JSON.parse(ssGet("pending_purchase", "{}") || "{}"); } catch { /* */ }
+
+    // PI disponible : depuis l'URL (3DS) ou depuis le contexte stocké (non-3DS)
+    const effectivePi = pi || ctx.pi;
+    if (!effectivePi) return; // pas de paiement à tracker
+
+    const guardKey = `ga_purchase_fired_${effectivePi}`;
+    if (ssGet(guardKey)) { ssRemove("pending_purchase"); return; } // déjà firé inline
+
     const value = Number(ctx.value || ctx.amount || ssGet("deposit_amt") || 0);
 
     let tries = 0;
     const fire = () => {
       if (!window.gtag) { if (tries++ < 25) { setTimeout(fire, 400); } return; } // attend gtag (max ~10s)
-      if (pi) ssSet(guardKey, "1");
-      const payload = { transaction_id: pi, currency: "EUR", value };
+      ssSet(guardKey, "1");
+      const payload = { transaction_id: effectivePi, currency: "EUR", value };
       if (ctx.bien_id) payload.bien_id = ctx.bien_id;
       if (ctx.niveau_tarifaire) payload.niveau_tarifaire = ctx.niveau_tarifaire;
       if (Array.isArray(ctx.items)) payload.items = ctx.items;

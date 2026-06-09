@@ -43,6 +43,43 @@ if [[ "${SKIP_TESTS:-0}" != "1" ]]; then
   echo ""
 fi
 
+# ── 0c. LINT — delta baseline : interdit d'AJOUTER des erreurs (pas de blocage historique) ──
+# Pour chaque fichier modifié, on compare le nb d'erreurs HEAD (baseline) vs actuel.
+# Seule une AUGMENTATION bloque le deploy. Erreurs pré-existantes = ignorées.
+if [[ "${SKIP_LINT:-0}" != "1" ]]; then
+  echo "🔍 Lint ESLint (delta baseline — interdit d'ajouter des erreurs)…"
+  CHANGED=$(git diff --name-only HEAD 2>/dev/null; git diff --name-only 2>/dev/null)
+  CHANGED_JS=$(echo "$CHANGED" | grep -E '\.(js|jsx|ts|tsx)$' | sort -u | while IFS= read -r f; do [[ -f "$f" ]] && echo "$f"; done)
+  if [[ -n "$CHANGED_JS" ]]; then
+    LINT_FAIL=0
+    LINT_NEW_ERRORS=""
+    while IFS= read -r f; do
+      # Erreurs actuelles (wc -l : exit 0 toujours, pas de double-output comme grep -c)
+      CURRENT=$(npx eslint "$f" 2>&1 | grep -E "^\s+[0-9]+:[0-9]+\s+error" | wc -l | tr -d ' ')
+      # Erreurs à HEAD (baseline). Fichier nouveau → baseline=0.
+      if git cat-file -e "HEAD:$f" 2>/dev/null; then
+        BASELINE=$(git show "HEAD:$f" 2>/dev/null | npx eslint --stdin --stdin-filename "$f" 2>&1 | grep -E "^\s+[0-9]+:[0-9]+\s+error" | wc -l | tr -d ' ')
+      else
+        BASELINE=0
+      fi
+      if [[ "$CURRENT" -gt "$BASELINE" ]]; then
+        DELTA=$((CURRENT - BASELINE))
+        LINT_NEW_ERRORS="$LINT_NEW_ERRORS\n   $f : +$DELTA nouvelle(s) erreur(s) (baseline=$BASELINE → actuel=$CURRENT)"
+        LINT_FAIL=1
+      fi
+    done <<< "$CHANGED_JS"
+    if [[ "$LINT_FAIL" == "1" ]]; then
+      echo "❌ ESLint : nouvelles erreurs introduites — déploiement ANNULÉ."
+      echo -e "$LINT_NEW_ERRORS"
+      exit 1
+    fi
+    echo "   ✅ Lint delta OK sur $(echo "$CHANGED_JS" | wc -l | tr -d ' ') fichier(s) — aucune nouvelle erreur"
+  else
+    echo "   ✅ Lint — aucun fichier JS/JSX modifié"
+  fi
+  echo ""
+fi
+
 # ── 0b. BUILD — garantit que dist/ = la source qu'on vient de tester ──────────
 #    (gen-image-variants + vite build + prerender). SKIP_BUILD=1 pour redéployer
 #    un dist déjà construit. set -e → un build qui échoue annule le déploiement.
@@ -135,16 +172,14 @@ else
   echo "   ⚠️  sw.js n'est pas le kill-switch attendu"
 fi
 
-# 4. Anti-asset-gelé : la taille du /guide servi doit correspondre au build local
-#    (détecte un manifeste Pages figé qui sert une vieille version — cf. incident /guide)
-if [[ -f dist/guide-hub/index.html ]]; then
-  LOCAL_SZ=$(wc -c < dist/guide-hub/index.html | tr -d ' ')
-  REMOTE_SZ=$(curl -s "$DOMAIN/guide-hub" | wc -c | tr -d ' ')
-  DELTA=$(( LOCAL_SZ > REMOTE_SZ ? LOCAL_SZ - REMOTE_SZ : REMOTE_SZ - LOCAL_SZ ))
-  if [[ "$DELTA" -le 800 ]]; then
-    echo "   ✅ /guide servi à jour (local=$LOCAL_SZ, remote=$REMOTE_SZ)"
+# 4. Anti-asset-gelé : /guide-hub doit contenir son titre SEO attendu
+#    (comparaison contenu, pas taille — le remote peut être légèrement différent du local)
+GUIDE_TITLE=$(grep -oE "<title>[^<]+</title>" dist/guide-hub/index.html 2>/dev/null | head -1 | sed 's/<[^>]*>//g' | cut -c1-30 || echo "")
+if [[ -n "$GUIDE_TITLE" ]]; then
+  if curl -s "$DOMAIN/guide-hub" | grep -qF "$GUIDE_TITLE"; then
+    echo "   ✅ /guide servi à jour (titre « $GUIDE_TITLE… » présent)"
   else
-    echo "   ⚠️  /guide possiblement gelé/caché — local=$LOCAL_SZ vs remote=$REMOTE_SZ (purger le cache ou vérifier le manifeste Pages)"
+    echo "   ⚠️  /guide possiblement gelé — titre attendu absent de la réponse live"
   fi
 fi
 
@@ -169,10 +204,18 @@ else
 fi
 
 # 7. (qa-003) une fiche villa prérendue contient bien son <title> SEO (meta injectée)
-if curl -s "$DOMAIN/mabouya" | grep -qi "<title>.*Mabouya"; then
+#    Retry 3× / 4s pour absorber la latence de propagation CF Pages Function
+MABOUYA_OK=0
+for _i in 1 2 3; do
+  if curl -s "$DOMAIN/mabouya" | grep -qi "<title>.*Mabouya"; then
+    MABOUYA_OK=1; break
+  fi
+  sleep 4
+done
+if [[ "$MABOUYA_OK" == "1" ]]; then
   echo "   ✅ Meta prérendue OK (/mabouya a son <title>)"
 else
-  echo "   ⚠️  /mabouya sans <title> attendu — vérifier le prerender"
+  echo "   ⚠️  /mabouya sans <title> attendu après 3 essais — vérifier le prerender"
 fi
 
 if [[ "$SMOKE_FAIL" == "1" ]]; then

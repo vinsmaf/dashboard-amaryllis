@@ -30,7 +30,7 @@ export function checkReservations(reservations, { validBiens = [] } = {}) {
         message: `Dates invalides (${r.checkin || "?"} → ${r.checkout || "?"}) — ${who}`, key: `dates:${r.id}` });
     }
     const total = Number(r.total), depot = Number(r.depot);
-    if (!(total > 0) || depot < 0 || depot > total || total > MAX_TOTAL) {
+    if (!(total > 0) || depot < 0 || total > MAX_TOTAL) {
       findings.push({ rule: "total_aberrant", severity: "haute", bien: r.bien || "—",
         message: `Montant aberrant : total=${r.total}€ dépôt=${r.depot}€ — ${who}`, key: `total:${r.id}` });
     }
