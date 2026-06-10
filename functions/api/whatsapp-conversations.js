@@ -20,7 +20,7 @@ export async function onRequestGet(context) {
   if (!db) return json({ error: "D1 indisponible" }, 503);
 
   const url = new URL(request.url);
-  const limit = Math.min(parseInt(url.searchParams.get("limit") || "100"), 500);
+  const limit = Math.min(parseInt(url.searchParams.get("limit") || "100") || 100, 500);
   const bien = url.searchParams.get("bien") || null;
   const from = url.searchParams.get("from") || null;
 
