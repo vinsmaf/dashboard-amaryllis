@@ -32,6 +32,9 @@ function lienReprise(c) {
   const q = new URLSearchParams();
   if (c.checkin) q.set("checkin", c.checkin);
   if (c.checkout) q.set("checkout", c.checkout);
+  q.set("utm_source", "email");
+  q.set("utm_medium", "email");
+  q.set("utm_campaign", "relance-panier");
   if (c.type === "group") {
     if (c.guests) q.set("guests", c.guests);
     return `${SITE}/location-groupe-sainte-luce?${q.toString()}`;

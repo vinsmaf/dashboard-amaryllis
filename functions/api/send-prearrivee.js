@@ -67,7 +67,7 @@ export async function onRequestGet(context) {
           code_acces: "communiqué 24 h avant votre arrivée",
           adresse: ADDRESSES[b.bien_id] || "Martinique",
           wa_hote: HOST_WA,
-          services_url: `https://villamaryllis.com/services/${b.bien_id || "amaryllis"}`,
+          services_url: `https://villamaryllis.com/guide-sejour/${b.bien_id || "amaryllis"}?utm_source=email&utm_medium=email&utm_campaign=pre-arrivee`,
         },
       });
       if (r.ok) {

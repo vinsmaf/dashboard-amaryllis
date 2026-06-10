@@ -128,7 +128,7 @@ function buildHtml({ firstName, bienNom, bienId, arrival, departure, reviewUrl, 
     <div style="margin:0 24px 24px;background:#0e3b3a;border-radius:10px;padding:20px 24px;text-align:center;">
       <p style="margin:0 0 6px;font-size:11px;color:rgba(250,247,242,0.45);letter-spacing:0.12em;text-transform:uppercase;">Revenez nous voir</p>
       <p style="margin:0 0 14px;font-size:14px;color:#faf5e9;font-weight:300;">Réservez en direct et économisez 15% vs Airbnb</p>
-      <a href="https://villamaryllis.com" style="display:inline-block;background:#c47254;color:#fff;text-decoration:none;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:600;">
+      <a href="https://villamaryllis.com?utm_source=email&utm_medium=email&utm_campaign=post-sejour" style="display:inline-block;background:#c47254;color:#fff;text-decoration:none;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:600;">
         Voir nos disponibilités →
       </a>
     </div>
