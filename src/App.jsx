@@ -27,8 +27,6 @@ import Cautions from "./tabs/Cautions.jsx";
 import AdminChatTab from "./tabs/AdminChatTab.jsx";
 import DevisEditor from "./tabs/DevisEditor.jsx";
 import InterventionsTab from "./tabs/InterventionsTab.jsx";
-import StockTrackerTab from "./tabs/StockTrackerTab.jsx";
-import LingeTab from "./tabs/LingeTab.jsx";
 import InventaireTab from "./tabs/InventaireTab.jsx";
 import ConversionTab from "./tabs/ConversionTab.jsx";
 import ServiceOrdersTab from "./tabs/ServiceOrdersTab.jsx";
@@ -39,6 +37,7 @@ import EditorialCalendarTab from "./tabs/EditorialCalendarTab.jsx";
 import CroissanceTab from "./tabs/CroissanceTab.jsx";
 import SEOAuditTab from "./tabs/SEOAuditTab.jsx";
 import AvisTab from "./tabs/AvisTab.jsx";
+import WhatsAppTab from "./tabs/WhatsAppTab.jsx";
 import BugReporter from "./components/BugReporter.jsx";
 import BugsTab from "./tabs/BugsTab.jsx";
 import { AppDataProvider } from "./AppDataContext.jsx";
@@ -1280,8 +1279,6 @@ export default function App() {
         { id: "menage",        icon: "🧹", label: "Ménage",      badge: menageBadge > 0    ? menageBadge : null,   badgeColor: "#f59e0b" },
         { id: "interventions", icon: "🔨", label: "Interventions" },
         { id: "inventaire",    icon: "📦", label: "Inventaire" },
-        { id: "stocks",        icon: "📦", label: "Stocks (legacy)" },
-        { id: "linge",         icon: "🛏️",  label: "Linge (legacy)" },
         { id: "prestataires",  icon: "👷", label: "Prestataires" },
         { id: "messages",      icon: "💬", label: "Messages" },
         { id: "emails",        icon: "📧", label: "Emails" },
@@ -1305,6 +1302,7 @@ export default function App() {
         { id: "conversion",  icon: "💳", label: "Conversion" },
         { id: "ventes",      icon: "🛎️", label: "Ventes" },
         { id: "avis",        icon: "⭐", label: "Avis" },
+        { id: "whatsapp",    icon: "💬", label: "WhatsApp" },
       ],
     },
     {
@@ -1567,11 +1565,10 @@ export default function App() {
             {tab === "orchestrateur" && <OrchestratorTab />}
             {tab === "interventions" && <InterventionsTab />}
             {tab === "inventaire"    && <InventaireTab />}
-            {tab === "stocks"        && <StockTrackerTab />}
-            {tab === "linge"         && <LingeTab />}
             {tab === "conversion"    && <ConversionTab />}
             {tab === "ventes"        && <ServiceOrdersTab />}
             {tab === "avis"          && <AvisTab />}
+            {tab === "whatsapp"      && <WhatsAppTab />}
             </LocalErrorBoundary>
           </div>
           </AppDataProvider>

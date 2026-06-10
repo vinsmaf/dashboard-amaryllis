@@ -11,6 +11,7 @@
   "checkout_time": "12h",
   "wifi_ssid": "ApptSchoelcher",
   "wifi_password": "bienvenue",
+  "code_acces": "",
   "sections": [
     {
       "id": "access",

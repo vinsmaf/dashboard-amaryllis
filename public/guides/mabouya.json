@@ -11,6 +11,7 @@
   "checkout_time": "12h",
   "wifi_ssid": "VillaMabouya",
   "wifi_password": "amaryllis",
+  "code_acces": "",
   "sections": [
     {
       "id": "access",

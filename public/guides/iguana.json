@@ -11,6 +11,7 @@
   "checkout_time": "10h00",
   "wifi_ssid": "VillaIguana",
   "wifi_password": "amaryllis",
+  "code_acces": "",
   "sections": [
     {
       "id": "access",

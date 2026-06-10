@@ -1968,11 +1968,10 @@ async function runEditorialAutoPublish(env) {
   }
 }
 
-// ── arch-018 : rappel rotation des tokens critiques (cadence 90j) ─────────────
-// Appelé par le cron mensuel ; n'agit qu'en janvier/avril/juillet/octobre.
+// ── arch-018 : rappel rotation des tokens critiques (cadence mensuelle) ────────
+// Appelé par le cron mensuel ; agit tous les mois (META_PAGE_TOKEN expire ~60j).
 async function runTokenRotationReminder(env) {
-  const month = new Date().getUTCMonth(); // 0=jan
-  if (![0, 3, 6, 9].includes(month)) return; // trimestriel ≈ 90 jours
+  // Mensuel — pas de filtre sur le mois (ancienne cadence trimestrielle supprimée)
   const tokens = [
     "BEDS24_TOKEN (auto-refresh via /api/beds24-refresh — vérifier que le refresh tourne)",
     "STRIPE_SECRET_KEY (Dashboard Stripe → Développeurs → Clés API → Roll)",
@@ -2170,7 +2169,7 @@ export default {
       ctx.waitUntil(Promise.all([
         runMonthlyExport(env, allEvents),
         runMonthlySeoArticle(env),
-        runTokenRotationReminder(env), // arch-018 — n'agit qu'en jan/avr/juil/oct
+        runTokenRotationReminder(env), // arch-018 — mensuel (META_PAGE_TOKEN expire ~60j)
         runReviewRefresh(env), // refresh mensuel des avis Airbnb (scrape + D1)
       ]));
 
