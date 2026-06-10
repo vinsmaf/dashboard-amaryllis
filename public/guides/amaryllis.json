@@ -11,7 +11,7 @@
   "checkout_time": "12h",
   "wifi_ssid": "VillaAmaryllis",
   "wifi_password": "amaryllis",
-  "code_acces": "",
+  "code_acces": "1983#",
   "sections": [
     {
       "id": "access",
@@ -21,11 +21,11 @@
       "items": [
         {
           "label": "Portail résidence",
-          "value": "Code ••••, poussez le portail après le bip."
+          "value": "Code 1983#, poussez le portail après le bip."
         },
         {
           "label": "Boîtier à clé",
-          "value": "Sur le mur gauche de l'entrée, code ••••. Tournez 2 fois pour déverrouiller."
+          "value": "Sur le mur gauche de l'entrée, code 1983#. Tournez 2 fois pour déverrouiller."
         },
         {
           "label": "Parking",
