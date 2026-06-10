@@ -113,7 +113,8 @@ export default function MerciPage() {
       if (ctx.niveau_tarifaire) payload.niveau_tarifaire = ctx.niveau_tarifaire;
       if (Array.isArray(ctx.items)) payload.items = ctx.items;
       try { window.gtag("event", "purchase", payload); } catch { /* */ }
-      try { mpTrack("Purchase", { value, currency: "EUR", ...(ctx.bien_id ? { content_ids: [ctx.bien_id], content_type: "product" } : {}) }); } catch { /* */ }
+      // event_id = payment_intent_id → déduplication avec la CAPI serveur (stripe-webhook.js)
+      try { mpTrack("Purchase", { value, currency: "EUR", eventID: effectivePi, ...(ctx.bien_id ? { content_ids: [ctx.bien_id], content_type: "product" } : {}) }); } catch { /* */ }
       ssRemove("pending_purchase");
     };
     fire();

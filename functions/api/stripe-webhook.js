@@ -1,5 +1,6 @@
 import { resendFrom } from "./_email.js";
 import { sendEmail as sendEmailHelper } from "./_sendEmail.js";
+import { capiPurchase } from "./_metaCapi.js";
 // Cloudflare Pages Function — POST /api/stripe-webhook
 // Reçoit les événements Stripe et notifie l'hôte par email
 //
@@ -307,6 +308,7 @@ export async function onRequestPost(context) {
         await ga4Event(env, "booking_completed", { bien_id: "groupe", booking_id: pi.id, value: grpValue, currency: "EUR", channel: "direct-groupe", checkin });
       }
       await storeDirectBooking(env, { paymentIntentId: pi.id, email: guestEmail, voyageur, bienId: "groupe", bienNom: logements, checkin, checkout });
+      await capiPurchase(env, { eventId: pi.id, value: grpValue, email: guestEmail, bienId: "groupe", bienNom: logements || "Réservation groupe" });
       return json({ received: true, group: true });
     }
 
@@ -352,6 +354,9 @@ export async function onRequestPost(context) {
       checkin,
       checkout,
     }, `booking-${txId}`);
+
+    // 3c. Meta CAPI (server-side) — déduplication via event_id = pi.id (même valeur que Pixel client)
+    await capiPurchase(env, { eventId: pi.id, value: piValue, currency: piCur, email: guestEmail, bienId, bienNom });
 
     // 4. Incrémenter le code promo s'il y en avait un (best-effort, n'échoue jamais)
     if (meta.promo_code && env.revenue_manager) {
