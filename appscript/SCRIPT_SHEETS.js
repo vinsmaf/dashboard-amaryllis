@@ -38,6 +38,9 @@ function doGet(e) {
   if (action === "revenus2026DryRun") return json_({ ok: true, preview: testRevenus2026_dryRun() });
   if (action === "revenus2026Setup")  return json_(setupRevenus2026());
   if (action === "revenus2026Sync")   return json_(syncRevenus2026());
+  if (action === "revenus2027DryRun") return json_({ ok: true, preview: testRevenus2027_dryRun() });
+  if (action === "revenus2027Setup")  return json_(setupRevenus2027());
+  if (action === "revenus2027Sync")   return json_(syncRevenus2027());
   if (action === "sendCheckinAlerts") { sendCheckinAlerts_(); return json_({ ok: true }); }
   if (action === "setNtfyTopic") return setNtfyTopic_(e.parameter);
   if (action === "getConfig")    return getConfig_(e.parameter);
@@ -64,6 +67,14 @@ function doPost(e) {
   if (action === "revenus2026Forget")     return json_(revenus2026Forget_(body.ids || ""));
   if (action === "revenus2026FromMonth")  return json_(revenus2026FromMonth_(body.month || 7, !!body.apply, !!body.ignoreMemo));
   if (action === "revenus2026Undo")       return json_(revenus2026Undo_(body.ids || ""));
+  if (action === "revenus2027DryRun")     return json_({ ok: true, preview: testRevenus2027_dryRun() });
+  if (action === "revenus2027Setup")      return json_(setupRevenus2027());
+  if (action === "revenus2027Sync")       return json_(syncRevenus2027());
+  if (action === "revenus2027Status")     return json_(revenus2027Status_());
+  if (action === "revenus2027Recent")     return json_(revenus2027Recent_(body.n || 10));
+  if (action === "revenus2027Forget")     return json_(revenus2027Forget_(body.ids || ""));
+  if (action === "revenus2027FromMonth")  return json_(revenus2027FromMonth_(body.month || 1, !!body.apply, !!body.ignoreMemo));
+  if (action === "revenus2027Undo")       return json_(revenus2027Undo_(body.ids || ""));
 
   return json_({ error: "action POST inconnue: " + action });
 }
@@ -562,11 +573,12 @@ function importAllReservations_(input) {
     );
   }
 
-  // ── Auto-remplissage "revenus locatif 2026" (montant tous canaux + nb résa + nuits) ──
+  // ── Auto-remplissage revenus locatif (montant tous canaux + nb résa + nuits) ──
   // Applique uniquement les NOUVELLES résas (le journal/baseline protège l'existant
   // → jamais de double-comptage). Temps réel : webhook Beds24, sync horaire iCal, 📊.
-  var rev2026 = null;
+  var rev2026 = null, rev2027 = null;
   try { rev2026 = syncRevenus2026(); } catch (eRev) { rev2026 = { error: String(eRev) }; }
+  try { rev2027 = syncRevenus2027(); } catch (eRev) { rev2027 = { error: String(eRev) }; }
 
-  return json_({ ok: true, added: added, updated: updated, total: reservations.length, rev2026: rev2026 });
+  return json_({ ok: true, added: added, updated: updated, total: reservations.length, rev2026: rev2026, rev2027: rev2027 });
 }
