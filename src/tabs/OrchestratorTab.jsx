@@ -5,6 +5,166 @@ import { useState, useEffect } from "react";
 import { adminFetch } from "../lib/apiFetch.js";
 import { useAppData } from "../AppDataContext.jsx";
 
+// Tarifs LLM approximatifs ($/M tokens input). Gratuit = 0.
+const PROVIDER_COST = { groq: 0, cloudflare: 0, cerebras: 0, mistral: 0.2 };
+const PROVIDER_LABEL = { groq: "Groq", cloudflare: "Cloudflare AI", cerebras: "Cerebras", mistral: "Mistral" };
+const PROVIDER_COLOR = { groq: "#f59e0b", cloudflare: "#f97316", cerebras: "#10b981", mistral: "#6366f1" };
+
+function LlmWidget({ onRefresh }) {
+  const [stats, setStats]       = useState(null);
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState(null);
+
+  async function load() {
+    setLoading(true);
+    setError(null);
+    try {
+      const r = await adminFetch("/api/agents-stats");
+      if (!r.ok) { setError("Non disponible (secret requis)"); setLoading(false); return; }
+      const d = await r.json();
+      setStats(d);
+    } catch (e) {
+      setError("Erreur réseau");
+    }
+    setLoading(false);
+  }
+
+  useEffect(() => { load(); }, []);
+
+  const oCard = { background: "#1e293b", borderRadius: 12, border: "1px solid rgba(255,255,255,0.06)", overflow: "hidden" };
+
+  if (loading) return (
+    <div style={{ ...oCard, padding: "14px 16px", marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}>
+      <span style={{ fontSize: 16, animation: "spin 1s linear infinite", display: "inline-block" }}>⟳</span>
+      <span style={{ fontSize: 12, color: "#64748b" }}>Chargement consommation LLM…</span>
+    </div>
+  );
+
+  if (error) return (
+    <div style={{ ...oCard, padding: "12px 16px", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <span style={{ fontSize: 11, color: "#64748b" }}>⚡ Consommation LLM — {error}</span>
+      <button onClick={load} style={{ fontSize: 10, color: "#475569", background: "transparent", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 6, padding: "4px 8px", cursor: "pointer" }}>↺ Réessayer</button>
+    </div>
+  );
+
+  if (!stats) return null;
+
+  const usage = stats.llm_usage_7j || [];
+  const plan  = stats.modeles_actifs;
+
+  // Totaux
+  const totalCalls = usage.reduce((s, r) => s + (r.calls || 0), 0);
+  const totalAvgLen = usage.reduce((s, r) => s + (r.avg_len || 0) * (r.calls || 0), 0) / (totalCalls || 1);
+
+  // Coût estimé Mistral (seul provider payant potentiel)
+  // avg_len = tokens output estimés. On suppose input ~ 2× output pour les agents.
+  const mistralRows = usage.filter(r => r.provider === "mistral");
+  const mistralTokensM = mistralRows.reduce((s, r) => s + (r.calls || 0) * (r.avg_len || 0) * 3 / 1_000_000, 0);
+  const estimatedCost = mistralTokensM * 0.2; // $0.2/M input
+
+  // Répartition par provider
+  const byProvider = {};
+  for (const r of usage) {
+    const k = r.provider || "inconnu";
+    byProvider[k] = (byProvider[k] || 0) + (r.calls || 0);
+  }
+  const providers = Object.entries(byProvider).sort((a, b) => b[1] - a[1]);
+  const maxCalls = providers[0]?.[1] || 1;
+
+  // Modèle actif depuis AI-Ops
+  const activeModel = plan?.models ? Object.entries(plan.models).map(([t, m]) => `${t}:${m}`).join(" · ") : null;
+
+  return (
+    <div style={{ ...oCard, marginBottom: 16 }}>
+      {/* Header widget */}
+      <div style={{ padding: "12px 16px 10px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 13 }}>⚡</span>
+          <span style={{ fontSize: 11, color: "#64748b", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Consommation LLM — 7 derniers jours</span>
+          {plan && (
+            <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 99, background: plan.healthOk > 0 ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)", color: plan.healthOk > 0 ? "#10b981" : "#ef4444", fontWeight: 700 }}>
+              {plan.healthOk > 0 ? "● AI-Ops OK" : "● AI-Ops ↓"}
+            </span>
+          )}
+        </div>
+        <button onClick={() => { load(); onRefresh && onRefresh(); }}
+          style={{ fontSize: 10, color: "#475569", background: "transparent", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 6, padding: "4px 8px", cursor: "pointer" }}>
+          ↺ Actualiser
+        </button>
+      </div>
+
+      <div style={{ padding: "12px 16px", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+        {/* KPIs */}
+        <div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: "#f1f5f9" }}>{totalCalls.toLocaleString("fr-FR")}</div>
+          <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>appels LLM sur 7j</div>
+          <div style={{ marginTop: 10 }}>
+            <div style={{ fontSize: 22, fontWeight: 700, color: estimatedCost < 0.01 ? "#10b981" : "#f59e0b" }}>
+              {estimatedCost < 0.01 ? "~0 €" : `~${(estimatedCost * 0.93).toFixed(2)} €`}
+            </div>
+            <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>coût estimé (Mistral ~0.2$/M tokens)</div>
+          </div>
+          {activeModel && (
+            <div style={{ marginTop: 10, fontSize: 9, color: "#475569", lineHeight: 1.5 }}>
+              <span style={{ color: "#334155", fontWeight: 600 }}>Plan AI-Ops :</span><br />{activeModel}
+            </div>
+          )}
+        </div>
+
+        {/* Répartition providers */}
+        <div style={{ gridColumn: "span 2" }}>
+          <div style={{ fontSize: 10, color: "#64748b", fontWeight: 600, marginBottom: 8 }}>Répartition par provider</div>
+          {providers.length === 0 ? (
+            <div style={{ fontSize: 11, color: "#334155" }}>Aucune donnée (table llm_outputs vide)</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+              {providers.map(([prov, calls]) => {
+                const pct = Math.round((calls / totalCalls) * 100);
+                const color = PROVIDER_COLOR[prov] || "#64748b";
+                const label = PROVIDER_LABEL[prov] || prov;
+                const isFree = (PROVIDER_COST[prov] ?? 0.2) === 0;
+                return (
+                  <div key={prov}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                      <span style={{ fontSize: 10, color: "#94a3b8" }}>
+                        {label}
+                        <span style={{ marginLeft: 5, fontSize: 8, padding: "1px 4px", borderRadius: 4, background: isFree ? "rgba(16,185,129,0.12)" : "rgba(99,102,241,0.15)", color: isFree ? "#10b981" : "#a5b4fc" }}>
+                          {isFree ? "gratuit" : "payant"}
+                        </span>
+                      </span>
+                      <span style={{ fontSize: 10, color: "#64748b" }}>{calls.toLocaleString("fr-FR")} ({pct}%)</span>
+                    </div>
+                    <div style={{ height: 5, background: "#0f172a", borderRadius: 99, overflow: "hidden" }}>
+                      <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 99, transition: "width 0.4s ease" }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Détail modèles */}
+          {usage.length > 0 && (
+            <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: 5 }}>
+              {usage.map((r, i) => (
+                <span key={i} style={{ fontSize: 9, padding: "2px 6px", borderRadius: 6, background: "rgba(255,255,255,0.04)", color: "#64748b", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  {r.model?.split("/").pop() || r.model} ×{r.calls}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {stats.generated_at && (
+        <div style={{ padding: "6px 16px 10px", fontSize: 9, color: "#334155" }}>
+          Généré le {stats.generated_at}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function OrchestratorTab() {
   const { mob } = useAppData();
   const [runs,     setRuns]     = useState([]);
@@ -99,6 +259,9 @@ export default function OrchestratorTab() {
           </button>
         </div>
       </div>
+
+      {/* Widget consommation LLM */}
+      <LlmWidget onRefresh={loadData} />
 
       {/* Architecture réseau agents */}
       <div style={{ ...oCard, marginBottom: 16, padding: "14px 16px" }}>

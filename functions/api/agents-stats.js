@@ -6,7 +6,9 @@
 //   - plan modèles actif (AI-Ops) + santé
 //   - score qualité moyen récent (llm_evals, alimenté par /api/agents-eval)
 //
-// Auth : ?secret=POSTSTAY_SECRET
+// Auth : ?secret=POSTSTAY_SECRET  OU Bearer admin (token de session)
+
+import { verifyBearer } from "./_adminauth.js";
 
 const json = (d, s = 200) => new Response(JSON.stringify(d, null, 2), {
   status: s, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
@@ -17,7 +19,9 @@ const one = async (db, sql, ...b) => { try { return await db.prepare(sql).bind(.
 
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
-  if (!env.POSTSTAY_SECRET || url.searchParams.get("secret") !== env.POSTSTAY_SECRET) {
+  const secretOk = env.POSTSTAY_SECRET && url.searchParams.get("secret") === env.POSTSTAY_SECRET;
+  const { ok: bearerOk } = await verifyBearer(request, env);
+  if (!secretOk && !bearerOk) {
     return json({ error: "Non autorisé" }, 401);
   }
   const db = env.revenue_manager;

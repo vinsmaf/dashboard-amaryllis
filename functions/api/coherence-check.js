@@ -10,6 +10,158 @@ const VALID_BIENS = [...Object.keys(CANON), "bellevue"];
 
 const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { "Content-Type": "application/json" } });
 
+// ── Helpers Check 4 : cross-canal ────────────────────────────────────────────
+
+/** Construit la map des URLs iCal Airbnb + Booking depuis les secrets d'env (même naming que get-availability.js et le Worker). */
+function getIcalUrls(env) {
+  const biens = ["amaryllis", "schoelcher", "geko", "mabouya", "zandoli", "iguana", "nogent"];
+  const result = {};
+  for (const id of biens) {
+    const upper = id.toUpperCase();
+    const airbnb  = env[`ICAL_AIRBNB_${upper}`] || env[`ICAL_${upper}`] || null;
+    const booking = env[`ICAL_BOOKING_${upper}`] || null;
+    if (airbnb || booking) result[id] = { airbnb, booking };
+  }
+  return result;
+}
+
+/** Fetch une URL iCal avec timeout de 10s. Retourne le texte brut ou null si erreur. */
+async function fetchIcalText(url) {
+  if (!url) return null;
+  const controller = new AbortController();
+  const tid = setTimeout(() => controller.abort(), 10000);
+  try {
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; AmaryllisCoherence/1.0)" },
+      redirect: "follow",
+      signal: controller.signal,
+    });
+    if (!res.ok) return null;
+    const text = await res.text();
+    return text.includes("VCALENDAR") ? text : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(tid);
+  }
+}
+
+/**
+ * Parse un texte iCal et retourne un tableau d'objets { uid, checkin, checkout, summary }.
+ * Ignore les événements "not available / blocked" (blocages internes Airbnb).
+ */
+function parseIcalEvents(text) {
+  if (!text) return [];
+  const events = [];
+  const blocks = text.split("BEGIN:VEVENT").slice(1);
+  for (const block of blocks) {
+    const get = (key) => {
+      const m = block.match(new RegExp(key + "[^:]*:([^\\r\\n]+)"));
+      return m ? m[1].trim() : "";
+    };
+    const cleanDate = (s) => {
+      const d = s.replace(/T.*/, "");
+      return d.length === 8 ? `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}` : d;
+    };
+    const ci  = cleanDate(get("DTSTART"));
+    const co  = cleanDate(get("DTEND"));
+    const uid = get("UID");
+    const sum = get("SUMMARY");
+    if (!ci || !co || !uid) continue;
+    if (/not available|blocked/i.test(sum)) continue;
+    events.push({ uid, checkin: ci, checkout: co, summary: sum });
+  }
+  return events;
+}
+
+/** Vérifie si deux intervalles de dates [a_ci, a_co[ et [b_ci, b_co[ se chevauchent. */
+function overlaps(aCi, aCo, bCi, bCo) {
+  return aCi < bCo && bCi < aCo;
+}
+
+/**
+ * Check 4 : détecte les double-bookings entre résas directes D1 et événements iCal.
+ * Retourne un tableau de findings avec { message, severity, rule, source }.
+ */
+async function checkCrossCanal(env, directBookings) {
+  const crossFindings = [];
+  const icalUrls = getIcalUrls(env);
+
+  if (Object.keys(icalUrls).length === 0) {
+    console.warn("[coherence/cross-canal] Aucune URL iCal configurée dans l'env — check sauté");
+    return { findings: crossFindings, warning: "no-ical-urls" };
+  }
+
+  // Filtrer les résas directes actives (checkin >= aujourd'hui)
+  const today = new Date().toISOString().slice(0, 10);
+  const activeDirects = directBookings.filter((r) => r.checkin && r.checkout && r.checkin >= today);
+
+  if (activeDirects.length === 0) {
+    return { findings: crossFindings };
+  }
+
+  // Grouper les résas directes par bien_id canonique
+  // (bien_nom peut valoir "bellevue" ou "schoelcher" selon la saisie)
+  const directsByBien = {};
+  for (const r of activeDirects) {
+    // Normalise le bien : on mappe depuis bien_nom (champ renvoyé par la requête SQL)
+    const raw = (r.bien || "").toLowerCase().trim();
+    const bienId = raw === "bellevue" ? "schoelcher" : raw;
+    if (!directsByBien[bienId]) directsByBien[bienId] = [];
+    directsByBien[bienId].push(r);
+  }
+
+  // Fetch tous les iCal en parallèle pour les biens qui ont des résas directes actives
+  const biensToCheck = Object.keys(directsByBien).filter((id) => icalUrls[id]);
+
+  if (biensToCheck.length === 0) {
+    return { findings: crossFindings };
+  }
+
+  const fetchPromises = biensToCheck.map(async (bienId) => {
+    const urls = icalUrls[bienId];
+    const [airbnbText, bookingText] = await Promise.all([
+      fetchIcalText(urls.airbnb),
+      fetchIcalText(urls.booking),
+    ]);
+    return { bienId, airbnb: parseIcalEvents(airbnbText), booking: parseIcalEvents(bookingText) };
+  });
+
+  const icalResults = await Promise.all(fetchPromises);
+
+  // Comparer les résas directes vs les événements iCal par bien
+  for (const { bienId, airbnb, booking } of icalResults) {
+    const directs = directsByBien[bienId] || [];
+    const icalEvents = [
+      ...airbnb.map((e) => ({ ...e, canal: "airbnb" })),
+      ...booking.map((e) => ({ ...e, canal: "booking" })),
+    ];
+
+    for (const direct of directs) {
+      for (const ical of icalEvents) {
+        if (!overlaps(direct.checkin, direct.checkout, ical.checkin, ical.checkout)) continue;
+
+        const msg =
+          `Double-booking cross-canal · ${bienId} · Direct (${direct.voyageur || direct.id}) ` +
+          `${direct.checkin}→${direct.checkout} chevauche ${ical.canal} ` +
+          `"${ical.summary || ical.uid}" ${ical.checkin}→${ical.checkout}`;
+
+        crossFindings.push({
+          rule:     "cross-canal-overlap",
+          severity: "critique",
+          message:  msg,
+          source:   "cross-canal",
+          bienId,
+          direct:   { id: direct.id, checkin: direct.checkin, checkout: direct.checkout, voyageur: direct.voyageur },
+          ical:     { uid: ical.uid, canal: ical.canal, checkin: ical.checkin, checkout: ical.checkout, summary: ical.summary },
+        });
+      }
+    }
+  }
+
+  return { findings: crossFindings };
+}
+
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
   if (!env.POSTSTAY_SECRET || url.searchParams.get("secret") !== env.POSTSTAY_SECRET) {
@@ -30,6 +182,17 @@ export async function onRequestGet({ request, env }) {
   }
 
   const findings = checkReservations(reservations, { validBiens: VALID_BIENS });
+
+  // ── Check 4 : double-booking cross-canaux (D1 directes vs iCal) ──
+  let crossCanalResult = { findings: [], warning: null };
+  try {
+    crossCanalResult = await checkCrossCanal(env, reservations);
+    findings.push(...crossCanalResult.findings);
+  } catch (e) {
+    console.warn("[coherence/cross-canal] Erreur non bloquante:", e.message);
+    crossCanalResult = { findings: [], warning: "error: " + e.message };
+  }
+
   const critical = findings.filter((f) => f.severity === "critique");
 
   if (!dry && findings.length) {
@@ -64,5 +227,19 @@ export async function onRequestGet({ request, env }) {
     }
   }
 
-  return json({ ok: true, checked: reservations.length, findings: findings.length, critical: critical.length, ...(dry ? { items: findings } : {}) });
+  const cross_canal = {
+    checked: crossCanalResult.findings.length + (crossCanalResult.warning ? 0 : 0),
+    overlaps: crossCanalResult.findings.length,
+    ...(crossCanalResult.warning ? { warning: crossCanalResult.warning } : {}),
+    ...(dry ? { items: crossCanalResult.findings } : {}),
+  };
+
+  return json({
+    ok: true,
+    checked: reservations.length,
+    findings: findings.length,
+    critical: critical.length,
+    cross_canal,
+    ...(dry ? { items: findings } : {}),
+  });
 }

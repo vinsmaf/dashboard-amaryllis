@@ -55,19 +55,19 @@ export async function onRequestGet(context) {
       } catch {}
 
       const r = await sendGuestEmail(env, url.origin, {
-        template: "pre-arrivee",
+        template: "j1-acces",
         to: b.email,
         subject: `Votre arrivée demain à ${b.bien_nom || "Amaryllis"} — codes d'accès`,
         vars: {
           prenom: b.prenom || "",
           bien_nom: b.bien_nom || "votre logement",
-          checkin: b.checkin, checkout: b.checkout || "",
+          checkin: b.checkin,
+          checkin_heure: "17h",
           code_acces: accessHtml
             ? `Voici vos accès :<br><br>${accessHtml}`
             : "Vos codes d'accès vous seront communiqués directement par votre hôte.",
-          adresse: b.adresse || "Martinique",
+          guide_url: `https://villamaryllis.com/guide-sejour/${b.bien_id || "amaryllis"}?utm_source=email&utm_medium=email&utm_campaign=j1-acces`,
           wa_hote: "33610880772",
-          services_url: `https://villamaryllis.com/guide-sejour/${b.bien_id || "amaryllis"}?utm_source=email&utm_medium=email&utm_campaign=j1-acces`,
         },
       });
 
