@@ -148,7 +148,7 @@ export async function onRequest(context) {
 
     const [blocked, directBlocked] = await Promise.all([
       fetchBeds24Blocked(env),
-      fetchDirectBlocked(env, "nogent"),
+      fetchDirectBlocked(env, bienId),
     ]);
     const merged = new Set([...blocked, ...directBlocked]);
     const result = {

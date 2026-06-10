@@ -41,6 +41,7 @@ const DDL = `CREATE TABLE IF NOT EXISTS direct_bookings (
   checkout   TEXT,
   prearrivee_sent INTEGER DEFAULT 0,
   poststay_sent   INTEGER DEFAULT 0,
+  j1_acces_sent   INTEGER DEFAULT 0,
   created_at INTEGER NOT NULL DEFAULT (unixepoch())
 );`;
 
