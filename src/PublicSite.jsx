@@ -159,7 +159,7 @@ const PRICE_HIDDEN = new Set(["iguana"]);
 // Biens où l'on masque le bloc "Tarifs prévisionnels" (PricingCalendar) :
 // grille saisonnière statique jugée redondante/non dynamique → on s'appuie sur le
 // calendrier de disponibilités/réservation qui lit les prix réels (onglet admin Tarifs).
-const PRICING_CAL_HIDDEN = new Set(["geko", "mabouya", "zandoli", "schoelcher", "nogent"]);
+const PRICING_CAL_HIDDEN = new Set(["amaryllis", "geko", "mabouya", "zandoli", "schoelcher", "nogent"]);
 
 const IVORY  = "var(--c-ivory)";  // paper — main background
 const CREAM  = "var(--c-cream)";  // cream — card/modal background
