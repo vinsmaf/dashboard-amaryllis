@@ -118,6 +118,19 @@ export default function AnalyticsTab() {
     .map(r => ({ canal: r.sessionDefaultChannelGroup || "(autre)", sessions: r.sessions || 0, resas: r.ecommercePurchases || 0, revenu: r.totalRevenue || 0 }));
   const maxChanSess = Math.max(...byChannel.map(c => c.sessions), 1);
 
+  // ── Pub 7j (data-pub) — pour la section Performance Pub ──
+  const byChannel7d = (data.byChannel7d || [])
+    .map(r => ({ canal: r.sessionDefaultChannelGroup || "(autre)", sessions: r.sessions || 0, users: r.totalUsers || 0 }))
+    .sort((a, b) => b.sessions - a.sessions);
+  const total7dSessions = byChannel7d.reduce((s, c) => s + c.sessions, 0);
+  const paid7d   = byChannel7d.find(c => c.canal === "Paid Search")?.sessions || 0;
+  const social7d = byChannel7d.find(c => c.canal === "Paid Social")?.sessions || 0;
+  // Budgets connus (mis à jour manuellement si changement)
+  const BUDGET_GOOGLE_PER_DAY = 7;   // C1 5€/j + C2 2€/j
+  const BUDGET_META_PER_DAY   = 11;  // C1 TOFU + C2 MOFU
+  const cpvGoogle = paid7d   > 0 ? ((BUDGET_GOOGLE_PER_DAY * 7) / paid7d).toFixed(2)   : null;
+  const cpvMeta   = social7d > 0 ? ((BUDGET_META_PER_DAY   * 1) / social7d).toFixed(2) : null; // Meta lancé le 10/06
+
   // ── Top pays ──
   const topCountries = (data.countries || []).slice(0, 6);
   const maxCountry = Math.max(...topCountries.map(c => c.sessions || 0), 1);
@@ -260,6 +273,60 @@ export default function AnalyticsTab() {
             </tbody>
           </table>
           <div style={{ fontSize: 10, color: "#64748b", marginTop: 8 }}>« Paid Search » = Google Ads · « Paid Social » = Meta · « Organic » = SEO · « Direct » = accès direct. C'est ici que tu verras le ROI de tes pubs.</div>
+        </div>
+      )}
+
+      {/* ── Performance Pub — 7 derniers jours ── */}
+      {byChannel7d.length > 0 && (
+        <div style={{ background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.15)", borderRadius: 13, padding: mob ? 12 : 18, marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#10b981" }}>📢 Performance Pub — 7 derniers jours</div>
+            <div style={{ fontSize: 10, color: "#475569", background: "rgba(255,255,255,0.05)", borderRadius: 6, padding: "2px 8px" }}>Google Ads + Meta Ads</div>
+          </div>
+
+          {/* Canaux payants en avant */}
+          <div style={{ display: "grid", gridTemplateColumns: mob ? "1fr 1fr" : "repeat(4,1fr)", gap: 10, marginBottom: 14 }}>
+            {[
+              { label: "Paid Search", desc: "Google Ads", v: paid7d,   color: "#4285f4", budget: cpvGoogle ? `${(BUDGET_GOOGLE_PER_DAY*7).toFixed(0)}€ dép.` : null, cpv: cpvGoogle },
+              { label: "Paid Social", desc: "Meta Ads (1j)", v: social7d, color: "#1877f2", budget: cpvMeta   ? `${(BUDGET_META_PER_DAY*1).toFixed(0)}€ dép.` : null, cpv: cpvMeta },
+              { label: "Organic Social", desc: "Posts organiques", v: byChannel7d.find(c=>c.canal==="Organic Social")?.sessions||0, color: "#a855f7" },
+              { label: "Direct", desc: "URL directe", v: byChannel7d.find(c=>c.canal==="Direct")?.sessions||0, color: "#0ea5e9" },
+            ].map(item => (
+              <div key={item.label} style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${item.color}33`, borderRadius: 10, padding: "10px 12px" }}>
+                <div style={{ fontSize: 9, color: "#64748b", marginBottom: 2, letterSpacing: "0.06em", textTransform: "uppercase" }}>{item.label}</div>
+                <div style={{ fontSize: 22, fontWeight: 700, color: item.color, fontFamily: "var(--font-mono)", lineHeight: 1.1 }}>{item.v}</div>
+                <div style={{ fontSize: 9, color: "#475569", marginTop: 3 }}>{item.desc}</div>
+                {item.budget && <div style={{ fontSize: 9, color: "#64748b", marginTop: 4 }}>{item.budget} · <span style={{ color: "#f59e0b" }}>{item.cpv}€/visite</span></div>}
+              </div>
+            ))}
+          </div>
+
+          {/* Barre de répartition */}
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ display: "flex", height: 8, borderRadius: 4, overflow: "hidden", gap: 1 }}>
+              {byChannel7d.filter(c => c.sessions > 0).map(c => {
+                const pct = total7dSessions > 0 ? (c.sessions / total7dSessions * 100) : 0;
+                const color = c.canal === "Paid Search" ? "#4285f4" : c.canal === "Paid Social" ? "#1877f2" : c.canal === "Organic Social" ? "#a855f7" : c.canal === "Direct" ? "#0ea5e9" : "#64748b";
+                return <div key={c.canal} style={{ width: `${pct}%`, background: color, minWidth: pct > 1 ? 2 : 0 }} title={`${c.canal}: ${c.sessions} (${Math.round(pct)}%)`} />;
+              })}
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 12px", marginTop: 8 }}>
+              {byChannel7d.filter(c => c.sessions > 0).map(c => {
+                const pct = total7dSessions > 0 ? Math.round(c.sessions / total7dSessions * 100) : 0;
+                const color = c.canal === "Paid Search" ? "#4285f4" : c.canal === "Paid Social" ? "#1877f2" : c.canal === "Organic Social" ? "#a855f7" : c.canal === "Direct" ? "#0ea5e9" : "#64748b";
+                return (
+                  <span key={c.canal} style={{ fontSize: 9, color: "#94a3b8", display: "flex", alignItems: "center", gap: 4 }}>
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: color, display: "inline-block" }} />
+                    {c.canal} {pct}%
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+
+          <div style={{ fontSize: 10, color: "#475569", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 8 }}>
+            ℹ️ Meta Ads lancé le 10/06 (1 jour). Google Ads actif depuis ~4/06. Tracking conversions réparé le 11/06 — les résas s'accumuleront dans la section « Canal 30j » ci-dessus d'ici 24-48h.
+          </div>
         </div>
       )}
 

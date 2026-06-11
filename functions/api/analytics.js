@@ -22,7 +22,7 @@ export async function onRequestGet(context) {
     const token = await getAccessToken(clientEmail, privateKey);
 
     // Exécuter les rapports en parallèle (data-006 : conversions par bien ; data-046 : funnel events)
-    const [overview, pages, countries, sources, devices, bienConversions, funnel, revenue, byBien, byChannel] = await Promise.all([
+    const [overview, pages, countries, sources, devices, bienConversions, funnel, revenue, byBien, byChannel, byChannel7d] = await Promise.all([
       runReport(token, propertyId, {
         dimensions:  [{ name: "date" }],
         metrics:     [{ name: "sessions" }, { name: "totalUsers" }, { name: "screenPageViews" }, { name: "bounceRate" }, { name: "averageSessionDuration" }],
@@ -105,6 +105,14 @@ export async function onRequestGet(context) {
         orderBys:   [{ metric: { metricName: "sessions" }, desc: true }],
         limit:      12,
       }),
+      // data-pub : canal 7j — pour la section "Performance Pub" (ads lancés récemment)
+      runReportSafe(token, propertyId, {
+        dimensions: [{ name: "sessionDefaultChannelGroup" }],
+        metrics:    [{ name: "sessions" }, { name: "totalUsers" }],
+        dateRanges: [{ startDate: "7daysAgo", endDate: "today" }],
+        orderBys:   [{ metric: { metricName: "sessions" }, desc: true }],
+        limit:      12,
+      }),
     ]);
 
     // traf-011 : stale-while-revalidate — sert le cache pendant le refresh background
@@ -120,6 +128,7 @@ export async function onRequestGet(context) {
       revenue:          parseReport(revenue),          // data-049 : revenu total €
       byBien:           parseReport(byBien),           // data-049 : résas + revenu / bien
       byChannel:        parseReport(byChannel),        // data-049 : résas + revenu / canal
+      byChannel7d:      parseReport(byChannel7d),      // data-pub : canal 7j (perf pub)
     }), {
       headers: {
         "Content-Type": "application/json",

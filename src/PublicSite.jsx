@@ -506,18 +506,18 @@ const BIENS = [
     sdb: "1",
     couleur: "#ec4899",
     photos: [
-      "/photos/mabouya/01.webp",
       "/photos/mabouya/02.webp",
-      "/photos/mabouya/03.webp",
-      "/photos/mabouya/04.webp",
-      "/photos/mabouya/05.webp",
-      "/photos/mabouya/06.webp",
-      "/photos/mabouya/07.webp",
-      "/photos/mabouya/08.webp",
-      "/photos/mabouya/09.webp",
-      "/photos/mabouya/10.webp",
-      "/photos/mabouya/11.webp",
       "/photos/mabouya/12.webp",
+      "/photos/mabouya/03.webp",
+      "/photos/mabouya/09.webp",
+      "/photos/mabouya/11.webp",
+      "/photos/mabouya/10.webp",
+      "/photos/mabouya/04.webp",
+      "/photos/mabouya/08.webp",
+      "/photos/mabouya/05.webp",
+      "/photos/mabouya/01.webp",
+      "/photos/mabouya/07.webp",
+      "/photos/mabouya/06.webp",
     ],
     mapsEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3862.822862640186!2d-60.92853662554015!3d14.49485608597908!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8c4021b73b656873%3A0xdb94b0a0ad33a741!2sresidence%20Amaryllis!5e0!3m2!1sfr!2sfr!4v1779046858310!5m2!1sfr!2sfr",
     amenities: ["Jacuzzi privatif 🛁", "Vue mer Caraïbes", "Terrasse privée", "Jardin fleuri tropical", "Barbecue charbon", "Wifi Starlink", "Parking privé", "Animaux OK"],
@@ -1424,8 +1424,8 @@ function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) 
       } catch { /* */ }
       if (window.gtag) {
         const guardKey = `ga_purchase_fired_${paymentIntent.id}`;
-        if (!sessionStorage.getItem(guardKey)) {
-          sessionStorage.setItem(guardKey, "1");
+        if (!ssGet(guardKey)) {
+          ssSet(guardKey, "1");
           window.gtag("event", "purchase", {
             transaction_id: paymentIntent.id, currency: "EUR", value: amount,
             bien_id: bien.id, niveau_tarifaire: niveauTarifaire(bien, localCheckin),
@@ -2176,8 +2176,8 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
       } catch { /* */ }
       if (window.gtag) {
         const guardKey = `ga_purchase_fired_${paymentIntent.id}`;
-        if (!sessionStorage.getItem(guardKey)) {
-          sessionStorage.setItem(guardKey, "1");
+        if (!ssGet(guardKey)) {
+          ssSet(guardKey, "1");
           window.gtag("event", "purchase", {
             transaction_id: paymentIntent.id,
             currency: "EUR",
@@ -3326,6 +3326,39 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
     } catch { return null; }
   }, [bien.id]);
 
+  // Signal de preuve sociale — scarcity/demand basé sur les dates bloquées
+  const socialProofMsg = useMemo(() => {
+    if (PRICE_HIDDEN.has(bien.id) || loadingAvail) return null;
+    try {
+      const now = new Date();
+      const checkMonth = (y, m) => {
+        const monthStr = `${y}-${String(m + 1).padStart(2, "0")}`;
+        const daysInMonth = new Date(y, m + 1, 0).getDate();
+        const startDay = (y === now.getFullYear() && m === now.getMonth()) ? now.getDate() : 1;
+        let avail = 0;
+        for (let d = startDay; d <= daysInMonth; d++) {
+          const ds = `${monthStr}-${String(d).padStart(2, "0")}`;
+          if (!blockedDates.includes(ds)) avail++;
+        }
+        return { avail, total: daysInMonth - startDay + 1 };
+      };
+      // Mois prochain en priorité
+      const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      const { avail: nAvail, total: nTotal } = checkMonth(next.getFullYear(), next.getMonth());
+      const monthName = next.toLocaleDateString("fr-FR", { month: "long" });
+      if (nAvail === 0) return `Complet en ${monthName}`;
+      if (nAvail <= 5) return `Plus que ${nAvail} nuit${nAvail > 1 ? "s" : ""} disponible${nAvail > 1 ? "s" : ""} en ${monthName}`;
+      const pctBooked = (nTotal - nAvail) / nTotal;
+      if (pctBooked >= 0.7) return `${Math.round(pctBooked * 100)}% de ${monthName} déjà réservé`;
+      // Mois courant
+      const { avail: cAvail, total: cTotal } = checkMonth(now.getFullYear(), now.getMonth());
+      const cMonth = now.toLocaleDateString("fr-FR", { month: "long" });
+      const cPct = (cTotal - cAvail) / cTotal;
+      if (cPct >= 0.7) return `${Math.round(cPct * 100)}% de ${cMonth} déjà réservé`;
+      return null;
+    } catch { return null; }
+  }, [bien.id, blockedDates, loadingAvail]);
+
   function onDetailTouchStart(e) { touchStartXDetail.current = e.touches[0].clientX; }
   function onDetailTouchEnd(e) {
     if (touchStartXDetail.current === null) return;
@@ -3880,6 +3913,41 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                   : "Book directly and save up to €300 on your stay."}
               </p>
 
+              {/* ── Trust bar — avantages réservation directe ── */}
+              <div style={{
+                display: "flex", flexWrap: "wrap", justifyContent: "center",
+                gap: isMobile ? "10px 16px" : "8px 28px",
+                marginBottom: 24,
+              }}>
+                {[
+                  { icon: "✓", text: lang === "fr" ? "Sans frais Airbnb (−15%)" : "No Airbnb fees (−15%)" },
+                  { icon: "✓", text: lang === "fr" ? "Prix direct propriétaire" : "Owner direct price" },
+                  { icon: "✓", text: lang === "fr" ? "Paiement 100% sécurisé" : "100% secure payment" },
+                  { icon: "✓", text: lang === "fr" ? "Support direct 24h/24" : "24/7 direct support" },
+                ].map(item => (
+                  <span key={item.text} style={{
+                    fontFamily: "'Jost', sans-serif", fontWeight: 400,
+                    fontSize: isMobile ? 11 : 12, color: "#6b5e52",
+                    display: "flex", alignItems: "center", gap: 5,
+                  }}>
+                    <span style={{ color: "#2d7a5e", fontWeight: 700, fontSize: 13 }}>{item.icon}</span>
+                    {item.text}
+                  </span>
+                ))}
+              </div>
+
+              {/* Signal de preuve sociale */}
+              {socialProofMsg && (
+                <div style={{
+                  textAlign: "center", marginBottom: 20,
+                  fontFamily: "'Jost', sans-serif", fontWeight: 400,
+                  fontSize: 13, letterSpacing: "0.04em",
+                  color: CORAL,
+                }}>
+                  🔥 {socialProofMsg}
+                </div>
+              )}
+
               {/* ── Calendrier interactif réel ── */}
               {loadingAvail ? (
                 <div style={{ textAlign: "center", padding: "48px 0", color: MUTED, fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13 }}>
@@ -4254,6 +4322,12 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
 
               const calendarBlock = (
                 <>
+                  {/* Social proof mobile */}
+                  {socialProofMsg && !calCheckin && (
+                    <div style={{ marginBottom: 10, fontSize: 12, color: CORAL, fontFamily: "'Jost', sans-serif", fontWeight: 500 }}>
+                      🔥 {socialProofMsg}
+                    </div>
+                  )}
                   {/* Instruction / résumé dates */}
                   <div style={{ fontSize: 12, color: MUTED, fontFamily: "'Jost', sans-serif", marginBottom: 12 }}>
                     {!calCheckin
@@ -4675,6 +4749,12 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
 
                     return (
                       <>
+                        {/* Social proof */}
+                        {socialProofMsg && !calCheckin && (
+                          <div style={{ textAlign: "center", marginBottom: 8, fontSize: 11, color: CORAL, fontFamily: "'Jost', sans-serif", fontWeight: 500 }}>
+                            🔥 {socialProofMsg}
+                          </div>
+                        )}
                         {/* Instruction */}
                         <div style={{ fontSize: 11, color: MUTED, fontFamily: "'Jost', sans-serif", marginBottom: 10, textAlign: "center" }}>
                           {!calCheckin
@@ -5838,8 +5918,8 @@ function GroupPaymentModal({ biens, checkin, checkout, guests, nights, total, on
       }).catch(() => {});
       if (window.gtag) {
         const guardKey = `ga_purchase_fired_${paymentIntent.id}`;
-        if (!sessionStorage.getItem(guardKey)) {
-          sessionStorage.setItem(guardKey, "1");
+        if (!ssGet(guardKey)) {
+          ssSet(guardKey, "1");
           try { window.gtag("event", "purchase", { transaction_id: paymentIntent.id, currency: "EUR", value: total, bien_id: biens?.[0]?.id, niveau_tarifaire: niveauTarifaire(biens?.[0], checkin) }); } catch { /* */ }
           mpTrack("Purchase", { value: total, currency: "EUR", content_ids: (biens || []).map(b => b.id), content_type: "product" });
         }
@@ -6867,9 +6947,9 @@ function FooterSection() {
           {/* ── Réseaux sociaux ── */}
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 16 }}>
             <a
-              href="https://www.instagram.com/amaryllis_villa"
+              href="https://www.instagram.com/amaryllislocations/"
               target="_blank" rel="noopener noreferrer"
-              title="Instagram — @amaryllis_villa"
+              title="Instagram — @amaryllislocations"
               style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 38, height: 38, borderRadius: "50%", border: "1px solid rgba(250,245,233,0.15)", background: "rgba(250,245,233,0.06)", color: "rgba(250,245,233,0.55)", transition: "all 0.2s", textDecoration: "none" }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(250,245,233,0.4)"; e.currentTarget.style.color = "rgba(250,245,233,0.9)"; e.currentTarget.style.background = "rgba(250,245,233,0.1)"; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(250,245,233,0.15)"; e.currentTarget.style.color = "rgba(250,245,233,0.55)"; e.currentTarget.style.background = "rgba(250,245,233,0.06)"; }}
@@ -6882,9 +6962,9 @@ function FooterSection() {
               </svg>
             </a>
             <a
-              href="https://www.facebook.com/share/18vjan5kpq/"
+              href="https://www.facebook.com/Amaryllis.villa"
               target="_blank" rel="noopener noreferrer"
-              title="Facebook — Villa Amaryllis"
+              title="Facebook — Amaryllis Locations"
               style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 38, height: 38, borderRadius: "50%", border: "1px solid rgba(250,245,233,0.15)", background: "rgba(250,245,233,0.06)", color: "rgba(250,245,233,0.55)", transition: "all 0.2s", textDecoration: "none" }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(250,245,233,0.4)"; e.currentTarget.style.color = "rgba(250,245,233,0.9)"; e.currentTarget.style.background = "rgba(250,245,233,0.1)"; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(250,245,233,0.15)"; e.currentTarget.style.color = "rgba(250,245,233,0.55)"; e.currentTarget.style.background = "rgba(250,245,233,0.06)"; }}
@@ -6895,7 +6975,7 @@ function FooterSection() {
               </svg>
             </a>
             <span style={{ fontSize: 10, color: "rgba(250,245,233,0.25)", fontFamily: "'Jost', sans-serif", letterSpacing: "0.05em" }}>
-              @amaryllis_villa
+              @amaryllislocations
             </span>
           </div>
 
@@ -7460,7 +7540,7 @@ function DevisPage() {
           total: data.total, depot: data.depot, checkin: data.checkin, checkout: data.checkout,
         }),
       }).catch(() => {});
-      const cs = sessionStorage.getItem("deposit_cs");
+      const cs = ssGet("deposit_cs");
       if (data?.depot && cs) {
         const el2 = stripe.elements({ clientSecret: cs, appearance });
         el2.create("payment");
@@ -8292,7 +8372,7 @@ export default function PublicSite() {
     const fn = (e) => {
       if (!ready || exitShown.current || e.clientY > 10) return;
       exitShown.current = true;
-      sessionStorage.setItem("amaryllis_exit_shown", "1");
+      ssSet("amaryllis_exit_shown", "1");
       setShowExitIntent(true);
     };
     document.addEventListener("mouseleave", fn);
