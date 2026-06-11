@@ -3656,10 +3656,17 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                   )}
                 </div>
                 {!PRICE_HIDDEN.has(bien.id) && (
-                  <div>
-                    <span style={{ color: CORAL, fontWeight: 700, fontSize: 14 }}>{bien.prix}€</span>
-                    <span style={{ color: MUTED, fontSize: 11, marginLeft: 4 }}>/nuit</span>
-                  </div>
+                  <>
+                    <div>
+                      <span style={{ color: CORAL, fontWeight: 700, fontSize: 14 }}>{bien.prix}€</span>
+                      <span style={{ color: MUTED, fontSize: 11, marginLeft: 4 }}>/nuit</span>
+                    </div>
+                    {isMobile && (
+                      <div style={{ fontSize: 9, color: "#14b8a6", fontWeight: 600, fontFamily: "'Jost', sans-serif", letterSpacing: "0.02em", marginTop: 2 }}>
+                        ✓ {lang === "fr" ? "Prix direct · paiement sécurisé" : "Direct price · secure payment"}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -4395,6 +4402,21 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                 <>
                   <div style={{ height: 1, background: SAND, marginBottom: 26 }} />
                   <div style={{ marginBottom: 32 }}>
+                    {/* Trust bar — visible avant sélection dates, uniquement hors Amaryllis (qui a sa propre section) */}
+                    {bien.id !== "amaryllis" && (
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 18px", marginBottom: 16 }}>
+                        {[
+                          lang === "fr" ? "Sans frais Airbnb (−15%)" : "No Airbnb fees (−15%)",
+                          lang === "fr" ? "Prix direct propriétaire" : "Owner direct price",
+                          lang === "fr" ? "Paiement 100% sécurisé" : "100% secure payment",
+                        ].map(text => (
+                          <span key={text} style={{ fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 11, color: "#6b5e52", display: "flex", alignItems: "center", gap: 4 }}>
+                            <span style={{ color: "#2d7a5e", fontWeight: 700, fontSize: 12 }}>✓</span>
+                            {text}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     <Eyebrow color="muted" style={{ marginBottom: 14 }}>{lang === "fr" ? "Disponibilités" : "Availability"}</Eyebrow>
                     {loadingAvail ? (
                       <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
