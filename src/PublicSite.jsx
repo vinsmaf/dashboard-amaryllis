@@ -680,7 +680,7 @@ function formatDateShort(ds) {
 const WEEKDAYS = ["Lu", "Ma", "Me", "Je", "Ve", "Sa", "Di"];
 const MONTHS_FR = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
 
-function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, onSelect, onHover, dailyPricesMap = {}, basePrice = 0, minNights = 1, readOnly = false, gapDates = {} }) {
+function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, onSelect, onHover, dailyPricesMap = {}, basePrice = 0, minNights = 1, readOnly = false, gapDates = {}, showPrices = true }) {
   const todayStr = today();
   const [hoveredCell, setHoveredCell] = useState(null);
   const firstDay = new Date(year, month, 1);
@@ -776,10 +776,12 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
               onMouseLeave={() => { if (!readOnly) setHoveredCell(null); }}
               onClick={() => { if (!readOnly && !disabled) onSelect(ds); }}
               style={{
-                height: 36,
+                height: 40,
                 display: "flex",
+                flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
+                gap: 1,
                 fontSize: 13,
                 cursor: readOnly ? "default" : disabled ? "not-allowed" : "pointer",
                 background: bg,
@@ -794,6 +796,11 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
               }}
             >
               {ds ? parseInt(ds.split("-")[2]) : ""}
+              {showPrices && isFree && ds && (() => {
+                const p = dailyPricesMap[ds] ?? basePrice;
+                if (!p) return null;
+                return <span style={{ fontSize: 8, lineHeight: 1, color: MUTED, fontFamily: "'Jost',sans-serif", letterSpacing: "0.01em" }}>{p}€</span>;
+              })()}
               {/* Badge remise gap — visible en permanence sur les dates remisées */}
               {ds && gapDates[ds] && !disabled && (
                 <div style={{

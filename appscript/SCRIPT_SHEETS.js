@@ -75,6 +75,7 @@ function doPost(e) {
   if (action === "revenus2027Forget")     return json_(revenus2027Forget_(body.ids || ""));
   if (action === "revenus2027FromMonth")  return json_(revenus2027FromMonth_(body.month || 1, !!body.apply, !!body.ignoreMemo));
   if (action === "revenus2027Undo")       return json_(revenus2027Undo_(body.ids || ""));
+  if (action === "revenus2027Reset")      return json_(clearAndResetRevenus2027_()); // eslint-disable-line no-undef
 
   return json_({ error: "action POST inconnue: " + action });
 }
