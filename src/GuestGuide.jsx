@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import TvScreen from './TvScreen.jsx';
 import { parseTvParams, buildSlides } from './utils/tvScreen.js';
+import { getReviewUrl, isGoogleReview } from './data/googleReview.js';
 
 /* ─── Palette par logement ─────────────────────────────────────── */
 const PROP_COLORS = {
@@ -344,6 +345,23 @@ export default function GuestGuide() {
           </div>
         </div>
       )}
+
+      {/* ══ AVIS GOOGLE — capture in-situ (tous voyageurs, Airbnb inclus) ══ */}
+      <div style={{ margin: '12px 16px 0', background: accent + '14', border: `1px solid ${accent}33`, borderRadius: 14, padding: '18px 16px', textAlign: 'center' }}>
+        <div style={{ fontSize: 20, marginBottom: 4 }}>⭐⭐⭐⭐⭐</div>
+        <div style={{ fontSize: 16, fontWeight: 700, color: '#f1f5f9', marginBottom: 6 }}>Vous passez un bon séjour ?</div>
+        <div style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.5, marginBottom: 14 }}>
+          Votre avis nous aide énormément — 30 secondes qui font toute la différence pour notre petite conciergerie 💛
+        </div>
+        <a
+          href={getReviewUrl(propertyId)}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ display: 'inline-block', background: accent, color: '#0b1120', borderRadius: 10, padding: '12px 24px', textDecoration: 'none', fontSize: 15, fontWeight: 800 }}
+        >
+          {isGoogleReview(propertyId) ? 'Laisser un avis Google →' : 'Laisser un avis →'}
+        </a>
+      </div>
 
       {/* ══ PIED DE PAGE : lien partage ═════════════════════════ */}
       <div style={{ padding: '16px 16px 40px' }}>

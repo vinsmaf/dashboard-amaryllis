@@ -243,6 +243,8 @@ const isKnown = KNOWN.includes(path)
   || path.startsWith("/admin")
   || path.startsWith("/landing")
   || path.startsWith("/bienvenue")
+  || path.startsWith("/guide-sejour/")
+  || path.startsWith("/services/")
   || path.startsWith("/api/")
   || path === "/stories-template"
   || path === "/guide-menage"
