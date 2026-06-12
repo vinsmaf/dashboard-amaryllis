@@ -11,6 +11,29 @@ import { capiPurchase } from "./_metaCapi.js";
 // Secret à ajouter dans Cloudflare Pages :
 //   STRIPE_WEBHOOK_SECRET (obtenu dans Stripe Dashboard → Webhooks)
 
+// DDL idempotent — échéancier des paiements en 2 fois (acompte déjà payé, solde à venir).
+async function ensurePaymentScheduleTable(db) {
+  await db.prepare(`CREATE TABLE IF NOT EXISTS payment_schedule (
+    deposit_pi_id     TEXT PRIMARY KEY,
+    bien_id           TEXT,
+    bien_nom          TEXT,
+    email             TEXT,
+    prenom            TEXT,
+    customer_id       TEXT,
+    payment_method_id TEXT,
+    balance_amount    INTEGER,
+    currency          TEXT DEFAULT 'eur',
+    checkin           TEXT,
+    checkout          TEXT,
+    due_date          TEXT,
+    status            TEXT DEFAULT 'pending',
+    balance_pi_id     TEXT,
+    attempts          INTEGER DEFAULT 0,
+    last_error        TEXT,
+    created_at        INTEGER NOT NULL DEFAULT (unixepoch())
+  )`).run();
+}
+
 const BEDS24_V2_BOOKINGS = "https://beds24.com/api/v2/bookings";
 const BEDS24_AUTH_TOKEN  = "https://beds24.com/api/v2/authentication/token";
 
@@ -27,10 +50,11 @@ async function ga4Event(env, eventName, params = {}, clientId = null) {
   // client_id stable mais anonymisé : on prend le bookingId Stripe (unique, non-PII)
   const cid = clientId || `srv-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   try {
-    await fetch(
+    const res = await fetch(
       `https://www.google-analytics.com/mp/collect?measurement_id=${measurementId}&api_secret=${apiSecret}`,
       {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           client_id: cid,
           non_personalized_ads: true,
@@ -38,6 +62,8 @@ async function ga4Event(env, eventName, params = {}, clientId = null) {
         }),
       }
     );
+    if (!res.ok) console.warn(`[ga4] HTTP ${res.status} pour event "${eventName}"`);
+    else console.log(`[ga4] event "${eventName}" envoyé (${res.status})`);
   } catch (e) {
     console.error(`[ga4] Erreur envoi event ${eventName}:`, e.message);
   }
