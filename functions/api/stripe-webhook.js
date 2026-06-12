@@ -351,8 +351,10 @@ export async function onRequestPost(context) {
         });
       } catch (e) { console.error("[webhook] alerte hôte groupe:", e.message); }
       await sendConfirmationToGuest(env, { bienNom: logements, voyageur, email: guestEmail, checkin, checkout, amount, bookingId: pi.id });
+      // grpValue déclaré au scope du bloc « groupe » : réutilisé plus bas par capiPurchase (L~364).
+      // (Résa groupée = toujours paiement intégral, pas de 2× → pi.amount fait foi.)
+      const grpValue = pi?.amount ? pi.amount / 100 : 0;
       {
-        const grpValue = pi?.amount ? pi.amount / 100 : 0;
         await ga4Event(env, "purchase", {
           transaction_id: pi.id, value: grpValue, currency: "EUR",
           items: [{ item_id: "groupe", item_name: logements || "Réservation groupe", price: grpValue, quantity: 1 }],
@@ -388,7 +390,15 @@ export async function onRequestPost(context) {
     await storePaymentSchedule(env, pi).catch(() => {});
 
     // 3. GA4 server-side — fiable (immunisé au Consent Mode, contrairement au gtag client).
-    const piValue = pi?.amount ? pi.amount / 100 : 0;
+    // ⚠️ Paiement en 2 fois : la conversion pub (GA4 purchase + Meta CAPI) doit refléter la
+    // VALEUR TOTALE de la réservation, pas l'acompte 30% — sinon le ROAS est sous-compté et
+    // Google/Meta optimisent sur une valeur fausse. `full_total` (euros) est posé en metadata
+    // par create-payment-intent. Le solde débité plus tard (charge-balance) NE refire AUCUN
+    // event → la valeur totale est comptée UNE seule fois, à la confirmation (acompte). Le
+    // client (Merci.jsx / BookingModal) envoie déjà `total` → même event_id, valeur cohérente.
+    const isTwoX = pi?.metadata?.pay_plan === "2x";
+    const fullTotal2x = parseInt(pi?.metadata?.full_total || "0", 10);
+    const piValue = (isTwoX && fullTotal2x > 0) ? fullTotal2x : (pi?.amount ? pi.amount / 100 : 0);
     const piCur = pi?.currency?.toUpperCase() || "EUR";
     const txId = bookingId || pi.id;
     // 3a. "purchase" : événement e-commerce STANDARD GA4 → à marquer comme conversion clé.
