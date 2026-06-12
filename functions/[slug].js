@@ -15,8 +15,8 @@ const BIEN_EXTRA = {
     amenities: ["Piscine à débordement eau salée", "Vue mer 180°", "Terrasse 100 m²", "Wifi Starlink", "Parking", "3 chambres climatisées"],
   },
   zandoli: {
-    desc: "Villa contemporaine nichée dans un jardin luxuriant à Sainte-Luce, avec piscine privative à cascade, mezzanine, vue mer et terrasse au coucher du soleil. WiFi Starlink, Netflix, lave-linge. 5 personnes.",
-    amenities: ["Piscine privative avec cascade", "Mezzanine", "Vue mer", "Jardin tropical", "Wifi Starlink", "Netflix"],
+    desc: "Logement contemporain niché dans la résidence Amaryllis à Sainte-Luce, avec piscine privative à cascade, mezzanine, vue sur la mer des Caraïbes et terrasse face au coucher du soleil. Accès à la piscine à débordement de la villa Amaryllis. WiFi Starlink, Netflix, lave-linge. 5 personnes.",
+    amenities: ["Piscine privative avec cascade", "Accès piscine débordement Amaryllis", "Mezzanine", "Vue mer Caraïbes", "Jardin tropical", "Wifi Starlink"],
   },
   iguana: {
     desc: "Villa sur deux niveaux dans la résidence Amaryllis à Sainte-Luce, avec piscine eau salée, vue sur le Rocher du Diamant et jardin fleuri. 2 chambres, 6 personnes, parking privatif.",
@@ -35,8 +35,8 @@ const BIEN_EXTRA = {
     amenities: ["Vue panoramique mer", "Dernier étage", "Résidence sécurisée", "Parking"],
   },
   nogent: {
-    desc: "Appartement calme à Nogent-sur-Marne, à 15 minutes du centre de Paris en RER A. Idéal pour séjours professionnels et touristiques en Île-de-France. WiFi, tout équipé. Dès 85€/nuit.",
-    amenities: ["15 min Paris RER A", "Wifi", "Calme", "Tout équipé"],
+    desc: "Location meublée calme à Nogent-sur-Marne, à 20 minutes de Paris-Châtelet en RER A direct. Jardin privatif, home cinéma, parking sécurisé — confort rare à cette distance de Paris. Idéal pour séjours professionnels ou week-ends en Île-de-France. Dès 90€/nuit.",
+    amenities: ["20 min Paris Châtelet RER A", "Jardin privatif", "Home cinéma", "Parking sécurisé", "Wifi", "Bord de Marne"],
   },
 };
 

@@ -22,8 +22,8 @@ export const BIENS = {
     prix: 110, capacite: 5, chambres: 2, lieu: "Sainte-Luce", postal: "97228",
     coords: { lat: 14.4725, lng: -60.9201 }, rating: 4.5, reviews: 16, bookable: true,
     photos: ["/photos/zandoli/01.webp","/photos/zandoli/02.webp","/photos/zandoli/03.webp","/photos/zandoli/04.webp"],
-    seoTitle: "Zandoli Sainte-Luce — logement piscine cascade Martinique",
-    seoDesc: "Zandoli à Sainte-Luce : piscine privative à cascade, mezzanine, jardin tropical. 5 personnes. Dès 110€/nuit en réservation directe.",
+    seoTitle: "Location Zandoli Martinique — piscine cascade, vue mer",
+    seoDesc: "Zandoli à Sainte-Luce : piscine cascade privée, mezzanine, vue mer Caraïbes. 5 pers., résidence sécurisée. Dès 110€/nuit sans frais Airbnb.",
   },
   iguana: {
     id: "iguana", nom: "Villa Iguana", type: "villa",
@@ -62,8 +62,8 @@ export const BIENS = {
     prix: 90, capacite: 2, chambres: 1, lieu: "Nogent-sur-Marne", postal: "94130",
     coords: { lat: 48.8374, lng: 2.4836 }, rating: 4.8, reviews: 18, bookable: true,
     photos: ["/photos/nogent/01.webp","/photos/nogent/02.webp","/photos/nogent/03.webp","/photos/nogent/04.webp","/photos/nogent/05.webp","/photos/nogent/06.webp"],
-    seoTitle: "Appart Nogent-sur-Marne — bord de Marne, Paris 20 min",
-    seoDesc: "Appartement de standing à Nogent-sur-Marne : jardin privatif, home cinéma, bord de Marne. RER A, Paris en 20 min. Dès 90€/nuit en direct.",
+    seoTitle: "Location appartement Nogent-sur-Marne — Paris 20 min",
+    seoDesc: "Location meublée Nogent-sur-Marne : jardin privatif, home cinéma, bord de Marne. RER A direct, Paris Châtelet en 20 min. 2 pers. Dès 90€/nuit.",
   },
 };
 

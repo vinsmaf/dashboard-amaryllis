@@ -207,6 +207,62 @@ export default function GuideNogent() {
             </div>
           ))}
 
+          {/* ── 3 EXPÉRIENCES INÉDITES (seo-032) ── */}
+          <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 22, letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY, marginBottom: 8 }}>
+            ✨ Que faire à Nogent — 3 expériences inédites
+          </h2>
+          <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 16, color: MUTED, lineHeight: 1.7, marginBottom: 24 }}>
+            Ce que la plupart des touristes ne font pas — et que nos locataires adorent.
+          </p>
+          {[
+            {
+              emoji: "🚣",
+              titre: "Stand-up paddle et canoë sur la Marne",
+              texte: "La base nautique de Nogent (Quai du Port, 5 min à pied) propose la location de paddles, canoës et pédalos en saison (avril–septembre). Une heure sur la Marne le matin, avant que les guinguettes ouvrent, pour voir Nogent d'un autre angle. Aucune expérience requise, initiation enfants disponible. Coût : environ 15–20€/heure.",
+            },
+            {
+              emoji: "🏰",
+              titre: "Château de Vincennes — le Versailles méconnu",
+              texte: "Le Château de Vincennes (XIVe siècle) est à 20 minutes en bus depuis notre appartement, à l'entrée du Bois. Moins fréquenté que Versailles, le donjon royal (le plus haut de France à 52 mètres) et la Sainte-Chapelle gothique méritent 2 heures. Idéal un dimanche matin avant les foules. Tarif plein 11€, gratuit moins de 26 ans UE.",
+            },
+            {
+              emoji: "🎵",
+              titre: "Soirée au Théâtre de Nogent",
+              texte: "Le Théâtre de Nogent (ancienne salle du Cinématographe rénovée, rue du Théâtre) accueille des concerts, spectacles de stand-up et comédies musicales de qualité — dans une salle à taille humaine, sans les files d'attente parisiennes. La programmation septembre–juin est disponible sur theatre-nogent.fr. Billets dès 15€ pour les résidents du Val-de-Marne.",
+            },
+          ].map((item, i) => (
+            <div key={i} className="ng-card" style={{ marginBottom: 16 }}>
+              <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 15, color: CORAL, margin: "0 0 8px" }}>{item.emoji} {item.titre}</p>
+              <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 16, lineHeight: 1.75, color: TEXT, margin: 0 }}>{item.texte}</p>
+            </div>
+          ))}
+
+          {/* ── LOUER À NOGENT — 2 CONSEILS PRATIQUES (seo-033) ── */}
+          <div style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 16, padding: "32px 28px", margin: "32px 0" }}>
+            <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 11, letterSpacing: "0.25em", textTransform: "uppercase", color: CORAL, margin: "0 0 8px" }}>Location appartement à Nogent-sur-Marne</p>
+            <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 20, letterSpacing: "0.06em", color: NAVY, margin: "0 0 20px" }}>2 conseils pour bien louer</h2>
+            {[
+              {
+                num: "01",
+                titre: "Réservez en direct — jusqu'à 15% d'économie",
+                texte: "Les grandes plateformes (Airbnb, Booking.com) ajoutent 8 à 15% de frais de service sur le montant affiché. En réservant directement sur villamaryllis.com, vous payez le prix net sans commission. Le contact est direct avec le propriétaire (WhatsApp réponse < 2h), les conditions d'annulation sont transparentes et le paiement est sécurisé par Stripe.",
+              },
+              {
+                num: "02",
+                titre: "Séjours longue durée — tarifs négociés sur demande",
+                texte: "Vous restez une semaine ou plus ? Les séjours de 7 nuits ou plus donnent droit à une remise automatique de 10%. Pour les séjours professionnels de 30 jours ou plus (missions, formations, stages), contactez-nous directement — des tarifs mensuels sont disponibles, bien en dessous du prix de location habituelle. Idéal pour les consultants en mission sur Paris.",
+              },
+            ].map((c, i) => (
+              <div key={i} style={{ display: "flex", gap: 20, marginBottom: i === 0 ? 20 : 0 }}>
+                <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 700, fontSize: 28, color: SAND, lineHeight: 1, minWidth: 36 }}>{c.num}</div>
+                <div>
+                  <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 14, color: NAVY, margin: "0 0 6px" }}>{c.titre}</p>
+                  <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 15, lineHeight: 1.7, color: TEXT, margin: 0 }}>{c.texte}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
           {/* ── INFOS PRATIQUES ── */}
           <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 22, letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY, marginBottom: 20 }}>
             🗓️ Infos pratiques
@@ -236,7 +292,7 @@ export default function GuideNogent() {
               Appartement aux Portes de Paris
             </h2>
             <p style={{ color: "rgba(250,245,233,0.65)", fontSize: 15, maxWidth: 480, margin: "0 auto 24px", lineHeight: 1.7, fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
-              Studio élégant, bord de Marne, jardin privé, parking sécurisé. Idéal pour les séjours professionnels ou les week-ends parisiens. À partir de 80€/nuit.
+              Studio élégant, bord de Marne, jardin privé, parking sécurisé. Idéal pour les séjours professionnels ou les week-ends parisiens. À partir de 90€/nuit.
             </p>
             <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
               <a href="/nogent" style={{ display: "inline-block", background: CORAL, color: "#fff", textDecoration: "none", padding: "14px 32px", borderRadius: 8, fontSize: 13, fontWeight: 400, letterSpacing: "0.12em", textTransform: "uppercase" }}>
