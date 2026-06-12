@@ -1,6 +1,8 @@
 // src/utils/tvScreen.js
 // Logique pure de l'écran TV (testable sans DOM).
 
+import { getReviewUrl } from "../data/googleReview.js";
+
 export function parseTvParams(search) {
   const q = new URLSearchParams(search || "");
   const clean = (v) => { const s = (v || "").trim(); return s.length ? s : null; };
@@ -69,7 +71,12 @@ export function buildSlides(guide, params = {}) {
     contact,
     qr: wa, qrLabel: "Contacter l'hôte" });
 
-  // 6. Revenez en direct
+  // 6. Avis Google — capture in-situ : QR vers la fiche GBP (tous voyageurs, Airbnb inclus)
+  slides.push({ id: "avis", title: "Vous passez un bon séjour ?",
+    subtitle: "Votre avis compte énormément pour nous — il prend 30 secondes 💛",
+    qr: getReviewUrl(pid), qrLabel: "Laisser un avis ⭐" });
+
+  // 7. Revenez en direct
   slides.push({ id: "rebook", title: "Revenez quand vous voulez",
     subtitle: "Réservez en direct — jusqu'à 15 % de moins que sur les plateformes",
     qr: absUrl(`/${pid}`), qrLabel: "villamaryllis.com" });

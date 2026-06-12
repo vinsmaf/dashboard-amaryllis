@@ -4,6 +4,7 @@
 // Mobile-first, surface "site" (IVORY/NAVY/CORAL).
 import { useState, useEffect } from "react";
 import SEOMeta from "./SEOMeta.jsx";
+import { getReviewUrl, isGoogleReview } from "./data/googleReview.js";
 
 const NAVY  = "#1f2a3d";
 const CORAL = "#c47254";
@@ -301,6 +302,31 @@ export default function GuideSejour() {
             🛎️ Commander des services & extras
           </a>
         )}
+
+        {/* Avis Google — capture in-situ (chaque voyageur, Airbnb inclus) */}
+        <div style={{ marginTop: 16, background: "linear-gradient(135deg, #fff8ef, #f6f1e7)", border: `1px solid ${SAND}`, borderRadius: 14, padding: "20px 22px", textAlign: "center" }}>
+          <div style={{ fontSize: 22, marginBottom: 4 }}>⭐⭐⭐⭐⭐</div>
+          <div style={{ fontFamily: "Georgia, serif", fontSize: 18, color: NAVY, fontWeight: 600, marginBottom: 6 }}>
+            Vous passez un bon séjour ?
+          </div>
+          <div style={{ fontSize: 13.5, color: MUTED, lineHeight: 1.5, marginBottom: 14, maxWidth: 360, marginInline: "auto" }}>
+            Votre avis nous aide énormément — il prend 30 secondes et fait toute la différence
+            pour une petite conciergerie comme la nôtre. Merci du fond du cœur 💛
+          </div>
+          <a
+            href={getReviewUrl(bien)}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: "inline-block", background: CORAL, color: "#fff",
+              borderRadius: 10, padding: "13px 26px", textDecoration: "none",
+              fontSize: 15, fontWeight: 700, letterSpacing: "0.02em",
+              boxShadow: "0 4px 14px rgba(196,114,84,0.3)",
+            }}
+          >
+            {isGoogleReview(bien) ? "Laisser un avis Google →" : "Laisser un avis →"}
+          </a>
+        </div>
 
         {/* Footer */}
         <div style={{ textAlign: "center", marginTop: 28, paddingTop: 20, borderTop: `1px solid #ece6d9` }}>

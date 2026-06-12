@@ -46,7 +46,7 @@ const GUIDE = {
 describe("buildSlides", () => {
   it("génère les slides de base dans l'ordre", () => {
     const s = buildSlides(GUIDE, { tv: true, guest: null });
-    expect(s.map(x => x.id)).toEqual(["welcome", "wifi", "guide", "services", "practical", "rebook"]);
+    expect(s.map(x => x.id)).toEqual(["welcome", "wifi", "guide", "services", "practical", "avis", "rebook"]);
   });
   it("titre générique sans guest", () => {
     const s = buildSlides(GUIDE, { tv: true, guest: null });
