@@ -221,7 +221,8 @@ if (typeof document !== "undefined" && !document.getElementById("__site_styles")
 
 // cpw-006 : clé chargée depuis /api/get-config (hors bundle) — fallback si fetch échoue
 let STRIPE_PK = "";
-fetch("/api/get-config").then(r => r.json()).then(d => { if (d.stripePk) STRIPE_PK = d.stripePk; }).catch(() => {});
+let PAY_2X_ENABLED = false;
+fetch("/api/get-config").then(r => r.json()).then(d => { if (d.stripePk) STRIPE_PK = d.stripePk; if (d.pay2xEnabled) PAY_2X_ENABLED = true; }).catch(() => {});
 const WA_NUMBER = "33610880772";
 const WA_MSG_DEFAULT = encodeURIComponent("Bonjour, je souhaite obtenir des informations sur une location Amaryllis.");
 
@@ -2098,7 +2099,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
   const petSuppl        = nbPets > 0 ? PET_SUPPLEMENT : 0;
   const total = rawTotal - discountAmount + fraisMenage + extraGuestSuppl + petSuppl;
   const todayIso = new Date().toISOString().slice(0, 10);
-  const twoPartOk = isTwoPartEligible({ total, checkin, today: todayIso });
+  const twoPartOk = PAY_2X_ENABLED && isTwoPartEligible({ total, checkin, today: todayIso });
   const minNights = getMinNights(bien.id, checkin);
   const belowMin = nights > 0 && nights < minNights;
 

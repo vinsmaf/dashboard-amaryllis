@@ -26,6 +26,8 @@ export async function onRequestGet(context) {
     icalAirbnb:  Object.keys(icalAirbnb).length > 0 ? icalAirbnb : null,
     // cpw-006 : clé Stripe publique servie depuis env, hors bundle JS
     stripePk:    env.STRIPE_PUBLIC_KEY || "",
+    // Paiement en 2 fois — flag OFF par défaut ; activer via CF Pages var PAY_2X_ENABLED=1
+    pay2xEnabled: env.PAY_2X_ENABLED === "1",
   };
   return new Response(JSON.stringify(data), {
     status: 200,
