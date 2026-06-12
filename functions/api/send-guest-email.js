@@ -18,7 +18,7 @@ const json = (d, s = 200) => new Response(JSON.stringify(d), {
   headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
 });
 
-const ALLOWED = new Set(["pre-arrivee", "post-sejour", "relance-panier", "newsletter-hiver"]);
+const ALLOWED = new Set(["pre-arrivee", "post-sejour", "relance-panier", "newsletter-hiver", "solde-debite", "solde-echec"]);
 
 function fillTemplate(html, vars = {}) {
   return html.replace(/\{\{(\w+)\}\}/g, (_, k) => (vars[k] != null ? String(vars[k]) : ""));
