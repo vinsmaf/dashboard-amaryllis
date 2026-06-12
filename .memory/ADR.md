@@ -5,6 +5,41 @@
 
 ---
 
+## ADR-PAY-001 · 2026-06-11 · Paiement en 2 fois = acompte/solde (J-30), pas Klarna
+1. **Choix** : « payer en 2 fois » = acompte 30 % maintenant + solde 70 % débité off-session à J-30, **optionnel** (proposé, pas imposé, défaut = paiement total). Plan écrit, à exécuter session suivante.
+2. **Alternatives refusées** : **Klarna** (3×) — surcharge au client **interdite** par CGV Klarna + réglementation EU, et absorber le frais BNPL (~3-5 %) ne convient pas à Vincent (regardant sur le coût) ; **Alma** (compte/intégration séparés, plus lourd).
+3. **Conséquences attendues** : 0 € de frais en plus (carte ~1,5 % répartie sur 2 débits) ; Vincent porte le risque d'annulation (couvert par la politique d'annulation existante) ; nouvelle table D1 `payment_schedule` + cron quotidien `charge-balance.js`. Argent réel → valider en mode Stripe TEST avant LIVE, flag `PAY_2X_ENABLED`.
+4. **Périmètre** : spec `docs/superpowers/specs/2026-06-11-paiement-2-fois-design.md` · plan `docs/superpowers/plans/2026-06-11-paiement-2-fois.md`.
+5. **Statut** : ✅ design validé Vincent ; ⏳ à coder (session suivante).
+
+## ADR-AVIS-001 · 2026-06-11 · Récolte d'avis Google = capture in-situ, pas email anciens voyageurs
+1. **Choix** : booster les avis Google (facteur n°1 du pack local) via **CTA in-situ** (page guide-séjour + /bienvenue QR physique + slide écran TV) — chaque voyageur présent, Airbnb inclus.
+2. **Alternatives refusées** : **campagne email anciens voyageurs** — abandonnée : D1 `direct_bookings` = **1 voyageur, 0 séjour passé** (canal direct trop neuf) ; les voyageurs Airbnb n'ont pas d'email exploitable. Aucun carburant.
+3. **Conséquences attendues** : avis captés sans dépendre du trafic ni d'emails ; compounding lent mais gratuit. Liens writereview par fiche (Villa/Résidence) centralisés `src/data/googleReview.js`.
+4. **Périmètre** : `src/data/googleReview.js`, `src/GuideSejour.jsx`, `src/GuestGuide.jsx`, `src/utils/tvScreen.js`.
+5. **Statut** : ✅ acté, déployé (`de6acf3`+`6d09ca2`).
+
+## ADR-S-016 · 2026-06-11 · Masquer PricingCalendar (Tarifs prévisionnels) sur Amaryllis
+1. **Choix** : `"amaryllis"` ajouté à `PRICING_CAL_HIDDEN` — le bloc "Tarifs prévisionnels" (`PricingCalendar`) supprimé sur Amaryllis (desktop était déjà masqué via condition `bien.id !== "amaryllis"`, mobile ne l'était pas).
+2. **Alternatives refusées** : condition `isMobile` ciblée seule (logique éclatée) ; retrait du composant entier (les autres biens en ont besoin).
+3. **Conséquences attendues** : Amaryllis passe de 3 calendriers à 2 (section réservation breakout + calendrier disponibilités). Plus propre, moins redondant.
+4. **Périmètre** : `src/PublicSite.jsx` — constante `PRICING_CAL_HIDDEN` L162.
+5. **Statut** : ✅ acté, déployé `d2012b4`.
+
+## ADR-S-015 · 2026-06-11 · Trust bar CRO étendue à tous les biens bookable mobile
+1. **Choix** : Trust bar "réservation directe" ajoutée (a) dans la sticky bar basse — tagline teal 9px "Prix direct · paiement sécurisé" et (b) avant le calendrier disponibilités sur les fiches Géko/Zandoli/Mabouya/Schœlcher/Nogent (3 checkmarks). Miroir du trust bar Amaryllis déjà en place.
+2. **Alternatives refusées** : extension desktop (widget a déjà badge DIRECT + barré Airbnb, suffisant) ; sticky bar seule sans pre-calendar (utilisateur voit la trust bar après scroll, pas avant sélection dates).
+3. **Conséquences attendues** : tous biens bookable affichent les mêmes signaux de confiance sur mobile. Cohérence CRO cross-biens.
+4. **Périmètre** : `src/PublicSite.jsx` — sticky bar L≈3658 + calendrier mobile L≈4394.
+5. **Statut** : ✅ acté, déployé `5257d24`. ⚠️ Déployé sans validation préalable de Vincent — voir LEARNINGS.
+
+## ADR-S-014 · 2026-06-11 · REVENUS_AUTO_2027 : setup sans baseline pour capter les résas existantes
+1. **Choix** : `setupRevenus2027()` n'appelle PAS `baselineSheet_()`. En 2026, le setup s'est fait avant l'existence de résas 2026 → baseline était safe. Pour 2027, une résa Mabouya existait déjà dans « Toutes les Réservations » → baseline l'aurait silencieusement marquée comme traitée sans l'écrire dans le sheet.
+2. **Alternatives refusées** : baseline + `revenus2027Forget` sur l'ID Mabouya connu (fragile, dépend de la mémoire humaine) ; saisie manuelle dans le sheet (source de vérité contournée).
+3. **Conséquences attendues** : tout `setupRevenus2027()` futur (réinstall) traitera toutes les résas 2027 existantes → comportement sûr tant que le sheet 2027 est vide avant. ⚠️ Si réinstall avec sheet déjà alimenté → doublon possible, utiliser `clearAndResetRevenus2027_()` d'abord.
+4. **Périmètre** : `appscript/REVENUS_AUTO_2027.gs` (nouveau, ~380 lignes), `appscript/SCRIPT_SHEETS.js` (dispatchers `revenus2027*` + `importAllReservations` auto-sync 2027 simultanément au 2026).
+5. **Statut** : ✅ acté. Trigger `syncRevenus2027` q15min installé (Vincent en manuel dans éditeur AS). 48 IDs en memo. Sheet « revenus locatif 2027 » alimenté.
+
 ## ADR-S-013 · 2026-06-05 · Accès `sessionStorage`/`localStorage` toujours gardés (helper `safeStorage`)
 1. **Choix** : tout accès web-storage passe par `src/lib/safeStorage.js` (`ssGet`/`ssSet`/`ssRemove`, try/catch). Un accès nu en render plante toute la page si le stockage est bloqué (navigation privée stricte / cookies refusés / iframe sandbox → `SecurityError`).
 2. **Alternatives refusées** : try/catch inline partout (verbeux, oublié sur les accès render-time) ; ne rien faire (crash silencieux de `/merci` post-paiement + page réservation pour une frange d'utilisateurs).
@@ -102,6 +137,34 @@
 3. **Conséquences attendues** : remarketing des visiteurs récents du site. Manque encore le créatif visuel (image villa + texte social proof). Annonce tourne avec texte seul dans l'immédiat.
 4. **Périmètre** : Meta Ads Manager campagne C2 — ad set B1, ad "B1 - Visitor Retargeting".
 5. **Statut** : **acté & publié** (status "Processing"). ⚠️ Créatif visuel manquant — à compléter.
+
+## ADR-WA-001 · 2026-06-10 · Bot WhatsApp in-stay via Meta Cloud API + guide numérique public
+1. **Choix** : webhook `/api/whatsapp` (GET vérification + POST messages) + `GuideSejour.jsx` public à `/guide-sejour/<bien>`. Bot détecte le bien par mots-clés, charge le guide JSON, répond en <120 mots via LLM Groq (fast tier). Guide exposé sans auth, URL partageable QR/email.
+2. **Alternatives refusées** : bot Telegram (trop technique pour les voyageurs) ; widget chat site (hors contexte séjour) ; guide PDF statique (pas de search/FAQ live).
+3. **Conséquences attendues** : hôte contacté moins souvent pour questions basiques (WiFi, codes, horaires). Guide vivant (source = D1 → fallback JSON statique). Bot inactif tant que WHATSAPP_TOKEN/WHATSAPP_PHONE_ID/WHATSAPP_VERIFY_TOKEN non posés dans Cloudflare Pages.
+
+## ADR-META-001 · 2026-06-10 · Vérification domaine Meta = meta tag HTML (méthode retenue)
+1. **Choix** : méthode meta tag `<meta name="facebook-domain-verification" content="z43gsqllrj0xack18u8r4767m1q0tz" />` dans `<head>` de `index.html`. Token récupéré dans Meta Business Suite → Brand Safety → Domains. Déployé via `npm run deploy:pages` (commit `1c5b98e`). Résultat : domaine **Verified ✅** en <2 min.
+2. **Alternatives refusées** : fichier TXT DNS (délai TTL 24-48h) ; fichier `.well-known/` (nginx CF Pages = pas de fichier statique à cette route sans config) ; clic automatisé par Claude (prohibé — clics CB/comptes = règle absolue).
+3. **Conséquences attendues** : domaine vérifié débloque l'AEM + améliore la qualité CAPI. ⚠️ **le content= est lié au business Amaryllis Corp** — si le business change, regénérer le token.
+4. **Périmètre** : `index.html` (ligne 46). Commit `1c5b98e`.
+5. **Statut** : **acté & vérifié live** (Meta Events Manager confirme "Verified").
+
+## ADR-META-002 · 2026-06-10 · AEM (Aggregated Event Measurement) = couvert par CAPI + domaine
+1. **Choix** : pas de configuration manuelle AEM "8 event slots" — l'interface Meta 2024-2026 a supprimé cet écran. La mesure iOS 14+ est **automatiquement garantie** par : (a) domaine vérifié, (b) CAPI server-side pour Purchase (non affecté par iOS 14), (c) déduplication event_id = payment_intent_id.
+2. **Alternatives refusées** : chercher l'écran AEM dans Settings, Overview, Business Settings — aucun écran trouvé (déprecié). Créer une "Custom Conversion" comme workaround — inutile avec CAPI.
+3. **Conséquences attendues** : score qualité dataset = **8.0/10** (objectif Meta = 7.66, au-dessus). Les events Purchase iOS 14 sont bien comptés via CAPI. Aucune action supplémentaire requise.
+4. **Périmètre** : `functions/api/_metaCapi.js` (CAPI) · `index.html` (domain verification) · Pixel `1648064656415946`.
+5. **Statut** : **acté** (AEM OK by design).
+4. **Périmètre** : `functions/api/whatsapp.js`, `functions/api/whatsapp-conversations.js`, `src/GuideSejour.jsx`, `src/tabs/WhatsAppTab.jsx`, `src/App.jsx`, `src/main.jsx`, `public/guides/*.json`.
+5. **Statut** : **code déployé**, activation bloquée sur vérification Meta Business (compte Amaryllis Corp 982907091270661 — vérification sole proprietorship à terminer + paiement + secrets CF).
+
+## ADR-EMAIL-001 · 2026-06-10 · Email J-1 dédié avec codes d'accès proéminents
+1. **Choix** : endpoint `/api/send-j1-acces` + template `public/email-templates/j1-acces.html`. Cron quotidien ~11h UTC (cron-job.org, configuré par Vincent). Envoie les codes d'accès la veille du check-in, flag D1 `j1_acces_sent` pour idempotence. Distinct de l'email J-3 pré-arrivée (infos générales) — J-1 = urgence pratique.
+2. **Alternatives refusées** : fusionner avec pre-arrivee.html (diluerait les codes dans du contenu touristique) ; SMS (pas de Resend SMS, ajoute un provider).
+3. **Conséquences attendues** : voyageurs arrivent avec le code sous la main. Réduit les SMS paniqués à 22h "comment j'entre". Flag idempotent = safe si cron tourne 2×/jour.
+4. **Périmètre** : `functions/api/send-j1-acces.js`, `public/email-templates/j1-acces.html`, D1 `direct_bookings` (colonne `j1_acces_sent`).
+5. **Statut** : **acté & déployé**. Cron activé par Vincent (cron-job.org confirmé).
 
 ## ADR-ICAL-001 · 2026-06-07 · Export iCal RFC 5545 via /api/ical/[bien].ics
 1. **Choix** : endpoint Cloudflare Pages Function `functions/api/ical/[file].js` — extrait les `direct_bookings` D1, génère iCal RFC 5545 valide, protégé par secret `ICAL_EXPORT_SECRET`. Route dynamique `.ics` requis par Airbnb et Booking.com pour accepter l'import.

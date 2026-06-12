@@ -3,6 +3,46 @@
 > Pièges déjà rencontrés + comment les éviter. 1 entrée = 1 leçon actionnable « la prochaine fois ».
 > Le journal d'erreurs exhaustif reste `../docs/ERREURS-LOG.md`.
 
+## 🌐 Vérif UI en prod réelle = Chrome MCP, PAS le preview tool — 2026-06-11
+- Le preview tool (localhost:5173) **ne peut pas charger une URL cross-origin** (`window.location='https://villamaryllis.com'` reste sur localhost) ET le dev Vite **ne sert pas les Functions** (`/api/*` → blockedDates vide, guides 404). → toute vérif qui dépend du backend/prod est **faussée** en preview (on a perdu du temps à croire à un bug double-booking inexistant).
+- **La bonne méthode** : `mcp__Claude_in_Chrome__*` (vrai navigateur, prod réelle, Vincent loggé Google) → navigate + `javascript_tool`/`get_page_text`. C'est comme ça qu'on a validé le rebond, les CTA avis, et tiré les données Search Console.
+- Pièges Chrome MCP : un retour JS contenant une **query string** (`?checkin=…`) est **bloqué** (`BLOCKED: Cookie/query string data`) → renvoyer les URL sans la query (`.split('?')[0]`). `javascript_tool` peut **freezer** sur page lourde → basculer sur `get_page_text`. Naviguer en boucle casse le contexte JS → 1 page à la fois.
+
+## 🗄️ Guides voyageur : la source de vérité = D1 `property_guides`, pas le JSON public — 2026-06-11
+- `/api/guides` lit **D1 d'abord**, fallback `public/guides/{id}.json`. Le placeholder tél `+33 6 XX XX XX XX` était propre dans le JSON mais **présent dans D1** → live cassé. Corrigé via `wrangler d1 execute --remote "UPDATE property_guides SET content_json=REPLACE(...)"`.
+- **La prochaine fois** : pour tout contenu guide servi en prod, vérifier/éditer **D1**, pas le JSON (qui n'est qu'un fallback).
+
+## 🧭 Route SPA 404 silencieux : la whitelist `isKnown` (main.jsx) doit lister TOUT préfixe — 2026-06-11
+- `/guide-sejour/*` et `/services/*` avaient leur handler (main.jsx ~L321-324) mais **manquaient dans `isKnown`** (~L241) → `NotFound` avant d'atteindre le handler. Les liens emails pré-arrivée/J-1 (résas directes) **404aient**.
+- **La prochaine fois** : tout nouveau préfixe de route = l'ajouter **à `isKnown` ET au routeur**. Tester un hit direct, pas seulement la nav SPA.
+
+## 💳 BNPL (Klarna) : surcharger le client est INTERDIT — 2026-06-11
+- On ne peut pas répercuter le frais Klarna sur le client (CGV Klarna + réglementation EU surcharging). Choix binaire : absorber le frais, ou ne pas proposer Klarna. → on a retenu l'**acompte/solde** (0 € de frais en plus). Cf. ADR-PAY-001.
+
+## 🔍 Diagnostic SEO réel (Search Console, 2026-06-11) : autorité, pas conversion
+- ~100 impressions / 3 mois. Le site ne ranke que sur des requêtes **brand** (« amaryllis ») + génériques micro-volume. Sur les vraies requêtes à volume, **invisible** (Booking/OTA dominent même sur la marque « résidence amaryllis »). → Le levier n'est PAS plus d'on-page mais l'**autorité hors-page** (GBP, citations/NAP) + paid. Les quick-wins on-page (titres recalés) restent marginaux en absolu.
+
+## 🚦 Modifications UI publiques = présenter AVANT de déployer — 2026-06-11
+- **Règle ferme (rappelée par Vincent)** : tout changement visible sur le site public (UI, CRO, texte, layout) doit être décrit à Vincent **avant de coder et déployer** — même si c'est dans la continuité logique d'un travail en cours.
+- **Ce qui s'est passé** : trust bar Amaryllis validée → extension aux autres biens faite et déployée de manière autonome sans présenter le scope. Vincent a demandé une explication après coup.
+- **Pattern correct** : décrire ce qu'on propose → attendre go → coder → build+test → `deploie` → prod. Pas de déploiement préemptif "dans la logique du précédent".
+- **Exception OK** : fix de bug UI clair (ex: PricingCalendar redondant) peut être décrit brièvement avant deploy sans attendre un go formel.
+
+## ⚠️ BLOCKERS.md stales — vérifier le code avant de proposer — 2026-06-11
+- **Pattern répété (3+ fois)** : des entrées BLOCKERS.md semblaient ouvertes mais étaient déjà fixées dans le code (beds24Amount, iCal null guard, smoke test Playwright, total_aberrant). Cause racine : le fix est appliqué mais l'entrée n'est pas fermée dans le même acte.
+- **Règle dure** : avant de proposer un item BLOCKERS comme travail à faire, exécuter un grep/read de 30s pour confirmer que le problème existe encore. Si le code a déjà la fix → fermer l'entrée immédiatement.
+- **Règle dure** : quand un fix est appliqué → fermer l'entrée BLOCKERS correspondante dans le MÊME élan, pas en clôture de session. Commit de code = fermeture BLOCKERS simultanée.
+
+## 💶 `total < caution` = NORMAL pour les courts séjours — 2026-06-11
+- **La caution (dépôt de garantie) est un montant FIXE**, indépendant de la durée du séjour. Un court séjour peut tout à fait coûter moins que la caution. **Ne JAMAIS flagguer `total < depot` comme aberrant.** Exemple validé : Zandoli/Mabouya court séjour 340€ < caution 500€ = légitime. Cette règle n'existe PAS dans `coherenceRules.js` et ne doit pas y être ajoutée.
+- **Seuls les cas aberrants à flagguer** : `total <= 0`, `depot < 0`, `total > 50 000€`.
+
+## Apps Script méthodes Auth-only = inutilisables depuis doGet/doPost anonyme — 2026-06-11
+- **`ScriptApp.getProjectTriggers()` (et toutes les méthodes `ScriptApp.*` qui touchent les triggers) nécessitent une autorisation utilisateur.** Appelées depuis le endpoint web app anonyme (`doGet`/`doPost`) → HTTP 502. **Règle : toute fonction qui crée/supprime/liste des triggers doit être exécutée depuis l'éditeur Apps Script** (bouton ▶), jamais via `/api/sheets-proxy` ou HTTP direct.
+
+## CF Pages secrets = write-only, inaccessibles localement — 2026-06-11
+- **Les secrets CF Pages (`wrangler pages secret put`) sont write-only côté infra.** Impossible à lire via API Cloudflare, wrangler CLI, ou dashboard. La valeur n'est accessible que depuis une CF Function en runtime (`context.env.MA_CLE`). **Conséquence** : pour configurer un service tiers (ex. Resend, Stripe) qui nécessite la clé API, Vincent doit l'extraire depuis le dashboard du service tiers, pas depuis CF. Pour tester localement = `.dev.vars`.
+
 ## 💶 Prix : SOURCE UNIQUE = prix journaliers (onglet Tarifs) — 2026-06-05
 - **À ne PLUS refaire : faire un devis / lire un prix depuis `biens.js prix` ou l'accroche « dès X€ ».** Ce sont des AFFICHAGES, pas le prix facturé. Le prix réel = les **prix journaliers** (`loadDailyPrices()` = `SEED_DAILY_PRICES` + overrides serveur `/api/site-config?type=prices`) que lit le tunnel. **Devis juste = lien tunnel `…/<bien>?checkin=&checkout=` OU onglet Tarifs OU onglet Devis.** Réf : `docs/PRICING.md`.
 - **Cause racine du bug « 2 prix différents » (résolu 2026-06-05)** : un 2ᵉ prix éditable « Prix de base — site public » était fusionné côté public dans `localStorage["amaryllis_prices"]` avec un **format incompatible** (`{bienId:nombre}` vs `{bienId:{date:prix}}`) → collision. **Fix : champ supprimé ; accroche = AUTO (min des prix journaliers, bornée par `biens.js prix`) ; `biens.js prix` = plancher réel + fallback SEO.** Source unique = le calendrier des tarifs.
@@ -91,6 +131,13 @@
 
 - **`npm run build` ne détecte PAS ce type de bug** : Vite/Rollup tree-shake et bundle sans exécuter React. Le crash se produit uniquement au runtime client. **Avant tout deploy d'un nouveau composant onglet, OBLIGATOIRE : `npm run dev` + ouvrir `/admin` dans Chrome avec console ouverte + cliquer sur l'onglet concerné.** Le smoke test deploy-pages.sh charge `/admin` mais ne déclenche pas le render React des onglets.
 
+## 2026-06-10 — Meta AEM (Aggregated Event Measurement) en 2024-2026
+
+- **L'écran de config AEM "8 event slots" n'existe plus dans l'interface Meta.** Présent jusqu'en 2023, il a été retiré de Events Manager Settings, Business Settings, et du dataset Overview. Ne pas passer du temps à le chercher.
+- **AEM iOS 14+ = automatiquement couvert si** : (1) domaine vérifié dans Meta Business (Brand Safety → Domains), (2) Conversions API active pour l'event principal (Purchase). Ces deux conditions suffisent — le score qualité Meta le confirme (8.0/10 vs objectif 7.66).
+- **Vérification domaine Meta = meta tag HTTP** : méthode la plus rapide (5 min). Token récupéré dans Business Suite → Brand Safety → Domains → Add → Create → copy `content=`. Coller dans `<head>` de `index.html`. Deploy. Cliquer "Verify". Résultat immédiat.
+- **La vérification domaine débloque** : CAPI quality score · AEM attribution · audiences Pixel fiables. C'est un prérequis souvent oublié qui améliore silencieusement la mesure.
+
 - **L'inbox `client_errors` D1 est le vrai diagnostic post-deploy** : quand le user a dit « erreur sur l'admin », `wrangler d1 execute revenue-manager --remote --command="SELECT * FROM client_errors ORDER BY last_seen DESC LIMIT 5"` m'a donné le message exact en 5 secondes (`Cannot read properties of undefined (reading 'filter')`). Reflex à conserver : avant de paniquer/rollback, **interroger `client_errors`** pour avoir le vrai message capté côté navigateur.
 
 ## 2026-06-07 (soir) — Chunk périmé v2 : SPA fallback + cache navigateur
@@ -106,3 +153,10 @@
 - **beds24-create.js est appelé pour TOUS les biens** dans `handleBook()`. Pour les biens Martinique, `cd.price` vaut `localAmount` (fallback ligne 166-167 de beds24-create.js) = notre `computedTotal`. La variable `beds24Amount` est donc en réalité `computedTotal` pour Martinique.
 - **La logique promo est fonctionnellement correcte** (fallback → `amount` = `computedTotal` si `cd.price == 0`), mais le **nommage est trompeur**. À renommer `confirmedAmount` ou `chargeAmount` avec commentaire expliquant les deux cas.
 - **À fixer prochain chantier** : renommer `beds24Amount` → `chargeAmount` dans `handleBook()` + ajouter un commentaire inline « Nogent: prix Beds24 confirmé / Martinique: notre calcul local ».
+
+## 2026-06-10 — Audit, WhatsApp bot, emails automatiques
+
+- **Toujours grep les placeholders dans les guides JSON avant de livrer.** `contacts[].phone = "+33 6 XX XX XX XX"` était en prod — voyageurs n'auraient pu joindre l'hôte en urgence. Pattern : après tout `Edit` sur un `public/guides/*.json`, lancer `grep -E "XX|TODO|TBD|placeholder" <fichier>`.
+- **`Math.min(parseInt(str || "100") || 100, max)` = pattern correct pour params URL numériques.** `parseInt("abc")` = NaN, `Math.min(NaN, 500)` = NaN → erreur SQL D1. Le double fallback couvre chaîne vide ET NaN.
+- **Le plan AI-Ops D1 peut se contaminer avec des modèles du mauvais provider.** Après un run AI-Ops, vérifier `SELECT v FROM ai_ops WHERE k='plan'` et contrôler que chaque modèle existe bien chez son provider déclaré (ex: `groq.smart` ne doit pas contenir `openai/gpt-oss-120b` = Cerebras).
+- **Les findings `[revue code]` LLM = taux de faux positifs ~80%.** Sur 6 findings : 5 FP, 1 vrai (limit NaN). Avant de corriger : lire le code. Avant de déployer : marquer les FP en `ignored` dans `client_errors` D1 pour ne pas re-trier à la prochaine session.
