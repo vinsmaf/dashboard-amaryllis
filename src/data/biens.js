@@ -45,9 +45,9 @@ export const BIENS = {
     id: "mabouya", nom: "Studio Mabouya", type: "studio",
     prix: 70, capacite: 2, chambres: 1, lieu: "Sainte-Luce", postal: "97228",
     coords: { lat: 14.4741, lng: -60.9209 }, rating: 4.55, reviews: 11, bookable: true,
-    photos: ["/photos/mabouya/01.webp","/photos/mabouya/02.webp","/photos/mabouya/03.webp","/photos/mabouya/04.webp"],
+    photos: ["/photos/mabouya/02.webp","/photos/mabouya/01.webp","/photos/mabouya/03.webp","/photos/mabouya/04.webp"],
     seoTitle: "Studio Mabouya Martinique — jacuzzi privatif vue mer",
-    seoDesc: "Studio Mabouya à Sainte-Luce : seul jacuzzi privatif vue mer de la résidence. Idéal couple, terrasse privée, plages à 5 min. Dès 70€/nuit.",
+    seoDesc: "Studio Mabouya à Sainte-Luce : seul jacuzzi privatif vue mer de la résidence. Idéal couple, terrasse privée, plages à 7 min. Dès 70€/nuit.",
   },
   schoelcher: {
     id: "schoelcher", nom: "Bellevue Schœlcher", type: "appartement de standing",
