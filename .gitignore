@@ -43,3 +43,6 @@ bug-reports/
 
 # Rapport d'audit rolling auto (régénéré à chaque deploy) — les rapports datés restent suivis
 docs/_audits/AUDIT-latest.md
+
+# Variables locales wrangler (secrets test/dev — NE JAMAIS committer)
+.dev.vars
