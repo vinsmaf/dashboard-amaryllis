@@ -226,6 +226,7 @@ const FAQS_PAR_BIEN = {
     { q: "Quel est le prix de la Villa Amaryllis en Martinique ?", a: "La Villa Amaryllis se loue à partir de 280€/nuit en réservation directe — sans frais Airbnb (jusqu'à 14% d'économie). Le prix varie selon la saison : haute saison décembre-avril, basse saison juillet-octobre." },
     { q: "La Villa Amaryllis a-t-elle une piscine ?", a: "Oui — la Villa Amaryllis dispose d'une piscine à débordement eau salée de 4×7 mètres avec vue mer 180° sur la baie de Sainte-Luce. C'est la seule propriété à débordement du portfolio." },
     { q: "Combien de personnes peut accueillir la Villa Amaryllis ?", a: "La Villa Amaryllis accueille jusqu'à 8 personnes dans 3 chambres climatisées, avec 3,5 salles de bain et une terrasse de 100 m² face à la mer." },
+    { q: "Peut-on payer la Villa Amaryllis en plusieurs fois ?", a: "Oui — pour les séjours réservés au moins 35 jours à l'avance et d'un montant supérieur à 800€, le paiement en 2 fois est disponible directement sur villamaryllis.com : 30% à la réservation et le solde automatiquement à J-30 avant votre arrivée." },
     { q: "Comment réserver la Villa Amaryllis sans passer par Airbnb ?", a: "Directement sur villamaryllis.com/amaryllis — paiement sécurisé Stripe, contact WhatsApp direct avec l'hôte, économies jusqu'à 14% vs Airbnb." },
     { q: "Où se trouve la Villa Amaryllis ?", a: "Sur les hauteurs de Sainte-Luce, sud de la Martinique. À 20 minutes des plages des Salines et de Sainte-Anne, à 35 minutes de l'aéroport, dans la résidence Amaryllis avec vue Caraïbes 180°." },
   ],
