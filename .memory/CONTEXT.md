@@ -70,7 +70,7 @@ Chantiers en attente : lint au gate · keepalive tokens · déclarations meublé
 ## Accès cron-job.org (API)
 - **API key** : `JSQTUh9EoFyPDJJkCj03gAZ6UnzRMT2cDlW+uAcvFa0=`
 - **API base** : `https://api.cron-job.org/`
-- **Jobs connus** (IDs) : send-relance-panier `7703942` · send-j1-acces `7777262` · send-prearrivee `7703775` · send-poststay `7669753` · send-menage-alert `7669734` · send-prix-recap `7669686`
+- **Jobs connus** (IDs) : send-relance-panier `7703942` · send-j1-acces `7777262` · send-prearrivee `7703775` · send-poststay `7669753` · send-menage-alert `7669734` · send-prix-recap `7669686` · charge-balance (solde 2x J-30) `7798126` (13h UTC quotidien)
 - **Secret actuel** : `6fbc60004a9503bf35b9df9b9d18589ee2029ddbed0e20a4` (POSTSTAY_SECRET)
 - Claude peut lister/modifier/activer/désactiver les crons sans passer par l'UI.
 
