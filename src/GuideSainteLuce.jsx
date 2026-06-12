@@ -160,7 +160,7 @@ export default function GuideSainteLuce() {
     <>
       <style dangerouslySetInnerHTML={{ __html: css }} />
       <SEOMeta
-        title="Location villa Sainte-Luce Martinique — piscine & vue mer"
+        title="Location Sainte-Luce Martinique — villa & studios dès 100€"
         description="Louez une villa à Sainte-Luce, Martinique : piscine privée, vue mer, dès 110€/nuit en direct sans frais. Plages, activités et conseils de vos hôtes."
         canonical="/sainte-luce-martinique"
         image={HERO_IMG}

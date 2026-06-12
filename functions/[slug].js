@@ -89,8 +89,8 @@ const GUIDE_PROXIMITE = {
 };
 
 const GROUP_STAY = {
-  title: "Location grande capacité Martinique — 11 pers., Sainte-Luce",
-  desc: "Louez 3 logements ensemble à Sainte-Luce (Zandoli, Géko, Mabouya) : jusqu'à 11 personnes, piscines privées, en direct sans frais. Devis rapide.",
+  title: "Résidence Amaryllis Sainte-Luce — studios & appart. 11 pers.",
+  desc: "Résidence Amaryllis à Sainte-Luce : studios et appartements à réunir jusqu'à 11 personnes, piscines privées, réservation en direct sans frais.",
   image: `${BASE}/photos/zandoli/01.webp`,
   url: `${BASE}/location-groupe-sainte-luce`,
 };
@@ -198,7 +198,7 @@ const GUIDE_META = {
     ],
   },
   "sainte-luce-martinique": {
-    title: "Location villa Sainte-Luce Martinique — piscine & vue mer",
+    title: "Location Sainte-Luce Martinique — villa & studios dès 100€",
     desc: "Louez une villa à Sainte-Luce, Martinique : piscine privée, vue mer, dès 110€/nuit en direct sans frais. Plages, activités et conseils de vos hôtes.",
     image: `${BASE}/photos/iguana/01.webp`,
     faq: [
@@ -237,7 +237,8 @@ function buildMeta(title, desc, url, image) {
 // Utilise Cloudflare Image Resizing (cdn-cgi) → format auto (AVIF/WebP selon browser),
 // qualité adaptée par breakpoint, srcset responsive. Réduit le LCP de ~4.5s à <2s.
 function heroPreloadTag(slug) {
-  const cdni = (w, q) => `/cdn-cgi/image/width=${w},format=auto,quality=${q}/photos/${slug}/01.webp`;
+  const heroPhoto = CANON[slug]?.photos?.[0] || `/photos/${slug}/01.webp`;
+  const cdni = (w, q) => `/cdn-cgi/image/width=${w},format=auto,quality=${q}${heroPhoto}`;
   return `<link rel="preload" as="image" fetchpriority="high" ` +
     `href="${cdni(1200, 85)}" ` +
     `imagesrcset="${cdni(480, 75)} 480w, ${cdni(800, 80)} 800w, ${cdni(1200, 85)} 1200w, ${cdni(1600, 90)} 1600w" ` +
@@ -281,7 +282,8 @@ export async function onRequest(context) {
     // les anciens usages ("Sainte-Luce, Martinique" / "Nogent-sur-Marne, Île-de-France").
     const lieuFull = `${bien.lieu}, ${isMartinique(bien) ? "Martinique" : "Île-de-France"}`;
     const url = `${BASE}/${slug}`;
-    const image = `${BASE}/photos/${slug}/01.webp`;
+    const heroPhoto = bien.photos?.[0] || `/photos/${slug}/01.webp`;
+    const image = `${BASE}${heroPhoto}`;
     const title = bien.seoTitle || `${bien.nom} — Location ${lieuFull} à partir de ${bien.prix}€/nuit`;
     const desc = bien.seoDesc || (extra.desc.slice(0, 155) + (extra.desc.length > 155 ? "…" : ""));
 

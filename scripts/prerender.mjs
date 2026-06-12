@@ -412,7 +412,7 @@ const ROUTES = [
   /* ── Sainte-Luce + Réservation directe ── */
   {
     path: "/sainte-luce-martinique",
-    title: "Location villa Sainte-Luce Martinique — piscine & vue mer",
+    title: "Location Sainte-Luce Martinique — villa & studios dès 100€",
     desc:  "Louez une villa à Sainte-Luce, Martinique : piscine privée, vue mer, dès 110€/nuit en direct sans frais. Plages, activités et conseils de vos hôtes.",
     image: `${BASE}/photos/iguana/01.webp`,
   },
@@ -424,8 +424,8 @@ const ROUTES = [
   },
   {
     path: "/location-groupe-sainte-luce",
-    title: "Location grande capacité Martinique — 11 pers., Sainte-Luce",
-    desc:  "Louez 3 logements ensemble à Sainte-Luce (Zandoli, Géko, Mabouya) : jusqu'à 11 personnes, piscines privées, en direct sans frais. Devis rapide.",
+    title: "Résidence Amaryllis Sainte-Luce — studios & appart. 11 pers.",
+    desc:  "Résidence Amaryllis à Sainte-Luce : studios et appartements à réunir jusqu'à 11 personnes, piscines privées, réservation en direct sans frais.",
     image: `${BASE}/photos/zandoli/01.webp`,
   },
   {
