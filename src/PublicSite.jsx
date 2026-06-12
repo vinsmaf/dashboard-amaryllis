@@ -646,6 +646,41 @@ const BIENS = [
   },
 ];
 
+// ── « À proximité » : repères de distance par bien (data extraite des descriptifs
+//    + ancrages géographiques du secteur). Affiché sur la fiche, scannable en 2 s. ──
+// Géko · Mabouya · Zandoli · Iguana = même résidence à Sainte-Luce (plages accessibles
+// en voiture, pas à pied). Proximité partagée.
+const RESIDENCE_SAINTE_LUCE = [
+  { icon: "🏖️", lieu: "Plages de Sainte-Luce", temps: "7 min en voiture" },
+  { icon: "🐢", lieu: "Snorkeling tortues marines", temps: "15 min" },
+  { icon: "🥃", lieu: "Distillerie Trois-Rivières", temps: "15 min" },
+  { icon: "✈️", lieu: "Aéroport Aimé Césaire", temps: "40 min" },
+];
+const PROXIMITE = {
+  amaryllis: [
+    { icon: "🏖️", lieu: "Plages de Sainte-Luce", temps: "5 min en voiture" },
+    { icon: "🏘️", lieu: "Bourg de Sainte-Luce (commerces, restos)", temps: "5 min" },
+    { icon: "🥃", lieu: "Distillerie Trois-Rivières", temps: "15 min" },
+    { icon: "✈️", lieu: "Aéroport Aimé Césaire", temps: "40 min" },
+  ],
+  geko: RESIDENCE_SAINTE_LUCE,
+  mabouya: RESIDENCE_SAINTE_LUCE,
+  zandoli: RESIDENCE_SAINTE_LUCE,
+  iguana: RESIDENCE_SAINTE_LUCE,
+  schoelcher: [
+    { icon: "🛒", lieu: "Centre commercial, boulangerie, pharmacie", temps: "1 min à pied" },
+    { icon: "🏖️", lieu: "Plages, restaurants, activités nautiques", temps: "5 min en voiture" },
+    { icon: "🏙️", lieu: "Fort-de-France", temps: "15 min" },
+    { icon: "✈️", lieu: "Aéroport Aimé Césaire", temps: "25 min" },
+  ],
+  nogent: [
+    { icon: "🚇", lieu: "Gare RER A → Paris centre", temps: "20 min" },
+    { icon: "🌊", lieu: "Bords de Marne (guinguettes)", temps: "quelques min à pied" },
+    { icon: "🌳", lieu: "Bois de Vincennes", temps: "10 min" },
+    { icon: "🅿️", lieu: "Parking public sécurisé", temps: "à pied" },
+  ],
+};
+
 // ── Price helpers ─────────────────────────────────────────────────
 function loadPriceOverrides() {
   try { return JSON.parse(localStorage.getItem("amaryllis_prices") || "{}"); }
@@ -4623,6 +4658,22 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                   >
                     Voir sur Google Maps →
                   </a>
+                  {PROXIMITE[bien.id] && PROXIMITE[bien.id].length > 0 && (
+                    <div style={{ marginTop: 18, background: CREAM, border: `1px solid ${SAND}`, borderRadius: 12, padding: "16px 18px" }}>
+                      <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: CORAL, marginBottom: 12 }}>
+                        {lang === "fr" ? "À proximité" : "Nearby"}
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+                        {PROXIMITE[bien.id].map((p, i) => (
+                          <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, fontFamily: "'Jost', sans-serif" }}>
+                            <span style={{ fontSize: 17, width: 22, textAlign: "center", flexShrink: 0 }}>{p.icon}</span>
+                            <span style={{ flex: 1, fontSize: 13, color: NAVY, fontWeight: 400 }}>{p.lieu}</span>
+                            <span style={{ fontSize: 12, color: MUTED, fontWeight: 600, whiteSpace: "nowrap", flexShrink: 0 }}>{p.temps}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </>
             )}
