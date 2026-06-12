@@ -8,6 +8,7 @@ import { useLang, LangToggle } from "./i18n.jsx";
 import { Eyebrow, Display, Editorial, Button, RatingBadge, Icon, ThemeToggle, Chip, StateTile, RImg } from "./primitives.jsx";
 import { Curtain } from "./Curtain.jsx";
 import { getVariant, trackConversion } from "./utils/abTest.js";
+import { depositAmount, balanceAmount, balanceDueDate, isTwoPartEligible } from "./utils/paymentPlan.js";
 import { getDiscount, discountLabel } from "./utils/pricing.js";
 import { mpTrack } from "./lib/metaPixel.js";
 import { ssGet, ssSet } from "./lib/safeStorage.js";
@@ -2003,6 +2004,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
   const [depositError, setDepositError] = useState("");
   const elRef = useRef(null);
   const depositAmt = DEPOSIT_AMOUNTS[bien.id] ?? 0;
+  const [payPlan, setPayPlan] = useState("full");
 
   const nights = checkin && checkout ? dateDiff(checkin, checkout) : 0;
 
@@ -2095,6 +2097,8 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
   const extraGuestSuppl = extraGuests * extraGuestRate * nights;
   const petSuppl        = nbPets > 0 ? PET_SUPPLEMENT : 0;
   const total = rawTotal - discountAmount + fraisMenage + extraGuestSuppl + petSuppl;
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const twoPartOk = isTwoPartEligible({ total, checkin, today: todayIso });
   const minNights = getMinNights(bien.id, checkin);
   const belowMin = nights > 0 && nights < minNights;
 
@@ -2136,10 +2140,27 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
         : "";
 
       // Payment intent
+      const isTwoX = twoPartOk && payPlan === "2x";
+      const chargeNow = isTwoX ? depositAmount(total) : total;
       const res = await fetch("/api/create-payment-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: total * 100, currency: "eur", metadata: { bienId: bien.id, checkin, checkout, voyageur: `${form.prenom} ${form.nom}`, email: form.email, ...(upsellsStr ? { upsells: upsellsStr } : {}), ...getAttributionMetadata() } }),
+        body: JSON.stringify({
+          amount: chargeNow * 100,
+          currency: "eur",
+          payPlan: isTwoX ? "2x" : "full",
+          metadata: {
+            bienId: bien.id, checkin, checkout,
+            voyageur: `${form.prenom} ${form.nom}`, email: form.email,
+            ...(upsellsStr ? { upsells: upsellsStr } : {}),
+            ...(isTwoX ? {
+              balance_amount: String(balanceAmount(total)),
+              due_date: balanceDueDate(checkin),
+              full_total: String(total),
+            } : {}),
+            ...getAttributionMetadata(),
+          },
+        }),
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
@@ -2540,13 +2561,28 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
               En réservant, vous acceptez notre <a href="/politique-confidentialite" target="_blank" rel="noopener" style={{ color: CORAL, textDecoration: "underline" }}>politique de confidentialité</a>. Vos données servent uniquement à gérer votre séjour.
             </p>
 
+            {twoPartOk && (
+              <div style={{ margin: "14px 0", border: `1px solid ${SAND}`, borderRadius: 12, padding: 12 }}>
+                <label style={{ display: "flex", gap: 10, alignItems: "center", cursor: "pointer", marginBottom: 8 }}>
+                  <input type="radio" name="payplan" checked={payPlan === "full"} onChange={() => setPayPlan("full")} />
+                  <span style={{ fontSize: 14, color: NAVY }}>Payer la totalité maintenant — <strong>{total} €</strong></span>
+                </label>
+                <label style={{ display: "flex", gap: 10, alignItems: "center", cursor: "pointer" }}>
+                  <input type="radio" name="payplan" checked={payPlan === "2x"} onChange={() => setPayPlan("2x")} />
+                  <span style={{ fontSize: 14, color: NAVY }}>
+                    En 2 fois — <strong>{depositAmount(total)} €</strong> aujourd'hui, puis <strong>{balanceAmount(total)} €</strong> le {balanceDueDate(checkin).split("-").reverse().join("/")}
+                  </span>
+                </label>
+              </div>
+            )}
+
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginTop: 18, paddingTop: 18, borderTop: `1px solid ${SAND}` }}>
               <button onClick={() => setStep(1)} style={{ background: "none", border: "none", color: MUTED, cursor: "pointer", fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 12, letterSpacing: "0.06em" }}>← Retour</button>
               <button
                 onClick={goToPayment}
                 disabled={!formOk || paying || !stripe}
                 style={{ background: formOk && !paying && stripe ? CORAL : SAND, color: "#fff", border: "none", padding: "14px 30px", borderRadius: 8, fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase", cursor: formOk && !paying && stripe ? "pointer" : "not-allowed", opacity: formOk && !paying && stripe ? 1 : 0.5, boxShadow: formOk && !paying && stripe ? "0 4px 20px rgba(196,114,84,0.35)" : "none" }}
-              >{paying ? "Chargement…" : "Passer au paiement →"}</button>
+              >{paying ? "Chargement…" : payPlan === "2x" && twoPartOk ? `Payer l'acompte ${depositAmount(total)} € →` : "Passer au paiement →"}</button>
             </div>
             {payError && <div style={errStyle}>⚠ {payError}</div>}
           </>
