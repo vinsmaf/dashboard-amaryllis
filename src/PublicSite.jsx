@@ -3271,6 +3271,110 @@ function Stat({ icon, label }) {
   );
 }
 
+// ── Rebond inter-biens ──────────────────────────────────────────
+// Quand le bien consulté est complet sur les dates voulues, on cherche les autres
+// logements du parc RÉELLEMENT libres sur la même plage (récupération de demande).
+async function findFreeAlternatives({ wantCheckin, wantCheckout, currentBienId, signal }) {
+  if (!wantCheckin || !wantCheckout || wantCheckout <= wantCheckin) return [];
+  const nights = dateDiff(wantCheckin, wantCheckout);
+  if (nights < 1) return [];
+  const allPrices = loadDailyPrices();
+  let bookingUrls = {};
+  try { bookingUrls = JSON.parse(localStorage.getItem("ical_urls_booking") || "{}"); } catch { /* ignore */ }
+  const current = BIENS.find(b => b.id === currentBienId);
+  const candidates = BIENS.filter(b => b.id !== currentBienId && !BOOKING_DISABLED.has(b.id));
+  const results = await Promise.all(candidates.map(async b => {
+    try {
+      let url = `/api/get-availability?bienId=${b.id}`;
+      if (bookingUrls[b.id]) url += `&bookingUrl=${encodeURIComponent(bookingUrls[b.id])}`;
+      const r = await fetch(url, signal ? { signal } : undefined);
+      if (!r.ok) return null;
+      const d = await r.json();
+      const blocked = d.blockedDates || [];
+      // Toute la plage [checkin, checkout[ doit être libre
+      let cur = wantCheckin;
+      for (let i = 0; i < nights; i++) {
+        if (blocked.includes(cur)) return null;
+        cur = addDays(cur, 1);
+      }
+      // Séjour minimum respecté ?
+      if (nights < getMinNights(b.id, wantCheckin)) return null;
+      // Prix total réel
+      const map = allPrices[b.id] || {};
+      let sum = 0; cur = wantCheckin;
+      for (let i = 0; i < nights; i++) { sum += map[cur] ?? b.prix; cur = addDays(cur, 1); }
+      const disc = getDiscount(nights);
+      const discAmt = disc > 0 ? Math.round(sum * disc) : 0;
+      const frais = FRAIS_MENAGE[b.id] ?? 0;
+      return { bien: b, nights, total: sum - discAmt + frais };
+    } catch { return null; }
+  }));
+  const free = results.filter(Boolean);
+  // Tri : même secteur d'abord, puis prix croissant
+  free.sort((a, b) => {
+    const aSame = current && a.bien.lieu === current.lieu ? 0 : 1;
+    const bSame = current && b.bien.lieu === current.lieu ? 0 : 1;
+    if (aSame !== bSame) return aSame - bSame;
+    return a.total - b.total;
+  });
+  return free.slice(0, 3);
+}
+
+function ReboundSuggestions({ rebound, currentNom, onDismiss }) {
+  if (!rebound) return null;
+  const { wantCheckin, wantCheckout, loading, suggestions } = rebound;
+  const dateStr = `${formatDateShort(wantCheckin)} → ${formatDateShort(wantCheckout)}`;
+  return (
+    <div style={{ marginTop: 16, background: CREAM, border: `1px solid ${SAND}`, borderRadius: 14, padding: "16px 18px", animation: "fadeIn 0.3s ease" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+        <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 13, color: NAVY, fontWeight: 600, lineHeight: 1.4 }}>
+          {currentNom} n'est pas libre du {dateStr.toLowerCase()}.
+          {!loading && suggestions.length > 0 && (
+            <span style={{ display: "block", fontWeight: 400, color: MUTED, fontSize: 12, marginTop: 3 }}>
+              Mais ces logements le sont — réservez en direct, mêmes dates :
+            </span>
+          )}
+        </div>
+        <button onClick={onDismiss} aria-label="Fermer" style={{ background: "none", border: "none", color: MUTED, fontSize: 18, cursor: "pointer", lineHeight: 1, padding: 0 }}>×</button>
+      </div>
+
+      {loading ? (
+        <div style={{ marginTop: 12, display: "flex", gap: 6, alignItems: "center", color: MUTED, fontSize: 12, fontFamily: "'Jost', sans-serif" }}>
+          <span className="skeleton" style={{ width: 54, height: 54, borderRadius: 8 }} />
+          <span>Recherche d'autres logements disponibles…</span>
+        </div>
+      ) : suggestions.length === 0 ? (
+        <div style={{ marginTop: 10, fontSize: 12, color: MUTED, fontFamily: "'Jost', sans-serif" }}>
+          Aucun autre logement libre sur ces dates pour le moment.
+        </div>
+      ) : (
+        <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
+          {suggestions.map(({ bien: b, nights, total }) => (
+            <a
+              key={b.id}
+              href={`/${b.id}?checkin=${wantCheckin}&checkout=${wantCheckout}`}
+              style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none", background: IVORY, border: `1px solid ${SAND}`, borderRadius: 10, padding: 8, transition: "box-shadow 0.15s" }}
+              onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 4px 14px rgba(0,0,0,0.08)"; }}
+              onMouseLeave={e => { e.currentTarget.style.boxShadow = "none"; }}
+            >
+              <img src={`/photos/${b.id}/01.webp`} alt={b.nom} loading="lazy" style={{ width: 56, height: 56, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 17, color: NAVY, fontWeight: 600, lineHeight: 1.1 }}>{b.nom}</div>
+                <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, color: MUTED, marginTop: 2 }}>{b.lieu} · {b.capacite} pers.</div>
+              </div>
+              <div style={{ textAlign: "right", flexShrink: 0 }}>
+                <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 14, fontWeight: 700, color: CORAL }}>{total}€</div>
+                <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 10, color: MUTED }}>{nights} nuit{nights > 1 ? "s" : ""}</div>
+                <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, color: NAVY, fontWeight: 600, marginTop: 2 }}>Voir →</div>
+              </div>
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Property Detail (full-screen) ───────────────────────────────
 function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail = false, isPage = false, initialCheckin = null, initialCheckout = null }) {
   useMinNights(); // re-render when admin changes min nights
@@ -3285,6 +3389,19 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
   const [calOffset, setCalOffset] = useState(0);
   const [showAlerte, setShowAlerte] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+  const [rebound, setRebound] = useState(null);       // { wantCheckin, wantCheckout, loading, suggestions }
+  const [reboundReq, setReboundReq] = useState(null);  // { wantCheckin, wantCheckout } — déclencheur
+  // Quand le client tente une plage indisponible, on cherche les autres biens libres.
+  useEffect(() => {
+    if (!reboundReq) return;
+    const { wantCheckin, wantCheckout } = reboundReq;
+    if (!wantCheckin || !wantCheckout || wantCheckout <= wantCheckin) return;
+    const ctrl = new AbortController();
+    findFreeAlternatives({ wantCheckin, wantCheckout, currentBienId: bien.id, signal: ctrl.signal })
+      .then(suggestions => { if (!ctrl.signal.aborted) setRebound({ wantCheckin, wantCheckout, loading: false, suggestions }); })
+      .catch(() => { if (!ctrl.signal.aborted) setRebound(null); });
+    return () => ctrl.abort();
+  }, [reboundReq, bien.id]);
   const [showStickyBar, setShowStickyBar] = useState(false);
   const [googleRevs, setGoogleRevs] = useState(null); // null = pas encore chargé
   const [voyageurRevs, setVoyageurRevs] = useState(null); // vrais avis Airbnb (D1, non masqués)
@@ -4328,8 +4445,8 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                   let cur = addDays(calCheckin, 1);
                   let blocked = false;
                   while (cur < ds) { if (blockedDates.includes(cur)) { blocked = true; break; } cur = addDays(cur, 1); }
-                  setCalCheckout(blocked ? null : ds);
-                  if (blocked) setCalCheckin(ds);
+                  if (blocked) { setRebound({ wantCheckin: calCheckin, wantCheckout: ds, loading: true, suggestions: [] }); setReboundReq({ wantCheckin: calCheckin, wantCheckout: ds }); setCalCheckin(ds); setCalCheckout(null); }
+                  else { setCalCheckout(ds); setRebound(null); setReboundReq(null); }
                 }
                 setCalHovered(null);
               };
@@ -4399,6 +4516,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                       ⚠ Séjour minimum : {minNights} nuits pour ce logement
                     </div>
                   )}
+                  <ReboundSuggestions rebound={rebound} currentNom={bien.nom} onDismiss={() => setRebound(null)} />
                 </>
               );
 
@@ -4770,8 +4888,8 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                         let cur = addDays(calCheckin, 1);
                         let blocked = false;
                         while (cur < ds) { if (blockedDates.includes(cur)) { blocked = true; break; } cur = addDays(cur, 1); }
-                        setCalCheckout(blocked ? null : ds);
-                        if (blocked) setCalCheckin(ds);
+                        if (blocked) { setRebound({ wantCheckin: calCheckin, wantCheckout: ds, loading: true, suggestions: [] }); setReboundReq({ wantCheckin: calCheckin, wantCheckout: ds }); setCalCheckin(ds); setCalCheckout(null); }
+                        else { setCalCheckout(ds); setRebound(null); setReboundReq(null); }
                       }
                       setCalHovered(null);
                     };
@@ -4814,6 +4932,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                             ⚠ Séjour min. {minNights} nuits
                           </div>
                         )}
+                        <ReboundSuggestions rebound={rebound} currentNom={bien.nom} onDismiss={() => setRebound(null)} />
                       </>
                     );
                   })()}
