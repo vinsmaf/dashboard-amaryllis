@@ -263,6 +263,33 @@ async function storeDirectBooking(env, { paymentIntentId, email, voyageur, bienI
   }
 }
 
+// Persiste l'échéancier d'un paiement en 2 fois après réussite de l'acompte.
+async function storePaymentSchedule(env, pi) {
+  const db = env.revenue_manager;
+  if (!db || !pi || pi.metadata?.pay_plan !== "2x") return;
+  try {
+    await ensurePaymentScheduleTable(db);
+    const balance = parseInt(pi.metadata.balance_amount || "0", 10); // euros
+    if (!balance || !pi.customer || !pi.payment_method) {
+      console.warn("[webhook] 2x schedule incomplet", pi.id, !!pi.customer, !!pi.payment_method, balance);
+      return;
+    }
+    const prenom = String(pi.metadata.voyageur || "").trim().split(/\s+/)[0] || "";
+    await db.prepare(`INSERT INTO payment_schedule
+        (deposit_pi_id, bien_id, bien_nom, email, prenom, customer_id, payment_method_id,
+         balance_amount, currency, checkin, checkout, due_date, status)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?, 'pending')
+      ON CONFLICT(deposit_pi_id) DO NOTHING`)
+      .bind(
+        pi.id, pi.metadata.bienId || "", pi.metadata.bienNom || pi.metadata.logements || "",
+        pi.metadata.email || "", prenom, pi.customer, pi.payment_method,
+        balance, pi.currency || "eur",
+        pi.metadata.checkin || "", pi.metadata.checkout || "", pi.metadata.due_date || ""
+      ).run();
+    console.log("[webhook] payment_schedule créé", pi.id, "solde", balance, "due", pi.metadata.due_date);
+  } catch (e) { console.error("[webhook] payment_schedule:", e.message); }
+}
+
 export async function onRequestPost(context) {
   const { request, env } = context;
   const rawBody = await request.text();
@@ -356,6 +383,9 @@ export async function onRequestPost(context) {
 
     // 2b. Stocke la résa DIRECTE en D1 → permet les emails pré-arrivée (J-3) et post-séjour (J+1)
     await storeDirectBooking(env, { paymentIntentId: pi.id, email: guestEmail, voyageur, bienId, bienNom, checkin, checkout });
+
+    // 2c. Si paiement en 2 fois, persiste le solde à prélever (off-session) en D1
+    await storePaymentSchedule(env, pi).catch(() => {});
 
     // 3. GA4 server-side — fiable (immunisé au Consent Mode, contrairement au gtag client).
     const piValue = pi?.amount ? pi.amount / 100 : 0;
