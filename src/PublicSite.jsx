@@ -4080,22 +4080,6 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
           </div>
         )}
 
-        {/* ── Vidéo de présentation Amaryllis (lazy-loaded, preload=none) ── */}
-        {bien.id === "amaryllis" && !isMobile && (
-          <div style={{ background: "#061616", padding: "0 0 4px" }}>
-            <video
-              width="100%"
-              controls
-              preload="none"
-              poster="/photos/amaryllis/01.webp"
-              style={{ display: "block", maxHeight: 480, width: "100%", objectFit: "cover" }}
-              aria-label="Villa Amaryllis — piscine à débordement eau salée et vue mer Caraïbes, Sainte-Luce Martinique"
-            >
-              <source src="/video/amaryllis-promo.mp4" type="video/mp4" />
-            </video>
-          </div>
-        )}
-
         {/* ── Transition filmstrip → cream ── */}
         {bien.id === "amaryllis" && !isMobile && photos.length > 1 && (
           <div style={{ height: 32, background: "linear-gradient(to bottom, #061616, var(--c-cream, #f5ede0))" }} />

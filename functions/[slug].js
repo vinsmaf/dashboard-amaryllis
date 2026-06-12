@@ -422,22 +422,6 @@ export async function onRequest(context) {
       }
     }
 
-    // Inject VideoObject for Amaryllis (rich snippet vidéo Google)
-    if (slug === "amaryllis") {
-      const videoLd = JSON.stringify({
-        "@context": "https://schema.org",
-        "@type": "VideoObject",
-        "name": "Villa Amaryllis Sainte-Luce Martinique — Piscine à débordement & vue mer Caraïbes",
-        "description": "Découvrez la Villa Amaryllis à Sainte-Luce en Martinique : piscine à débordement eau salée 4×7 m, terrasse 100 m² face à la mer des Caraïbes. 3 chambres climatisées, 8 personnes, réservation directe.",
-        "thumbnailUrl": `${BASE}/photos/amaryllis/01.webp`,
-        "uploadDate": "2026-06-12",
-        "duration": "PT3M19S",
-        "contentUrl": `${BASE}/video/amaryllis-promo.mp4`,
-        "publisher": { "@type": "Organization", "name": "Amaryllis Locations", "url": BASE },
-      });
-      modified = modified.replace("</head>", `<script type="application/ld+json" id="ld-video">${videoLd}</script>\n</head>`);
-    }
-
     return new Response(modified, {
       status: 200,
       headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache" },
