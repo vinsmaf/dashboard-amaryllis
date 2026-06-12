@@ -35,12 +35,34 @@ export async function onRequestPost(context) {
   try { body = await request.json(); }
   catch { return json({ error: "JSON invalide" }, 400); }
 
-  const { amount, currency = "eur", metadata = {}, bookingId = "" } = body;
+  const { amount, currency = "eur", metadata = {}, bookingId = "", payPlan = "full" } = body;
   if (!currency || currency !== "eur")
     return json({ error: "Devise non autorisée" }, 400);
   if (!amount || amount < 50) return json({ error: "Montant invalide" }, 400);
   if (amount > 500000)
     return json({ error: "Montant hors limites" }, 400);
+
+  // Paiement en 2 fois : on crée un Customer pour pouvoir débiter le solde plus tard
+  // (off-session). L'acompte = `amount` reçu. Garde-fous montant déjà validés au-dessus.
+  let customerId = "";
+  if (payPlan === "2x") {
+    try {
+      const cRes = await fetch("https://api.stripe.com/v1/customers", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${sk}`, "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          email: metadata.email || "",
+          name:  metadata.voyageur || "",
+          "metadata[bienId]": metadata.bienId || "",
+        }).toString(),
+      });
+      const c = await cRes.json();
+      if (c.error) return json({ error: c.error.message }, 400);
+      customerId = c.id;
+    } catch (e) {
+      return json({ error: "Création client Stripe échouée: " + e.message }, 500);
+    }
+  }
 
   const payload = new URLSearchParams({
     amount: String(Math.round(amount)),
@@ -56,6 +78,15 @@ export async function onRequestPost(context) {
     "metadata[type]":      metadata.type      || "",
     "metadata[logements]": metadata.logements || "",
     "metadata[guests]":    metadata.guests    || "",
+    // Paiement en 2 fois : metadata échéancier + Customer + off-session
+    ...(payPlan === "2x" ? {
+      customer: customerId,
+      setup_future_usage: "off_session",
+      "metadata[pay_plan]":      "2x",
+      "metadata[balance_amount]": String(metadata.balance_amount || ""),
+      "metadata[due_date]":       String(metadata.due_date || ""),
+      "metadata[full_total]":     String(metadata.full_total || ""),
+    } : {}),
   });
 
   try {
@@ -94,7 +125,7 @@ export async function onRequestPost(context) {
       ts: new Date().toISOString(),
     }));
     await storeAbandonedCart(env, parsed.id, metadata).catch(() => {});
-    return json({ clientSecret: parsed.client_secret });
+    return json({ clientSecret: parsed.client_secret, customerId });
   } catch (err) {
     console.error(JSON.stringify({
       level: "error",
