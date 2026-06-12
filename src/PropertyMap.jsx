@@ -2,12 +2,13 @@
 // Isolé dans son propre fichier pour éviter que l'import Leaflet
 // ne pollue le chunk PublicSite.jsx (module dynamique global).
 
-import { MapContainer, TileLayer, Marker } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+import { DESTINATIONS } from "./data/destinations.js";
 
 export default function PropertyMap({ bien, height = 280 }) {
-  const { coords, nom, couleur } = bien;
+  const { coords, nom, couleur, id } = bien;
   if (!coords) return null;
 
   const pinIcon = L.divIcon({
@@ -35,10 +36,30 @@ export default function PropertyMap({ bien, height = 280 }) {
     iconAnchor: [60, 40],
   });
 
+  // POI à proximité : destinations avec un temps de route connu depuis ce bien,
+  // triées par distance, les 6 plus proches → marqueurs emoji liés aux guides.
+  const nearby = id
+    ? DESTINATIONS
+        .filter(d => typeof d?.distFrom?.[id] === "number" && typeof d.lat === "number")
+        .sort((a, b) => a.distFrom[id] - b.distFrom[id])
+        .slice(0, 6)
+    : [];
+
+  const poiIcon = (emoji) => L.divIcon({
+    className: "",
+    html: `<div style="font-size:21px;line-height:1;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.45));cursor:pointer;">${emoji}</div>`,
+    iconSize: [26, 26],
+    iconAnchor: [13, 13],
+  });
+
+  // Cadre la carte sur le bien + ses POI proches (vue secteur). Sinon zoom rue.
+  const bounds = nearby.length
+    ? L.latLngBounds([[coords.lat, coords.lng], ...nearby.map(d => [d.lat, d.lng])]).pad(0.18)
+    : null;
+
   return (
     <MapContainer
-      center={[coords.lat, coords.lng]}
-      zoom={15}
+      {...(bounds ? { bounds } : { center: [coords.lat, coords.lng], zoom: 15 })}
       scrollWheelZoom={false}
       zoomControl={true}
       style={{ width: "100%", height, borderRadius: 10, display: "block" }}
@@ -50,6 +71,23 @@ export default function PropertyMap({ bien, height = 280 }) {
         maxZoom={19}
       />
       <Marker position={[coords.lat, coords.lng]} icon={pinIcon} />
+      {nearby.map(d => (
+        <Marker key={d.id} position={[d.lat, d.lng]} icon={poiIcon(d.emoji)}>
+          <Popup>
+            <div style={{ padding: "10px 12px", fontFamily: "'Jost', sans-serif", width: 200 }}>
+              <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 17, fontWeight: 600, color: "#0e3b3a", lineHeight: 1.15 }}>
+                {d.emoji} {d.nom}
+              </div>
+              <div style={{ fontSize: 12, color: "#7a6b5a", margin: "4px 0 8px" }}>
+                🚗 {d.distFrom[id]} min en voiture
+              </div>
+              <a href={d.href} style={{ fontSize: 12, fontWeight: 600, color: "#c47254", textDecoration: "none" }}>
+                Voir le guide →
+              </a>
+            </div>
+          </Popup>
+        </Marker>
+      ))}
     </MapContainer>
   );
 }
