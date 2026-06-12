@@ -214,6 +214,8 @@ Deploy separately: `wrangler deploy` from project root.
 
 **Tracking pub** : `src/lib/metaPixel.js` (Meta Pixel `714189639771397`, **consent-gated RGPD** comme GA4 — chargé après acceptation cookies via `CookieBanner.jsx`). Events miroir de GA4 : `ViewContent`/`InitiateCheckout`/`Purchase`. ⚠️ **Tout domaine tiers de tracking doit être ajouté au CSP de `public/_headers`** sinon silencieusement bloqué (le Pixel ET des endpoints GA4 régionaux l'étaient avant le fix : `connect.facebook.net`, `*.google-analytics.com`, `stats.g.doubleclick.net`).
 
+**⚠️ Paiement en 2 fois & valeur de conversion (depuis 06/2026)** : quand un voyageur paie en 2× (acompte 30 % + solde J-30), la conversion `purchase` (GA4 `purchase`/`booking_completed` + Meta Pixel/CAPI) DOIT remonter la **valeur TOTALE** de la réservation, **jamais l'acompte** — sinon le ROAS est sous-compté de ~70 % et Google/Meta optimisent à tort. Mécanique : `create-payment-intent.js` pose `metadata.full_total` ; `stripe-webhook.js` calcule `piValue = (pay_plan==='2x' && full_total>0) ? full_total : pi.amount/100`. **La valeur totale est comptée UNE seule fois** (à la confirmation = acompte) ; `charge-balance.js` (débit du solde plus tard) **ne déclenche aucun event** → zéro double comptage. Le client (`BookingModal`) envoie déjà `total` avec le même `event_id`/`transaction_id` → dédup cohérente. **Toute modification du flux 2× doit préserver cet invariant** : valeur = total, comptée une seule fois.
+
 ### Data Sources
 
 All financial data flows from a single Google Sheets file (ID: `1xuhU0KraEMxF9NAWO5MKEt23JI_V8mnNnWktzHy6q2U`). The bridge is a Google Apps Script deployed as a web app — its URL is stored as `APPS_SCRIPT_URL`. The source for the Apps Script is `SCRIPT_SHEETS.gs`.

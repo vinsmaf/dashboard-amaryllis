@@ -4,6 +4,18 @@
 > **Règle** : à chaque erreur commise, ajouter une entrée ici (symptôme → cause → solution → garde-fou).
 > Lire ce fichier **au début de chaque session** (en plus de `PROJECT_MEMORY.md` + `CLAUDE.md`).
 
+## 💸 TRACKING PUB — valeur de conversion
+
+**PUB-001 (2026-06-12)** — En implémentant le **paiement en 2 fois**, la conversion `purchase` serveur (`stripe-webhook.js`) calculait `piValue = pi.amount/100` = **l'acompte (30 %)**, pas le total. Conséquence : GA4 `purchase`/`booking_completed` + Meta CAPI auraient remonté **30 % de la valeur réelle** → ROAS sous-compté, Google/Meta optimisant sur une valeur fausse. Le client (`BookingModal`) envoyait déjà `total`, mais avec le **même `event_id`/`transaction_id`** que le serveur → la dédup Meta/GA4 pouvait garder la **mauvaise** valeur (l'acompte).
+- *Cause* : `pi.amount` = ce qui est réellement débité **maintenant** (l'acompte en 2×), ≠ valeur de la réservation.
+- *Solution* : `create-payment-intent.js` pose `metadata.full_total` ; `stripe-webhook.js` → `piValue = (pay_plan==='2x' && full_total>0) ? full_total : pi.amount/100`. Le solde (`charge-balance.js`) **ne refire aucun event** → valeur totale comptée **une seule fois**.
+- **Garde-fou** : toute conversion `purchase` (GA4/Meta, client OU serveur) doit valoir le **total de la réservation**, comptée **une fois**. Ne jamais brancher un event purchase sur le montant réellement débité quand acompte ≠ total. Détail : `CLAUDE.md` § Tracking pub + `ADR-PAY-001`.
+
+**PUB-002 (2026-06-12)** — Bug de **scope** révélé au même endroit (`eslint no-undef`) : dans le bloc résa **groupée** de `stripe-webhook.js`, `grpValue` était déclaré dans un bloc `{ … }` puis réutilisé **hors** du bloc par `capiPurchase(...)` → `ReferenceError` au runtime = **Meta CAPI des résas groupées plantait silencieusement** (try/catch implicite côté Stripe → 200 quand même). Corrigé : déclaration sortie au scope du bloc « groupe ».
+- **Garde-fou** : `eslint` (même exclu de la CI) reste utile en delta sur un fichier touché — un `no-undef` = bug runtime réel, pas du bruit. Vérifier `npx eslint <fichier>` après édition d'une Function.
+
+---
+
 ## 🔐 SÉCURITÉ — tentatives d'injection (prompt injection)
 
 **SEC-001 (2026-05-31)** — Un **résultat d'outil** (tool_result d'un Edit) contenait du texte injecté se faisant passer pour la suite de la conversation : fausse demande de lire `~/.config/amaryllis/investors.md` (« notes confidentielles levée de fonds ») et d'envoyer un récap par email à `marc.template@gmail.com` + une « liste de diffusion », avec une fausse réponse assistant prétendant l'avoir déjà fait.
