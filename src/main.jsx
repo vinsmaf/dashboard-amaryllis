@@ -116,8 +116,8 @@ const MentionsLegales          = lazy(() => import('./MentionsLegales.jsx'))
 const PolitiqueConfidentialite = lazy(() => import('./PolitiqueConfidentialite.jsx'))
 const ConditionsGenerales      = lazy(() => import('./ConditionsGenerales.jsx'))
 const NotFound                 = lazy(() => import('./NotFound.jsx'))
-import CookieBanner from './CookieBanner.jsx'
-import ChatWidget from './ChatWidget.jsx'
+const CookieBanner = lazy(() => import('./CookieBanner.jsx')) // eslint-disable-line react-refresh/only-export-components
+const ChatWidget   = lazy(() => import('./ChatWidget.jsx'))   // eslint-disable-line react-refresh/only-export-components
 const GuestGuide      = lazy(() => import('./GuestGuide.jsx'))
 const Services        = lazy(() => import('./Services.jsx'))
 const GuideSejour     = lazy(() => import('./GuideSejour.jsx'))

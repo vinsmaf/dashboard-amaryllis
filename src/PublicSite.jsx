@@ -172,14 +172,8 @@ const GOLD   = "var(--c-gold)";   // star ratings, accents
 
 // ── CSS Animations ────────────────────────────────────────────────
 if (typeof document !== "undefined" && !document.getElementById("__site_styles")) {
-  // Google Fonts — Jost (display) + Cormorant Garamond (serif/italic)
-  if (!document.getElementById("__site_fonts")) {
-    const link = document.createElement("link");
-    link.id = "__site_fonts";
-    link.rel = "stylesheet";
-    link.href = "https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,200;0,300;0,400;0,700;1,300&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&display=swap";
-    document.head.appendChild(link);
-  }
+  // Google Fonts chargées en superset dans index.html via <link rel="stylesheet">
+  // — injection dynamique supprimée (évite une double requête fonts.googleapis.com).
   const s = document.createElement("style");
   s.id = "__site_styles";
   s.textContent = `

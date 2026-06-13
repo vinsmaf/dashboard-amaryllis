@@ -1,4 +1,8 @@
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /api/
+Disallow: /bienvenue/
+Disallow: /landing/
 
 Sitemap: https://villamaryllis.com/sitemap.xml

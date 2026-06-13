@@ -121,19 +121,35 @@ function applyOne27_(row, C, dstSheet, dryRun) {
   var arrivalMonth = (aDate && aDate.getUTCFullYear() === 2027) ? aDate.getUTCMonth() + 1 : null;
   if (!arrivalMonth) { for (var mm in nbm) { arrivalMonth = parseInt(mm, 10); break; } }
 
+  // Comptage : 1 resa sur le mois d'ARRIVEE (jamais reparti).
   if (arrivalMonth) {
     var cRow = CNT_ROWS_27[bienId][ck], cCol = arrivalMonth + 2;
     changes.push({ bloc:"resa", row:cRow, col:cCol, delta:1 });
     if (!dryRun) appendCell27_(dstSheet, cRow, cCol, 1);
   }
-  for (var m in nbm) {
-    var month = parseInt(m, 10), col = month + 2, nightsM = nbm[m];
-    if (montant > 0) {
-      var part = Math.round(montant * nightsM / totalN * 100) / 100;
-      var revRow = REV_ROWS_27[bienId][ck];
-      changes.push({ bloc:"revenus", row:revRow, col:col, delta:part });
-      if (!dryRun) appendCell27_(dstSheet, revRow, col, part);
+
+  // Montant : 100% sur le mois d'ARRIVEE — PAS de prorata (regle Vincent 2026-06-13).
+  //   Resa a cheval = montant ENTIER sur le mois d'arrivee ; seules les NUITS reparties.
+  //   Cas limite : arrivee hors 2027 -> prorata des nuits 2027 uniquement.
+  if (montant > 0) {
+    var revRow = REV_ROWS_27[bienId][ck];
+    if (aDate && aDate.getUTCFullYear() === 2027) {
+      var aCol = arrivalMonth + 2;
+      changes.push({ bloc:"revenus", row:revRow, col:aCol, delta:montant });
+      if (!dryRun) appendCell27_(dstSheet, revRow, aCol, montant);
+    } else {
+      for (var mm2 in nbm) {
+        var pcol = parseInt(mm2, 10) + 2;
+        var part = Math.round(montant * nbm[mm2] / totalN * 100) / 100;
+        changes.push({ bloc:"revenus", row:revRow, col:pcol, delta:part });
+        if (!dryRun) appendCell27_(dstSheet, revRow, pcol, part);
+      }
     }
+  }
+
+  // Nuits ("jours occupes") : TOUJOURS reparties par mois reel.
+  for (var m in nbm) {
+    var col = parseInt(m, 10) + 2, nightsM = nbm[m];
     changes.push({ bloc:"nuits", row:NIGHTS_ROW_27[bienId], col:col, delta:nightsM });
     if (!dryRun) appendCell27_(dstSheet, NIGHTS_ROW_27[bienId], col, nightsM);
   }
@@ -343,4 +359,62 @@ function revenus2027Undo_(idsCsv) {
     });
   });
   return { ok: true, undone: done };
+}
+
+// ── Inspection read-only 2027 (structure formule vs valeur) ──
+function revenusInspect2027_() {
+  var ss = SpreadsheetApp.openById(SHEET_ID_27);
+  var dst = ss.getSheetByName(DST_SHEET_27); if (!dst) return { ok:false, error:"dst 2027 introuvable" };
+  var probe = [2,3,4,5,6, 36,37,38, 68, 69,70,72];
+  var out = [];
+  probe.forEach(function(r){
+    var vals = dst.getRange(r,1,1,14).getValues()[0];
+    var fmls = dst.getRange(r,1,1,14).getFormulas()[0];
+    out.push({ row:r, label:String(vals[0]).slice(0,28),
+      jan: fmls[2] ? fmls[2] : vals[2],
+      fev: fmls[3] ? fmls[3] : vals[3],
+      isFormula: !!(fmls[2] || fmls[3]) });
+  });
+  return { ok:true, dst:DST_SHEET_27, rows:out };
+}
+
+// ── Recompute SCOPÉ rétroactif 2027 (regle courante : montant 100% mois d'arrivee) ──
+//   2027 est 100% futur -> toutes les resas sont encore en source -> fromMonth defaut 1
+//   (recompute toute l'annee, sans risque de perte d'historique). Meme mecanique que 2026 :
+//   zero des lignes data cols fromMonth..dec + re-application des arrivees 2027 >= fromMonth.
+function rebuildRevenus2027_(apply, fromMonth) {
+  fromMonth = parseInt(fromMonth, 10); if (!fromMonth || fromMonth < 1 || fromMonth > 12) fromMonth = 1;
+  var ss = SpreadsheetApp.openById(SHEET_ID_27);
+  var dst = ss.getSheetByName(DST_SHEET_27); if (!dst) return { ok:false, error:"dst 2027 introuvable" };
+  var startCol = fromMonth + 2, nCols = 14 - startCol + 1;
+  var dataRows = [];
+  for (var b in REV_ROWS_27)    { dataRows.push(REV_ROWS_27[b].airbnb, REV_ROWS_27[b].booking, REV_ROWS_27[b].direct); }
+  for (var b2 in CNT_ROWS_27)   { dataRows.push(CNT_ROWS_27[b2].airbnb, CNT_ROWS_27[b2].booking, CNT_ROWS_27[b2].direct); }
+  for (var b3 in NIGHTS_ROW_27) { dataRows.push(NIGHTS_ROW_27[b3]); }
+  if (!apply) {
+    return { ok:true, mode:"dry", fromMonth:fromMonth, startCol:startCol, nCols:nCols,
+             rowsToRecompute:dataRows.length, note:"mois < " + fromMonth + " preserves" };
+  }
+  var before = dst.getRange(6, startCol, 1, nCols).getValues()[0];
+  var zeros = []; for (var z=0; z<nCols; z++) zeros.push(0);
+  dataRows.forEach(function(r){ dst.getRange(r, startCol, 1, nCols).setValues([zeros.slice()]); });
+  var seen = {}, applied = 0;
+  [[SRC_SHEET_27, COL_TOUTES_27], [RESA_SHEET_27, COL_RESA_27]].forEach(function(pair){
+    var sh = ss.getSheetByName(pair[0]); if (!sh || sh.getLastRow() < 2) return;
+    var C = pair[1];
+    var rows = sh.getRange(2, 1, sh.getLastRow() - 1, C.ncols).getValues();
+    rows.forEach(function(row){
+      var a = toNoonUTC27_(row[C.arrivee]);
+      if (!a || a.getUTCFullYear() !== 2027 || (a.getUTCMonth() + 1) < fromMonth) return;
+      var id = String(row[C.id] || ""), ck = contentKeyRow27_(row, C);
+      if ((id && seen[id]) || (ck && seen[ck])) return;
+      var ch = applyOne27_(row, C, dst, false);
+      if (id) seen[id] = true; if (ck) seen[ck] = true;
+      if (ch.length) applied++;
+    });
+  });
+  SpreadsheetApp.flush();
+  var after = dst.getRange(6, startCol, 1, nCols).getValues()[0];
+  return { ok:true, mode:"applied", fromMonth:fromMonth, rowsZeroed:dataRows.length,
+           appliedBookings:applied, nogentTotalBefore:before, nogentTotalAfter:after };
 }
