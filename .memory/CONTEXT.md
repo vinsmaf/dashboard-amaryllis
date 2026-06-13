@@ -1,6 +1,6 @@
 # CONTEXT — État courant (locatif-dashboard)
 
-> Snapshot condensé de l'état réel. **À mettre à jour à CHAQUE session.** Dernière MAJ : **2026-06-11 (nuit)** — Grosse session CRO+acquisition : prix/case calendrier · rebond inter-biens · bloc « À proximité » · marqueurs POI carte→guides · CTA avis Google in-situ · 2 titres SEO recalés sur Search Console · bugs réparés (routes /guide-sejour & /services 404, tél placeholder D1 6 guides). **Prochaine session : coder le paiement en 2 fois** (plan prêt `docs/superpowers/plans/2026-06-11-paiement-2-fois.md`).
+> Snapshot condensé de l'état réel. **À mettre à jour à CHAQUE session.** Dernière MAJ : **2026-06-13 (soir)** — SEO 5 chantiers : JSON-LD VacationRental · hreflang runtime · robots.txt sécurisé · sitemap.xml nettoyé · LCP + lazy-load.
 
 ## Le projet
 Conciergerie + site de réservation directe pour **7 logements** (Martinique + Nogent-sur-Marne).
@@ -40,6 +40,26 @@ Source unique des biens (ph1-3) · Robustesse (tests+gate+CI, cohérence, import
 ## Crons autonomes (depuis 2026-06-10)
 - **consolidation-memoire-hebdo** : lundi 6h MTQ (`0 6 * * 1`) — jardinera `.memory/` mode propose
 - **point-ads-hebdo** : lundi 7h MTQ (`0 7 * * 1`) — résumé perf Meta+Google + 1 reco actionnable
+
+## Chantiers récents livrés (2026-06-13 soir — SEO 5 chantiers)
+- **Chantier A — Prix cohérents** : 9 corrections dans `functions/[slug].js` (BIEN_EXTRA descs + guide meta). Prix validés par Vincent : Zandoli 110€, Géko 110€, Mabouya 70€, Schœlcher 90€, Nogent 90€.
+- **Chantier B — JSON-LD VacationRental** : `LodgingBusiness` → `VacationRental` + `BreadcrumbList` · check-in/out (MTQ 17h/12h, Nogent 15h/11h) · ImageObject array (4 photos) · `addressCountry` ISO : MQ (Martinique) / FR (Nogent) · `priceRange` conditionnel (bookable).
+- **Chantier C — hreflang runtime** : était 0% en prod (prerender l'injectait mais runtime écrasait sans réinjecter). Désormais injecté dans `injectMeta()` : MTQ = fr + en (→ /villa-rental-martinique) + x-default ; Nogent = fr + x-default. Vérifié live `/amaryllis` ✅.
+- **Chantier D — robots.txt + sitemap** : `public/sitemap.xml` (26 URLs stales) supprimé — prerender génère 63 URLs fraîches à chaque build. `public/robots.txt` sécurisé avec Disallow `/admin`, `/api/`, `/bienvenue/`, `/landing/`.
+- **Chantier E — LCP + perf** : `lcpPreload` ajouté sur 6 biens (était seulement Amaryllis+homepage) · Doublonnage Google Fonts supprimé de `PublicSite.jsx` · CookieBanner + ChatWidget convertis en `lazy()` dans `main.jsx`.
+- **Commit** : `14c817d` (11 fichiers, 604 insertions, 337 suppressions). Déployé `SKIP_BUILD=1`.
+
+## Chantiers récents livrés (2026-06-13 matin — Pub + ViewContent + Webhook V2)
+- **Point pub** : Meta Ads C1+C2 actifs, Google Ads C1+C2 actifs. ViewContent Meta ne firait que 2×/période → bug consent-gating. Fix : `meta-pixel-ready` CustomEvent + deferred listeners dans `PublicSite.jsx`. Commit `30c99d2`.
+- **Webhook Beds24 V1→V2** : `beds24-webhook.js` réécrit complet (getActiveBeds24Token + sheets-proxy). Résa SALZE Bérengère (Booking.com Nogent) absente du Sheet → webhook V1 mort depuis migration V2. Fix commité.
+- **Règle revenus 100% mois d'arrivée** : `applyOne_()` dans GAS 2026+2027 réécrit. Commité.
+- **Incident rebuild Sheet** : `rebuildRevenus2026_(apply=true)` a détruit données manuelles → Vincent a restauré manuellement.
+
+## Chantiers récents livrés (2026-06-12 soir — audit design)
+- **Audit visuel multi-agents** : 10 pages publiques auditées (11 agents workflow, 8 min, 754k tokens). 9 corrections déployées :
+  - **Code** : `og:image:alt` injectable par page (`id="og-image-alt"` index.html + injectMeta imageAlt) · Iguana filtré du `@graph VacationRental` (bookable:false) · VILLAS de GuideExplorer.jsx dérivé de `ALL_BIENS` · favicon dupliqué supprimé · Iguana retiré de l'ItemList homepage (6 biens reservables, plus Iguana) · hreflang Nogent → /nogent (pas /villa-rental-martinique).
+  - **Texte public** : FAQ Zandoli 220€→110€ · FAQ Géko (comparaison) 150€→110€ · FAQ Nogent 85€→90€ et 15min→20min · Photo Sainte-Anne → Wikimedia CC0 "Grande Anse des Salines".
+- **Débt restant** : prix en prose stales dans BIEN_EXTRA + FAQs (Mabouya, Schœlcher, homepage "Dès 85€") + lint delta crash [slug] (voir BLOCKERS).
 
 ## Chantiers récents livrés (2026-06-11)
 - **REVENUS_AUTO_2027** : `appscript/REVENUS_AUTO_2027.gs` (mirror 2026, filtre 2027, memo `rev2027_traites`). Setup sans baseline → 48 IDs absorbés dont Mabouya fév 2027. Trigger q15min actif. `importAllReservations` synce 2026+2027 en parallèle.

@@ -3,6 +3,18 @@
 > Pièges déjà rencontrés + comment les éviter. 1 entrée = 1 leçon actionnable « la prochaine fois ».
 > Le journal d'erreurs exhaustif reste `../docs/ERREURS-LOG.md`.
 
+## 🔍 CDN propagation : toujours vérifier via l'alias direct avant de conclure que le déploiement est cassé — 2026-06-13
+- Après un `npm run deploy:pages`, la prod `villamaryllis.com` peut servir le contenu précédent encore plusieurs minutes (cache CDN Cloudflare). L'**alias de déploiement direct** (`https://<branch>.dashboard-amaryllis.pages.dev`) ne cache JAMAIS → montre immédiatement le code déployé.
+- **La prochaine fois** : vérifier le comportement attendu sur l'alias d'abord, puis attendre quelques minutes pour villamaryllis.com. Ne pas re-déployer si l'alias est OK — c'est le CDN, pas le code.
+
+## ⚡ `SKIP_BUILD=1` = réutilise `dist/` existant — inclut les fichiers `public/` si build a déjà tournéavant — 2026-06-13
+- `SKIP_BUILD=1 npm run deploy:pages` déploie le `dist/` déjà construit. Si `public/robots.txt` a été modifié ET qu'un `npm run build` a tourné après cette modification, le `dist/robots.txt` est correct → `SKIP_BUILD=1` est safe.
+- **Piège** : modifier `public/` APRÈS le build et faire `SKIP_BUILD=1` → la modification n'est pas dans dist/. Toujours builder après toute modif `public/`.
+
+## 🔗 Lazy import React + ESLint `react-refresh/only-export-components` — 2026-06-13
+- Convertir un import statique en `lazy(() => import('./X.jsx'))` ajoute une erreur ESLint `react-refresh/only-export-components` si la const est au top level (pas dans un composant). Le delta-check du deploy script le détecte et bloque.
+- **Fix** : ajouter `// eslint-disable-line react-refresh/only-export-components` sur la ligne du `lazy()`. Ces constantes sont des composants React différés, pas une vraie violation de règle.
+
 ## 🌐 Vérif UI en prod réelle = Chrome MCP, PAS le preview tool — 2026-06-11
 - Le preview tool (localhost:5173) **ne peut pas charger une URL cross-origin** (`window.location='https://villamaryllis.com'` reste sur localhost) ET le dev Vite **ne sert pas les Functions** (`/api/*` → blockedDates vide, guides 404). → toute vérif qui dépend du backend/prod est **faussée** en preview (on a perdu du temps à croire à un bug double-booking inexistant).
 - **La bonne méthode** : `mcp__Claude_in_Chrome__*` (vrai navigateur, prod réelle, Vincent loggé Google) → navigate + `javascript_tool`/`get_page_text`. C'est comme ça qu'on a validé le rebond, les CTA avis, et tiré les données Search Console.
@@ -27,6 +39,17 @@
 - **Ce qui s'est passé** : trust bar Amaryllis validée → extension aux autres biens faite et déployée de manière autonome sans présenter le scope. Vincent a demandé une explication après coup.
 - **Pattern correct** : décrire ce qu'on propose → attendre go → coder → build+test → `deploie` → prod. Pas de déploiement préemptif "dans la logique du précédent".
 - **Exception OK** : fix de bug UI clair (ex: PricingCalendar redondant) peut être décrit brièvement avant deploy sans attendre un go formel.
+
+## 🔄 Stale chunk React : `unhandledrejection` ne suffit pas — onError ErrorBoundary requis — 2026-06-12
+- Quand React lazy() + Suspense échoue à charger un chunk (hash périmé après déploiement), React attrape l'exception **via l'ErrorBoundary avant** que la Promise soit considérée "unhandled". Le handler `window.addEventListener('unhandledrejection', …)` existant ne se déclenche donc pas.
+- **Fix** : ajouter un `onError` sur le `Sentry.ErrorBoundary` racine (`main.jsx`) qui détecte le pattern stale chunk et recharge. Le fallback `({ error }) => …` doit afficher un écran neutre (pas un message d'erreur) pendant le rechargement.
+- **Pattern final** : `unhandledrejection` + `vite:preloadError` + `ErrorBoundary.onError` + `console.error` intercept = couverture quasi-totale (Chrome/Firefox/Safari/iOS).
+
+## 📺 YouTube Studio : pièges opérationnels — 2026-06-12
+- **"Remplacer la vidéo"** n'existe plus dans YouTube (supprimé). Seul flux : Créer → Importer des vidéos (nouveau fichier, nouveau hash) → mettre à jour bande-annonce manuellement.
+- **COPPA "conçue pour les enfants"** sur une vidéo : désactive silencieusement les commentaires et les notifications. Vérifier la section "Audience" sur chaque vidéo importée/existante. Default = "Non" à confirmer explicitement.
+- **`file_upload` Chrome MCP** : ne peut uploader que des fichiers partagés dans la session — pas un path filesystem arbitraire. Pour une vidéo locale, Vincent doit cliquer manuellement "Sélectionner des fichiers" dans le wizard YouTube.
+- **`/playlists` URL directe** donnait "Petit problème" sur Firefox/Chrome MCP. Solution fiable : onglet "Playlists" dans l'onglet Contenus → ou le bouton "Créer → Nouvelle playlist" du header.
 
 ## ⚠️ BLOCKERS.md stales — vérifier le code avant de proposer — 2026-06-11
 - **Pattern répété (3+ fois)** : des entrées BLOCKERS.md semblaient ouvertes mais étaient déjà fixées dans le code (beds24Amount, iCal null guard, smoke test Playwright, total_aberrant). Cause racine : le fix est appliqué mais l'entrée n'est pas fermée dans le même acte.
@@ -154,9 +177,32 @@
 - **La logique promo est fonctionnellement correcte** (fallback → `amount` = `computedTotal` si `cd.price == 0`), mais le **nommage est trompeur**. À renommer `confirmedAmount` ou `chargeAmount` avec commentaire expliquant les deux cas.
 - **À fixer prochain chantier** : renommer `beds24Amount` → `chargeAmount` dans `handleBook()` + ajouter un commentaire inline « Nogent: prix Beds24 confirmé / Martinique: notre calcul local ».
 
+## 2026-06-12 — Audit visuel multi-agents + double-source SEO + pièges HTML
+
+- **`lits` ≠ `chambres` dans les BIENS de PublicSite.jsx.** Deux champs distincts coexistent dans le tableau `BIENS` local de `PublicSite.jsx` : `lits` = total couchages (inclut canapé-lit, utilisé sur la carte du logement L3242) ; `chambres` = nombre de chambres stricto sensu (vient de `biens.js`, utilisé dans l'overlay de réservation L3962). Zandoli `lits:3` + `chambres:2` = cohérent (3 personnes dorment via 2 ch + canapé). **Ne jamais flagguer ce delta comme bug sans vérifier les deux champs.**
+- **Audit visuel multi-agents = QA systématique.** Lancer 11 agents en parallèle (1 par page) via un workflow multi-agents détecte des incohérences HTML invisibles à la relecture de code (attributs `id` manquants, Iguana dans JSON-LD alors que bookable:false, VILLAS hardcodées en dehors de la source unique, photo placeholder en prod). Rentable en ~8 min vs des heures de revue manuelle. Pattern : 1 agent = 1 page = 1 rapport structuré → synthèse en loop.
+- **`og:image:alt` doit avoir un `id` pour être ciblé par `injectMeta()`.** La fonction `injectMeta()` dans `functions/[slug].js` remplace des tags par regex sur le HTML brut. Si le tag `<meta property="og:image:alt">` n'a pas d'attribut `id`, aucune regex ne peut le cibler de façon fiable. **Pattern : ajouter `id="og-image-alt"` dans `index.html`, puis la regex cible `<meta id="og-image-alt"[^>]*>`.** À reproduire pour tout autre meta-tag qu'on veut injecter par page.
+- **Bash glob casse sur les crochets dans un nom de fichier.** Dans `deploy-pages.sh`, le lint delta check fait un `grep` sur les fichiers modifiés puis boucle sur eux. `functions/[slug].js` contient `[slug]` qui est interprété comme un glob bash même entre guillemets dans certains contextes → le script plante. **Workaround : `SKIP_LINT=1 bash scripts/deploy-pages.sh`**. Fix propre = échapper les crochets ou utiliser `--` dans le grep. Puce de background créée (task_cef1560f).
+- **Wikimedia `Special:FilePath/<nom-exact-du-fichier>` = URL directe CC0 pour les photos POI.** Pattern : `https://commons.wikimedia.org/wiki/Special:FilePath/Grande_Anse_des_Salines_(Sainte-Anne,_Martinique)_-_01.jpg`. Pas besoin de créer ni héberger la photo. Rechercher sur commons.wikimedia.org, copier le nom exact du fichier, composer l'URL. Licence CC0 = libre de droits.
+- **Règle de déploiement réaffirmée : montrer les changements site public AVANT de committer.** (Rappel Vincent, acté dans LEARNINGS 2026-06-11 - voir entrée "Modifications UI publiques"). Cette session : 4 corrections textuelles présentées et validées avant déploiement ✅.
+
 ## 2026-06-10 — Audit, WhatsApp bot, emails automatiques
 
 - **Toujours grep les placeholders dans les guides JSON avant de livrer.** `contacts[].phone = "+33 6 XX XX XX XX"` était en prod — voyageurs n'auraient pu joindre l'hôte en urgence. Pattern : après tout `Edit` sur un `public/guides/*.json`, lancer `grep -E "XX|TODO|TBD|placeholder" <fichier>`.
 - **`Math.min(parseInt(str || "100") || 100, max)` = pattern correct pour params URL numériques.** `parseInt("abc")` = NaN, `Math.min(NaN, 500)` = NaN → erreur SQL D1. Le double fallback couvre chaîne vide ET NaN.
 - **Le plan AI-Ops D1 peut se contaminer avec des modèles du mauvais provider.** Après un run AI-Ops, vérifier `SELECT v FROM ai_ops WHERE k='plan'` et contrôler que chaque modèle existe bien chez son provider déclaré (ex: `groq.smart` ne doit pas contenir `openai/gpt-oss-120b` = Cerebras).
 - **Les findings `[revue code]` LLM = taux de faux positifs ~80%.** Sur 6 findings : 5 FP, 1 vrai (limit NaN). Avant de corriger : lire le code. Avant de déployer : marquer les FP en `ignored` dans `client_errors` D1 pour ne pas re-trier à la prochaine session.
+
+## 2026-06-13 — Webhook Beds24, Pixel, Revenus Sheet
+
+- **Toujours vérifier la version API utilisée dans CHAQUE endpoint, pas seulement dans le flux principal.** Le webhook `beds24-webhook.js` était resté en V1 (api.beds24.com/json + BEDS24_API_KEY/PROP_KEY) alors que tout le reste avait migré en V2. Les creds V1 n'existant plus en CF Pages → échec silencieux (aucune résa Nogent dans le Sheet).
+
+- **Nogent n'est PAS dans le Worker iCal.** `getBookingUrls()` dans `workers/ical-sync/index.js` exclut Nogent (pas d'iCal Airbnb Nogent). Les **seuls chemins d'écriture Sheet pour Nogent** = webhook Beds24 + bouton 📊 admin. Si l'un est cassé → résa silencieusement perdue.
+
+- **Meta Pixel consent-gating = race condition ViewContent.** `loadMetaPixel()` charge le pixel APRÈS acceptation cookies. `ViewContent` appelé avant = no-op (fbq pas encore dispo). Fix : dispatch `CustomEvent("meta-pixel-ready")` depuis `loadMetaPixel()`, ajouter listener `{ once: true }` aux call sites. Pour les URLs directes (click Meta Ads → `/amaryllis`), le fire ViewContent était totalement absent — l'ajouter dans le useEffect d'initialisation de la route.
+
+- **`rebuildRevenus2026_` = DESTRUCTIF si le Sheet contient des données mixtes (système + manuel).** La fonction zéro TOUTES les lignes data des colonnes cibles AVANT de re-appliquer depuis les onglets source. Toute donnée saisie manuellement hors des onglets source (Airbnb historique, corrections, données hors-système) est définitivement perdue. **La prochaine fois : NE JAMAIS faire de zéro global sans avoir exporté une copie du Sheet.** L'alternative safe = trigger `syncRevenus2026` (mémo-based = incremental, jamais destructif).
+
+- **Le trigger `syncRevenus2026` (15 min) est la seule voie safe pour les incréments.** Il utilise le mémo `rev2026_traites` pour ne traiter que les résas nouvelles, jamais les existantes. Il ne touche jamais les cellules qui n'ont pas de delta à appliquer. Utiliser TOUJOURS cette voie pour les nouveaux enregistrements ; la fonction rebuild est réservée à un reset total sur données 100% système.
+
+- **Avant tout rebuild rétroactif sur un Sheet Google, demander : "ces données viennent-elles toutes d'un onglet source ?"** Si la réponse est "non" (données manuelles, corrections, imports externes), un rebuild qui zéro+reapply va détruire les données orphelines sans avertissement.

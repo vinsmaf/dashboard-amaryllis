@@ -3,14 +3,18 @@
 > Ce qui reviendra nous embêter si on ne le documente pas. Format : statut · sujet · ce qui débloque.
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 
-## En cours → PROCHAINE SESSION : Paiement en 2 fois (acompte/solde) OPTIONNEL
-- **Quoi** : feature « payer en 2 fois » proposée au client (PAS imposée) sur la résa directe.
-- **Statut** : design **validé par Vincent le 2026-06-11**, pas encore codé.
-- **Prochaine action** : lancer `/writing-plans` depuis le spec puis exécuter.
-- **Spec complet** : `docs/superpowers/specs/2026-06-11-paiement-2-fois-design.md`
-- **Contexte critique** : argent réel Stripe LIVE → tester en mode TEST avant. Optionnel
-  (défaut = paiement total). Ne touche pas à l'acompte des devis admin. Klarna écarté
-  (surcharge interdite). Acompte 30% + solde débité à J-30 via cron + carte off-session.
+## En cours → ✅ terminé le 2026-06-13 (SEO 5 chantiers)
+
+---
+
+## 🟡 2026-06-13 — Changeset session non commité (worktree sad-bartik-02a3c2)
+- **Sujet** : 4 fichiers modifiés et déployés (manuellement `--branch=main`) mais pas commités en git :
+  - `functions/api/beds24-webhook.js` (V1→V2 complet)
+  - `src/PublicSite.jsx` (ViewContent deferred listener x2)
+  - `src/lib/metaPixel.js` (dispatch `meta-pixel-ready`)
+  - `appscript/REVENUS_AUTO_2026.gs` + `REVENUS_AUTO_2027.gs` + `appscript/SCRIPT_SHEETS.js` (règle 100% + rebuild functions)
+- **Prod = OK** (déployé), mais git `main` ne reflète pas les changements → rollback accidentel possible au prochain deploy.
+- **Débloque** : commiter les 4 fichiers sur `main` dans le worktree → `git commit` + push ou merge.
 
 ---
 
@@ -26,6 +30,16 @@
 
 ## ✅ 2026-06-11 — AI-Ops : modèle Groq.smart aberrant → AUTO-CORRIGÉ par AI-Ops
 - Plan D1 vérifié : `groq.smart = "llama-3.3-70b-versatile"` ✅ · `cerebras` → `disabled` ✅. L'agent AI-Ops a redécouvert et corrigé seul.
+
+## ✅ 2026-06-13 — Prix en prose dans slug.js corrigés (chantier SEO A — 2026-06-13)
+- Chantier A du 2026-06-13 a corrigé les 9 prix incorrects dans `functions/[slug].js` (BIEN_EXTRA descs + guide meta). Confirmés par Vincent avant correction.
+- Prix validés (source `src/data/biens.js`) : Amaryllis 280€ · Zandoli 110€ · Géko 110€ · Mabouya 70€ · Schœlcher 90€ · Nogent 90€ · Iguana 180€.
+- `scripts/prerender.mjs` homepage "Dès 85€/nuit" → **reste à corriger** si homepage meta doit aligner sur Nogent 90€ (confirmation Vincent différée). Commit `14c817d`.
+
+## 🟡 2026-06-12 — Lint delta check crash sur fichiers [slug].js (crochets)
+- **Sujet** : `deploy-pages.sh` lint delta section crash quand `functions/[slug].js` (crochets dans le nom) apparaît dans la liste des fichiers modifiés — bash interprète `[slug]` comme un glob.
+- **Contournement actif** : `SKIP_LINT=1 bash scripts/deploy-pages.sh` (à utiliser jusqu'au fix).
+- **Débloque** : corriger le loop dans `deploy-pages.sh` pour échapper les crochets ou utiliser un test `-f` au lieu d'un glob. Background chip spawned `task_cef1560f`.
 
 ## 🟡 2026-06-10 — Visual-review Playwright retourne rapport vide
 - **Sujet** : `node scripts/visual-review.mjs` se termine sans erreur mais `rapport.json` = `{summary:[]}` (0 pages crawlées). Probable cause : timeouts Playwright sur les pages prod (Cloudflare rate-limit la nuit, ou réseau).

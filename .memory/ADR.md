@@ -5,6 +5,27 @@
 
 ---
 
+## ADR-SEO-001 · 2026-06-13 · JSON-LD VacationRental (pas LodgingBusiness) + BreadcrumbList
+1. **Choix** : toutes les fiches biens passent de `LodgingBusiness` → `VacationRental` (plus précis pour les locations courte durée) avec `BreadcrumbList` séparé, `checkinTime`/`checkoutTime` (MTQ 17h/12h · Nogent 15h/11h), `ImageObject` array (4 photos), `priceRange` conditionnel (`bien.bookable !== false`), `addressCountry` ISO : Martinique = `MQ`, Nogent = `FR`.
+2. **Alternatives refusées** : garder `LodgingBusiness` (générique, moins pertinent pour vacances courte durée) ; coder le pays en `"FR"` pour Martinique (Martinique = ISO 3166-1 `MQ`, pas une région métropolitaine, le code `FR` renvoyait une confusion).
+3. **Conséquences attendues** : rich snippet "Location de vacances" potentiel dans SERP Google · Iguana (`bookable:false`) n'a pas de `priceRange` → correct (bail long, pas disponible à la résa).
+4. **Périmètre** : `functions/[slug].js` (bloc JSON-LD lignes ~319-346) — runtime GAGNE toujours sur le prerender statique (cf. CLAUDE.md §1 « double source SEO »).
+5. **Statut** : ✅ déployé 2026-06-13 (commit `14c817d`). CDN propagation en cours (alias OK, villamaryllis.com lag normal).
+
+## ADR-SEO-002 · 2026-06-13 · hreflang injecté dans le runtime (était 0% en prod)
+1. **Choix** : `injectMeta()` accepte désormais un paramètre `hreflang` et l'injecte dans `</head>`. Martinique : `hreflang="fr"` (page) + `hreflang="en"` (→ `/villa-rental-martinique`) + `x-default`. Nogent : `fr` + `x-default`. Guide EN : `en` + `fr` + `x-default`.
+2. **Alternatives refusées** : gérer le hreflang uniquement dans `prerender.mjs` (le runtime écrase le `<head>` sans le réinjecter → 0% en prod, constaté en session).
+3. **Conséquences attendues** : Google détecte maintenant la version EN pour les biens Martinique → trafic EN potentiel. `/villa-rental-martinique` = page cible EN canonique.
+4. **Périmètre** : `functions/[slug].js` (injectMeta + hreflang generation par bien/slug).
+5. **Statut** : ✅ déployé, vérifié live sur `/amaryllis` (3 tags hreflang présents en prod).
+
+## ADR-SEO-003 · 2026-06-13 · Suppression public/sitemap.xml statique (prerender génère le bon)
+1. **Choix** : `public/sitemap.xml` (26 URLs stales) **supprimé**. Le `prerender.mjs` génère `dist/sitemap.xml` à chaque build (63 URLs fraîches incluant tous les guides). C'est ce fichier qui est déployé.
+2. **Alternatives refusées** : garder `public/sitemap.xml` en synchro manuelle (source de désynchronisation permanente).
+3. **Conséquences attendues** : sitemap.xml toujours en sync avec les routes réelles. Sitemap: https://villamaryllis.com/sitemap.xml dans `public/robots.txt` est correct (pointe vers le fichier généré). robots.txt sécurisé avec `Disallow: /admin`, `/api/`, `/bienvenue/`, `/landing/`.
+4. **Périmètre** : `public/sitemap.xml` (supprimé) · `public/robots.txt` (Disallow ajoutés).
+5. **Statut** : ✅ déployé 2026-06-13 (commit `14c817d`).
+
 ## ADR-PAY-001 · 2026-06-11 · Paiement en 2 fois = acompte/solde (J-30), pas Klarna
 1. **Choix** : « payer en 2 fois » = acompte 30 % maintenant + solde 70 % débité off-session à J-30, **optionnel** (proposé, pas imposé, défaut = paiement total). Plan écrit, à exécuter session suivante.
 2. **Alternatives refusées** : **Klarna** (3×) — surcharge au client **interdite** par CGV Klarna + réglementation EU, et absorber le frais BNPL (~3-5 %) ne convient pas à Vincent (regardant sur le coût) ; **Alma** (compte/intégration séparés, plus lourd).
@@ -12,6 +33,20 @@
 4. **Périmètre** : spec `docs/superpowers/specs/2026-06-11-paiement-2-fois-design.md` · plan `docs/superpowers/plans/2026-06-11-paiement-2-fois.md`.
 5. **Tracking pub (décision 2026-06-12)** : la conversion `purchase` (GA4 + Meta CAPI + Pixel) doit remonter la **VALEUR TOTALE** de la réservation, **pas l'acompte 30 %** — sinon ROAS sous-compté et Google/Meta optimisent sur une valeur fausse. Implémenté : `create-payment-intent` pose `full_total` en metadata ; `stripe-webhook.js` lit `pi.metadata.full_total` quand `pay_plan='2x'` (sinon `pi.amount`). La valeur totale est comptée **UNE seule fois** (à la confirmation = acompte) ; `charge-balance.js` (débit du solde) **ne refire AUCUN event** → pas de double comptage. Côté client le `BookingModal` envoie déjà `total` → même `event_id`/`transaction_id`, valeur cohérente (dédup OK).
 6. **Statut** : ✅ **livré & LIVE en prod (2026-06-12)**. Validé en Stripe TEST de bout en bout (acompte → `payment_schedule` → débit off-session du solde succès + échec/retry). Flag `PAY_2X_ENABLED=1` posé (CF Pages prod). Cron cron-job.org `7798126` (quotidien 13h UTC). Option visible si total ≥ 800 € & arrivée > 35 j.
+
+## ADR-YT-001 · 2026-06-12 · Chaîne YouTube = 3 playlists + bande-annonce hook
+1. **Choix** : chaîne @AmaryllisLocations structurée avec 3 playlists permanentes ("Nos villas en Martinique", "Visites virtuelles — Martinique", "Martinique : conseils & guides") + hook animé (0:23s) comme bande-annonce non-abonnés.
+2. **Alternatives refusées** : 1 seule playlist générique (trop peu de surface SEO) ; pas de bande-annonce (les non-abonnés voient les dernières vidéos, sans contexte de marque).
+3. **Conséquences attendues** : les 7 scripts de visite virtuelle sont écrits, à filmer ; les playlists accueilleront les futures vidéos sans restructuration. La playlist "Nos villas en Martinique" contient déjà les 2 vidéos live.
+4. **Périmètre** : YouTube Studio uniquement (pas de code). Footer villamaryllis.com = icône YouTube `src/PublicSite.jsx`.
+5. **Statut** : ✅ acté. Vidéo hook ID `HxrYu74fj90`, promo ID `k7XVHXtLSWg`. Prochaine étape = filmer les 7 visites.
+
+## ADR-BUG-001 · 2026-06-12 · Stale chunk recovery = onError ErrorBoundary en plus de unhandledrejection
+1. **Choix** : ajouter un `onError` sur le `Sentry.ErrorBoundary` racine (`src/main.jsx`) qui détecte les erreurs `Failed to fetch dynamically imported module` / `ChunkLoadError` et recharge la page (guard anti-boucle 30s via `sessionStorage`).
+2. **Alternatives refusées** : uniquement `unhandledrejection` (déjà en place mais ne catch pas le cas où React intercepte la rejection AVANT qu'elle devienne "unhandled") ; ignorer l'erreur (page blanche pour l'utilisateur).
+3. **Conséquences attendues** : les utilisateurs avec HTML caché avant un déploiement (chunk hash changé) voient un écran noir 1s puis un rechargement automatique — plus de page d'erreur. Sentry continue à loguer l'event pour observabilité.
+4. **Périmètre** : `src/main.jsx` L360–377.
+5. **Statut** : ✅ livré et déployé (`npm run deploy:pages`, 2026-06-12 14:13).
 
 ## ADR-AVIS-001 · 2026-06-11 · Récolte d'avis Google = capture in-situ, pas email anciens voyageurs
 1. **Choix** : booster les avis Google (facteur n°1 du pack local) via **CTA in-situ** (page guide-séjour + /bienvenue QR physique + slide écran TV) — chaque voyageur présent, Airbnb inclus.
@@ -26,6 +61,13 @@
 3. **Conséquences attendues** : Amaryllis passe de 3 calendriers à 2 (section réservation breakout + calendrier disponibilités). Plus propre, moins redondant.
 4. **Périmètre** : `src/PublicSite.jsx` — constante `PRICING_CAL_HIDDEN` L162.
 5. **Statut** : ✅ acté, déployé `d2012b4`.
+
+## ADR-DESIGN-001 · 2026-06-12 · Audit visuel multi-agents = QA systématique + og:image:alt injectable par page
+1. **Choix** : (a) L'audit visuel de toutes les pages publiques est délégué à un workflow multi-agents (11 agents en parallèle, ~8 min, 754k tokens) qui capture les incohérences HTML invisibles à la relecture code. (b) L'attribut `og:image:alt` reçoit un `id="og-image-alt"` dans `index.html` permettant à `injectMeta()` de le remplacer par une alt description par-page. (c) Iguana est filtré du `@graph VacationRental` dans `prerender.mjs` (bookable:false = bail long, ne pas le présenter comme disponible à la location). (d) Le tableau VILLAS de `GuideExplorer.jsx` dérive maintenant de `ALL_BIENS` (source unique) au lieu d'être codé en dur.
+2. **Alternatives refusées** : audit manuel page par page (trop lent, biais d'habituation) ; og:image:alt statique unique pour toutes les pages (moins précis pour les partages sociaux par bien).
+3. **Conséquences attendues** : tout changement structurel de page peut être re-audité en 10 min. Les partages Facebook/Twitter de pages villas affichent une description alt explicite. Iguana n'apparaît plus en structured data comme rental disponible (évite la confusion Search Console).
+4. **Périmètre** : `index.html` (id og-image-alt) · `functions/[slug].js` (injectMeta signature + imageAlt) · `scripts/prerender.mjs` (filter bookable, enHref param) · `src/GuideExplorer.jsx` (VILLAS dérivé de ALL_BIENS) · `src/data/destinations.js` (photo Sainte-Anne → Wikimedia CC0).
+5. **Statut** : ✅ acté et déployé 2026-06-12 (178 tests, SKIP_LINT=1 workaround [slug] bug).
 
 ## ADR-S-015 · 2026-06-11 · Trust bar CRO étendue à tous les biens bookable mobile
 1. **Choix** : Trust bar "réservation directe" ajoutée (a) dans la sticky bar basse — tagline teal 9px "Prix direct · paiement sécurisé" et (b) avant le calendrier disponibilités sur les fiches Géko/Zandoli/Mabouya/Schœlcher/Nogent (3 checkmarks). Miroir du trust bar Amaryllis déjà en place.
@@ -180,3 +222,24 @@
 3. **Conséquences attendues** : chaque réservation Stripe a son origine (google/meta/direct). Permet de calculer le vrai ROAS par canal dans le dashboard admin.
 4. **Périmètre** : `src/lib/trackingAttribution.js` (nouveau), `src/App.jsx`/`src/main.jsx` (import + appel), `functions/api/notify-booking.js` (injection metadata).
 5. **Statut** : **acté & déployé** (commit 2f4d6da). À vérifier : metadata visibles dans Stripe Dashboard sur prochaine résa.
+
+## ADR-BEDS24-002 · 2026-06-13 · Webhook Beds24 migré V1→V2 (getActiveBeds24Token)
+1. **Choix** : `functions/api/beds24-webhook.js` réécrit pour utiliser Beds24 API V2 (`beds24.com/api/v2/bookings` + token auto-refresh via `getActiveBeds24Token`) au lieu de V1 (mort). Route via `/api/sheets-proxy` (POST → GET paginé `forwardChunked`) au lieu de POST direct sur Apps Script (redirect 302 supprime le body).
+2. **Alternatives refusées** : corriger les creds V1 (compte migré V2 — pas de retour arrière) ; POST direct Apps Script (le redirect drop-body est un quirk non contournable côté CF Function).
+3. **Conséquences attendues** : nouvelles résas Beds24 Nogent arrivent automatiquement dans "Toutes les Réservations" + revenus 2026 via le trigger 15 min. Webhook protégé par `BEDS24_WEBHOOK_SECRET` (optionnel, recommandé).
+4. **Périmètre** : `functions/api/beds24-webhook.js` (réécriture complète). Commit : **non commité** (dans worktree `sad-bartik-02a3c2`, à merger sur `main`).
+5. **Statut** : **acté & déployé** (manuel deploy `--branch=main`), code non commité en git.
+
+## ADR-PIXEL-002 · 2026-06-13 · ViewContent Meta Pixel — event `meta-pixel-ready` pour consentement tardif
+1. **Choix** : `src/lib/metaPixel.js` dispatch `CustomEvent("meta-pixel-ready")` après `fbq("init")`. Les deux sites d'appel ViewContent (`openDetail()` + useEffect URL directe) ajoutent un listener `{ once: true }` en cas de pixel non encore chargé. Résultat : ViewContent fire même si le visiteur consent après le chargement de la page.
+2. **Alternatives refusées** : fire ViewContent sans consent-gate (violation RGPD) ; attendre la page suivante (perd le first view — les clicks Meta Ads atterrissent sur `/amaryllis` directement).
+3. **Conséquences attendues** : ViewContent devrait passer de 2 fires/période à ~N visiteurs atterrissant sur une fiche. URL directe (depuis Meta Ads) était totalement manquante — ajout du fire dans le useEffect d'initialisation.
+4. **Périmètre** : `src/lib/metaPixel.js` (dispatch event) · `src/PublicSite.jsx` (~L8469 `openDetail()` + ~L8608 useEffect URL directe). Commit : **non commité**.
+5. **Statut** : **acté & déployé**, code non commité en git.
+
+## ADR-REVENUS-001 · 2026-06-13 · Règle revenus locatifs : montant 100% mois d'ARRIVÉE (pas de prorata)
+1. **Choix** : pour une résa à cheval sur 2 mois (ex. 25 mai → 8 juin), le montant total est imputé **en intégralité** au mois d'arrivée (mai). Les nuits sont toujours réparties par mois réel. Comptage de la résa : mois d'arrivée uniquement. Règle actée par Vincent le 2026-06-13.
+2. **Alternatives refusées** : prorata par nuit (était la règle précédente — montant réparti pro-rata nuits/mois). Problème : fragment la lecture par mois, rend difficile l'attribution commerciale (canal, campagne).
+3. **Conséquences attendues** : `applyOne_()` dans `REVENUS_AUTO_2026.gs` et `REVENUS_AUTO_2027.gs` implémentent la nouvelle règle. Toute nouvelle résa (trigger syncRevenus2026) utilisera cette règle. Les données antérieures ont été restaurées manuellement par Vincent.
+4. **Périmètre** : `appscript/REVENUS_AUTO_2026.gs` · `appscript/REVENUS_AUTO_2027.gs`. Déployé via clasp deploy (@37). Commit : **non commité**.
+5. **Statut** : **acté** (Vincent) · déployé GAS · données Sheet rétablies manuellement.
