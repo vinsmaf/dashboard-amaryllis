@@ -178,9 +178,9 @@ fi
 GUIDE_TITLE=$(grep -oE "<title>[^<]+</title>" dist/guide-hub/index.html 2>/dev/null | head -1 | sed 's/<[^>]*>//g' | cut -c1-30 || echo "")
 if [[ -n "$GUIDE_TITLE" ]]; then
   if curl -s "$DOMAIN/guide-hub" | grep -qF "$GUIDE_TITLE"; then
-    echo "   ✅ /guide servi à jour (titre « $GUIDE_TITLE… » présent)"
+    echo "   ✅ /guide-hub servi à jour (titre « $GUIDE_TITLE… » présent)"
   else
-    echo "   ⚠️  /guide possiblement gelé — titre attendu absent de la réponse live"
+    echo "   ⚠️  /guide-hub possiblement gelé — titre attendu absent de la réponse live"
   fi
 fi
 
@@ -204,19 +204,20 @@ else
   SMOKE_FAIL=1
 fi
 
-# 7. (qa-003) une fiche villa prérendue contient bien son <title> SEO (meta injectée)
-#    Retry 3× / 4s pour absorber la latence de propagation CF Pages Function
+# 7. (qa-003) une fiche villa contient bien son <title> SEO (meta injectée au runtime)
+#    Retry 5× / 5s (~25s) pour absorber la propagation CF Pages Function : juste après
+#    deploy, le CDN peut servir l'edge avant activation de la Function → faux négatif.
 MABOUYA_OK=0
-for _i in 1 2 3; do
+for _i in 1 2 3 4 5; do
   if curl -s "$DOMAIN/mabouya" | grep -qi "<title>.*Mabouya"; then
     MABOUYA_OK=1; break
   fi
-  sleep 4
+  sleep 5
 done
 if [[ "$MABOUYA_OK" == "1" ]]; then
-  echo "   ✅ Meta prérendue OK (/mabouya a son <title>)"
+  echo "   ✅ Meta OK (/mabouya a son <title>)"
 else
-  echo "   ⚠️  /mabouya sans <title> attendu après 3 essais — vérifier le prerender"
+  echo "   ⚠️  /mabouya sans <title> après 5 essais — vérifier functions/[slug].js (injectMeta) + src/data/biens.js (seoTitle)"
 fi
 
 if [[ "$SMOKE_FAIL" == "1" ]]; then

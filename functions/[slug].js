@@ -92,13 +92,6 @@ const BIEN_FAQ = {
   ],
 };
 
-const GUIDE = {
-  title: "Guide Sainte-Luce Martinique : plages & activités",
-  desc: "Visiter Sainte-Luce en Martinique : meilleures plages (Anse Corps de Garde, Gros Raisin), restaurants créoles, plongée, distilleries et conseils pratiques.",
-  image: `${BASE}/photos/amaryllis/01.webp`,
-  url: `${BASE}/guide`,
-};
-
 const GUIDE_DIAMANT = {
   title: "Guide Le Diamant Martinique : rocher, plages et plongée",
   desc: "Tout sur Le Diamant en Martinique : le Rocher du Diamant (plongée, histoire), les plus belles plages et les meilleures adresses. À 15 min de Sainte-Luce.",
@@ -431,27 +424,12 @@ export async function onRequest(context) {
   }
 
   // Handle /guide
+  // /guide est une URL héritée → vraie 301 vers /guide-hub (le hub actuel).
+  // L'ancien handler récupérait la réponse 301 du _redirects, réinjectait des meta
+  // dessus et la resservait en status:200 → stub « Redirecting to /guide-hub » sans
+  // <title>, cul-de-sac pour le visiteur. On renvoie désormais une redirection nette.
   if (slug === "guide") {
-    const ldJson = JSON.stringify({
-      "@context": "https://schema.org",
-      "@type": "Article",
-      "headline": GUIDE.title,
-      "description": GUIDE.desc,
-      "url": GUIDE.url,
-      "image": GUIDE.image,
-      "author": { "@id": `${BASE}/#organization` },
-      "publisher": { "@id": `${BASE}/#organization` },
-    });
-
-    const meta = buildMeta(GUIDE.title, GUIDE.desc, GUIDE.url, GUIDE.image);
-    const resp = await context.next();
-    const html = await resp.text();
-    const modified = injectMeta(html, meta, ldJson);
-
-    return new Response(modified, {
-      status: 200,
-      headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache" },
-    });
+    return Response.redirect(`${BASE}/guide-hub`, 301);
   }
 
   // Handle /guide-le-diamant
