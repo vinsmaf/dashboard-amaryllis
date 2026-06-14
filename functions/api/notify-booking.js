@@ -42,6 +42,7 @@ const DDL = `CREATE TABLE IF NOT EXISTS direct_bookings (
   prearrivee_sent INTEGER DEFAULT 0,
   poststay_sent   INTEGER DEFAULT 0,
   j1_acces_sent   INTEGER DEFAULT 0,
+  host_notified   INTEGER DEFAULT 0,
   created_at INTEGER NOT NULL DEFAULT (unixepoch())
 );`;
 
@@ -125,8 +126,10 @@ export async function onRequest(context) {
       // Inclut bien_id + email pour que get-availability bloque bien les dates au site public,
       // et que les emails pré-arrivée / post-séjour partent (cf. send-prearrivee, send-poststay).
       const prenom = String(voyageur || "").trim().split(/\s+/)[0] || "";
+      // host_notified=1 dès l'insert : ce flux envoie l'alerte hôte juste après (lignes ci-dessous).
+      // Le webhook stripe (notifyHostOnce) verra host_notified=1 → ne re-notifiera pas (dédup).
       await db.prepare(
-        "INSERT INTO direct_bookings (payment_intent_id, bien_id, bien_nom, voyageur, prenom, email, total, depot, checkin, checkout) VALUES (?,?,?,?,?,?,?,?,?,?)"
+        "INSERT INTO direct_bookings (payment_intent_id, bien_id, bien_nom, voyageur, prenom, email, total, depot, checkin, checkout, host_notified) VALUES (?,?,?,?,?,?,?,?,?,?,1)"
       ).bind(paymentIntentId, bienId || null, bienNom, voyageur, prenom, email || null, Math.round(total), Math.round(depot), checkin, checkout).run();
     } catch { /* non bloquant */ }
   }
@@ -143,12 +146,11 @@ export async function onRequest(context) {
       <tr><td style="padding:3px 16px 3px 0">Montant payé</td><td><strong>${total} €</strong></td></tr>
       ${depot ? `<tr><td style="padding:3px 16px 3px 0">Caution</td><td>${depot} € (pré-autorisée)</td></tr>` : ""}
     </table>
-    <p style="background:rgba(245,158,11,0.12);border-radius:8px;padding:10px 14px;font-size:14px;color:#92400e;margin-top:16px">
-      🚨 Pense à <strong>bloquer ces dates sur Airbnb + Booking</strong> (pas de sync auto pour les villas Martinique).</p>
+    <p style="font-size:14px;color:#0e7a5a;margin-top:16px">✅ Dates bloquées automatiquement sur Airbnb + Booking (sync iCal).</p>
   </div>`;
 
   const emailSent = await sendEmail(env, titre, html, ligne, { booking_id: paymentIntentId, bien_id: bienId });
-  const ntfySent  = await sendNtfy(env, titre, ligne + "\n\n🚨 Bloquer les dates sur Airbnb + Booking");
+  const ntfySent  = await sendNtfy(env, titre, ligne);
 
   return json({ ok: true, emailSent, ntfySent }, 200, request);
 }

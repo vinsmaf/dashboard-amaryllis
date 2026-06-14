@@ -162,12 +162,27 @@ async function sendEmail(env, { subject, html, to, booking_id, bien_id, category
   }
 }
 
+// Formate une date ISO (YYYY-MM-DD) en JJ/MM/AAAA pour l'affichage FR.
+const fmtFrDate = (iso) => /^\d{4}-\d{2}-\d{2}/.test(iso || "") ? iso.slice(0, 10).split("-").reverse().join("/") : (iso || "?");
+
 // Email de confirmation automatique envoyé au voyageur après paiement
-async function sendConfirmationToGuest(env, { bienNom, voyageur, email, checkin, checkout, amount, bookingId }) {
+async function sendConfirmationToGuest(env, { bienNom, voyageur, email, checkin, checkout, amount, bookingId, twoX = null }) {
   if (!email || !email.includes("@")) {
     console.log("[webhook] Pas d'email voyageur — confirmation non envoyée");
     return;
   }
+  // Paiement en 2 fois : on remplace la ligne « Montant payé » par le détail acompte/solde
+  // et on ajoute un encart rappelant le prélèvement automatique du solde à J-30.
+  const montantRows = twoX
+    ? `<tr><td style="padding:7px 0;color:#7a6b5a;width:45%">Acompte payé</td><td style="padding:7px 0;font-weight:700;color:#0e3b3a">${twoX.acompte} €</td></tr>
+              <tr><td style="padding:7px 0;color:#7a6b5a">Solde restant</td><td style="padding:7px 0;font-weight:700;color:#0e3b3a">${twoX.solde} €</td></tr>
+              <tr><td style="padding:7px 0;color:#7a6b5a">Total du séjour</td><td style="padding:7px 0;font-weight:700;color:#0e3b3a">${twoX.total} €</td></tr>`
+    : `<tr><td style="padding:7px 0;color:#7a6b5a">Montant payé</td><td style="padding:7px 0;font-weight:700;color:#0e3b3a">${amount}</td></tr>`;
+  const twoXNote = twoX
+    ? `<div style="background:rgba(20,184,166,0.10);border-left:3px solid #14b8a6;border-radius:8px;padding:14px 18px;margin:20px 0">
+            <p style="margin:0;font-size:13px;color:#0e3b3a;line-height:1.6">💳 <strong>Paiement en 2 fois</strong> — le solde de <strong>${twoX.solde} €</strong> sera prélevé automatiquement sur votre carte le <strong>${fmtFrDate(twoX.dueDate)}</strong> (30 jours avant votre arrivée). Vous n'avez aucune démarche à effectuer.</p>
+          </div>`
+    : "";
   await sendEmail(env, {
     to: email,
     subject: `✅ Réservation confirmée — ${bienNom}`,
@@ -199,10 +214,11 @@ async function sendConfirmationToGuest(env, { bienNom, voyageur, email, checkin,
               <tr><td style="padding:7px 0;color:#7a6b5a;width:45%">Propriété</td><td style="padding:7px 0;font-weight:700;color:#0e3b3a">${bienNom}</td></tr>
               <tr><td style="padding:7px 0;color:#7a6b5a">Arrivée</td><td style="padding:7px 0;font-weight:700;color:#0e3b3a">${checkin}</td></tr>
               <tr><td style="padding:7px 0;color:#7a6b5a">Départ</td><td style="padding:7px 0;font-weight:700;color:#0e3b3a">${checkout}</td></tr>
-              <tr><td style="padding:7px 0;color:#7a6b5a">Montant payé</td><td style="padding:7px 0;font-weight:700;color:#0e3b3a">${amount}</td></tr>
+              ${montantRows}
               ${bookingId ? `<tr><td style="padding:7px 0;color:#7a6b5a">N° réservation</td><td style="padding:7px 0;font-size:12px;color:#5a4a3a">${bookingId}</td></tr>` : ""}
             </table>
           </div>
+          ${twoXNote}
 
           <!-- Check-in info -->
           <div style="border-left:3px solid #14b8a6;padding-left:16px;margin:20px 0">
@@ -232,6 +248,56 @@ async function sendConfirmationToGuest(env, { bienNom, voyageur, email, checkin,
   console.log(`[webhook] Email confirmation envoyé → ${email}`);
 }
 
+// Alerte hôte (email + ntfy) — FALLBACK fiable côté serveur. Le front-end `notify-booking`
+// envoie déjà cette alerte juste après paiement, MAIS il ne tourne pas si le voyageur quitte
+// la page (ex: bug sur la page caution) → l'hôte n'était alors jamais prévenu. Ce relais
+// garantit l'alerte. Dédup atomique via `host_notified` : un seul des deux flux émet (le
+// premier qui passe `0 → 1` gagne ; D1 sérialise les UPDATE → jamais de double notification).
+async function notifyHostOnce(env, { paymentIntentId, bienId, bienNom, voyageur, email, checkin, checkout, amount, twoX = null }) {
+  const db = env.revenue_manager;
+  if (db) {
+    try {
+      const claim = await db.prepare(
+        "UPDATE direct_bookings SET host_notified=1 WHERE payment_intent_id=? AND host_notified=0"
+      ).bind(paymentIntentId).run();
+      if (!claim?.meta?.changes) return; // déjà notifié par le front-end notify-booking → on s'arrête
+    } catch { /* colonne absente (avant migration) → fail-open : on notifie quand même */ }
+  }
+  const montantRows = twoX
+    ? `<tr><td style="padding:4px 16px 4px 0">Acompte payé</td><td style="padding:4px 0;font-weight:700">${twoX.acompte} €</td></tr>
+       <tr><td style="padding:4px 16px 4px 0">Solde (auto le ${fmtFrDate(twoX.dueDate)})</td><td style="padding:4px 0;font-weight:700">${twoX.solde} €</td></tr>
+       <tr><td style="padding:4px 16px 4px 0">Total séjour</td><td style="padding:4px 0;font-weight:700">${twoX.total} €</td></tr>`
+    : `<tr><td style="padding:4px 16px 4px 0">Montant payé</td><td style="padding:4px 0;font-weight:700">${amount}</td></tr>`;
+  const ligne = `${voyageur || "Voyageur"} · ${checkin} → ${checkout} · ${twoX ? `acompte ${twoX.acompte}€ / total ${twoX.total}€` : amount}`;
+  try {
+    await sendEmail(env, {
+      to: env.NOTIFICATION_EMAIL || "vinsmaf@hotmail.com,contact@villamaryllis.com",
+      subject: `🎉 NOUVELLE RÉSA — ${bienNom}`,
+      booking_id: paymentIntentId, bien_id: bienId, category: "internal", template: "notify_booking_host",
+      html: `<div style="font-family:Georgia,serif;color:#2b2b2b;line-height:1.7">
+        <h2 style="color:#0e3b3a">🎉 Nouvelle réservation directe</h2>
+        <p style="font-size:16px"><strong>${bienNom}</strong></p>
+        <table style="font-size:15px;border-collapse:collapse">
+          <tr><td style="padding:4px 16px 4px 0">Voyageur</td><td><strong>${voyageur || "—"}</strong></td></tr>
+          <tr><td style="padding:4px 16px 4px 0">Email</td><td>${email || "—"}</td></tr>
+          <tr><td style="padding:4px 16px 4px 0">Dates</td><td>${checkin} → ${checkout}</td></tr>
+          ${montantRows}
+        </table>
+        <p style="font-size:13px;color:#0e7a5a;margin-top:14px">✅ Dates bloquées automatiquement sur Airbnb + Booking (sync iCal).</p>
+      </div>`,
+    });
+  } catch (e) { console.error("[webhook] alerte hôte:", e.message); }
+  if (env.NTFY_TOPIC) {
+    try {
+      await fetch(`https://ntfy.sh/${env.NTFY_TOPIC}`, {
+        method: "POST",
+        headers: { Title: `🎉 NOUVELLE RESA - ${bienNom}`, Priority: "high", Tags: "tada,money_with_wings" },
+        body: ligne,
+      });
+    } catch { /* fail-silent */ }
+  }
+}
+
 // Stocke une réservation DIRECTE en D1 (pour emails pré-arrivée / post-séjour).
 // Fail-silent : ne casse jamais le webhook.
 async function storeDirectBooking(env, { paymentIntentId, email, voyageur, bienId, bienNom, checkin, checkout }) {
@@ -244,7 +310,8 @@ async function storeDirectBooking(env, { paymentIntentId, email, voyageur, bienI
       total INTEGER, depot INTEGER, checkin TEXT, checkout TEXT,
       created_at INTEGER NOT NULL DEFAULT (unixepoch()),
       email TEXT, prenom TEXT, bien_id TEXT,
-      prearrivee_sent INTEGER DEFAULT 0, poststay_sent INTEGER DEFAULT 0
+      prearrivee_sent INTEGER DEFAULT 0, poststay_sent INTEGER DEFAULT 0,
+      host_notified INTEGER DEFAULT 0
     )`).run();
     const prenom = String(voyageur || "").trim().split(/\s+/)[0] || "";
     // Clé stable : pi.id si dispo, sinon fallback déterministe (évite les doublons).
@@ -380,11 +447,22 @@ export async function onRequestPost(context) {
       console.log("[webhook] payment_intent.succeeded sans bookingId — Beds24 ignoré");
     }
 
+    // Paiement en 2 fois : détail acompte/solde pour le mail voyageur ET l'alerte hôte.
+    const twoX = meta.pay_plan === "2x" ? {
+      acompte: Math.round((pi.amount || 0) / 100),
+      solde: parseInt(meta.balance_amount || "0", 10),
+      total: parseInt(meta.full_total || "0", 10) || (Math.round((pi.amount || 0) / 100) + parseInt(meta.balance_amount || "0", 10)),
+      dueDate: meta.due_date || "",
+    } : null;
+
     // 2. Email de confirmation au voyageur
-    await sendConfirmationToGuest(env, { bienNom, voyageur, email: guestEmail, checkin, checkout, amount, bookingId });
+    await sendConfirmationToGuest(env, { bienNom, voyageur, email: guestEmail, checkin, checkout, amount, bookingId, twoX });
 
     // 2b. Stocke la résa DIRECTE en D1 → permet les emails pré-arrivée (J-3) et post-séjour (J+1)
     await storeDirectBooking(env, { paymentIntentId: pi.id, email: guestEmail, voyageur, bienId, bienNom, checkin, checkout });
+
+    // 2b-bis. Alerte hôte fiable (relais serveur, dédup atomique avec le front-end notify-booking)
+    await notifyHostOnce(env, { paymentIntentId: pi.id, bienId, bienNom, voyageur, email: guestEmail, checkin, checkout, amount, twoX });
 
     // 2c. Si paiement en 2 fois, persiste le solde à prélever (off-session) en D1
     await storePaymentSchedule(env, pi).catch(() => {});
