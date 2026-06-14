@@ -65,14 +65,17 @@ export async function onRequestGet(context) {
   try {
     const result = await db
       .prepare(
+        // Inclut les résas groupées (offre résidence) dont ce bien fait partie :
+        // group_biens = CSV des bien_ids ("zandoli,geko") ; on l'encadre de virgules
+        // pour matcher le token exact sans faux positif de sous-chaîne.
         `SELECT payment_intent_id, voyageur, checkin, checkout
          FROM direct_bookings
-         WHERE bien_id = ?
+         WHERE (bien_id = ? OR (bien_id = 'groupe' AND (',' || group_biens || ',') LIKE '%,' || ? || ',%'))
            AND checkin  IS NOT NULL
            AND checkout IS NOT NULL
          ORDER BY checkin ASC`
       )
-      .bind(bienId)
+      .bind(bienId, bienId)
       .all();
     rows = result.results ?? [];
   } catch (err) {

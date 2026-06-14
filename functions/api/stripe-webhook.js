@@ -300,7 +300,7 @@ async function notifyHostOnce(env, { paymentIntentId, bienId, bienNom, voyageur,
 
 // Stocke une réservation DIRECTE en D1 (pour emails pré-arrivée / post-séjour).
 // Fail-silent : ne casse jamais le webhook.
-async function storeDirectBooking(env, { paymentIntentId, email, voyageur, bienId, bienNom, checkin, checkout, total = null }) {
+async function storeDirectBooking(env, { paymentIntentId, email, voyageur, bienId, bienNom, checkin, checkout, total = null, groupBiens = null }) {
   const db = env.revenue_manager;
   if (!db || !email || !email.includes("@") || !checkin) return;
   try {
@@ -311,7 +311,7 @@ async function storeDirectBooking(env, { paymentIntentId, email, voyageur, bienI
       created_at INTEGER NOT NULL DEFAULT (unixepoch()),
       email TEXT, prenom TEXT, bien_id TEXT,
       prearrivee_sent INTEGER DEFAULT 0, poststay_sent INTEGER DEFAULT 0,
-      host_notified INTEGER DEFAULT 0
+      host_notified INTEGER DEFAULT 0, group_biens TEXT
     )`).run();
     const prenom = String(voyageur || "").trim().split(/\s+/)[0] || "";
     // Clé stable : pi.id si dispo, sinon fallback déterministe (évite les doublons).
@@ -322,13 +322,14 @@ async function storeDirectBooking(env, { paymentIntentId, email, voyageur, bienI
     // remonte au Sheet même si le front-end notify-booking n'a pas tourné (sinon montant=0).
     // COALESCE : on ne remplace jamais un total déjà posé par le front-end (fill-if-null).
     await db.prepare(`INSERT INTO direct_bookings
-        (payment_intent_id, email, prenom, bien_id, bien_nom, voyageur, checkin, checkout, total)
-      VALUES (?,?,?,?,?,?,?,?,?)
+        (payment_intent_id, email, prenom, bien_id, bien_nom, voyageur, checkin, checkout, total, group_biens)
+      VALUES (?,?,?,?,?,?,?,?,?,?)
       ON CONFLICT(payment_intent_id) DO UPDATE SET
         email=excluded.email, prenom=excluded.prenom, bien_id=excluded.bien_id,
         bien_nom=excluded.bien_nom, checkout=excluded.checkout,
-        total=COALESCE(direct_bookings.total, excluded.total)`)
-      .bind(pid, email, prenom, bienId || "", bienNom || "", voyageur || "", checkin, checkout || "", total != null ? Math.round(total) : null).run();
+        total=COALESCE(direct_bookings.total, excluded.total),
+        group_biens=COALESCE(excluded.group_biens, direct_bookings.group_biens)`)
+      .bind(pid, email, prenom, bienId || "", bienNom || "", voyageur || "", checkin, checkout || "", total != null ? Math.round(total) : null, groupBiens || null).run();
   } catch (e) {
     console.error("[direct-booking] D1:", e.message);
   }
@@ -395,21 +396,22 @@ export async function onRequestPost(context) {
     const amount    = pi?.amount     ? `${(pi.amount / 100).toFixed(0)} €` : "?";
 
     // ── Réservation GROUPÉE (offre résidence : plusieurs logements iCal, pas Beds24) ──
-    // Ces logements (Sainte-Luce) ne se bloquent pas automatiquement → alerte hôte impérative.
+    // Les biens du groupe (meta.bienIds) sont désormais exportés par bien dans l'iCal
+    // (ical-export + ical/[file]) → Airbnb/Booking se bloquent automatiquement.
     if (meta.type === "group") {
       const logements = meta.logements || "Zandoli + Géko + Mabouya";
       const guests    = meta.guests || "?";
       try {
         await sendEmail(env, {
-          subject: `🚨 Résa GROUPÉE payée — BLOQUER les calendriers (${logements})`,
+          subject: `🎉 Résa GROUPÉE payée — ${logements}`,
           booking_id: pi.id,
           bien_id: "groupe",
           category: "internal",
           template: "stripe_group_host",
           html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto">
-            <h2 style="color:#0e3b3a">Réservation groupée payée ✅ — action requise</h2>
-            <p style="font-size:14px;color:#b91c1c"><strong>Bloquez immédiatement</strong> les calendriers Airbnb/Booking des logements ci-dessous pour éviter une double réservation (ils ne se bloquent pas automatiquement) :</p>
+            <h2 style="color:#0e3b3a">Réservation groupée payée ✅</h2>
             <p style="font-size:18px;font-weight:700;color:#0e3b3a">${logements}</p>
+            <p style="font-size:13px;color:#0e7a5a">✅ Dates bloquées automatiquement sur Airbnb + Booking (sync iCal par bien).</p>
             <table style="font-size:14px;color:#4a3f35">
               <tr><td style="padding:4px 0">Voyageur</td><td style="padding:4px 0;font-weight:700">${voyageur || "?"}</td></tr>
               <tr><td style="padding:4px 0">Email</td><td style="padding:4px 0">${guestEmail || "?"}</td></tr>
@@ -433,7 +435,7 @@ export async function onRequestPost(context) {
         }, `booking-${pi.id}`);
         await ga4Event(env, "booking_completed", { bien_id: "groupe", booking_id: pi.id, value: grpValue, currency: "EUR", channel: "direct-groupe", checkin });
       }
-      await storeDirectBooking(env, { paymentIntentId: pi.id, email: guestEmail, voyageur, bienId: "groupe", bienNom: logements, checkin, checkout, total: grpValue });
+      await storeDirectBooking(env, { paymentIntentId: pi.id, email: guestEmail, voyageur, bienId: "groupe", bienNom: logements, checkin, checkout, total: grpValue, groupBiens: meta.bienIds || "" });
       await capiPurchase(env, { eventId: pi.id, value: grpValue, email: guestEmail, bienId: "groupe", bienNom: logements || "Réservation groupe" });
       return json({ received: true, group: true });
     }

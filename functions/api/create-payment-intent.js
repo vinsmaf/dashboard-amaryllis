@@ -77,6 +77,7 @@ export async function onRequestPost(context) {
     // Réservation groupée (offre résidence — plusieurs logements, 1 paiement)
     "metadata[type]":      metadata.type      || "",
     "metadata[logements]": metadata.logements || "",
+    "metadata[bienIds]":   metadata.bienIds   || "",
     "metadata[guests]":    metadata.guests    || "",
     // Paiement en 2 fois : metadata échéancier + Customer + off-session
     ...(payPlan === "2x" ? {

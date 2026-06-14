@@ -75,8 +75,10 @@ async function fetchDirectBlocked(env, bienId) {
   try {
     const today = new Date().toISOString().slice(0, 10);
     const rows = await env.revenue_manager
-      .prepare("SELECT checkin, checkout FROM direct_bookings WHERE bien_id=? AND checkout>=?")
-      .bind(bienId, today).all();
+      // Inclut les résas groupées (offre résidence) dont ce bien fait partie
+      // (group_biens = CSV des bien_ids, encadré de virgules pour un match exact).
+      .prepare("SELECT checkin, checkout FROM direct_bookings WHERE (bien_id=? OR (bien_id='groupe' AND (',' || group_biens || ',') LIKE '%,' || ? || ',%')) AND checkout>=?")
+      .bind(bienId, bienId, today).all();
     const blocked = new Set();
     for (const r of (rows?.results || [])) {
       if (!r.checkin || !r.checkout) continue;
