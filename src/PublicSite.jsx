@@ -1742,20 +1742,6 @@ function generateDevis({ bien, checkin, checkout, nights, rawTotal, discountRate
     .property-info .dates { margin-top:10px; font-size:13px; color:#0e3b3a; background:#f4ecdc; border-radius:7px; padding:8px 12px; display:inline-block; }
     .property-info .dates strong { color:#c47254; }
 
-    /* Discount editor (screen only) */
-    .disc-editor { background:#fdf8f0; border:1px solid #e0d4bc; border-radius:10px; padding:16px 20px; margin-bottom:20px; display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; }
-    .disc-editor-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1.2px; color:#7a6b5a; margin-bottom:10px; width:100%; }
-    .disc-field { display:flex; flex-direction:column; gap:4px; }
-    .disc-field label { font-size:11px; color:#7a6b5a; font-weight:600; letter-spacing:0.5px; }
-    .disc-field input { border:1px solid #d0c4ae; border-radius:7px; padding:8px 11px; font-size:14px; font-family:inherit; color:#0e3b3a; background:#fff; outline:none; width:110px; }
-    .disc-field input:focus { border-color:#c47254; box-shadow:0 0 0 2px rgba(196,114,84,0.12); }
-    .disc-field input[type="text"] { width:260px; }
-    .disc-badge { font-size:12px; color:#c47254; font-weight:700; padding:8px 14px; background:rgba(196,114,84,0.08); border-radius:7px; align-self:flex-end; white-space:nowrap; }
-    .disc-hint { font-size:11px; color:#9a8b7a; font-style:italic; width:100%; margin-top:4px; }
-    .disc-presets { display:flex; gap:6px; flex-wrap:wrap; width:100%; margin-top:4px; }
-    .disc-preset { background:#f0e8d4; border:1px solid #d0c4ae; border-radius:20px; padding:3px 11px; font-size:11px; font-weight:700; color:#0e3b3a; cursor:pointer; }
-    .disc-preset:hover { background:#e8d9be; }
-
     /* Table */
     .table-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:#7a6b5a; margin-bottom:10px; }
     table { width:100%; border-collapse:collapse; margin-bottom:24px; }
@@ -1801,7 +1787,7 @@ function generateDevis({ bien, checkin, checkout, nights, rawTotal, discountRate
 
   <!-- Top bar (hidden on print) -->
   <div class="no-print" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
-    <div style="font-size:13px;color:#7a6b5a;">Modifiez la remise ci-dessous avant d'imprimer.</div>
+    <div style="font-size:13px;color:#7a6b5a;">Devis prêt — enregistrez-le en PDF ou imprimez-le.</div>
     <button onclick="window.print()" style="background:#0e3b3a;color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:0.04em;">
       🖨 Enregistrer en PDF
     </button>
@@ -1833,30 +1819,6 @@ function generateDevis({ bien, checkin, checkout, nights, rawTotal, discountRate
     </div>
   </div>
 
-  <!-- ── REMISE ÉDITABLE (screen only) ── -->
-  <div class="disc-editor no-print">
-    <div class="disc-editor-title">🏷 Remise personnalisée — modifiable avant impression</div>
-    <div class="disc-field">
-      <label>Remise (%)</label>
-      <input type="number" id="disc-pct" min="0" max="50" step="1" value="${initPct}" oninput="recalc()" />
-    </div>
-    <div class="disc-field">
-      <label>Libellé affiché</label>
-      <input type="text" id="disc-label" value="${initPct > 0 ? initDiscLabel : "Remise commerciale"}" oninput="recalc()" />
-    </div>
-    <div class="disc-badge" id="disc-badge">${initPct > 0 ? `−${discountAmount}€` : "0€"}</div>
-    <div class="disc-hint">La remise automatique basée sur la durée est pré-remplie. Vous pouvez la modifier librement.</div>
-    <div class="disc-presets">
-      <span style="font-size:11px;color:#9a8b7a;align-self:center;margin-right:4px;">Raccourcis :</span>
-      ${nights >= 7 ? `<button class="disc-preset" onclick="setDisc(5,'Remise semaine (−5%)')">−5% semaine</button>` : ""}
-      ${nights >= 14 ? `<button class="disc-preset" onclick="setDisc(10,'Remise 2 semaines (−10%)')">−10% quinzaine</button>` : ""}
-      ${nights >= 28 ? `<button class="disc-preset" onclick="setDisc(15,'Remise mensuelle (−15%)')">−15% mensuel</button>` : ""}
-      <button class="disc-preset" onclick="setDisc(8,'Tarif fidélité (−8%)')">−8% fidélité</button>
-      <button class="disc-preset" onclick="setDisc(12,'Offre spéciale (−12%)')">−12% spécial</button>
-      <button class="disc-preset" onclick="setDisc(0,'')">Aucune</button>
-    </div>
-  </div>
-
   <!-- Price table -->
   <div class="table-title">Détail du tarif</div>
   <table>
@@ -1873,11 +1835,11 @@ function generateDevis({ bien, checkin, checkout, nights, rawTotal, discountRate
         <td style="color:#7a6b5a;font-size:12px;">${nights} nuit${nights > 1 ? "s" : ""} · ${Math.round(rawTotal / nights)}€/nuit moy.</td>
         <td>${rawTotal}€</td>
       </tr>
-      <tr class="discount" id="disc-row" style="${initPct === 0 ? "display:none" : ""}">
-        <td id="disc-row-label">${initPct > 0 ? initDiscLabel : ""}</td>
+      ${discountAmount > 0 ? `<tr class="discount">
+        <td>${initDiscLabel}</td>
         <td style="color:#c47254;font-size:12px;">Remise séjour</td>
-        <td id="disc-row-amt">${initPct > 0 ? `−${discountAmount}€` : ""}</td>
-      </tr>
+        <td>−${discountAmount}€</td>
+      </tr>` : ""}
       ${fraisMenage > 0 ? `<tr>
         <td>Frais de ménage</td>
         <td style="color:#7a6b5a;font-size:12px;">Nettoyage fin de séjour</td>
@@ -1895,7 +1857,7 @@ function generateDevis({ bien, checkin, checkout, nights, rawTotal, discountRate
       </tr>` : ""}
       <tr class="total-row">
         <td colspan="2">TOTAL SÉJOUR</td>
-        <td id="total-cell">${total}€</td>
+        <td>${total}€</td>
       </tr>
     </tbody>
   </table>
@@ -1927,36 +1889,6 @@ function generateDevis({ bien, checkin, checkout, nights, rawTotal, discountRate
   </div>
 
 </div>
-<script>
-  const RAW   = ${rawTotal};
-  const MENAGE = ${fraisMenage};
-  const EXTRA  = ${extraGuestSuppl};
-  const PET    = ${petSuppl};
-
-  function recalc() {
-    const pct   = Math.max(0, Math.min(50, parseFloat(document.getElementById('disc-pct').value) || 0));
-    const label = document.getElementById('disc-label').value.trim() || (pct > 0 ? 'Remise commerciale' : '');
-    const discAmt = Math.round(RAW * pct / 100);
-    const newTotal = RAW - discAmt + MENAGE + EXTRA + PET;
-
-    const row = document.getElementById('disc-row');
-    if (pct > 0) {
-      row.style.display = '';
-      document.getElementById('disc-row-label').textContent = label;
-      document.getElementById('disc-row-amt').textContent = '−' + discAmt + '€';
-    } else {
-      row.style.display = 'none';
-    }
-    document.getElementById('total-cell').textContent = newTotal + '€';
-    document.getElementById('disc-badge').textContent = pct > 0 ? '−' + discAmt + '€' : '0€';
-  }
-
-  function setDisc(pct, label) {
-    document.getElementById('disc-pct').value = pct;
-    if (label) document.getElementById('disc-label').value = label;
-    recalc();
-  }
-</script>
 </body>
 </html>`;
 
