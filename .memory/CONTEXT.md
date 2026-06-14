@@ -1,6 +1,6 @@
 # CONTEXT — État courant (locatif-dashboard)
 
-> Snapshot condensé de l'état réel. **À mettre à jour à CHAQUE session.** Dernière MAJ : **2026-06-14** — Fiabilisation tunnel résa (alerte hôte webhook + CA total + mail 2×) · blocage dates résa groupe · /guide 301 · badge Booking + préservation saisies iCal + rappel « à compléter » · smoke-test sur alias. **Cap demain : connectivité Booking.com (nom+prix auto).**
+> Snapshot condensé de l'état réel. **À mettre à jour à CHAQUE session.** Dernière MAJ : **2026-06-14 (soir)** — **Nom+prix Airbnb désormais AUTO** via pont email (règle serveur Outlook.com → Gmail → Apps Script trigger 15 min → onglet Emails → enrich) — fin de la saisie manuelle Airbnb (ADR-MAIL-001). Matin : fiabilisation tunnel résa (alerte hôte webhook + CA total + mail 2×) · blocage dates résa groupe · /guide 301 · préservation saisies iCal. **Cap suivant : même pont pour Booking.com (nom+prix auto).**
 
 ## Le projet
 Conciergerie + site de réservation directe pour **7 logements** (Martinique + Nogent-sur-Marne).

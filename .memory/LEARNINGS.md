@@ -3,6 +3,19 @@
 > Pièges déjà rencontrés + comment les éviter. 1 entrée = 1 leçon actionnable « la prochaine fois ».
 > Le journal d'erreurs exhaustif reste `../docs/ERREURS-LOG.md`.
 
+## 📧 Pont email OTA → Sheet : pièges à connaître — 2026-06-14
+- **Cloudflare Email Routing pose un MX au niveau de la zone** → il **écrase** un MX existant. `villamaryllis.com` a `MX smtp.google.com` (Google Workspace) → activer Email Routing aurait cassé la réception email. **Toujours `dig MX <domaine>` avant** d'envisager Email Routing ; sur un domaine qui reçoit déjà, c'est exclu.
+- **Apple Mail (et toute règle client) ne tourne que si l'app est ouverte** → pas fiable pour de l'auto 24/7. Pour du robuste → **règle côté serveur** (Outlook.com : Paramètres → Courrier → Règles).
+- **Outlook.com exige une re-vérification d'identité** (bouton « Se connecter ») **avant de créer toute règle de transfert externe** (anti-abus). Claude ne peut pas (mot de passe) → **étape humaine obligatoire**, puis la règle se finalise.
+- **Limite cellule Google Sheets = 50 000 caractères** : le « Body Content » HTML d'un mail Outlook dépasse → **stripper le HTML / `getPlainBody()`** avant d'écrire. (C'est ce qui faisait planter le Zap.)
+- **Forward vs Redirect** : pour un transfert vers Gmail qui doit atterrir en boîte de réception (pas spam) → **Transférer** (part de TON adresse, SPF OK). **Rediriger** garde l'expéditeur d'origine (airbnb) → SPF fail → spam → `GmailApp.search` le rate (ne lit pas le spam sans `in:anywhere`).
+- **Apps Script GmailApp : le scope `https://mail.google.com/` est large** — si le projet utilise déjà `GmailApp.sendEmail`, ajouter `GmailApp.search` (lecture) ne redéclenche **aucun** consentement OAuth (scope déjà couvert). `clasp push` met à jour le HEAD sans toucher la version web déployée (URL `APPS_SCRIPT_URL` préservée).
+
+## 🖱️ Pilotage navigateur SPA (Chrome MCP) : ref > coordonnées, Return pour activer — 2026-06-14
+- **Cliquer par `ref`** (outil `computer`, param `ref` issu de `find`/`read_page`) est **fiable** ; cliquer par **coordonnées** rate souvent (l'espace du screenshot ≠ viewport CSS → un clic « sur le bouton » tombe à côté / sur le backdrop et ferme la modale).
+- Les **boutons React/SPA** (Apps Script, Outlook web) sont parfois **inertes au clic synthétique** : faire **clic (focus) + touche `Return`** pour les activer (vécu : « Ajouter une règle » Outlook, « Exécuter » Apps Script). ⚠️ Mais `Return` sur un **menu déroulant** sélectionne le 1er item → pour un dropdown, ouvrir au **clic simple** puis sélectionner l'option par `ref`.
+- **Saisie de texte = `form_input` par ref** (fiable, déclenche l'event input). Les champs « chip » se valident en cliquant ailleurs / `Return`.
+
 ## 🏨 iCal OTA = ni nom ni prix : saisie manuelle obligatoire (biens Martinique) — 2026-06-14
 - **Les flux iCal Airbnb ET Booking.com ne transmettent NI le nom du client NI le prix** — juste les dates (DTSTART/DTEND) + un `SUMMARY` générique (« CLOSED - Not available » côté Booking, « Reserved » côté Airbnb). C'est structurel aux OTA, pas un bug. **Seul Nogent remonte les prix** (API Beds24, une vraie API). Pour les 6 biens Martinique en OTA → le nom et le prix se saisissent à la main (sinon CA sous-compté).
 - **La prochaine fois** : ne jamais s'attendre à un prix/nom depuis une résa `fromIcal`. Le rappel « ✏️ à compléter » (badge admin + push Worker) existe pour ça. Piste de fond : connectivité Booking.com (API/Connectivity Partner) pour automatiser.

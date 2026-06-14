@@ -3,11 +3,13 @@
 > Ce qui reviendra nous embêter si on ne le documente pas. Format : statut · sujet · ce qui débloque.
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 
-## En cours
-- **Tâche** : Connectivité Booking.com — récupérer **nom + prix** des résas automatiquement (éliminer la saisie manuelle des résas Booking Martinique).
-- **Étape** : pas commencé. Décidé en fin de session 2026-06-14, **à explorer demain (2026-06-15)**.
-- **Prochaine action** : étudier comment se connecter à Booking.com pour lire les détails d'une résa (Booking.com **Connectivity API** / Partner — accès réservé aux partenaires ; alternative : parsing des emails de confirmation Booking via Resend inbound / Gmail, ou l'extranet). Vérifier si Beds24 (déjà branché pour Nogent) pourrait gérer les biens Martinique côté Booking.
-- **Contexte critique** : l'iCal Booking/Airbnb ne donne NI nom NI prix (structurel) → seule une vraie API (Beds24 pour Nogent) les remonte. Le rappel « ✏️ à compléter » (admin + push) est le contournement actuel. Préservation des saisies manuelles déjà en place (ADR-ICAL-001).
+## En cours → ✅ AIRBNB FAIT le 2026-06-14 · Booking.com reste à faire
+- **✅ Airbnb (livré)** : pont email **règle serveur Outlook.com → Gmail → Apps Script `ingestAirbnbEmails_` (15 min) → onglet « Emails » → enrich** (cf. ADR-MAIL-001). Live, trigger actif vérifié. Plus de saisie manuelle nom+prix Airbnb.
+- **⬜ Booking.com (prochaine cible)** : appliquer la **même mécanique** — les emails de confirmation Booking arrivent aussi sur Hotmail. Écrire un `parseBookingMail.js` (les mails Booking ont le nom du client + le montant), élargir la règle serveur Outlook (ou en ajouter une « booking.com » → même Gmail), et router vers `enrichReservation_`. Alternative lourde écartée pour l'instant : Booking Connectivity API (réservé partenaires).
+- **Contexte critique** : l'iCal Booking/Airbnb ne donne NI nom NI prix (structurel). Pour Airbnb c'est désormais le **mail** qui les apporte (pont ci-dessus). Pour Booking, idem à construire. Préservation des saisies manuelles déjà en place (ADR-ICAL-001).
+
+## 🟡 2026-06-14 — Mac forcé allumé (caffeinate) = devenu redondant
+- LaunchAgent `~/Library/LaunchAgents/com.vincentsalomon.caffeinate.plist` (`caffeinate -dimsu`, RunAtLoad+KeepAlive) installé à la demande de Vincent pour fiabiliser l'ancienne règle **app Mail**. Depuis que le transfert est **côté serveur Outlook.com**, le Mac n'a plus besoin de rester allumé. **Débloque** : `launchctl unload ~/Library/LaunchAgents/com.vincentsalomon.caffeinate.plist && rm` pour laisser le Mac redormir (proposé à Vincent, en attente de son go).
 
 ## ⚠️ Résa Booking NINA GRUBO (Zandoli) — Vincent doit la re-remplir UNE fois — 2026-06-14
 - La ligne existe dans le Sheet « Toutes les Réservations » **sans nom ni prix** (effacée par l'ancien bug de re-sync). Le fix de préservation (`9fdcc92`) est déployé → **Vincent doit re-saisir nom + prix une fois** dans l'admin, puis 📊. Cette fois ça tiendra (re-sync + push ne l'effaceront plus). Statut : 🟡 action humaine.

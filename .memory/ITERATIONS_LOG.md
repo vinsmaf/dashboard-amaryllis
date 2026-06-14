@@ -5,6 +5,14 @@
 
 ---
 
+## 2026-06-14 (soir) — Nom+prix Airbnb AUTO via pont email (Zapier abandonné)
+Session pilotée à la main avec Vincent (computer-use + Chrome MCP). Objectif : récupérer auto le nom+prix des résas Airbnb (l'iCal ne les donne pas).
+- **Zapier abandonné** : Zap à 3 étapes (Outlook→Formatter→Sheets) = Formatter « Pro » payant. Le Formatter servait à stripper le HTML (> limite 50k cellule Sheets).
+- **Pivot → pont email gratuit possédé** (ADR-MAIL-001) : **Cloudflare Email Routing écarté** (`dig MX villamaryllis.com` = `smtp.google.com` Google Workspace → Email Routing aurait cassé la réception). **Retenu** : règle **serveur Outlook.com** (expéditeur airbnb ET objet confirmed → Transférer vers `vinsmaf@gmail.com`) → **Apps Script `ingestAirbnbEmails_`** (trigger 15 min, `getPlainBody`, label idempotent) → onglet « Emails » → `enrich-from-emails` (cron Worker) → `parseAirbnbMail`+`enrichReservation_` (non destructif).
+- **Exécuté** : code Apps Script poussé (`clasp push`), worker `enrich` redéployé, `setupAirbnbIngest` lancé depuis l'éditeur (trigger 15 min **actif vérifié**). Règle **app Mail désactivée** (anti-double-transfert). **Mac forcé allumé** (LaunchAgent caffeinate) puis noté redondant. Outlook a exigé une **re-vérif d'identité** pour autoriser le transfert externe (faite par Vincent).
+- **Git** : 5 fichiers déployés-mais-non-commités rattrapés sur `main` (`parseAirbnbMail.js`+test, `appscript/SCRIPT_SHEETS.js`, `workers/ical-sync/index.js`, `scripts/deploy-pages.sh`).
+- **Reste** : confirmer end-to-end à la prochaine vraie résa Airbnb ; appliquer le **même pont à Booking.com**.
+
 ## 2026-06-14 — Fiabilité tunnel résa + résas OTA (10 commits)
 Grosse session, partie d'une résa réelle (Anaïs Chouteau, Zandoli, paiement 2×, bug page caution).
 - **Diagnostic résa Anaïs** : solde 695€ programmé 03/07 OK ; caution 500€ pré-autorisée OK (2 tentatives, la 1ʳᵉ échouée = le « bug ») ; mail voyageur reçu ; MAIS pas de notif hôte (front-end interrompu) + CA août=0€ au Sheet. CA corrigé à la main (pipeline `revenus2026Undo`→`importAllReservations`→`Forget`→`Sync`, montant 993€ en août, vérifié).
