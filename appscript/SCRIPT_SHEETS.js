@@ -44,6 +44,53 @@ function readEmails_(p) {
   return json_({ ok: true, rows: rows, total: last - 1 });
 }
 
+// ── INGESTION Gmail → onglet « Emails » (remplace le Zap payant) ──────────────
+// Airbnb arrive sur Hotmail. Une règle Outlook transfère les mails « Reservation/Booking
+// confirmed » vers ce compte Gmail (vinsmaf@gmail.com, propriétaire du script). Ce trigger
+// (toutes les 15 min) lit ces mails transférés et écrit Date/Sender/Subject/Body dans l'onglet
+// « Emails », d'où enrichReservation_ tire nom + prix. Idempotent : chaque thread traité est
+// labellisé « amaryllis-ingested » et exclu des recherches suivantes. getPlainBody() = texte
+// (pas le HTML) → évite la limite 50 000 caractères d'une cellule Sheets.
+function ingestAirbnbEmails_() {
+  var LABEL = "amaryllis-ingested";
+  var label = GmailApp.getUserLabelByName(LABEL) || GmailApp.createLabel(LABEL);
+  // Sujet seulement : après transfert le from devient Hotmail (« TR:/Fwd: Reservation confirmed… »).
+  var threads = GmailApp.search(
+    'subject:("reservation confirmed" OR "booking confirmed") newer_than:21d -label:' + LABEL, 0, 30);
+  var ss = SpreadsheetApp.openById("1xuhU0KraEMxF9NAWO5MKEt23JI_V8mnNnWktzHy6q2U");
+  var sheet = ss.getSheetByName("Emails");
+  if (!sheet) { sheet = ss.insertSheet("Emails"); sheet.appendRow(["Date", "Sender", "Subject", "Body"]); }
+  if (sheet.getLastRow() === 0) sheet.appendRow(["Date", "Sender", "Subject", "Body"]);
+  var written = 0;
+  for (var i = 0; i < threads.length; i++) {
+    var msgs = threads[i].getMessages();
+    for (var j = 0; j < msgs.length; j++) {
+      var m = msgs[j];
+      var subj = m.getSubject() || "";
+      if (!/(reservation|booking)\s+confirmed/i.test(subj)) continue;
+      var body = m.getPlainBody() || m.getBody() || "";
+      // Sender forcé « Airbnb » : transféré (from = Hotmail) mais contenu Airbnb. enrich-from-emails
+      // filtre /airbnb/i (Sender|Subject) et ignore tout mail qui ne matche aucun bien.
+      sheet.appendRow([m.getDate(), "Airbnb", subj, body.slice(0, 45000)]);
+      written++;
+    }
+    threads[i].addLabel(label);
+  }
+  return { ok: true, threads: threads.length, written: written };
+}
+
+// À exécuter UNE fois depuis l'éditeur Apps Script : autorise le scope Gmail (lecture) et crée le
+// déclencheur temporel 15 min. Idempotent (supprime un ancien trigger homonyme), lance un 1er passage.
+function setupAirbnbIngest() {
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === "ingestAirbnbEmails_") ScriptApp.deleteTrigger(triggers[i]);
+  }
+  ScriptApp.newTrigger("ingestAirbnbEmails_").timeBased().everyMinutes(15).create();
+  var res = ingestAirbnbEmails_();
+  return { ok: true, trigger: "ingestAirbnbEmails_ toutes les 15 min", premierPassage: res };
+}
+
 // Enrichit UNE résa existante de « Toutes les Réservations » avec nom/prix venant d'un mail OTA
 // (Airbnb/Booking ne transmettent ni nom ni prix par iCal). NON DESTRUCTIF : n'écrit Voyageur
 // (col C) et Montant (col H) QUE s'ils sont vides/placeholder. Matching par clé-contenu
@@ -117,6 +164,8 @@ function doGet(e) {
   if (action === "getConfig")    return getConfig_(e.parameter);
   if (action === "setConfig")    return setConfig_(e.parameter);
   if (action === "readEmails")   return readEmails_(e.parameter);
+  if (action === "ingestAirbnbEmails") return json_(ingestAirbnbEmails_());
+  if (action === "setupAirbnbIngest")  return json_(setupAirbnbIngest());
 
   return json_({ error: "action inconnue: " + action });
 }
@@ -131,6 +180,8 @@ function doPost(e) {
   if (action === "setConfig")             return setConfig_(body);
   if (action === "read")                  return readAll_();
   if (action === "readEmails")            return readEmails_(body);
+  if (action === "ingestAirbnbEmails")    return json_(ingestAirbnbEmails_());
+  if (action === "setupAirbnbIngest")     return json_(setupAirbnbIngest());
   if (action === "enrichReservation")     return enrichReservation_(body);
   if (action === "getConfig")             return getConfig_(body);
   if (action === "revenus2026DryRun")     return json_({ ok: true, preview: testRevenus2026_dryRun() });

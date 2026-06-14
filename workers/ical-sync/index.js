@@ -2028,6 +2028,24 @@ async function runRagIngest(env) {
   } catch (e) { console.error("[rag] ingestion échouée:", e.message); }
 }
 
+// ── Auto-complétion résas OTA Airbnb depuis les mails (cron horaire) ─────────
+// L'iCal Airbnb ne transmet ni nom ni prix. Un Zap (Outlook → onglet « Emails » du
+// Sheet) y dépose les mails de confirmation ; cet appel parse ces mails et complète
+// le voyageur + le payout net dans « Toutes les Réservations ». Écriture NON destructive
+// et idempotente (ne remplit que les cases vides → ré-exécutable sans risque).
+async function runEnrichFromEmails(env) {
+  const secret = env.POSTSTAY_SECRET || "";
+  if (!secret) { console.log("[enrich-emails] POSTSTAY_SECRET absent — skip"); return; }
+  const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+  try {
+    const r = await fetch(`${siteUrl}/api/enrich-from-emails?secret=${encodeURIComponent(secret)}`);
+    const j = await r.json().catch(() => ({}));
+    console.log(`[enrich-emails] ${j.ok ? "OK" : "KO"} — mails=${j.airbnbMails ?? "?"} enrichis=${j.enrichis ?? 0} ignorés=${j.ignores ?? 0}`);
+  } catch (e) {
+    console.error("[enrich-emails] error:", e.message);
+  }
+}
+
 async function runAgentsExecuteAndDigest(env) {
   const siteUrl = env.SITE_URL || "https://villamaryllis.com";
   if (!env.POSTSTAY_SECRET) { console.log("[agents] POSTSTAY_SECRET absent — skip"); return; }
@@ -2205,6 +2223,7 @@ export default {
         await runCautionAutoRelease(env);
         await runInventoryAlerts(env);
         await runDevisSoldeCron(env); // C2 — solde devis 2 fois : lien J-30 + relances J-25/J-20 + annulation J-15
+        await runEnrichFromEmails(env); // complète nom+payout des résas Airbnb depuis les mails (onglet « Emails ») AVANT le contrôle de cohérence
         // ── Contrôle de cohérence des réservations (chantier 2 Robustesse) ──
         //    Détecte double-bookings / totaux aberrants / bien inconnu → inbox 🐞 Bugs + ntfy si critique.
         try {
@@ -2390,6 +2409,10 @@ export default {
     }
     if (url.pathname === "/occupancy-snapshot") {
       const { allEvents } = await runSync(env); await runOccupancySnapshot(env, allEvents);
+      return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
+    }
+    if (url.pathname === "/enrich-emails") {
+      await runEnrichFromEmails(env);
       return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
     }
     if (url.pathname === "/monitor") {

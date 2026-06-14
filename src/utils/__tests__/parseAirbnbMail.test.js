@@ -81,6 +81,24 @@ describe("parseAirbnbMail — exemple réel Athenais/Mabouya", () => {
   });
 });
 
+// Corps « brut » réel tel que reçu via Outlook/Zapier (markdown collé, sans retours-ligne propres).
+// Extrait condensé du vrai mail Athenais — le nom est un lien juste avant « Identity verified ».
+const AIRBNB_BRUT = `New booking confirmed! Athenais arrives Feb 1.Send a message to confirm check-in details or welcome Athenais.[Athenais Huguenot](https://www.airbnb.com/hosting/reservations/details/HMSBFCS3FM?isPending=true)![](https://a0.muscache.com/im/pictures/0d520e2d.jpg)Identity verified![](https://a0.muscache.com/im/pictures/d109f44f.jpg)[Mabouya | Jacuzzi privatif, Jardin fleuri, vue mer](https://www.airbnb.com/rooms/1046596752160926069)Check-inMon, Feb 1, 20274:00 PMCheckoutTue, Mar 2, 202712:00 PMGuests1 adultConfirmation codeHMSBFCS3FM[View itinerary](https://www.airbnb.com/hosting/reservations/details/HMSBFCS3FM)Total (EUR)€1,440.24Host payoutYou earn€1,222.68`;
+
+describe("parseAirbnbMail — corps brut Outlook/Zapier (markdown collé)", () => {
+  const r = parseAirbnbMail({ subject: "Reservation confirmed - Athenais Huguenot arrives Feb 1", body: AIRBNB_BRUT });
+
+  it("récupère le NOM COMPLET malgré le format collé (pas juste le prénom)", () => {
+    expect(r.guestName).toBe("Athenais Huguenot");
+  });
+  it("identifie bien + dates + payout sur le format brut", () => {
+    expect(r.bienId).toBe("mabouya");
+    expect(r.checkin).toBe("2027-02-01");
+    expect(r.checkout).toBe("2027-03-02");
+    expect(r.montantPayout).toBe(1222.68);
+  });
+});
+
 describe("parseAirbnbMail — robustesse", () => {
   it("renvoie null sur les champs absents (jamais de valeur devinée)", () => {
     const r = parseAirbnbMail({ subject: "Bonjour", body: "rien d'utile ici" });

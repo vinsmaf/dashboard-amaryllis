@@ -56,10 +56,10 @@ if [[ "${SKIP_LINT:-0}" != "1" ]]; then
     while IFS= read -r f; do
       # Erreurs actuelles. { … || true; } neutralise l'exit 1 d'ESLint (errors found)
       # pour ne pas déclencher set -o pipefail sur l'assignation.
-      CURRENT=$({ npx eslint "$f" 2>&1 || true; } | grep -E "^\s+[0-9]+:[0-9]+\s+error" | wc -l | tr -d ' ')
+      CURRENT=$({ npx eslint "$f" 2>&1 || true; } | { grep -E "^\s+[0-9]+:[0-9]+\s+error" || true; } | wc -l | tr -d ' ')
       # Erreurs à HEAD (baseline). Fichier nouveau → baseline=0.
       if git cat-file -e "HEAD:$f" 2>/dev/null; then
-        BASELINE=$(git show "HEAD:$f" 2>/dev/null | { npx eslint --stdin --stdin-filename "$f" 2>&1 || true; } | grep -E "^\s+[0-9]+:[0-9]+\s+error" | wc -l | tr -d ' ')
+        BASELINE=$(git show "HEAD:$f" 2>/dev/null | { npx eslint --stdin --stdin-filename "$f" 2>&1 || true; } | { grep -E "^\s+[0-9]+:[0-9]+\s+error" || true; } | wc -l | tr -d ' ')
       else
         BASELINE=0
       fi

@@ -39,7 +39,7 @@ function parseMoney(s) {
   const m = String(s).match(/([\d][\d\s.,]*\d|\d)/);
   if (!m) return null;
   // normalise : retire espaces/insécables ; gère le format US (1,440.24) ET FR (1 440,24)
-  let raw = m[1].replace(/[\s ]/g, "");
+  let raw = m[1].replace(/[\s]/g, "");
   if (raw.includes(",") && raw.includes(".")) {
     // le dernier séparateur est le décimal
     raw = raw.lastIndexOf(",") > raw.lastIndexOf(".")
@@ -52,6 +52,24 @@ function parseMoney(s) {
   return isNaN(v) ? null : v;
 }
 
+// Convertit un corps HTML (« Body Content » Outlook) en texte lisible : retire styles/scripts,
+// remplace chaque balise par une espace (sépare les mots collés), décode les entités courantes.
+// Si l'entrée n'est pas du HTML, la renvoie telle quelle.
+function htmlToText(s) {
+  if (!s) return "";
+  if (!/<[a-z!/]/i.test(s)) return s; // pas du HTML → inchangé
+  return s
+    .replace(/<(script|style|head)[\s\S]*?<\/\1>/gi, " ") // blocs non-textuels
+    .replace(/<[^>]+>/g, " ")                              // toute balise → espace
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&euro;/gi, "€")
+    .replace(/&(?:#39|rsquo|#8217|apos);/gi, "'")
+    .replace(/&quot;/gi, '"')
+    .replace(/&[a-z]+;/gi, " ")                            // autres entités → espace
+    .replace(/[ \t\u00A0]+/g, " ");                        // collapse espaces (insécables inclus)
+}
+
 // Cherche la valeur qui suit un libellé (tolère sauts de ligne / espaces entre label et valeur).
 function afterLabel(text, label, valueRe) {
   const re = new RegExp(label + "[\\s\\S]{0,40}?(" + valueRe + ")", "i");
@@ -60,7 +78,8 @@ function afterLabel(text, label, valueRe) {
 }
 
 export function parseAirbnbMail({ subject = "", body = "" } = {}) {
-  const text = `${subject}\n${body}`.replace(/\r/g, "");
+  // Le « Body Content » Outlook est du HTML → on le convertit en texte lisible d'abord.
+  const text = `${subject}\n${htmlToText(body)}`.replace(/\r/g, "");
 
   // ── Bien (listing → bienId) ──
   let bienId = null, listingLabel = null;
@@ -74,11 +93,22 @@ export function parseAirbnbMail({ subject = "", body = "" } = {}) {
   const checkout = parseEnDate(afterLabel(text, "Check-?out", "[A-Za-z]{3}[a-z]*\\.?\\s+\\d{1,2},?\\s+\\d{4}"));
 
   // ── Nom du voyageur ──
-  // Heuristique principale : la ligne juste avant « Identity verified ».
-  // Fallbacks : « welcome <Prénom> », « <Prénom> arrives ».
+  // Priorité 1 : le SUJET « Reservation confirmed - <Nom complet> arrives … » — source la plus
+  // fiable (nom complet, insensible au format du corps). Fallbacks corps ensuite.
   let guestName = null;
-  const idM = text.match(/\n[\s\t]*([A-ZÀ-Ÿ][^\n]{1,60}?)\n[\s\t]*Identity verified/);
-  if (idM) guestName = idM[1].trim();
+  const subjM = subject.match(/confirmed\s*[-–—]\s*(.+?)\s+arrives\b/i);
+  if (subjM) guestName = subjM[1].trim();
+  // Heuristique corps : la ligne juste avant « Identity verified » (format texte propre).
+  if (!guestName) {
+    const idM = text.match(/\n[\s\t]*([A-ZÀ-Ÿ][^\n]{1,60}?)\n[\s\t]*Identity verified/);
+    if (idM) guestName = idM[1].trim();
+  }
+  // Mail « brut » (texte/markdown collé) : le nom est un lien juste avant « Identity verified »,
+  // ex « [Athenais Huguenot](https://…)![](…)Identity verified ». On capture le libellé du lien.
+  if (!guestName) {
+    const mdM = text.match(/\[([A-ZÀ-Ÿ][^\]\n]{1,60}?)\]\([^)]*\)\s*(?:!\[[^\]]*\]\([^)]*\)\s*)?Identity verified/);
+    if (mdM) guestName = mdM[1].trim();
+  }
   if (!guestName) {
     const arr = text.match(/\b([A-ZÀ-Ÿ][\p{L}'’-]+)\s+arrives\b/u) || text.match(/welcome\s+([A-ZÀ-Ÿ][\p{L}'’-]+)/i);
     if (arr) guestName = arr[1].trim(); // prénom seul
