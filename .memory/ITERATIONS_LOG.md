@@ -5,6 +5,17 @@
 
 ---
 
+## 2026-06-14 — Fiabilité tunnel résa + résas OTA (10 commits)
+Grosse session, partie d'une résa réelle (Anaïs Chouteau, Zandoli, paiement 2×, bug page caution).
+- **Diagnostic résa Anaïs** : solde 695€ programmé 03/07 OK ; caution 500€ pré-autorisée OK (2 tentatives, la 1ʳᵉ échouée = le « bug ») ; mail voyageur reçu ; MAIS pas de notif hôte (front-end interrompu) + CA août=0€ au Sheet. CA corrigé à la main (pipeline `revenus2026Undo`→`importAllReservations`→`Forget`→`Sync`, montant 993€ en août, vérifié).
+- **Fix tunnel** (`e1cf7d1`,`692d5e4`) : webhook = autorité pour alerte hôte (dédup `host_notified`) + total séjour ; mail 2× détaillé.
+- **Résa groupe** (`df95587`) : `group_biens` → blocage par-bien (iCal OTA + site public). 3 lecteurs patchés.
+- **Diag prerender /guide+/mabouya** (workflow 4 investigateurs + vérif adversariale) : /mabouya OK (faux-positif timing) ; /guide = vrai bug (stub 200 sans redirection) → 301 (`5bfea81`,`82897f5`).
+- **Badge Booking** (`8542890`) + **préservation saisies iCal** (`9fdcc92`) + **rappel à-compléter** admin+Worker (`5d3e4e5`).
+- **Smoke-test sur alias** (`98e368c`) : fin des faux hard-fail CDN (déclenché par un hard-fail bundle text/plain sur un deploy sain).
+- **Rattrapage git** (`1ec6a06`) : 19 fichiers de sessions précédentes commités + graphify-out gitignoré.
+**Migrations D1** : `host_notified`, `group_biens` (prod). **Cap demain** : connectivité Booking.com (nom+prix auto).
+
 ## 2026-06-13 (soir) — SEO 5 chantiers : VacationRental · hreflang · robots · LCP
 5 chantiers SEO exécutés et déployés sur branche `claude/sad-bartik-02a3c2` → merge main :
 - **A** : 9 prix corrigés dans `functions/[slug].js` (BIEN_EXTRA descs + guide meta). Prix validés par Vincent : Zandoli 110€, Géko 110€, Mabouya 70€, Schœlcher 90€, Nogent 90€.

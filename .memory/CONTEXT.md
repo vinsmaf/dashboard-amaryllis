@@ -1,6 +1,6 @@
 # CONTEXT — État courant (locatif-dashboard)
 
-> Snapshot condensé de l'état réel. **À mettre à jour à CHAQUE session.** Dernière MAJ : **2026-06-13 (soir)** — SEO 5 chantiers : JSON-LD VacationRental · hreflang runtime · robots.txt sécurisé · sitemap.xml nettoyé · LCP + lazy-load.
+> Snapshot condensé de l'état réel. **À mettre à jour à CHAQUE session.** Dernière MAJ : **2026-06-14** — Fiabilisation tunnel résa (alerte hôte webhook + CA total + mail 2×) · blocage dates résa groupe · /guide 301 · badge Booking + préservation saisies iCal + rappel « à compléter » · smoke-test sur alias. **Cap demain : connectivité Booking.com (nom+prix auto).**
 
 ## Le projet
 Conciergerie + site de réservation directe pour **7 logements** (Martinique + Nogent-sur-Marne).
@@ -40,6 +40,17 @@ Source unique des biens (ph1-3) · Robustesse (tests+gate+CI, cohérence, import
 ## Crons autonomes (depuis 2026-06-10)
 - **consolidation-memoire-hebdo** : lundi 6h MTQ (`0 6 * * 1`) — jardinera `.memory/` mode propose
 - **point-ads-hebdo** : lundi 7h MTQ (`0 7 * * 1`) — résumé perf Meta+Google + 1 reco actionnable
+
+## Chantiers récents livrés (2026-06-14 — fiabilité tunnel résa + résas OTA)
+**Déclencheur** : résa directe 2× Anaïs Chouteau (Zandoli) — bug page caution → ni notif hôte ni CA. Puis résa Booking NINA GRUBO sans nom/prix.
+- **Tunnel résa fiabilisé** (`e1cf7d1`+`692d5e4`) : alerte hôte (email+ntfy) **côté webhook** (plus dépendante du front-end), dédup atomique `host_notified` ; webhook stocke le `total` séjour → CA Sheet correct même si front interrompu ; mail voyageur 2× affiche acompte/solde/date. Migration D1 `host_notified`. *(CA Anaïs corrigé à la main via pipeline undo→reimport→forget→sync.)*
+- **Blocage dates résa groupe** (`df95587`) : colonne `group_biens` (bien_ids du groupe, depuis le front) → les 2 exports iCal + get-availability incluent les résas groupe → fin du double-booking sur l'offre résidence. Migration D1 `group_biens`.
+- **/guide 301** (`5bfea81`+`82897f5`) : vraie redirection vers /guide-hub (était un stub 200 cassé) + nettoyage sitemap.
+- **Badge canal résas iCal** (`8542890`) : Booking n'affiche plus « airbnb » au nom du client (`fromIcal` ≠ airbnb).
+- **Préservation saisies iCal** (`9fdcc92`) : nom/prix/état opé saisis à la main ne sont plus écrasés par le re-sync.
+- **Rappel « ✏️ à compléter »** (`5d3e4e5`) : badge admin (résas OTA sans nom/prix) + compteur + push Worker (email+ntfy à l'arrivée d'une résa Airbnb/Booking).
+- **Smoke-test sur alias** (`98e368c`) : fin des faux hard-fail de propagation CDN.
+- **Rattrapage git** (`1ec6a06`) : commit des travaux sessions précédentes déjà déployés (revenus 2026/2027, webhook Beds24 V2, audit design SEO, AI-ops, worker).
 
 ## Chantiers récents livrés (2026-06-13 soir — SEO 5 chantiers)
 - **Chantier A — Prix cohérents** : 9 corrections dans `functions/[slug].js` (BIEN_EXTRA descs + guide meta). Prix validés par Vincent : Zandoli 110€, Géko 110€, Mabouya 70€, Schœlcher 90€, Nogent 90€.

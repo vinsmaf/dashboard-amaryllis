@@ -3,7 +3,22 @@
 > Ce qui reviendra nous embêter si on ne le documente pas. Format : statut · sujet · ce qui débloque.
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 
-## En cours → ✅ terminé le 2026-06-13 (SEO 5 chantiers)
+## En cours
+- **Tâche** : Connectivité Booking.com — récupérer **nom + prix** des résas automatiquement (éliminer la saisie manuelle des résas Booking Martinique).
+- **Étape** : pas commencé. Décidé en fin de session 2026-06-14, **à explorer demain (2026-06-15)**.
+- **Prochaine action** : étudier comment se connecter à Booking.com pour lire les détails d'une résa (Booking.com **Connectivity API** / Partner — accès réservé aux partenaires ; alternative : parsing des emails de confirmation Booking via Resend inbound / Gmail, ou l'extranet). Vérifier si Beds24 (déjà branché pour Nogent) pourrait gérer les biens Martinique côté Booking.
+- **Contexte critique** : l'iCal Booking/Airbnb ne donne NI nom NI prix (structurel) → seule une vraie API (Beds24 pour Nogent) les remonte. Le rappel « ✏️ à compléter » (admin + push) est le contournement actuel. Préservation des saisies manuelles déjà en place (ADR-ICAL-001).
+
+## ⚠️ Résa Booking NINA GRUBO (Zandoli) — Vincent doit la re-remplir UNE fois — 2026-06-14
+- La ligne existe dans le Sheet « Toutes les Réservations » **sans nom ni prix** (effacée par l'ancien bug de re-sync). Le fix de préservation (`9fdcc92`) est déployé → **Vincent doit re-saisir nom + prix une fois** dans l'admin, puis 📊. Cette fois ça tiendra (re-sync + push ne l'effaceront plus). Statut : 🟡 action humaine.
+
+## 🟡 2026-06-14 — Warnings smoke /mabouya + /guide-hub (titres) : bénins
+- Persistent à chaque deploy même sur l'alias frais : la **Function de meta-injection** runtime met ~30-60s à s'activer post-deploy, alors que le smoke teste à ~30s. **Titres vérifiés corrects** (prod = alias). Non bloquant. **Débloque** : si ça gêne, tester ces 2 titres uniquement après un `sleep` plus long, ou les sortir du smoke (le prerender/code les couvre déjà). Pas prioritaire.
+
+## 🟡 2026-06-14 — Résas groupe passées (group_biens NULL) restent à bloquer à la main
+- Le blocage auto par-bien (ADR-GROUP-001) ne couvre que les **nouvelles** résas groupe (avec `group_biens` rempli). Les résas résidence déjà encaissées avant le 2026-06-14 ont `group_biens=NULL` → invisibles au blocage par-bien. **Débloque** : Vincent les a déjà bloquées manuellement à l'époque ; sinon, remplir `group_biens` à la main en D1 si une ancienne résa groupe pose problème.
+
+## En cours (SEO) → ✅ terminé le 2026-06-13 (SEO 5 chantiers)
 
 ---
 

@@ -5,6 +5,41 @@
 
 ---
 
+## ADR-BOOK-002 · 2026-06-14 · Alerte hôte + total séjour = autorité au webhook (pas au front-end)
+1. **Choix** : le webhook Stripe (`payment_intent.succeeded`) devient l'autorité pour (a) l'alerte hôte (email+ntfy) et (b) le stockage du `total` séjour en D1 — pas seulement le front-end `notify-booking`. Dédup atomique via flag `host_notified` (`UPDATE … WHERE host_notified=0` + check `changes` → un seul des deux flux émet, D1 sérialise). Le webhook stocke `total = full_total` (2×) ou `pi.amount` (intégral), en `COALESCE(existing, new)` (fill-if-null).
+2. **Alternatives refusées** : laisser l'alerte hôte + le montant au seul front-end (cassé si le voyageur quitte la page caution → hôte jamais prévenu + CA=0 au Sheet, vécu avec la résa Anaïs Chouteau).
+3. **Conséquences attendues** : l'hôte est toujours prévenu et le CA toujours correct même si le front-end ne tourne pas. Migration D1 : colonne `host_notified`. Mail voyageur 2× affiche acompte/solde/date.
+4. **Périmètre** : `functions/api/stripe-webhook.js` (notifyHostOnce, storeDirectBooking+total, sendConfirmationToGuest twoX) · `functions/api/notify-booking.js` (host_notified=1). Migration prod faite.
+5. **Statut** : ✅ livré & déployé 2026-06-14 (`e1cf7d1`+`692d5e4`).
+
+## ADR-GROUP-001 · 2026-06-14 · Résa groupe = stocker les bien_ids pour le blocage par-bien
+1. **Choix** : une résa groupée (offre résidence, `bien_id='groupe'`) stocke les bien_ids exacts qu'elle couvre (nouvelle colonne `group_biens`, CSV alimenté depuis le front via `metadata.bienIds`). Les 3 lecteurs par-bien (`ical-export.js`, `ical/[file].js`, `get-availability.js`) incluent les résas groupe via `WHERE bien_id=? OR (bien_id='groupe' AND group_biens contient ce bien)` (match token encadré de virgules).
+2. **Alternatives refusées** : hardcoder groupe = Zandoli+Géko+Mabouya (Vincent : la composition varie) ; splitter en N lignes direct_bookings (PK = payment_intent_id, impossible sans id dérivé).
+3. **Conséquences attendues** : une résa groupe bloque automatiquement les bons calendriers OTA (iCal export) ET le site public (get-availability) — fin du risque de double-booking que l'avertissement « bloquer manuellement » couvrait. Résas groupe passées (`group_biens` NULL) restent manuelles.
+4. **Périmètre** : `src/PublicSite.jsx`, `create-payment-intent.js`, `stripe-webhook.js` (branche groupe), `ical-export.js`, `ical/[file].js`, `get-availability.js`. Migration prod faite.
+5. **Statut** : ✅ livré & déployé 2026-06-14 (`df95587`).
+
+## ADR-ICAL-001 · 2026-06-14 · Préserver les saisies manuelles à travers les re-syncs iCal
+1. **Choix** : le merge iCal (`Planning.jsx`) préserve, par UID, les champs saisis à la main (voyageur si non-placeholder, montant>0, tél, email, voyageurs, code) + l'état opé (✅/🧹/ménage/assigné), au lieu de tout réécraser par le parse brut à chaque sync.
+2. **Alternatives refusées** : re-fetch écrasant (comportement précédent — effaçait le nom/prix saisis, puis le push 📊 propageait la perte au Sheet, vécu avec la résa Booking NINA GRUBO).
+3. **Conséquences attendues** : les saisies manuelles tiennent ; le rappel « ✏️ à compléter » (badge admin + push Worker) signale les résas OTA iCal sans nom/prix. **NB métier** : l'iCal Airbnb/Booking ne transmet ni nom ni prix → saisie manuelle obligatoire pour les biens Martinique (seul Nogent/Beds24 remonte les prix).
+4. **Périmètre** : `src/tabs/Planning.jsx` (merge + needsManualFill + badges), `workers/ical-sync/index.js` (notif rappel).
+5. **Statut** : ✅ livré & déployé 2026-06-14 (`9fdcc92`+`5d3e4e5`). **Suite prévue (demain) : connectivité Booking.com pour récupérer nom+prix automatiquement.**
+
+## ADR-SMOKE-001 · 2026-06-14 · Smoke-test post-deploy contre l'alias, pas le domaine CDN
+1. **Choix** : le smoke de `deploy-pages.sh` teste l'**alias de déploiement** (`<hash>.dashboard-amaryllis.pages.dev`, capturé de la sortie wrangler, live immédiatement sans cache CDN) au lieu de villamaryllis.com. Fallback robuste sur le domaine prod + sleep 6 si l'alias n'est pas capturé.
+2. **Alternatives refusées** : continuer sur villamaryllis.com (le CDN met >30s à propager → faux négatifs récurrents et un **hard-fail** « bundle servi en text/plain » sur un déploiement sain → masquerait un vrai problème).
+3. **Conséquences attendues** : plus de faux hard-fail de propagation. Restent 2 warnings bénins (/mabouya, /guide-hub : la Function de meta-injection met ~30-60s à s'activer même sur l'alias — titres vérifiés corrects).
+4. **Périmètre** : `scripts/deploy-pages.sh` (capture alias + DOMAIN + BASE_URL passé à admin-smoke.mjs).
+5. **Statut** : ✅ livré & déployé 2026-06-14 (`98e368c`), validé sur 3 déploiements suivants.
+
+## ADR-GUIDE-301 · 2026-06-14 · /guide = vraie 301 vers /guide-hub (était un stub 200 cassé)
+1. **Choix** : la branche `if(slug==="guide")` de `functions/[slug].js` renvoie `Response.redirect(BASE/guide-hub, 301)`. Avant, elle récupérait la réponse 301 du `_redirects`, réinjectait des meta et la resservait en `status:200` → stub « Redirecting to /guide-hub » (25o, sans `<title>`, sans vraie redirection) = cul-de-sac pour les vieux liens. Constante `GUIDE` orpheline + entrée sitemap morte retirées.
+2. **Alternatives refusées** : laisser le stub (cassé pour l'utilisateur ET le crawler).
+3. **Conséquences attendues** : `/guide` redirige proprement ; `/guide-hub` est l'URL canonique. Vérifié live (301 + location).
+4. **Périmètre** : `functions/[slug].js`, `scripts/prerender.mjs` (sitemap).
+5. **Statut** : ✅ livré & déployé 2026-06-14 (`5bfea81`+`82897f5`).
+
 ## ADR-SEO-001 · 2026-06-13 · JSON-LD VacationRental (pas LodgingBusiness) + BreadcrumbList
 1. **Choix** : toutes les fiches biens passent de `LodgingBusiness` → `VacationRental` (plus précis pour les locations courte durée) avec `BreadcrumbList` séparé, `checkinTime`/`checkoutTime` (MTQ 17h/12h · Nogent 15h/11h), `ImageObject` array (4 photos), `priceRange` conditionnel (`bien.bookable !== false`), `addressCountry` ISO : Martinique = `MQ`, Nogent = `FR`.
 2. **Alternatives refusées** : garder `LodgingBusiness` (générique, moins pertinent pour vacances courte durée) ; coder le pays en `"FR"` pour Martinique (Martinique = ISO 3166-1 `MQ`, pas une région métropolitaine, le code `FR` renvoyait une confusion).

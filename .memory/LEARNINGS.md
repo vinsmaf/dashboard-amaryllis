@@ -3,6 +3,23 @@
 > Pièges déjà rencontrés + comment les éviter. 1 entrée = 1 leçon actionnable « la prochaine fois ».
 > Le journal d'erreurs exhaustif reste `../docs/ERREURS-LOG.md`.
 
+## 🏨 iCal OTA = ni nom ni prix : saisie manuelle obligatoire (biens Martinique) — 2026-06-14
+- **Les flux iCal Airbnb ET Booking.com ne transmettent NI le nom du client NI le prix** — juste les dates (DTSTART/DTEND) + un `SUMMARY` générique (« CLOSED - Not available » côté Booking, « Reserved » côté Airbnb). C'est structurel aux OTA, pas un bug. **Seul Nogent remonte les prix** (API Beds24, une vraie API). Pour les 6 biens Martinique en OTA → le nom et le prix se saisissent à la main (sinon CA sous-compté).
+- **La prochaine fois** : ne jamais s'attendre à un prix/nom depuis une résa `fromIcal`. Le rappel « ✏️ à compléter » (badge admin + push Worker) existe pour ça. Piste de fond : connectivité Booking.com (API/Connectivity Partner) pour automatiser.
+
+## 🔒 Webhook Stripe = autorité, pas le front-end (garanti de tourner) — 2026-06-14
+- Le webhook Stripe est **rejoué jusqu'à succès** par Stripe → garanti. Le front-end (`notify-booking`, push au Sheet) **ne tourne pas** si le voyageur quitte la page (ex: bug page caution). → **mettre les actions critiques côté webhook** : alerte hôte, stockage du total (CA), confirmation. Vécu : résa Anaïs Chouteau → ni notif hôte ni CA car front-end interrompu sur la caution.
+- **Dédup atomique D1 sans lock** : `UPDATE t SET flag=1 WHERE id=? AND flag=0` puis tester `meta.changes` → un seul des deux flux (webhook OU front-end) « gagne » et agit (D1 sérialise les statements). Pattern réutilisable pour tout « exactly-once » entre deux chemins concurrents.
+
+## 🌐 Smoke-test post-deploy : viser l'alias de déploiement, pas le domaine CDN — 2026-06-14
+- Tester `villamaryllis.com` juste après deploy = **faux négatifs** : le CDN met >30s à propager → bundle servi transitoirement en `text/plain`, titres absents. Ça a causé un **hard-fail** (exit 1) sur un déploiement pourtant sain → danger (masque les vrais problèmes).
+- **Fix** : capturer l'URL alias `<hash>.dashboard-amaryllis.pages.dev` de la sortie wrangler (`grep -oE "https://[a-z0-9-]+\.<projet>\.pages\.dev"`) et smoke-tester celle-ci (live immédiatement, zéro cache). Fallback sur le domaine prod si non capturé.
+- **Nuance** : même sur l'alias frais, la **Function de meta-injection** (`[slug].js` runtime) met ~30-60s à s'activer → les checks de `<title>` runtime peuvent encore warner brièvement, alors que les checks statiques (bundle, /admin) passent immédiatement. Warnings bénins, non bloquants.
+
+## 🏷️ `fromIcal` ≠ Airbnb : Booking.com a aussi un iCal — 2026-06-14
+- Coder « Airbnb » en dur pour toute résa `fromIcal` est faux depuis l'ajout de l'iCal Booking.com → une résa Booking affichait « airbnb » collé au nom du client. **La prochaine fois** : dériver le libellé/couleur du **canal réel** (`r.canal`), pas de `fromIcal`. Idem pour les compteurs (« X Airbnb » → « X iCal »).
+- **Éditer une résa `fromIcal` était fragile** : le re-sync iCal réécrasait toutes les résas du bien par le parse brut → effaçait les éditions (nom/prix), puis le push 📊 propageait la perte au Sheet. Fix : préserver par UID les champs manuels + l'état opé au moment du merge.
+
 ## 🔍 CDN propagation : toujours vérifier via l'alias direct avant de conclure que le déploiement est cassé — 2026-06-13
 - Après un `npm run deploy:pages`, la prod `villamaryllis.com` peut servir le contenu précédent encore plusieurs minutes (cache CDN Cloudflare). L'**alias de déploiement direct** (`https://<branch>.dashboard-amaryllis.pages.dev`) ne cache JAMAIS → montre immédiatement le code déployé.
 - **La prochaine fois** : vérifier le comportement attendu sur l'alias d'abord, puis attendre quelques minutes pour villamaryllis.com. Ne pas re-déployer si l'alias est OK — c'est le CDN, pas le code.
