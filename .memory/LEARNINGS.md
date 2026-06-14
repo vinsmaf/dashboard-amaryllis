@@ -3,6 +3,10 @@
 > Pièges déjà rencontrés + comment les éviter. 1 entrée = 1 leçon actionnable « la prochaine fois ».
 > Le journal d'erreurs exhaustif reste `../docs/ERREURS-LOG.md`.
 
+## 🗓️ Scheduled tasks : créé même quand /schedule affiche une erreur de connexion — 2026-06-14
+- La skill `/schedule` peut afficher « trouble connecting with remote claude.ai account » **ET avoir quand même créé la tâche** en arrière-plan. **La prochaine fois : toujours vérifier avec `list_scheduled_tasks` avant de recréer** — évite les doublons et les surprises.
+- Pattern vérifié : tâche `rapport-business-amaryllis-18h` apparue dans la liste malgré le message d'erreur affiché à l'écran.
+
 ## 📧 Pont email OTA → Sheet : pièges à connaître — 2026-06-14
 - **Cloudflare Email Routing pose un MX au niveau de la zone** → il **écrase** un MX existant. `villamaryllis.com` a `MX smtp.google.com` (Google Workspace) → activer Email Routing aurait cassé la réception email. **Toujours `dig MX <domaine>` avant** d'envisager Email Routing ; sur un domaine qui reçoit déjà, c'est exclu.
 - **Apple Mail (et toute règle client) ne tourne que si l'app est ouverte** → pas fiable pour de l'auto 24/7. Pour du robuste → **règle côté serveur** (Outlook.com : Paramètres → Courrier → Règles).

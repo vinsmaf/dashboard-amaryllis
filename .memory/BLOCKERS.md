@@ -3,7 +3,14 @@
 > Ce qui reviendra nous embêter si on ne le documente pas. Format : statut · sujet · ce qui débloque.
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 
-## En cours → ✅ AIRBNB FAIT le 2026-06-14 · Booking.com reste à faire
+## En cours → ✅ terminé le 2026-06-14 (nuit — session cinéma)
+- **V4 rapport-business** : endpoint LIVE + scheduled task `rapport-business-amaryllis-18h` fire à 18h MTQ automatiquement. Test autonomie hors-session.
+- **Page projets cerveau** : `src/tabs/ProjetsCerveauTab.jsx` déployée dans admin sous "🧩 Projets cerveau".
+- **Prochaine action** : vérifier la notif ntfy reçue ce soir + lire le rapport généré.
+
+## ⬜ Booking.com nom+prix auto (prochaine cible après Airbnb)
+- **Contexte** : Airbnb = FAIT (ADR-MAIL-001). Booking.com : même mécanique — leurs emails de confirmation contiennent nom + montant, arrivent sur Hotmail. Écrire `parseBookingMail.js` + élargir règle Outlook « booking.com » → même Gmail → `enrichReservation_`.
+
 - **✅ Airbnb (livré)** : pont email **règle serveur Outlook.com → Gmail → Apps Script `ingestAirbnbEmails_` (15 min) → onglet « Emails » → enrich** (cf. ADR-MAIL-001). Live, trigger actif vérifié. Plus de saisie manuelle nom+prix Airbnb.
 - **⬜ Booking.com (prochaine cible)** : appliquer la **même mécanique** — les emails de confirmation Booking arrivent aussi sur Hotmail. Écrire un `parseBookingMail.js` (les mails Booking ont le nom du client + le montant), élargir la règle serveur Outlook (ou en ajouter une « booking.com » → même Gmail), et router vers `enrichReservation_`. Alternative lourde écartée pour l'instant : Booking Connectivity API (réservé partenaires).
 - **Contexte critique** : l'iCal Booking/Airbnb ne donne NI nom NI prix (structurel). Pour Airbnb c'est désormais le **mail** qui les apporte (pont ci-dessus). Pour Booking, idem à construire. Préservation des saisies manuelles déjà en place (ADR-ICAL-001).

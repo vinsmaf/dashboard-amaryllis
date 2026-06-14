@@ -5,6 +5,13 @@
 
 ---
 
+## ADR-BRAIN-001 · 2026-06-14 (nuit) · ProjetsCerveauTab = composant statique (données embarquées, pas d'API)
+1. **Choix** : la page admin "État des projets second cerveau" est un composant React pur (`src/tabs/ProjetsCerveauTab.jsx`) avec les données de roadmap **embarquées en dur** (VAGUES, CRONS, JALONS) plutôt qu'une API qui lirait PROJETS.md depuis le cloud.
+2. **Alternatives refusées** : (a) API `/api/projets-status` qui lirait PROJETS.md — impossible (PROJETS.md est un fichier local, les Pages Functions n'ont pas accès au FS de la machine). (b) Stocker PROJETS.md dans D1 — sur-ingénierie pour un document édité manuellement.
+3. **Conséquences attendues** : mise à jour du statut des vagues = édition du fichier JSX + redéploiement. Acceptable (rythme de changement = 1x/mois par vague). La section "Dernier rapport" est dynamique via `fetch /api/rapport-business` (bouton avec token à saisir).
+4. **Périmètre** : `src/tabs/ProjetsCerveauTab.jsx` (nouveau) · `src/App.jsx` (import + nav + render).
+5. **Statut** : ✅ livré & déployé 2026-06-14 (219 tests, audit 🟢, smoke OK).
+
 ## ADR-PRICE-001 · 2026-06-14 (soir) · Prix résa : ALERTE montant bas (jamais de rejet — validation stricte impossible)
 1. **Choix** : face au montant de paiement falsifiable côté client (`create-payment-intent` faisait confiance au `amount` du navigateur), on ajoute une **alerte non bloquante** : le webhook (`notifyHostOnce`) signale à l'hôte (⚠️ email + ntfy `urgent`) toute résa dont le montant est < 20% de `nuits × prix_base` (6% pour l'acompte 2×). Logique pure testée : `src/utils/priceGuard.js` (11 tests).
 2. **Alternatives refusées** : **rejeter** le paiement si « trop bas » — IMPOSSIBLE sans casser de vraies résas : prix nuitées **dynamiques** (saison/RM, inconnus du serveur) + **codes promo jusqu'à −99%** (`promo-codes.js:121`) → une vraie résa peut légitimement coûter quelques euros, aucun seuil de rejet au-dessus du min Stripe (0,50€) n'est sûr. Recalcul serveur exact = répliquer tout le moteur de prix dynamique = risque de faux rejets.

@@ -5,6 +5,14 @@
 
 ---
 
+## 2026-06-14 (nuit) — V4 rapport-business + page Projets Cerveau
+Session de clôture + test autonomie. Vincent au cinéma jusqu'au soir.
+- **Scheduled task vérifiée** : `rapport-business-amaryllis-18h` déjà créée en session précédente malgré le message d'erreur `/schedule`. Leçon : toujours vérifier avec `list_scheduled_tasks` avant de recréer.
+- **Page admin "🧩 Projets cerveau"** créée (`src/tabs/ProjetsCerveauTab.jsx`) : roadmap V1→V4 avec statuts, jalons countdown, crons actifs, section rapport business en live. Intégrée dans App.jsx sous le groupe "Équipe".
+- **Deploy** : 219 tests ✅, audit 🟢, smoke OK. Alias `5e2cca40.dashboard-amaryllis.pages.dev`.
+- **ADR-BRAIN-001** : composant statique (données embarquées) → pas d'API (PROJETS.md = local).
+- **Test ce soir** : scheduled task tire à 18h MTQ en autonomie complète → ntfy "Rapport business Amaryllis" attendu.
+
 ## 2026-06-14 (soir) — Nom+prix Airbnb AUTO via pont email (Zapier abandonné)
 Session pilotée à la main avec Vincent (computer-use + Chrome MCP). Objectif : récupérer auto le nom+prix des résas Airbnb (l'iCal ne les donne pas).
 - **Zapier abandonné** : Zap à 3 étapes (Outlook→Formatter→Sheets) = Formatter « Pro » payant. Le Formatter servait à stripper le HTML (> limite 50k cellule Sheets).
