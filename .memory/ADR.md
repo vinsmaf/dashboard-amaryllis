@@ -5,6 +5,13 @@
 
 ---
 
+## ADR-PRICE-001 · 2026-06-14 (soir) · Prix résa : ALERTE montant bas (jamais de rejet — validation stricte impossible)
+1. **Choix** : face au montant de paiement falsifiable côté client (`create-payment-intent` faisait confiance au `amount` du navigateur), on ajoute une **alerte non bloquante** : le webhook (`notifyHostOnce`) signale à l'hôte (⚠️ email + ntfy `urgent`) toute résa dont le montant est < 20% de `nuits × prix_base` (6% pour l'acompte 2×). Logique pure testée : `src/utils/priceGuard.js` (11 tests).
+2. **Alternatives refusées** : **rejeter** le paiement si « trop bas » — IMPOSSIBLE sans casser de vraies résas : prix nuitées **dynamiques** (saison/RM, inconnus du serveur) + **codes promo jusqu'à −99%** (`promo-codes.js:121`) → une vraie résa peut légitimement coûter quelques euros, aucun seuil de rejet au-dessus du min Stripe (0,50€) n'est sûr. Recalcul serveur exact = répliquer tout le moteur de prix dynamique = risque de faux rejets.
+3. **Conséquences attendues** : le trou (payer 1€ pour une vraie résa via requête trafiquée) reste techniquement ouvert MAIS **immédiatement visible** (alerte hôte → annulation manuelle). Zéro risque de bloquer une vraie résa. **Fix robuste réel (différé)** = jeton de prix signé HMAC (le serveur signe le prix au devis, la résa le présente) — non fait (changement plus large du tunnel).
+4. **Périmètre** : `src/utils/priceGuard.js` (+test), `functions/api/stripe-webhook.js` (`notifyHostOnce` : flag ⚠️ subject/bannière/ntfy + param `amountEur`). Fail-safe : bien inconnu (groupe) / dates absentes → pas d'alerte.
+5. **Statut** : ✅ livré & déployé 2026-06-14. Exploit non fermé (advisory) — voir BLOCKERS pour le fix robuste.
+
 ## ADR-MAIL-001 · 2026-06-14 (soir) · Nom+prix Airbnb auto via pont email serveur (pas Zapier, pas Email Routing)
 1. **Choix** : récupérer **nom + prix** des résas Airbnb (Martinique) par un pont email gratuit qu'on possède : **règle serveur Outlook.com** (expéditeur contient `airbnb` ET objet contient `confirmed` → **Transférer** vers `vinsmaf@gmail.com`) → **Apps Script `ingestAirbnbEmails_`** (trigger 15 min, lit Gmail via `getPlainBody()`, écrit l'onglet « Emails », idempotent via label `amaryllis-ingested`) → **`enrich-from-emails`** (cron Worker quotidien) : `parseAirbnbMail` + `enrichReservation_` (non destructif).
 2. **Alternatives refusées** : Zapier (3 étapes = Formatter « Pro » payant ~20€/mois) ; **Cloudflare Email Routing** (pose un MX au niveau zone → écraserait le `MX smtp.google.com` = Google Workspace de villamaryllis.com → CASSE la messagerie) ; règle **app Mail** seule (ne tourne que si Mail.app ouvert) ; action **Rediriger** au lieu de **Transférer** (Redirect garde l'expéditeur airbnb → SPF fail → spam Gmail).
