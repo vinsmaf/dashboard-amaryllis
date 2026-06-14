@@ -1,6 +1,7 @@
 import { resendFrom } from "./_email.js";
 import { sendEmail as sendEmailHelper } from "./_sendEmail.js";
 import { capiPurchase } from "./_metaCapi.js";
+import { lowAmountInfo } from "../../src/utils/priceGuard.js";
 // Cloudflare Pages Function — POST /api/stripe-webhook
 // Reçoit les événements Stripe et notifie l'hôte par email
 //
@@ -253,7 +254,7 @@ async function sendConfirmationToGuest(env, { bienNom, voyageur, email, checkin,
 // la page (ex: bug sur la page caution) → l'hôte n'était alors jamais prévenu. Ce relais
 // garantit l'alerte. Dédup atomique via `host_notified` : un seul des deux flux émet (le
 // premier qui passe `0 → 1` gagne ; D1 sérialise les UPDATE → jamais de double notification).
-async function notifyHostOnce(env, { paymentIntentId, bienId, bienNom, voyageur, email, checkin, checkout, amount, twoX = null }) {
+async function notifyHostOnce(env, { paymentIntentId, bienId, bienNom, voyageur, email, checkin, checkout, amount, twoX = null, amountEur = 0 }) {
   const db = env.revenue_manager;
   if (db) {
     try {
@@ -263,6 +264,12 @@ async function notifyHostOnce(env, { paymentIntentId, bienId, bienNom, voyageur,
       if (!claim?.meta?.changes) return; // déjà notifié par le front-end notify-booking → on s'arrête
     } catch { /* colonne absente (avant migration) → fail-open : on notifie quand même */ }
   }
+  // Alerte montant anormalement bas (JAMAIS bloquant — cf. priceGuard.js : le serveur ne peut
+  // pas valider le prix exact, mais signale une résa à montant suspect pour vérification).
+  const lowAmt = lowAmountInfo({ bienId, checkin, checkout, amountEur, payPlan: twoX ? "2x" : "full" });
+  const warnBanner = lowAmt.low
+    ? `<p style="background:#fef2f2;border:1px solid #fca5a5;color:#991b1b;padding:10px 14px;border-radius:8px;font-size:14px;margin:0 0 12px"><strong>⚠️ Montant inhabituellement bas — à vérifier.</strong><br/>${amountEur}€ encaissé pour un séjour de référence ~${lowAmt.refEur}€ (${lowAmt.nights} nuit${lowAmt.nights > 1 ? "s" : ""}). Cause probable : promo/remise volontaire — sinon vérifiez (montant potentiellement trafiqué) et annulez si besoin.</p>`
+    : "";
   const montantRows = twoX
     ? `<tr><td style="padding:4px 16px 4px 0">Acompte payé</td><td style="padding:4px 0;font-weight:700">${twoX.acompte} €</td></tr>
        <tr><td style="padding:4px 16px 4px 0">Solde (auto le ${fmtFrDate(twoX.dueDate)})</td><td style="padding:4px 0;font-weight:700">${twoX.solde} €</td></tr>
@@ -272,10 +279,10 @@ async function notifyHostOnce(env, { paymentIntentId, bienId, bienNom, voyageur,
   try {
     await sendEmail(env, {
       to: env.NOTIFICATION_EMAIL || "vinsmaf@hotmail.com,contact@villamaryllis.com",
-      subject: `🎉 NOUVELLE RÉSA — ${bienNom}`,
+      subject: `${lowAmt.low ? "⚠️ À VÉRIFIER — " : ""}🎉 NOUVELLE RÉSA — ${bienNom}`,
       booking_id: paymentIntentId, bien_id: bienId, category: "internal", template: "notify_booking_host",
       html: `<div style="font-family:Georgia,serif;color:#2b2b2b;line-height:1.7">
-        <h2 style="color:#0e3b3a">🎉 Nouvelle réservation directe</h2>
+        ${warnBanner}<h2 style="color:#0e3b3a">🎉 Nouvelle réservation directe</h2>
         <p style="font-size:16px"><strong>${bienNom}</strong></p>
         <table style="font-size:15px;border-collapse:collapse">
           <tr><td style="padding:4px 16px 4px 0">Voyageur</td><td><strong>${voyageur || "—"}</strong></td></tr>
@@ -291,8 +298,8 @@ async function notifyHostOnce(env, { paymentIntentId, bienId, bienNom, voyageur,
     try {
       await fetch(`https://ntfy.sh/${env.NTFY_TOPIC}`, {
         method: "POST",
-        headers: { Title: `🎉 NOUVELLE RESA - ${bienNom}`, Priority: "high", Tags: "tada,money_with_wings" },
-        body: ligne,
+        headers: { Title: `${lowAmt.low ? "⚠️ A VERIFIER " : ""}🎉 NOUVELLE RESA - ${bienNom}`, Priority: lowAmt.low ? "urgent" : "high", Tags: lowAmt.low ? "warning,money_with_wings" : "tada,money_with_wings" },
+        body: lowAmt.low ? `⚠️ MONTANT BAS (${amountEur}€ vs réf ~${lowAmt.refEur}€) — ${ligne}` : ligne,
       });
     } catch { /* fail-silent */ }
   }
@@ -469,7 +476,7 @@ export async function onRequestPost(context) {
     await storeDirectBooking(env, { paymentIntentId: pi.id, email: guestEmail, voyageur, bienId, bienNom, checkin, checkout, total: twoX ? twoX.total : Math.round((pi.amount || 0) / 100) });
 
     // 2b-bis. Alerte hôte fiable (relais serveur, dédup atomique avec le front-end notify-booking)
-    await notifyHostOnce(env, { paymentIntentId: pi.id, bienId, bienNom, voyageur, email: guestEmail, checkin, checkout, amount, twoX });
+    await notifyHostOnce(env, { paymentIntentId: pi.id, bienId, bienNom, voyageur, email: guestEmail, checkin, checkout, amount, twoX, amountEur: Math.round((pi.amount || 0) / 100) });
 
     // 2c. Si paiement en 2 fois, persiste le solde à prélever (off-session) en D1
     await storePaymentSchedule(env, pi).catch(() => {});
