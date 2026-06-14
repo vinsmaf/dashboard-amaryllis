@@ -223,19 +223,24 @@ export async function onRequestPost(context) {
     const lastUser = [...messages].reverse().find(m => m && m.role === "user")?.content || "";
     const SENSIBLE = /litige|plaint|avocat|tribunal|juridiqu|arnaqu|fraud|escroc|cambriol|effract|dégât|degat|inonda|insalubre|punaise|cafard|moisiss|agress|menac|harcel|\bbless|accident|urgence|scandal|inadmissible|porter plainte|remboursez|tr[èe]s d[ée][çc]u|honteux/i;
     if (mode === "public" && SENSIBLE.test(lastUser)) {
+      // ⚠️ Les headers HTTP = ByteString latin-1 : Title DOIT être ASCII (emoji/accents → throw).
+      let notified = false;
       const topic = context.env.NTFY_TOPIC;
       if (topic) {
-        const p = fetch(`https://ntfy.sh/${topic}`, {
-          method: "POST",
-          headers: { "Title": "💬 Chat — cas sensible à traiter", "Priority": "4", "Tags": "warning,speech_balloon" },
-          body: `Un visiteur a écrit :\n"${lastUser.slice(0, 250)}"\n\n→ À traiter par un humain (pas de réponse IA auto sur ce sujet).`,
-        }).catch(() => {});
-        if (typeof context.waitUntil === "function") context.waitUntil(p);
+        try {
+          const r = await fetch(`https://ntfy.sh/${topic}`, {
+            method: "POST",
+            headers: { "Title": "Chat - cas sensible a traiter", "Priority": "high", "Tags": "warning,speech_balloon" },
+            body: `Un visiteur a ecrit :\n"${lastUser.slice(0, 250)}"\n\nA traiter par un humain (pas de reponse IA auto).`,
+          });
+          notified = r.ok;
+        } catch { notified = false; }
       }
       return Response.json({
         reply: "Je transmets votre message à notre équipe, qui vous recontactera au plus vite. Vous pouvez aussi nous écrire à contact@villamaryllis.com.",
         suggestions: [],
         escalated: true,
+        notified,   // confirme que le push ntfy est parti (debug/monitoring)
       }, { headers: corsHeaders });
     }
 
