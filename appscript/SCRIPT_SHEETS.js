@@ -44,6 +44,58 @@ function readEmails_(p) {
   return json_({ ok: true, rows: rows, total: last - 1 });
 }
 
+// Enrichit UNE résa existante de « Toutes les Réservations » avec nom/prix venant d'un mail OTA
+// (Airbnb/Booking ne transmettent ni nom ni prix par iCal). NON DESTRUCTIF : n'écrit Voyageur
+// (col C) et Montant (col H) QUE s'ils sont vides/placeholder. Matching par clé-contenu
+// bienId|checkin|checkout (même dedupKey_ que le reste). Téléphone/Email (col N/O) si fournis et vides.
+function enrichReservation_(p) {
+  if (!p || !p.bienId || !p.checkin || !p.checkout) return json_({ ok: false, error: "bienId, checkin, checkout requis" });
+  var ss = SpreadsheetApp.openById("1xuhU0KraEMxF9NAWO5MKEt23JI_V8mnNnWktzHy6q2U");
+  var sheet = ss.getSheetByName("Toutes les Réservations");
+  if (!sheet) return json_({ ok: false, error: "Onglet Toutes les Réservations introuvable" });
+  var last = sheet.getLastRow();
+  if (last < 2) return json_({ ok: true, matched: false });
+
+  var LABEL_TO_BIENID = { "T2 Nogent": "nogent", "Villa Amaryllis": "amaryllis", "Villa Iguana": "iguana", "Geko": "geko", "Zandoli": "zandoli", "Mabouya": "mabouya", "T2 Schoelcher": "schoelcher" };
+  var PLACEHOLDERS = { "": 1, "—": 1, "-": 1, "Not available": 1, "Voyageur Booking": 1, "Voyageur Airbnb": 1, "Voyageur": 1 };
+  function isPlaceholder(v) { return PLACEHOLDERS[String(v || "").trim()] === 1; }
+
+  // Matching robuste au décalage -1j de fuseau de l'iCal : même bien + même nombre de NUITS
+  // (invariant au décalage) + check-in à ±1 jour. On prend le candidat le plus proche ; si
+  // deux candidats sont à égalité de distance → ambigu, on n'écrit rien (jamais de faux match).
+  function toUTC_(v) { return new Date(normDate_(v) + "T12:00:00Z"); }
+  function nights_(a, b) { return Math.round((toUTC_(b) - toUTC_(a)) / 86400000); }
+  function dayDiff_(a, b) { return Math.abs(Math.round((toUTC_(a) - toUTC_(b)) / 86400000)); }
+
+  var bienId = String(p.bienId).toLowerCase();
+  var targetNights = nights_(p.checkin, p.checkout);
+  var ncols = Math.max(sheet.getLastColumn(), 15);
+  var data = sheet.getRange(2, 1, last - 1, ncols).getValues();
+  var best = null, bestDiff = 99, tie = false, sameBien = [];
+  for (var i = 0; i < data.length; i++) {
+    var r = data[i];
+    var bId = LABEL_TO_BIENID[r[1]] || String(r[1] || "").toLowerCase();
+    if (bId !== bienId) continue;
+    sameBien.push(dedupKey_(bId, r[4], r[5]));
+    if (nights_(r[4], r[5]) !== targetNights) continue;
+    var diff = dayDiff_(r[4], p.checkin);
+    if (diff > 1) continue;
+    if (diff < bestDiff) { best = { rowNum: i + 2, r: r }; bestDiff = diff; tie = false; }
+    else if (diff === bestDiff) { tie = true; }
+  }
+  if (!best || tie) return json_({ ok: true, matched: false, ambigu: tie, targetKey: dedupKey_(bienId, p.checkin, p.checkout), candidatsMemeBien: sameBien.slice(0, 8) });
+
+  var rowNum = best.rowNum, r = best.r;
+  var before = { voyageur: String(r[2] || ""), montant: r[7] };
+  var wrote = {};
+  if (p.voyageur && isPlaceholder(r[2])) { sheet.getRange(rowNum, 3).setValue(p.voyageur); wrote.voyageur = p.voyageur; }
+  var curM = parseFloat(r[7]) || 0;
+  if (p.montant && curM <= 0) { sheet.getRange(rowNum, 8).setValue(parseFloat(p.montant)); wrote.montant = parseFloat(p.montant); }
+  if (p.phone && !String(r[13] || "").trim()) { sheet.getRange(rowNum, 14).setValue(p.phone); wrote.phone = p.phone; }
+  if (p.email && !String(r[14] || "").trim()) { sheet.getRange(rowNum, 15).setValue(p.email); wrote.email = p.email; }
+  return json_({ ok: true, matched: true, row: rowNum, dayDiff: bestDiff, before: before, wrote: wrote });
+}
+
 function doGet(e) {
   const action = e?.parameter?.action || "read";
 
@@ -79,6 +131,7 @@ function doPost(e) {
   if (action === "setConfig")             return setConfig_(body);
   if (action === "read")                  return readAll_();
   if (action === "readEmails")            return readEmails_(body);
+  if (action === "enrichReservation")     return enrichReservation_(body);
   if (action === "getConfig")             return getConfig_(body);
   if (action === "revenus2026DryRun")     return json_({ ok: true, preview: testRevenus2026_dryRun() });
   if (action === "revenus2026Setup")      return json_(setupRevenus2026());
