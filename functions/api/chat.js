@@ -2,6 +2,7 @@
 // Utilisé par le ChatWidget public (site) et l'assistant admin (dashboard)
 
 import { rateLimit } from "./_ratelimit.js";
+import { callLLM } from "./_llm.js";
 
 const SYSTEM_PROMPT = `Tu es l'assistant virtuel d'Amaryllis Locations, une collection de villas et appartements de prestige en Martinique et à Nogent-sur-Marne (Île-de-France).
 
@@ -210,40 +211,30 @@ export async function onRequestPost(context) {
       return Response.json({ error: "messages requis" }, { status: 400, headers: corsHeaders });
     }
 
-    const apiKey = context.env.GROQ_API_KEY;
-    if (!apiKey) {
-      return Response.json({ error: "GROQ_API_KEY non configurée" }, { status: 500, headers: corsHeaders });
-    }
-
     // System prompt selon le mode
     const systemContent = mode === "admin"
       ? SYSTEM_PROMPT + "\n\nMODE ADMIN : Tu peux aussi aider à analyser des données de gestion locative, rédiger des emails professionnels, et répondre à des questions de revenue management."
       : SYSTEM_PROMPT;
 
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: context.env.GROQ_MODEL || "llama-3.3-70b-versatile",
-        messages: [
-          { role: "system", content: systemContent },
-          ...messages.slice(-10), // garder les 10 derniers messages max (contrôle des tokens)
-        ],
-        max_tokens: 420, // prompt-002 : plafond resserré (~-30% tokens sortie)
-        temperature: 0.7,
-      }),
+    // Mistral en tête (champion FR), cascade Groq/CF en fallback (latence + robustesse).
+    const result = await callLLM(context.env, {
+      provider: "mistral",
+      tier: "medium",                                   // mistral-medium-3.5 — équilibre FR/latence pour un chat live
+      cascade: ["mistral", "groq", "cloudflare", "cerebras"],
+      messages: [
+        { role: "system", content: systemContent },
+        ...messages.slice(-10),                         // 10 derniers messages max (contrôle des tokens)
+      ],
+      max_tokens: 420,                                  // prompt-002 : plafond resserré (~-30% tokens sortie)
+      temperature: 0.7,
+      timeoutMs: 15000,                                 // chat live : si Mistral traîne >15s, on cascade
     });
 
-    if (!response.ok) {
-      const err = await response.text();
-      return Response.json({ error: `xAI API error ${response.status}: ${err}` }, { status: 502, headers: corsHeaders });
+    if (!result.ok) {
+      return Response.json({ error: "Assistant momentanément indisponible." }, { status: 502, headers: corsHeaders });
     }
 
-    const data = await response.json();
-    const raw = data.choices?.[0]?.message?.content || "";
+    const raw = result.text || "";
 
     // Parser la ligne NEXT: pour extraire les suggestions
     const nextMatch = raw.match(/\nNEXT:\s*(.+)$/m);
@@ -255,7 +246,7 @@ export async function onRequestPost(context) {
     return Response.json({
       reply,
       suggestions,
-      usage: data.usage || null,
+      provider: result.provider || null,   // quel provider a répondu (mistral / groq / …) — debug/monitoring
     }, { headers: corsHeaders });
 
   } catch (e) {
