@@ -240,7 +240,7 @@ export async function onRequestPost(context) {
         reply: "Je transmets votre message à notre équipe, qui vous recontactera au plus vite. Vous pouvez aussi nous écrire à contact@villamaryllis.com.",
         suggestions: [],
         escalated: true,
-        notified,   // confirme que le push ntfy est parti (debug/monitoring)
+        notified,   // monitoring : le push d'alerte interne est-il parti ?
       }, { headers: corsHeaders });
     }
 
