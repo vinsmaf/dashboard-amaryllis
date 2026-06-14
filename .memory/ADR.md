@@ -12,6 +12,20 @@
 4. **Périmètre** : `src/tabs/ProjetsCerveauTab.jsx` (nouveau) · `src/App.jsx` (import + nav + render).
 5. **Statut** : ✅ livré & déployé 2026-06-14 (219 tests, audit 🟢, smoke OK).
 
+## ADR-DEVIS-001 · 2026-06-14 · Devis client = LECTURE SEULE (éditeur de remise supprimé)
+1. **Choix** : le devis généré par `generateDevis()` dans `PublicSite.jsx` était un document HTML interactif (inputs de remise, presets, `recalc()` JS) — le client **pouvait abaisser la remise à sa guise** et imprimer un devis à prix arbitraire. On supprime entièrement l'éditeur côté client. Le devis devient statique : remise et total sont calculés côté serveur/render, figés dans le HTML généré.
+2. **Alternatives refusées** : masquer en CSS (non fiable) ; garder côté admin uniquement (trop complexe, HTML partagé).
+3. **Conséquences attendues** : client reçoit devis non modifiable. Risque résiduel montant Stripe → ADR-PRICE-001.
+4. **Périmètre** : `src/PublicSite.jsx` (suppression `.disc-editor`, `<script>recalc()</script>`, vars `RAW/MENAGE/EXTRA/PET`, total cell statique).
+5. **Statut** : acté, déployé (commit `da82843`).
+
+## ADR-BOOKING-001 · 2026-06-14 · Booking.com nom+prix : scraper local Playwright (pas email, pas Beds24)
+1. **Choix** : Booking ne transmet ni nom ni prix par iCal/email (structurel). Beds24 exclu hors Nogent (règle absolue). Scraper local Playwright (`scripts/booking-sync.mjs`) ouvre l'extranet **dans la session de l'hôte** (profil persistant `~/.amaryllis-booking-profile`) → lit la fiche détail → `parseBookingReservation.js` → `enrichReservation_` GAS (`force` flag).
+2. **Alternatives refusées** : (a) **Email Booking** : les emails host Booking ne contiennent PAS le montant → stratégie email impossible ; (b) **Booking Connectivity API** : réservé partenaires (contrat + intégration lourde) ; (c) **Beds24 Martinique** : décision irréversible.
+3. **Conséquences attendues** : nom+prix auto pour chaque résa Booking après `node scripts/booking-sync.mjs <res_id>:<hotel_id>` — ntfy si session expirée. Déclenchement auto différé. **Montant = NET = total − commission** (convention Vincent 2026-06-14).
+4. **Périmètre** : `src/utils/parseBookingReservation.js` (19 tests) · `scripts/booking-sync.mjs` · `docs/booking-sync.md` · `appscript/SCRIPT_SHEETS.js` (flag `force` @GAS41).
+5. **Statut** : acté, testé e2e NINA GRUBO/Zandoli (696,48 €). Reste : `--login` initial par Vincent.
+
 ## ADR-PRICE-001 · 2026-06-14 (soir) · Prix résa : ALERTE montant bas (jamais de rejet — validation stricte impossible)
 1. **Choix** : face au montant de paiement falsifiable côté client (`create-payment-intent` faisait confiance au `amount` du navigateur), on ajoute une **alerte non bloquante** : le webhook (`notifyHostOnce`) signale à l'hôte (⚠️ email + ntfy `urgent`) toute résa dont le montant est < 20% de `nuits × prix_base` (6% pour l'acompte 2×). Logique pure testée : `src/utils/priceGuard.js` (11 tests).
 2. **Alternatives refusées** : **rejeter** le paiement si « trop bas » — IMPOSSIBLE sans casser de vraies résas : prix nuitées **dynamiques** (saison/RM, inconnus du serveur) + **codes promo jusqu'à −99%** (`promo-codes.js:121`) → une vraie résa peut légitimement coûter quelques euros, aucun seuil de rejet au-dessus du min Stripe (0,50€) n'est sûr. Recalcul serveur exact = répliquer tout le moteur de prix dynamique = risque de faux rejets.

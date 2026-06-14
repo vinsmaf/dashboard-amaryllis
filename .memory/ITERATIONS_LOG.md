@@ -5,6 +5,14 @@
 
 ---
 
+## 2026-06-14 (soir long) — Sécurité devis + priceGuard + Booking scraper + Chat Mistral
+Session longue pilotée par Vincent : 4 livrables.
+- **Devis client R/O** (`da82843`) : éditeur de remise supprimé de `generateDevis()` (client voyait et pouvait modifier la remise, imprimer un prix arbitraire). ADR-DEVIS-001.
+- **priceGuard alerte** (`327c2d5`) : `src/utils/priceGuard.js` (11 tests) + `stripe-webhook.js` — ⚠️ email + ntfy `urgent` si montant Stripe < 20% de nuits×prix_base (6% pour acompte 2×). Alerte non bloquante (prix dynamiques + promos légitimes). ADR-PRICE-001.
+- **Booking.com scraper** (`a813185`) : `src/utils/parseBookingReservation.js` (19 tests, données réelles NINA GRUBO + Ferry Vergeer) + `scripts/booking-sync.mjs` (Playwright session persistante, ntfy si expirée) + `docs/booking-sync.md` + GAS `enrichReservation_` flag `force` déployé @41. Testé e2e : NINA GRUBO/Zandoli 696,48 € ✅. ADR-BOOKING-001. Convention montant = NET = total−commission (Vincent).
+- **Chat Mistral + escalade** (`1614d68`, `4695081`, `9f992f3`, `d5a79b4`) : ChatWidget bascule sur Mistral medium (FR-natif, cascade Groq/CF) · escalade ntfy + flag `notified` · kill-switch `CHAT_DISABLED`.
+- **219 tests ✅**. Rapport-business V4 + page projets (session précédente, commits `d077f37`, `a95a014`).
+
 ## 2026-06-14 (nuit) — V4 rapport-business + page Projets Cerveau
 Session de clôture + test autonomie. Vincent au cinéma jusqu'au soir.
 - **Scheduled task vérifiée** : `rapport-business-amaryllis-18h` déjà créée en session précédente malgré le message d'erreur `/schedule`. Leçon : toujours vérifier avec `list_scheduled_tasks` avant de recréer.

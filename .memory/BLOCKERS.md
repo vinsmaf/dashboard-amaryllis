@@ -3,17 +3,21 @@
 > Ce qui reviendra nous embêter si on ne le documente pas. Format : statut · sujet · ce qui débloque.
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 
-## En cours → ✅ terminé le 2026-06-14 (nuit — session cinéma)
-- **V4 rapport-business** : endpoint LIVE + scheduled task `rapport-business-amaryllis-18h` fire à 18h MTQ automatiquement. Test autonomie hors-session.
-- **Page projets cerveau** : `src/tabs/ProjetsCerveauTab.jsx` déployée dans admin sous "🧩 Projets cerveau".
-- **Prochaine action** : vérifier la notif ntfy reçue ce soir + lire le rapport généré.
+## En cours → ✅ terminé le 2026-06-14 (session soir — tunnels OTA + sécurité devis)
+- **Devis client R/O** : éditeur de remise supprimé de `generateDevis()` (ADR-DEVIS-001, commit `da82843`).
+- **priceGuard alert** : `src/utils/priceGuard.js` (11 tests) + `stripe-webhook.js` alerte ⚠️ email+ntfy si montant < 20% réf (ADR-PRICE-001, commit `327c2d5`).
+- **Booking.com scraper** : `parseBookingReservation.js` (19 tests) + `scripts/booking-sync.mjs` + GAS `force` flag @41 (ADR-BOOKING-001, commit `a813185`). Testé e2e NINA GRUBO.
+- **Rapport-business V4** + **Page projets cerveau** déployés (commits `d077f37`, `a95a014`).
+- **Chat escalade ntfy** : ChatWidget Mistral + escalade cas sensibles + kill-switch (commits `1614d68`, `4695081`).
 
-## ⬜ Booking.com nom+prix auto (prochaine cible après Airbnb)
-- **Contexte** : Airbnb = FAIT (ADR-MAIL-001). Booking.com : même mécanique — leurs emails de confirmation contiennent nom + montant, arrivent sur Hotmail. Écrire `parseBookingMail.js` + élargir règle Outlook « booking.com » → même Gmail → `enrichReservation_`.
+## ✅ 2026-06-14 — Booking.com nom+prix auto : LIVRÉ (scraper Playwright local)
+- **Airbnb** ✅ : pont email `Outlook→Gmail→Apps Script→enrich` (ADR-MAIL-001). Trigger 15min actif.
+- **Booking** ✅ : scraper local `scripts/booking-sync.mjs` (ADR-BOOKING-001). Test e2e NINA GRUBO OK (696,48 €).
+- **Reste** : Vincent doit faire `node scripts/booking-sync.mjs --login` **une fois** (ouvre l'extranet, entre ses creds, appuie sur Entrée). Après ça le profil `~/.amaryllis-booking-profile` persiste.
+- **Déclenchement auto** (différé) : Worker → ntfy iCal ligne incomplète → launchd local. Voir `docs/booking-sync.md §"Reste à brancher"`.
 
-- **✅ Airbnb (livré)** : pont email **règle serveur Outlook.com → Gmail → Apps Script `ingestAirbnbEmails_` (15 min) → onglet « Emails » → enrich** (cf. ADR-MAIL-001). Live, trigger actif vérifié. Plus de saisie manuelle nom+prix Airbnb.
-- **⬜ Booking.com (prochaine cible)** : appliquer la **même mécanique** — les emails de confirmation Booking arrivent aussi sur Hotmail. Écrire un `parseBookingMail.js` (les mails Booking ont le nom du client + le montant), élargir la règle serveur Outlook (ou en ajouter une « booking.com » → même Gmail), et router vers `enrichReservation_`. Alternative lourde écartée pour l'instant : Booking Connectivity API (réservé partenaires).
-- **Contexte critique** : l'iCal Booking/Airbnb ne donne NI nom NI prix (structurel). Pour Airbnb c'est désormais le **mail** qui les apporte (pont ci-dessus). Pour Booking, idem à construire. Préservation des saisies manuelles déjà en place (ADR-ICAL-001).
+## ⚠️ Résa Booking NINA GRUBO (Zandoli) — Vincent a re-saisi à la main — 2026-06-14
+- revenus2026 mémo : le Forget n'avait vidé que l'id, la content-key `zandoli|2026-08-10|2026-08-15` bloquait encore. Vincent a saisi manuellement la ligne revenus2026. Le Sheet « Toutes les Réservations » = complet (enrichReservation_ OK). ✅ Résolu.
 
 ## 🟡 2026-06-14 (soir) — Prix de réservation falsifiable côté client (mitigé par alerte, pas fermé)
 - **Trou** : `create-payment-intent.js` (+ `create-deposit-intent.js`) sont **publics, sans auth, et font confiance au `amount` envoyé par le navigateur** — le serveur ne recalcule jamais le prix (seule borne : 0,50€–5000€). Quelqu'un de technique peut payer 1€ pour une vraie résa via requête trafiquée. Confirmé par audit adversarial (workflow `audit-prix-paiement`).

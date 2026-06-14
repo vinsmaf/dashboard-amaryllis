@@ -1,6 +1,6 @@
 # CONTEXT — État courant (locatif-dashboard)
 
-> Snapshot condensé de l'état réel. **À mettre à jour à CHAQUE session.** Dernière MAJ : **2026-06-14 (nuit)** — **V4 rapport-business LIVE** : endpoint `/api/rapport-business` (D1 → Mistral FR → ntfy) · scheduled task one-shot 18h MTQ (test autonomie hors-session) · **page admin "🧩 Projets cerveau"** déployée (état roadmap V1→V4, crons, jalons). **Cap demain** : Booking.com nom+prix auto (même pont que Airbnb).
+> Snapshot condensé de l'état réel. **À mettre à jour à CHAQUE session.** Dernière MAJ : **2026-06-14 (soir long)** — **Sécurité devis + tunnel résa** : devis client R/O (ADR-DEVIS-001) · alerte montant bas priceGuard (ADR-PRICE-001) · **Booking.com nom+prix auto** : scraper Playwright local `scripts/booking-sync.mjs` + `parseBookingReservation.js` (19 tests) + GAS `force` flag (ADR-BOOKING-001) — testé e2e NINA GRUBO ✅ · **Chat** : bascule Mistral + escalade cas sensibles + kill-switch. **Cap suivant** : `--login` Booking par Vincent + déclencheur auto (Worker→ntfy→launchd).
 
 ## Le projet
 Conciergerie + site de réservation directe pour **7 logements** (Martinique + Nogent-sur-Marne).
