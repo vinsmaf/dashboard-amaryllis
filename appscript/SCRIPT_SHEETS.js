@@ -67,6 +67,8 @@ function doPost(e) {
   if (action === "revenus2026Forget")     return json_(revenus2026Forget_(body.ids || ""));
   if (action === "revenus2026FromMonth")  return json_(revenus2026FromMonth_(body.month || 7, !!body.apply, !!body.ignoreMemo));
   if (action === "revenus2026Undo")       return json_(revenus2026Undo_(body.ids || ""));
+  if (action === "revenus2026Inspect")    return json_(revenusInspect2026_());            // eslint-disable-line no-undef
+  if (action === "revenus2026Rebuild")    return json_(rebuildRevenus2026_(!!body.apply, body.fromMonth)); // eslint-disable-line no-undef
   if (action === "revenus2027DryRun")     return json_({ ok: true, preview: testRevenus2027_dryRun() });
   if (action === "revenus2027Setup")      return json_(setupRevenus2027());
   if (action === "revenus2027Sync")       return json_(syncRevenus2027());
@@ -75,7 +77,8 @@ function doPost(e) {
   if (action === "revenus2027Forget")     return json_(revenus2027Forget_(body.ids || ""));
   if (action === "revenus2027FromMonth")  return json_(revenus2027FromMonth_(body.month || 1, !!body.apply, !!body.ignoreMemo));
   if (action === "revenus2027Undo")       return json_(revenus2027Undo_(body.ids || ""));
-  if (action === "revenus2027Reset")      return json_(clearAndResetRevenus2027_()); // eslint-disable-line no-undef
+  if (action === "revenus2027Inspect")    return json_(revenusInspect2027_());            // eslint-disable-line no-undef
+  if (action === "revenus2027Rebuild")    return json_(rebuildRevenus2027_(!!body.apply, body.fromMonth)); // eslint-disable-line no-undef
 
   return json_({ error: "action POST inconnue: " + action });
 }

@@ -8,7 +8,7 @@ export const DESTINATIONS = [
     accroche: "Sept kilomètres de sable blanc et un lagon turquoise qui s'étend jusqu'à l'horizon.",
     lat: 14.378, lng: -60.876, tags: ["Plages", "Famille", "Couple"],
     must: "Les Salines au lever du jour — arriver avant 9h pour avoir la plage à soi.",
-    href: "/guide-sainte-anne", photo: "https://villamaryllis.com/photos/amaryllis/01.webp", isMust: true,
+    href: "/guide-sainte-anne", photo: "https://commons.wikimedia.org/wiki/Special:FilePath/Grande_Anse_des_Salines_(Sainte-Anne,_Martinique)_-_01.jpg", isMust: true,
     distFrom: { amaryllis:15, zandoli:15, geko:14, mabouya:14, iguana:16, schoelcher:45 },
   },
   {

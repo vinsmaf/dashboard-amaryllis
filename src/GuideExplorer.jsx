@@ -6,6 +6,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { DESTINATIONS } from "./data/destinations.js";
+import { ALL_BIENS, isMartinique as isMtq } from "./data/biens.js";
 
 /* ─── WeatherPill (Sainte-Luce) ─────────────────────────────── */
 const WMO_ICON = { 0:"☀️",1:"🌤️",2:"⛅",3:"☁️",45:"🌫️",48:"🌫️",51:"🌦️",53:"🌦️",55:"🌧️",61:"🌧️",63:"🌧️",65:"🌧️",80:"🌦️",81:"🌧️",82:"⛈️",95:"⛈️",96:"⛈️",99:"⛈️" };
@@ -41,14 +42,15 @@ const SAND  = "#e0d4bc";
 const MUTED = "#7a6b5a";
 
 /* ─── Villas sur la carte (Martinique uniquement) ───────────── */
-const VILLAS = [
-  { id:"amaryllis",  nom:"Villa Amaryllis", coords:[14.4732,-60.9196], couleur:"#10b981", prix:280, photo:"/photos/amaryllis/01.webp"  },
-  { id:"zandoli",    nom:"Zandoli",         coords:[14.4725,-60.9201], couleur:"#3b82f6", prix:110, photo:"/photos/zandoli/01.webp"    },
-  { id:"geko",       nom:"Géko",            coords:[14.4718,-60.9188], couleur:"#f59e0b", prix:110, photo:"/photos/geko/01.webp"       },
-  { id:"mabouya",    nom:"Mabouya",         coords:[14.4729,-60.9194], couleur:"#ec4899", prix:70, photo:"/photos/mabouya/01.webp"    },
-  { id:"iguana",     nom:"Villa Iguana",    coords:[14.4741,-60.9209], couleur:"#6366f1", prix:null, photo:"/photos/iguana/01.webp"    },
-  { id:"schoelcher", nom:"Bellevue",        coords:[14.6121,-61.0887], couleur:"#8b5cf6", prix:90,  photo:"/photos/schoelcher/01.webp" },
-];
+const VILLA_COLORS = { amaryllis:"#10b981", zandoli:"#3b82f6", geko:"#f59e0b", mabouya:"#ec4899", iguana:"#6366f1", schoelcher:"#8b5cf6" };
+const VILLAS = ALL_BIENS.filter(b => isMtq(b)).map(b => ({
+  id: b.id,
+  nom: b.nom,
+  coords: [b.coords.lat, b.coords.lng],
+  couleur: VILLA_COLORS[b.id] || "#10b981",
+  prix: b.bookable !== false ? b.prix : null,
+  photo: b.photos?.[0] || `/photos/${b.id}/01.webp`,
+}));
 
 /* Catégories d'activité (filtres) */
 const ZONES = ["Sud", "Centre", "Nord"];

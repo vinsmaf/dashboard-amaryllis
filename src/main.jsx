@@ -357,7 +357,24 @@ function CautionPage({ status }) {
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <Sentry.ErrorBoundary fallback={<p>Une erreur est survenue.</p>} showDialog>
+    <Sentry.ErrorBoundary
+      onError={(error) => {
+        const STALE = /Failed to fetch dynamically imported module|error loading dynamically imported module|ChunkLoadError/i;
+        if (!STALE.test(String(error?.message || ""))) return;
+        let last = 0;
+        try { last = Number(sessionStorage.getItem("amaryllis_chunk_reload_ts")) || 0; } catch { /* noop */ }
+        if (Date.now() - last < 30000) return;
+        try { sessionStorage.setItem("amaryllis_chunk_reload_ts", String(Date.now())); } catch { /* noop */ }
+        window.location.reload();
+      }}
+      fallback={({ error }) => {
+        const STALE = /Failed to fetch dynamically imported module|error loading dynamically imported module|ChunkLoadError/i;
+        if (STALE.test(String(error?.message || ""))) {
+          return <div style={{ minHeight: "100vh", background: "#0e3b3a" }} />;
+        }
+        return <p>Une erreur est survenue.</p>;
+      }}
+      showDialog>
       <LangProvider>
         <Suspense fallback={<div style={{ minHeight: "100vh", background: "#0e3b3a" }} />}>
           {cautionParam ? <CautionPage status={cautionParam} /> : <Component />}

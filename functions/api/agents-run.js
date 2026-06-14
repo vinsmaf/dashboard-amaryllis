@@ -297,10 +297,11 @@ const AGENT_PREFERRED_PROVIDER = {
   "consultant-ebusiness":       "groq",
   "responsable-service-client": "groq",
   "webdesigner":                "groq",
-  // Cloudflare AI (5 agents) — bucket séparé, latence faible
-  "community-manager":          "cloudflare",
-  "crm-manager":                "cloudflare",
-  "seo-content-writer":         "cloudflare",
+  // Mistral — contenu FR natif (social posts, emails voyageurs, SEO)
+  "community-manager":          "mistral",
+  "crm-manager":                "mistral",
+  "seo-content-writer":         "mistral",
+  // Cloudflare AI (2 agents) — bucket séparé, latence faible
   "developpeur-multimedia":     "cloudflare",
   "photographe-da":             "cloudflare",
   // Cerebras (2 agents) — ultra-rapide pour analyses simples

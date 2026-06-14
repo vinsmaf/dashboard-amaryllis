@@ -51,7 +51,7 @@ const BIEN_FAQ = {
     { q: "Comment réserver la Villa Amaryllis sans passer par Airbnb ?", a: "Directement sur villamaryllis.com/amaryllis — paiement sécurisé Stripe, contact WhatsApp direct avec l'hôte, économies jusqu'à 14% vs Airbnb." },
   ],
   zandoli: [
-    { q: "Quel est le prix de Zandoli en Martinique ?", a: "Zandoli se loue à partir de 220€/nuit en direct sur villamaryllis.com — sans frais Airbnb." },
+    { q: "Quel est le prix de Zandoli en Martinique ?", a: "Zandoli se loue à partir de 110€/nuit en direct sur villamaryllis.com — sans frais Airbnb." },
     { q: "Zandoli a-t-elle une piscine privée ?", a: "Oui — Zandoli dispose de sa propre piscine privative avec cascade, située dans la résidence Amaryllis à Sainte-Luce." },
     { q: "Combien de personnes peut accueillir Zandoli ?", a: "Zandoli accueille jusqu'à 5 personnes dans 2 chambres + mezzanine, avec jardin tropical et vue mer." },
     { q: "Où se trouve Zandoli ?", a: "Sur les hauteurs de Sainte-Luce, dans la résidence Amaryllis, à 5-7 minutes des plages du sud Martinique." },
@@ -69,7 +69,7 @@ const BIEN_FAQ = {
     { q: "Géko a-t-elle une piscine ?", a: "Oui — Géko dispose de sa propre piscine privative avec cascade, dans la résidence Amaryllis à Sainte-Luce sur les hauteurs." },
     { q: "Combien de personnes peut accueillir Géko ?", a: "Géko accueille jusqu'à 4 personnes — idéal pour les couples ou petites familles. Climatisation, cuisine extérieure, barbecue." },
     { q: "Où se trouve Géko ?", a: "Sur les hauteurs de Sainte-Luce, dans la résidence Amaryllis, à 7 minutes des plages du sud." },
-    { q: "Quelle est la différence entre Géko et Zandoli ?", a: "Zandoli a 2 chambres + mezzanine pour 5 personnes (220€/nuit). Géko est un cocon 4 personnes (150€/nuit). Les deux ont leur propre piscine privative avec cascade." },
+    { q: "Quelle est la différence entre Géko et Zandoli ?", a: "Zandoli a 2 chambres + mezzanine pour 5 personnes (110€/nuit). Géko est un cocon 4 personnes (110€/nuit). Les deux ont leur propre piscine privative avec cascade." },
   ],
   mabouya: [
     { q: "Quel est le prix du studio Mabouya en Martinique ?", a: "Studio Mabouya se loue à partir de 110€/nuit en réservation directe sur villamaryllis.com — l'option la plus accessible du portfolio." },
@@ -85,10 +85,10 @@ const BIEN_FAQ = {
     { q: "Où se trouve l'appartement Bellevue ?", a: "À Schœlcher, sur les hauteurs avec vue baie de Fort-de-France. À 5 minutes des plages." },
   ],
   nogent: [
-    { q: "Quel est le prix de l'appartement de Nogent-sur-Marne ?", a: "L'appartement Nogent se loue à partir de 85€/nuit en réservation directe — idéal pour les séjours professionnels et touristiques en Île-de-France." },
-    { q: "L'appartement de Nogent est-il bien situé ?", a: "Oui — à 15 minutes du centre de Paris via le RER A. Quartier calme, à proximité de la Marne." },
-    { q: "Combien de personnes peut accueillir l'appartement Nogent ?", a: "L'appartement Nogent accueille 2 à 4 personnes. WiFi, cuisine équipée, tout le nécessaire pour un séjour professionnel ou touristique." },
-    { q: "Où se trouve l'appartement Nogent ?", a: "À Nogent-sur-Marne, Val-de-Marne (94). Accès Paris RER A en 15 min, proche Vincennes et Marne-la-Vallée." },
+    { q: "Quel est le prix de l'appartement de Nogent-sur-Marne ?", a: "L'appartement Nogent se loue à partir de 90€/nuit en réservation directe — idéal pour les séjours professionnels et touristiques en Île-de-France." },
+    { q: "L'appartement de Nogent est-il bien situé ?", a: "Oui — à 20 minutes du centre de Paris via le RER A. Quartier calme, à proximité de la Marne." },
+    { q: "Combien de personnes peut accueillir l'appartement Nogent ?", a: "L'appartement Nogent accueille 2 personnes. WiFi, cuisine équipée, tout le nécessaire pour un séjour professionnel ou touristique." },
+    { q: "Où se trouve l'appartement Nogent ?", a: "À Nogent-sur-Marne, Val-de-Marne (94). Accès Paris RER A en 20 min, proche Vincennes et bord de Marne." },
   ],
 };
 
@@ -297,7 +297,7 @@ function heroPreloadTag(slug) {
     `imagesizes="(max-width: 768px) 100vw, (max-width: 1200px) 72vw, 900px" />`;
 }
 
-function injectMeta(html, { title, desc, url, image, slug }, ldJson) {
+function injectMeta(html, { title, desc, url, image, imageAlt, slug }, ldJson) {
   // Remplace le preload hero statique (amaryllis en dur dans index.html) par le bon slug.
   // Si aucun preload existant, on l'insère avant </head>.
   const preload = slug ? heroPreloadTag(slug) : "";
@@ -311,6 +311,7 @@ function injectMeta(html, { title, desc, url, image, slug }, ldJson) {
     .replace(/<meta id="og-description"[^>]*>/, `<meta id="og-description" property="og:description" content="${desc}" />`)
     .replace(/<meta id="og-url"[^>]*>/, `<meta id="og-url" property="og:url" content="${url}" />`)
     .replace(/<meta id="og-image"[^>]*>/, `<meta id="og-image" property="og:image" content="${image}" />`)
+    .replace(/<meta id="og-image-alt"[^>]*>/, imageAlt ? `<meta id="og-image-alt" property="og:image:alt" content="${imageAlt}" />` : "$&")
     .replace(/<meta id="tw-title"[^>]*>/, `<meta id="tw-title" name="twitter:title" content="${title}" />`)
     .replace(/<meta id="tw-description"[^>]*>/, `<meta id="tw-description" name="twitter:description" content="${desc}" />`)
     .replace(/<meta id="tw-image"[^>]*>/, `<meta id="tw-image" name="twitter:image" content="${image}" />`)
@@ -397,7 +398,8 @@ export async function onRequest(context) {
       "provider": { "@id": `${BASE}/#organization` },
     });
 
-    const meta = { ...buildMeta(title, desc, url, image), slug };
+    const imageAlt = `${bien.nom} — ${isMartinique(bien) ? bien.lieu + ", Martinique" : bien.lieu}`;
+    const meta = { ...buildMeta(title, desc, url, image), slug, imageAlt };
 
     // Fetch the base index.html via the next handler (static serving)
     const resp = await context.next();

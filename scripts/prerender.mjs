@@ -92,7 +92,7 @@ function rentalNode(id) {
 }
 
 function buildRentalsGraph() {
-  const graph = { "@context": "https://schema.org", "@graph": Object.keys(CANON).map(rentalNode) };
+  const graph = { "@context": "https://schema.org", "@graph": Object.keys(CANON).filter(id => CANON[id].bookable !== false).map(rentalNode) };
   return `<script type="application/ld+json">\n${JSON.stringify(graph)}\n    </script>`;
 }
 const RENTALS_GRAPH = buildRentalsGraph();
@@ -231,7 +231,7 @@ const FAQS_PAR_BIEN = {
     { q: "Où se trouve la Villa Amaryllis ?", a: "Sur les hauteurs de Sainte-Luce, sud de la Martinique. À 20 minutes des plages des Salines et de Sainte-Anne, à 35 minutes de l'aéroport, dans la résidence Amaryllis avec vue Caraïbes 180°." },
   ],
   zandoli: [
-    { q: "Quel est le prix de Zandoli en Martinique ?", a: "Zandoli se loue à partir de 220€/nuit en direct sur villamaryllis.com — sans frais Airbnb." },
+    { q: "Quel est le prix de Zandoli en Martinique ?", a: "Zandoli se loue à partir de 110€/nuit en direct sur villamaryllis.com — sans frais Airbnb." },
     { q: "Zandoli a-t-elle une piscine privée ?", a: "Oui — Zandoli dispose de sa propre piscine privative avec cascade, située dans la résidence Amaryllis à Sainte-Luce." },
     { q: "Combien de personnes peut accueillir Zandoli ?", a: "Zandoli accueille jusqu'à 5 personnes dans 2 chambres + mezzanine, avec jardin tropical et vue mer." },
     { q: "Où se trouve Zandoli ?", a: "Sur les hauteurs de Sainte-Luce, dans la résidence Amaryllis, à 5-7 minutes des plages du sud Martinique." },
@@ -249,7 +249,7 @@ const FAQS_PAR_BIEN = {
     { q: "Géko a-t-elle une piscine ?", a: "Oui — Géko dispose de sa propre piscine privative avec cascade, dans la résidence Amaryllis à Sainte-Luce sur les hauteurs." },
     { q: "Combien de personnes peut accueillir Géko ?", a: "Géko accueille jusqu'à 4 personnes — idéal pour les couples ou petites familles. Climatisation, cuisine extérieure, barbecue." },
     { q: "Où se trouve Géko ?", a: "Sur les hauteurs de Sainte-Luce, dans la résidence Amaryllis, à 7 minutes des plages du sud." },
-    { q: "Quelle est la différence entre Géko et Zandoli ?", a: "Zandoli a 2 chambres + mezzanine pour 5 personnes (220€/nuit). Géko est un cocon 4 personnes (150€/nuit). Les deux ont leur propre piscine privative avec cascade." },
+    { q: "Quelle est la différence entre Géko et Zandoli ?", a: "Zandoli a 2 chambres + mezzanine pour 5 personnes (110€/nuit). Géko est un cocon 4 personnes (110€/nuit). Les deux ont leur propre piscine privative avec cascade." },
   ],
   mabouya: [
     { q: "Quel est le prix du studio Mabouya en Martinique ?", a: "Studio Mabouya se loue à partir de 110€/nuit en réservation directe sur villamaryllis.com — l'option la plus accessible du portfolio." },
@@ -266,7 +266,7 @@ const FAQS_PAR_BIEN = {
     { q: "Bellevue a-t-il une piscine ?", a: "Non, Bellevue n'a pas de piscine. C'est un appartement vue baie idéal pour les voyageurs cherchant un séjour calme et économique. Les plages de Schœlcher sont à 5 minutes." },
   ],
   nogent: [
-    { q: "Quel est le prix de l'appartement Nogent-sur-Marne ?", a: "L'appartement de Nogent-sur-Marne se loue à partir de 85€/nuit — sans commission Airbnb." },
+    { q: "Quel est le prix de l'appartement Nogent-sur-Marne ?", a: "L'appartement de Nogent-sur-Marne se loue à partir de 90€/nuit — sans commission Airbnb." },
     { q: "Combien de temps pour aller à Paris depuis Nogent ?", a: "20 minutes en RER A jusqu'à Châtelet-Les Halles. Idéal pour séjour business ou touristique à Paris sans payer les tarifs parisiens." },
     { q: "L'appartement Nogent a-t-il un jardin ?", a: "Oui — l'appartement dispose d'un jardin et d'une terrasse privatifs, en bord de Marne. Calme et nature à 20 min de Paris." },
     { q: "Combien de personnes peut accueillir Nogent ?", a: "L'appartement Nogent accueille 2 personnes — idéal pour un séjour business ou un couple visitant Paris." },
@@ -344,6 +344,7 @@ const ROUTES = [
     image: `${BASE}/photos/nogent/01.webp`,
     jsonld: bienJsonLd("nogent"),
     faqld: buildFAQLd(FAQS_PAR_BIEN.nogent),
+    enHref: `${BASE}/nogent`,
   },
 
   /* ── Pages thématiques ── */
@@ -672,7 +673,7 @@ function buildSeoBody({ h1, title, desc, routePath, intro = null, sections = [] 
     `</div></div>`;
 }
 
-function patchHtml(tmpl, { path: routePath, title, desc, image, h1 = null, intro = null, sections = [], noindex = false, jsonld = null, faqld = null, lang = "fr", lcpPreload = false }) {
+function patchHtml(tmpl, { path: routePath, title, desc, image, h1 = null, intro = null, sections = [], noindex = false, jsonld = null, faqld = null, lang = "fr", lcpPreload = false, enHref = null }) {
   const url = `${BASE}${routePath}`;
   let html = tmpl;
 
@@ -696,7 +697,7 @@ function patchHtml(tmpl, { path: routePath, title, desc, image, h1 = null, intro
 
   /* hreflang — remplace les 3 balises génériques de index.html par des URLs spécifiques */
   const frUrl   = lang === "en" ? `${BASE}/` : url;
-  const enUrl   = lang === "en" ? url : `${BASE}/villa-rental-martinique`;
+  const enUrl   = enHref || (lang === "en" ? url : `${BASE}/villa-rental-martinique`);
   html = html.replace(
     /(<link rel="alternate" hreflang="fr" href=")[^"]*/,
     `$1${frUrl}`

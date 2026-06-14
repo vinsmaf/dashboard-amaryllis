@@ -2181,6 +2181,15 @@ export default {
       // 9h UTC chaque jour — audit + rappels + alertes + gap pricing + agents autonomes
       const { allEvents } = await runSync(env);
       ctx.waitUntil((async () => {
+        // ── Refresh modèles LLM (AI-Ops) — en premier pour que les agents utilisent les meilleurs modèles ──
+        try {
+          const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+          const aiOpsRes = await fetch(`${siteUrl}/api/ai-ops?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`);
+          const aiOpsData = await aiOpsRes.json().catch(() => ({}));
+          console.log(`[ai-ops] ✓ ${aiOpsData.okCount ?? "?"}/${aiOpsData.total ?? "?"} providers OK · âge=${aiOpsData.age_h ?? "?"}h`);
+        } catch (e) {
+          console.error("[ai-ops] Cron error:", e.message);
+        }
         await runMonitor(env);
         await runReminders(env, allEvents, allEvents);
         await runOccupancyAlerts(env, allEvents);

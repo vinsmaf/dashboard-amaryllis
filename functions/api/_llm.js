@@ -75,7 +75,7 @@ const PROVIDERS = {
   },
 };
 
-// Modèles par provider — actifs vérifiés mai 2026
+// Modèles par provider — actifs vérifiés juin 2026
 export const MODELS = {
   groq: {
     fast:    "llama-3.1-8b-instant",
@@ -88,9 +88,9 @@ export const MODELS = {
     smart:   "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
   },
   mistral: {
-    fast:    "mistral-small-latest",
-    medium:  "mistral-medium-latest",
-    smart:   "mistral-large-latest",
+    fast:   "mistral-small-2506",   // juin 2026 — plus récent que mistral-small-latest
+    medium: "mistral-medium-3.5",   // mai 2026 — meilleur ratio qualité/prix FR
+    smart:  "mistral-large-latest", // contenu FR premium
   },
   cerebras: {
     // ⚠️ Compte Cerebras : seuls gpt-oss-120b et zai-glm-4.7 sont accessibles

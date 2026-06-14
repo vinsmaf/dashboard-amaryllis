@@ -1,6 +1,15 @@
 // Cloudflare Pages Function — POST /api/beds24-webhook
 // Reçoit les notifications Beds24 en temps réel → transmet à Apps Script
 //
+// ⚠️ MIGRÉ V1 → V2 (2026-06-13) — bug RESA-001 : le webhook utilisait encore
+//   l'API Beds24 **V1** (api.beds24.com/json + BEDS24_API_KEY/BEDS24_PROP_KEY)
+//   alors que tout le reste de l'app est passé en **V2** (token auto-refresh).
+//   Les creds V1 n'étant plus valides, la résa fraîche n'était jamais récupérée
+//   → bookings vide → rien écrit dans « Toutes les Réservations » ni « Revenus 2026 ».
+//   Nogent ne passe PAS par le Worker iCal (getBookingUrls l'exclut) : le webhook
+//   et le bouton 📊 manuel sont les SEULS chemins d'écriture sheet pour Nogent.
+//   Désormais le webhook lit Beds24 V2 (getActiveBeds24Token) comme /api/beds24-bookings.
+//
 // Sécurité (arch-053) — vérification d'authenticité du webhook :
 //   Configurer le secret Cloudflare `BEDS24_WEBHOOK_SECRET`, puis dans Beds24
 //   ajouter le secret à l'URL du webhook : .../api/beds24-webhook?secret=XXXX
@@ -8,8 +17,10 @@
 //   Tant que le secret n'est pas configuré → on log un warning mais on accepte
 //   (rétro-compatibilité, migration en douceur).
 
-const BEDS24_URL = "https://api.beds24.com/json/getBookings";
-const PROP_ID    = "158192";
+import { getActiveBeds24Token } from "./beds24-refresh.js";
+
+const BEDS24_V2_URL = "https://beds24.com/api/v2/bookings";
+const PROP_ID       = "158192";
 
 // Comparaison à temps constant (anti timing-attack)
 function safeEqual(a, b) {
@@ -55,12 +66,12 @@ export async function onRequestPost(context) {
   const { request, env } = context;
   const url = new URL(request.url);
 
-  const apiKey       = env.BEDS24_API_KEY;
-  const propKey      = env.BEDS24_PROP_KEY;
   const scriptUrl    = env.APPS_SCRIPT_URL;
   const webhookSecret = env.BEDS24_WEBHOOK_SECRET; // optionnel (recommandé)
 
-  if (!apiKey || !propKey)   return json({ error: "Clés Beds24 manquantes" }, 500);
+  // V2 : token auto-refresh (D1 en priorité, env var en fallback) — même source que /api/beds24-bookings
+  const token = await getActiveBeds24Token(env, env.revenue_manager);
+  if (!token)                return json({ error: "BEDS24_TOKEN manquant (V2)" }, 500);
   if (!scriptUrl)            return json({ error: "APPS_SCRIPT_URL manquante" }, 500);
 
   // ── Lire le body brut (nécessaire pour la vérification HMAC) ──
@@ -91,50 +102,29 @@ export async function onRequestPost(context) {
   // On récupère le bookingId depuis le payload (plusieurs formats possibles)
   const bookingId = payload.bookId || payload.bookingId || payload.id;
 
+  // ── Beds24 V2 : récupérer les résas Nogent récemment modifiées (2 jours) ──
+  // On lit toujours par `modifiedFrom` (param prouvé, auto-réparant : rattrape un
+  // éventuel webhook manqué). Si le payload porte un bookId, on cible cette résa ;
+  // sinon on pousse toutes les résas récentes (upsert idempotent par `beds24-<id>`).
+  const since = new Date(Date.now() - 2 * 86400 * 1000).toISOString().slice(0, 10);
   let bookings = [];
+  try {
+    const qp = new URLSearchParams({ propId: PROP_ID, modifiedFrom: since, numId: "50" });
+    const res = await fetch(`${BEDS24_V2_URL}?${qp}`, { headers: { token } });
+    const data = await res.json();
+    if (data && data.success && Array.isArray(data.data)) {
+      bookings = data.data;
+    } else {
+      console.warn("[beds24-webhook] V2 réponse inattendue:", JSON.stringify(data).slice(0, 300));
+    }
+  } catch (err) {
+    console.error("[beds24-webhook] fetch V2 error:", err.message);
+  }
 
+  // Ciblage : si un bookId est fourni et présent dans le lot, ne pousser que lui.
   if (bookingId) {
-    // Récupérer les détails complets de cette réservation
-    try {
-      const res = await fetch(BEDS24_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          apiKey,
-          propKey,
-          propId:  Number(PROP_ID),
-          bookId:  Number(bookingId),
-          firstId: 0,
-          numId:   1,
-        }),
-      });
-      const data = await res.json();
-      if (Array.isArray(data)) bookings = data;
-    } catch (err) {
-      console.error("[beds24-webhook] fetch booking error:", err.message);
-    }
-  } else {
-    // Pas de bookingId → on récupère les 50 dernières réservations modifiées
-    const today = new Date();
-    const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
-    const modifiedFrom = yesterday.toISOString().slice(0, 10);
-    try {
-      const res = await fetch(BEDS24_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          apiKey, propKey,
-          propId:       Number(PROP_ID),
-          modifiedFrom,
-          firstId:      0,
-          numId:        50,
-        }),
-      });
-      const data = await res.json();
-      if (Array.isArray(data)) bookings = data;
-    } catch (err) {
-      console.error("[beds24-webhook] fetch recent error:", err.message);
-    }
+    const one = bookings.filter(b => String(b.id) === String(bookingId));
+    if (one.length > 0) bookings = one;
   }
 
   if (bookings.length === 0) {
@@ -160,18 +150,23 @@ export async function onRequestPost(context) {
     modifiedOn: b.modifiedOn || b.arrival || "",
   }));
 
+  // ⚠️ Bug RESA-001 (2026-06-13) — NE PAS POSTer directement vers scriptUrl :
+  //   Apps Script redirige les POST (302) et le redirect **supprime le body**
+  //   (fetch repasse en GET) → Apps Script reçoit un postData vide → RIEN n'est écrit.
+  //   On passe par /api/sheets-proxy (même origine) qui envoie en GET paginé
+  //   (forwardChunked), exactement comme le Worker iCal et le bouton 📊 admin.
   try {
-    const r = await fetch(scriptUrl, {
+    const origin = new URL(request.url).origin;
+    const r = await fetch(`${origin}/api/sheets-proxy`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "importAllReservations", reservations }),
-      redirect: "follow",
     });
     const txt = await r.text();
-    console.log("[beds24-webhook] Apps Script response:", txt);
-    return json({ ok: true, synced: normalized.length, script: txt });
+    console.log("[beds24-webhook] sheets-proxy response:", txt.slice(0, 300));
+    return json({ ok: true, synced: normalized.length, script: txt.slice(0, 500) });
   } catch (err) {
-    console.error("[beds24-webhook] Apps Script error:", err.message);
+    console.error("[beds24-webhook] sheets-proxy error:", err.message);
     return json({ error: err.message }, 502);
   }
 }
@@ -181,42 +176,44 @@ export async function onRequestGet(context) {
   return json({ ok: true, msg: "Beds24 webhook endpoint actif", prop: PROP_ID });
 }
 
+// V2 booking → format unifié. Mirror de la normalisation de /api/beds24-bookings.
+// (V2 : id, firstName/lastName, arrival/departure ISO, price string, status string,
+//  referer canal, numAdult/numChild, bookingTime/modifiedTime, comments.)
 function normalizeBooking(b) {
-  const lastNight = b.lastNight || "";
-  let departure = "";
-  if (lastNight) {
-    const d = new Date(lastNight + "T12:00:00Z");
-    d.setDate(d.getDate() + 1);
-    departure = d.toISOString().slice(0, 10);
-  }
+  const arrival   = b.arrival   || "";
+  const departure = b.departure || "";
   const nights = (() => {
-    if (!b.firstNight || !b.lastNight) return 0;
-    const a = new Date(b.firstNight + "T12:00:00Z");
-    const c = new Date(b.lastNight  + "T12:00:00Z");
-    return Math.round((c - a) / 86400000) + 1;
+    if (!arrival || !departure) return 0;
+    const a = new Date(arrival   + "T12:00:00Z");
+    const c = new Date(departure + "T12:00:00Z");
+    return Math.round((c - a) / 86400000);
   })();
   return {
-    bookingId:   String(b.bookId || ""),
+    bookingId:   String(b.id || ""),
     guestName:   `${b.firstName || ""} ${b.lastName || ""}`.trim() || "—",
-    email:       b.guestEmail  || "",
-    phone:       b.guestPhone  || "",
-    arrival:     b.firstNight  || "",
+    email:       b.email || "",
+    phone:       b.phone || b.mobile || "",
+    arrival,
     departure,
     nights,
-    channel:     channelLabel(b.referer),
-    price:       parseFloat(b.price) || 0,
+    channel:     channelLabel(b.referer || b.channel),
+    price:       parseFloat(b.price) || 0,   // même champ que le sync 📊 → dedup cohérent
     status:      statusLabel(b.status),
     statusCode:  String(b.status),
-    createdOn:   b.createdOn   || "",
-    modifiedOn:  b.modifiedOn  || "",
-    numGuests:   parseInt(b.numGuests) || 1,
-    notes:       b.guestNote   || "",
+    createdOn:   b.bookingTime  || "",
+    modifiedOn:  b.modifiedTime || "",
+    numGuests:   (parseInt(b.numAdult) || 1) + (parseInt(b.numChild) || 0),
+    notes:       b.comments || b.notes || "",
   };
 }
 
-function statusLabel(code) {
-  const m = { "0":"Nouveau","1":"Confirmé","2":"Annulé","3":"Demande","4":"Paiement en attente","5":"Fermé" };
-  return m[String(code)] || `Statut ${code}`;
+// V2 status (string) → libellé FR
+function statusLabel(status) {
+  const labels = {
+    "new": "Nouveau", "confirmed": "Confirmé", "cancelled": "Annulé",
+    "request": "Demande", "black": "Bloqué", "closed": "Fermé", "archived": "Archivé",
+  };
+  return labels[status] || status || "Inconnu";
 }
 
 function channelLabel(r) {
@@ -225,6 +222,7 @@ function channelLabel(r) {
   if (s.includes("airbnb"))  return "Airbnb";
   if (s.includes("booking")) return "Booking.com";
   if (s.includes("expedia")) return "Expedia";
+  if (s.includes("vrbo"))    return "VRBO";
   if (s.includes("direct"))  return "Direct";
   return r;
 }
