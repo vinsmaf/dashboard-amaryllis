@@ -754,7 +754,7 @@ export default function Planning() {
                 style={{ padding: "5px 10px", borderRadius: 8, border: `1px solid ${onlyDirect ? "#10b981" : "rgba(255,255,255,0.12)"}`, background: onlyDirect ? "#10b981" : "transparent", color: onlyDirect ? "#06281f" : "#94a3b8", fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}
               >🟢 Directes</button>
               <span style={{ fontSize: 10, color: "#10b981" }}>
-                {filteredReservations.filter(r => r.fromIcal).length} Airbnb · {filteredReservations.filter(r => !r.fromIcal).length} manuelles
+                {filteredReservations.filter(r => r.fromIcal).length} iCal · {filteredReservations.filter(r => !r.fromIcal).length} manuelles
               </span>
             </div>
           </div>
@@ -800,7 +800,7 @@ export default function Planning() {
                         <td style={{ padding: "8px 10px", fontSize: 11 }}>{b?.emoji} {b?.nom}</td>
                         <td style={{ padding: "8px 10px", color: "#e2e8f0", fontSize: 11, fontWeight: 500 }}>
                           {r.voyageur}
-                          {r.fromIcal && <span style={{ fontSize: 8, color: "#FF5A5F", marginLeft: 3, padding: "1px 4px", borderRadius: 4, background: "rgba(255,90,95,0.1)" }}>Airbnb</span>}
+                          {r.fromIcal && <span style={{ fontSize: 8, color: CC[r.canal] || "#FF5A5F", marginLeft: 3, padding: "1px 4px", borderRadius: 4, background: CB[r.canal] || "rgba(255,90,95,0.1)" }}>{r.canal === "booking" ? "Booking" : "Airbnb"}</span>}
                         </td>
                         <td style={{ padding: "8px 10px" }}>
                           <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 8, background: CB[r.canal], color: CC[r.canal], fontWeight: 600 }}>{r.canal}</span>
