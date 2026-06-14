@@ -25,6 +25,25 @@ function json_(data) {
 }
 
 // ── LECTURE ──────────────────────────────────────────────────────
+// Lit l'onglet « Emails » (rempli par Zapier : Date/Sender/Subject/Body) — lecture seule.
+// Borné aux 80 dernières lignes pour limiter la taille de réponse.
+function readEmails_(p) {
+  var ss = SpreadsheetApp.openById("1xuhU0KraEMxF9NAWO5MKEt23JI_V8mnNnWktzHy6q2U");
+  var sheet = ss.getSheetByName("Emails");
+  if (!sheet) return json_({ ok: false, error: "Onglet Emails introuvable" });
+  var last = sheet.getLastRow();
+  if (last < 2) return json_({ ok: true, rows: [], total: 0 });
+  var ncols = sheet.getLastColumn();
+  var headers = sheet.getRange(1, 1, 1, ncols).getValues()[0].map(function (h) { return String(h).trim(); });
+  var n = Math.min(parseInt((p && p.n) || 80, 10) || 80, last - 1);
+  var startRow = last - n + 1;
+  var data = sheet.getRange(startRow, 1, n, ncols).getValues();
+  var rows = data
+    .map(function (row) { var o = {}; headers.forEach(function (h, i) { o[h] = String(row[i] || ""); }); return o; })
+    .filter(function (r) { return r.Sender || r.Subject; });
+  return json_({ ok: true, rows: rows, total: last - 1 });
+}
+
 function doGet(e) {
   const action = e?.parameter?.action || "read";
 
@@ -45,6 +64,7 @@ function doGet(e) {
   if (action === "setNtfyTopic") return setNtfyTopic_(e.parameter);
   if (action === "getConfig")    return getConfig_(e.parameter);
   if (action === "setConfig")    return setConfig_(e.parameter);
+  if (action === "readEmails")   return readEmails_(e.parameter);
 
   return json_({ error: "action inconnue: " + action });
 }
@@ -58,6 +78,7 @@ function doPost(e) {
   if (action === "importAllReservations") return importAllReservations_(body.reservations || []);
   if (action === "setConfig")             return setConfig_(body);
   if (action === "read")                  return readAll_();
+  if (action === "readEmails")            return readEmails_(body);
   if (action === "getConfig")             return getConfig_(body);
   if (action === "revenus2026DryRun")     return json_({ ok: true, preview: testRevenus2026_dryRun() });
   if (action === "revenus2026Setup")      return json_(setupRevenus2026());
