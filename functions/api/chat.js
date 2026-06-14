@@ -211,6 +211,34 @@ export async function onRequestPost(context) {
       return Response.json({ error: "messages requis" }, { status: 400, headers: corsHeaders });
     }
 
+    // ── Kill-switch : coupe l'assistant public (env CHAT_DISABLED=1). L'admin reste actif. ──
+    if (mode === "public" && (context.env.CHAT_DISABLED === "1" || context.env.CHAT_DISABLED === "true")) {
+      return Response.json({
+        reply: "Notre assistant est momentanément indisponible. Écrivez-nous à contact@villamaryllis.com, nous vous répondrons rapidement.",
+        suggestions: [],
+      }, { headers: corsHeaders });
+    }
+
+    // ── Escalade des cas SENSIBLES : pas de réponse IA, on transmet à un humain + ntfy. ──
+    const lastUser = [...messages].reverse().find(m => m && m.role === "user")?.content || "";
+    const SENSIBLE = /litige|plaint|avocat|tribunal|juridiqu|arnaqu|fraud|escroc|cambriol|effract|dégât|degat|inonda|insalubre|punaise|cafard|moisiss|agress|menac|harcel|\bbless|accident|urgence|scandal|inadmissible|porter plainte|remboursez|tr[èe]s d[ée][çc]u|honteux/i;
+    if (mode === "public" && SENSIBLE.test(lastUser)) {
+      const topic = context.env.NTFY_TOPIC;
+      if (topic) {
+        const p = fetch(`https://ntfy.sh/${topic}`, {
+          method: "POST",
+          headers: { "Title": "💬 Chat — cas sensible à traiter", "Priority": "4", "Tags": "warning,speech_balloon" },
+          body: `Un visiteur a écrit :\n"${lastUser.slice(0, 250)}"\n\n→ À traiter par un humain (pas de réponse IA auto sur ce sujet).`,
+        }).catch(() => {});
+        if (typeof context.waitUntil === "function") context.waitUntil(p);
+      }
+      return Response.json({
+        reply: "Je transmets votre message à notre équipe, qui vous recontactera au plus vite. Vous pouvez aussi nous écrire à contact@villamaryllis.com.",
+        suggestions: [],
+        escalated: true,
+      }, { headers: corsHeaders });
+    }
+
     // System prompt selon le mode
     const systemContent = mode === "admin"
       ? SYSTEM_PROMPT + "\n\nMODE ADMIN : Tu peux aussi aider à analyser des données de gestion locative, rédiger des emails professionnels, et répondre à des questions de revenue management."
