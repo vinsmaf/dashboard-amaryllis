@@ -93,16 +93,27 @@ fi
 echo "🚀 Déploiement → projet Cloudflare Pages '$PROJECT_NAME' (villamaryllis.com)"
 echo ""
 
-npx wrangler pages deploy dist --project-name "$PROJECT_NAME" "$@"
+DEPLOY_LOG=$(mktemp)
+npx wrangler pages deploy dist --project-name "$PROJECT_NAME" "$@" 2>&1 | tee "$DEPLOY_LOG"
+# Alias de déploiement (URL unique <hash>.<projet>.pages.dev, live immédiatement, SANS cache
+# CDN). On smoke-teste cette URL plutôt que villamaryllis.com : le CDN met >30s à propager,
+# ce qui faisait échouer le smoke (bundle en text/plain, titres absents) sur des déploiements
+# pourtant sains. L'alias reflète exactement le déploiement → zéro faux négatif de propagation.
+ALIAS_URL=$(grep -oE "https://[a-z0-9-]+\.${PROJECT_NAME}\.pages\.dev" "$DEPLOY_LOG" | head -1 || true)
+rm -f "$DEPLOY_LOG"
 
 # ── Smoke test post-déploiement ──────────────────────────────────────────────
 # Vérifie que les pages clés rendent et que le bundle référencé est bien servi
 # en JS (pas en HTML = symptôme d'empoisonnement). La protection anti-cache est
 # assurée par sw.js (v5) + rotation de hash (window.__BUILD__).
+DOMAIN="${ALIAS_URL:-https://villamaryllis.com}"
 echo ""
-echo "🔎 Smoke test post-déploiement (propagation 6s)…"
-sleep 6
-DOMAIN="https://villamaryllis.com"
+if [[ -n "$ALIAS_URL" ]]; then
+  echo "🔎 Smoke test post-déploiement → alias frais $DOMAIN (pas de cache CDN)…"
+else
+  echo "🔎 Smoke test post-déploiement → $DOMAIN (alias non capturé, fallback prod, propagation 6s)…"
+  sleep 6
+fi
 SMOKE_FAIL=0
 
 # 1. Pages clés répondent en 200 (home, villa, admin)
@@ -119,7 +130,7 @@ done
 # 1b. Playwright smoke /admin — vérifie que React monte sans pageerror ni chunk 404
 #     (un import circulaire passe le HTTP 200 ci-dessus mais crashe au runtime)
 if command -v node >/dev/null 2>&1; then
-  if node scripts/admin-smoke.mjs 2>&1; then
+  if BASE_URL="$DOMAIN" node scripts/admin-smoke.mjs 2>&1; then
     : # succès déjà loggué par le script
   else
     echo "   ❌ /admin — crash React détecté (voir ci-dessus)"
