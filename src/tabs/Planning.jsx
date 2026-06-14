@@ -34,6 +34,11 @@ import { useAppData } from "../AppDataContext.jsx";
 const ICAL_PLACEHOLDER_NAMES = new Set(["Not available", "Voyageur Booking", "Voyageur Airbnb", "—", ""]);
 const isPlaceholderName = (n) => ICAL_PLACEHOLDER_NAMES.has(String(n || "").trim());
 
+// Résa OTA (Airbnb/Booking via iCal, hors Beds24/Nogent) à compléter à la main : l'iCal ne
+// transmet ni nom ni prix → tant que le nom reste un placeholder OU que le prix est à 0, on
+// rappelle à l'hôte de les saisir (sinon CA sous-compté, cf. bug résa sans prix).
+const needsManualFill = (r) => !!r?.fromIcal && (isPlaceholderName(r.voyageur) || !(Number(r.montant) > 0));
+
 // ── parseICS — parser iCal (uniquement utilisé dans Planning) ────────────────
 function parseICS(text, bienId, canal = "airbnb") {
   return text.split("BEGIN:VEVENT").slice(1).map(block => {
@@ -573,7 +578,7 @@ export default function Planning() {
                     <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 13px", background: "rgba(255,255,255,0.02)", borderRadius: 9, border: "1px solid rgba(255,255,255,0.05)", marginBottom: 5 }}>
                       <span style={{ fontSize: 14 }}>{b?.emoji}</span>
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 12, color: "#e2e8f0", fontWeight: 500 }}>{b?.nom} — {r.voyageur}</div>
+                        <div style={{ fontSize: 12, color: "#e2e8f0", fontWeight: 500 }}>{b?.nom} — {r.voyageur}{needsManualFill(r) && <span title="iCal Airbnb/Booking : ni nom ni prix transmis — à saisir à la main" style={{ fontSize: 8, color: "#f59e0b", marginLeft: 4, padding: "1px 4px", borderRadius: 4, background: "rgba(245,158,11,0.15)", fontWeight: 700, whiteSpace: "nowrap" }}>✏️ à compléter</span>}</div>
                         <div style={{ fontSize: 10, color: "#64748b" }}>{r.checkin} → {r.checkout} · {diffDays(r.checkin, r.checkout)}j</div>
                       </div>
                       <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 8, background: CB[r.canal], color: CC[r.canal], fontWeight: 600 }}>{r.canal}</span>
@@ -784,6 +789,7 @@ export default function Planning() {
               >🟢 Directes</button>
               <span style={{ fontSize: 10, color: "#10b981" }}>
                 {filteredReservations.filter(r => r.fromIcal).length} iCal · {filteredReservations.filter(r => !r.fromIcal).length} manuelles
+                {(() => { const n = filteredReservations.filter(needsManualFill).length; return n > 0 ? <span style={{ color: "#f59e0b", fontWeight: 700 }}> · ⚠️ {n} à compléter (nom/prix)</span> : null; })()}
               </span>
             </div>
           </div>
@@ -830,6 +836,7 @@ export default function Planning() {
                         <td style={{ padding: "8px 10px", color: "#e2e8f0", fontSize: 11, fontWeight: 500 }}>
                           {r.voyageur}
                           {r.fromIcal && <span style={{ fontSize: 8, color: CC[r.canal] || "#FF5A5F", marginLeft: 3, padding: "1px 4px", borderRadius: 4, background: CB[r.canal] || "rgba(255,90,95,0.1)" }}>{r.canal === "booking" ? "Booking" : "Airbnb"}</span>}
+                          {needsManualFill(r) && <span title="L'iCal Airbnb/Booking ne transmet ni nom ni prix — à saisir à la main" style={{ fontSize: 8, color: "#f59e0b", marginLeft: 3, padding: "1px 4px", borderRadius: 4, background: "rgba(245,158,11,0.15)", fontWeight: 700, whiteSpace: "nowrap" }}>✏️ à compléter</span>}
                         </td>
                         <td style={{ padding: "8px 10px" }}>
                           <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 8, background: CB[r.canal], color: CC[r.canal], fontWeight: 600 }}>{r.canal}</span>

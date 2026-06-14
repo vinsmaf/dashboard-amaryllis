@@ -296,6 +296,7 @@ async function sendNouvellesResas(env, nouvelles) {
           ${cautionUrl ? `<a href="${cautionUrl}" style="background:#6366f1;color:#fff;text-decoration:none;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;">🔒 Lien caution ${cautionAmt}€</a>` : ""}
         </div>
         ${cautionUrl ? `<div style="font-size:10px;color:#b0a898;margin-top:8px;">Lien caution valable 72h · Copier et envoyer au voyageur via Airbnb/Booking</div>` : ""}
+        ${(e.canal === "airbnb" || e.canal === "booking") ? `<div style="font-size:11px;color:#92400e;background:rgba(245,158,11,0.12);border-radius:6px;padding:8px 12px;margin-top:10px;">✏️ <strong>À faire dans l'admin :</strong> renseigner le <strong>nom du voyageur</strong> et le <strong>prix</strong> — ${e.canal === "airbnb" ? "Airbnb" : "Booking"} ne les transmet pas (sinon le CA est sous-compté).</div>` : ""}
       </div>
     `;
   }));
@@ -320,6 +321,11 @@ async function sendNouvellesResas(env, nouvelles) {
         const c = e.canal === "airbnb" ? "Airbnb" : e.canal === "booking" ? "Booking" : (e.canal || "Direct");
         return `${e.nom} · ${formatDate(e.checkin)}→${formatDate(e.checkout)} (${n} nuit${n > 1 ? "s" : ""}) · ${c}`;
       }).join("\n");
+      // Rappel : les résas OTA (Airbnb/Booking via iCal) arrivent sans nom ni prix → à compléter à la main.
+      const otaACompleter = nouvelles.filter(e => e.canal === "airbnb" || e.canal === "booking").length;
+      const body = otaACompleter > 0
+        ? `${lignes}\n\n✏️ ${otaACompleter} à compléter dans l'admin (nom + prix — non transmis par l'OTA)`
+        : lignes;
       await fetch(`https://ntfy.sh/${env.NTFY_TOPIC}`, {
         method: "POST",
         headers: {
@@ -329,7 +335,7 @@ async function sendNouvellesResas(env, nouvelles) {
           "Tags": "tada,calendar",
           "Click": `${env.SITE_URL || "https://villamaryllis.com"}/admin`,
         },
-        body: lignes,
+        body,
       });
       console.log("[ntfy] ✓ notif nouvelle réservation envoyée");
     } catch (e) {
