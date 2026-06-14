@@ -845,7 +845,6 @@ const SITEMAP_META = {
   "/politique-confidentialite":      { priority: "0.3",  changefreq: "yearly"  },
   "/conditions-generales":           { priority: "0.3",  changefreq: "yearly"  },
   "/villa-rental-martinique":        { priority: "0.9",  changefreq: "monthly" },
-  "/guide":                          { priority: "0.85", changefreq: "monthly" },
   "/guide-hub":                      { priority: "0.9",  changefreq: "monthly" },
   "/explorer":                       { priority: "0.8",  changefreq: "monthly" },
   "/guide-arlet":                    { priority: "0.85", changefreq: "monthly" },
