@@ -28,6 +28,12 @@ import { sumN, avgN, addDays, diffDays, todayStr } from "../utils/calculations.j
 import { loadDailyPrices } from "../seedPrices.js";
 import { useAppData } from "../AppDataContext.jsx";
 
+// Noms-placeholder posés par le parser quand l'iCal ne fournit pas de vrai nom
+// (Airbnb/Booking ne transmettent ni nom ni prix). Sert à savoir si l'hôte a saisi
+// un vrai nom à la main (à préserver) vs un placeholder (remplaçable par le re-parse).
+const ICAL_PLACEHOLDER_NAMES = new Set(["Not available", "Voyageur Booking", "Voyageur Airbnb", "—", ""]);
+const isPlaceholderName = (n) => ICAL_PLACEHOLDER_NAMES.has(String(n || "").trim());
+
 // ── parseICS — parser iCal (uniquement utilisé dans Planning) ────────────────
 function parseICS(text, bienId, canal = "airbnb") {
   return text.split("BEGIN:VEVENT").slice(1).map(block => {
@@ -198,7 +204,30 @@ export default function Planning() {
         addToast(`🔔 ${trueNew.length} nouvelle${trueNew.length > 1 ? "s" : ""} réservation${trueNew.length > 1 ? "s" : ""} — ${bienNom} (${canal})`);
       }
 
-      const merged = [...currentResas.filter(r => !(r.bienId === bienId && r.fromIcal && r.canal === canal)), ...newEvents];
+      // Préserver les saisies manuelles (nom, prix, tél, voyageurs…) + l'état opé (✅/🧹/ménage)
+      // à travers les re-syncs : l'iCal ne porte ni nom ni prix → sans ça, chaque sync réécrase
+      // la résa éditée par le brut « Not available »/0 et le push 📊 propage la perte au Sheet.
+      const prevById = new Map(
+        currentResas.filter(r => r.fromIcal && r.bienId === bienId && r.canal === canal).map(r => [r.id, r])
+      );
+      const preserved = newEvents.map(e => {
+        const prev = prevById.get(e.id);
+        if (!prev) return e;
+        return {
+          ...e,
+          voyageur:         isPlaceholderName(prev.voyageur) ? e.voyageur : prev.voyageur,
+          montant:          prev.montant > 0 ? prev.montant : e.montant,
+          phone:            prev.phone || e.phone,
+          email:            prev.email || e.email,
+          nb_guests:        prev.nb_guests || e.nb_guests,
+          reservation_code: prev.reservation_code || e.reservation_code,
+          checkin_done:     prev.checkin_done,
+          menage_done:      prev.menage_done,
+          menage:           prev.menage || e.menage,
+          assigne:          prev.assigne || e.assigne,
+        };
+      });
+      const merged = [...currentResas.filter(r => !(r.bienId === bienId && r.fromIcal && r.canal === canal)), ...preserved];
       saveRes(merged);
       setIcalStatus(s => ({ ...s, [statusKey]: `✓ ${newEvents.length}` }));
       setLastIcalSync(new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }));
