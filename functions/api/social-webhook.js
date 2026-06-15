@@ -152,6 +152,15 @@ async function classify(env, msg) {
   } catch { return { lead: false, lang: "fr", confidence: 0 }; }
 }
 
+// Rédige un brouillon pour un texte libre (utilisé par la veille groupes locale via /api/social-draft).
+// Retourne { lead, confidence, lang, reply? }. Réutilise le MÊME agent (source unique de la voix).
+export async function draftReply(env, txt) {
+  const cls = await classify(env, txt);
+  if (!cls.lead || cls.confidence < 0.7) return { lead: false, confidence: cls.confidence, lang: cls.lang };
+  const reply = (await genReply(env, { text: txt, lang: cls.lang })) || pickReply(cls.lang, String(txt).slice(0, 16));
+  return { lead: true, confidence: cls.confidence, lang: cls.lang, reply };
+}
+
 async function ensureTable(db) {
   await db.prepare(`CREATE TABLE IF NOT EXISTS social_bot_log (
     platform TEXT, comment_id TEXT, from_id TEXT, txt TEXT, lead INTEGER, confidence REAL,
