@@ -1951,6 +1951,24 @@ async function runEditorialDraftGen(env) {
   }
 }
 
+// ── Editorial Calendar : re-seed auto (horizon glissant 30j, zéro clic « Seed »)
+// Idempotent : handleSeed30Days skippe les dates déjà planifiées → relancer chaque jour
+// ne crée pas de doublon, ajoute juste le nouveau J+30 entrant dans la fenêtre.
+async function runEditorialReseed(env) {
+  const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+  try {
+    const r = await fetch(`${siteUrl}/api/editorial-calendar?action=seed_30days&secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}), // start_date = aujourd'hui par défaut
+    });
+    const d = await r.json();
+    console.log(`[editorial-reseed] +${d.inserted || 0} jour(s) planifié(s) (${d.skipped || 0} déjà présents)`);
+  } catch (e) {
+    console.error("[editorial-reseed] error:", e.message);
+  }
+}
+
 // ── Editorial Calendar : publication auto des drafts approuvés (cron horaire)
 async function runEditorialAutoPublish(env) {
   const siteUrl = env.SITE_URL || "https://villamaryllis.com";
@@ -2245,8 +2263,11 @@ export default {
       ]));
 
     } else if (cron === "0 12 * * *") {
-      // 12h UTC chaque jour (8h Martinique) — génération drafts éditoriaux J+2
-      ctx.waitUntil(runEditorialDraftGen(env));
+      // 12h UTC chaque jour (8h Martinique) — re-seed horizon 30j puis génération drafts éditoriaux J+2
+      ctx.waitUntil((async () => {
+        await runEditorialReseed(env);
+        await runEditorialDraftGen(env);
+      })());
 
     } else if (cron === "0 9 * * *") {
       // 9h UTC chaque jour — audit + rappels + alertes + gap pricing + agents autonomes
