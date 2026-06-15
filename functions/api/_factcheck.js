@@ -47,6 +47,9 @@ export const FACT_CHECK_RULES = [
   // Nomenclature : seuls Amaryllis et Iguana sont des "villas".
   // Zandoli (logement), Géko (cocon), Mabouya (studio), Bellevue (appartement) ne le sont pas.
   { rx: /villa\s+(zandoli|g(é|e)ko|mabouya|bellevue)/i, reason: "Zandoli/Géko/Mabouya/Bellevue ne sont PAS des villas — écrire le nom sans « Villa »" },
+  // Le mot « villa » employé pour un bien qui n'en est pas une (seules Amaryllis & Iguana = villas).
+  // onlyFor les 5 biens non-villa → ne flague jamais amaryllis/iguana. Hashtags déjà strippés.
+  { rx: /\bvillas?\b/i, reason: "Seules Villa Amaryllis et Villa Iguana sont des « villas » — ne pas désigner ce bien comme une villa", onlyFor: ["zandoli", "geko", "mabouya", "schoelcher", "nogent"] },
   // Nombre de chambres faux (en lettres ou chiffres). `onlyFor` : la règle ne s'applique QUE pour ce bien.
   // Villa Amaryllis = 3 chambres → « quatre/cinq/4/5 suites/chambres » est faux.
   { rx: /(quatre|cinq|six|4|5|6)\s+(suites?|chambres?)/i, reason: "Villa Amaryllis a 3 chambres — nombre de pièces faux", onlyFor: ["amaryllis"] },

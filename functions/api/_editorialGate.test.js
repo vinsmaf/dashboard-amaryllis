@@ -67,6 +67,18 @@ describe("evaluateGate — fact-check conscient du bien", () => {
     });
     expect(r.fails.some((f) => f.filter === "mots_interdits")).toBe(false);
   });
+  it("FAIL : « villa » employé pour un bien non-villa (schoelcher)", () => {
+    const r = evaluateGate({
+      ...BASE, imageUrl: "https://villamaryllis.com/photos/schoelcher/03.webp", expectedBien: "schoelcher",
+      caption: "Réservez votre villa à Bellevue.\n\n#AmaryllisLocations",
+    });
+    expect(r.fails.some((f) => f.filter === "mots_interdits")).toBe(true);
+  });
+  it("PASS : « Villa Amaryllis » est correct (amaryllis EST une villa)", () => {
+    const r = evaluateGate({ ...BASE, caption: "Bienvenue à la Villa Amaryllis.\n\nRéservez ⤴️" });
+    expect(r.fails.some((f) => f.filter === "mots_interdits")).toBe(false);
+    expect(r.pass).toBe(true);
+  });
   it("FAIL : « piscine à débordement » attribuée à un autre bien (mabouya)", () => {
     const r = evaluateGate({
       ...BASE,
