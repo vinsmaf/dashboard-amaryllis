@@ -47,7 +47,10 @@ describe("classifyRisk", () => {
   });
   it("review : tout le reste (défaut)", () => {
     expect(classifyRisk({ category: "ops", action: "Organiser rotation ménage", effort: "4h" })).toBe("review");
-    expect(classifyRisk({ category: "seo", action: "Refondre architecture du site", effort: "8h" })).toBe("review");
+    expect(classifyRisk({ category: "seo", action: "Rédiger 12 guides destination longue traîne", effort: "8h" })).toBe("review");
+  });
+  it("blocked : refonte/structure (charte graphique, 2026-06-15)", () => {
+    expect(classifyRisk({ category: "seo", action: "Refondre architecture du site", effort: "8h" })).toBe("blocked");
   });
 });
 
