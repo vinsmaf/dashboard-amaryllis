@@ -42,11 +42,21 @@ export function isDuplicate(action, existingActions, threshold = 0.55) {
   return null;
 }
 
-export const BLOCKED_CATEGORIES = new Set(["legal", "ads", "revenue"]);
+export const BLOCKED_CATEGORIES = new Set(["legal", "ads", "revenue", "design"]);
 export const BLOCKED_KEYWORDS = [
   "prix", "tarif", "appliquer", "publier prix", "dépense", "budget", "campagne",
   "lancer", "google ads", "meta ads", "caution", "stripe", "paiement", "rgpd",
   "cgv", "déclaration", "contrat", "supprimer", "gbp", "fiche google",
+];
+// Charte graphique = CRITIQUE (jamais auto). Vincent (2026-06-15) : tokens globaux +
+// refonte/structure de page + composants partagés ne sont JAMAIS modifiés sans validation.
+// Biais assumé vers le blocage (un faux positif = escalade inoffensive ; un faux négatif =
+// modif visuelle non voulue en prod = grave).
+export const DESIGN_CRITICAL_KEYWORDS = [
+  "tokens.css", "tokens css", "design system", "système de design", "charte graphique",
+  "charte visuelle", "identité visuelle", "palette", "typographie", "typographique",
+  "police de caractère", "logo", "primitives", "composant partagé", "composants partagés",
+  "refonte", "refondre", "redesign", "restructurer", "thème global", "couleurs du site",
 ];
 const AUTO_CATEGORIES = new Set(["content", "seo"]);
 
@@ -64,6 +74,7 @@ export function classifyRisk(action) {
   const text = (action.action || "").toLowerCase();
   if (BLOCKED_CATEGORIES.has(cat)) return "blocked";
   if (BLOCKED_KEYWORDS.some(k => text.includes(k))) return "blocked";
+  if (DESIGN_CRITICAL_KEYWORDS.some(k => text.includes(k))) return "blocked"; // charte graphique
   if (AUTO_CATEGORIES.has(cat) && effortHours(action.effort) <= 2) return "auto";
   return "review";
 }

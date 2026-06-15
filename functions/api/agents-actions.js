@@ -3,6 +3,7 @@
 // Stockage D1 (binding: revenue_manager, table: agent_actions)
 
 import { verifyBearer } from "./_adminauth.js";
+import { classifyRisk } from "./_triage.js";
 
 const CORS = {
   "Content-Type": "application/json",
@@ -390,6 +391,25 @@ export async function onRequest(context) {
       } catch (e) {
         return json({ error: e.message }, 500);
       }
+    }
+
+    // ── POST ?action=retriage — recalcule risk (auto/review/blocked) de TOUTES les actions ─
+    // Applique le triage à jour (protection paiement + charte graphique). Idempotent.
+    if (action === "retriage") {
+      try { await db.prepare("ALTER TABLE agent_actions ADD COLUMN risk TEXT DEFAULT 'review'").run(); } catch (_) { /* déjà présente */ }
+      const { results } = await db.prepare("SELECT id, category, action, effort, risk FROM agent_actions").all();
+      const now = Math.floor(Date.now() / 1000);
+      let changed = 0;
+      const distribution = {};
+      for (const a of results || []) {
+        const newRisk = classifyRisk({ category: a.category, action: a.action, effort: a.effort });
+        distribution[newRisk] = (distribution[newRisk] || 0) + 1;
+        if (newRisk !== a.risk) {
+          await db.prepare("UPDATE agent_actions SET risk=?, updated_at=? WHERE id=?").bind(newRisk, now, a.id).run();
+          changed++;
+        }
+      }
+      return json({ ok: true, total: (results || []).length, changed, distribution });
     }
 
     // ── POST ?action=upsert — mise à jour par un agent (analyse autonome) ─
