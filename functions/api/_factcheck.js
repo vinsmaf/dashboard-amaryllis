@@ -22,8 +22,8 @@ export const FACT_CHECK_RULES = [
   { rx: /4 chambres.*amaryllis|amaryllis.*4 chambres/i, reason: "Villa Amaryllis a 3 chambres (pas 4)" },
   { rx: /3 chambres.*iguana|iguana.*3 chambres/i, reason: "Villa Iguana a 2 chambres (pas 3)" },
   // Équipements piscines / jacuzzi — vérité par bien
-  // Piscine à débordement : UNIQUEMENT Villa Amaryllis
-  { rx: /piscine\s+(à|a)\s+d(é|e)bordement/i, reason: "Piscine à débordement uniquement pour Villa Amaryllis — vérifier le bien mentionné" },
+  // Piscine à débordement : UNIQUEMENT Villa Amaryllis (donc légitime SI le post concerne amaryllis → okFor)
+  { rx: /piscine\s+(à|a)\s+d(é|e)bordement/i, reason: "Piscine à débordement uniquement pour Villa Amaryllis — vérifier le bien mentionné", okFor: ["amaryllis"] },
   // Cascade : UNIQUEMENT Zandoli et Géko (résidence partagée)
   { rx: /cascade.*(iguana|mabouya|sch(œ|oe)lcher|nogent|bellevue|amaryllis)/i, reason: "Piscine avec cascade uniquement pour Zandoli et Géko" },
   { rx: /(iguana|mabouya|sch(œ|oe)lcher|nogent|bellevue|amaryllis).*cascade/i, reason: "Cascade uniquement pour Zandoli et Géko" },
@@ -47,13 +47,21 @@ export const FACT_CHECK_RULES = [
   // Nomenclature : seuls Amaryllis et Iguana sont des "villas".
   // Zandoli (logement), Géko (cocon), Mabouya (studio), Bellevue (appartement) ne le sont pas.
   { rx: /villa\s+(zandoli|g(é|e)ko|mabouya|bellevue)/i, reason: "Zandoli/Géko/Mabouya/Bellevue ne sont PAS des villas — écrire le nom sans « Villa »" },
+  // Nombre de chambres faux (en lettres ou chiffres). `onlyFor` : la règle ne s'applique QUE pour ce bien.
+  // Villa Amaryllis = 3 chambres → « quatre/cinq/4/5 suites/chambres » est faux.
+  { rx: /(quatre|cinq|six|4|5|6)\s+(suites?|chambres?)/i, reason: "Villa Amaryllis a 3 chambres — nombre de pièces faux", onlyFor: ["amaryllis"] },
 ];
 
-// Vérifie un caption contre la fact-check list — retourne [erreurs] ou []
-export function factCheckCaption(caption, extraRules = []) {
+// Vérifie un caption contre la fact-check list — retourne [erreurs] ou [].
+// bienId (optionnel) : si fourni, une règle avec `okFor: [...]` incluant ce bien est ignorée
+// (l'équipement est LÉGITIME pour ce bien — ex. piscine à débordement pour amaryllis).
+export function factCheckCaption(caption, extraRules = [], bienId = null) {
   if (!caption) return [];
   const errors = [];
   for (const rule of [...FACT_CHECK_RULES, ...extraRules]) {
+    if (bienId && Array.isArray(rule.okFor) && rule.okFor.includes(bienId)) continue;
+    // onlyFor : règle restreinte à certains biens — ignorée pour les autres (et si bien inconnu).
+    if (Array.isArray(rule.onlyFor) && (!bienId || !rule.onlyFor.includes(bienId))) continue;
     if (rule.rx.test(caption)) {
       const match = caption.match(rule.rx)?.[0] || "";
       errors.push({ phrase: match.slice(0, 60), reason: rule.reason });

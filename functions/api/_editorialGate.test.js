@@ -39,6 +39,38 @@ describe("evaluateGate — cas passant", () => {
   });
 });
 
+describe("evaluateGate — fact-check conscient du bien", () => {
+  it("PASS : « piscine à débordement » est légitime pour amaryllis (pas un faux positif)", () => {
+    const r = evaluateGate({
+      ...BASE,
+      caption: "Plongez dans la piscine à débordement eau salée de la Villa Amaryllis.\n\nRéservez ⤴️",
+    });
+    expect(r.fails.some((f) => f.filter === "mots_interdits")).toBe(false);
+    expect(r.pass).toBe(true);
+  });
+  it("FAIL : « Quatre suites » pour amaryllis (qui a 3 chambres)", () => {
+    const r = evaluateGate({ ...BASE, caption: "Quatre suites baignées de lumière à la Villa Amaryllis." });
+    expect(r.fails.some((f) => f.filter === "mots_interdits")).toBe(true);
+  });
+  it("PASS : « quatre » sans rapport aux chambres n'est pas flaggé hors amaryllis", () => {
+    const r = evaluateGate({
+      ...BASE, imageUrl: "https://villamaryllis.com/photos/mabouya/02.webp", expectedBien: "mabouya",
+      caption: "Quatre chambres ? Non, un studio cosy pour deux au Studio Mabouya.",
+    });
+    // onlyFor:[amaryllis] → la règle nb-chambres ne s'applique pas à mabouya
+    expect(r.fails.some((f) => f.reason?.includes("3 chambres"))).toBe(false);
+  });
+  it("FAIL : « piscine à débordement » attribuée à un autre bien (mabouya)", () => {
+    const r = evaluateGate({
+      ...BASE,
+      imageUrl: "https://villamaryllis.com/photos/mabouya/02.webp",
+      expectedBien: "mabouya",
+      caption: "Détente dans la piscine à débordement du Studio Mabouya.",
+    });
+    expect(r.fails.some((f) => f.filter === "mots_interdits")).toBe(true);
+  });
+});
+
 describe("evaluateGate — chaque filtre qui bloque", () => {
   it("FAIL mots interdits (fact-check)", () => {
     const r = evaluateGate({ ...BASE, caption: "Les pieds dans l'eau à la Villa Amaryllis." });

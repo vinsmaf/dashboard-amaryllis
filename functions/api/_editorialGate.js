@@ -54,7 +54,7 @@ export function evaluateGate(o) {
   const recentSet = recentBienPosts instanceof Set ? recentBienPosts : new Set(recentBienPosts);
 
   // ── Filtre 1 — mots interdits / faits faux (BLOQUANT) ───────────────────────
-  const factErrors = factCheckCaption(caption || "", learnedRules);
+  const factErrors = factCheckCaption(caption || "", learnedRules, bien);
   if (factErrors.length) {
     fails.push({ filter: "mots_interdits", reason: factErrors.map((e) => e.phrase || e.reason).slice(0, 3).join(" · ") });
   }

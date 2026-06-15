@@ -7,6 +7,7 @@ import { resendFrom } from "./_email.js";
 // D1 binding : revenue_manager
 
 import { verifyBearer } from "./_adminauth.js";
+import { factCheckCaption, loadLearnedLessons } from "./_factcheck.js";
 
 const CORS = {
   "Content-Type": "application/json",
@@ -47,6 +48,18 @@ async function executeDraft(env, draft) {
   const payload = JSON.parse(draft.payload);
 
   if (draft.type === "social_post") {
+    // 🛡️ Garde-fou fact-check de DERNIÈRE MINUTE (défense en profondeur) : toute publication
+    // passe ici — y compris les drafts approuvés à la main avant le gate, et le « Publier maintenant ».
+    // Un caption qui matche une règle factuelle ou un mot banni → publication REFUSÉE.
+    try {
+      const learned = await loadLearnedLessons(env.revenue_manager).catch(() => []);
+      const bienId = (payload.imageUrl || "").match(/\/photos\/([a-z]+)\//i)?.[1]?.toLowerCase() || null;
+      const factErrors = factCheckCaption(payload.caption || "", learned, bienId);
+      if (factErrors.length) {
+        return { ok: false, error: "fact-check: " + factErrors.map((e) => e.reason).slice(0, 3).join(" · "), factErrors, blocked: true };
+      }
+    } catch { /* en cas d'erreur du fact-check, on ne bloque pas (fail-open) */ }
+
     // Délègue à /api/social (publication multi-channels FB + IG)
     const channels = Array.isArray(payload.channels) && payload.channels.length
       ? payload.channels
