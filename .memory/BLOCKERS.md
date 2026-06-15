@@ -3,6 +3,16 @@
 > Ce qui reviendra nous embêter si on ne le documente pas. Format : statut · sujet · ce qui débloque.
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 
+## 🔴 2026-06-15 — Optim tracking pub LIVE mais DÉPEND de 2 secrets CF Pages (action Vincent)
+- Le tracking serveur (Meta CAPI enrichie + GA4 Measurement Protocol) est déployé MAIS **silencieux sans secrets** :
+  - **`META_CAPI_TOKEN`** (CF Pages → dashboard-amaryllis → Settings → Environment variables) → sinon `capiPurchase` ne part jamais (aucune conversion serveur Meta, et l'enrichissement fbc/fbp/tél ne sert à rien). Générer : Meta Events Manager → Pixel 1648064656415946 → Conversions API → token.
+  - **`GA4_API_SECRET`** → l'audit le signale **absent en prod** → le purchase serveur GA4 ne part pas. Générer : GA4 Admin → Flux de données → Measurement Protocol API secrets.
+- **Account-side (gain direct, advisory)** : (1) Meta Events Manager → vérifier **dédup** Navigateur+Serveur sur un Purchase test + **EMQ Purchase** (cible >6/10) ; (2) Google Ads → conversion `purchase` (source GA4) en **« Principale »** + **valeurs de conversion pour enchères** + **Enhanced Conversions** ; (3) optionnel : créer une action conversion Google Ads directe → me donner `AW-XXXX/label` → je l'ajoute dans `Merci.jsx` (dédup `transaction_id`, conversions temps réel vs 24-48h d'import).
+- **Débloque** : Vincent pose les 2 secrets + fait les vérifs compte. Réf : ADR-TRACKING-001.
+
+## ✅ 2026-06-15 — Double-comptage Purchase Meta + fantômes solde 2× → CORRIGÉ & déployé
+- `eventID=pi.id` sur les 3 Purchase Pixel inline + guard `kind=solde-2x` webhook + `transaction_id=pi.id`. Commits `f5b1784`→`9a30660`. Le solde 2× ne génère plus de fausse conversion/alerte/booking.
+
 ## En cours → ✅ terminé le 2026-06-14 (session soir — tunnels OTA + sécurité devis)
 - **Devis client R/O** : éditeur de remise supprimé de `generateDevis()` (ADR-DEVIS-001, commit `da82843`).
 - **priceGuard alert** : `src/utils/priceGuard.js` (11 tests) + `stripe-webhook.js` alerte ⚠️ email+ntfy si montant < 20% réf (ADR-PRICE-001, commit `327c2d5`).

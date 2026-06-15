@@ -5,6 +5,15 @@
 
 ---
 
+## 2026-06-15 — Optimisation tracking pub Meta/Google (audit adversarial → 7 fichiers déployés)
+Workflow d'audit 6 dimensions (Pixel client, CAPI, GA4/Ads, consent/CSP, attribution, funnel) × vérif adversariale → 50 findings confirmés, 2 faux positifs écartés. Correctifs livrés (ADR-TRACKING-001) :
+- **Anti double-comptage** : `eventID=pi.id` sur les 3 Purchase Pixel inline (dédup CAPI) + guard `kind=solde-2x` dans le webhook (le solde 2× créait une fausse conversion + fausse alerte hôte + faux `direct_booking`) + `transaction_id=pi.id` (parité Nogent/Beds24).
+- **Match quality CAPI** : user_data enrichi (fbc/fbp/tél/prénom/nom/external_id hachés) → EMQ ~15-40%→~60-75%. Chaîne : `_fbp`/`_fbc` lus à chaud + gclid/fbclid → metadata Stripe (allowlist `create-payment-intent` élargie, elle jetait tout) → webhook → CAPI.
+- **Compléments** : events Meta `Lead` (contact/alerte/WhatsApp), items GA4 résa groupe, CSP googleads/googleadservices/td.doubleclick, CAPI v19→v21, test trackingAttribution (4 cas).
+- **Cœur paiement intouché** (Vincent a demandé confirmation) : prix, débit Stripe, Beds24, caution, acompte 2× = identiques.
+- 223 tests ✅, audit 🟢, smoke OK, CSP vérifié live. Commits `f5b1784`→`9a30660`. Déployé alias `cca5555d`.
+- **Reste côté Vincent** (cf. BLOCKERS) : vérifier secrets `META_CAPI_TOKEN` + `GA4_API_SECRET` (sinon CAPI/GA4-MP silencieux) + activer Enhanced Conversions / vérifier EMQ.
+
 ## 2026-06-14 (soir long) — Sécurité devis + priceGuard + Booking scraper + Chat Mistral
 Session longue pilotée par Vincent : 4 livrables.
 - **Devis client R/O** (`da82843`) : éditeur de remise supprimé de `generateDevis()` (client voyait et pouvait modifier la remise, imprimer un prix arbitraire). ADR-DEVIS-001.
