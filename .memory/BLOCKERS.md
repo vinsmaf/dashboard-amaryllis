@@ -11,6 +11,16 @@
 - **Bot social — App Review Meta** : Business Verification Amaryllis Corp → soumettre App Review (dossier `docs/marketing/social-bot-app-review.md`). Seule voie pour débloquer FB `/{pageId}/feed`. AGENDA 2026-06-20.
 - **Crédit Beds24** à vérifier ; **prospection netlinking** à envoyer.
 
+## En cours → ✅ terminé le 2026-06-15 (soir — auto-publication réseaux LIVE)
+
+## 📣 2026-06-15 (soir) — Auto-publication réseaux : LIVE, points de vigilance
+- ✅ **Système complet en live** (ADR-SOCIAL-AUTOPUB-001) : re-seed→génère(photos cochées)→gate(4 filtres)→publie. Zéro clic. Token publie FB+IG (vérifié).
+- 🟡 **Seuil qualité = 85/100** (`EDITORIAL_GATE_MIN_SCORE`, def 85). Exigeant → si trop d'escalades ntfy « à valider », baisser. **À surveiller sur les 1ers jours.**
+- 🟡 **Post Bellevue 102 publié dit « votre villa »** (Bellevue ≠ villa) — passé avant le durcissement de la règle. La règle `\bvillas?\b` onlyFor empêche les FUTURS. Le 102 reste en ligne (Vincent décide de le garder/supprimer).
+- 🟡 **Iguana = 0 photo cochée** (normal, bail long, exclu du seed). Si un jour besoin de publier Iguana → cocher des photos.
+- 🟡 **Faux négatifs fact-check possibles** : le fact-check regex ne couvre pas tout (ex « 5 min Montagne Pelée » depuis Schœlcher = faux mais non détecté). Compléter les règles au fil des erreurs vues. Bannir un mot = onglet Approbations → « Bannir mot » (agent_lessons).
+- **Kill-switch** : `EDITORIAL_GATE_DISABLED=1` (stoppe le gate) ou `EDITORIAL_GATE_MODE=shadow` (re-bascule en observation). Nécessite **redeploy Pages** pour prise en compte.
+
 ## 🤖 2026-06-15 — Bot social : token OK, FB bloqué par Meta policy
 - **Construit & déployé** : agent roster `repondeur-social` ; `/api/social-webhook` ; `/api/social-poll` ; `/api/social-draft` ; `scripts/group-watch.mjs`. Secret `SOCIAL_WEBHOOK_VERIFY_TOKEN` posé. 15 tests. Doc `docs/marketing/social-bot-app-review.md`.
 - **Token META_PAGE_TOKEN** ✅ régénéré le 2026-06-15, 20 permissions dont `pages_read_engagement`, permanent. Vérifié `debug_token`. (ADR-META-TOKEN-001)

@@ -3,6 +3,15 @@
 > Pièges déjà rencontrés + comment les éviter. 1 entrée = 1 leçon actionnable « la prochaine fois ».
 > Le journal d'erreurs exhaustif reste `../docs/ERREURS-LOG.md`.
 
+## 📣 Auto-publication réseaux — pièges du fact-check & du pipeline — 2026-06-15 (soir)
+- **Le `META_PAGE_TOKEN` publie bien FB+IG** (`pages_manage_posts` / `instagram_content_publish` présents) MALGRÉ la régénération du matin pour le bot social — vérifié par un VRAI test de publication (post Bellevue id FB `986487064137992`). `debug_token` sur un **page token** renvoie `scopes:[]` (non concluant) → le seul test fiable des droits de publication = publier réellement. Ne jamais conclure « token ne peut pas publier » sans test live.
+- **Le hashtag `#AmaryllisLocations` est un faux-positif systématique** pour toute règle fact-check `équipement.*amaryllis` (cascade/piscine + le mot « amaryllis » du hashtag de marque). Fix : **stripper les hashtags** (`/#[^\s#]+/g`) AVANT d'appliquer les règles factuelles — les hashtags sont du marketing, pas des affirmations.
+- **Fact-check générique = aveugle au bien → faux positifs.** « piscine à débordement » est VRAI pour Amaryllis mais la règle flaguait tout. Solution : passer le `bienId` à `factCheckCaption(caption, rules, bienId)` + 2 mécaniques : `okFor:[biens]` (équipement légitime → skip) et `onlyFor:[biens]` (règle ciblée, ex « quatre suites » faux seulement pour amaryllis=3ch). Le `bienId` se dérive de l'imageUrl `/photos/{bien}/`.
+- **Les drafts « approved » ne repassent PAS le gate** (le cron `runEditorialAutoPublish` publie les approved tels quels). Donc tout post approuvé AVANT la mise en place du gate peut être faux. **Défense en profondeur indispensable** : remettre le fact-check BLOQUANT au point de passage unique = `executeDraft`/action publish dans `agent-drafts.js` (toute publication le traverse : cron, manuelle, gate).
+- **Nomenclature villas (règle métier confirmée Vincent)** : SEULES Villa Amaryllis ET Villa Iguana sont des « villas ». Zandoli/Géko/Mabouya/Schœlcher(Bellevue)/Nogent ne le sont pas → règle `\bvillas?\b` onlyFor ces 5 biens.
+- **CF Pages : un secret/var posé via `wrangler pages secret put` n'est actif qu'APRÈS un redéploiement** (vu avec `EDITORIAL_GATE_MODE` : resté shadow jusqu'au redeploy). Toujours redéployer après avoir posé une var Pages.
+- **`handleSeed30Days` est idempotent** (anti-doublon sur dates déjà planifiées + exclut Iguana) → le re-seeder chaque jour à partir d'aujourd'hui maintient un horizon glissant 30j sans doublon = auto-reseed trivial.
+
 ## 🤖 Meta Graph API — Scopes vs Advanced Access — 2026-06-15
 - **Token avec `pages_read_engagement` ≠ accès au `/{pageId}/feed`.** Depuis 2023, Meta exige **Advanced Access** (App Review approuvé) pour ce endpoint, même en mode Développement avec le bon scope. Le token est correct, le blocage est au niveau app.
 - **Seul `/api/social-poll` IG** (`/{igId}/media?fields=comments`) fonctionne avec Standard Access pour son propre compte. Pas d'App Review nécessaire pour ses propres médias IG.

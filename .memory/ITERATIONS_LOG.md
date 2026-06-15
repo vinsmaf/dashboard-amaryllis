@@ -5,6 +5,16 @@
 
 ---
 
+## 2026-06-15 (soir) — Auto-publication réseaux SANS validation humaine (gate de qualité) → LIVE
+Vincent : « automatiser les publications réseaux, de bonnes publications validées et publiées sans mon intervention » → « on passe en live, je choisis les photos ».
+- **Diagnostic** : tout le pipeline éditorial était DÉJÀ auto (génération J-2, publication horaire des approved) ; seul le clic « Approuver » restait manuel. Construit le **gate de qualité** qui le remplace (ADR-SOCIAL-AUTOPUB-001).
+- **Livré & déployé** : `_editorialGate.js` (moteur pur, 4 filtres, 20 tests) · `editorial-gate.js` (orchestrateur shadow/live + ntfy) · `editorial-photos.js` + `EditorialPhotosTab.jsx` (whitelist photos, onglet « Photos publiables ») · `photos-manifest.mjs` (114 photos) · Worker : génération pioche dans la whitelist + `runEditorialReseed` (horizon 30j) + appel gate.
+- **Passé en LIVE** : `EDITORIAL_GATE_MODE=live` (var CF, nécessite redeploy). Vincent a coché **42 photos**.
+- **Test grandeur réelle RÉUSSI** : token Meta publie bien FB+IG (post Bellevue id 102, FB `986487064137992` / IG `17861211021649749`) — mon inquiétude sur les scopes était infondée.
+- **3 pièges fact-check trouvés & corrigés** (défense en profondeur — fact-check BLOQUANT remis dans `agent-drafts` executeDraft) : (1) faux positif hashtag `#AmaryllisLocations` → strip hashtags ; (2) aveuglement au bien → `okFor`/`onlyFor` + bienId ; (3) « villa » pour bien non-villa → règle `\bvillas?\b` onlyFor 5 biens ; + règle nb chambres (« Quatre suites » faux pour Amaryllis=3ch).
+- **Nettoyage approved** : 1 post Amaryllis « Quatre suites » renvoyé en régénération ; 4 propres conservés (Géko 16/06, Nogent 17/06, Zandoli 19/06, Nogent 20/06).
+- 258 tests verts. Commits multiples (gate, garde-fou, factcheck, reseed). Kill-switch `EDITORIAL_GATE_DISABLED=1`.
+
 ## 2026-06-15 (suite) — Token Meta permanent + diagnostic blocage FB feed
 Contexte : `/api/social-poll` retournait `Session has expired` sur les 2 sources (FB + IG).
 - **Token renouvelé** : Graph API Explorer avec URL params `?permissions=pages_read_engagement,...` → token court → endpoint temporaire `meta-refresh-token.js` → échange `META_APP_SECRET` CF → page token permanent → mis à jour CF Pages via `wrangler pages secret put META_PAGE_TOKEN`.

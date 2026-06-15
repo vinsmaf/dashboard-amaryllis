@@ -5,6 +5,13 @@
 
 ---
 
+## ADR-SOCIAL-AUTOPUB-001 · 2026-06-15 (soir) · Auto-publication réseaux SANS validation humaine (gate de qualité)
+1. **Choix** : remplacer le clic « Approuver » humain par un **gate de qualité automatique**. Un post FB/IG part seul SI 4 filtres cumulatifs passent : (1) fact-check = 0 erreur (mots interdits/faits faux, BLOQUANT), (2) photo ∈ whitelist Vincent, (3) score LLM-juge ≥ 85 + verdict approve, (4) forme (channels=[ig,fb], anti-doublon 7j). Sinon → escalade ntfy. Passé en **mode live** (var CF `EDITORIAL_GATE_MODE=live`) à la demande de Vincent.
+2. **Alternatives refusées** : (a) phase shadow d'abord (recommandée mais Vincent a voulu le live direct) ; (b) publier tous les drafts approuvés tels quels — refusé car certains pré-gate contenaient des erreurs factuelles (« Quatre suites » pour Amaryllis=3ch) ; (c) gate sans whitelist photo — Vincent veut choisir « les plus belles » lui-même.
+3. **Conséquences attendues** : publication 100% autonome (re-seed→génère sur photos cochées→gate→publie), zéro clic. **Défense en profondeur** : le fact-check est AUSSI appliqué en bloquant au moment de la publication (`agent-drafts` executeDraft) → même un post approuvé à la main ne part pas s'il est faux. Irréversibilité = posts publics réels. Kill-switch : `EDITORIAL_GATE_DISABLED=1` ou retour shadow. **Token Meta publie bien FB+IG** (vérifié en prod, post Bellevue 102).
+4. **Périmètre** : `functions/api/_editorialGate.js` (moteur pur, 20 tests) · `editorial-gate.js` (orchestrateur) · `editorial-photos.js` (whitelist D1) · `_factcheck.js` (okFor/onlyFor + strip hashtags) · `agent-drafts.js` (garde-fou publication) · `src/tabs/EditorialPhotosTab.jsx` (onglet sélection) · `scripts/photos-manifest.mjs` · Worker `runEditorialDraftGen` (pioche whitelist + appelle gate) + `runEditorialReseed`.
+5. **Statut** : ✅ livré & déployé 2026-06-15, mode **live**. 258 tests. Vincent a coché 42 photos. À surveiller : seuil 85 (escalades), premiers posts auto (Géko 16/06).
+
 ## ADR-META-TOKEN-001 · 2026-06-15 · Token Meta permanent + diagnostic blocage FB feed
 1. **Choix** : régénérer `META_PAGE_TOKEN` avec 20 permissions (incl. `pages_read_engagement`) via Graph API Explorer URL params → endpoint temporaire `meta-refresh-token.js` (supprimé post-usage) échange user token → page token permanent via `META_APP_SECRET` CF. Token mis à jour dans Cloudflare.
 2. **Alternatives refusées** : mettre à jour le token manuellement dans le dashboard CF sans passer par le serveur → impossible : `META_APP_SECRET` non lisible depuis l'extérieur ; garder l'ancien token → expirait (session courte ~1h).
