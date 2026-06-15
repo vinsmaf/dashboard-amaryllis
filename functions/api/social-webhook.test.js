@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { extractComments, decideReply } from "./social-webhook.js";
+import { extractComments, decideReply, finalizeReply } from "./social-webhook.js";
 
 describe("extractComments — parsing webhook Meta", () => {
   it("extrait un commentaire Facebook (feed/comment/add)", () => {
@@ -28,6 +28,32 @@ describe("extractComments — parsing webhook Meta", () => {
     expect(extractComments({})).toEqual([]);
     expect(extractComments({ entry: [{}] })).toEqual([]);
     expect(extractComments(null)).toEqual([]);
+  });
+});
+
+describe("finalizeReply — garde-fous de l'accroche générée par l'agent", () => {
+  it("accepte une accroche propre et y ajoute le lien", () => {
+    const r = finalizeReply("Bonjour et bienvenue, nous serions ravis de vous accueillir en Martinique", "fr");
+    expect(r).toContain("villamaryllis.com");
+    expect(r).toMatch(/^Bonjour et bienvenue/);
+  });
+  it("retire les guillemets parasites du modèle", () => {
+    expect(finalizeReply('"Avec plaisir, découvrez nos logements"', "fr")).toMatch(/^Avec plaisir/);
+  });
+  it("REJETTE (→ null) si l'accroche invente un prix", () => {
+    expect(finalizeReply("Dès 110€ la nuit en Martinique !", "fr")).toBeNull();
+    expect(finalizeReply("Nos tarifs commencent à 90 euros", "fr")).toBeNull();
+  });
+  it("REJETTE si l'accroche affirme une disponibilité", () => {
+    expect(finalizeReply("Oui c'est disponible en août, réservez vite", "fr")).toBeNull();
+  });
+  it("REJETTE si l'accroche contient déjà un lien", () => {
+    expect(finalizeReply("Voyez villamaryllis.com pour nos villas", "fr")).toBeNull();
+    expect(finalizeReply("Allez sur https://exemple.fr", "fr")).toBeNull();
+  });
+  it("REJETTE si vide ou trop longue", () => {
+    expect(finalizeReply("", "fr")).toBeNull();
+    expect(finalizeReply("a".repeat(230), "fr")).toBeNull();
   });
 });
 

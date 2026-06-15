@@ -167,6 +167,14 @@ export const AGENTS = [
     files_hint: "src/PublicSite.jsx (footer, descriptions), ~/.claude/agents/skills/community-manager-skills.md",
   },
   {
+    id: "repondeur-social",
+    label: "Répondeur Social",
+    emoji: "💬",
+    prefix: "rep",
+    focus: "répondre aux commentaires FB/IG des prospects qui cherchent une location en Martinique (lead inbound) : accueil chaleureux + lien du site, ton Amaryllis vouvoiement, JAMAIS de prix/dispo inventés. Améliorer les accroches/gabarits, analyser social_bot_log (taux de lead, ignorés, erreurs), affiner le tri LLM des commentaires.",
+    files_hint: "functions/api/social-webhook.js (REPONDEUR_SYSTEM, REPLIES/DM, classify), D1 social_bot_log",
+  },
+  {
     id: "commercial-publicite",
     label: "Commercial / Pub",
     emoji: "💼",

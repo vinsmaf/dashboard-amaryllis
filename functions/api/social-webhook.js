@@ -38,6 +38,9 @@ const REPLIES = {
     `Hi 🌴 We have several holiday rentals in Martinique. Live availability & rates here 👉 ${SITE}${UTM}`,
   ],
 };
+// Persona de l'agent « Répondeur Social » : rédige l'accroche (le lien est ajouté APRÈS, par le code).
+const REPONDEUR_SYSTEM = `Tu es le Répondeur Social d'Amaryllis Locations (locations saisonnières premium en Martinique + Nogent-sur-Marne). Une personne commente PUBLIQUEMENT qu'elle cherche une location / un hébergement / un séjour. Écris UNE seule phrase d'accueil (~20 mots max), chaleureuse et professionnelle, en VOUVOIEMENT. RÈGLES STRICTES : n'invente JAMAIS de prix ni de disponibilité ; n'écris AUCUN lien (il est ajouté automatiquement après ta phrase) ; pas de hashtag ; 1 emoji maximum. Donne uniquement la phrase d'accroche, rien d'autre.`;
+
 // DM privé (1 par commentaire).
 const DM = {
   fr: `Bonjour 🌴 Merci pour votre message ! Toutes nos locations en Martinique, avec dispos en temps réel et réservation directe : ${SITE}${UTM} — dites-moi si vous avez des dates précises en tête, je vous oriente avec plaisir 🌺`,
@@ -100,6 +103,34 @@ function pickReply(lang, seedStr) {
   return arr[seed % arr.length];
 }
 
+// Valide l'accroche produite par l'agent et y ajoute le lien. PUR (testé).
+// Rejette (→ null = fallback gabarit) si : vide, trop longue, contient un prix/dispo inventé, ou un lien.
+export function finalizeReply(modelText) {
+  const body = String(modelText || "").trim().replace(/\s+/g, " ").replace(/^["'«»]+|["'«»]+$/g, "").trim();
+  if (!body || body.length > 220) return null;
+  if (/https?:\/\/|www\.|\.com/i.test(body)) return null;                 // pas de lien dans l'accroche
+  if (/(€|\$|\beuros?\b|\bprix\b|\btarif|\bnuit\b|\bdisponible?\b|\bdispo\b|\d+\s*(€|eur|nuits?))/i.test(body)) return null; // pas de prix/dispo inventés
+  const link = `👉 ${SITE}${UTM}`;
+  return `${body} ${link}`;
+}
+
+// L'agent « Répondeur Social » rédige la réponse ; null si indispo/non conforme → fallback gabarit.
+async function genReply(env, { text: t, lang }) {
+  try {
+    const r = await callLLM(env, {
+      tier: "fast",
+      logSource: "social-bot-reply",
+      max_tokens: 90,
+      temperature: 0.7,
+      messages: [
+        { role: "system", content: `${REPONDEUR_SYSTEM} Réponds en ${lang === "en" ? "anglais" : "français"}.` },
+        { role: "user", content: String(t).slice(0, 400) },
+      ],
+    });
+    return r?.ok ? finalizeReply(r.text) : null;
+  } catch { return null; }
+}
+
 // Tri LLM : est-ce une vraie recherche de location en Martinique ?
 async function classify(env, msg) {
   try {
@@ -148,7 +179,8 @@ async function handleComment(env, c) {
 
   if (!shouldReply) { await log("ignored"); return; }
 
-  const reply = pickReply(cls.lang, c.commentId);
+  // L'agent « Répondeur Social » rédige (ton Amaryllis) ; gabarit statique en filet de sécurité.
+  const reply = (await genReply(env, { text: c.text, lang: cls.lang })) || pickReply(cls.lang, c.commentId);
 
   // SHADOW : ne poste rien, prévient Vincent avec la réponse qu'il AURAIT postée.
   if (mode !== "live") {
