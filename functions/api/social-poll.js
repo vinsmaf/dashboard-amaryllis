@@ -24,10 +24,17 @@ export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
   if (url.searchParams.get("secret") !== env.POSTSTAY_SECRET) return json({ error: "unauthorized" }, 401);
 
-  const token = env.META_PAGE_TOKEN;
+  const userOrPageToken = env.META_PAGE_TOKEN;
   const pageId = env.META_PAGE_ID;
   const igId = env.META_IG_ACCOUNT_ID;
-  if (!token || !pageId) return json({ error: "META_PAGE_TOKEN / META_PAGE_ID manquant" }, 500);
+  if (!userOrPageToken || !pageId) return json({ error: "META_PAGE_TOKEN / META_PAGE_ID manquant" }, 500);
+
+  // Échange user token → page token si nécessaire (le feed exige un page token).
+  let token = userOrPageToken;
+  try {
+    const pageInfo = await graphGet(`${pageId}?fields=access_token`, userOrPageToken);
+    if (pageInfo?.access_token) token = pageInfo.access_token;
+  } catch { /* fail-open */ }
 
   const postLimit = Math.min(parseInt(url.searchParams.get("posts") || "8", 10) || 8, 25);
   const comments = [];
