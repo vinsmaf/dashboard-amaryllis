@@ -134,12 +134,13 @@ function enrichReservation_(p) {
 
   var rowNum = best.rowNum, r = best.r;
   var before = { voyageur: String(r[2] || ""), montant: r[7] };
+  var force = !!p.force; // opt-in : écrase même si déjà rempli (corrections ponctuelles). Défaut = non destructif.
   var wrote = {};
-  if (p.voyageur && isPlaceholder(r[2])) { sheet.getRange(rowNum, 3).setValue(p.voyageur); wrote.voyageur = p.voyageur; }
+  if (p.voyageur && (force || isPlaceholder(r[2]))) { sheet.getRange(rowNum, 3).setValue(p.voyageur); wrote.voyageur = p.voyageur; }
   var curM = parseFloat(r[7]) || 0;
-  if (p.montant && curM <= 0) { sheet.getRange(rowNum, 8).setValue(parseFloat(p.montant)); wrote.montant = parseFloat(p.montant); }
-  if (p.phone && !String(r[13] || "").trim()) { sheet.getRange(rowNum, 14).setValue(p.phone); wrote.phone = p.phone; }
-  if (p.email && !String(r[14] || "").trim()) { sheet.getRange(rowNum, 15).setValue(p.email); wrote.email = p.email; }
+  if (p.montant && (force || curM <= 0)) { sheet.getRange(rowNum, 8).setValue(parseFloat(p.montant)); wrote.montant = parseFloat(p.montant); }
+  if (p.phone && (force || !String(r[13] || "").trim())) { sheet.getRange(rowNum, 14).setValue(p.phone); wrote.phone = p.phone; }
+  if (p.email && (force || !String(r[14] || "").trim())) { sheet.getRange(rowNum, 15).setValue(p.email); wrote.email = p.email; }
   return json_({ ok: true, matched: true, row: rowNum, dayDiff: bestDiff, before: before, wrote: wrote });
 }
 
