@@ -4,6 +4,13 @@
 > **Règle** : à chaque erreur commise, ajouter une entrée ici (symptôme → cause → solution → garde-fou).
 > Lire ce fichier **au début de chaque session** (en plus de `PROJECT_MEMORY.md` + `CLAUDE.md`).
 
+## 🔻 PROD DOWN — quota KV partagé (compte) + put non protégé
+
+**INFRA-001 (2026-06-15)** — UptimeRobot : `villamaryllis.com/api/get-availability?bienId=nogent` → **HTTP 500** (Cloudflare 1101 = exception JS). Les autres biens (amaryllis, zandoli) → 200.
+- *Cause* : le **quota gratuit Cloudflare KV (1000 PUT/jour) est PAR COMPTE**, donc **partagé entre `dashboard-amaryllis` et `patrimoine-dashboard`**. Une journée d'écritures intensives côté patrimoine l'a épuisé. Dans `get-availability.js`, le `AVAIL_CACHE.put` de **Nogent (TTL 1h)** n'était **pas protégé** → cache expiré → put → **429 → exception non gérée → 500**. Les autres biens (TTL 6h, cache encore chaud) retournaient le cache sans atteindre le put.
+- *Solution* : `.catch(() => {})` sur les **deux** `AVAIL_CACHE.put` → dégradation propre (on sert les dispos calculées sans cacher). Déployé `dashboard-amaryllis` (eedd908d). Vérifié : nogent 200 malgré quota épuisé.
+- *Garde-fou* : (1) **TOUTE écriture KV doit être non bloquante** (`.catch`/try) — une Function ne doit jamais 500 sur un échec de cache ; (2) le **quota KV est commun aux 2 projets** → un pic d'écritures dans l'un peut casser l'autre ; surveiller le volume de PUT global ; (3) préférer des TTL longs / écritures rares pour les caches.
+
 ## 💸 TRACKING PUB — valeur de conversion
 
 **PUB-001 (2026-06-12)** — En implémentant le **paiement en 2 fois**, la conversion `purchase` serveur (`stripe-webhook.js`) calculait `piValue = pi.amount/100` = **l'acompte (30 %)**, pas le total. Conséquence : GA4 `purchase`/`booking_completed` + Meta CAPI auraient remonté **30 % de la valeur réelle** → ROAS sous-compté, Google/Meta optimisant sur une valeur fausse. Le client (`BookingModal`) envoyait déjà `total`, mais avec le **même `event_id`/`transaction_id`** que le serveur → la dédup Meta/GA4 pouvait garder la **mauvaise** valeur (l'acompte).
