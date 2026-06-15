@@ -159,13 +159,15 @@ async function ensureTable(db) {
     PRIMARY KEY (platform, comment_id))`).run();
 }
 
-async function handleComment(env, c) {
+// Cœur PARTAGÉ (webhook + poller). c = { platform, commentId, text, fromId, permalink? }.
+// opts.mode = "live" (poste) | "shadow" (t'envoie le brouillon, DÉFAUT). opts.source = "webhook"|"poll".
+export async function processLead(env, c, { mode = "shadow", source = "webhook" } = {}) {
   const db = env.revenue_manager;
-  const mode = (env.SOCIAL_BOT_MODE || "shadow").toLowerCase();
+  mode = String(mode).toLowerCase();
   if (db) {
     await ensureTable(db);
     const seen = await db.prepare("SELECT 1 FROM social_bot_log WHERE platform=? AND comment_id=?").bind(c.platform, c.commentId).first();
-    if (seen) return; // déjà traité (dédup)
+    if (seen) return { skipped: "dup" }; // déjà traité (dédup)
   }
 
   const selfIds = [env.META_PAGE_ID, env.META_IG_ACCOUNT_ID].filter(Boolean);
@@ -177,19 +179,20 @@ async function handleComment(env, c) {
         .bind(c.platform, c.commentId, c.fromId || "", String(c.text || "").slice(0, 300), cls.lead ? 1 : 0, cls.confidence || 0, action, mode).run()
     : Promise.resolve();
 
-  if (!shouldReply) { await log("ignored"); return; }
+  if (!shouldReply) { await log("ignored"); return { lead: false }; }
 
   // L'agent « Répondeur Social » rédige (ton Amaryllis) ; gabarit statique en filet de sécurité.
   const reply = (await genReply(env, { text: c.text, lang: cls.lang })) || pickReply(cls.lang, c.commentId);
 
-  // SHADOW : ne poste rien, prévient Vincent avec la réponse qu'il AURAIT postée.
+  // SHADOW (et tout le flux POLL) : ne poste rien, t'envoie le brouillon prêt à coller.
   if (mode !== "live") {
-    await ntfy(env, "🤖 Bot social (shadow) — lead détecté", `[${c.platform}] « ${String(c.text).slice(0, 140)} »\n→ réponse prête : ${reply}`, "high");
-    await log("shadow");
-    return;
+    await ntfy(env, "🤖 Lead social — réponse prête à coller",
+      `[${c.platform}] « ${String(c.text).slice(0, 140)} »\n→ ${reply}${c.permalink ? `\n👉 ${c.permalink}` : ""}`, "high");
+    await log(source === "poll" ? "shadow-poll" : "shadow");
+    return { lead: true, reply };
   }
 
-  // LIVE : répond publiquement (+ DM privé).
+  // LIVE (webhook publié uniquement) : répond publiquement (+ DM privé).
   const token = env.META_PAGE_TOKEN;
   let action = "replied", errMsg = "";
   try {
@@ -214,6 +217,7 @@ async function handleComment(env, c) {
   await ntfy(env, action === "error" ? "🤖 Bot social — ERREUR réponse" : "🤖 Bot social — réponse postée",
     `[${c.platform}] « ${String(c.text).slice(0, 120) }»${errMsg ? "\n⚠️ " + errMsg : ""}`, action === "error" ? "high" : "default");
   await log(action);
+  return { lead: true, action };
 }
 
 // ── Webhook ──────────────────────────────────────────────────────────────────
@@ -239,6 +243,7 @@ export async function onRequestPost(context) {
 
   const comments = extractComments(body);
   // On répond 200 tout de suite (Meta rejoue si non-200) ; traitement en tâche de fond.
-  context.waitUntil(Promise.all(comments.map((c) => handleComment(env, c).catch(() => {}))));
+  const mode = env.SOCIAL_BOT_MODE || "shadow";
+  context.waitUntil(Promise.all(comments.map((c) => processLead(env, c, { mode, source: "webhook" }).catch(() => {}))));
   return json({ ok: true, received: comments.length });
 }
