@@ -3,10 +3,10 @@
 > Ce qui reviendra nous embêter si on ne le documente pas. Format : statut · sujet · ce qui débloque.
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 
-## 🔴 2026-06-15 — Optim tracking pub LIVE mais DÉPEND de 2 secrets CF Pages (action Vincent)
-- Le tracking serveur (Meta CAPI enrichie + GA4 Measurement Protocol) est déployé MAIS **silencieux sans secrets** :
-  - **`META_CAPI_TOKEN`** (CF Pages → dashboard-amaryllis → Settings → Environment variables) → sinon `capiPurchase` ne part jamais (aucune conversion serveur Meta, et l'enrichissement fbc/fbp/tél ne sert à rien). Générer : Meta Events Manager → Pixel 1648064656415946 → Conversions API → token.
-  - **`GA4_API_SECRET`** → l'audit le signale **absent en prod** → le purchase serveur GA4 ne part pas. Générer : GA4 Admin → Flux de données → Measurement Protocol API secrets.
+## 🟡 2026-06-15 — Tracking serveur : les 2 secrets EXISTENT déjà (vérifié) — reste à valider la santé du token CAPI
+- ⚠️ **CORRECTION** : l'audit (sous-agent) avait *déduit* `GA4_API_SECRET` « absent en prod » → **FAUX POSITIF**. Vérifié via `wrangler pages secret list --project-name dashboard-amaryllis` le 2026-06-15 : **`META_CAPI_TOKEN` ET `GA4_API_SECRET` sont tous deux posés (Value Encrypted)**. Leçon : toujours `wrangler pages secret list` avant d'affirmer qu'un secret manque — ne jamais relayer une déduction de sous-agent sur l'état prod.
+- **GA4 MP = fonctionne** (preuve indirecte : les 2 purchases 30j sont en canal « Unassigned » = signature des events serveur Measurement Protocol avec client_id synthétique `booking-${pi.id}`).
+- **Reste à valider** : la **validité du `META_CAPI_TOKEN`** (peut être expiré, comme META_PAGE_TOKEN ~60j). Je ne peux pas lire sa valeur. Vérif côté Vincent = Meta Events Manager → Pixel 1648064656415946 → onglet *Événements* : voir si des events **Serveur** arrivent récemment + score **EMQ** Purchase. Si 0 event serveur / erreurs → régénérer le token (Conversions API → générer) + `wrangler pages secret put META_CAPI_TOKEN --project-name dashboard-amaryllis`.
 - **Account-side (gain direct, advisory)** : (1) Meta Events Manager → vérifier **dédup** Navigateur+Serveur sur un Purchase test + **EMQ Purchase** (cible >6/10) ; (2) Google Ads → conversion `purchase` (source GA4) en **« Principale »** + **valeurs de conversion pour enchères** + **Enhanced Conversions** ; (3) optionnel : créer une action conversion Google Ads directe → me donner `AW-XXXX/label` → je l'ajoute dans `Merci.jsx` (dédup `transaction_id`, conversions temps réel vs 24-48h d'import).
 - **Débloque** : Vincent pose les 2 secrets + fait les vérifs compte. Réf : ADR-TRACKING-001.
 
