@@ -393,6 +393,12 @@ export async function onRequestPost(context) {
   if (event.type === "payment_intent.succeeded") {
     const pi        = event.data?.object;
     const meta      = pi?.metadata || {};
+
+    // Débit du SOLDE 2× (charge-balance.js pose metadata.kind="solde-2x") : NE doit refaire NI
+    // Beds24, NI email hôte, NI conversion pub — la résa + sa valeur TOTALE ont déjà été comptées
+    // à l'acompte. Court-circuit immédiat (sinon : fausse conversion + fausse alerte + faux booking).
+    if (meta.kind === "solde-2x") return json({ received: true, skipped: "solde-2x" });
+
     const bookingId = meta.bookingId || meta.beds24Id || "";
     const bienId    = meta.bienId    || "";
     const bienNom   = NOMS[bienId]   || bienId || "Amaryllis Locations";
@@ -443,7 +449,11 @@ export async function onRequestPost(context) {
         await ga4Event(env, "booking_completed", { bien_id: "groupe", booking_id: pi.id, value: grpValue, currency: "EUR", channel: "direct-groupe", checkin });
       }
       await storeDirectBooking(env, { paymentIntentId: pi.id, email: guestEmail, voyageur, bienId: "groupe", bienNom: logements, checkin, checkout, total: grpValue, groupBiens: meta.bienIds || "" });
-      await capiPurchase(env, { eventId: pi.id, value: grpValue, email: guestEmail, bienId: "groupe", bienNom: logements || "Réservation groupe" });
+      await capiPurchase(env, {
+        eventId: pi.id, value: grpValue, email: guestEmail, bienId: "groupe", bienNom: logements || "Réservation groupe",
+        phone: meta.phone, firstName: meta.prenom, lastName: meta.nom,
+        fbc: meta.fbc, fbp: meta.fbp, externalId: pi.customer || "",
+      });
       return json({ received: true, group: true });
     }
 
@@ -495,8 +505,10 @@ export async function onRequestPost(context) {
     const txId = bookingId || pi.id;
     // 3a. "purchase" : événement e-commerce STANDARD GA4 → à marquer comme conversion clé.
     //     GA4 dédoublonne par transaction_id, donc cohabite sans risque avec le purchase client.
+    //     ⚠️ transaction_id = pi.id (PAS bookingId) → parité STRICTE avec le purchase client
+    //     (Merci.jsx envoie pi.id) ET avec l'event_id Meta CAPI. Sinon double-comptage GA4 sur Nogent.
     await ga4Event(env, "purchase", {
-      transaction_id: txId,
+      transaction_id: pi.id,
       value: piValue,
       currency: piCur,
       items: [{ item_id: bienId || "unknown", item_name: bienNom || bienId || "Réservation directe", price: piValue, quantity: 1 }],
@@ -513,8 +525,13 @@ export async function onRequestPost(context) {
       checkout,
     }, `booking-${txId}`);
 
-    // 3c. Meta CAPI (server-side) — déduplication via event_id = pi.id (même valeur que Pixel client)
-    await capiPurchase(env, { eventId: pi.id, value: piValue, currency: piCur, email: guestEmail, bienId, bienNom });
+    // 3c. Meta CAPI (server-side) — déduplication via event_id = pi.id (même valeur que Pixel client).
+    //     user_data enrichi (fbc/fbp/téléphone/nom/external_id) → Event Match Quality maximal.
+    await capiPurchase(env, {
+      eventId: pi.id, value: piValue, currency: piCur, email: guestEmail, bienId, bienNom,
+      phone: meta.phone, firstName: meta.prenom, lastName: meta.nom,
+      fbc: meta.fbc, fbp: meta.fbp, externalId: pi.customer || "",
+    });
 
     // 4. Incrémenter le code promo s'il y en avait un (best-effort, n'échoue jamais)
     if (meta.promo_code && env.revenue_manager) {

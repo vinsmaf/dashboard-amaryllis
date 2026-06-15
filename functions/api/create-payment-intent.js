@@ -79,6 +79,9 @@ export async function onRequestPost(context) {
     "metadata[logements]": metadata.logements || "",
     "metadata[bienIds]":   metadata.bienIds   || "",
     "metadata[guests]":    metadata.guests    || "",
+    // Attribution + identité → relayées au webhook pour la CAPI Meta (match quality) et
+    // l'attribution Google Ads serveur. Seuls les champs réellement présents sont posés.
+    ...attribMeta(metadata),
     // Paiement en 2 fois : metadata échéancier + Customer + off-session
     ...(payPlan === "2x" ? {
       customer: customerId,
@@ -146,6 +149,18 @@ export function onRequestOptions() {
       "Access-Control-Allow-Headers": "Content-Type",
     },
   });
+}
+
+// N'ajoute au payload Stripe que les champs d'attribution/identité réellement présents
+// (CAPI match quality Meta + attribution Google Ads). Évite d'encombrer la metadata de clés vides.
+function attribMeta(m = {}) {
+  const out = {};
+  const put = (k, v) => { const s = String(v ?? "").trim(); if (s) out[`metadata[${k}]`] = s.slice(0, 480); };
+  put("fbp", m.fbp); put("fbc", m.fbc); put("fbclid", m.fbclid); put("gclid", m.gclid);
+  put("channel", m.channel);
+  put("utm_source", m.utm_source); put("utm_medium", m.utm_medium); put("utm_campaign", m.utm_campaign);
+  put("phone", m.phone); put("prenom", m.prenom); put("nom", m.nom);
+  return out;
 }
 
 function json(data, status = 200) {

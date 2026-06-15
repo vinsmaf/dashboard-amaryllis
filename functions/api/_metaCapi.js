@@ -8,7 +8,7 @@
 // Pixel ID : hardcodé (1648064656415946) — même valeur que src/lib/metaPixel.js
 
 const PIXEL_ID = "1648064656415946";
-const CAPI_URL = `https://graph.facebook.com/v19.0/${PIXEL_ID}/events`;
+const CAPI_URL = `https://graph.facebook.com/v21.0/${PIXEL_ID}/events`;
 
 async function sha256hex(str) {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
@@ -25,17 +25,31 @@ async function sha256hex(str) {
  * @param {number}  opts.value     - montant en € (ex. 420.00)
  * @param {string}  [opts.currency] - devise (défaut "EUR")
  * @param {string}  [opts.email]   - email voyageur (haché SHA-256 avant envoi)
+ * @param {string}  [opts.phone]   - téléphone (normalisé + haché)
+ * @param {string}  [opts.firstName] - prénom (haché)
+ * @param {string}  [opts.lastName]  - nom (haché)
+ * @param {string}  [opts.fbc]     - cookie _fbc (fb.1.<ts>.<fbclid>, NON haché)
+ * @param {string}  [opts.fbp]     - cookie _fbp (NON haché)
+ * @param {string}  [opts.externalId] - id Stripe customer (haché)
  * @param {string}  [opts.bienId]  - id du bien (ex. "amaryllis")
  * @param {string}  [opts.bienNom] - nom lisible (ex. "Villa Amaryllis")
  * @param {string}  [opts.sourceUrl] - URL de la page purchase (défaut /merci)
+ *
+ * Plus user_data est riche (em + ph + fn + ln + fbc + fbp + external_id), meilleur est
+ * l'Event Match Quality Meta (EMQ) → attribution fiable même sans cookie tiers (iOS/adblock).
  */
-export async function capiPurchase(env, { eventId, value, currency = "EUR", email, bienId, bienNom, sourceUrl }) {
+export async function capiPurchase(env, { eventId, value, currency = "EUR", email, phone, firstName, lastName, fbc, fbp, externalId, bienId, bienNom, sourceUrl }) {
   if (!env.META_CAPI_TOKEN) return; // pas configuré → silencieux
 
+  const hash = async (v) => { try { return await sha256hex(String(v).trim().toLowerCase()); } catch { return null; } };
   const userData = {};
-  if (email) {
-    try { userData.em = [await sha256hex(email.trim().toLowerCase())]; } catch { /* */ }
-  }
+  if (email)     { const h = await hash(email);     if (h) userData.em = [h]; }
+  if (phone)     { const h = await hash(String(phone).replace(/[\s+\-().]/g, "")); if (h) userData.ph = [h]; }
+  if (firstName) { const h = await hash(firstName); if (h) userData.fn = [h]; }
+  if (lastName)  { const h = await hash(lastName);  if (h) userData.ln = [h]; }
+  if (fbc) userData.fbc = fbc;                 // déjà au bon format, NON haché
+  if (fbp) userData.fbp = fbp;                 // NON haché
+  if (externalId) { const h = await hash(externalId); if (h) userData.external_id = [h]; }
 
   const payload = {
     data: [{

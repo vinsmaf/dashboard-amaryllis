@@ -1405,6 +1405,9 @@ function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) 
             checkout:    localCheckout,
             voyageur:    `${form.prenom} ${form.nom}`.trim(),
             email:       form.email.trim(),
+            prenom:      form.prenom?.trim() || "",
+            nom:         form.nom?.trim() || "",
+            phone:       form.tel?.trim() || "",
             beds24Id:    cd.bookingId,
             bookingId:   cd.bookingId,
             promo_code:  promoData?.code || "",
@@ -1475,7 +1478,7 @@ function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) 
             bien_id: bien.id, niveau_tarifaire: niveauTarifaire(bien, localCheckin),
             items: [{ item_id: bien.id, item_name: bien.nom, price: bien.prix, quantity: nights || 1 }],
           });
-          mpTrack("Purchase", { value: amount, currency: "EUR", content_ids: [bien.id], content_type: "product" });
+          mpTrack("Purchase", { value: amount, currency: "EUR", eventID: paymentIntent.id, content_ids: [bien.id], content_type: "product" });
         }
       }
       window.location.href = "/merci";
@@ -2085,6 +2088,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
           metadata: {
             bienId: bien.id, checkin, checkout,
             voyageur: `${form.prenom} ${form.nom}`, email: form.email,
+            prenom: form.prenom?.trim() || "", nom: form.nom?.trim() || "", phone: form.tel?.trim() || "",
             ...(upsellsStr ? { upsells: upsellsStr } : {}),
             ...(isTwoX ? {
               balance_amount: String(balanceAmount(total)),
@@ -2182,7 +2186,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
             niveau_tarifaire: niveauTarifaire(bien, checkin),
             items: [{ item_id: bien.id, item_name: bien.nom, price: bien.prix, quantity: nights }],
           });
-          mpTrack("Purchase", { value: total, currency: "EUR", content_ids: [bien.id], content_type: "product" });
+          mpTrack("Purchase", { value: total, currency: "EUR", eventID: paymentIntent.id, content_ids: [bien.id], content_type: "product" });
         }
       }
       // Notifier l'hôte des upsells sélectionnés
@@ -5288,6 +5292,7 @@ function AlerteDispoModal({ bien, checkin: initCheckin, checkout: initCheckout, 
       if (data.ok) {
         setSent(true);
         if (window.gtag) window.gtag("event", "generate_lead", { method: "alerte_dispo", item_id: bien.id, item_name: bien.nom });
+        mpTrack("Lead", { value: 0, currency: "EUR", content_ids: [bien.id], content_type: "product" });
       } else { setErr(true); }
     } catch { setErr(true); }
     setSending(false);
@@ -6060,7 +6065,7 @@ function GroupPaymentModal({ biens, checkin, checkout, guests, nights, total, on
 
       const res = await fetch("/api/create-payment-intent", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: total * 100, currency: "eur", metadata: { type: "group", bienId: "groupe", bienIds: biens.map(b => b.id).join(","), logements: logementsLabel, checkin, checkout, guests: String(guests), voyageur: `${form.prenom} ${form.nom}`.trim(), email: form.email, ...getAttributionMetadata() } }),
+        body: JSON.stringify({ amount: total * 100, currency: "eur", metadata: { type: "group", bienId: "groupe", bienIds: biens.map(b => b.id).join(","), logements: logementsLabel, checkin, checkout, guests: String(guests), voyageur: `${form.prenom} ${form.nom}`.trim(), email: form.email, prenom: form.prenom?.trim() || "", nom: form.nom?.trim() || "", phone: form.tel?.trim() || "", ...getAttributionMetadata() } }),
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
@@ -6084,12 +6089,19 @@ function GroupPaymentModal({ biens, checkin, checkout, guests, nights, total, on
         body: JSON.stringify({ nom: `${form.prenom} ${form.nom}`.trim(), email: form.email, tel: form.tel, bien: `GROUPE : ${logementsLabel}`, source: "reservation-groupe",
           message: `🚨 RÉSA GROUPÉE PAYÉE (${paymentIntent.id}) — BLOQUER les calendriers Airbnb/Booking de : ${biens.map(b => b.nom).join(", ")}\nDates : ${checkin} → ${checkout} (${nights} nuits)\nVoyageurs : ${guests}\nTotal payé : ${total}€` }),
       }).catch(() => {});
+      // Failsafe : si le beacon inline ci-dessous meurt au unload, Merci.jsx refire avec le même eventID.
+      try {
+        ssSet("pending_purchase", JSON.stringify({
+          pi: paymentIntent.id, value: total,
+          items: (biens || []).map(b => ({ item_id: b.id, item_name: b.nom, price: b.prix, quantity: nights || 1 })),
+        }));
+      } catch { /* */ }
       if (window.gtag) {
         const guardKey = `ga_purchase_fired_${paymentIntent.id}`;
         if (!ssGet(guardKey)) {
           ssSet(guardKey, "1");
-          try { window.gtag("event", "purchase", { transaction_id: paymentIntent.id, currency: "EUR", value: total, bien_id: biens?.[0]?.id, niveau_tarifaire: niveauTarifaire(biens?.[0], checkin) }); } catch { /* */ }
-          mpTrack("Purchase", { value: total, currency: "EUR", content_ids: (biens || []).map(b => b.id), content_type: "product" });
+          try { window.gtag("event", "purchase", { transaction_id: paymentIntent.id, currency: "EUR", value: total, bien_id: biens?.[0]?.id, niveau_tarifaire: niveauTarifaire(biens?.[0], checkin), items: (biens || []).map(b => ({ item_id: b.id, item_name: b.nom, price: b.prix, quantity: nights || 1 })) }); } catch { /* */ }
+          mpTrack("Purchase", { value: total, currency: "EUR", eventID: paymentIntent.id, content_ids: (biens || []).map(b => b.id), content_type: "product" });
         }
       }
       window.location.href = "/merci";
@@ -7057,6 +7069,7 @@ function FooterSection() {
         setSent(true);
         setForm({ nom: "", email: "", message: "" });
         if (window.gtag) window.gtag("event", "generate_lead", { method: "contact_form" });
+        mpTrack("Lead", { value: 0, currency: "EUR" });
       } else {
         setSentError(true);
       }
@@ -7095,7 +7108,7 @@ function FooterSection() {
           </Editorial>
 
           <a href={`https://wa.me/${WA_NUMBER}?text=${waMsg}`} target="_blank" rel="noopener noreferrer"
-            onClick={() => { if (window.gtag) window.gtag("event", "generate_lead", { method: "whatsapp" }); }}
+            onClick={() => { if (window.gtag) window.gtag("event", "generate_lead", { method: "whatsapp" }); mpTrack("Lead", { value: 0, currency: "EUR" }); }}
             style={{ display: "inline-flex", alignItems: "center", gap: 10, background: "#25D366", color: "#fff", borderRadius: 6, padding: "12px 22px", marginBottom: 12, textDecoration: "none", fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase", transition: "opacity 0.2s", width: "100%", maxWidth: 260, boxSizing: "border-box" }}
             onMouseEnter={e => { e.currentTarget.style.opacity = "0.85"; }}
             onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
