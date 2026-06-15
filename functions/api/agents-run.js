@@ -15,6 +15,35 @@ import { ragBlock } from "./_rag.js"; // #2 RAG — grounding sur les vraies don
 // Agents "content" qui bénéficient du grounding sur les vraies données (avis/guides/drafts).
 const RAG_AGENTS = new Set(["community-manager", "seo-content-writer", "voyageur-research", "crm-manager", "commercial-publicite"]);
 
+// ── Spécialistes fiscaux (ADR-BRAIN-003) : grounding sur le contexte fiscal UNIFIÉ ──
+// FISCAL_CONTEXT = miroir condensé de ~/.claude/memory/FISCAL.md (cerveau fiscal partagé
+// des 2 cerveaux). Une CF Function ne lit pas ~/.claude au runtime → on embarque l'extrait.
+// ⚠️ MIROIR : si FISCAL.md change matériellement, mettre à jour ce bloc + redéployer.
+const FISCAL_AGENTS = new Set(["fiscaliste", "controleur-fiscal", "comptable", "notaire-assurance"]);
+const FISCAL_CONTEXT = `
+═══════════════════════════════════════════════════════════════
+🧾 CONTEXTE FISCAL UNIFIÉ DE VINCENT (un seul contribuable — locatif + patrimoine)
+═══════════════════════════════════════════════════════════════
+STATUT : Loueur Meublé sur 7 biens (6 Martinique Sainte-Luce/Schœlcher + 1 Nogent IDF). Activité BIC.
+Revenus locatifs 2025 : ~160 k€ brut / ~77 k€ net. Résidence fiscale Martinique (DOM → DMTO, dispositifs ultramarins).
+Aussi : crypto (depuis 2018), actions, épargne salariale (PEE/PERCO Vivendi, PEG Altice), AV — détail = côté patrimoine.
+
+ÉCHÉANCES FISCALES DATÉES (FIXES) :
+• Régularisation DGFiP 2023 : 2 319 € (IR 1 439 + PS 825 + ESSOC 55) — avis complémentaire, paiement ~01/09/2026.
+• Déclarations meublé de tourisme : 🔴 URGENT, jusqu'à 12 500 € d'enjeu. Déclaration mairie = prérequis.
+• Passage RÉGIME RÉEL LMP — déc. 2026 (crédit Résidence soldé) → dossier amortissement (actes notariés Résidence +
+  coût construction + inventaire mobilier + factures travaux) à remettre au comptable. Amortissement par composants = levier #1.
+• PEG Altice : exonération IR complète 10/2029.
+
+STRATÉGIE : conformité d'abord (DGFiP + meublé tourisme), PUIS optimisation régime réel (amortissements). Structures
+SCI/holding évoquées (non décidées). Projet d'enfant + PACS/mariage Céline → impact futur quotient familial/transmission.
+
+🚨 RÈGLES : tu es ADVISORY — tu prépares l'analyse, VINCENT décide et signe. Aucune déclaration/paiement déclenché.
+Ne présente JAMAIS un conseil comme une certitude → termine par « à valider avec le comptable/notaire réel ».
+Reste factuel : ne cite pas un chiffre que tu n'as pas ici ; pointe vers la pièce manquante.
+═══════════════════════════════════════════════════════════════
+`;
+
 // ── Inventaire des capacités DÉJÀ LIVRÉES (anti-doublon transverse) ──────────
 // Injecté dans CHAQUE prompt agent : ne JAMAIS reproposer la CRÉATION d'une de ces
 // briques (elles existent en prod). Seulement une AMÉLIORATION précise, en nommant
@@ -233,6 +262,42 @@ export const AGENTS = [
     focus: "analyse en masse avis Airbnb/Google/Booking/TripAdvisor, codage thématique, sentiment, personas voyageurs, NPS, frictions récurrentes, attentes non couvertes, synthèse trimestrielle",
     files_hint: "D1 google_reviews / contacts, functions/api/google-reviews.js, ~/.claude/skills/voyageur-research-amaryllis/SKILL.md",
   },
+  // ── Spécialistes fiscaux/comptables (ADR-BRAIN-003, 2026-06-15) ─────────────
+  // « Armée commune » aux 2 cerveaux : mêmes rôles que côté patrimoine (agentsConfig.js),
+  // ici scopés au business locatif MAIS grounded sur le contexte fiscal UNIFIÉ (FISCAL_CONTEXT
+  // = miroir de ~/.claude/memory/FISCAL.md). Advisory only — Vincent décide et signe.
+  {
+    id: "fiscaliste",
+    label: "Fiscaliste LMP",
+    emoji: "📜",
+    prefix: "fisc",
+    focus: "Tu es Maître Moreau, avocat fiscaliste (CGI art. 14/31) doublé de Céline, experte LMNP/LMP. Fiscalité des meublés : micro-BIC vs régime réel, amortissement par composants (PCG), statut LMP (seuils 23k€/revenus), TVA meublé para-hôtelier, plus-values, spécificités DOM. Objectif : réduire légalement la base imposable des revenus locatifs de Vincent en préparant le passage au régime réel (déc. 2026).",
+    files_hint: "~/.claude/memory/FISCAL.md (contexte unifié), docs/legal/plan-action-declarations.md, src/data/biens.js (7 biens, valeurs), revenus locatifs (Sheet)",
+  },
+  {
+    id: "controleur-fiscal",
+    label: "Contrôleur Fiscal",
+    emoji: "🏛️",
+    prefix: "ctrlfisc",
+    focus: "Tu es l'Inspecteur Lévy, inspecteur DGFiP (vérification de comptabilité + ESFP). Tu traques le RISQUE fiscal AVANT que l'administration ne le fasse : cohérence des déclarations, suite de la régularisation DGFiP 2023, conformité des déclarations meublé de tourisme (enjeu 12 500 €), pièces justificatives, points de contrôle probables. Tu sécurises, tu ne dénonces pas — tu prépares Vincent à un contrôle.",
+    files_hint: "~/.claude/memory/FISCAL.md, docs/legal/plan-action-declarations.md, D1 direct_bookings (revenus déclarables), agent_actions (conformité)",
+  },
+  {
+    id: "comptable",
+    label: "Comptable",
+    emoji: "📒",
+    prefix: "compta",
+    focus: "Tu es Valérie, expert-comptable (DEC, PCG 2014, spécialiste bailleurs meublés). Charges déductibles, immobilisations & amortissements, clôture, préparation de la liasse et du dossier comptable (Résidence : actes notariés + coût construction + inventaire mobilier + factures travaux). Tu structures les pièces pour le comptable réel et maximises les déductions légitimes.",
+    files_hint: "~/.claude/memory/FISCAL.md, src/data/biens.js, charges par bien (App.jsx CHARGES_*), Sheet revenus/charges",
+  },
+  {
+    id: "notaire-assurance",
+    label: "Notaire & Assurance",
+    emoji: "⚖️",
+    prefix: "notass",
+    focus: "Tu combines Maître Blanc (notaire DOM : DMTO Martinique, droit immobilier, transmission, actes nécessaires au dossier d'amortissement de la Résidence) et Nicolas (courtier : couverture des biens locatifs, PNO, RC, prévoyance bailleur, contact AXA Loganadin). Tu sécurises le juridique-patrimonial du bâti locatif et la couverture assurantielle.",
+    files_hint: "~/.claude/memory/FISCAL.md, dossier Résidence (actes), contrats AXA (Loganadin 01 47 74 40 98), src/data/biens.js",
+  },
 ];
 
 // ── Modèles Groq — rotation pour maximiser les appels parallèles ─────────────
@@ -283,6 +348,11 @@ const AGENT_TIERS = {
   "seo-local":                  "fast",
   // voyageur-research = medium (analyse sentiment + synthèse)
   "voyageur-research":          "medium",
+  // Spécialistes fiscaux (ADR-BRAIN-003) — raisonnement à fort enjeu → smart/medium
+  "fiscaliste":                 "smart",
+  "controleur-fiscal":          "smart",
+  "comptable":                  "medium",
+  "notaire-assurance":          "medium",
 };
 
 // Provider préféré par agent (cascade vers les autres si échec)
@@ -318,6 +388,11 @@ const AGENT_PREFERRED_PROVIDER = {
   "prompt-engineer":            "cloudflare", // bucket séparé pour méta-tâches
   "seo-local":                  "groq",       // analyses techniques NAP
   "voyageur-research":          "cerebras",   // synthèse rapide grand corpus
+  // Spécialistes fiscaux (ADR-BRAIN-003) — répartis sur les buckets
+  "fiscaliste":                 "groq",       // raisonnement fiscal (llama-70b smart)
+  "controleur-fiscal":          "mistral",    // analyse risque FR-native
+  "comptable":                  "groq",       // structuration comptable
+  "notaire-assurance":          "cloudflare", // bucket séparé
 };
 
 // ── Récupère l'historique D1 d'un agent ────────────────────────────────────
@@ -546,6 +621,9 @@ MÉMOIRE DE TES RUNS PRÉCÉDENTS :
   (première analyse)
 `)}`;
 
+  // ── Contexte fiscal unifié (spécialistes fiscaux — ADR-BRAIN-003) ───────────
+  const fiscalSection = FISCAL_AGENTS.has(agent.id) ? FISCAL_CONTEXT : "";
+
   // ── Skill métier injecté (manuel d'opération de l'agent) ────────────────
   const skill = getSkillForAgent(agent.id);
   const skillSection = skill ? `
@@ -691,7 +769,7 @@ Retourne UN SEUL JSON :
 TON DOMAINE D'EXPERTISE : ${agent.focus}
 
 FICHIERS CLÉS à analyser : ${agent.files_hint}
-${skillSection}${liveSection}${sharedSection}${ragSection}${bannedSection}${memorySection}${feedbackSection}${outcomesSection}${historySection}
+${fiscalSection}${skillSection}${liveSection}${sharedSection}${ragSection}${bannedSection}${memorySection}${feedbackSection}${outcomesSection}${historySection}
 ${DEJA_EN_PLACE}
 MISSION : Identifie les actions concrètes NOUVELLES à réaliser dans ton domaine. Tiens compte de ce qui a déjà été fait ou identifié pour approfondir ton analyse et aller plus loin. Si une idée recoupe une capacité « DÉJÀ EN PLACE », ne la propose PAS — sauf amélioration précise et chiffrée (dis ce qui manque concrètement).
 
