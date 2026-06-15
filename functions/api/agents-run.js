@@ -499,7 +499,7 @@ function renderBannedSection(lessons = []) {
   return `\n🚫 MOTS / EXPRESSIONS STRICTEMENT INTERDITS (ne JAMAIS les écrire, ni une variante proche) :\n${lines}\n`;
 }
 
-function buildPrompt(agent, history = [], memories = [], recentDrafts = [], brief = "", liveSection = "", feedbackSection = "", outcomesSection = "", ragSection = "", bannedSection = "") {
+function buildPrompt(agent, history = [], memories = [], recentDrafts = [], brief = "", liveSection = "", feedbackSection = "", outcomesSection = "", ragSection = "", bannedSection = "", sharedSection = "") {
   // Sépare l'historique par statut pour donner du contexte à l'agent
   const done    = history.filter(h => h.status === "fait");
   const blocked = history.filter(h => h.status === "bloqué");
@@ -691,7 +691,7 @@ Retourne UN SEUL JSON :
 TON DOMAINE D'EXPERTISE : ${agent.focus}
 
 FICHIERS CLÉS à analyser : ${agent.files_hint}
-${skillSection}${liveSection}${ragSection}${bannedSection}${memorySection}${feedbackSection}${outcomesSection}${historySection}
+${skillSection}${liveSection}${sharedSection}${ragSection}${bannedSection}${memorySection}${feedbackSection}${outcomesSection}${historySection}
 ${DEJA_EN_PLACE}
 MISSION : Identifie les actions concrètes NOUVELLES à réaliser dans ton domaine. Tiens compte de ce qui a déjà été fait ou identifié pour approfondir ton analyse et aller plus loin. Si une idée recoupe une capacité « DÉJÀ EN PLACE », ne la propose PAS — sauf amélioration précise et chiffrée (dis ce qui manque concrètement).
 
@@ -791,7 +791,8 @@ Retourne un JSON strict avec cette structure :
       "effort": "durée estimée (30min|1h|2h|4h|8h|ext pour externe)",
       "status": "backlog"
     }
-  ]${DRAFT_CAPABLE[agent.id] ? `,
+  ],
+  "signal": "OPTIONNEL — UNE phrase si tu détectes une tendance/alerte/opportunité TRANSVERSE utile aux AUTRES agents (ex: 'CA août -30%, Mabouya sous-performe' ou 'concurrents -15% sur juillet'). Sinon omets ce champ."${DRAFT_CAPABLE[agent.id] ? `,
   "drafts": [
     {
       "type": "${DRAFT_CAPABLE[agent.id].types.join("|")}",
@@ -1152,6 +1153,28 @@ export async function onRequest(context) {
         memories = mems || [];
       } catch {}
 
+      // ── Bus inter-agents (B) : signaux transverses émis par les AUTRES agents ──
+      // Chaque agent peut émettre 1 "signal" (tendance/alerte) lu par tous les autres au run
+      // suivant → fin du silo. On exclut son propre signal.
+      let sharedSection = "";
+      try {
+        const { results: sig } = await db.prepare(
+          "SELECT value FROM agent_memory WHERE agent='_shared' AND key LIKE 'signal:%' AND key != ? ORDER BY created_at DESC LIMIT 8"
+        ).bind(`signal:${agent.id}`).all();
+        // Apprentissages distillés (B2) : sagesse durable extraite des évals/impacts hebdo.
+        const { results: lessons } = await db.prepare(
+          "SELECT value FROM agent_memory WHERE agent='_shared' AND key LIKE 'learning:%' ORDER BY created_at DESC LIMIT 5"
+        ).all();
+        const blocks = [];
+        if (lessons && lessons.length) {
+          blocks.push(`🧠 APPRENTISSAGES DU RÉSEAU (distillés des résultats passés — applique-les) :\n${lessons.map(s => `  • ${s.value}`).join("\n")}`);
+        }
+        if (sig && sig.length) {
+          blocks.push(`📡 SIGNAUX DU RÉSEAU (émis par les autres agents — contexte transverse frais) :\n${sig.map(s => `  • ${s.value}`).join("\n")}`);
+        }
+        if (blocks.length) sharedSection = `\n${blocks.join("\n\n")}\n`;
+      } catch { /* bus indisponible → run sans signaux, fail-soft */ }
+
       // Feedback (lever #2) : actions passées en "fait" depuis le dernier run de cet agent
       let lastRunTs = null, completedSince = 0;
       try {
@@ -1184,7 +1207,7 @@ export async function onRequest(context) {
         max_tokens: 4096, // débridé (était 2048) — réponses agents plus complètes
         temperature: 0.3,
         logSource: `agent:${agent.id}`, // prompt-004 — journalise la sortie en D1
-        messages: [{ role: "user", content: buildPrompt(agent, history, memories, recentDrafts, body.brief || "", liveSection, feedbackSection, outcomesSection, ragSection, bannedSection) }],
+        messages: [{ role: "user", content: buildPrompt(agent, history, memories, recentDrafts, body.brief || "", liveSection, feedbackSection, outcomesSection, ragSection, bannedSection, sharedSection) }],
       });
 
       if (!llmResult.ok) {
@@ -1214,6 +1237,16 @@ export async function onRequest(context) {
       const actions = parsed.actions || [];
       const drafts  = parsed.drafts || [];
       let inserted = 0, updated = 0, draftsCreated = 0, rejected = 0;
+
+      // ── Bus inter-agents (B) : publie le signal transverse émis par cet agent ──
+      // Lu par tous les autres agents au run suivant (agent_memory '_shared'). 1 par agent
+      // (ON CONFLICT remplace l'ancien) → le réseau partage ses tendances sans silo.
+      const signal = typeof parsed.signal === "string" ? parsed.signal.trim() : "";
+      if (signal && signal.length > 8 && !/^optionnel/i.test(signal)) {
+        await db.prepare(`INSERT INTO agent_memory (agent, key, value) VALUES (?,?,?)
+          ON CONFLICT(agent, key) DO UPDATE SET value=excluded.value, created_at=unixepoch()`)
+          .bind("_shared", `signal:${agent.id}`, `${agent.emoji} ${agent.label}: ${signal}`.slice(0, 300)).run().catch(() => {});
+      }
 
       // ── Insertion des drafts (si l'agent en a généré) ────────────────────
       if (drafts.length > 0 && DRAFT_CAPABLE[agent.id]) {

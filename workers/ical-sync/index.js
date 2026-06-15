@@ -2060,6 +2060,19 @@ async function runAgentsEval(env) {
   } catch (e) { console.error("[agents-eval] error:", e.message); }
 }
 
+// Agent-mémoire (B2) : distille evals 7j + impacts mesurés + signaux en apprentissages
+// durables (agent_memory '_shared/learning:N') injectés dans tous les agents. Hebdo.
+async function runMemoryDistill(env) {
+  const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+  const secret = env.POSTSTAY_SECRET || "";
+  if (!secret) { console.log("[memory-distill] POSTSTAY_SECRET absent — skip"); return; }
+  try {
+    const r = await fetch(`${siteUrl}/api/memory-distill?secret=${encodeURIComponent(secret)}`);
+    const j = await r.json().catch(() => ({}));
+    console.log(`[memory-distill] ${j.ok ? "✓" : "✗"} ${j.written ?? 0} apprentissages distillés${j.note ? " — " + j.note : ""}`);
+  } catch (e) { console.error("[memory-distill] error:", e.message); }
+}
+
 async function runAgentsExecuteAndDigest(env) {
   const siteUrl = env.SITE_URL || "https://villamaryllis.com";
   if (!env.POSTSTAY_SECRET) { console.log("[agents] POSTSTAY_SECRET absent — skip"); return; }
@@ -2199,6 +2212,7 @@ export default {
         runTokenHealthCheck(env), // alerte si META_PAGE_TOKEN invalide/expire <7j
         runSeoReport(env), // 📈 rapport SEO hebdo (Search Console) par email
         runBugTriage(env), // 🐞 triage hebdo des bugs captés en prod → backlog + digest
+        runMemoryDistill(env), // 🧠 B2 — distille l'expérience du réseau en apprentissages durables
       ]));
 
     } else if (cron === "0 1 1 * *") {
