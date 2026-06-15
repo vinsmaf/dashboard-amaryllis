@@ -36,6 +36,7 @@ export async function onRequest(context) {
   const { request, env } = context;
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
 
+  try {
   const url = new URL(request.url);
   const secretOk = env.POSTSTAY_SECRET && url.searchParams.get("secret") === env.POSTSTAY_SECRET;
   const { ok: adminOk } = await verifyBearer(request, env);
@@ -55,13 +56,20 @@ export async function onRequest(context) {
   const dry = url.searchParams.get("dry") === "1";
   const mode = (url.searchParams.get("mode") || env.GUIDE_WRITE_MODE || "shadow").toLowerCase();
 
-  // 1. Charger le guide actuel (D1 prioritaire, fallback fichier statique) via l'endpoint guides.
+  // 1. Charger le guide actuel — D1 direct (prioritaire) puis fallback fichier statique.
+  // (Pas de fetch interne Function→Function : fragile/timeout → 502.)
   let guide = null;
   try {
-    const r = await fetch(`${url.origin}/api/guides?property_id=${propertyId}`);
-    const d = await r.json();
-    guide = d.guide || d;
+    await db.prepare("CREATE TABLE IF NOT EXISTS property_guides (property_id TEXT PRIMARY KEY, content_json TEXT NOT NULL, updated_at INTEGER NOT NULL)").run().catch(() => {});
+    const row = await db.prepare("SELECT content_json FROM property_guides WHERE property_id=?").bind(propertyId).first();
+    if (row?.content_json) guide = JSON.parse(row.content_json);
   } catch { /* ignore */ }
+  if (!guide) {
+    try {
+      const r = await fetch(new URL(`/guides/${propertyId}.json`, url.origin));
+      if (r.ok) guide = await r.json();
+    } catch { /* ignore */ }
+  }
   if (!guide || typeof guide !== "object") return json({ error: "guide introuvable" }, 404);
 
   // 2. Génération : réécriture des champs éditables uniquement, grounded sur les faits du bien.
@@ -115,4 +123,7 @@ Retourne UNIQUEMENT un JSON : {"welcome_message": "...", "tagline": "..."}`;
     result.preview = { welcome_message: improved.welcome_message, tagline: improved.tagline };
   }
   return json(result);
+  } catch (e) {
+    return json({ ok: false, error: String(e?.message || e), where: "guide-write" }, 500);
+  }
 }
