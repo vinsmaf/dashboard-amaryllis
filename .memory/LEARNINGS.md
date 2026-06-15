@@ -3,6 +3,13 @@
 > Pièges déjà rencontrés + comment les éviter. 1 entrée = 1 leçon actionnable « la prochaine fois ».
 > Le journal d'erreurs exhaustif reste `../docs/ERREURS-LOG.md`.
 
+## 🤖 Réseau d'agents : boucles d'autonomie — pièges rencontrés — 2026-06-15
+- **`agent_memory` est injectée dans le prompt** (`buildPrompt` memorySection, agents-run.js) → écrire une clé dans `agent_memory(agent=<id>)` = le faire lire à l'agent au run suivant. C'est le canal de feedback le plus simple (utilisé pour `eval_feedback`). Le bus inter-agents = même mécanique avec `agent='_shared'`.
+- **Sélection des sorties à évaluer : 1 par agent, pas les N plus récentes.** community-manager génère ~12 drafts/jour → il monopolisait les 25 places de `agents-eval` (les autres agents jamais notés). Fix : `JOIN (SELECT source, MAX(id) ... GROUP BY source)` → dernière sortie de CHAQUE source.
+- **Batch d'éval : ordonner DESC + garde anti-écrasement.** En traitant plusieurs sorties du même agent dans un batch (ordre DESC), une vieille bonne note **supprimait** la correction d'une sortie récente faible. Fix : `Set` des agents déjà traités → seule la sortie la plus récente fait foi (vu en prod : feedback=1 puis effacé dans la même passe).
+- **`no-empty` ESLint accepte un bloc avec commentaire.** Tout `catch {}` vide = +1 erreur lint → bloque le deploy (gate delta). Toujours mettre `catch { /* raison */ }`. Idem nouveau fichier : il part d'un baseline 0, donc 0 erreur tolérée.
+- **Émettre un signal/donnée structurée d'un agent = champ JSON explicite, pas du parsing de prose.** On a ajouté un champ `signal` optionnel au schéma de sortie (parsé via `parsed.signal`), fiable et additif (absent = rien ne casse).
+
 ## 🗓️ Scheduled tasks : créé même quand /schedule affiche une erreur de connexion — 2026-06-14
 - La skill `/schedule` peut afficher « trouble connecting with remote claude.ai account » **ET avoir quand même créé la tâche** en arrière-plan. **La prochaine fois : toujours vérifier avec `list_scheduled_tasks` avant de recréer** — évite les doublons et les surprises.
 - Pattern vérifié : tâche `rapport-business-amaryllis-18h` apparue dans la liste malgré le message d'erreur affiché à l'écran.

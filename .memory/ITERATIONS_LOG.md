@@ -13,6 +13,16 @@ Session longue pilotée par Vincent : 4 livrables.
 - **Chat Mistral + escalade** (`1614d68`, `4695081`, `9f992f3`, `d5a79b4`) : ChatWidget bascule sur Mistral medium (FR-natif, cascade Groq/CF) · escalade ntfy + flag `notified` · kill-switch `CHAT_DISABLED`.
 - **219 tests ✅**. Rapport-business V4 + page projets (session précédente, commits `d077f37`, `a95a014`).
 
+## 2026-06-15 — Autonomie réseau d'agents : 3 boucles (A éval auto + B bus + distillation)
+Objectif Vincent : "peaufiner le second cerveau, plus autonome/puissant, réseau clair, façon d'interagir/apprendre/s'améliorer". Workflow de cartographie (5 lecteurs //) puis A puis B.
+- **Cartographie** : workflow `comprendre-agents-amaryllis` (5 agents Explore //) → constats clés : `agents-eval` existait mais DORMAIT (aucun cron) ; `agent_memory` injectée dans les prompts MAIS silo (chaque agent ne lit que la sienne) ; `llm_outputs` journalise via `logSource`.
+- **A — Évaluateur auto + feedback** (ADR-BRAIN-002) : `agents-eval.js` sélectionne 1 sortie/agent → note 0-10 → si faible, consigne corrective dans `agent_memory(eval_feedback)` mise en exergue au prompt ; supprimée quand l'agent repasse ≥8. Cron quotidien `runAgentsEval` (worker 0 9). Vérifié : 22 agents notés, moyenne **7,9/10**.
+- **B1 — Bus inter-agents** : champ JSON `signal` optionnel → `agent_memory('_shared','signal:<id>')` lu par tous (section `📡 SIGNAUX`). Prouvé prod : data-analyst "Mabouya sous-performe" → revenue-manager le reprend.
+- **B2 — Agent-mémoire** : `memory-distill.js` (NOUVEAU) distille evals+impacts+signaux → 3-5 `_shared/learning:N` injectés partout. Cron hebdo `runMemoryDistill` (worker 0 6 lun). Prouvé : 3 learnings distillés.
+- **Dashboard** : section "Boucles d'autonomie" dans ProjetsCerveauTab.
+- **Bugs corrigés en cours de route** : sélection 25-plus-récentes monopolisée par community-manager → 1/agent ; écrasement feedback même-batch → garde `Set` ; lints `no-empty`.
+- Déploiements : Pages ×4 + Worker ×3. Commits A, B, dashboard. Tests 219 verts à chaque gate.
+
 ## 2026-06-14 (nuit) — V4 rapport-business + page Projets Cerveau
 Session de clôture + test autonomie. Vincent au cinéma jusqu'au soir.
 - **Scheduled task vérifiée** : `rapport-business-amaryllis-18h` déjà créée en session précédente malgré le message d'erreur `/schedule`. Leçon : toujours vérifier avec `list_scheduled_tasks` avant de recréer.
