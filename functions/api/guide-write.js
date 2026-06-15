@@ -87,15 +87,20 @@ Réécris ces DEUX textes pour qu'ils soient plus chaleureux, fluides et accueil
 RÈGLES STRICTES : n'invente AUCUN fait (équipement, distance, capacité, prix). Ne mentionne pas le wifi, le code d'accès, les horaires (ils sont ailleurs dans le guide). Reste fidèle aux faits ci-dessus.
 Retourne UNIQUEMENT un JSON : {"welcome_message": "...", "tagline": "..."}`;
 
-  let improved = null;
+  let improved = null, llmRaw = "", llmErr = null, llmProvider = null;
   try {
     const res = await callLLM(env, { provider: "mistral", tier: "smart", max_tokens: 700, temperature: 0.5, messages: [{ role: "user", content: prompt }] });
+    llmProvider = res.provider;
     if (res.ok) {
-      const m = String(res.text || "").match(/\{[\s\S]*\}/);
-      if (m) improved = JSON.parse(m[0]);
-    }
-  } catch { /* ignore */ }
-  if (!improved) return json({ ok: false, error: "génération LLM échouée" }, 502);
+      // Nettoie les fences markdown (```json … ```) avant d'isoler le JSON.
+      llmRaw = String(res.text || "").replace(/```json/gi, "").replace(/```/g, "").trim();
+      const m = llmRaw.match(/\{[\s\S]*\}/);
+      if (m) { try { improved = JSON.parse(m[0]); } catch (e) { llmErr = "parse: " + e.message; } }
+      else llmErr = "aucun JSON dans la réponse";
+    } else { llmErr = "callLLM: " + (res.errors?.map(e => e.error).join(", ") || "échec"); }
+  } catch (e) { llmErr = "exception: " + (e?.message || e); }
+  // Statut 200 (et NON 502 — Cloudflare habille les 502 et masque le body).
+  if (!improved) return json({ ok: false, error: "génération LLM échouée", llmErr, provider: llmProvider, raw: llmRaw.slice(0, 400) }, 200);
 
   // 3. Validation : champs critiques intacts + fact-check bien-aware des champs réécrits.
   const learned = await loadLearnedLessons(db).catch(() => []);
