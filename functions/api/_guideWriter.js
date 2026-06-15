@@ -8,6 +8,24 @@
 
 import { factCheckCaption } from "./_factcheck.js";
 
+// Répare le JSON renvoyé par un LLM : échappe les retours à la ligne/tabs BRUTS présents
+// à l'intérieur des chaînes (les LLM oublient souvent de les échapper → JSON.parse échoue
+// « Bad control character in string literal »). Ne touche pas au JSON structurel hors strings.
+export function repairLlmJson(s) {
+  let out = "", inStr = false, esc = false;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (esc) { out += ch; esc = false; continue; }
+    if (ch === "\\") { out += ch; esc = true; continue; }
+    if (ch === '"') { inStr = !inStr; out += ch; continue; }
+    if (inStr && ch === "\n") { out += "\\n"; continue; }
+    if (inStr && ch === "\r") { out += "\\r"; continue; }
+    if (inStr && ch === "\t") { out += "\\t"; continue; }
+    out += ch;
+  }
+  return out;
+}
+
 // Champs que l'IA a le droit de réécrire (prose pure, aucun fait technique).
 export const EDITABLE_FIELDS = ["welcome_message", "tagline"];
 

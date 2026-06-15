@@ -1,5 +1,24 @@
 import { describe, it, expect } from "vitest";
-import { validateGuideEdit, mergeGuide, EDITABLE_FIELDS, PROTECTED_FIELDS } from "./_guideWriter.js";
+import { validateGuideEdit, mergeGuide, EDITABLE_FIELDS, PROTECTED_FIELDS, repairLlmJson } from "./_guideWriter.js";
+
+describe("repairLlmJson — JSON LLM avec newlines bruts", () => {
+  it("répare les retours à la ligne bruts dans une string → JSON.parse OK", () => {
+    const broken = '{\n  "welcome_message": "Bonjour,\n\nBienvenue !",\n  "tagline": "Soleil\tet mer"\n}';
+    expect(() => JSON.parse(broken)).toThrow(); // brut = invalide
+    const fixed = repairLlmJson(broken);
+    const obj = JSON.parse(fixed);
+    expect(obj.welcome_message).toBe("Bonjour,\n\nBienvenue !");
+    expect(obj.tagline).toBe("Soleil\tet mer");
+  });
+  it("préserve un JSON déjà valide", () => {
+    const ok = '{"a": "déjà \\n échappé", "b": 2}';
+    expect(JSON.parse(repairLlmJson(ok))).toEqual({ a: "déjà \n échappé", b: 2 });
+  });
+  it("ne casse pas les guillemets échappés", () => {
+    const s = '{"x": "il a dit \\"oui\\"\nensuite"}';
+    expect(JSON.parse(repairLlmJson(s)).x).toBe('il a dit "oui"\nensuite');
+  });
+});
 
 const ORIGINAL = {
   property_id: "amaryllis",

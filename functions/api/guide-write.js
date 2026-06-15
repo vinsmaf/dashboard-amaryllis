@@ -12,7 +12,7 @@
 
 import { verifyBearer } from "./_adminauth.js";
 import { loadLearnedLessons } from "./_factcheck.js";
-import { validateGuideEdit, mergeGuide, EDITABLE_FIELDS } from "./_guideWriter.js";
+import { validateGuideEdit, mergeGuide, EDITABLE_FIELDS, repairLlmJson } from "./_guideWriter.js";
 import { callLLM } from "./_llm.js";
 import { getBien } from "../../src/data/biens.js";
 
@@ -95,7 +95,7 @@ Retourne UNIQUEMENT un JSON : {"welcome_message": "...", "tagline": "..."}`;
       // Nettoie les fences markdown (```json … ```) avant d'isoler le JSON.
       llmRaw = String(res.text || "").replace(/```json/gi, "").replace(/```/g, "").trim();
       const m = llmRaw.match(/\{[\s\S]*\}/);
-      if (m) { try { improved = JSON.parse(m[0]); } catch (e) { llmErr = "parse: " + e.message; } }
+      if (m) { try { improved = JSON.parse(repairLlmJson(m[0])); } catch (e) { llmErr = "parse: " + e.message; } }
       else llmErr = "aucun JSON dans la réponse";
     } else { llmErr = "callLLM: " + (res.errors?.map(e => e.error).join(", ") || "échec"); }
   } catch (e) { llmErr = "exception: " + (e?.message || e); }
