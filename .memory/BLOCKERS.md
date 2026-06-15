@@ -15,7 +15,7 @@
 
 ## 📣 2026-06-15 (soir) — Auto-publication réseaux : LIVE, points de vigilance
 - ✅ **Système complet en live** (ADR-SOCIAL-AUTOPUB-001) : re-seed→génère(photos cochées)→gate(4 filtres)→publie. Zéro clic. Token publie FB+IG (vérifié).
-- 🟡 **Seuil qualité = 85/100** (`EDITORIAL_GATE_MIN_SCORE`, def 85). Exigeant → si trop d'escalades ntfy « à valider », baisser. **À surveiller sur les 1ers jours.**
+- ✅ **Seuil 85 validé atteignable** : un post Amaryllis frais a obtenu 88/100 → gate PASS → auto-approuvé en live (pipeline prouvé end-to-end 2026-06-15 soir). Le système publie réellement, pas que des escalades. Reste à surveiller le TAUX de passage sur la durée (`EDITORIAL_GATE_MIN_SCORE` ajustable si trop d'escalades).
 - 🟡 **Post Bellevue 102 publié dit « votre villa »** (Bellevue ≠ villa) — passé avant le durcissement de la règle. La règle `\bvillas?\b` onlyFor empêche les FUTURS. Le 102 reste en ligne (Vincent décide de le garder/supprimer).
 - 🟡 **Iguana = 0 photo cochée** (normal, bail long, exclu du seed). Si un jour besoin de publier Iguana → cocher des photos.
 - 🟡 **Faux négatifs fact-check possibles** : le fact-check regex ne couvre pas tout (ex « 5 min Montagne Pelée » depuis Schœlcher = faux mais non détecté). Compléter les règles au fil des erreurs vues. Bannir un mot = onglet Approbations → « Bannir mot » (agent_lessons).
