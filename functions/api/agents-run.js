@@ -530,13 +530,21 @@ Les IDs déjà utilisés vont jusqu'à ${agent.prefix}-${String(maxNum).padStart
 Commence tes nouveaux IDs à ${agent.prefix}-${String(nextId).padStart(3, "0")}.
 `;
 
-  const memorySection = memories.length > 0 ? `
+  // Retour qualité de l'évaluateur (boucle de feedback A) — mis en exergue car c'est
+  // la consigne la plus actionnable du run. Le reste de la mémoire passe en dessous.
+  const evalFb = memories.find(m => m.key === "eval_feedback");
+  const otherMems = memories.filter(m => m.key !== "eval_feedback");
+  const evalSection = evalFb ? `
+🎯 RETOUR QUALITÉ (évaluateur automatique — corrige ÇA en priorité) :
+  ${evalFb.value}
+` : "";
+  const memorySection = `${evalSection}${otherMems.length > 0 ? `
 MÉMOIRE DE TES RUNS PRÉCÉDENTS :
-${memories.map(m => `  • ${m.key}: ${m.value}`).join('\n')}
-` : `
+${otherMems.map(m => `  • ${m.key}: ${m.value}`).join('\n')}
+` : (evalFb ? "" : `
 MÉMOIRE DE TES RUNS PRÉCÉDENTS :
   (première analyse)
-`;
+`)}`;
 
   // ── Skill métier injecté (manuel d'opération de l'agent) ────────────────
   const skill = getSkillForAgent(agent.id);

@@ -2046,6 +2046,20 @@ async function runEnrichFromEmails(env) {
   }
 }
 
+// Évaluateur qualité auto (boucle A) : note les sorties d'agents du jour (llm_outputs)
+// → llm_evals, et renvoie une consigne corrective aux agents faibles (agent_memory).
+// Appelé APRÈS agents-run pour noter les sorties fraîches du run.
+async function runAgentsEval(env) {
+  const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+  const secret = env.POSTSTAY_SECRET || "";
+  if (!secret) { console.log("[agents-eval] POSTSTAY_SECRET absent — skip"); return; }
+  try {
+    const r = await fetch(`${siteUrl}/api/agents-eval?secret=${encodeURIComponent(secret)}&limit=30`);
+    const j = await r.json().catch(() => ({}));
+    console.log(`[agents-eval] ✓ ${j.scored ?? 0}/${j.candidats ?? 0} notés · ${j.feedback ?? 0} corrections renvoyées`);
+  } catch (e) { console.error("[agents-eval] error:", e.message); }
+}
+
 async function runAgentsExecuteAndDigest(env) {
   const siteUrl = env.SITE_URL || "https://villamaryllis.com";
   if (!env.POSTSTAY_SECRET) { console.log("[agents] POSTSTAY_SECRET absent — skip"); return; }
@@ -2266,6 +2280,9 @@ export default {
           } catch (e) {
             console.error("[orchestrateur] Cron error:", e.message);
           }
+
+          // ── Évaluateur qualité auto (boucle A) — note les sorties du run + feedback aux agents ──
+          await runAgentsEval(env);
 
           // ── Digest email quotidien ─────────────────────────────────────────
           if (env.RESEND_API_KEY && orchData.run) {
