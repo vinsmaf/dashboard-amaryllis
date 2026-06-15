@@ -79,6 +79,20 @@ describe("evaluateGate — fact-check conscient du bien", () => {
     expect(r.fails.some((f) => f.filter === "mots_interdits")).toBe(false);
     expect(r.pass).toBe(true);
   });
+  it("PASS : un mot banni pour UN bien (learnedRule onlyFor) ne bloque pas un autre bien", () => {
+    const bannedVilla = [{ rx: /\bvilla\b/i, reason: "villa interdit schoelcher", onlyFor: ["schoelcher"] }];
+    const r = evaluateGate({ ...BASE, caption: "Bienvenue à la Villa Amaryllis.\n\nRéservez ⤴️", learnedRules: bannedVilla });
+    expect(r.fails.some((f) => f.filter === "mots_interdits")).toBe(false);
+    expect(r.pass).toBe(true);
+  });
+  it("FAIL : ce même mot banni bloque bien le bien ciblé (schoelcher)", () => {
+    const bannedVilla = [{ rx: /\bvilla\b/i, reason: "villa interdit schoelcher", onlyFor: ["schoelcher"] }];
+    const r = evaluateGate({
+      ...BASE, imageUrl: "https://villamaryllis.com/photos/schoelcher/03.webp", expectedBien: "schoelcher",
+      caption: "Réservez votre villa.\n\n#x", learnedRules: bannedVilla,
+    });
+    expect(r.fails.some((f) => f.filter === "mots_interdits")).toBe(true);
+  });
   it("FAIL : « piscine à débordement » attribuée à un autre bien (mabouya)", () => {
     const r = evaluateGate({
       ...BASE,

@@ -87,10 +87,15 @@ export async function loadLearnedLessons(db) {
       bien_id TEXT,
       created_at INTEGER NOT NULL DEFAULT (unixepoch())
     )`).run();
-    const { results } = await db.prepare("SELECT pattern, reason FROM agent_lessons LIMIT 200").all();
+    const { results } = await db.prepare("SELECT pattern, reason, bien_id FROM agent_lessons LIMIT 200").all();
     return (results || []).map(r => {
-      try { return { rx: new RegExp(r.pattern, "i"), reason: r.reason }; }
-      catch { return null; }
+      try {
+        const rule = { rx: new RegExp(r.pattern, "i"), reason: r.reason };
+        // Mot banni rattaché à UN bien → ne s'applique qu'à ce bien (onlyFor). Sinon = global.
+        // Évite qu'un « villa » banni pour schoelcher bloque un post amaryllis (qui EST une villa).
+        if (r.bien_id) rule.onlyFor = [r.bien_id];
+        return rule;
+      } catch { return null; }
     }).filter(Boolean);
   } catch { return []; }
 }
