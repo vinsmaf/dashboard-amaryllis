@@ -1969,6 +1969,26 @@ async function runEditorialReseed(env) {
   }
 }
 
+// ── Auto-rédaction guides voyageurs D1 (cron hebdomadaire, lundi) ────────────
+// Appelle /api/guide-write en mode live pour chaque bien avec un guide en D1.
+// Les champs critiques (wifi/code/horaires) sont INTOUCHABLES ; seule la prose d'accueil est réécrite.
+// En cas d'échec fact-check : escalade ntfy « à revoir » sans rien écrire.
+async function runGuideWrite(env) {
+  const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+  const secret = encodeURIComponent(env.POSTSTAY_SECRET || "");
+  const biens = ["amaryllis", "zandoli", "geko", "mabouya", "schoelcher", "nogent", "iguana"];
+  for (const bien of biens) {
+    try {
+      const r = await fetch(`${siteUrl}/api/guide-write?property_id=${bien}&mode=live&secret=${secret}`);
+      const d = await r.json();
+      if (d.disabled) { console.log("[guide-write] kill-switch actif, skip"); break; }
+      console.log(`[guide-write] ${bien}: action=${d.action || "?"} valid=${d.valid} changed=${(d.changed||[]).join(",")}`);
+    } catch (e) {
+      console.error(`[guide-write] ${bien} error:`, e.message);
+    }
+  }
+}
+
 // ── Editorial Calendar : publication auto des drafts approuvés (cron horaire)
 async function runEditorialAutoPublish(env) {
   const siteUrl = env.SITE_URL || "https://villamaryllis.com";
@@ -2250,6 +2270,7 @@ export default {
         runSeoReport(env), // 📈 rapport SEO hebdo (Search Console) par email
         runBugTriage(env), // 🐞 triage hebdo des bugs captés en prod → backlog + digest
         runMemoryDistill(env), // 🧠 B2 — distille l'expérience du réseau en apprentissages durables
+        runGuideWrite(env), // 📝 réécriture prose d'accueil guides D1 (welcome_message + tagline)
       ]));
 
     } else if (cron === "0 1 1 * *") {
