@@ -12,7 +12,8 @@ Workflow d'audit 6 dimensions (Pixel client, CAPI, GA4/Ads, consent/CSP, attribu
 - **Compléments** : events Meta `Lead` (contact/alerte/WhatsApp), items GA4 résa groupe, CSP googleads/googleadservices/td.doubleclick, CAPI v19→v21, test trackingAttribution (4 cas).
 - **Cœur paiement intouché** (Vincent a demandé confirmation) : prix, débit Stripe, Beds24, caution, acompte 2× = identiques.
 - 223 tests ✅, audit 🟢, smoke OK, CSP vérifié live. Commits `f5b1784`→`9a30660`. Déployé alias `cca5555d`.
-- **Reste côté Vincent** (cf. BLOCKERS) : vérifier secrets `META_CAPI_TOKEN` + `GA4_API_SECRET` (sinon CAPI/GA4-MP silencieux) + activer Enhanced Conversions / vérifier EMQ.
+- **Secrets** : vérifié `wrangler pages secret list` → `META_CAPI_TOKEN` **ET** `GA4_API_SECRET` déjà posés (l'audit qui les disait absents = faux positif). GA4 MP prouvé fonctionnel (purchases en « Unassigned »).
+- **Perf pubs lue dans les dashboards** (Chrome MCP read-only) : Meta 50€/30j (objectif LPV, 0 conv), Google 47,88€ (CPC 0,62€, Max clics, 0 conv), 2 ventes GA4 (2 226€) en « Unassigned ». **Meta était gelé** (plafond compte 50€ atteint) → Vincent l'a relevé à **100€** → C1+C2 repassées **Active** (vérifié). Google conversion « amaryllis (web) purchase » déjà GA4/Principale mais 0 (attribution). **Lever 2 (Max conversions) DIFFÉRÉ** → AGENDA 28/06. Cf. ADR-TRACKING-001 + BLOCKERS « Perf pubs réelle ».
 
 ## 2026-06-14 (soir long) — Sécurité devis + priceGuard + Booking scraper + Chat Mistral
 Session longue pilotée par Vincent : 4 livrables.
