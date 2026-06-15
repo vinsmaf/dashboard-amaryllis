@@ -5,6 +5,15 @@
 
 ---
 
+## 2026-06-15 (suite) — Token Meta permanent + diagnostic blocage FB feed
+Contexte : `/api/social-poll` retournait `Session has expired` sur les 2 sources (FB + IG).
+- **Token renouvelé** : Graph API Explorer avec URL params `?permissions=pages_read_engagement,...` → token court → endpoint temporaire `meta-refresh-token.js` → échange `META_APP_SECRET` CF → page token permanent → mis à jour CF Pages via `wrangler pages secret put META_PAGE_TOKEN`.
+- **Token vérifié** via `debug_token` → 20 scopes listés dont `pages_read_engagement: True`.
+- **Diagnostic final** : IG (`/{igId}/media`) ✅ fonctionne. FB (`/{pageId}/feed`) 🔴 bloqué par Meta policy → Advanced Access (App Review) obligatoire depuis 2023, quel que soit le token.
+- **Nettoyage** : `meta-refresh-token.js` supprimé après usage (token dans URL = risque log).
+- **Page abonnée** (`POST /{pageId}/subscribed_apps?subscribed_fields=feed`) — fait, ne débloque pas le Advanced Access.
+- **BLOCKERS mis à jour** + ADR-META-TOKEN-001 posé. Dossier App Review prêt (`docs/marketing/social-bot-app-review.md`).
+
 ## 2026-06-15 — Optimisation tracking pub Meta/Google (audit adversarial → 7 fichiers déployés)
 Workflow d'audit 6 dimensions (Pixel client, CAPI, GA4/Ads, consent/CSP, attribution, funnel) × vérif adversariale → 50 findings confirmés, 2 faux positifs écartés. Correctifs livrés (ADR-TRACKING-001) :
 - **Anti double-comptage** : `eventID=pi.id` sur les 3 Purchase Pixel inline (dédup CAPI) + guard `kind=solde-2x` dans le webhook (le solde 2× créait une fausse conversion + fausse alerte hôte + faux `direct_booking`) + `transaction_id=pi.id` (parité Nogent/Beds24).

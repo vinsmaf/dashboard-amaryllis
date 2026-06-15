@@ -3,6 +3,14 @@
 > Pièges déjà rencontrés + comment les éviter. 1 entrée = 1 leçon actionnable « la prochaine fois ».
 > Le journal d'erreurs exhaustif reste `../docs/ERREURS-LOG.md`.
 
+## 🤖 Meta Graph API — Scopes vs Advanced Access — 2026-06-15
+- **Token avec `pages_read_engagement` ≠ accès au `/{pageId}/feed`.** Depuis 2023, Meta exige **Advanced Access** (App Review approuvé) pour ce endpoint, même en mode Développement avec le bon scope. Le token est correct, le blocage est au niveau app.
+- **Seul `/api/social-poll` IG** (`/{igId}/media?fields=comments`) fonctionne avec Standard Access pour son propre compte. Pas d'App Review nécessaire pour ses propres médias IG.
+- **Endpoint temporaire `meta-refresh-token.js`** (GET → échange user token → page token permanent via `META_APP_SECRET` serveur) = pattern à reproduire quand on doit renouveler le token page. À créer → utiliser → supprimer (le token apparaît dans les logs d'URL CF si non supprimé).
+- **`debug_token` est la source de vérité des scopes** : `GET /debug_token?input_token=<tok>&access_token=<app_id|app_secret>`. Le champ `scopes[]` liste les permissions réellement octroyées. Un scope listé ≠ Advanced Access accordé.
+- **Page abonnée** (`POST /{pageId}/subscribed_apps?subscribed_fields=feed`) est nécessaire mais non suffisant pour recevoir les events webhook — l'App Review reste obligatoire pour les apps en Développement.
+- **`pbpaste` sur Mac** = lire le presse-papier depuis un terminal après « Copy Token » dans Graph Explorer. Plus fiable que de demander à Chrome MCP de lire le clipboard (non disponible comme action).
+
 ## 📣 Tracking pub + lecture des dashboards Ads — 2026-06-15
 - **Toujours `wrangler pages secret list --project-name <projet>` AVANT d'affirmer qu'un secret manque en prod.** Un sous-agent d'audit a *déduit* « GA4_API_SECRET absent » en lisant le code (`if(!apiSecret) …`) → FAUX : les 2 secrets (`META_CAPI_TOKEN`, `GA4_API_SECRET`) étaient bien posés. Ne jamais relayer une déduction de sous-agent sur l'état prod sans le vérifier (corollaire du « relire le vrai code avant de corriger un finding LLM »).
 - **GA4 « Unassigned » + conversions = signature des events serveur Measurement Protocol** avec `client_id` synthétique (`booking-${pi.id}`). Ça prouve que le MP marche MAIS casse l'attribution canal → les ventes ne sont jamais créditées au paid. Le client_id réel (`_ga`) faudrait le capturer pour rattacher.

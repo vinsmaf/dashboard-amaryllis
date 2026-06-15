@@ -5,6 +5,13 @@
 
 ---
 
+## ADR-META-TOKEN-001 · 2026-06-15 · Token Meta permanent + diagnostic blocage FB feed
+1. **Choix** : régénérer `META_PAGE_TOKEN` avec 20 permissions (incl. `pages_read_engagement`) via Graph API Explorer URL params → endpoint temporaire `meta-refresh-token.js` (supprimé post-usage) échange user token → page token permanent via `META_APP_SECRET` CF. Token mis à jour dans Cloudflare.
+2. **Alternatives refusées** : mettre à jour le token manuellement dans le dashboard CF sans passer par le serveur → impossible : `META_APP_SECRET` non lisible depuis l'extérieur ; garder l'ancien token → expirait (session courte ~1h).
+3. **Conséquences attendues** : `META_PAGE_TOKEN` = permanent (ne périme pas). IG `/media` lit OK. FB `/{pageId}/feed` toujours bloqué → nécessite App Review Advanced Access (Meta policy 2023). `/api/social-poll` : IG silencieusement OK (0 commentaires récents), FB renvoie `(#10)`.
+4. **Périmètre** : `functions/api/meta-refresh-token.js` (créé + supprimé après usage) · `META_PAGE_TOKEN` dans CF Pages secrets (`dashboard-amaryllis`).
+5. **Statut** : ✅ token OK. 🔴 FB feed bloqué jusqu'à App Review → voir BLOCKERS.
+
 ## ADR-TRACKING-001 · 2026-06-15 · Optimisation pub Meta/Google : dédup + match quality + anti double-comptage
 1. **Choix** : audit adversarial 6 dimensions (50 findings confirmés) → correctifs tracking déployés. (a) **eventID=pi.id** sur les 3 `Purchase` Pixel inline (`PublicSite.jsx`) → dédup Pixel↔CAPI ; (b) **guard `kind=solde-2x`** dans le webhook → le prélèvement du solde 2× ne refait plus NI conversion NI alerte hôte NI `direct_booking` (3 fantômes supprimés) ; (c) **CAPI user_data enrichi** (fbc/fbp/tél/prénom/nom/external_id hachés SHA-256, `_metaCapi.js`) → EMQ ~15-40 %→~60-75 % ; (d) chaîne attribution `_fbp`/`_fbc` lus à chaud + gclid/fbclid → metadata Stripe (allowlist `create-payment-intent` élargie, elle jetait tout avant) → webhook → CAPI ; (e) `transaction_id`=pi.id (parité Nogent) ; (f) events Meta `Lead`, CSP googleads/googleadservices/td.doubleclick, CAPI v19→v21.
 2. **Alternatives refusées** : `AddToCart`/`AddPaymentInfo` (redondants avec `InitiateCheckout` qui porte déjà la vraie valeur séjour) et `Search` (mauvais signal sur « voir le logement ») → écartés pour ne pas bruiter à ~5 visiteurs/j. Balise Google Ads directe `AW-` → différée (besoin que Vincent crée l'action conversion + me donne l'ID/label) ; aujourd'hui import GA4.
