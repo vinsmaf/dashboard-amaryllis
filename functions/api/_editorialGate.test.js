@@ -60,6 +60,13 @@ describe("evaluateGate — fact-check conscient du bien", () => {
     // onlyFor:[amaryllis] → la règle nb-chambres ne s'applique pas à mabouya
     expect(r.fails.some((f) => f.reason?.includes("3 chambres"))).toBe(false);
   });
+  it("PASS : hashtag #AmaryllisLocations ne déclenche pas les règles équipement (cascade légitime zandoli)", () => {
+    const r = evaluateGate({
+      ...BASE, imageUrl: "https://villamaryllis.com/photos/zandoli/01.webp", expectedBien: "zandoli",
+      caption: "Détente près de la cascade de Zandoli.\n\nRéservez ⤴️\n\n#AmaryllisLocations #Martinique",
+    });
+    expect(r.fails.some((f) => f.filter === "mots_interdits")).toBe(false);
+  });
   it("FAIL : « piscine à débordement » attribuée à un autre bien (mabouya)", () => {
     const r = evaluateGate({
       ...BASE,

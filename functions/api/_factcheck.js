@@ -57,13 +57,17 @@ export const FACT_CHECK_RULES = [
 // (l'équipement est LÉGITIME pour ce bien — ex. piscine à débordement pour amaryllis).
 export function factCheckCaption(caption, extraRules = [], bienId = null) {
   if (!caption) return [];
+  // Les hashtags (#AmaryllisLocations, #Martinique…) sont du marketing, pas des affirmations
+  // factuelles. On les retire AVANT d'appliquer les règles, sinon le nom de marque « Amaryllis »
+  // présent dans tous les hashtags déclenche en boucle les règles « équipement.*amaryllis » (faux positifs).
+  const body = caption.replace(/#[^\s#]+/g, " ");
   const errors = [];
   for (const rule of [...FACT_CHECK_RULES, ...extraRules]) {
     if (bienId && Array.isArray(rule.okFor) && rule.okFor.includes(bienId)) continue;
     // onlyFor : règle restreinte à certains biens — ignorée pour les autres (et si bien inconnu).
     if (Array.isArray(rule.onlyFor) && (!bienId || !rule.onlyFor.includes(bienId))) continue;
-    if (rule.rx.test(caption)) {
-      const match = caption.match(rule.rx)?.[0] || "";
+    if (rule.rx.test(body)) {
+      const match = body.match(rule.rx)?.[0] || "";
       errors.push({ phrase: match.slice(0, 60), reason: rule.reason });
     }
   }
