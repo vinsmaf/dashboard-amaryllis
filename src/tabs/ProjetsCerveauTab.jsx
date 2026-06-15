@@ -1,5 +1,5 @@
 // src/tabs/ProjetsCerveauTab.jsx — État d'avancement des projets piloté par le second cerveau
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 const C = {
   live:    { bg: "rgba(16,185,129,0.15)", border: "#10b981", dot: "#10b981", label: "LIVE" },
@@ -100,6 +100,34 @@ const JALONS = [
 
 const ENDPOINT = "https://villamaryllis.com/api/rapport-business";
 
+// Boucles d'autonomie du réseau (produire → juger → partager → distiller)
+const BOUCLES = [
+  {
+    id: "A",
+    titre: "Évaluateur qualité automatique",
+    flux: "Chaque sortie d'agent → notée 0-10 (factualité · actionnabilité · nomenclature · clarté) → si faible, une consigne corrective revient à l'agent pour son run suivant",
+    cadence: "Quotidien (cron 9h)",
+    statut: "live",
+    preuve: "22 agents notés · moyenne 7,9/10",
+  },
+  {
+    id: "B1",
+    titre: "Bus inter-agents (signaux)",
+    flux: "Chaque agent émet 1 signal transverse (tendance/alerte) → lu par tous les autres au run suivant. Fin du silo : un agent réagit à ce qu'un autre a vu",
+    cadence: "À chaque run",
+    statut: "live",
+    preuve: "data-analyst → revenue-manager (signal Mabouya repris)",
+  },
+  {
+    id: "B2",
+    titre: "Agent-mémoire (distillation)",
+    flux: "Distille les notes qualité + impacts mesurés + signaux → 3-5 apprentissages durables injectés dans le prompt de TOUS les agents",
+    cadence: "Hebdo (lundi)",
+    statut: "live",
+    preuve: "3 apprentissages distillés (nomenclature, factualité…)",
+  },
+];
+
 const s = {
   wrap: { padding: "20px 24px", maxWidth: 1100, margin: "0 auto" },
   h1:   { fontSize: 20, fontWeight: 700, color: "#e2e8f0", margin: "0 0 4px" },
@@ -181,13 +209,11 @@ function daysUntil(dateStr) {
 }
 
 export default function ProjetsCerveauTab() {
-  const [lastReport, setLastReport] = useState(null);
+  const [lastReport, setLastReport] = useState(() => {
+    try { const c = sessionStorage.getItem("brain_last_report"); return c ? JSON.parse(c) : null; }
+    catch { return null; }
+  });
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    const cached = sessionStorage.getItem("brain_last_report");
-    if (cached) try { setLastReport(JSON.parse(cached)); } catch {}
-  }, []);
 
   async function fetchReport() {
     setLoading(true);
@@ -197,7 +223,7 @@ export default function ProjetsCerveauTab() {
       const r = await fetch(`${ENDPOINT}?token=${token}`);
       const d = await r.json();
       setLastReport(d);
-      try { sessionStorage.setItem("brain_last_report", JSON.stringify(d)); } catch {}
+      try { sessionStorage.setItem("brain_last_report", JSON.stringify(d)); } catch { /* sessionStorage indispo (privé) */ }
     } catch (e) {
       alert("Erreur : " + e.message);
     } finally {
@@ -230,6 +256,32 @@ export default function ProjetsCerveauTab() {
           Roadmap d'extension — <b style={{ color: "#94a3b8" }}>Claude décide du timing et lance chaque vague à son jalon, sans redemander</b>
         </div>
         {VAGUES.map(v => <VagueCard key={v.num} v={v} />)}
+      </div>
+
+      {/* BOUCLES D'AUTONOMIE */}
+      <div style={s.sec}>
+        <div style={s.sh}>Boucles d'autonomie — comment le réseau apprend & s'améliore</div>
+        <div style={{ fontSize: 12, color: "#64748b", marginBottom: 12 }}>
+          Cycle complet : <b style={{ color: "#94a3b8" }}>produire → juger (A) → partager (B1) → distiller (B2)</b> — sans intervention.
+        </div>
+        {BOUCLES.map(b => {
+          const col = C[b.statut] || C.planned;
+          return (
+            <div key={b.id} style={s.card(col)}>
+              <div style={s.num}>{b.id}</div>
+              <div style={{ ...s.row, marginBottom: 6 }}>
+                <span style={s.dot(col.dot)} />
+                <span style={s.title}>{b.titre}</span>
+                <StatusBadge statut={b.statut} />
+              </div>
+              <div style={s.desc}>{b.flux}</div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 10, fontWeight: 600, color: "#64748b", background: "rgba(100,116,139,0.15)", border: "1px solid rgba(100,116,139,0.2)", borderRadius: 4, padding: "2px 7px" }}>⏱ {b.cadence}</span>
+                <span style={{ fontSize: 10, fontWeight: 600, color: "#10b981", background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.25)", borderRadius: 4, padding: "2px 7px" }}>✓ {b.preuve}</span>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* GRID CRONS + JALONS */}
