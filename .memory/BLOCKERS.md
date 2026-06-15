@@ -3,6 +3,12 @@
 > Ce qui reviendra nous embêter si on ne le documente pas. Format : statut · sujet · ce qui débloque.
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 
+## 📈 2026-06-15 — Perf pubs réelle (lue dans les dashboards) + Meta débloqué
+- **Lecture dashboards (Chrome MCP, read-only)** — 30j : **Meta** = C1 TOFU 39,98€ + C2 MOFU 10,02€ = **50€**, objectif *Landing Page Views* (506 LPV), **0 conversion optimisée** ; **Google** = 47,88€, CPC 0,62€, ~77 clics, stratégie *Maximiser les clics*, **0 conversion**. GA4 : 587 sessions/30j, 2 ventes (2 226€) mais en canal **« Unassigned »** (jamais créditées au paid).
+- **🟢 Meta débloqué** : les 2 campagnes étaient gelées (*« Account spend limit reached »*, plafond compte 50€). Vincent a **relevé le plafond à 100€** (2026-06-15) → **C1 + C2 repassées « Active »** (vérifié). ⚠️ Reset le 1er du mois ; ~50€ de marge → surveiller, peut re-toucher 100€ avant le 1er juillet.
+- **Google conversion = déjà bien configurée** : action *« amaryllis (web) purchase »*, Source GA4, **Principale**, période 90j — mais **« Aucune conversion récente » / 0,00** = trou d'attribution (Unassigned), corrigé par le code du 2026-06-15. **Ménage optionnel** : conversion *« Pages vues »* comptée en Vente avec valeur bidon 1,00 → passer en Secondaire.
+- **⏳ Lever 2 (bid → conversions) DIFFÉRÉ** : NE PAS basculer Google « Maximiser les conversions » ni Meta « Purchase » tant que le compteur purchase = 0 (l'algo crève sans historique). Déclencheur : quand `purchase` commence à se remplir côté GA4/Google Ads (post-fix). Garder « Maximiser les clics » / LPV d'ici là.
+
 ## 🟡 2026-06-15 — Tracking serveur : les 2 secrets EXISTENT déjà (vérifié) — reste à valider la santé du token CAPI
 - ⚠️ **CORRECTION** : l'audit (sous-agent) avait *déduit* `GA4_API_SECRET` « absent en prod » → **FAUX POSITIF**. Vérifié via `wrangler pages secret list --project-name dashboard-amaryllis` le 2026-06-15 : **`META_CAPI_TOKEN` ET `GA4_API_SECRET` sont tous deux posés (Value Encrypted)**. Leçon : toujours `wrangler pages secret list` avant d'affirmer qu'un secret manque — ne jamais relayer une déduction de sous-agent sur l'état prod.
 - **GA4 MP = fonctionne** (preuve indirecte : les 2 purchases 30j sont en canal « Unassigned » = signature des events serveur Measurement Protocol avec client_id synthétique `booking-${pi.id}`).
