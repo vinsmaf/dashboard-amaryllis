@@ -34,6 +34,7 @@ import OrchestratorTab from "./tabs/OrchestratorTab.jsx";
 import SocialTab from "./tabs/SocialTab.jsx";
 import ApprobationsTab from "./tabs/ApprobationsTab.jsx";
 import EditorialCalendarTab from "./tabs/EditorialCalendarTab.jsx";
+import EditorialPhotosTab from "./tabs/EditorialPhotosTab.jsx";
 import CroissanceTab from "./tabs/CroissanceTab.jsx";
 import SEOAuditTab from "./tabs/SEOAuditTab.jsx";
 import AvisTab from "./tabs/AvisTab.jsx";
@@ -1331,6 +1332,7 @@ export default function App() {
         { id: "social", icon: "📣", label: "Réseaux sociaux" },
         { id: "approbations", icon: "📥", label: "Approbations" },
         { id: "editorial", icon: "📅", label: "Planning éditorial" },
+        { id: "photos-pub", icon: "📷", label: "Photos publiables" },
         { id: "croissance", icon: "📈", label: "Croissance audience" },
         { id: "seo-audit", icon: "🔍", label: "SEO Audit" },
       ],
@@ -1561,6 +1563,7 @@ export default function App() {
             {tab === "social"        && <SocialTab />}
             {tab === "approbations"  && <ApprobationsTab />}
             {tab === "editorial"     && <EditorialCalendarTab />}
+            {tab === "photos-pub"    && <EditorialPhotosTab />}
             {tab === "croissance"    && <CroissanceTab />}
             {tab === "seo-audit"     && <SEOAuditTab />}
             {tab === "chat-admin"    && <AdminChatTab />}

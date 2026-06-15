@@ -1893,6 +1893,14 @@ async function runEditorialDraftGen(env) {
     const entries = d.entries || [];
     if (entries.length === 0) { console.log("[editorial-J-2] Aucune entrée planifiée à J+2"); return; }
 
+    // Whitelist photos (les « plus belles » cochées par Vincent) — la génération ne pioche QUE dedans.
+    let allowedPhotos = {};
+    try {
+      const wr = await fetch(`${siteUrl}/api/editorial-photos?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`);
+      const wd = await wr.json();
+      allowedPhotos = wd.photos || {};
+    } catch (err) { console.warn("[editorial-J-2] whitelist photos indisponible:", err.message); }
+
     console.log(`[editorial-J-2] ${entries.length} entrée(s) à générer`);
     for (const e of entries) {
       // Marque "generating"
@@ -1902,8 +1910,12 @@ async function runEditorialDraftGen(env) {
         body: JSON.stringify({ status: "generating" }),
       }).catch(() => {});
 
+      // Photo = une photo autorisée du bien (rotation déterministe). Si rien de coché → photo du calendrier (le gate escaladera).
+      const wl = allowedPhotos[e.bien_id] || [];
+      const photoUrl = wl.length ? `/photos/${e.bien_id}/${wl[Math.abs(e.id) % wl.length]}.webp` : e.photo_url;
+
       // Brief enrichi → community-manager
-      const brief = `BRIEF CALENDRIER ÉDITORIAL — date=${new Date(e.scheduled_at*1000).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})}, bien=${e.bien_id}, thème=${e.theme}, variante=${e.variante}, format=${e.format}, photo=${e.photo_url}, CTA="${e.cta}". Génère UN draft social_post selon ce brief précis.`;
+      const brief = `BRIEF CALENDRIER ÉDITORIAL — date=${new Date(e.scheduled_at*1000).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})}, bien=${e.bien_id}, thème=${e.theme}, variante=${e.variante}, format=${e.format}, photo=${photoUrl}, CTA="${e.cta}". Génère UN draft social_post selon ce brief précis.`;
       try {
         const runRes = await fetch(`${siteUrl}/api/agents-run?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
           method: "POST",
@@ -1927,6 +1939,13 @@ async function runEditorialDraftGen(env) {
         }).catch(() => {});
       }
     }
+
+    // Gate de qualité : juge les drafts générés → auto-approuve (live) ou escalade en ntfy (shadow/fail).
+    try {
+      const gr = await fetch(`${siteUrl}/api/editorial-gate?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, { method: "POST" });
+      const gd = await gr.json();
+      console.log(`[editorial-gate] mode=${gd.mode} évalués=${gd.evaluated} auto-publiés=${gd.queued_for_publish} shadow=${gd.would_publish} escaladés=${gd.escalated}`);
+    } catch (err) { console.error("[editorial-gate] error:", err.message); }
   } catch (e) {
     console.error("[editorial-J-2] error:", e.message);
   }
