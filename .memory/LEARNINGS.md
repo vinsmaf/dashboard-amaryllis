@@ -3,6 +3,12 @@
 > Pièges déjà rencontrés + comment les éviter. 1 entrée = 1 leçon actionnable « la prochaine fois ».
 > Le journal d'erreurs exhaustif reste `../docs/ERREURS-LOG.md`.
 
+## 🚀 CF Pages a une LIMITE de déploiements/jour — grouper les builds — 2026-06-15
+- Vincent : « on peut pas déployer avant 19h, limite atteinte » après ~12 déploiements dans la session. **CF Pages limite le nombre de déploiements (≈ rate limit horaire/quotidien).** **La prochaine fois : GROUPER les correctifs et déployer 1 fois**, pas un `deploy:pages` par micro-fix. Tester un max en local (`vitest`, `npm run build`, `node --check`) AVANT de déployer. La limite s'est levée ~1 min après (probablement fenêtre glissante).
+
+## 🐛 Pages Function qui renvoie « error code: 502 » (HTML, pas mon JSON) — 2026-06-15
+- Diagnostic différentiel : un GET minimal qui répond (mon JSON 400) = le **module charge bien** (pas un import cassé). Un POST qui 502 **en ~6s** (pas 30s) et **échappe au try/catch global** = ce n'est NI une exception JS (sinon catchée), NI un timeout 30s → **dépassement d'une limite CF** (CPU/mémoire/subrequest) sur le chemin exécuté (ici l'appel LLM + post-traitement). **À élucider via `wrangler pages deployment tail` (read-only, ne déploie pas).** Statut guide-write : moteur `_guideWriter.js` OK (9 tests), endpoint 502 sur le chemin LLM à debugger via logs.
+
 ## 📣 Auto-publication réseaux — pièges du fact-check & du pipeline — 2026-06-15 (soir)
 - **Le `META_PAGE_TOKEN` publie bien FB+IG** (`pages_manage_posts` / `instagram_content_publish` présents) MALGRÉ la régénération du matin pour le bot social — vérifié par un VRAI test de publication (post Bellevue id FB `986487064137992`). `debug_token` sur un **page token** renvoie `scopes:[]` (non concluant) → le seul test fiable des droits de publication = publier réellement. Ne jamais conclure « token ne peut pas publier » sans test live.
 - **Le hashtag `#AmaryllisLocations` est un faux-positif systématique** pour toute règle fact-check `équipement.*amaryllis` (cascade/piscine + le mot « amaryllis » du hashtag de marque). Fix : **stripper les hashtags** (`/#[^\s#]+/g`) AVANT d'appliquer les règles factuelles — les hashtags sont du marketing, pas des affirmations.
