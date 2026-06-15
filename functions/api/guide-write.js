@@ -73,7 +73,9 @@ export async function onRequest(context) {
   if (!guide || typeof guide !== "object") return json({ error: "guide introuvable" }, 404);
 
   // 2. Génération : réécriture des champs éditables uniquement, grounded sur les faits du bien.
-  const faits = `Faits VRAIS (ne JAMAIS contredire) : nom=${bien.nom} · type=${bien.type} · ${bien.capacite} personnes · ${bien.chambres} chambres · ${bien.lieu}.`;
+  const surHauteurs = bien.lieu && /martinique|sainte-luce|schoelcher/i.test(bien.lieu);
+  const faits = `Faits VRAIS (ne JAMAIS contredire) : nom=${bien.nom} · type=${bien.type} · ${bien.capacite} personnes · ${bien.chambres} chambres · ${bien.lieu}.`
+    + (surHauteurs ? `\n⚠️ Le bien est sur les HAUTEURS avec vue sur la mer AU LOIN. INTERDIT : « pieds dans l'eau », « bord de mer », « plage privée », « accès direct à la plage », bruit des vagues. La piscine et la vue mer panoramique sont OK.` : "");
   const prompt = `Tu es l'hôte d'Amaryllis Locations. Voici le livret d'accueil du bien « ${bien.nom} ».
 ${faits}
 
