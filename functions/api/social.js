@@ -58,6 +58,7 @@ async function handleStatus(env) {
       expiresAt,
       expiresIn: expiresAt ? Math.floor((expiresAt * 1000 - Date.now()) / 86400000) : null,
       isValid: !debug?.data?.error,
+      scopes: debug?.data?.scopes || [],
     },
   });
 }
