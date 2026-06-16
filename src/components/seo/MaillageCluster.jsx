@@ -22,6 +22,10 @@ export default function MaillageCluster({ currentSlug = null, bienId = null, bie
   }, []);
 
   const cluster = currentSlug ? clusterForGuide(currentSlug) : clusterForBien(bienId);
+  // RM-22 : wording orienté lieu (moat SEO local) plutôt que le vague "dans le secteur".
+  // Préposition gérée par cluster géographique ; fallback générique pour le hub non-géo (séjour).
+  const HUB_LOC = { "sainte-luce": "à Sainte-Luce", diamant: "au Diamant", nogent: "à Nogent" };
+  const loc = HUB_LOC[cluster] || "à proximité";
   const guides = (CLUSTER_GUIDES[cluster] || []).filter((s) => s !== currentSlug).slice(0, 5);
   const biens  = (CLUSTER_BIENS[cluster] || []).filter((id) => id !== bienId).slice(0, 4);
   if (guides.length === 0 && biens.length === 0) return null;
@@ -54,12 +58,12 @@ export default function MaillageCluster({ currentSlug = null, bienId = null, bie
         .mc-guide::before{content:"\\203A";color:#c47254;font-size:12px}
       `}</style>
       <details className="mc-details" open={isDesktop}>
-      <summary className="mc-summary">Dans le secteur</summary>
+      <summary className="mc-summary">Nos maisons {loc}</summary>
       <div className="mc-wrap">
       <div className="mc-grid">
         {biens.length > 0 && (
           <div>
-            <h2 style={MC_HEAD}><span style={MC_TICK} />Où loger dans le secteur</h2>
+            <h2 style={MC_HEAD}><span style={MC_TICK} />Où loger {loc}</h2>
             <div className="mc-cards">
               {biens.map((id) => {
                 const b = CANON[id] || {};
