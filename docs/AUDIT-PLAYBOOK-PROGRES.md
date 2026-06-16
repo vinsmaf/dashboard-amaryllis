@@ -26,6 +26,11 @@
 ## ⚠️ Flake connu déploiement
 `deploy:pages` : le smoke test peut faussement échouer (asset 404 / "crash React" / bundle servi text/html) en **course avec la propagation CDN des chunks lazy** juste après upload. Vérif : re-curler les noms de chunks réels depuis `dist/assets/` → 200 JS en quelques secondes = flake, prod saine. Vu 2× le 2026-06-16 (RM-19, RM-25).
 
+## 🟡 MED traités
+| Item | Quoi | Preuve |
+|---|---|---|
+| **RM-16** | Digest hôte arrivées J+1 en ntfy (flag prio si bien <4,7) — `runArrivalsDigest`, cron 9h. | Worker `ce26f976` |
+
 ## Apprentissage process
 Les findings d'audit sur la **réalité/provenance d'une donnée** (ex. avis réels ?) ne peuvent pas être tranchés par un agent — ils requièrent la confirmation métier de Vincent. → toujours vérifier le code ET demander la provenance avant d'agir.
 
