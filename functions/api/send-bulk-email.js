@@ -77,6 +77,20 @@ export async function onRequest(context) {
       bien_id: r.bien_id || null,
     }));
 
+  } else if (segment === "repeaters") {
+    // RM-19 : voyageurs directs FIDÈLES (≥2 séjours en direct) — échelle de fidélité,
+    // le segment le plus rentable (0% commission, réacquisition quasi nulle).
+    let sql = `SELECT lower(trim(email)) AS email, MAX(prenom) AS prenom, MAX(bien_id) AS bien_id, COUNT(*) AS n
+               FROM direct_bookings WHERE email IS NOT NULL AND email != ''
+               GROUP BY lower(trim(email)) HAVING COUNT(*) >= 2
+               ORDER BY n DESC LIMIT ${MAX_RECIPIENTS}`;
+    const { results } = await db.prepare(sql).all();
+    recipients = (results || []).map(r => ({
+      email: r.email.trim().toLowerCase(),
+      prenom: r.prenom || "",
+      bien_id: r.bien_id || null,
+    }));
+
   } else if (segment === "past_guests") {
     // RM-19/RM-10 : anciens voyageurs DIRECTS (base repeat) — relance fidélité hors OTA.
     // Même pattern que les autres segments : résout les destinataires, n'envoie que si !dry_run.

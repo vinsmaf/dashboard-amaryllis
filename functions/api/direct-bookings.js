@@ -35,6 +35,31 @@ export async function onRequestGet(context) {
   const db = env.revenue_manager;
   if (!db) return json({ reservations: [], reason: "D1 non liée" });
 
+  // RM-19 — base voyageurs UNIFIÉE (1 ligne par email, repeaters en tête). Échelle de fidélité :
+  // détecte les clients revenus en DIRECT (canal 0% commission), leurs biens et leur LTV.
+  if (new URL(request.url).searchParams.get("view") === "guests") {
+    try {
+      const g = await db.prepare(
+        `SELECT lower(trim(email)) AS email, MAX(prenom) AS prenom, MAX(phone) AS phone,
+                COUNT(*) AS nb_sejours, GROUP_CONCAT(DISTINCT bien_id) AS biens,
+                MIN(checkin) AS premier_sejour, MAX(checkin) AS dernier_sejour,
+                SUM(total) AS total_cumule
+         FROM direct_bookings
+         WHERE email IS NOT NULL AND email != ''
+         GROUP BY lower(trim(email))
+         ORDER BY nb_sejours DESC, dernier_sejour DESC`
+      ).all();
+      const guests = (g?.results || []).map(r => ({
+        ...r,
+        biens: r.biens ? r.biens.split(",").filter(Boolean) : [],
+        repeater: (r.nb_sejours || 0) >= 2,
+      }));
+      return json({ guests, count: guests.length, repeaters: guests.filter(x => x.repeater).length });
+    } catch (e) {
+      return json({ error: e.message, guests: [] }, 500);
+    }
+  }
+
   try {
     const rows = await db.prepare(
       `SELECT payment_intent_id, bien_id, bien_nom, voyageur, email, total, depot, checkin, checkout

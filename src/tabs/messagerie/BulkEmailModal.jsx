@@ -5,6 +5,8 @@ import { useState, useEffect } from "react";
 const SEGMENTS = [
   { id: "hot_carts", label: "🔥 Paniers chauds", desc: "Abandonnés avec dates futures, non convertis" },
   { id: "all_carts", label: "📋 Tous les paniers", desc: "Tous les abandonnés non convertis (dates passées incluses)" },
+  { id: "past_guests", label: "🏡 Anciens voyageurs", desc: "Clients ayant déjà séjourné en direct (base repeat, RM-10/19)" },
+  { id: "repeaters",   label: "⭐ Voyageurs fidèles", desc: "Revenus en direct ≥ 2 fois — segment le plus rentable (RM-19)" },
   { id: "custom",    label: "✏️ Emails personnalisés", desc: "Saisir des adresses email manuellement" },
 ];
 
