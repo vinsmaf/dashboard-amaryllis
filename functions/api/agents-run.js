@@ -15,6 +15,55 @@ import { ragBlock } from "./_rag.js"; // #2 RAG — grounding sur les vraies don
 // Agents "content" qui bénéficient du grounding sur les vraies données (avis/guides/drafts).
 const RAG_AGENTS = new Set(["community-manager", "seo-content-writer", "voyageur-research", "crm-manager", "commercial-publicite"]);
 
+// ── Playbook revenue management / hospitality (agents revenue & marketing) ──
+// Miroir condensé de ~/.claude/memory/PLAYBOOK-LOCATIF.md (cerveau partagé). Une CF Function
+// ne lit pas ~/.claude au runtime → on embarque l'extrait (même pattern que FISCAL_CONTEXT).
+// ⚠️ MIROIR : si PLAYBOOK-LOCATIF.md change matériellement, mettre à jour ce bloc + redéployer.
+const PLAYBOOK_AGENTS = new Set([
+  "revenue-manager", "traffic-manager", "crm-manager", "consultant-ebusiness",
+  "growth-experiments", "seo-local", "seo-content-writer", "community-manager",
+  "voyageur-research", "data-analyst", "chef-produit-web", "responsable-service-client",
+  "commercial-publicite", "responsable-logistique", "veille-concurrentielle",
+]);
+const PLAYBOOK_DIGEST = `
+═══════════════════════════════════════════════════════════════
+📘 PLAYBOOK REVENUE MANAGEMENT & HOSPITALITY (applique quand pertinent à ton domaine)
+═══════════════════════════════════════════════════════════════
+PRICING & YIELD
+• RM-01 Last-room-value : haut de bande seulement quand rareté réelle (Amaryllis 8p sans substitut) ; Mabouya/Bellevue (2p) = bas de bande pour remplir.
+• RM-02 Lead-time : déc-avr = TENIR (ouvrir haut tôt, pas de décote avant J-14) ; juin-oct = DÉMARQUER par paliers.
+• RM-03 Le NET encaissé décide, pas l'occupation brute : piloter le NET RevPAR par bien × canal.
+• RM-04 LOS : resserrer min-stay sur pics confirmés (pickup J-45) ; orphan-night → remplir en DIRECT avant OTA.
+• RM-05 Displacement Iguana : à chaque renouvellement de bail, comparer loyer net garanti vs RevPAR court terme net.
+DÉSINTERMÉDIATION & DIRECT (priorité #1)
+• RM-06 Billboard effect : être #1 sur son nom (Amaryllis/Géko/Bellevue ≥4,8) pour récupérer la résa amorcée par l'OTA.
+• RM-07 Le direct gagne par les frais OTA évités, JAMAIS par un prix cassé : prix hôte égal en vitrine, afficher l'économie ~14%.
+• RM-08 CAC ≤ 50% de la commission Booking nette évitée, par résa (pas par clic) ; budget sur le non-brand des gros tickets.
+• RM-09 OTA pour le creux, direct pour le pic.
+• RM-10 LTV : capturer email+tél de 100% des voyageurs (OTA inclus) → repeat direct = 0% commission.
+• RM-11 Bouche-à-oreille diaspora : parrainage auto-financé (coûte moins que la commission évitée).
+CONVERSION & PERSUASION
+• RM-12 Chiffrer le delta de frais vs OTA, jamais casser l'ADR ; micro-étapes sur petits tickets.
+• RM-13 Preuve sociale réelle, attribuée, datée, par bien (note <4,7 → mener par le verbatim, pas le chiffre).
+• RM-14 Rareté HONNÊTE branchée sur le calendrier réel (D1/Beds24), zéro faux compteur.
+• RM-15 A/B test seulement si ≥~30-50 résas/cycle ; métrique = résa confirmée Stripe→D1.
+EXPÉRIENCE & FIDÉLISATION
+• RM-16 Service (attendu) vs hospitalité (fidélise) : 1 geste humain perso par arrivée ; prioriser notes planchers (Mabouya, Zandoli).
+• RM-17 Router les avis vers Google (l'avis Airbnb nourrit Airbnb).
+• RM-18 Récupération : accuser <15min, résoudre <2h, compenser après ; geste calibré sur l'irritation, pas le prix.
+• RM-19 Échelle de fidélité multi-biens (Mabouya→Géko→Amaryllis) en direct.
+DISTRIBUTION & POSITIONNEMENT
+• RM-20 Amaryllis (4,94) en produit-phare ; ruissellement vers alternatives du même besoin (jamais Iguana/Nogent).
+• RM-21 Grille produit-segment : 1 segment dominant par bien ; diaspora = segment direct n°1.
+• RM-22 Cluster Sainte-Luce = moat (groupe multi-biens en direct, relogement « selon dispo »).
+SYSTÈMES & SCALABILITÉ
+• RM-23 Conciergerie = actif, pas emploi : éliminer→automatiser→déléguer (modèle Nogent/Nesrine).
+• RM-24 Checklist + photos horodatées bloquent le calendrier ; standard uniforme tous biens.
+• RM-25 Automatiser le prévisible, brouillon-puis-validation sur l'amirale ; un PRIX ne part JAMAIS en auto.
+• RM-26 Runbooks de crise pré-écrits (cyclone, double-booking, no-show, Stripe).
+GARDE-FOUS : Revenue Manager ADVISORY ONLY — ne change jamais prix/min-stay/canal seul. Iguana bookable:false exclue. Nogent = marché distinct. Jamais de faux compteur (Stripe LIVE).
+`;
+
 // ── Spécialistes fiscaux (ADR-BRAIN-003) : grounding sur le contexte fiscal UNIFIÉ ──
 // FISCAL_CONTEXT = miroir condensé de ~/.claude/memory/FISCAL.md (cerveau fiscal partagé
 // des 2 cerveaux). Une CF Function ne lit pas ~/.claude au runtime → on embarque l'extrait.
@@ -632,6 +681,9 @@ MÉMOIRE DE TES RUNS PRÉCÉDENTS :
   // ── Contexte fiscal unifié (spécialistes fiscaux — ADR-BRAIN-003) ───────────
   const fiscalSection = FISCAL_AGENTS.has(agent.id) ? FISCAL_CONTEXT : "";
 
+  // ── Playbook revenue management / hospitality (agents revenue & marketing) ──
+  const playbookSection = PLAYBOOK_AGENTS.has(agent.id) ? PLAYBOOK_DIGEST : "";
+
   // ── Skill métier injecté (manuel d'opération de l'agent) ────────────────
   const skill = getSkillForAgent(agent.id);
   const skillSection = skill ? `
@@ -777,7 +829,7 @@ Retourne UN SEUL JSON :
 TON DOMAINE D'EXPERTISE : ${agent.focus}
 
 FICHIERS CLÉS à analyser : ${agent.files_hint}
-${fiscalSection}${skillSection}${liveSection}${sharedSection}${ragSection}${bannedSection}${memorySection}${feedbackSection}${outcomesSection}${historySection}
+${fiscalSection}${playbookSection}${skillSection}${liveSection}${sharedSection}${ragSection}${bannedSection}${memorySection}${feedbackSection}${outcomesSection}${historySection}
 ${DEJA_EN_PLACE}
 MISSION : Identifie les actions concrètes NOUVELLES à réaliser dans ton domaine. Tiens compte de ce qui a déjà été fait ou identifié pour approfondir ton analyse et aller plus loin. Si une idée recoupe une capacité « DÉJÀ EN PLACE », ne la propose PAS — sauf amélioration précise et chiffrée (dis ce qui manque concrètement).
 
