@@ -34,6 +34,16 @@ const NOISE = [
   /_AutofillCallbackHandler/i,
   /webkit\.messageHandlers/i,
   /Can't find variable: (_Autofill|webkit|gmo|__gCrWeb|instantSearch)/i,
+  // Réseau transitoire (jamais un bug de code) : connexions coupées/réinitialisées/timeout.
+  // Couvre aussi le bruit du crawler "[revue visuelle]" (net::ERR_* + page.goto Timeout/networkidle).
+  /net::ERR_/i,
+  /page\.goto.*Timeout|waiting until "networkidle"/i,
+  // Chargement de chunk/lazy après déploiement — bénin (l'auto-reload stale-chunk le gère).
+  /Importing a module script failed|(Failed to fetch|error loading) dynamically imported module/i,
+  // Navigateurs in-app (WebView Android Instagram/Facebook) : pont JS détruit, hors notre code.
+  /postMessage.*Java object is gone/i,
+  // Loader Google API (gapi) injecté par extension/compte Google côté client — pas notre code.
+  /Jsloader error/i,
 ];
 const SCREENSHOT_MAX = 180_000; // ~180 Ko base64 max (downscalé côté client)
 

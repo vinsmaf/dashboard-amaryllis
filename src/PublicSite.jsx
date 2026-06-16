@@ -3180,7 +3180,7 @@ function BienCard({ bien, onDetail, onBook, isFavorite = false, onToggleFavorite
 
         {/* Amenities — piscine en premier, max 4 */}
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16, marginTop: 4 }}>
-          {(lang === "fr" ? bien.amenities : (bien.amenitiesEn || bien.amenities)).slice(0, 4).map(a => (
+          {(lang === "fr" ? (bien.amenities || []) : (bien.amenitiesEn || bien.amenities || [])).slice(0, 4).map(a => (
             <Chip key={a} style={{ fontSize: 11, padding: "3px 8px" }}>{a}</Chip>
           ))}
         </div>
