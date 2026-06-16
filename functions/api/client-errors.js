@@ -172,7 +172,7 @@ export async function onRequest(context) {
     const withShot = url.searchParams.get("screenshots") === "1";
     const cols = withShot
       ? "*"
-      : "id,kind,message,path,url,ua,viewport,comment,severity,status,count,backlog_id,first_seen,last_seen,(screenshot IS NOT NULL) AS has_shot";
+      : "id,kind,message,stack,path,url,ua,viewport,comment,severity,status,count,backlog_id,first_seen,last_seen,(screenshot IS NOT NULL) AS has_shot";
     const conds = [], binds = [];
     if (status) { conds.push("status=?"); binds.push(status); }
     if (kind) { conds.push("kind=?"); binds.push(kind); }
@@ -185,9 +185,24 @@ export async function onRequest(context) {
   // ── PATCH : statut / gravité / push backlog ───────────────────────
   if (request.method === "PATCH") {
     const id = url.searchParams.get("id");
-    if (!id) return json({ error: "id requis (query string)" }, 400);
     let body = {};
     try { body = await request.json(); } catch {}
+
+    // ── Bulk : { ids:[...], status, severity? } → 1 seule requête (triage en masse) ──
+    const VALID_ST = ["new", "triaged", "backlog", "ignored", "fixed"];
+    if (Array.isArray(body.ids) && body.ids.length) {
+      const ids = body.ids.slice(0, 500).filter(x => typeof x === "string");
+      if (!ids.length) return json({ error: "ids vides" }, 400);
+      const sets = [], binds = [];
+      if (body.status && VALID_ST.includes(body.status)) { sets.push("status=?"); binds.push(body.status); }
+      if (body.severity) { sets.push("severity=?"); binds.push(body.severity); }
+      if (!sets.length) return json({ error: "rien à modifier (status/severity)" }, 400);
+      const ph = ids.map(() => "?").join(",");
+      await db.prepare(`UPDATE client_errors SET ${sets.join(", ")} WHERE id IN (${ph})`).bind(...binds, ...ids).run();
+      return json({ ok: true, updated: ids.length });
+    }
+
+    if (!id) return json({ error: "id requis (query string)" }, 400);
 
     if (body.tobacklog) {
       const row = await db.prepare("SELECT * FROM client_errors WHERE id=?").bind(id).first();

@@ -1,7 +1,7 @@
 // Onglet admin 🐞 Bugs — inbox des erreurs JS captées en prod + reports manuels.
-// Tri par statut/type, push vers le backlog agents, capture d'écran des reports.
+// Tri statut/type/fréquence, compteurs, triage en masse, stack inline, captures.
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { fetchJSON, adminFetch } from "../lib/apiFetch.js";
 
 const KIND = {
@@ -22,13 +22,17 @@ const fmtDate = (ts) => ts ? new Date(ts * 1000).toLocaleString("fr-FR", { day: 
 
 export default function BugsTab() {
   const [items, setItems] = useState([]);
+  const [counts, setCounts] = useState({});   // status → nb d'entrées (via /stats)
   const [err, setErr] = useState(null);
   const [loading, setLoading] = useState(true);
   const [fStatus, setFStatus] = useState("new");
   const [fKind, setFKind] = useState("");
+  const [sortBy, setSortBy] = useState("date"); // "date" | "count"
   const [shots, setShots] = useState({});   // id → dataURL (chargé à la demande)
   const [zoom, setZoom] = useState(null);
   const [sev, setSev] = useState({});        // id → gravité choisie avant push backlog
+  const [sel, setSel] = useState(() => new Set()); // ids sélectionnés (triage en masse)
+  const [open, setOpen] = useState({});      // id → stack dépliée
 
   const load = useCallback(() => {
     setLoading(true);
@@ -40,16 +44,46 @@ export default function BugsTab() {
       .catch(e => { setItems([]); if (e?.status !== 401) setErr(e?.message || "Erreur de chargement"); })
       .finally(() => setLoading(false));
   }, [fStatus, fKind]);
+
+  const loadStats = useCallback(() => {
+    fetchJSON("/api/client-errors?stats=1", { timeout: 10000 })
+      .then(d => {
+        const c = {};
+        (d?.groups || []).forEach(g => { c[g.status] = (c[g.status] || 0) + (g.n || 0); });
+        c.__all = Object.values(c).reduce((s, n) => s + n, 0);
+        setCounts(c);
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { loadStats(); }, [loadStats]);
+
+  const refresh = useCallback(() => { load(); loadStats(); }, [load, loadStats]);
+  // Changer de filtre vide la sélection (évite des ids périmés) — fait dans le handler, pas un effet.
+  const pickStatus = (v) => { setFStatus(v); setSel(new Set()); };
+  const pickKind = (v) => { setFKind(v); setSel(new Set()); };
 
   const patch = useCallback(async (id, body) => {
     try {
       await adminFetch(`/api/client-errors?id=${encodeURIComponent(id)}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
       });
-      load();
+      refresh();
     } catch { /* noop */ }
-  }, [load]);
+  }, [refresh]);
+
+  const bulk = useCallback(async (status) => {
+    const ids = [...sel];
+    if (!ids.length) return;
+    try {
+      await adminFetch("/api/client-errors", {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids, status }),
+      });
+      setSel(new Set());
+      refresh();
+    } catch { /* noop */ }
+  }, [sel, refresh]);
 
   const viewShot = useCallback(async (id) => {
     if (shots[id]) { setZoom(shots[id]); return; }
@@ -62,6 +96,17 @@ export default function BugsTab() {
     } catch { /* noop */ }
   }, [shots]);
 
+  const sorted = useMemo(() => {
+    const arr = [...items];
+    if (sortBy === "count") arr.sort((a, b) => (b.count || 0) - (a.count || 0) || (b.last_seen || 0) - (a.last_seen || 0));
+    else arr.sort((a, b) => (b.last_seen || 0) - (a.last_seen || 0));
+    return arr;
+  }, [items, sortBy]);
+
+  const allSelected = sorted.length > 0 && sorted.every(it => sel.has(it.id));
+  const toggleAll = () => setSel(allSelected ? new Set() : new Set(sorted.map(it => it.id)));
+  const toggleOne = (id) => setSel(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+
   return (
     <div style={{ padding: "8px 4px" }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 4 }}>
@@ -69,32 +114,65 @@ export default function BugsTab() {
         <span style={{ fontSize: 12, color: "#64748b" }}>Erreurs captées en prod + reports manuels → triables vers le backlog</span>
       </div>
       <p style={{ fontSize: 12, color: "#64748b", margin: "0 0 14px" }}>
-        L'agent de triage hebdo (lundi) classe et pousse automatiquement les bugs récurrents. Ici tu peux aussi trier à la main.
+        L'agent de triage hebdo (lundi) classe et pousse automatiquement les bugs récurrents. Ici tu peux aussi trier à la main (sélection multiple).
       </p>
 
-      {/* Filtres */}
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
-        {[["new", "🆕 Nouveaux"], ["backlog", "📋 Backlog"], ["fixed", "✅ Corrigés"], ["ignored", "🔕 Ignorés"], ["", "Tous"]].map(([v, l]) => (
-          <button key={v} onClick={() => setFStatus(v)} style={chip(fStatus === v)}>{l}</button>
-        ))}
-        <span style={{ width: 1, background: "rgba(255,255,255,0.1)", margin: "0 4px" }} />
-        {[["", "Tous types"], ["report", "🙋 Reports"], ["error", "💥 Erreurs"], ["console", "🟡 console"]].map(([v, l]) => (
-          <button key={v} onClick={() => setFKind(v)} style={chip(fKind === v)}>{l}</button>
-        ))}
-        <button onClick={load} style={{ ...chip(false), marginLeft: "auto" }}>⟳ Rafraîchir</button>
+      {/* Filtres statut (avec compteurs) */}
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+        {[["new", "🆕 Nouveaux"], ["triaged", "👀 Triés"], ["backlog", "📋 Backlog"], ["fixed", "✅ Corrigés"], ["ignored", "🔕 Ignorés"], ["", "Tous"]].map(([v, l]) => {
+          const n = v === "" ? counts.__all : counts[v];
+          return (
+            <button key={v} onClick={() => pickStatus(v)} style={chip(fStatus === v)}>
+              {l}{n != null && <span style={{ marginLeft: 6, opacity: 0.7 }}>{n}</span>}
+            </button>
+          );
+        })}
+        <button onClick={refresh} style={{ ...chip(false), marginLeft: "auto" }}>⟳ Rafraîchir</button>
       </div>
 
+      {/* Filtres type + tri */}
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12, alignItems: "center" }}>
+        {[["", "Tous types"], ["report", "🙋 Reports"], ["error", "💥 Erreurs"], ["console", "🟡 console"]].map(([v, l]) => (
+          <button key={v} onClick={() => pickKind(v)} style={chip(fKind === v)}>{l}</button>
+        ))}
+        <span style={{ width: 1, alignSelf: "stretch", background: "rgba(255,255,255,0.1)", margin: "0 4px" }} />
+        <span style={{ fontSize: 11, color: "#64748b" }}>Tri</span>
+        <button onClick={() => setSortBy("date")} style={chip(sortBy === "date")}>🕒 Récents</button>
+        <button onClick={() => setSortBy("count")} style={chip(sortBy === "count")}>🔥 Fréquence</button>
+      </div>
+
+      {/* Barre de triage en masse */}
+      {sorted.length > 0 && (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 10, padding: "8px 12px", background: sel.size ? "rgba(37,99,235,0.12)" : "transparent", border: sel.size ? "1px solid rgba(37,99,235,0.35)" : "1px solid transparent", borderRadius: 8 }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#94a3b8", cursor: "pointer" }}>
+            <input type="checkbox" checked={allSelected} onChange={toggleAll} />
+            Tout ({sorted.length})
+          </label>
+          {sel.size > 0 && (
+            <>
+              <span style={{ fontSize: 12, color: "#e2e8f0", fontWeight: 600 }}>{sel.size} sélectionné{sel.size > 1 ? "s" : ""}</span>
+              <button onClick={() => bulk("ignored")} style={btn("#475569")}>🔕 Ignorer</button>
+              <button onClick={() => bulk("fixed")} style={btn("#16a34a")}>✅ Corrigé</button>
+              <button onClick={() => bulk("triaged")} style={btn("#a16207")}>👀 Trié</button>
+              <button onClick={() => setSel(new Set())} style={{ ...btn("#1e293b"), color: "#94a3b8" }}>Annuler</button>
+            </>
+          )}
+        </div>
+      )}
+
       {loading ? <div style={{ color: "#64748b", fontSize: 13 }}>Chargement…</div>
-        : err ? <div style={{ color: "#f87171", fontSize: 13, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 8, padding: "12px 14px" }}>⚠️ Erreur de chargement : {err}. <button onClick={load} style={{ ...chip(false), marginLeft: 6 }}>Réessayer</button></div>
-        : items.length === 0 ? <div style={{ color: "#22c55e", fontSize: 14, padding: "20px 0" }}>✓ Aucun bug dans ce filtre.</div>
+        : err ? <div style={{ color: "#f87171", fontSize: 13, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 8, padding: "12px 14px" }}>⚠️ Erreur de chargement : {err}. <button onClick={refresh} style={{ ...chip(false), marginLeft: 6 }}>Réessayer</button></div>
+        : sorted.length === 0 ? <div style={{ color: "#22c55e", fontSize: 14, padding: "20px 0" }}>✓ Aucun bug dans ce filtre.</div>
         : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {items.map(it => {
+          {sorted.map(it => {
             const k = KIND[it.kind] || KIND.error;
             const st = STATUS[it.status] || STATUS.new;
+            const checked = sel.has(it.id);
             return (
-              <div key={it.id} style={{ background: "#0f172a", border: `1px solid rgba(255,255,255,0.08)`, borderLeft: `3px solid ${k.color}`, borderRadius: 10, padding: "10px 14px" }}>
+              <div key={it.id} style={{ background: checked ? "#13213b" : "#0f172a", border: `1px solid ${checked ? "rgba(37,99,235,0.4)" : "rgba(255,255,255,0.08)"}`, borderLeft: `3px solid ${k.color}`, borderRadius: 10, padding: "10px 14px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <input type="checkbox" checked={checked} onChange={() => toggleOne(it.id)} style={{ cursor: "pointer" }} />
                   <span style={{ fontSize: 11, fontWeight: 700, color: k.color }}>{k.emoji} {k.label}</span>
                   <span style={{ fontSize: 11, color: st.color, fontWeight: 600 }}>{st.label}</span>
                   {it.count > 1 && <span style={{ fontSize: 10, background: "rgba(239,68,68,0.15)", color: "#f87171", borderRadius: 6, padding: "1px 6px", fontWeight: 700 }}>×{it.count}</span>}
@@ -109,8 +187,15 @@ export default function BugsTab() {
                   {it.backlog_id && <span> · 📋 {it.backlog_id}</span>}
                 </div>
 
+                {it.stack && open[it.id] && (
+                  <pre style={{ fontSize: 10.5, color: "#94a3b8", background: "#0b1120", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 6, padding: "8px 10px", marginTop: 6, overflowX: "auto", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{it.stack}</pre>
+                )}
+
                 {/* Actions */}
                 <div style={{ display: "flex", gap: 6, marginTop: 8, alignItems: "center", flexWrap: "wrap" }}>
+                  {it.stack && (
+                    <button onClick={() => setOpen(o => ({ ...o, [it.id]: !o[it.id] }))} style={btn("#334155")}>{open[it.id] ? "▾ Stack" : "▸ Stack"}</button>
+                  )}
                   {Number(it.has_shot) === 1 && (
                     <button onClick={() => viewShot(it.id)} style={btn("#334155")}>📷 Capture</button>
                   )}
