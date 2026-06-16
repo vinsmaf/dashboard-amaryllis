@@ -30,6 +30,7 @@
 | Item | Quoi | Preuve |
 |---|---|---|
 | **RM-16** | Digest hôte arrivées J+1 en ntfy (flag prio si bien <4,7) — `runArrivalsDigest`, cron 9h. | Worker `ce26f976` |
+| **RM-17** | Post-séjour direct = avis Google UNIQUE (bouton Airbnb retiré, Google pleine largeur) → ranking local. | Pages `9f250f1` |
 
 ## Apprentissage process
 Les findings d'audit sur la **réalité/provenance d'une donnée** (ex. avis réels ?) ne peuvent pas être tranchés par un agent — ils requièrent la confirmation métier de Vincent. → toujours vérifier le code ET demander la provenance avant d'agir.
