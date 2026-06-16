@@ -23,7 +23,7 @@
 Les findings d'audit sur la **réalité/provenance d'une donnée** (ex. avis réels ?) ne peuvent pas être tranchés par un agent — ils requièrent la confirmation métier de Vincent. → toujours vérifier le code ET demander la provenance avant d'agir.
 
 ## Reste à traiter (extraits prioritaires — voir AUDIT-PLAYBOOK-RM.md / MM.md)
-- ⏳ **RM-03** 🔴 — NET RevPAR par bien×canal (Worker `runOccupancySnapshot`). Gros.
+- 🅿️ **RM-03** 🔴 — **PARKÉ (data-blocked, audit mal cadré).** `runOccupancySnapshot` (ical-sync:876) travaille sur des `allEvents` iCal **forward** qui ne portent QUE `bienId/checkin/checkout` — aucun revenu/commission/canal. Le NET (`total−commission`) de `parseBookingRow` ne concerne que les résas Booking **scrapées** (script local), pas ce contexte. Écrire `revpar_cents` là = valeurs fausses/NULL → trompe le pricing (RM advisory = doit être fiable). **RM-03 réel = mini-projet** : NET RevPAR = indicateur de **réalisé** (revenu encaissé net ÷ nuits dispo, trailing) à sourcer depuis Sheet `revenus locatif` + `direct_bookings` (split par canal = le plus dur, données non séparées). Reprise : décider fenêtre + source revenu unifiée AVANT de coder. Vérifié 2026-06-16 (ical-sync:876-910 + parseBookingReservation:74-90).
 - ℹ️ RM-19 : la vue `?view=guests` est un endpoint data (admin Bearer) — pas encore d'écran dédié ; consommée via les segments emailing. Un onglet "voyageurs fidèles" serait l'étape suivante si voulu.
 - ⏳ **RM-19** 🔴 — table `guests` unifiée (base repeat).
 - ⏳ **RM-18** 🔴 — détection irritation WhatsApp → ntfy.
