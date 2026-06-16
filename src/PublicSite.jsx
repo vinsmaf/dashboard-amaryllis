@@ -3290,7 +3290,15 @@ async function findFreeAlternatives({ wantCheckin, wantCheckout, currentBienId, 
   let bookingUrls = {};
   try { bookingUrls = JSON.parse(localStorage.getItem("ical_urls_booking") || "{}"); } catch { /* ignore */ }
   const current = BIENS.find(b => b.id === currentBienId);
-  const candidates = BIENS.filter(b => b.id !== currentBienId && !BOOKING_DISABLED.has(b.id));
+  const curCanon = CANON[currentBienId];
+  const candidates = BIENS.filter(b => {
+    if (b.id === currentBienId || BOOKING_DISABLED.has(b.id)) return false;
+    // RM-20 : rebond uniquement intra-marché — ne jamais proposer Nogent sur une
+    // fiche Martinique (ni l'inverse). Comparaison sur le canonique BRUT (CANON[id]),
+    // car BIENS[].lieu est enrichi (« …, Martinique ») et fausserait isMartinique.
+    if (curCanon && CANON[b.id] && isMartiniqueCanon(CANON[b.id]) !== isMartiniqueCanon(curCanon)) return false;
+    return true;
+  });
   const results = await Promise.all(candidates.map(async b => {
     try {
       let url = `/api/get-availability?bienId=${b.id}`;

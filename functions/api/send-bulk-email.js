@@ -77,6 +77,21 @@ export async function onRequest(context) {
       bien_id: r.bien_id || null,
     }));
 
+  } else if (segment === "past_guests") {
+    // RM-19/RM-10 : anciens voyageurs DIRECTS (base repeat) — relance fidélité hors OTA.
+    // Même pattern que les autres segments : résout les destinataires, n'envoie que si !dry_run.
+    let sql = `SELECT DISTINCT email, prenom, bien_id FROM direct_bookings
+               WHERE email IS NOT NULL AND email != ''`;
+    if (bien_id) sql += ` AND bien_id = '${bien_id.replace(/'/g, "''")}'`;
+    sql += ` ORDER BY created_at DESC LIMIT ${MAX_RECIPIENTS}`;
+
+    const { results } = await db.prepare(sql).all();
+    recipients = (results || []).map(r => ({
+      email: r.email.trim().toLowerCase(),
+      prenom: r.prenom || "",
+      bien_id: r.bien_id || null,
+    }));
+
   } else {
     return json({ error: `segment inconnu: ${segment}` }, 400);
   }

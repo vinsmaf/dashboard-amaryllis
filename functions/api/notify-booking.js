@@ -35,6 +35,7 @@ const DDL = `CREATE TABLE IF NOT EXISTS direct_bookings (
   voyageur   TEXT,
   prenom     TEXT,
   email      TEXT,
+  phone      TEXT,
   total      INTEGER,
   depot      INTEGER,
   checkin    TEXT,
@@ -99,7 +100,7 @@ export async function onRequest(context) {
   }
 
   const body = await request.json().catch(() => ({}));
-  const { paymentIntentId, bienId = "", bienNom = "?", voyageur = "", total = 0, checkin = "", checkout = "", depot = 0, email = "" } = body;
+  const { paymentIntentId, bienId = "", bienNom = "?", voyageur = "", total = 0, checkin = "", checkout = "", depot = 0, email = "", phone = "" } = body;
 
   // ── 1. Vérification anti-spam : le paiement existe-t-il vraiment et est-il réussi ? ──
   const sk = env.STRIPE_SECRET_KEY;
@@ -121,6 +122,8 @@ export async function onRequest(context) {
   if (db) {
     try {
       await db.prepare(DDL).run();
+      // Migration idempotente : ajoute phone à la table live créée avant ce champ (RM-10).
+      try { await db.prepare(`ALTER TABLE direct_bookings ADD COLUMN phone TEXT`).run(); } catch { /* colonne déjà présente */ }
       const exists = await db.prepare("SELECT 1 FROM direct_bookings WHERE payment_intent_id = ?").bind(paymentIntentId).first();
       if (exists) return json({ ok: true, already: true }, 200, request);
       // Inclut bien_id + email pour que get-availability bloque bien les dates au site public,
@@ -129,8 +132,8 @@ export async function onRequest(context) {
       // host_notified=1 dès l'insert : ce flux envoie l'alerte hôte juste après (lignes ci-dessous).
       // Le webhook stripe (notifyHostOnce) verra host_notified=1 → ne re-notifiera pas (dédup).
       await db.prepare(
-        "INSERT INTO direct_bookings (payment_intent_id, bien_id, bien_nom, voyageur, prenom, email, total, depot, checkin, checkout, host_notified) VALUES (?,?,?,?,?,?,?,?,?,?,1)"
-      ).bind(paymentIntentId, bienId || null, bienNom, voyageur, prenom, email || null, Math.round(total), Math.round(depot), checkin, checkout).run();
+        "INSERT INTO direct_bookings (payment_intent_id, bien_id, bien_nom, voyageur, prenom, email, phone, total, depot, checkin, checkout, host_notified) VALUES (?,?,?,?,?,?,?,?,?,?,?,1)"
+      ).bind(paymentIntentId, bienId || null, bienNom, voyageur, prenom, email || null, String(phone || "").trim() || null, Math.round(total), Math.round(depot), checkin, checkout).run();
     } catch { /* non bloquant */ }
   }
 

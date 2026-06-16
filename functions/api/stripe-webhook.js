@@ -307,7 +307,7 @@ async function notifyHostOnce(env, { paymentIntentId, bienId, bienNom, voyageur,
 
 // Stocke une réservation DIRECTE en D1 (pour emails pré-arrivée / post-séjour).
 // Fail-silent : ne casse jamais le webhook.
-async function storeDirectBooking(env, { paymentIntentId, email, voyageur, bienId, bienNom, checkin, checkout, total = null, groupBiens = null }) {
+async function storeDirectBooking(env, { paymentIntentId, email, voyageur, bienId, bienNom, checkin, checkout, total = null, groupBiens = null, phone = null }) {
   const db = env.revenue_manager;
   if (!db || !email || !email.includes("@") || !checkin) return;
   try {
@@ -316,10 +316,12 @@ async function storeDirectBooking(env, { paymentIntentId, email, voyageur, bienI
       payment_intent_id TEXT PRIMARY KEY, bien_nom TEXT, voyageur TEXT,
       total INTEGER, depot INTEGER, checkin TEXT, checkout TEXT,
       created_at INTEGER NOT NULL DEFAULT (unixepoch()),
-      email TEXT, prenom TEXT, bien_id TEXT,
+      email TEXT, prenom TEXT, bien_id TEXT, phone TEXT,
       prearrivee_sent INTEGER DEFAULT 0, poststay_sent INTEGER DEFAULT 0,
       host_notified INTEGER DEFAULT 0, group_biens TEXT
     )`).run();
+    // Migration idempotente : ajoute phone à la table live créée avant ce champ (RM-10).
+    try { await db.prepare(`ALTER TABLE direct_bookings ADD COLUMN phone TEXT`).run(); } catch { /* colonne déjà présente */ }
     const prenom = String(voyageur || "").trim().split(/\s+/)[0] || "";
     // Clé stable : pi.id si dispo, sinon fallback déterministe (évite les doublons).
     const pid = paymentIntentId || `direct-${email}-${checkin}`;
@@ -329,14 +331,15 @@ async function storeDirectBooking(env, { paymentIntentId, email, voyageur, bienI
     // remonte au Sheet même si le front-end notify-booking n'a pas tourné (sinon montant=0).
     // COALESCE : on ne remplace jamais un total déjà posé par le front-end (fill-if-null).
     await db.prepare(`INSERT INTO direct_bookings
-        (payment_intent_id, email, prenom, bien_id, bien_nom, voyageur, checkin, checkout, total, group_biens)
-      VALUES (?,?,?,?,?,?,?,?,?,?)
+        (payment_intent_id, email, prenom, bien_id, bien_nom, voyageur, checkin, checkout, total, group_biens, phone)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?)
       ON CONFLICT(payment_intent_id) DO UPDATE SET
         email=excluded.email, prenom=excluded.prenom, bien_id=excluded.bien_id,
         bien_nom=excluded.bien_nom, checkout=excluded.checkout,
         total=COALESCE(direct_bookings.total, excluded.total),
-        group_biens=COALESCE(excluded.group_biens, direct_bookings.group_biens)`)
-      .bind(pid, email, prenom, bienId || "", bienNom || "", voyageur || "", checkin, checkout || "", total != null ? Math.round(total) : null, groupBiens || null).run();
+        group_biens=COALESCE(excluded.group_biens, direct_bookings.group_biens),
+        phone=COALESCE(direct_bookings.phone, excluded.phone)`)
+      .bind(pid, email, prenom, bienId || "", bienNom || "", voyageur || "", checkin, checkout || "", total != null ? Math.round(total) : null, groupBiens || null, String(phone || "").trim() || null).run();
   } catch (e) {
     console.error("[direct-booking] D1:", e.message);
   }
@@ -448,7 +451,7 @@ export async function onRequestPost(context) {
         }, `booking-${pi.id}`);
         await ga4Event(env, "booking_completed", { bien_id: "groupe", booking_id: pi.id, value: grpValue, currency: "EUR", channel: "direct-groupe", checkin });
       }
-      await storeDirectBooking(env, { paymentIntentId: pi.id, email: guestEmail, voyageur, bienId: "groupe", bienNom: logements, checkin, checkout, total: grpValue, groupBiens: meta.bienIds || "" });
+      await storeDirectBooking(env, { paymentIntentId: pi.id, email: guestEmail, voyageur, bienId: "groupe", bienNom: logements, checkin, checkout, total: grpValue, groupBiens: meta.bienIds || "", phone: meta.phone });
       await capiPurchase(env, {
         eventId: pi.id, value: grpValue, email: guestEmail, bienId: "groupe", bienNom: logements || "Réservation groupe",
         phone: meta.phone, firstName: meta.prenom, lastName: meta.nom,
@@ -483,7 +486,7 @@ export async function onRequestPost(context) {
 
     // 2b. Stocke la résa DIRECTE en D1 → permet les emails pré-arrivée (J-3) et post-séjour (J+1)
     //     + total du séjour (full_total si 2×, sinon montant payé) pour le CA Sheet.
-    await storeDirectBooking(env, { paymentIntentId: pi.id, email: guestEmail, voyageur, bienId, bienNom, checkin, checkout, total: twoX ? twoX.total : Math.round((pi.amount || 0) / 100) });
+    await storeDirectBooking(env, { paymentIntentId: pi.id, email: guestEmail, voyageur, bienId, bienNom, checkin, checkout, total: twoX ? twoX.total : Math.round((pi.amount || 0) / 100), phone: meta.phone });
 
     // 2b-bis. Alerte hôte fiable (relais serveur, dédup atomique avec le front-end notify-booking)
     await notifyHostOnce(env, { paymentIntentId: pi.id, bienId, bienNom, voyageur, email: guestEmail, checkin, checkout, amount, twoX, amountEur: Math.round((pi.amount || 0) / 100) });

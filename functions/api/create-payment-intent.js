@@ -11,17 +11,21 @@ async function storeAbandonedCart(env, paymentIntentId, m = {}) {
     await db.prepare(`CREATE TABLE IF NOT EXISTS abandoned_carts (
       payment_intent_id TEXT PRIMARY KEY, email TEXT, prenom TEXT,
       bien_id TEXT, type TEXT, logements TEXT, checkin TEXT, checkout TEXT,
-      guests TEXT, created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+      guests TEXT, phone TEXT, created_at INTEGER NOT NULL DEFAULT (unixepoch()),
       relance_sent INTEGER DEFAULT 0)`).run();
+    // Migration idempotente : ajoute phone aux tables créées avant ce champ (RM-10 — capture
+    // du tél des NON-acheteurs pour relance). Le tél reste optionnel (NULL si non saisi).
+    try { await db.prepare(`ALTER TABLE abandoned_carts ADD COLUMN phone TEXT`).run(); } catch { /* colonne déjà présente */ }
     const prenom = String(m.voyageur || "").trim().split(/\s+/)[0] || "";
     await db.prepare(`INSERT INTO abandoned_carts
-        (payment_intent_id, email, prenom, bien_id, type, logements, checkin, checkout, guests)
-      VALUES (?,?,?,?,?,?,?,?,?)
+        (payment_intent_id, email, prenom, bien_id, type, logements, checkin, checkout, guests, phone)
+      VALUES (?,?,?,?,?,?,?,?,?,?)
       ON CONFLICT(payment_intent_id) DO UPDATE SET
         email=excluded.email, prenom=excluded.prenom, bien_id=excluded.bien_id,
         type=excluded.type, logements=excluded.logements,
-        checkin=excluded.checkin, checkout=excluded.checkout, guests=excluded.guests`)
-      .bind(paymentIntentId, email, prenom, m.bienId || "", m.type || "", m.logements || "", m.checkin || "", m.checkout || "", m.guests || "").run();
+        checkin=excluded.checkin, checkout=excluded.checkout, guests=excluded.guests,
+        phone=COALESCE(excluded.phone, abandoned_carts.phone)`)
+      .bind(paymentIntentId, email, prenom, m.bienId || "", m.type || "", m.logements || "", m.checkin || "", m.checkout || "", m.guests || "", String(m.phone || "").trim() || null).run();
   } catch (e) { console.error("[cart] D1:", e.message); }
 }
 
@@ -73,6 +77,7 @@ export async function onRequestPost(context) {
     "metadata[checkout]":  metadata.checkout || "",
     "metadata[voyageur]":  metadata.voyageur || "",
     "metadata[email]":     metadata.email    || "",
+    "metadata[phone]":     metadata.phone    || "",
     "metadata[bookingId]": bookingId || metadata.bookingId || metadata.beds24Id || "",
     // Réservation groupée (offre résidence — plusieurs logements, 1 paiement)
     "metadata[type]":      metadata.type      || "",
