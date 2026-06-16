@@ -175,6 +175,22 @@ async function logConversation(env, { from, bien, userMessage, botReply, provide
   }
 }
 
+// ─── 5b. Service recovery (RM-18) ────────────────────────────────────────────
+// Détecte un message voyageur irrité / réclamation → push ntfy IMMÉDIAT à l'hôte pour
+// intervenir vite (< 15 min, cf. playbook RM-18). Best-effort, ne bloque pas la réponse bot.
+const IRRITATION_RE = /\b(rembours|plainte|déçu|decu|déception|inadmissible|inacceptable|scandaleux?|honteux|arnaque|voleur|dégueu|degueu|saleté|cafards?|insectes?|punaises?|panne|cassé|fuite|ne (?:marche|fonctionne) pas|marche pas|pas d'eau chaude|pas de clim|trop (?:chaud|froid)|horrible|inutilisable|urgent|mécontent|mecontent|refund|disgusting|broken|not working|doesn'?t work|filthy|dirty|terrible|worst|unacceptable|scam|leak|no hot water|complaint|disappointed)\b/i;
+
+async function alertHostIrritation(env, { from, bien, userMessage }) {
+  if (!env.NTFY_TOPIC) return;
+  try {
+    await fetch(`https://ntfy.sh/${env.NTFY_TOPIC}`, {
+      method: "POST",
+      body: `${bien ? bien.toUpperCase() : "?"} · ${from}\n« ${userMessage.slice(0, 240)} »\n→ intervenir vite (service recovery : accuser <15min, résoudre <2h).`,
+      headers: { "Title": "🚨 Voyageur mécontent (WhatsApp)", "Priority": "high", "Tags": "rotating_light" },
+    });
+  } catch { /* best-effort */ }
+}
+
 // ─── 6. Handlers HTTP ────────────────────────────────────────────────────────
 
 export async function onRequestGet(context) {
@@ -214,6 +230,14 @@ export async function onRequestPost(context) {
 
   // Détection du bien
   const bien  = detectBien(userMessage);
+
+  // RM-18 : si le message trahit de l'irritation/réclamation → alerte hôte immédiate,
+  // en parallèle (waitUntil) pour ne pas retarder la réponse du bot.
+  if (IRRITATION_RE.test(userMessage)) {
+    const p = alertHostIrritation(env, { from, bien, userMessage });
+    if (typeof context.waitUntil === "function") context.waitUntil(p); else await p.catch(() => {});
+  }
+
   const guide = await fetchGuide(env, bien, new URL(request.url).origin);
 
   // Appel LLM
