@@ -47,6 +47,7 @@ CONVERSION & PERSUASION
 • RM-13 Preuve sociale réelle, attribuée, datée, par bien (note <4,7 → mener par le verbatim, pas le chiffre).
 • RM-14 Rareté HONNÊTE branchée sur le calendrier réel (D1/Beds24), zéro faux compteur.
 • RM-15 A/B test seulement si ≥~30-50 résas/cycle ; métrique = résa confirmée Stripe→D1.
+• RM-27 « C'est trop cher » = déficit de VALEUR perçue, pas prix trop haut. Ne JAMAIS baisser d'emblée (on se décrédibilise) → demander « trop cher par rapport à quoi ? » : concurrent → argumenter la valeur (note, piscine, conciergerie) ; budget → ajuster le PÉRIMÈTRE (durée/bien plus petit/saison creuse), jamais le tarif seul. Tarif et offre bougent ENSEMBLE.
 EXPÉRIENCE & FIDÉLISATION
 • RM-16 Service (attendu) vs hospitalité (fidélise) : 1 geste humain perso par arrivée ; prioriser notes planchers (Mabouya, Zandoli).
 • RM-17 Router les avis vers Google (l'avis Airbnb nourrit Airbnb).
