@@ -31,8 +31,12 @@
 |---|---|---|
 | **RM-16** | Digest hôte arrivées J+1 en ntfy (flag prio si bien <4,7) — `runArrivalsDigest`, cron 9h. | Worker `ce26f976` |
 | **RM-17** | Post-séjour direct = avis Google UNIQUE (bouton Airbnb retiré, Google pleine largeur) → ranking local. | Pages `9f250f1` |
+| **RM-03** (moteurs morts) | **Source de vérité tranchée (décision Vincent : supprimer).** `src/lib/pricingEngine.js` + `minStayEngine.js` supprimés (0 import prod, doublons divergents = footgun qui aurait fait coder RM-01/02/04 dans le mauvais moteur). Moteur unique = `calcDateReco` (rm-recommendations). ⚠️ Distinct du RM-03 « NET RevPAR » parké plus bas (homonyme). | commit `2563378` · déployé `efa6e259` |
+| **RM-22** | Wording MaillageCluster orienté lieu (moat SEO local) : « Nos maisons à Sainte-Luce » / « Où loger à Sainte-Luce » au lieu du vague « dans le secteur ». Map préposition par cluster géo (au Diamant, à Nogent), fallback « à proximité ». « maisons » et non « villas » (nomenclature). | commit `2563378` · déployé `efa6e259` |
+| **RM-26** | Runbooks de crise créés : `docs/runbooks/` (README + cyclone, double-booking, no-show, stripe-down). Cyclone inclut le tier « crise corrélée Sainte-Luce » (RM-26 #2). Double-booking ancré sur `coherence-check.js` Check 4. Docs only (pas de deploy). | commit (à venir) |
 
 ## Apprentissage process
+- **Piège deploy:pages + suppression de fichier** : le gate lint-delta (`set -euo pipefail`) calcule `CHANGED_JS=$(… while [[ -f $f ]] …)` ; si un fichier **supprimé** est trié en dernier, le `[[ -f ]] && echo` final retourne 1 → la substitution échoue → `set -e` tue le script (mort silencieuse après l'echo lint, EXIT=1). **Parade : committer d'abord** (arbre clean → `git diff vs HEAD` vide → gate ne boucle sur rien), puis `deploy:pages`. Vécu 2026-06-16 (RM-03 suppression).
 Les findings d'audit sur la **réalité/provenance d'une donnée** (ex. avis réels ?) ne peuvent pas être tranchés par un agent — ils requièrent la confirmation métier de Vincent. → toujours vérifier le code ET demander la provenance avant d'agir.
 
 ## Reste à traiter (extraits prioritaires — voir AUDIT-PLAYBOOK-RM.md / MM.md)
