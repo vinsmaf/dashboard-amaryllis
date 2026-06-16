@@ -288,3 +288,9 @@
 - **Le trigger `syncRevenus2026` (15 min) est la seule voie safe pour les incréments.** Il utilise le mémo `rev2026_traites` pour ne traiter que les résas nouvelles, jamais les existantes. Il ne touche jamais les cellules qui n'ont pas de delta à appliquer. Utiliser TOUJOURS cette voie pour les nouveaux enregistrements ; la fonction rebuild est réservée à un reset total sur données 100% système.
 
 - **Avant tout rebuild rétroactif sur un Sheet Google, demander : "ces données viennent-elles toutes d'un onglet source ?"** Si la réponse est "non" (données manuelles, corrections, imports externes), un rebuild qui zéro+reapply va détruire les données orphelines sans avertissement.
+
+## 2026-06-16 (audit Playbook)
+- **`BIENS[].lieu` est ENRICHI** ("…, Martinique") → `isMartinique(b)` se trompe sur un élément BIENS. Pour le marché d'un bien, passer par le canonique BRUT `CANON[id]` (RM-20).
+- **Donnée saisie puis JETÉE** : `form.tel` collecté mais jamais transmis (metadata/INSERT). Avant de "capturer", vérifier si c'est déjà saisi côté front et juste perdu en aval (RM-10).
+- **A/B = proxy ≠ conversion** : câbler `trackConversion(step:"purchase")` à la résa confirmée (Merci.jsx), n'attribuer qu'aux tests EXPOSÉS (`listActiveVariants`).
+- **Findings sur réalité d'une donnée = confirmation humaine** : RM-13 (avis statiques) faux positif (réels). Demander la provenance à Vincent avant de "corriger".
