@@ -20,6 +20,11 @@
 | **RM-18** 🔴 | ✅ FAIT | Service recovery : `whatsapp.js` détecte un message voyageur irrité (`IRRITATION_RE` FR+EN) → push ntfy priority high immédiat (waitUntil) pour intervenir <15min. Testé 7/7 (pas de fausse alerte). | commit `14ccafd` · déployé |
 | **RM-19** 🔴 | ✅ FAIT | Base voyageurs UNIFIÉE : `/api/direct-bookings?view=guests` (agrège par email : nb_sejours, biens, premier/dernier, total, flag repeater≥2). + segments emailing `repeaters` (≥2 séjours) & `past_guests` rendus sélectionnables dans `BulkEmailModal`. Exploite la capture RM-10. Prod saine vérifiée (smoke a flaké en headless, mais bundle 200 + 0 erreur JS confirmés). | commit `4edc7e7` · déployé (villamaryllis.com) |
 
+| **RM-25** 🔴 | ✅ FAIT (remise) | Pas un bug (plancher `price_min` existe déjà, consommation PublicSite:1983 + yield charge D1). Optimisé : remise par bien (amiral Amaryllis ×0.4 protégé, studios 2p ×1.2, Iguana ×0) × courbe lead-time (×0.5 J>14 → ×1.0 J<7), dans runGapPricing+runYieldPricing. #3 badge `-X%` existait déjà. #4 tooltip « tarif direct -X% ». Worker `6c714231` + Pages `f32c865`. **⏳ Reste : uplift symétrique** (hausse auto si occ haute, plafond price_max). | commit `f32c865` |
+
+## ⚠️ Flake connu déploiement
+`deploy:pages` : le smoke test peut faussement échouer (asset 404 / "crash React" / bundle servi text/html) en **course avec la propagation CDN des chunks lazy** juste après upload. Vérif : re-curler les noms de chunks réels depuis `dist/assets/` → 200 JS en quelques secondes = flake, prod saine. Vu 2× le 2026-06-16 (RM-19, RM-25).
+
 ## Apprentissage process
 Les findings d'audit sur la **réalité/provenance d'une donnée** (ex. avis réels ?) ne peuvent pas être tranchés par un agent — ils requièrent la confirmation métier de Vincent. → toujours vérifier le code ET demander la provenance avant d'agir.
 
