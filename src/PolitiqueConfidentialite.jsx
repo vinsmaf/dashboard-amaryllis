@@ -178,6 +178,43 @@ export default function PolitiqueConfidentialite() {
           </table>
         </Section>
 
+        {/* 2bis. Données réseaux sociaux (Meta) — requis pour l'App Review Meta */}
+        <div id="donnees-reseaux-sociaux">
+        <Section title="2 bis. Données issues de Facebook & Instagram (Meta)">
+          <p style={{ marginBottom: 14 }}>
+            Lorsque vous commentez l'une de nos publications sur notre <strong style={{ fontWeight: 600, color: NAVY }}>page Facebook « Amaryllis Location »</strong> ou notre <strong style={{ fontWeight: 600, color: NAVY }}>compte Instagram @amaryllislocations</strong>, ou que vous nous envoyez un message via ces plateformes, nous traitons les données suivantes via l'API officielle de Meta :
+          </p>
+          <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 8 }}>
+            <thead>
+              <TableRow header cells={["Source", "Données", "Finalité", "Base légale"]} />
+            </thead>
+            <tbody>
+              <TableRow cells={["Commentaire FB / Instagram", "Nom public, identifiant, texte du commentaire", "Identifier une demande de location et y répondre", "Intérêt légitime"]} />
+              <TableRow cells={["Message privé (Messenger / DM IG)", "Nom public, contenu du message", "Vous répondre et vous orienter vers la réservation", "Exécution de mesures précontractuelles"]} />
+            </tbody>
+          </table>
+          <ul style={{ paddingLeft: 20, lineHeight: 2.0, marginTop: 14 }}>
+            <li>Nous accédons <strong style={{ fontWeight: 500, color: NAVY }}>uniquement</strong> aux interactions sur <strong style={{ fontWeight: 500, color: NAVY }}>nos propres</strong> contenus (notre page et notre compte). Nous ne lisons aucune page, groupe ou compte tiers.</li>
+            <li>Aucune donnée n'est vendue ni partagée à des fins publicitaires.</li>
+            <li>Conservation : <strong style={{ fontWeight: 500, color: NAVY }}>12 mois</strong> maximum après le dernier échange.</li>
+          </ul>
+        </Section>
+        </div>
+
+        {/* 2ter. Suppression des données — Data Deletion Instructions (requis Meta) */}
+        <div id="suppression-donnees">
+        <Section title="2 ter. Suppression de vos données (Facebook / Instagram)">
+          <p>
+            Vous pouvez à tout moment demander la suppression des données vous concernant que nous aurions collectées via Facebook ou Instagram :
+          </p>
+          <ul style={{ paddingLeft: 20, lineHeight: 2.2, marginTop: 10 }}>
+            <li>Par email à <a href="mailto:contact@villamaryllis.com?subject=Suppression%20de%20mes%20donn%C3%A9es" style={{ color: CORAL }}>contact@villamaryllis.com</a> avec l'objet « Suppression de mes données ».</li>
+            <li>Indiquez votre nom d'utilisateur Facebook ou Instagram afin que nous puissions identifier vos données.</li>
+            <li>Nous traitons la demande et confirmons la suppression sous <strong style={{ fontWeight: 500, color: NAVY }}>30 jours</strong>.</li>
+          </ul>
+        </Section>
+        </div>
+
         {/* 3. Cookies */}
         <Section title="3. Cookies et traceurs">
           <p style={{ marginBottom: 16 }}>

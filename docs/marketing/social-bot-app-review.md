@@ -2,7 +2,26 @@
 
 **App :** Amaryllis Dashboard · App ID `1248539197126557` · Business : Amaryllis Corp (`609408700286001`)  
 **Page FB :** Amaryllis Location (`115471004486809`) · **IG :** @amaryllislocations (`17841450886833537`)  
-**Site :** https://villamaryllis.com · **Webhook :** https://villamaryllis.com/api/social-webhook
+**Site :** https://villamaryllis.com · **Webhook :** https://villamaryllis.com/api/social-webhook  
+**Politique de confidentialité :** https://villamaryllis.com/politique-confidentialite (section Meta + suppression ✅ ajoutées 2026-06-16)  
+**URL suppression données (Data Deletion) :** https://villamaryllis.com/politique-confidentialite#suppression-donnees
+
+---
+
+## ✅ ÉTAT — préparé en autonome (2026-06-16) vs à faire par Vincent
+
+**Déjà prêt (rien à faire) :**
+- ✅ Politique de confidentialité en ligne + **section « Données Facebook/Instagram »** + **section suppression de données** (ancre dédiée pour l'URL Data Deletion exigée par Meta). Déployé.
+- ✅ Justifications des 5 permissions rédigées (copier-coller, §3) · description de l'app (§2) · script vidéo (§4) · notes reviewer (§5).
+- ✅ Endpoints live et vérifiés : `/api/social-poll` (répond), `/api/social-webhook` (déployé).
+
+**À faire par Vincent (actions compte Meta — non automatisables de l'extérieur) :**
+1. ⬜ **Business Verification** d'Amaryllis Corp (Business Manager → Vérification) — pièce légale/identité.
+2. ⬜ Coller les textes du §2 et §3 dans le formulaire App Review (champs par permission).
+3. ⬜ Renseigner les URLs : Privacy Policy + Data Deletion (ci-dessus) dans App Dashboard → Settings → Basic.
+4. ⬜ **Enregistrer la capture vidéo** (~2 min, script §4) — nécessite la prod live + tes comptes FB/IG.
+5. ⬜ Créer un **Test User** (Roles → Test Users) + passer l'app en **Live**.
+6. ⬜ **Soumettre** (bouton final) → c'est toi qui valides l'envoi.
 
 ---
 
@@ -30,7 +49,7 @@ Sans cette étape, même le mode dev ne fonctionnera pas.
 - [ ] App en mode **Live** (pas Development) au moment de la soumission
 - [ ] Webhook `https://villamaryllis.com/api/social-webhook` actif et abonné à `feed` (FB) + `comments` (IG)
 - [ ] Page abonnée : `POST /115471004486809/subscribed_apps?subscribed_fields=feed` avec ton page token
-- [ ] **Politique de confidentialité** accessible en ligne (ajouter `/confidentialite` sur villamaryllis.com ou utiliser une page Notion publique)
+- [x] **Politique de confidentialité** en ligne ✅ : https://villamaryllis.com/politique-confidentialite (section données Meta + suppression ajoutées 2026-06-16)
 - [ ] **Capture vidéo** enregistrée (voir script §4 ci-dessous)
 - [ ] Compte de test Meta créé (Roles → Test Users dans l'App Dashboard) avec droits sur la page de test
 
@@ -51,8 +70,9 @@ Sans cette étape, même le mode dev ne fonctionnera pas.
 >
 > The app only accesses our own Page and Instagram account. It never reads third-party pages, groups, or users' private data beyond what they voluntarily post in a comment on our content.
 
-**Privacy Policy URL :** https://villamaryllis.com/confidentialite  
-*(à créer avant soumission — peut être une page simple)*
+**Privacy Policy URL :** https://villamaryllis.com/politique-confidentialite ✅  
+**Data Deletion Instructions URL :** https://villamaryllis.com/politique-confidentialite#suppression-donnees ✅  
+**User Data Deletion :** "Data Deletion Instructions URL" (champ App Dashboard → Settings → Basic) = l'URL ci-dessus.
 
 ---
 
