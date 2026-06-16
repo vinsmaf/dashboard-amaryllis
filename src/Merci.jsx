@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { mpTrack } from "./lib/metaPixel.js";
 import { ssGet, ssSet, ssRemove } from "./lib/safeStorage.js";
+import { trackConversion, listActiveVariants } from "./utils/abTest.js";
 
 const STRIPE_PK = "pk_live_51QAsyQDstT3IRAj26eVHpBuMZI8UllaKGCCJUNAW5O9BfC3NqzVJwhrgfF0VndNMWPph0vijKomm24OwrTXCG58N00Co6GOWh1";
 
@@ -115,6 +116,15 @@ export default function MerciPage() {
       try { window.gtag("event", "purchase", payload); } catch { /* */ }
       // event_id = payment_intent_id → déduplication avec la CAPI serveur (stripe-webhook.js)
       try { mpTrack("Purchase", { value, currency: "EUR", eventID: effectivePi, ...(ctx.bien_id ? { content_ids: [ctx.bien_id], content_type: "product" } : {}) }); } catch { /* */ }
+      // RM-15 : conversion FINALE (résa confirmée = métrique primaire du playbook) attribuée
+      // aux tests A/B où l'user est RÉELLEMENT exposé (cookie présent → pas de fausse attribution).
+      // step:"purchase" distingue ces conversions des events clic/scroll. Guardé par guardKey → 1×/pi.
+      try {
+        const variants = listActiveVariants();
+        Object.keys(variants).forEach(testName =>
+          trackConversion(testName, { step: "purchase", transaction_id: effectivePi, value })
+        );
+      } catch { /* */ }
       ssRemove("pending_purchase");
     };
     fire();
