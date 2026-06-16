@@ -1644,7 +1644,7 @@ export default function App() {
                   <button
   onClick={() => {
     const lignes = rapportBiens.filter(b => b.rev > 0).map(b =>
-      `${b.emoji} ${b.nom.replace("Villa ","").replace("T2 ","")} : ${fmt(b.rev)} CA · ${b.occ.toFixed(0)}% occ · CF ${b.cf >= 0 ? "+" : ""}${fmt(b.cf)}`
+      `${b.emoji} ${b.nom.replace("Villa ","").replace("T2 ","")} : ${fmt(b.rev)} CA · ${(b.occ ?? 0).toFixed(0)}% occ · CF ${b.cf >= 0 ? "+" : ""}${fmt(b.cf)}`
     );
     const texte = [
       `📊 Rapport ${moisLabel} ${yr} — Amaryllis Locations`,
@@ -1695,8 +1695,8 @@ export default function App() {
                       <tr key={b.id} style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
                         <td style={{ padding: "9px 10px", fontSize: 11, color: "#e2e8f0" }}>{b.emoji} {b.nom}</td>
                         <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: "#0ea5e9", fontFamily: "var(--font-mono)", fontWeight: 600 }}>{fmt(b.rev)}</td>
-                        <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: b.occ >= 60 ? "#10b981" : b.occ >= 30 ? "#f59e0b" : "#ef4444", fontFamily: "var(--font-mono)" }}>{b.occ.toFixed(0)}%</td>
-                        <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: "#94a3b8", fontFamily: "var(--font-mono)" }}>{b.adr.toFixed(0)} €</td>
+                        <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: b.occ >= 60 ? "#10b981" : b.occ >= 30 ? "#f59e0b" : "#ef4444", fontFamily: "var(--font-mono)" }}>{(b.occ ?? 0).toFixed(0)}%</td>
+                        <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: "#94a3b8", fontFamily: "var(--font-mono)" }}>{(b.adr ?? 0).toFixed(0)} €</td>
                         <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: b.cf >= 0 ? "#10b981" : "#ef4444", fontFamily: "var(--font-mono)" }}>{b.cf >= 0 ? "+" : ""}{fmt(b.cf)}</td>
                         <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: "#94a3b8" }}>{b.nbResas}</td>
                         <td style={{ padding: "9px 10px", textAlign: "right", fontSize: 11, color: "#94a3b8" }}>{b.nbNuits}</td>
