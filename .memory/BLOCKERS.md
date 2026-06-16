@@ -11,7 +11,9 @@
 - **Bot social — App Review Meta** : Business Verification Amaryllis Corp → soumettre App Review (dossier `docs/marketing/social-bot-app-review.md`). Seule voie pour débloquer FB `/{pageId}/feed`. AGENDA 2026-06-20.
 - **Crédit Beds24** à vérifier ; **prospection netlinking** à envoyer.
 
-## En cours → ✅ terminé le 2026-06-15 (soir — auto-publication réseaux LIVE)
+## En cours → ✅ terminé le 2026-06-16 — audit Playbook RM (RM-10/15/19/20 déployés, RM-07/13 classés) + playbook bakée fleet + KV diet
+- ⏳ **Reste** (non bloquant) : **RM-03** (NET RevPAR NET par bien×canal dans `runOccupancySnapshot` du Worker — gros morceau). Détail : `docs/AUDIT-PLAYBOOK-PROGRES.md`.
+- ℹ️ Push trading launchd passé 5min→60min (KV diet, écritures partagées entre les 2 projets CF — cf. CROSS-LEARNINGS 2026-06-16).
 
 ## 📣 2026-06-15 (soir) — Auto-publication réseaux : LIVE, points de vigilance
 - ✅ **Système complet en live** (ADR-SOCIAL-AUTOPUB-001) : re-seed→génère(photos cochées)→gate(4 filtres)→publie. Zéro clic. Token publie FB+IG (vérifié).

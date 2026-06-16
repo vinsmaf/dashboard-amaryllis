@@ -5,6 +5,12 @@
 
 ---
 
+## 2026-06-15 (nuit) — Auto-rédaction guides D1 → mode LIVE + cron hebdo
+Vincent : « oui » (validation dry-run → activer live).
+- `runGuideWrite(env)` ajoutée au Worker, branchée sur cron `0 6 * * 1` (lundi 6h UTC). Tourne sur les 7 biens séquentiellement, escalade ntfy si fact-check échoue.
+- `GUIDE_WRITE_MODE=live` posé en secret CF Pages. Commit `7072da4`. Déployé Worker + Pages.
+- 1er passage automatique : **lundi 22 juin 2026, 6h UTC**.
+
 ## 2026-06-15 (soir) — Auto-publication réseaux SANS validation humaine (gate de qualité) → LIVE
 Vincent : « automatiser les publications réseaux, de bonnes publications validées et publiées sans mon intervention » → « on passe en live, je choisis les photos ».
 - **Diagnostic** : tout le pipeline éditorial était DÉJÀ auto (génération J-2, publication horaire des approved) ; seul le clic « Approuver » restait manuel. Construit le **gate de qualité** qui le remplace (ADR-SOCIAL-AUTOPUB-001).
