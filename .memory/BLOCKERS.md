@@ -11,8 +11,11 @@
 - **Bot social — App Review Meta** : Business Verification Amaryllis Corp → soumettre App Review (dossier `docs/marketing/social-bot-app-review.md`). Seule voie pour débloquer FB `/{pageId}/feed`. AGENDA 2026-06-20.
 - **Crédit Beds24** à vérifier ; **prospection netlinking** à envoyer.
 
-## En cours → ✅ terminé le 2026-06-16 — audit Playbook RM (RM-10/15/19/20 déployés, RM-07/13 classés) + playbook bakée fleet + KV diet
-- ⏳ **Reste** (non bloquant) : **RM-03** (NET RevPAR NET par bien×canal dans `runOccupancySnapshot` du Worker — gros morceau). Détail : `docs/AUDIT-PLAYBOOK-PROGRES.md`.
+## En cours → ✅ terminé le 2026-06-16 (session 17) — audit Playbook RM : 🟡 « propres » faits (RM-03 moteurs morts supprimés, RM-22 wording, RM-26 runbooks)
+- ⏳ **Débloqués, à coder dans `calcDateReco`** (advisory, Vincent valide) : **RM-01** (uplift scarcity par capacité/positionnement), **RM-02** (filtre saison sur règles lead-time, nécessite re-seed), **RM-04** (gap orphelin 1 nuit + min-stay).
+- ⛔ **Attendent input Vincent** : **RM-06** (connecter Google Search Console = credentials) · **RM-08** (dépense pub réelle Google/Meta pour CAC) · **RM-11** (code parrainage qui crédite via stripe-webhook = argent LIVE, + montant récompense) · **RM-23** (destinataire ménage par bien Martinique) · **RM-24** (arbitrage ROI : volume litiges caution réels d'abord).
+- ⚠️ **Modif NON committée pré-existante** : `src/components/tabs/TabTrading.jsx` (projection div/mois+an, colonne SAF/GRW) — PAS de cette session, dans l'arbre avant. Vincent décide : committer ou `git checkout`.
+- ⏳ **Reste antérieur** (non bloquant) : **RM-03 NET RevPAR** (NET par bien×canal dans `runOccupancySnapshot` — gros morceau, homonyme distinct du RM-03 moteurs morts). Détail : `docs/AUDIT-PLAYBOOK-PROGRES.md`.
 - ℹ️ Push trading launchd passé 5min→60min (KV diet, écritures partagées entre les 2 projets CF — cf. CROSS-LEARNINGS 2026-06-16).
 
 ## 📣 2026-06-15 (soir) — Auto-publication réseaux : LIVE, points de vigilance

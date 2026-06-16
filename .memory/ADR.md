@@ -5,6 +5,13 @@
 
 ---
 
+## ADR-PRICING-SOT-001 · 2026-06-16 · Source de vérité unique du pricing = calcDateReco (suppression moteurs morts)
+1. **Choix** : SUPPRIMER `src/lib/pricingEngine.js` + `src/lib/minStayEngine.js` (RM-03). Vérifié 0 import en prod (Functions/src/Worker). Le seul moteur de pricing = `calcDateReco` dans `functions/api/rm-recommendations/[[path]].js`. Décision de Vincent (supprimer plutôt que promouvoir).
+2. **Alternatives refusées** : (a) promouvoir les libs comme moteur unique et retirer calcDateReco — refusé (le live tourne déjà, plus risqué) ; (b) les garder « au cas où » — refusé, ce sont des doublons à logique DIVERGENTE = footgun (RM-04 voulait justement câbler `findGaps` de minStayEngine, on aurait codé dans le mauvais moteur).
+3. **Conséquences** : RM-01 (scarcity par capacité), RM-02 (filtre saison sur règles lead-time, nécessite re-seed), RM-04 (gap orphelin 1 nuit + min-stay) doivent être implémentés **directement dans calcDateReco**, jamais dans des libs séparées. RM advisory only (Vincent valide les prix).
+4. **Périmètre** : `src/lib/pricingEngine.js` (supprimé) · `src/lib/minStayEngine.js` (supprimé) · moteur vivant `functions/api/rm-recommendations/[[path]].js`. Commit `2563378`.
+5. **Statut** : ✅ acté & déployé `efa6e259`. 285 tests verts.
+
 ## ADR-GUIDE-WRITE-001 · 2026-06-15 (nuit) · Auto-rédaction guides voyageurs D1 — mode live + cron hebdo
 1. **Choix** : activer l'auto-rédaction des guides voyageurs en **mode live** (`GUIDE_WRITE_MODE=live`, secret CF Pages) et brancher `runGuideWrite(env)` sur le cron Worker lundi 6h UTC (`0 6 * * 1`). L'IA réécrit UNIQUEMENT `welcome_message` + `tagline` (prose pure) — les champs critiques (wifi/code/horaires/contacts) sont intouchables. Fact-check bien-aware bloquant avant toute écriture. Biens validés en dry-run : Amaryllis ✅, Nogent ✅, Mabouya ❌ (piscine → escalade ntfy, jamais appliqué).
 2. **Alternatives refusées** : (a) mode shadow indéfini — écarté, le dry-run en fonctionnait bien et le fait-check est robuste ; (b) cron quotidien — trop fréquent pour des textes d'accueil (les biens ne changent pas chaque jour) ; (c) déclenchement manuel seul — écarté, Vincent veut de l'automatisation.

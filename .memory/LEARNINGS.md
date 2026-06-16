@@ -3,6 +3,13 @@
 > Pièges déjà rencontrés + comment les éviter. 1 entrée = 1 leçon actionnable « la prochaine fois ».
 > Le journal d'erreurs exhaustif reste `../docs/ERREURS-LOG.md`.
 
+## ⚠️ `deploy:pages` meurt en silence si on supprime un fichier sans committer d'abord — 2026-06-16
+- Le gate lint-delta de `scripts/deploy-pages.sh` (`set -euo pipefail`) calcule `CHANGED_JS=$(git diff … | while read f; do [[ -f "$f" ]] && echo "$f"; done)`. Si un fichier **supprimé** (non committé) est trié en dernier, le `[[ -f ]] && echo` final retourne **1** → la substitution `$()` échoue → `set -e` tue le script juste après l'echo « 🔍 Lint… » (EXIT=1, aucun message d'erreur, déroutant).
+- **La prochaine fois** : après un `git rm`, **committer AVANT `deploy:pages`** (arbre clean → `git diff vs HEAD` vide → le gate ne boucle sur rien). Vécu sur RM-03 (suppression des moteurs pricing morts). Fix durable possible (hors scope) : neutraliser le `while` avec `|| true` ou filtrer les suppressions en amont.
+
+## 📁 RM-22 — wording SEO local : « maisons » et non « villas » (nomenclature stricte) — 2026-06-16
+- MaillageCluster est **générique** (le cluster n'est pas toujours Sainte-Luce) ET seuls Amaryllis+Iguana sont des « villas ». L'audit suggérait « Nos villas à Sainte-Luce » = doublement faux. Solution : map préposition par cluster géo (`à Sainte-Luce`/`au Diamant`/`à Nogent`, fallback `à proximité`) + terme « maisons ». **Toujours vérifier la nomenclature + la généricité d'un composant avant d'appliquer un wording suggéré par un audit.**
+
 ## 🚀 CF Pages a une LIMITE de déploiements/jour — grouper les builds — 2026-06-15
 - Vincent : « on peut pas déployer avant 19h, limite atteinte » après ~12 déploiements dans la session. **CF Pages limite le nombre de déploiements (≈ rate limit horaire/quotidien).** **La prochaine fois : GROUPER les correctifs et déployer 1 fois**, pas un `deploy:pages` par micro-fix. Tester un max en local (`vitest`, `npm run build`, `node --check`) AVANT de déployer. La limite s'est levée ~1 min après (probablement fenêtre glissante).
 

@@ -5,6 +5,13 @@
 
 ---
 
+## 2026-06-16 (session 17) — Audit Playbook RM : les 🟡 « propres » (RM-03/22/26)
+- **RM-03** : tranché la source de vérité pricing → **suppression** de `pricingEngine.js` + `minStayEngine.js` (morts, 0 import prod). Moteur unique = `calcDateReco`. ADR-PRICING-SOT-001. Débloque RM-01/02/04 (à coder dans calcDateReco).
+- **RM-22** : wording MaillageCluster orienté lieu (« Nos maisons à Sainte-Luce » / « Où loger à Sainte-Luce ») — moat SEO local, map préposition par cluster, fallback « à proximité ». « maisons » (pas « villas »).
+- **RM-26** : créé `docs/runbooks/` (README + cyclone/double-booking/no-show/stripe-down). Cyclone inclut le tier crise corrélée Sainte-Luce. Double-booking ancré sur coherence-check.js Check 4.
+- **Commits** : `2563378` (RM-03+22, déployé `efa6e259`) · `8f1fdb5` (RM-26, docs). 285 tests verts, smoke OK (flakes /mabouya & /guide-hub = propagation CDN, titres vérifiés live OK).
+- **Reste audit** : RM-01/02/04 (débloqués, advisory) · RM-06/08/11/23/24 (attendent input Vincent) — détail `docs/AUDIT-PLAYBOOK-PROGRES.md`.
+
 ## 2026-06-15 (nuit) — Auto-rédaction guides D1 → mode LIVE + cron hebdo
 Vincent : « oui » (validation dry-run → activer live).
 - `runGuideWrite(env)` ajoutée au Worker, branchée sur cron `0 6 * * 1` (lundi 6h UTC). Tourne sur les 7 biens séquentiellement, escalade ntfy si fact-check échoue.
