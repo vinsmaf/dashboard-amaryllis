@@ -842,12 +842,12 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
               {ds && gapDates[ds] && !disabled && (
                 <div style={{
                   position: "absolute", top: 2, right: 2,
-                  background: "#14b8a6", color: "#fff",
+                  background: gapDates[ds] < 0 ? "#d97706" : "#14b8a6", color: "#fff",
                   fontSize: 7, fontWeight: 800,
                   padding: "1px 3px", borderRadius: 3,
                   lineHeight: 1.2, pointerEvents: "none",
                   fontFamily: "'Jost', sans-serif",
-                }}>-{gapDates[ds]}%</div>
+                }}>{gapDates[ds] < 0 ? `+${-gapDates[ds]}` : `-${gapDates[ds]}`}%</div>
               )}
               {hoveredCell === ds && !disabled && ds && (() => {
                 const p = dailyPricesMap[ds] ?? basePrice;
@@ -864,7 +864,7 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
                     pointerEvents: "none",
                     boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
                     fontFamily: "'Jost', sans-serif",
-                  }}>{p}€/nuit{gap ? ` · tarif direct -${gap}%` : ""}</div>
+                  }}>{p}€/nuit{gap ? (gap < 0 ? ` · forte demande +${-gap}%` : ` · tarif direct -${gap}%`) : ""}</div>
                 );
               })()}
             </div>

@@ -1598,6 +1598,16 @@ const factorLeadTime = (daysUntil) => (daysUntil > 14 ? 0.5 : daysUntil > 7 ? 0.
 // Remise finale = base × bien × lead-time (arrondie). Le clamp price_min se fait à la consommation.
 const adjustDiscountPct = (basePct, bienId, daysUntil) => Math.round(basePct * factorBien(bienId) * factorLeadTime(daysUntil));
 
+// RM-01 (last-room-value) — SENS HAUSSE : forte demande → premium sur les dernières dates libres.
+// Facteur INVERSÉ vs remise : l'amiral/bien rare commande le plus gros premium ; les studios
+// substituables le plus faible (sinon le voyageur va ailleurs). Iguana exclu. Plafonné price_max
+// (clamp autoritaire côté widget, sur le prix réel). Stocké en pct NÉGATIF dans gap_prices. TUNABLE.
+const UPLIFT_FACTOR = { amaryllis: 1.4, zandoli: 1.1, iguana: 0, geko: 1.0, mabouya: 0.7, schoelcher: 0.7, nogent: 1.0 };
+const factorUpBien = (id) => (id in UPLIFT_FACTOR ? UPLIFT_FACTOR[id] : 1.0);
+// Lead-time hausse : date proche + pleine = dernières chambres → premium plus fort.
+const factorUpLead = (daysUntil) => (daysUntil <= 2 ? 1.0 : daysUntil <= 4 ? 0.85 : 0.7);
+const adjustUpliftPct = (baseUp, bienId, daysUntil) => Math.round(baseUp * factorUpBien(bienId) * factorUpLead(daysUntil));
+
 async function runGapPricing(env, allEvents) {
   const todayStr = today();
   const horizon  = addDays(todayStr, 21);
@@ -1655,10 +1665,10 @@ async function runYieldPricing(env, allEvents) {
     const db = env.revenue_manager;
     if (db) {
       const { results: props } = await db.prepare(
-        "SELECT id, price_min, base_price_low FROM rm_properties WHERE is_active = 1"
+        "SELECT id, price_min, price_max, base_price_low, base_price_high FROM rm_properties WHERE is_active = 1"
       ).all();
       for (const p of (props || [])) {
-        priceMinMap[p.id] = { priceMin: p.price_min || 0, basePriceLow: p.base_price_low || 0 };
+        priceMinMap[p.id] = { priceMin: p.price_min || 0, priceMax: p.price_max || 0, basePriceLow: p.base_price_low || 0, basePriceHigh: p.base_price_high || 0 };
       }
     }
   } catch (e) {
@@ -1706,9 +1716,33 @@ async function runYieldPricing(env, allEvents) {
     const pct14 = ((occ14[bienId] || 0) / 14) * 100;
     const pct7  = ((occ7[bienId]  || 0) / 7)  * 100;
 
-    // Trop chargé sur 7j — log et skip
+    // Forte demande sur 7j → PREMIUM auto sur les dernières dates libres (RM-01 last-room-value).
+    // Stocké en pct NÉGATIF (uplift) ; le plafond price_max est clampé côté widget (prix réel).
     if (pct7 > 80) {
-      console.log(`[yield] ${bienId} — occupation >80% sur 7j (${Math.round(pct7)}%), pas de remise`);
+      if (!yieldPrices[bienId]) yieldPrices[bienId] = {};
+      const reserved = reservedDates[bienId] || new Set();
+      const pmData = priceMinMap[bienId] || {};
+      const priceMaxCents = pmData.priceMax || 0;
+      // Cap contre le HAUT normal (base_price_high) → base_high×(1+up%) ≤ price_max garantit le
+      // plafond pour TOUT prix réel du jour (≤ base_high), sans dépendre du widget (endpoint 401).
+      const capBaseCents = pmData.basePriceHigh || pmData.basePriceLow || 0;
+      const baseUp = pct7 >= 95 ? 25 : 15; // quasi-plein = dernières chambres → pousser plus fort
+      let nUp = 0;
+      for (let d = 0; d < 7; d++) {
+        const dateStr = addDays(todayStr, d);
+        if (reserved.has(dateStr)) continue; // date déjà vendue
+        let up = adjustUpliftPct(baseUp, bienId, d);
+        if (up <= 0) continue; // bien exclu (iguana) ou premium nul
+        // Plafond price_max garanti (cap contre base_high) :
+        if (priceMaxCents > 0 && capBaseCents > 0) {
+          const maxUpPct = Math.floor((priceMaxCents / capBaseCents - 1) * 100);
+          if (maxUpPct <= 0) continue;
+          if (up > maxUpPct) up = maxUpPct;
+        }
+        yieldPrices[bienId][dateStr] = -up; // négatif = uplift
+        nUp++;
+      }
+      console.log(`[yield] ${bienId} — occ ${Math.round(pct7)}% → premium sur ${nUp} date(s) libre(s)`);
       continue;
     }
 
@@ -1757,7 +1791,9 @@ async function runYieldPricing(env, allEvents) {
   for (const [bienId, dates] of Object.entries(yieldPrices)) {
     if (!gapPrices[bienId]) gapPrices[bienId] = {};
     for (const [date, pct] of Object.entries(dates)) {
-      gapPrices[bienId][date] = Math.max(gapPrices[bienId][date] || 0, pct);
+      // pct < 0 = uplift (forte demande) → set direct ; pct > 0 = remise → max. (un bien est soit
+      // en creux soit en forte demande, jamais les deux sur la même date → pas de conflit)
+      gapPrices[bienId][date] = pct < 0 ? pct : Math.max(gapPrices[bienId][date] || 0, pct);
     }
   }
   await env.ICAL_STORE.put("gap_prices", JSON.stringify(gapPrices), { expirationTtl: 86400 });
