@@ -345,6 +345,30 @@ async function sendNouvellesResas(env, nouvelles) {
 }
 
 // ── Rappels hôte (J-3 / J-1 / J+1 / J+2 avis / J-7 direct) ─────────────────
+// RM-16 (hospitalité) — digest HÔTE des arrivées de demain (J+1) en ntfy, avec flag prioritaire
+// sur les biens notés <4,7 (à soigner pour remonter la note). Miroir des notes : src/data/biens.js.
+const LOW_RATED = new Set(["zandoli", "mabouya"]); // notes <4,7 — MAJ si les notes évoluent
+
+async function runArrivalsDigest(env, allEvents) {
+  if (!env.NTFY_TOPIC) return;
+  const tomorrow = addDays(today(), 1);
+  const arrivals = (allEvents || []).filter(e => e.checkin === tomorrow);
+  if (!arrivals.length) { console.log("[arrivals] aucune arrivée demain"); return; }
+  const lines = arrivals.map(e => {
+    const who = e.voyageur && e.voyageur !== "?" ? e.voyageur : "voyageur";
+    return `• ${e.nom || e.bienId} — ${who}${LOW_RATED.has(e.bienId) ? " ⭐ soigner (note basse)" : ""}`;
+  });
+  const hasPrio = arrivals.some(e => LOW_RATED.has(e.bienId));
+  try {
+    await fetch(`https://ntfy.sh/${env.NTFY_TOPIC}`, {
+      method: "POST",
+      body: `Demain (${formatDate(tomorrow)}) — ${arrivals.length} arrivée(s) :\n${lines.join("\n")}\n\n→ préparer le geste d'accueil (RM-16).`,
+      headers: { "Title": "🛬 Arrivées demain", "Priority": hasPrio ? "high" : "default", "Tags": "wave" },
+    });
+    console.log(`[arrivals] digest poussé (${arrivals.length} arrivées, prio=${hasPrio})`);
+  } catch (e) { console.error("[arrivals] ntfy:", e.message); }
+}
+
 async function runReminders(env, allEvents, allEventsCtx) {
   const todayStr  = today();
   const eventsCtx = allEventsCtx || allEvents; // contexte complet pour chercher prochaine arrivée
@@ -2355,6 +2379,7 @@ export default {
         }
         await runMonitor(env);
         await runReminders(env, allEvents, allEvents);
+        await runArrivalsDigest(env, allEvents); // RM-16 — récap arrivées de demain à l'hôte
         await runOccupancyAlerts(env, allEvents);
         await runOccupancySnapshot(env, allEvents); // persiste l'occupation réelle → rm_kpi_snapshots
         await runGapPricing(env, allEvents);
