@@ -864,7 +864,7 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
                     pointerEvents: "none",
                     boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
                     fontFamily: "'Jost', sans-serif",
-                  }}>{p}€/nuit{gap ? ` (-${gap}%)` : ""}</div>
+                  }}>{p}€/nuit{gap ? ` · tarif direct -${gap}%` : ""}</div>
                 );
               })()}
             </div>

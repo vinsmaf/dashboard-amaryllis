@@ -1588,6 +1588,16 @@ async function runCautionAutoRelease(env) {
 // Logique : si 2 réservations sont séparées de 1-4 nuits et que le gap
 // commence dans les 21 prochains jours → remise pour combler le trou.
 // Discount : 1-2 nuits = -25%, 3-4 nuits = -15%
+// RM-01 (last-room-value) : facteur de remise par bien — on PROTÈGE l'amiral (Amaryllis :
+// unique, 8p, 4,94, peu de substituts) et on remise PLUS les biens substituables (studios 2p).
+// Iguana exclu (bail long, bookable:false). Le plancher price_min reste appliqué en aval. TUNABLE.
+const DISCOUNT_FACTOR = { amaryllis: 0.4, zandoli: 0.7, iguana: 0, geko: 1.0, mabouya: 1.2, schoelcher: 1.2, nogent: 1.0 };
+const factorBien = (id) => (id in DISCOUNT_FACTOR ? DISCOUNT_FACTOR[id] : 1.0);
+// RM-02 (lead-time) : ne pas lâcher la remise trop tôt — faible loin de la date, pleine à l'approche.
+const factorLeadTime = (daysUntil) => (daysUntil > 14 ? 0.5 : daysUntil > 7 ? 0.8 : 1.0);
+// Remise finale = base × bien × lead-time (arrondie). Le clamp price_min se fait à la consommation.
+const adjustDiscountPct = (basePct, bienId, daysUntil) => Math.round(basePct * factorBien(bienId) * factorLeadTime(daysUntil));
+
 async function runGapPricing(env, allEvents) {
   const todayStr = today();
   const horizon  = addDays(todayStr, 21);
@@ -1607,10 +1617,13 @@ async function runGapPricing(env, allEvents) {
       const gapLen = diffDays(endA, startB);
       if (gapLen < 1 || gapLen > 4) continue;           // pas un trou utile
       if (endA < todayStr || endA > horizon) continue;   // hors fenêtre 21j
-      const pct = gapLen <= 2 ? 25 : 15;
-      if (!gaps[bienId]) gaps[bienId] = {};
+      const basePct = gapLen <= 2 ? 25 : 15;
       for (let d = 0; d < gapLen; d++) {
-        gaps[bienId][addDays(endA, d)] = pct;
+        const date = addDays(endA, d);
+        const adj = adjustDiscountPct(basePct, bienId, diffDays(todayStr, date)); // RM-01 + RM-02
+        if (adj <= 0) continue;  // bien protégé (amiral/iguana) ou remise nulle
+        if (!gaps[bienId]) gaps[bienId] = {};
+        gaps[bienId][date] = adj;
       }
     }
   }
@@ -1711,7 +1724,8 @@ async function runYieldPricing(env, allEvents) {
         const dateStr = addDays(todayStr, d);
         if (reserved.has(dateStr)) continue; // date occupée, skip
 
-        const discount = d <= 4 ? 20 : 15;
+        const discount = adjustDiscountPct(d <= 4 ? 20 : 15, bienId, d); // RM-01 (bien) + RM-02 (lead-time = d jours)
+        if (discount <= 0) continue; // bien protégé (amiral/iguana)
 
         // Vérifier que le prix après remise respecte le price_min
         if (priceMinCents > 0 && basePriceCents > 0) {
