@@ -191,6 +191,48 @@ async function alertHostIrritation(env, { from, bien, userMessage }) {
   } catch { /* best-effort */ }
 }
 
+// ─── 5c. Transcription vocale — Voxtral STT ──────────────────────────────────
+// WhatsApp envoie les notes vocales avec msg.type === "audio" et msg.audio.id.
+// Flux : Meta media URL → téléchargement → Voxtral → texte transcrit.
+// Fail-open : si MISTRAL_API_KEY absent ou erreur réseau, retourne null (message ignoré
+// comme avant). SKIP si limite Voxtral (50k tok/min) → cascade gracieuse.
+async function transcribeAudio(env, mediaId) {
+  const token      = env.WHATSAPP_TOKEN;
+  const mistralKey = env.MISTRAL_API_KEY;
+  if (!token || !mistralKey) return null;
+
+  try {
+    // 1. Obtenir l'URL signée du media via Meta Graph API
+    const metaRes = await fetch(`https://graph.facebook.com/v21.0/${mediaId}`, {
+      headers: { "Authorization": `Bearer ${token}` },
+    });
+    if (!metaRes.ok) return null;
+    const { url } = await metaRes.json();
+    if (!url) return null;
+
+    // 2. Télécharger le fichier audio (ogg/opus depuis WhatsApp)
+    const audioRes = await fetch(url, {
+      headers: { "Authorization": `Bearer ${token}` },
+    });
+    if (!audioRes.ok) return null;
+    const audioBlob = await audioRes.blob();
+
+    // 3. Envoyer à Voxtral pour transcription (multipart)
+    const form = new FormData();
+    form.append("model", "voxtral-mini-latest");
+    form.append("file", audioBlob, "audio.ogg");
+
+    const voxtralRes = await fetch("https://api.mistral.ai/v1/audio/transcriptions", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${mistralKey}` },
+      body: form,
+    });
+    if (!voxtralRes.ok) return null;
+    const { text } = await voxtralRes.json();
+    return text?.trim() || null;
+  } catch { return null; }
+}
+
 // ─── 6. Handlers HTTP ────────────────────────────────────────────────────────
 
 export async function onRequestGet(context) {
@@ -223,10 +265,17 @@ export async function onRequestPost(context) {
   // Ignorer les statuts (delivered, read…)
   if (!msg) return json({ ok: true, note: "aucun message à traiter" });
 
-  const from        = msg.from;           // numéro WhatsApp de l'expéditeur
-  const userMessage = msg.text?.body || "";
+  const from = msg.from;
+  let userMessage = msg.text?.body || "";
+  let isVoice = false;
 
-  if (!userMessage.trim()) return json({ ok: true, note: "message vide" });
+  // Note vocale WhatsApp (type "audio") → transcription Voxtral
+  if (!userMessage && msg.type === "audio" && msg.audio?.id) {
+    const transcript = await transcribeAudio(env, msg.audio.id);
+    if (transcript) { userMessage = transcript; isVoice = true; }
+  }
+
+  if (!userMessage.trim()) return json({ ok: true, note: "message vide ou non transcrit" });
 
   // Détection du bien
   const bien  = detectBien(userMessage);
@@ -240,12 +289,15 @@ export async function onRequestPost(context) {
 
   const guide = await fetchGuide(env, bien, new URL(request.url).origin);
 
+  const systemPrompt = buildSystemPrompt(guide, bien)
+    + (isVoice ? "\n\n[Transcription d'un message vocal — formulation possible approximative, prends en compte le sens global.]" : "");
+
   // Appel LLM
   const llmResult = await callLLM(env, {
     tier: "fast",
     logSource: "whatsapp",
     messages: [
-      { role: "system", content: buildSystemPrompt(guide, bien) },
+      { role: "system", content: systemPrompt },
       { role: "user",   content: userMessage },
     ],
     max_tokens: 300,
@@ -262,7 +314,7 @@ export async function onRequestPost(context) {
   // Log
   await logConversation(env, {
     from, bien,
-    userMessage,
+    userMessage: isVoice ? `[🎙️] ${userMessage}` : userMessage,
     botReply: reply,
     provider: llmResult.provider,
     ok: sendResult.ok,
