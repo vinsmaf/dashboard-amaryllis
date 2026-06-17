@@ -1345,6 +1345,7 @@ export async function onRequest(context) {
         tier,
         max_tokens: 4096, // débridé (était 2048) — réponses agents plus complètes
         temperature: 0.3,
+        responseFormat: { type: "json_object" },
         logSource: `agent:${agent.id}`, // prompt-004 — journalise la sortie en D1
         messages: [{ role: "user", content: buildPrompt(agent, history, memories, recentDrafts, body.brief || "", liveSection, feedbackSection, outcomesSection, ragSection, bannedSection, sharedSection) }],
       });
@@ -1364,13 +1365,17 @@ export async function onRequest(context) {
         try { text = String(text ?? ""); } catch { text = ""; }
       }
 
-      // Parser le JSON
+      // Parser le JSON (json_object mode → direct ; fallback regex pour cascade sans json mode)
       let parsed;
       try {
-        const match = text.match(/\{[\s\S]*\}/);
-        parsed = JSON.parse(match ? match[0] : text);
-      } catch (e) {
-        return { agent: agent.id, model: activeModel, error: "JSON parse failed", raw: String(text).slice(0, 200), parse_err: e.message };
+        parsed = JSON.parse(text);
+      } catch {
+        try {
+          const match = text.match(/\{[\s\S]*\}/);
+          parsed = JSON.parse(match ? match[0] : text);
+        } catch (e) {
+          return { agent: agent.id, model: activeModel, error: "JSON parse failed", raw: String(text).slice(0, 200), parse_err: e.message };
+        }
       }
 
       const actions = parsed.actions || [];
@@ -1475,14 +1480,15 @@ Si verdict=reject : "improved_blocks": null`;
                 tier: "smart",
                 max_tokens: 1500,
                 temperature: 0.4,
+                responseFormat: { type: "json_object" },
                 messages: [{ role: "user", content: validatorPrompt }],
               });
               if (valResult.ok) {
                 let valText = valResult.text;
                 if (typeof valText !== "string") valText = String(valText ?? "");
-                const match = valText.match(/\{[\s\S]*\}/);
-                if (match) {
-                  const parsed = JSON.parse(match[0]);
+                let parsed;
+                try { parsed = JSON.parse(valText); } catch { const match = valText.match(/\{[\s\S]*\}/); if (match) parsed = JSON.parse(match[0]); }
+                if (parsed) {
                   reviews = JSON.stringify(parsed);
                   // Reconstruire le caption depuis les 5 blocs (concatène avec lignes vides)
                   if (parsed.improved_blocks && parsed.verdict !== "reject") {

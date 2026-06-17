@@ -139,15 +139,15 @@ async function classify(env, msg) {
       logSource: "social-bot",
       max_tokens: 60,
       temperature: 0,
+      responseFormat: { type: "json_object" },
       messages: [
         { role: "system", content: 'Tu classes des commentaires de réseaux sociaux. Réponds en JSON STRICT {"lead":bool,"lang":"fr"|"en","confidence":0..1}. lead=true UNIQUEMENT si la personne CHERCHE une location saisonnière / un logement / un hébergement / un gîte en Martinique, ou demande dispo/prix/réservation pour un séjour là-bas. lead=false pour : spam, insulte, concurrent qui fait sa pub, question SAV d\'un client déjà en séjour, hors-sujet, ou personne qui PROPOSE elle-même un logement. Sois strict, dans le doute lead=false.' },
         { role: "user", content: String(msg).slice(0, 500) },
       ],
     });
     const raw = r?.ok ? (r.text || "") : "";
-    const m = raw.match(/\{[\s\S]*\}/);
-    if (!m) return { lead: false, lang: "fr", confidence: 0 };
-    const o = JSON.parse(m[0]);
+    let o;
+    try { o = JSON.parse(raw); } catch { const m = raw.match(/\{[\s\S]*\}/); if (!m) return { lead: false, lang: "fr", confidence: 0 }; o = JSON.parse(m[0]); }
     return { lead: !!o.lead, lang: o.lang === "en" ? "en" : "fr", confidence: Number(o.confidence) || 0 };
   } catch { return { lead: false, lang: "fr", confidence: 0 }; }
 }

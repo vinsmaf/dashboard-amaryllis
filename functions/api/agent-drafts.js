@@ -297,16 +297,20 @@ Retourne UNIQUEMENT un JSON :
         tier: "smart",
         max_tokens: 1500,
         temperature: 0.4,
+        responseFormat: { type: "json_object" },
         messages: [{ role: "user", content: improvePrompt }],
       });
 
       if (!llmResult.ok) return json({ error: "LLM amélioration échoué", details: llmResult.errors }, 500);
 
-      const match = llmResult.text.match(/\{[\s\S]*\}/);
-      if (!match) return json({ error: "Parse JSON échoué", raw: String(llmResult.text ?? "").slice(0, 200) }, 500);
-
       let parsed;
-      try { parsed = JSON.parse(match[0]); } catch (e) { return json({ error: "JSON invalide" }, 500); }
+      try {
+        parsed = JSON.parse(llmResult.text);
+      } catch {
+        const match = llmResult.text.match(/\{[\s\S]*\}/);
+        if (!match) return json({ error: "Parse JSON échoué", raw: String(llmResult.text ?? "").slice(0, 200) }, 500);
+        try { parsed = JSON.parse(match[0]); } catch { return json({ error: "JSON invalide" }, 500); }
+      }
 
       const b = parsed.improved_blocks;
       if (!b) return json({ error: "improved_blocks manquant" }, 500);
