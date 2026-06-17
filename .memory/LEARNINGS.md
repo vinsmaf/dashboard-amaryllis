@@ -3,6 +3,14 @@
 > Pièges déjà rencontrés + comment les éviter. 1 entrée = 1 leçon actionnable « la prochaine fois ».
 > Le journal d'erreurs exhaustif reste `../docs/ERREURS-LOG.md`.
 
+## 🔴 Piratage compte pub Meta — pattern reconnaissable — 2026-06-17
+- **Signal d'alerte** : email Meta « nouvelles campagnes approuvées » que tu n'as pas créées + nom de campagnes bizarres/langue étrangère dans Ads Manager. **Réflexe immédiat** : aller dans Ads Manager → vérifier TOUTES les campagnes (pas seulement les nouvelles visibles) → désactiver les suspectes AVANT de supprimer (pour prendre des captures).
+- **Pattern vietnamien** : campagnes avec 🪴 emojis + noms en majuscules + produits e-commerce asiatiques diffusées sous ta page = piratage classique. Aucune confusion possible avec tes propres campagnes si tu vérifies les visuels.
+- **Piège** : une campagne avec "quelques clics et quelques €" de dépense ≠ forcément légitime. Toujours ouvrir l'aperçu publicitaire avant de conclure que c'est une campagne à toi.
+- **Portfolio pirate** : Meta peut créer un 2e Business Portfolio sous ton nom sans que tu le saches (via une app compromise). Vérifier régulièrement `business.facebook.com` → switcher de portfolio en haut à gauche pour voir si un portfolio inconnu existe.
+- **Meta bloque la suppression du portfolio frauduleux** pendant enquête interne — comportement normal, ne pas s'inquiéter. Le portfolio devient inoffensif une fois vidé.
+- **Prochaine fois** : activer le 2FA DÈS l'ouverture d'un compte Meta Business (jamais remettre à plus tard).
+
 ## ⚠️ `deploy:pages` meurt en silence si on supprime un fichier sans committer d'abord — 2026-06-16
 - Le gate lint-delta de `scripts/deploy-pages.sh` (`set -euo pipefail`) calcule `CHANGED_JS=$(git diff … | while read f; do [[ -f "$f" ]] && echo "$f"; done)`. Si un fichier **supprimé** (non committé) est trié en dernier, le `[[ -f ]] && echo` final retourne **1** → la substitution `$()` échoue → `set -e` tue le script juste après l'echo « 🔍 Lint… » (EXIT=1, aucun message d'erreur, déroutant).
 - **La prochaine fois** : après un `git rm`, **committer AVANT `deploy:pages`** (arbre clean → `git diff vs HEAD` vide → le gate ne boucle sur rien). Vécu sur RM-03 (suppression des moteurs pricing morts). Fix durable possible (hors scope) : neutraliser le `while` avec `|| true` ou filtrer les suppressions en amont.

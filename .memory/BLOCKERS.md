@@ -7,11 +7,19 @@
 ---
 
 ## 🔴 Actions humaines (hors dashboard) en attente
+- **🚨 2FA Facebook** (URGENT — compte piraté 2026-06-17) : `accountscenter.facebook.com/password_and_security/two_factor` → saisir code Gmail → activer appli d'authentification. Non fait = récidive assurée.
+- **C2 MOFU Retargeting** : à recréer de zéro avec visuels Amaryllis légitimes (l'ancienne C2 était entièrement frauduleuse, supprimée). Advisory : vérifier d'abord que `purchase` remonte dans GA4/Meta avant d'optimiser sur cette conversion (AGENDA 2026-06-28).
+- **Remboursement dépenses frauduleuses** : contacter Meta Business Support (`business.facebook.com/ads/contact`) — Meta rembourse souvent dans ces cas. Montant estimé : quelques dizaines d'€ max (campagnes récentes).
 - **Déclarations meublé de tourisme** (🔴 urgent, jusqu'à 12 500€ d'enjeu) — Vincent, voir `docs/legal/plan-action-declarations.md`. Prérequis aux citations OT/CMT.
-- **Bot social — App Review Meta** : Business Verification Amaryllis Corp → soumettre App Review (dossier `docs/marketing/social-bot-app-review.md`). Seule voie pour débloquer FB `/{pageId}/feed`. AGENDA 2026-06-20.
+- **Bot WA + Bot social — Business Verification Meta** : 🟡 SOUMISE le 2026-06-17, en attente validation (1-5 jours ouvrés). Email Meta attendu. Débloque : (1) App Review bot social + (2) vrai numéro WA + (3) token permanent. Dossier `docs/marketing/social-bot-app-review.md`.
+- **Post-BV (dès validation email)** : (1) ajouter vrai numéro WA → WhatsApp Manager → Phone numbers · (2) créer System User token permanent dans Business Manager · (3) soumettre App Review.
 - **Crédit Beds24** à vérifier ; **prospection netlinking** à envoyer.
 
-## En cours → ✅ terminé le 2026-06-16 (session 17) — audit Playbook RM : 🟡 « propres » faits (RM-03 moteurs morts supprimés, RM-22 wording, RM-26 runbooks)
+## ✅ 2026-06-17 — Bot WhatsApp test mode LIVE
+- App "Amaryllis Conciergerie" (ID `1783600126154478`) · WABA `982907091270661` · test number `+1 555 006 0804`.
+- Secrets CF posés + redeploy · webhook vérifié · subscription `messages` activée · recipient `+33 6 10 88 07 72` · test validé par Vincent.
+
+## En cours → ✅ terminé le 2026-06-16 — CSP fix (workers.dev+ntfy.sh) + null-guards toFixed() + paiement 2× confirmé LIVE
 - ⏳ **Débloqués, à coder dans `calcDateReco`** (advisory, Vincent valide) : **RM-01** (uplift scarcity par capacité/positionnement), **RM-02** (filtre saison sur règles lead-time, nécessite re-seed), **RM-04** (gap orphelin 1 nuit + min-stay).
 - ⛔ **Attendent input Vincent** : **RM-06** (connecter Google Search Console = credentials) · **RM-08** (dépense pub réelle Google/Meta pour CAC) · **RM-11** (code parrainage qui crédite via stripe-webhook = argent LIVE, + montant récompense) · **RM-23** (destinataire ménage par bien Martinique) · **RM-24** (arbitrage ROI : volume litiges caution réels d'abord).
 - ⚠️ **Modif NON committée pré-existante** : `src/components/tabs/TabTrading.jsx` (projection div/mois+an, colonne SAF/GRW) — PAS de cette session, dans l'arbre avant. Vincent décide : committer ou `git checkout`.

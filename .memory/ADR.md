@@ -5,6 +5,27 @@
 
 ---
 
+## ADR-SECURITY-META-001 · 2026-06-17 · Gestion incident piratage compte pub Meta
+1. **Choix** : nettoyage manuel direct (supprimer les campagnes frauduleuses + page H U), NE PAS toucher C1 légitime, NE PAS créer de nouvelle campagne C2 en urgence, laisser Meta bloquer le portfolio pirate.
+2. **Alternatives refusées** : (a) supprimer TOUT le compte pub — écarté (C1 TOFU Découverte juin est légitime et en cours) ; (b) recréer C2 d'urgence — écarté (trop de risque d'erreur sous pression, à faire à froid) ; (c) tenter de supprimer le portfolio `282577832488612` — impossible, Meta bloque pendant enquête interne.
+3. **Conséquences attendues** : C2 MOFU Retargeting est à recréer de zéro avec des visuels Amaryllis légitimes. Portfolio pirate `282577832488612` reste figé/bloqué chez Meta (inoffensif). 2FA à finaliser impérativement pour éviter la récidive.
+4. **Périmètre** : Ads Manager `act=853205825762332` · Business Portfolio `609408700286001` (légitime, intact) · Portfolio pirate `282577832488612` (bloqué Meta, vide).
+5. **Statut** : acté 2026-06-17. Actions restantes : 2FA (Vincent) + recréer C2 MOFU + contacter Meta Support pour remboursement dépenses frauduleuses.
+
+## ADR-WHATSAPP-001 · 2026-06-17 · Architecture 3 apps Meta pour WhatsApp Business
+1. **Choix** : 3e app Meta dédiée "Amaryllis Conciergerie" (ID `1783600126154478`) pour WhatsApp Cloud API — les 2 apps existantes (App 1 Ads + App 2 Instagram) sont incompatibles avec WhatsApp API. Aucune des 3 n'est supprimée.
+2. **Alternatives refusées** : (a) ajouter WhatsApp à App 1 (Ads) — impossible, verrouillée sur use-case Marketing ; (b) ajouter à App 2 (Instagram classic) — galerie produits n'offre pas WhatsApp ; (c) supprimer une app existante — écarté (casse les ads + social publishing).
+3. **Conséquences** : bot WhatsApp live en test mode (test number `+1 555 006 0804`, recipient `+33 6 10 88 07 72`). Pour la prod : Business Verification → App Review → vrai numéro → token permanent (60j actuellement). Webhook `villamaryllis.com/api/whatsapp` déjà vérifié.
+4. **Périmètre** : `functions/api/whatsapp.js` (code existant, non modifié) · secrets CF Pages (`WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID`, `WHATSAPP_VERIFY_TOKEN`).
+5. **Statut** : acté, test live validé par Vincent.
+
+## ADR-PREMORTEM-001 · 2026-06-18 · Pré-mortem Gary Klein — 3 risques critiques retenus
+1. **Choix** : suite au pré-mortem (horizon 2029), 3 risques critiques actés avec mesures : (1) **CAC tracker** → bloc "résas directes 30j" ajouté au rapport hebdo Worker (🟢/🟡/🔴, seuil ≥3/mois) ; (2) **Éparpillement** → AGENDA mensuel "vidage backlog actions Vincent" ; (3) **Fiscal DAC7** → deadline 30/06 ajoutée AGENDA. 2 risques secondaires planifiés : bus factor (20/07) + assurance cyclone (20/07).
+2. **Alternatives refusées** : (a) ignorer le pré-mortem comme exercice théorique — écarté, 3 items directement actionnables trouvés ; (b) tout coder en une session — écarté, les mesures humaines (fiscal, assurance) ne se codent pas.
+3. **Conséquences attendues** : le rapport hebdo lundi montre désormais le ratio direct en tête d'email (couleur selon seuil). Si 🔴 plusieurs semaines = signal d'alarme pour couper les pubs et retravailler le funnel.
+4. **Périmètre** : `workers/ical-sync/index.js` (`runWeeklyReport` + requête D1 `direct_bookings`) · `~/.claude/memory/AGENDA.md` (4 items ajoutés).
+5. **Statut** : ✅ acté 2026-06-18. Worker à redéployer.
+
 ## ADR-PRICING-SOT-001 · 2026-06-16 · Source de vérité unique du pricing = calcDateReco (suppression moteurs morts)
 1. **Choix** : SUPPRIMER `src/lib/pricingEngine.js` + `src/lib/minStayEngine.js` (RM-03). Vérifié 0 import en prod (Functions/src/Worker). Le seul moteur de pricing = `calcDateReco` dans `functions/api/rm-recommendations/[[path]].js`. Décision de Vincent (supprimer plutôt que promouvoir).
 2. **Alternatives refusées** : (a) promouvoir les libs comme moteur unique et retirer calcDateReco — refusé (le live tourne déjà, plus risqué) ; (b) les garder « au cas où » — refusé, ce sont des doublons à logique DIVERGENTE = footgun (RM-04 voulait justement câbler `findGaps` de minStayEngine, on aurait codé dans le mauvais moteur).
