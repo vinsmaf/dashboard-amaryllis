@@ -270,12 +270,27 @@ export async function onRequestPost(context) {
   let isVoice = false;
 
   // Note vocale WhatsApp (type "audio") → transcription Voxtral
-  if (!userMessage && msg.type === "audio" && msg.audio?.id) {
+  const isVoiceNote = msg.type === "audio" && !!msg.audio?.id;
+  if (!userMessage && isVoiceNote) {
     const transcript = await transcribeAudio(env, msg.audio.id);
     if (transcript) { userMessage = transcript; isVoice = true; }
   }
 
-  if (!userMessage.trim()) return json({ ok: true, note: "message vide ou non transcrit" });
+  if (!userMessage.trim()) {
+    // Note vocale reçue mais NON transcrite (Voxtral indispo / audio illisible) :
+    // on répond gracieusement plutôt que de laisser le voyageur sans réponse —
+    // sinon le bot paraît cassé. Fallback bilingue (base voyageurs internationale).
+    if (isVoiceNote) {
+      const fallback = "🙏 Je n'ai pas réussi à lire votre message vocal — pouvez-vous me l'écrire en quelques mots ?\n\nI couldn't process your voice message — could you type it instead?";
+      const r = await sendWhatsAppMessage(env, from, fallback);
+      await logConversation(env, {
+        from, bien: null, userMessage: "[🎙️ non transcrit]",
+        botReply: fallback, provider: "fallback-voix", ok: r.ok,
+      });
+      return json({ ok: true, note: "vocal non transcrit — fallback envoyé", sent: r.ok });
+    }
+    return json({ ok: true, note: "message vide ou non traité (type non supporté)" });
+  }
 
   // Détection du bien
   const bien  = detectBien(userMessage);
