@@ -117,17 +117,23 @@ else
 fi
 SMOKE_FAIL=0
 
+# Helper : retry 3× / 5s — absorbe la propagation CF Pages alias URL (inconsistante)
+smoke_check() {
+  local route="$1" expected="$2" label="${3:-$1}" st
+  for _r in 1 2 3; do
+    st=$(curl -s -o /dev/null -w "%{http_code}" "$DOMAIN$route" || echo "000")
+    if [[ "$st" == "$expected" ]]; then echo "   ✅ $label → $st"; return 0; fi
+    [[ $_r -lt 3 ]] && sleep 5
+  done
+  echo "   ❌ $label → $st (attendu $expected, 3 essais)"
+  SMOKE_FAIL=1
+}
+
 # 1. Pages clés répondent en 200 (home, villa)
 #    /admin exclue du curl check : CF Pages renvoie 404 pour le routage SPA
 #    côté serveur (normal) — la vérification admin est couverte par le playwright (1b).
 for route in "/" "/amaryllis"; do
-  ST=$(curl -s -o /dev/null -w "%{http_code}" "$DOMAIN$route" || echo "000")
-  if [[ "$ST" == "200" ]]; then
-    echo "   ✅ $route → 200"
-  else
-    echo "   ❌ $route → $ST (attendu 200)"
-    SMOKE_FAIL=1
-  fi
+  smoke_check "$route" "200"
 done
 
 # 1b. Playwright smoke /admin — vérifie que React monte sans pageerror ni chunk 404
@@ -199,13 +205,14 @@ fi
 
 # 5. (qa-003) Endpoints API critiques répondent (pas de 5xx ni 404)
 for api in "/api/get-config" "/api/social?action=status"; do
-  ST=$(curl -s -o /dev/null -w "%{http_code}" -H "User-Agent: Mozilla/5.0" "$DOMAIN$api" || echo "000")
-  if [[ "$ST" =~ ^(200|401|405)$ ]]; then
-    echo "   ✅ API $api → $ST (vivant)"
-  else
-    echo "   ❌ API $api → $ST (5xx/404 = fonction cassée)"
-    SMOKE_FAIL=1
-  fi
+  for _r in 1 2 3; do
+    ST=$(curl -s -o /dev/null -w "%{http_code}" -H "User-Agent: Mozilla/5.0" "$DOMAIN$api" || echo "000")
+    if [[ "$ST" =~ ^(200|401|405)$ ]]; then echo "   ✅ API $api → $ST (vivant)"; break; fi
+    if [[ $_r -lt 3 ]]; then sleep 5; else
+      echo "   ❌ API $api → $ST (5xx/404 = fonction cassée, 3 essais)"
+      SMOKE_FAIL=1
+    fi
+  done
 done
 
 # 6. (qa-003) sitemap.xml servi en XML et non vide
