@@ -217,10 +217,17 @@ done
 
 # 6. (qa-003) sitemap.xml servi en XML et non vide
 SMAP=$(curl -s "$DOMAIN/sitemap.xml")
-if echo "$SMAP" | grep -q "<urlset"; then
-  echo "   ✅ sitemap.xml valide ($(echo "$SMAP" | grep -c "<loc>") URLs)"
-else
-  echo "   ❌ sitemap.xml absent ou invalide"
+SMAP_OK=0
+for _r in 1 2 3; do
+  SMAP=$(curl -s "$DOMAIN/sitemap.xml")
+  if echo "$SMAP" | grep -q "<urlset"; then
+    echo "   ✅ sitemap.xml valide ($(echo "$SMAP" | grep -c "<loc>") URLs)"
+    SMAP_OK=1; break
+  fi
+  [[ $_r -lt 3 ]] && sleep 5
+done
+if [[ "$SMAP_OK" == "0" ]]; then
+  echo "   ❌ sitemap.xml absent ou invalide (3 essais)"
   SMOKE_FAIL=1
 fi
 
