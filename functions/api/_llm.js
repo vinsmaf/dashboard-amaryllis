@@ -88,9 +88,9 @@ export const MODELS = {
     smart:   "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
   },
   mistral: {
-    fast:   "mistral-small-2506",   // juin 2026 — plus récent que mistral-small-latest
-    medium: "mistral-medium-3.5",   // mai 2026 — meilleur ratio qualité/prix FR
-    smart:  "mistral-large-latest", // contenu FR premium
+    fast:   "mistral-small-2506",   // 2.25M tok/min, 5 req/s — très généreux
+    medium: "mistral-medium-2505",  // 375k tok/min — ID vérifié console juin 2026
+    smart:  "mistral-large-2512",   // 250k tok/min — ID vérifié console juin 2026
   },
   cerebras: {
     // ⚠️ Compte Cerebras : seuls gpt-oss-120b et zai-glm-4.7 sont accessibles

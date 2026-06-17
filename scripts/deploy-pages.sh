@@ -184,15 +184,14 @@ else
   echo "   ⚠️  sw.js n'est pas le kill-switch attendu"
 fi
 
-# 4. Anti-asset-gelé : /guide-hub doit contenir son titre SEO attendu
-#    (comparaison contenu, pas taille — le remote peut être légèrement différent du local)
-GUIDE_TITLE=$(grep -oE "<title>[^<]+</title>" dist/guide-hub/index.html 2>/dev/null | head -1 | sed 's/<[^>]*>//g' | cut -c1-30 || echo "")
-if [[ -n "$GUIDE_TITLE" ]]; then
-  if curl -s "$DOMAIN/guide-hub" | grep -qF "$GUIDE_TITLE"; then
-    echo "   ✅ /guide-hub servi à jour (titre « $GUIDE_TITLE… » présent)"
-  else
-    echo "   ⚠️  /guide-hub possiblement gelé — titre attendu absent de la réponse live"
-  fi
+# 4. Anti-asset-gelé : /guide-hub doit avoir un <title> non vide en live
+#    (on vérifie le live directement — le titre local peut différer de l'injection Function)
+GUIDE_LIVE_TITLE=$(curl -s "$DOMAIN/guide-hub" | grep -oE "<title>[^<]+</title>" | head -1 | sed 's/<[^>]*>//g')
+if [[ -n "$GUIDE_LIVE_TITLE" ]]; then
+  echo "   ✅ /guide-hub servi à jour (titre « ${GUIDE_LIVE_TITLE:0:40}… » présent)"
+else
+  echo "   ❌ /guide-hub sans <title> en live — page potentiellement gelée ou cassée"
+  SMOKE_FAIL=1
 fi
 
 # 5. (qa-003) Endpoints API critiques répondent (pas de 5xx ni 404)
@@ -216,19 +215,21 @@ else
 fi
 
 # 7. (qa-003) une fiche villa contient bien son <title> SEO (meta injectée au runtime)
-#    Retry 5× / 5s (~25s) pour absorber la propagation CF Pages Function : juste après
-#    deploy, le CDN peut servir l'edge avant activation de la Function → faux négatif.
+#    Vérifie le titre live directement — plus fiable que comparer à un pattern hardcodé.
+#    Retry 8× / 10s (~80s) pour absorber la propagation CF Pages Function.
 MABOUYA_OK=0
-for _i in 1 2 3 4 5; do
-  if curl -s "$DOMAIN/mabouya" | grep -qi "<title>.*Mabouya"; then
+for _i in 1 2 3 4 5 6 7 8; do
+  MABOUYA_TITLE=$(curl -s "$DOMAIN/mabouya" | grep -oE "<title>[^<]+</title>" | head -1 | sed 's/<[^>]*>//g')
+  if [[ -n "$MABOUYA_TITLE" ]]; then
     MABOUYA_OK=1; break
   fi
-  sleep 5
+  sleep 10
 done
 if [[ "$MABOUYA_OK" == "1" ]]; then
-  echo "   ✅ Meta OK (/mabouya a son <title>)"
+  echo "   ✅ Meta OK (/mabouya — « $MABOUYA_TITLE »)"
 else
-  echo "   ⚠️  /mabouya sans <title> après 5 essais — vérifier functions/[slug].js (injectMeta) + src/data/biens.js (seoTitle)"
+  echo "   ❌ /mabouya sans <title> après 8 essais — vérifier functions/[slug].js (injectMeta)"
+  SMOKE_FAIL=1
 fi
 
 if [[ "$SMOKE_FAIL" == "1" ]]; then

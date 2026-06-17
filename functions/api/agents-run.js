@@ -421,9 +421,9 @@ const AGENT_PREFERRED_PROVIDER = {
   "revenue-manager":            "groq",
   "traffic-manager":            "groq",
   "chef-produit-web":           "groq",
-  "commercial-publicite":       "groq",
+  "commercial-publicite":       "mistral", // copie pub FR → Mistral nettement meilleur
   "consultant-ebusiness":       "groq",
-  "responsable-service-client": "groq",
+  "responsable-service-client": "mistral", // réponses voyageurs FR → qualité native FR > Llama
   "webdesigner":                "groq",
   // Mistral — contenu FR natif (social posts, emails voyageurs, SEO)
   "community-manager":          "mistral",
@@ -445,12 +445,12 @@ const AGENT_PREFERRED_PROVIDER = {
   // Phase 2 — 3 derniers agents (2026-05)
   "prompt-engineer":            "cloudflare", // bucket séparé pour méta-tâches
   "seo-local":                  "groq",       // analyses techniques NAP
-  "voyageur-research":          "cerebras",   // synthèse rapide grand corpus
+  "voyageur-research":          "mistral",    // analyse sentiment FR avis voyageurs
   // Spécialistes fiscaux (ADR-BRAIN-003) — répartis sur les buckets
   "fiscaliste":                 "groq",       // raisonnement fiscal (llama-70b smart)
   "controleur-fiscal":          "mistral",    // analyse risque FR-native
   "comptable":                  "groq",       // structuration comptable
-  "notaire-assurance":          "cloudflare", // bucket séparé
+  "notaire-assurance":          "mistral",    // texte juridique FR/DOM → vocabulaire Martinique
 };
 
 // ── Récupère l'historique D1 d'un agent ────────────────────────────────────
