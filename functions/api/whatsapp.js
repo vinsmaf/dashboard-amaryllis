@@ -73,6 +73,10 @@ async function fetchGuide(env, propertyId, origin) {
 
 // ─── 3. Construction du prompt système ──────────────────────────────────────
 
+const POOL_BIENS     = ["amaryllis", "iguana", "zandoli", "geko"];
+const VILLA_BIENS    = ["amaryllis", "iguana"];
+const RESIDENCE_BIENS = ["zandoli", "geko", "mabouya", "schoelcher"];
+
 function buildSystemPrompt(guide, propertyId) {
   const propertyName = guide?.property_name || propertyId;
   const lines = [
@@ -81,7 +85,32 @@ function buildSystemPrompt(guide, propertyId) {
     `Tu aides les voyageurs pendant leur séjour : accès, wifi, équipements, départ, extras.`,
     `Ne fournis jamais d'informations que tu n'as pas. Si tu ne sais pas, dis "je vais demander à l'hôte".`,
     "",
+    `═══ RÈGLES STRICTES — À appliquer FERMEMENT, sans exception ═══`,
+    `• Fêtes / réceptions / invités extérieurs : STRICTEMENT INTERDIT dans tous les logements. Répondre : "Notre règlement interdit toute réception d'invités extérieurs, fête ou événement. Nous ne pouvons pas faire d'exception."`,
+    `• Animaux : acceptés (2 maximum), supplément 30 €/séjour. Si > 2 animaux : refuser poliment.`,
+    `• Tabac / cigarette : INTERDIT à l'intérieur. Autorisé en terrasse/extérieur uniquement.`,
+    `• Capacité : strictement limitée au nombre de voyageurs de la réservation. Demande d'invité supplémentaire → "Je transmets à l'hôte, il vous répondra directement."`,
+    `• Bruit : silence obligatoire de 22h à 7h.`,
+    `• Barbecue (gaz) : ne pas déplacer. Après ouverture de la bouteille, appuyer sur le bouton du détendeur pour libérer le gaz avant d'allumer.`,
+    `• Ménage de fin de séjour : inclus. Ménage supplémentaire pendant le séjour : possible selon disponibilités, contacter l'hôte.`,
+    `• Check-in tardif / check-out anticipé : possible. Tarifs dans la confirmation de réservation.`,
+    `• Caution : Airbnb → Aircover. Booking / réservation directe → espèces ou chèque à l'arrivée. Détails dans la confirmation.`,
+    `• Annulation : politique indiquée dans la confirmation de réservation.`,
+    "",
   ];
+
+  // Règles spécifiques au bien
+  if (POOL_BIENS.includes(propertyId)) {
+    lines.push(`• Piscine : filtration active de 8h à 20h uniquement. Surveillance obligatoire des enfants en permanence.`);
+  }
+  if (VILLA_BIENS.includes(propertyId)) {
+    lines.push(`• Parking : 3 places à l'intérieur de la villa. INTERDIT de se garer à l'extérieur de la villa.`);
+  } else if (RESIDENCE_BIENS.includes(propertyId)) {
+    lines.push(`• Parking : 1 place réservée devant votre logement. Véhicules supplémentaires : se garer en haut de la résidence.`);
+  } else if (propertyId === "nogent") {
+    lines.push(`• Parking : stationnement dans la rue selon disponibilités. Contacter l'hôte pour conseils.`);
+  }
+  lines.push("");
 
   if (!guide) {
     lines.push("(Guide non disponible — réponds de façon générale et propose de contacter l'hôte.)");
@@ -187,6 +216,18 @@ async function alertHostIrritation(env, { from, bien, userMessage }) {
       method: "POST",
       body: `${bien ? bien.toUpperCase() : "?"} · ${from}\n« ${userMessage.slice(0, 240)} »\n→ intervenir vite (service recovery : accuser <15min, résoudre <2h).`,
       headers: { "Title": "🚨 Voyageur mécontent (WhatsApp)", "Priority": "high", "Tags": "rotating_light" },
+    });
+  } catch { /* best-effort */ }
+}
+
+// ─── 5b2. Escalade LLM (bot ne sait pas) ────────────────────────────────────
+async function alertHostEscalade(env, { from, bien, userMessage, reply }) {
+  if (!env.NTFY_TOPIC) return;
+  try {
+    await fetch(`https://ntfy.sh/${env.NTFY_TOPIC}`, {
+      method: "POST",
+      body: `${bien ? bien.toUpperCase() : "?"} · ${from}\nQuestion sans réponse : « ${userMessage.slice(0, 200)} »\nBot : « ${reply.slice(0, 150)} »\n→ répondre au voyageur.`,
+      headers: { "Title": "💬 Voyageur attend ta réponse (WhatsApp)", "Priority": "default", "Tags": "speech_balloon" },
     });
   } catch { /* best-effort */ }
 }
@@ -325,6 +366,12 @@ export async function onRequestPost(context) {
 
   // Envoi de la réponse
   const sendResult = await sendWhatsAppMessage(env, from, reply);
+
+  // Escalade LLM : bot ne sait pas → alerte hôte pour qu'il prenne le relai
+  if (/demander à l.hôte|contacter l.hôte|je ne sais pas|je n.ai pas.*information/i.test(reply)) {
+    const p = alertHostEscalade(env, { from, bien, userMessage, reply });
+    if (typeof context.waitUntil === "function") context.waitUntil(p); else await p.catch(() => {});
+  }
 
   // Log
   await logConversation(env, {
