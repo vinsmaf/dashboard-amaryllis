@@ -116,8 +116,10 @@ else
 fi
 SMOKE_FAIL=0
 
-# 1. Pages clés répondent en 200 (home, villa, admin)
-for route in "/" "/amaryllis" "/admin"; do
+# 1. Pages clés répondent en 200 (home, villa)
+#    /admin exclue du curl check : CF Pages renvoie 404 pour le routage SPA
+#    côté serveur (normal) — la vérification admin est couverte par le playwright (1b).
+for route in "/" "/amaryllis"; do
   ST=$(curl -s -o /dev/null -w "%{http_code}" "$DOMAIN$route" || echo "000")
   if [[ "$ST" == "200" ]]; then
     echo "   ✅ $route → 200"
