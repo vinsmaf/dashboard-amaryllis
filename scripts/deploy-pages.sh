@@ -109,7 +109,8 @@ rm -f "$DEPLOY_LOG"
 DOMAIN="${ALIAS_URL:-https://villamaryllis.com}"
 echo ""
 if [[ -n "$ALIAS_URL" ]]; then
-  echo "🔎 Smoke test post-déploiement → alias frais $DOMAIN (pas de cache CDN)…"
+  echo "🔎 Smoke test post-déploiement → alias frais $DOMAIN (attente propagation 5s)…"
+  sleep 5   # CF Pages alias : déploiement déclaré ≠ propagé — 5s absorbent la latence typique
 else
   echo "🔎 Smoke test post-déploiement → $DOMAIN (alias non capturé, fallback prod, propagation 6s)…"
   sleep 6
