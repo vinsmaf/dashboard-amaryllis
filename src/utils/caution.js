@@ -79,8 +79,11 @@ export function decideCautionAction({ status, placeDate, captureBefore, checkout
   }
 
   if (status === "held") {
+    // 0) checkout invalide → ligne pathologique (impossible de savoir quand libérer) : on LIBÈRE
+    //    par sécurité, plutôt que de re-bloquer à l'infini (fonds voyageur sinon gelés à vie).
+    if (!isISODate(checkout)) return "release";
     // 1) Départ passé depuis RELEASE_DAYS_AFTER → on libère (priorité sur le re-blocage).
-    if (isISODate(checkout) && today >= addDaysISO(checkout, RELEASE_DAYS_AFTER)) return "release";
+    if (today >= addDaysISO(checkout, RELEASE_DAYS_AFTER)) return "release";
     // 2) Hold sur le point d'expirer ET fenêtre encore utile (jusqu'à la libération) → on re-pose.
     if (isISODate(captureBefore) && today >= addDaysISO(captureBefore, -REAUTH_LEAD_DAYS)) return "reauth";
     return "noop";
@@ -90,7 +93,7 @@ export function decideCautionAction({ status, placeDate, captureBefore, checkout
   return "noop";
 }
 
-function isISODate(s) {
+export function isISODate(s) {
   if (typeof s !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
   // Rejette les dates au bon format mais irréelles (mois 13, 30 février…) :
   // elles passeraient le regex puis feraient déraper `Date`.

@@ -138,6 +138,12 @@ describe("decideCautionAction (machine à états poser / re-poser / libérer)", 
     })).toBe("reauth"); // checkout+3 = 12/08 non atteint, hold expire → on garde actif
   });
 
+  it("held + checkout invalide → LIBÈRE (jamais de hold à vie / reauth perpétuel)", () => {
+    // Sans cette garde, checkout='' saute la release et reauth boucle à l'infini.
+    expect(decideCautionAction({ status: "held", captureBefore: "2026-08-01", checkout: "", today: "2026-09-01" })).toBe("release");
+    expect(decideCautionAction({ status: "held", captureBefore: "2026-08-01", checkout: "pas-une-date", today: "2026-07-01" })).toBe("release");
+  });
+
   it("états terminaux et date invalide → noop", () => {
     for (const status of ["released", "captured", "failed"]) {
       expect(decideCautionAction({ status, checkout: "2026-08-09", today: "2026-08-20" })).toBe("noop");

@@ -65,9 +65,13 @@ export async function onRequestGet(context) {
       }
 
       // place ou reauth : on crée un nouveau hold sur la carte enregistrée.
-      // Idempotency-Key Stripe (par action + jour) : si le cron crashe entre le succès Stripe et
-      // l'UPDATE D1 puis re-tourne le même jour, Stripe renvoie le MÊME PI au lieu d'empiler un 2e hold.
-      const { pi, captureBefore, error } = await createHold(sk, r, `caution-${action}-${r.booking_pi_id}-${today}`);
+      // Idempotency-Key Stripe : 'place' SANS date (clé stable, partagée avec la pose immédiate du
+      // webhook → un createHold réussi mais non enregistré ne sera jamais doublé) ; 'reauth' AVEC date
+      // (répétition intentionnelle à chaque cycle d'expiration).
+      const idemKey = action === "reauth"
+        ? `caution-reauth-${r.booking_pi_id}-${today}`
+        : `caution-place-${r.booking_pi_id}`;
+      const { pi, captureBefore, error } = await createHold(sk, r, idemKey);
       if (error) {
         failed++;
         // place : échec → on retente (attempts), puis on escalade à l'hôte. L'ancien hold (reauth)

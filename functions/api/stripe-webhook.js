@@ -2,7 +2,7 @@ import { resendFrom } from "./_email.js";
 import { sendEmail as sendEmailHelper } from "./_sendEmail.js";
 import { capiPurchase } from "./_metaCapi.js";
 import { lowAmountInfo } from "../../src/utils/priceGuard.js";
-import { cautionAmountFor, placeDateFor, leadDays } from "../../src/utils/caution.js";
+import { cautionAmountFor, placeDateFor, leadDays, isISODate } from "../../src/utils/caution.js";
 import { ensureCautionTable, createHold } from "./_caution.js";
 // Cloudflare Pages Function — POST /api/stripe-webhook
 // Reçoit les événements Stripe et notifie l'hôte par email
@@ -383,7 +383,9 @@ async function storeCautionSchedule(env, pi) {
   const db = env.revenue_manager;
   if (!db || !pi) return;
   const meta = pi.metadata || {};
-  if (meta.type === "deposit" || meta.kind === "caution-auto") return; // jamais sur un hold/caution
+  // Jamais sur un hold/caution, NI sur le flux devis/short-link (qui pose DÉJÀ sa propre caution
+  // manuelle via create-deposit-intent → sinon DOUBLE caution sur la CB du voyageur).
+  if (meta.type === "deposit" || meta.type === "devis" || meta.kind === "caution-auto") return;
   const bienId = meta.bienId || "";
   const amount = cautionAmountFor(bienId);
   // Carte non enregistrée → impossible de poser la caution off-session : on s'abstient (lien manuel).
@@ -391,8 +393,10 @@ async function storeCautionSchedule(env, pi) {
   const today = new Date().toISOString().slice(0, 10);
   const checkin = meta.checkin || "";
   const checkout = meta.checkout || "";
+  // checkin ET checkout valides requis : une ligne 'held' sans checkout valide ne pourrait jamais
+  // être libérée (reauth perpétuel → fonds gelés à vie). Mieux vaut s'abstenir.
   const place = placeDateFor(checkin, today);
-  if (!place) return; // checkin absent/invalide
+  if (!place || !isISODate(checkout)) return;
   try {
     await ensureCautionTable(db);
     const prenom = String(meta.voyageur || "").trim().split(/\s+/)[0] || "";
@@ -418,7 +422,9 @@ async function storeCautionSchedule(env, pi) {
         customer_id: pi.customer, payment_method_id: pi.payment_method,
         amount, currency: pi.currency || "eur", checkin, checkout,
       };
-      const { pi: holdPi, captureBefore, error } = await createHold(env.STRIPE_SECRET_KEY, row, `caution-place-${pi.id}-${today}`);
+      // Clé d'idempotence 'place' SANS date : partagée avec le 'place' du cron → si l'UPDATE D1 ci-dessous
+      // échoue après un createHold réussi, le cron réutilisera le MÊME PI au lieu d'empiler un 2e hold.
+      const { pi: holdPi, captureBefore, error } = await createHold(env.STRIPE_SECRET_KEY, row, `caution-place-${pi.id}`);
       if (!error && holdPi) {
         await db.prepare(`UPDATE caution_schedule SET status='held', caution_pi_id=?, capture_before=? WHERE booking_pi_id=? AND status='pending'`)
           .bind(holdPi.id, captureBefore, pi.id).run();
