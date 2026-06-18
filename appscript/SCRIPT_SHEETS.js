@@ -683,9 +683,10 @@ function importAllReservations_(input) {
 
   var NCOLS = 15;
 
-  // Index des lignes existantes — par ID ET par clé-contenu (bien|checkin|checkout)
+  // Index des lignes existantes — par ID, par clé-contenu (bien|checkin|checkout),
+  // ET par voyageur+bien (pour détecter les modifs OTA qui changent les dates d'1-2j et génèrent un nouvel UID)
   var lastRow = sheet.getLastRow();
-  var existingIds = {}, existingByContent = {};
+  var existingIds = {}, existingByContent = {}, existingByVoyBien = {};
   var LABEL_TO_BIENID = { "T2 Nogent":"nogent", "Villa Amaryllis":"amaryllis", "Villa Iguana":"iguana", "Geko":"geko", "Zandoli":"zandoli", "Mabouya":"mabouya", "T2 Schoelcher":"schoelcher" };
   if (lastRow > 1) {
     var existRows = sheet.getRange(2, 1, lastRow - 1, 6).getValues(); // ID, Propriété, Voyageur, Canal, Arrivée, Départ
@@ -695,6 +696,13 @@ function importAllReservations_(input) {
       var bId = LABEL_TO_BIENID[er[1]] || String(er[1] || "").toLowerCase();
       var ck = dedupKey_(bId, er[4], er[5]);
       if (ck && ck !== "||") existingByContent[ck] = rowNum;
+      // Index voyageur+bien pour détecter chevauchement de dates (modif OTA)
+      var voy = String(er[2] || "").toLowerCase().trim();
+      if (voy && bId) {
+        var vbKey = bId + "|" + voy;
+        if (!existingByVoyBien[vbKey]) existingByVoyBien[vbKey] = [];
+        existingByVoyBien[vbKey].push({ rowNum: rowNum, checkin: String(er[4] || ""), checkout: String(er[5] || "") });
+      }
     });
   }
 
@@ -746,15 +754,49 @@ function importAllReservations_(input) {
 
     var contentK = dedupKey_(r.bienId, r.checkin || r.arrival, r.checkout || r.departure);
     var existingRow = existingIds[id] || (contentK && contentK !== "||" ? existingByContent[contentK] : null);
+
+    // 3ème dédup : même voyageur + même bien + dates qui se chevauchent (modif OTA, nouvel UID)
+    if (!existingRow) {
+      var voy = String(r.voyageur || r.guestName || "").toLowerCase().trim();
+      var ci = r.checkin || r.arrival || "";
+      var co = r.checkout || r.departure || "";
+      if (voy && r.bienId && ci && co) {
+        var vbKey = r.bienId + "|" + voy;
+        var candidates = existingByVoyBien[vbKey] || [];
+        for (var ci2 = 0; ci2 < candidates.length; ci2++) {
+          var cand = candidates[ci2];
+          // Chevauchement : a.checkin < b.checkout && b.checkin < a.checkout
+          if (cand.checkin && cand.checkout && cand.checkin < co && ci < cand.checkout) {
+            existingRow = cand.rowNum;
+            break;
+          }
+        }
+      }
+    }
+
     if (existingRow) {
       sheet.getRange(existingRow, 1, 1, NCOLS).setValues([row]);
       existingIds[id] = existingRow;
       if (contentK && contentK !== "||") existingByContent[contentK] = existingRow;
+      // Mise à jour de l'index voyBien avec les nouvelles dates
+      var voy2 = String(r.voyageur || r.guestName || "").toLowerCase().trim();
+      if (voy2 && r.bienId) {
+        var vbKey2 = r.bienId + "|" + voy2;
+        existingByVoyBien[vbKey2] = (existingByVoyBien[vbKey2] || []).filter(function(c) { return c.rowNum !== existingRow; });
+        existingByVoyBien[vbKey2].push({ rowNum: existingRow, checkin: String(r.checkin || r.arrival || ""), checkout: String(r.checkout || r.departure || "") });
+      }
       updated++;
     } else {
       sheet.appendRow(row);
       existingIds[id] = sheet.getLastRow();
       if (contentK && contentK !== "||") existingByContent[contentK] = sheet.getLastRow();
+      // Ajout dans l'index voyBien
+      var voy3 = String(r.voyageur || r.guestName || "").toLowerCase().trim();
+      if (voy3 && r.bienId) {
+        var vbKey3 = r.bienId + "|" + voy3;
+        if (!existingByVoyBien[vbKey3]) existingByVoyBien[vbKey3] = [];
+        existingByVoyBien[vbKey3].push({ rowNum: sheet.getLastRow(), checkin: String(r.checkin || r.arrival || ""), checkout: String(r.checkout || r.departure || "") });
+      }
       added++;
       if (r.montant > 0 || r.price > 0) newResaLines.push(bienLabel + " · " + (r.voyageur || r.guestName || "?") + " · " + (r.checkin || r.arrival) + " · " + (r.montant || r.price || "?") + "€");
     }
