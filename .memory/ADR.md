@@ -5,6 +5,34 @@
 
 ---
 
+## ADR-CAUTION-CARDONLY-001 · 2026-06-17 · Caution = carte uniquement (pas de Link)
+1. **Choix** : forcer `payment_method_types:['card']` (retrait de `automatic_payment_methods`) sur les 2 flux de caution — `create-deposit-intent.js` (inline) + `caution-checkout.js` (lien admin). Le **paiement du séjour garde Link** (décision Vincent : conversion > cohérence).
+2. **Alternatives refusées** : (a) tenter de masquer les messages d'erreur côté front — impossible, ils sont rendus dans l'iframe Stripe (Payment Element), pas dans notre code (grep = 0) ; (b) passer AUSSI le séjour en card-only — refusé par Vincent (Link = checkout plus rapide = conversion) ; (c) supprimer l'étape caution inline — trop gros, l'admin a déjà le lien de secours.
+3. **Conséquences attendues** : sur la caution, Stripe Link ne peut plus réafficher une carte enregistrée déjà refusée (cause de l'écran anxiogène de la résa Antoine FENAERT). Caution réussie = écran propre ; carte réellement refusée = message Stripe correct MAIS géré (bloc rassurant + bouton Finaliser + alerte hôte `caution-skipped`). Prouvé en prod : PI test → `payment_method_types:["card"]`.
+4. **Périmètre** : `functions/api/create-deposit-intent.js`, `functions/api/caution-checkout.js`, `src/PublicSite.jsx` (handleDeposit + bloc rassurant + alerte + stockage voyageur/email), `src/Merci.jsx` (même UX, retrait `errStyle` orphelin).
+5. **Statut** : ✅ acté & déployé 2026-06-17. 285 tests, smoke OK, audit 🟢.
+
+## ADR-JOEL-OVERLAP-001 · 2026-06-17 · Fix chevauchement bail Joël BAILLEUL (Iguana Ligne 1)
+1. **Choix** : raccourcir la **Ligne 1** (Rentila 31/10/2024 → 19/12/2024) pour qu'elle se termine le **03/11/2024** (la veille du 1er virement bancaire : 04/11/2024). Résultat : 3 nuits, 3 400€, zéro chevauchement avec Ligne 2 (19/11/2024 → 31/10/2025). Gap de 16 jours (04→18 nov) = période de transition / prise de possession avant le bail formel.
+2. **Alternatives refusées** : (a) raccourcir Ligne 1 jusqu'au 18/11 (veille Ligne 2) — écarté, artificiel (ne reflète pas la réalité bancaire) ; (b) supprimer Ligne 1 — écarté, la prise de possession d'octobre est réelle ; (c) laisser le chevauchement en l'état — écarté, comptait 30 nuits en double dans les stats.
+3. **Conséquences attendues** : Sheet Iguana sans double-compte sur nov-déc 2024. **Méthode retenue : le 1er virement bancaire = date de démarrage réel du bail** (plus fiable que les dates Rentila qui couvrent la prise de possession).
+4. **Périmètre** : ID `direct-iguana-2024-10-31` · Sheet « Toutes les Réservations » · GAS `importAllReservations_` (delete + re-import).
+5. **Statut** : ✅ acté & exécuté 2026-06-17. Confirmation GAS : `updated:1`.
+
+## ADR-IMPORT-DIRECTES-001 · 2026-06-17 · Import résas directes 2022→2026 via Rentila XLSX
+1. **Choix** : importer **~56 résas directes** (6 biens Martinique) via 6 fichiers Rentila XLSX → TSV propre → GAS `importAllReservations` en GET chunké. Bails longs termes (Joël BAILLEUL Iguana 3 lignes, Société MAUI ENTERTAINMENT Zandoli) importés comme `canal:direct`. **Protection overlap** : pull du Sheet avant chaque bien → filtre `checkin|checkout` par bienId → jamais re-importer une résa 2025-2026 déjà en base (preserve contact data Stripe).
+2. **Alternatives refusées** : (a) coller en TSV dans Google Sheets → conversion date −1j (déjà vécu sur Booking) ; (b) importer les bails longs comme canal séparé — trop compliqué, Vincent a choisi `direct`.
+3. **Conséquences attendues** : Sheet = **~700 résas 2022-2027** (Booking ~370, Airbnb ~284, direct ~56). CA direct 2022→2024 enfin visible dans ConversionTab. ⚠️ Les **bails longs termes gonflent le CA direct et distordent l'ADR/nuitée** des biens concernés (Iguana Joël: ~46 k€/an, Zandoli MAUI: 19 620€). Interpréter les métriques `direct` Iguana/Zandoli avec précaution. **Nogent directes** : non fournies (Nogent = Beds24 → déjà synced).
+4. **Périmètre** : `scripts/direct-historique.tsv` · Sheet « Toutes les Réservations ». GAS non modifié (même action `importAllReservations_`).
+5. **Statut** : ✅ acté & exécuté 2026-06-17. Total validé ~700 résas.
+
+## ADR-IMPORT-OTA-001 · 2026-06-17 · Import de tout l'historique OTA (Booking + Airbnb) dans le Sheet
+1. **Choix** : importer l'historique complet 2022-2026 — **Booking 355** (12 PDF vue groupe) + **Airbnb 281** sur **2 comptes hôte** (compte 1 Amaryllis+Nogent = 176 ; compte 2 Céline Hartog/5 villas Martinique = 105) — via pré-transformation en **TSV propre** puis action GAS `importAllReservations` en **GET chunké direct vers la web app**. IDs : `booking-BK-<bien>-<date>` (synthétiques, la vue groupe Booking n'expose aucun code) · `airbnb-<code>` (vrais codes de confirmation). Montants : Booking = paiement total brut guest ; Airbnb = colonne « Revenus bruts » (host).
+2. **Alternatives refusées** : (a) `/api/sheets-proxy` POST → **403 Cloudflare WAF** (urllib bloqué) ; (b) onglet « Import Airbnb » + `importFromAirbnb` GET → **`buildColMap_` ne mappe pas le CSV brut Airbnb** (entêtes « Date de début/fin » ≠ alias, nom d'annonce Nogent/Schœlcher ne contient pas le bienId) ; (c) IDs Booking via n° de résa → indisponibles en vue groupe.
+3. **Conséquences** : Sheet « Toutes les Réservations » = **664 résas 2022-2027** (Booking 370, Airbnb 284, direct 8). ConversionTab affiche enfin du multi-années réel + base historique exploitable (RM/analyse). ⚠️ **Montant Airbnb (brut host) ≠ Booking (total guest)** → ~15% d'écart de base, comparaison CA **inter-canal** imparfaite (intra-canal/ADR/saisonnalité = fiables).
+4. **Périmètre** : `scripts/booking-historique.tsv`, `scripts/airbnb-historique.tsv`, `appscript/SCRIPT_SHEETS.js` (action `importFromBooking` déployée clasp **@43**), Sheet « Toutes les Réservations ».
+5. **Statut** : ✅ acté & exécuté 2026-06-17. **Reste : résas DIRECTES 2022→aujourd'hui** (Vincent doit les fournir — seules 8 en base).
+
 ## ADR-SECURITY-META-001 · 2026-06-17 · Gestion incident piratage compte pub Meta
 1. **Choix** : nettoyage manuel direct (supprimer les campagnes frauduleuses + page H U), NE PAS toucher C1 légitime, NE PAS créer de nouvelle campagne C2 en urgence, laisser Meta bloquer le portfolio pirate.
 2. **Alternatives refusées** : (a) supprimer TOUT le compte pub — écarté (C1 TOFU Découverte juin est légitime et en cours) ; (b) recréer C2 d'urgence — écarté (trop de risque d'erreur sous pression, à faire à froid) ; (c) tenter de supprimer le portfolio `282577832488612` — impossible, Meta bloque pendant enquête interne.

@@ -17,7 +17,11 @@ export async function onRequestPost(context) {
     amount: String(Math.round(amount)),
     currency,
     capture_method: "manual",
-    "automatic_payment_methods[enabled]": "true",
+    // Caution = CARTE UNIQUEMENT (pas de Link). Sinon Stripe Link auto-remplit une
+    // carte enregistrée déjà refusée → écran d'erreur anxiogène sur l'étape caution
+    // ("moyen de paiement a échoué" / "erreur de traitement") même quand le séjour est
+    // déjà payé. Vécu résa Antoine FENAERT (Zandoli, 2026-06-17). Carte fraîche = pas d'autofill cassé.
+    "payment_method_types[0]": "card",
     "metadata[type]":     "deposit",
     "metadata[bienId]":   metadata.bienId   || "",
     "metadata[checkin]":  metadata.checkin  || "",

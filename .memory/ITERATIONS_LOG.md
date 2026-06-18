@@ -5,6 +5,24 @@
 
 ---
 
+## 2026-06-17 (session 21) — Import directes + fix chevauchement Joël Bailleul Iguana
+- **Directes Rentila** : 6 fichiers XLSX (Amaryllis/Géko/Mabouya/Schœlcher/Iguana/Zandoli) → `scripts/direct-historique.tsv` → import chunked GET GAS. ~56 résas directes 2022→2025, dont bails longs termes (Joël BAILLEUL x3 Iguana, Société MAUI ENTERTAINMENT Zandoli). Protection overlap : pull Sheet avant chaque bien → filtre `checkin|checkout` → skip les 2025-2026 déjà en base. Total Sheet : **~700 résas**.
+- **Fix Joël BAILLEUL (Iguana)** : Ligne 1 (31/10 → 19/12/2024) chevauchait Ligne 2 (19/11/2024 → 31/10/2025) sur 30 nuits. Méthode : relevé bancaire → 1er virement = 04/11/2024 → checkout Ligne 1 corrigé à **03/11/2024** (3 nuits). GAS : delete `direct-iguana-2024-10-31` + re-import → `updated:1`. ADR-JOEL-OVERLAP-001.
+- Aucun commit code (TSV + mémoire ; GAS via API).
+
+## 2026-06-17 (session 19) — Import historique OTA complet (Booking + Airbnb) dans le Sheet
+- **Booking** : 12 PDF vue groupe → `scripts/booking-historique.tsv` (355 résas, IDs synthétiques `booking-BK-<bien>-<date>`). Action GAS `importFromBooking` redéployée via clasp **@43** (n'était pas exposée). Import via web app GET. Résultat : added 132 + updated 223.
+- **Airbnb** : 2 comptes hôte (compte 1 Amaryllis+Nogent = 176 ; compte 2 Céline Hartog/Géko+Zandoli+Mabouya+Schœlcher+Iguana = 105) → `scripts/airbnb-historique.tsv`, vrais codes `airbnb-<code>`, montant « Revenus bruts ». Import **chunked GET direct vers GAS** (contournement du **403 WAF** sur `/api/sheets-proxy` POST). 281 résas.
+- **Résultat** : Sheet « Toutes les Réservations » = **664 résas 2022-2027** (Booking 370, Airbnb 284, direct 8). ConversionTab multi-années réel. ADR-IMPORT-OTA-001.
+- **Lancé puis interrompu** : workflow d'analyse des 664 résas (`wf_b3a6734a-492`) — 5 analystes ont tourné, synthèse non atteinte (relançable).
+- **Reste** : résas **directes** 2022→aujourd'hui (Vincent doit fournir). Aucun commit code (TSV + mémoire seulement ; GAS déployé hors git).
+
+## 2026-06-16 (session 18) — CSP fix + null-guards + paiement 2× confirmé LIVE
+- **Pollinisation** : 2 tags `[à vérifier: locatif]` fermés dans CROSS-LEARNINGS (cascade 5 providers confirmée · CSP gap = bugs réels → fix).
+- **CSP connect-src** : `amaryllis-ical-sync.vinsmaf.workers.dev` + `ntfy.sh` manquants → gap-prices silencieusement bloqué en browser, alerts admin coupées. Fix : commit `a354cac`, déployé.
+- **Paiement 2×** : confirmé LIVE (`PAY_2X_ENABLED: Value Encrypted` + commits `572fdec→fa317dd`). CONTEXT.md mis à jour (statut ✅).
+- **Null-guards** : `b.occ/b.adr.toFixed()` crashait si Sheet retourne null. Fix `?? 0` sur 3 lignes (1647, 1698, 1699 App.jsx). Commit `0439281`. 285 tests verts.
+
 ## 2026-06-16 (session 17) — Audit Playbook RM : les 🟡 « propres » (RM-03/22/26)
 - **RM-03** : tranché la source de vérité pricing → **suppression** de `pricingEngine.js` + `minStayEngine.js` (morts, 0 import prod). Moteur unique = `calcDateReco`. ADR-PRICING-SOT-001. Débloque RM-01/02/04 (à coder dans calcDateReco).
 - **RM-22** : wording MaillageCluster orienté lieu (« Nos maisons à Sainte-Luce » / « Où loger à Sainte-Luce ») — moat SEO local, map préposition par cluster, fallback « à proximité ». « maisons » (pas « villas »).

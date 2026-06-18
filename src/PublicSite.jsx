@@ -2116,6 +2116,8 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
           ssSet("deposit_bien", bien.nom);
           ssSet("deposit_checkin", checkin || "");
           ssSet("deposit_checkout", checkout || "");
+          ssSet("deposit_voyageur", `${form.prenom} ${form.nom}`.trim());
+          ssSet("deposit_email", form.email || "");
         }
       }
 
@@ -2222,7 +2224,13 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
       confirmParams: { return_url: window.location.origin + "/merci?deposit=1" },
       redirect: "if_required",
     });
-    if (error) setDepositError(error.message);
+    if (error) {
+      // À cette étape le séjour est DÉJÀ payé : un échec de caution ne doit JAMAIS
+      // bloquer ni inquiéter (souvent un refus ponctuel de la banque / un souci de
+      // l'autoremplissage de la carte, pas une carte « incompatible »). On rassure
+      // et on laisse finir — la caution sera reprise via un lien séparé si besoin.
+      setDepositError("__CAUTION_SOFT_FAIL__");
+    }
     setDepositPaying(false);
   }
 
@@ -2588,7 +2596,38 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
             <button onClick={handleDeposit} disabled={paying || depositPaying} style={{ width: "100%", background: depositPaying ? SAND : "#d97706", color: "#fff", border: "none", padding: "15px", borderRadius: 8, fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 13, letterSpacing: "0.12em", textTransform: "uppercase", cursor: depositPaying ? "not-allowed" : "pointer", opacity: (paying || depositPaying) ? 0.6 : 1 }}>
               {depositPaying ? "Traitement…" : `🔒 Valider la caution — ${depositAmt.toLocaleString("fr-FR")} €`}
             </button>
-            {depositError && <div style={errStyle}>⚠ {depositError}</div>}
+            {depositError && (
+              <div style={{ marginTop: 14, background: "rgba(16,122,120,0.06)", border: "1px solid rgba(16,122,120,0.25)", borderRadius: 10, padding: "16px 18px" }}>
+                <div style={{ fontWeight: 700, color: NAVY, fontSize: 14, marginBottom: 6 }}>
+                  ✓ Votre réservation est confirmée
+                </div>
+                <div style={{ color: "#475569", fontSize: 13, lineHeight: 1.6, marginBottom: 14 }}>
+                  Votre paiement est validé. Le blocage de la caution n'a pas pu aboutir cette fois
+                  (refus ponctuel de votre banque) — ce n'est rien : nous vous enverrons un lien
+                  pour la déposer en quelques secondes. Vous pouvez finaliser dès maintenant.
+                </div>
+                <button
+                  onClick={() => {
+                    // Alerte hôte best-effort : caution non déposée → Vincent envoie un lien séparé.
+                    fetch("/api/contact", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        nom: `${form.prenom} ${form.nom}`.trim(),
+                        email: form.email,
+                        bien: bien.nom,
+                        source: "caution-skipped",
+                        message: `⚠️ CAUTION NON DÉPOSÉE — séjour payé, blocage de caution échoué côté client.\nÀ relancer via l'onglet Cautions → « Générer lien Stripe ».\n\nVoyageur : ${form.prenom} ${form.nom}\nBien : ${bien.nom}\nDates : ${checkin} → ${checkout}\nCaution : ${depositAmt}€`,
+                      }),
+                    }).catch(() => {});
+                    window.location.href = "/merci?deposit=skipped";
+                  }}
+                  style={{ width: "100%", background: CORAL, color: "#fff", border: "none", padding: "14px", borderRadius: 8, fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", cursor: "pointer" }}
+                >
+                  Finaliser ma réservation →
+                </button>
+              </div>
+            )}
           </>
         )}
 

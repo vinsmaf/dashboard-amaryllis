@@ -73,6 +73,9 @@ export async function onRequestPost(context) {
 
   const payload = new URLSearchParams({
     mode: "payment",
+    // Caution = carte uniquement (cohérent avec create-deposit-intent) : pas de Link
+    // qui réaffiche une carte enregistrée déjà refusée.
+    "payment_method_types[0]": "card",
     "payment_intent_data[capture_method]": "manual",
     "payment_intent_data[metadata][type]": "deposit",
     "payment_intent_data[metadata][bienId]": bienId,

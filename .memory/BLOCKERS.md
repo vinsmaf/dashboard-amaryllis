@@ -6,6 +6,11 @@
 
 ---
 
+## En cours → ✅ terminé le 2026-06-17 — Import historique complet (OTA + directes + fix Joël)
+- **Fait total** : Booking **355** (12 PDF, IDs synthétiques) + Airbnb **281** (2 comptes) + Directes **~56** (6 fichiers Rentila XLSX : Amaryllis/Géko/Mabouya/Schœlcher/Iguana/Zandoli) → **~700 résas 2022-2027** en base. Fichiers TSV : `scripts/booking-historique.tsv` · `scripts/airbnb-historique.tsv` · `scripts/direct-historique.tsv`.
+- **Fix Joël BAILLEUL** : chevauchement Ligne 1/Ligne 2 supprimé → `direct-iguana-2024-10-31` checkout = **03/11/2024** (3 nuits, avant 1er virement 04/11/2024). ADR-JOEL-OVERLAP-001.
+- **En suspens** : workflow d'analyse des ~700 résas (`wf_b3a6734a-492`, 5 analystes) **lancé mais interrompu avant la synthèse** → relançable. ⚠️ Montant **Airbnb = brut host ≠ Booking = total guest** (~15% d'écart) → CA inter-canal à manier avec prudence. **Bails longs termes** (Iguana Joël, Zandoli MAUI) gonflent le CA direct : exclure pour l'ADR/nuitée.
+
 ## 🔴 Actions humaines (hors dashboard) en attente
 - **🚨 2FA Facebook** (URGENT — compte piraté 2026-06-17) : `accountscenter.facebook.com/password_and_security/two_factor` → saisir code Gmail → activer appli d'authentification. Non fait = récidive assurée.
 - **C2 MOFU Retargeting** : à recréer de zéro avec visuels Amaryllis légitimes (l'ancienne C2 était entièrement frauduleuse, supprimée). Advisory : vérifier d'abord que `purchase` remonte dans GA4/Meta avant d'optimiser sur cette conversion (AGENDA 2026-06-28).

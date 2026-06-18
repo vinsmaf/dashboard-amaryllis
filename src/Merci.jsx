@@ -22,12 +22,6 @@ const btnPrimary = {
   letterSpacing: 1, textTransform: "uppercase",
 };
 
-const errStyle = {
-  color: CORAL, marginTop: 14, fontSize: 13,
-  background: "rgba(200,85,61,0.06)",
-  border: `1px solid rgba(200,85,61,0.2)`,
-  borderRadius: 8, padding: "10px 14px",
-};
 
 export default function MerciPage() {
   const params = new URLSearchParams(window.location.search);
@@ -65,7 +59,9 @@ export default function MerciPage() {
       confirmParams: { return_url: window.location.origin + "/merci?deposit=1" },
       redirect: "if_required",
     });
-    if (err) setError(err.message);
+    // Le séjour est déjà payé (on est sur /merci après redirection) : un échec de
+    // caution ne doit ni bloquer ni inquiéter → message rassurant + on laisse finir.
+    if (err) setError("__CAUTION_SOFT_FAIL__");
     setPaying(false);
   }
 
@@ -153,8 +149,39 @@ export default function MerciPage() {
           >
             {paying ? "Traitement…" : `🔒 Valider le blocage — ${depositAmt.toLocaleString("fr-FR")} €`}
           </button>
-          {error && <div style={{ ...errStyle, marginTop: 12 }}>⚠ {error}</div>}
-          <div style={{ marginTop: 16, textAlign: "center", color: MUTED, fontSize: 12 }}>🔒 Pré-autorisation sécurisée · Aucun débit sans dommage constaté</div>
+          {error && (
+            <div style={{ marginTop: 14, background: "rgba(16,122,120,0.06)", border: "1px solid rgba(16,122,120,0.25)", borderRadius: 10, padding: "16px 18px", textAlign: "left" }}>
+              <div style={{ fontWeight: 700, color: NAVY, fontSize: 14, marginBottom: 6 }}>✓ Votre réservation est confirmée</div>
+              <div style={{ color: "#475569", fontSize: 13, lineHeight: 1.6, marginBottom: 14 }}>
+                Votre paiement est validé. Le blocage de la caution n'a pas pu aboutir cette fois
+                (refus ponctuel de votre banque) — ce n'est rien : nous vous enverrons un lien
+                pour la déposer en quelques secondes.
+              </div>
+              <button
+                onClick={() => {
+                  // Alerte hôte best-effort : caution non déposée → Vincent envoie un lien séparé.
+                  const voyageur = ssGet("deposit_voyageur", "") || "Voyageur";
+                  const email = ssGet("deposit_email", "") || "non communiqué";
+                  fetch("/api/contact", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      nom: voyageur,
+                      email,
+                      bien: depositBien,
+                      source: "caution-skipped",
+                      message: `⚠️ CAUTION NON DÉPOSÉE — séjour payé, blocage de caution échoué côté client.\nÀ relancer via l'onglet Cautions → « Générer lien Stripe ».\n\nVoyageur : ${voyageur}\nBien : ${depositBien}\nDates : ${ssGet("deposit_checkin", "") || "?"} → ${ssGet("deposit_checkout", "") || "?"}\nCaution : ${depositAmt}€`,
+                    }),
+                  }).catch(() => {});
+                  window.location.href = "/merci?deposit=skipped";
+                }}
+                style={{ ...btnPrimary, width: "100%", background: CORAL, color: "#fff" }}
+              >
+                Finaliser ma réservation →
+              </button>
+            </div>
+          )}
+          {!error && <div style={{ marginTop: 16, textAlign: "center", color: MUTED, fontSize: 12 }}>🔒 Pré-autorisation sécurisée · Aucun débit sans dommage constaté</div>}
         </div>
       </div>
     );
