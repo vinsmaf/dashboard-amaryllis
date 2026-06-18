@@ -9,6 +9,7 @@ import { Eyebrow, Display, Editorial, Button, RatingBadge, Icon, ThemeToggle, Ch
 import { Curtain } from "./Curtain.jsx";
 import { getVariant, trackConversion } from "./utils/abTest.js";
 import { depositAmount, balanceAmount, balanceDueDate, isTwoPartEligible } from "./utils/paymentPlan.js";
+import { isNearBooking } from "./utils/caution.js";
 import { getDiscount, discountLabel } from "./utils/pricing.js";
 import { mpTrack } from "./lib/metaPixel.js";
 import { ssGet, ssSet } from "./lib/safeStorage.js";
@@ -1944,6 +1945,11 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
 
   const nights = checkin && checkout ? dateDiff(checkin, checkout) : 0;
 
+  // Caution prise AU PAIEMENT (étape inline) UNIQUEMENT si l'arrivée est proche (≤ 3 j).
+  // Sinon elle est différée : posée automatiquement ~2 j avant l'arrivée par le cron caution-cron
+  // (sur la carte enregistrée). Le webhook applique le même seuil → jamais de double caution.
+  const cautionInline = depositAmt > 0 && isNearBooking(checkin, new Date().toISOString().slice(0, 10));
+
   const [dailyPricesMap, setDailyPricesMap] = useState(() => {
     try { return loadDailyPrices()[bien.id] || {}; } catch { return {}; }
   });
@@ -2102,8 +2108,9 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
       const data = await res.json();
       if (data.error) throw new Error(data.error);
 
-      // Deposit intent (pre-auth) — store clientSecret for use in step 4 / merci page
-      if (depositAmt) {
+      // Deposit intent (pre-auth) — store clientSecret for use in step 4 / merci page.
+      // Seulement pour les résas PROCHES : pour les lointaines, la caution est posée plus tard par le cron.
+      if (cautionInline) {
         const dr = await fetch("/api/create-deposit-intent", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -2234,9 +2241,9 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
     setDepositPaying(false);
   }
 
-  const steps = depositAmt ? ["Dates", "Coordonnées", "Paiement", "Caution"] : ["Dates", "Coordonnées", "Paiement"];
+  const steps = cautionInline ? ["Dates", "Coordonnées", "Paiement", "Caution"] : ["Dates", "Coordonnées", "Paiement"];
 
-  const stepLabels = depositAmt ? ["Dates", "Vos infos", "Paiement", "Caution"] : ["Dates", "Vos infos", "Paiement"];
+  const stepLabels = cautionInline ? ["Dates", "Vos infos", "Paiement", "Caution"] : ["Dates", "Vos infos", "Paiement"];
   const nSteps = stepLabels.length;
   const photo0 = bien.photos?.[0] || "";
 
@@ -2542,7 +2549,9 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
                 Paiement <em style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontWeight: 400, color: CORAL, letterSpacing: 0, textTransform: "none" }}>sécurisé</em>
               </h2>
               <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: 15, color: MUTED }}>
-                Stripe · cryptage 256-bit · la caution est pré-autorisée, jamais débitée.
+                Stripe · cryptage 256-bit{depositAmt > 0 ? (cautionInline
+                  ? " · la caution est pré-autorisée à l'étape suivante, jamais débitée."
+                  : ` · une caution de ${depositAmt.toLocaleString("fr-FR")} € sera pré-autorisée ~2 jours avant votre arrivée (jamais débitée).`) : "."}
               </div>
             </div>
 

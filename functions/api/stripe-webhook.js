@@ -2,6 +2,7 @@ import { resendFrom } from "./_email.js";
 import { sendEmail as sendEmailHelper } from "./_sendEmail.js";
 import { capiPurchase } from "./_metaCapi.js";
 import { lowAmountInfo } from "../../src/utils/priceGuard.js";
+import { cautionAmountFor, placeDateFor, isNearBooking } from "../../src/utils/caution.js";
 // Cloudflare Pages Function — POST /api/stripe-webhook
 // Reçoit les événements Stripe et notifie l'hôte par email
 //
@@ -372,6 +373,51 @@ async function storePaymentSchedule(env, pi) {
   } catch (e) { console.error("[webhook] payment_schedule:", e.message); }
 }
 
+// DDL idempotent — échéancier des cautions (pré-autorisation off-session, re-posée glissante).
+// ⚠️ Doit rester IDENTIQUE au DDL de caution-cron.js (source canonique de la table).
+async function ensureCautionScheduleTable(db) {
+  await db.prepare(`CREATE TABLE IF NOT EXISTS caution_schedule (
+    booking_pi_id TEXT PRIMARY KEY, bien_id TEXT, bien_nom TEXT, email TEXT, prenom TEXT,
+    customer_id TEXT, payment_method_id TEXT, amount INTEGER, currency TEXT DEFAULT 'eur',
+    checkin TEXT, checkout TEXT, place_date TEXT,
+    status TEXT DEFAULT 'pending', caution_pi_id TEXT, capture_before TEXT,
+    attempts INTEGER DEFAULT 0, last_error TEXT,
+    created_at INTEGER NOT NULL DEFAULT (unixepoch()))`).run();
+}
+
+// Programme la caution d'une résa directe : caution-cron.js la posera off-session ~2 j avant l'arrivée,
+// la re-posera avant chaque expiration (couvre tout séjour), puis la libérera 3 j après le départ.
+// Nécessite une carte ENREGISTRÉE (pi.customer + pi.payment_method, posés par create-payment-intent)
+// et un montant de caution > 0 pour le bien. Fail-silent : ne casse jamais le webhook.
+async function storeCautionSchedule(env, pi) {
+  const db = env.revenue_manager;
+  if (!db || !pi) return;
+  const meta = pi.metadata || {};
+  if (meta.type === "deposit" || meta.kind === "caution-auto") return; // jamais sur un hold/caution
+  const bienId = meta.bienId || "";
+  const amount = cautionAmountFor(bienId);
+  // Carte non enregistrée → impossible de poser la caution off-session plus tard : on s'abstient.
+  if (!amount || !pi.customer || !pi.payment_method) return;
+  const today = new Date().toISOString().slice(0, 10);
+  const checkin = meta.checkin || "";
+  // Résa de dernière minute (arrivée ≤ 3 j) : la caution est prise AU PAIEMENT (inline) → on ne crée
+  // PAS de caution différée ici, sinon double. Le tunnel et le webhook se partagent par ce même seuil.
+  if (isNearBooking(checkin, today)) return;
+  const place = placeDateFor(checkin, today);
+  if (!place) return; // checkin absent/invalide
+  try {
+    await ensureCautionScheduleTable(db);
+    const prenom = String(meta.voyageur || "").trim().split(/\s+/)[0] || "";
+    await db.prepare(`INSERT INTO caution_schedule
+        (booking_pi_id, bien_id, bien_nom, email, prenom, customer_id, payment_method_id, amount, currency, checkin, checkout, place_date, status)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?, 'pending')
+      ON CONFLICT(booking_pi_id) DO NOTHING`)
+      .bind(pi.id, bienId, NOMS[bienId] || bienId, meta.email || "", prenom, pi.customer, pi.payment_method,
+            amount, pi.currency || "eur", meta.checkin || "", meta.checkout || "", place).run();
+    console.log("[caution] schedule créé", pi.id, bienId, amount + "€", "pose", place);
+  } catch (e) { console.error("[caution] schedule:", e.message); }
+}
+
 export async function onRequestPost(context) {
   const { request, env } = context;
   const rawBody = await request.text();
@@ -401,6 +447,10 @@ export async function onRequestPost(context) {
     // Beds24, NI email hôte, NI conversion pub — la résa + sa valeur TOTALE ont déjà été comptées
     // à l'acompte. Court-circuit immédiat (sinon : fausse conversion + fausse alerte + faux booking).
     if (meta.kind === "solde-2x") return json({ received: true, skipped: "solde-2x" });
+
+    // Capture d'une caution auto (caution-cron.js pose metadata.kind="caution-auto") : un débit de
+    // caution pour dégâts ne doit PAS être traité comme une réservation (ni Beds24, ni email, ni CA).
+    if (meta.kind === "caution-auto") return json({ received: true, skipped: "caution-auto" });
 
     const bookingId = meta.bookingId || meta.beds24Id || "";
     const bienId    = meta.bienId    || "";
@@ -493,6 +543,10 @@ export async function onRequestPost(context) {
 
     // 2c. Si paiement en 2 fois, persiste le solde à prélever (off-session) en D1
     await storePaymentSchedule(env, pi).catch(() => {});
+
+    // 2c-bis. Programme la caution off-session (posée ~2 j avant l'arrivée, re-posée glissante,
+    // libérée 3 j après le départ). Nécessite la carte enregistrée → no-op si non dispo.
+    await storeCautionSchedule(env, pi).catch(() => {});
 
     // 3. GA4 server-side — fiable (immunisé au Consent Mode, contrairement au gtag client).
     // ⚠️ Paiement en 2 fois : la conversion pub (GA4 purchase + Meta CAPI) doit refléter la

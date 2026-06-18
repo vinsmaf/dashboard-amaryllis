@@ -5,6 +5,13 @@
 
 ---
 
+## 2026-06-18 (session 22) — Caution différée off-session (carte enregistrée → hold avant l'arrivée)
+- **Déclencheur** : résa Antoine FENAERT (Zandoli) → écran d'erreur caution (Link réaffiche une carte refusée) + constat qu'un hold Stripe ne dure que ~7 j → inutile pour les séjours lointains (caution Anaïs réservée juin, séjour août, expire 21/06).
+- **Investigation Stripe (données réelles)** : `capture_before` Anaïs = création +7,0 j pile ; `extended_authorization:disabled` ; compte **blended** (pas IC+) → extended-auth 30 j indispo. Les 2 messages d'erreur du checkout = rendus par l'iframe Stripe (absents du repo). Antoine ≠ Anaïs (lui = vrai refus carte Link ; elle = tunnel réinitialisé, pas de refus).
+- **Livré (ADR-CAUTION-DEFERRED-001)** : système de caution différée complet — carte enregistrée à la résa (`create-payment-intent`, toutes résas, gracieux 1×) → `caution-cron` (mirror `charge-balance`) pose/re-bloque/libère off-session → `decideCautionAction` (machine à états pure, 21 tests) → répartition inline/différé par `isNearBooking` (seuil 3 j) → CGV §5 consentement → cron Worker 9h. Carte-only sur les 2 flux caution (ADR-CAUTION-CARDONLY-001). 306 tests, Pages+Worker déployés, dry+vrai run OK.
+- **Backfill** : caution Anaïs insérée en D1 (`caution_schedule`, pose 31/07) via wrangler d1 execute. François/Mabouya = lien manuel (carte non enregistrée) → AGENDA 02/07. Checkpoint 1er placement réel : AGENDA 31/07.
+- Commits : à committer (code déployé). Pas de revue de code LLM (endpoint non autorisé au deploy).
+
 ## 2026-06-17 (session 21) — Import directes + fix chevauchement Joël Bailleul Iguana
 - **Directes Rentila** : 6 fichiers XLSX (Amaryllis/Géko/Mabouya/Schœlcher/Iguana/Zandoli) → `scripts/direct-historique.tsv` → import chunked GET GAS. ~56 résas directes 2022→2025, dont bails longs termes (Joël BAILLEUL x3 Iguana, Société MAUI ENTERTAINMENT Zandoli). Protection overlap : pull Sheet avant chaque bien → filtre `checkin|checkout` → skip les 2025-2026 déjà en base. Total Sheet : **~700 résas**.
 - **Fix Joël BAILLEUL (Iguana)** : Ligne 1 (31/10 → 19/12/2024) chevauchait Ligne 2 (19/11/2024 → 31/10/2025) sur 30 nuits. Méthode : relevé bancaire → 1er virement = 04/11/2024 → checkout Ligne 1 corrigé à **03/11/2024** (3 nuits). GAS : delete `direct-iguana-2024-10-31` + re-import → `updated:1`. ADR-JOEL-OVERLAP-001.

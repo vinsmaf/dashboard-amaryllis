@@ -46,10 +46,15 @@ export async function onRequestPost(context) {
   if (amount > 500000)
     return json({ error: "Montant hors limites" }, 400);
 
-  // Paiement en 2 fois : on crée un Customer pour pouvoir débiter le solde plus tard
-  // (off-session). L'acompte = `amount` reçu. Garde-fous montant déjà validés au-dessus.
+  // Enregistrement de la carte (off-session) pour TOUTES les résas directes munies d'un email :
+  // c'est ce qui permet de poser la CAUTION automatiquement avant l'arrivée (caution-cron) ET de
+  // prélever le solde 2×. Requiert un Customer Stripe.
+  //  - Paiement 2× : le Customer est INDISPENSABLE (le solde est débité dessus) → échec = on bloque.
+  //  - Paiement 1× : souhaitable mais non bloquant → en cas d'échec, on continue le paiement SANS
+  //    carte enregistrée (la caution retombera sur le lien manuel). On ne casse jamais le flux argent.
+  const wantSavedCard = !!metadata.email || payPlan === "2x";
   let customerId = "";
-  if (payPlan === "2x") {
+  if (wantSavedCard) {
     try {
       const cRes = await fetch("https://api.stripe.com/v1/customers", {
         method: "POST",
@@ -61,10 +66,15 @@ export async function onRequestPost(context) {
         }).toString(),
       });
       const c = await cRes.json();
-      if (c.error) return json({ error: c.error.message }, 400);
-      customerId = c.id;
+      if (c.error) {
+        if (payPlan === "2x") return json({ error: c.error.message }, 400);
+        console.error("[customer] création échouée (1x → on continue sans carte enregistrée):", c.error.message);
+      } else {
+        customerId = c.id;
+      }
     } catch (e) {
-      return json({ error: "Création client Stripe échouée: " + e.message }, 500);
+      if (payPlan === "2x") return json({ error: "Création client Stripe échouée: " + e.message }, 500);
+      console.error("[customer] exception (1x → on continue sans carte enregistrée):", e.message);
     }
   }
 
@@ -87,11 +97,13 @@ export async function onRequestPost(context) {
     // Attribution + identité → relayées au webhook pour la CAPI Meta (match quality) et
     // l'attribution Google Ads serveur. Seuls les champs réellement présents sont posés.
     ...attribMeta(metadata),
-    // Paiement en 2 fois : metadata échéancier + Customer + off-session
+    // Carte enregistrée (off-session) dès qu'un Customer existe → caution auto avant l'arrivée + solde 2×.
+    // Déclenche l'authentification 3DS au paiement (on-session) si la banque l'exige → fiabilise les
+    // opérations off-session ultérieures.
+    ...(customerId ? { customer: customerId, setup_future_usage: "off_session" } : {}),
+    // Paiement en 2 fois : metadata échéancier (le débit du solde lit ces champs).
     ...(payPlan === "2x" ? {
-      customer: customerId,
-      setup_future_usage: "off_session",
-      "metadata[pay_plan]":      "2x",
+      "metadata[pay_plan]":       "2x",
       "metadata[balance_amount]": String(metadata.balance_amount || ""),
       "metadata[due_date]":       String(metadata.due_date || ""),
       "metadata[full_total]":     String(metadata.full_total || ""),

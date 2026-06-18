@@ -6,6 +6,12 @@
 
 ---
 
+## En cours → ✅ terminé le 2026-06-18 — Caution différée off-session (ADR-CAUTION-DEFERRED-001)
+- **Livré & déployé** : carte enregistrée à la résa → `caution-cron` (Worker 9h) pose ~J-2 / re-bloque glissant / libère J+3 off-session. Inline pour arrivées ≤3 j, différé au-delà. 306 tests, dry+vrai run OK. Anaïs backfillée (pose 31/07).
+- 🟡 **1er placement off-session RÉEL non encore vu** : Anaïs 31/07. La mécanique est prouvée (= solde 2× qui tourne déjà) mais le 1er vrai hold off-session caution n'a pas encore eu lieu → **valider le 31/07** (AGENDA). Si la banque refuse off-session (SCA) → fallback ntfy + lien manuel déjà câblé.
+- 🟡 **Résas 1× antérieures = pas de carte enregistrée** → caution rétroactive auto impossible. **François Cambier (Mabouya, arrivée 05/07)** : lien manuel à envoyer ~02/07 (AGENDA). Son séjour 15 nuits > 7 j d'un hold → 2e lien possible.
+- 🟡 **Edge near-booking + long séjour** : une résa proche (≤3 j, caution inline) avec un séjour > ~7 nuits n'est PAS re-bloquée (pas de ligne `caution_schedule`, l'inline expire mid-séjour). Rare (réserver 2 j avant un long séjour). À traiter si ça arrive (créer une ligne `caution_schedule` status=held liée au hold inline).
+
 ## En cours → ✅ terminé le 2026-06-17 — Import historique complet (OTA + directes + fix Joël)
 - **Fait total** : Booking **355** (12 PDF, IDs synthétiques) + Airbnb **281** (2 comptes) + Directes **~56** (6 fichiers Rentila XLSX : Amaryllis/Géko/Mabouya/Schœlcher/Iguana/Zandoli) → **~700 résas 2022-2027** en base. Fichiers TSV : `scripts/booking-historique.tsv` · `scripts/airbnb-historique.tsv` · `scripts/direct-historique.tsv`.
 - **Fix Joël BAILLEUL** : chevauchement Ligne 1/Ligne 2 supprimé → `direct-iguana-2024-10-31` checkout = **03/11/2024** (3 nuits, avant 1er virement 04/11/2024). ADR-JOEL-OVERLAP-001.

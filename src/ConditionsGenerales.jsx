@@ -165,7 +165,8 @@ export default function ConditionsGenerales() {
           <Section num="5" title="Caution (dépôt de garantie)">
             <P>Une caution peut être demandée en sus du loyer. Elle prend la forme d'une <strong>pré-autorisation bancaire</strong> (empreinte CB) via Stripe :</P>
             <Ul>
-              <Li>Aucun débit n'est effectué au moment de la réservation.</Li>
+              <Li>Aucun débit n'est effectué au moment de la réservation : les fonds sont simplement bloqués, puis libérés.</Li>
+              <Li>En validant votre réservation, <strong>vous autorisez Amaryllis Locations à enregistrer votre carte et à effectuer cette pré-autorisation de caution automatiquement quelques jours avant votre arrivée</strong> (généralement 2 à 3 jours avant), sans nouvelle action de votre part. Vous en êtes informé(e) par email.</Li>
               <Li>La pré-autorisation est levée automatiquement dans un délai de <strong>3 jours après le départ</strong> du Voyageur, en l'absence de dommages constatés.</Li>
               <Li>En cas de dommages, le Propriétaire notifie le Voyageur par email dans les 3 jours suivant le départ, avec justificatifs, et procède au débit correspondant dans la limite du montant pré-autorisé.</Li>
               <Li>Tout litige relatif à la caution doit être soumis par écrit dans un délai de 8 jours suivant la notification.</Li>

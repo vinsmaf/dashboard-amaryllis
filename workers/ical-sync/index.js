@@ -1562,6 +1562,9 @@ async function runCautionAutoRelease(env) {
     if (data.error) { console.error("[caution] Stripe error:", data.error.message); return; }
 
     for (const pi of (data.data || [])) {
+      // Cautions DIFFÉRÉES (résas lointaines) : cycle complet géré par caution-cron
+      // (pose / re-pose glissante / libération). Ne pas les libérer ici.
+      if (pi.metadata?.kind === "caution-auto") continue;
       const checkoutDate = pi.metadata?.checkout;
       if (!checkoutDate) continue;
       const releaseDate = addDays(checkoutDate, 3);
@@ -2385,6 +2388,17 @@ export default {
         await runGapPricing(env, allEvents);
         await runYieldPricing(env, allEvents);
         await runCautionAutoRelease(env);
+        // Caution DIFFÉRÉE (résas lointaines) : pose ~2 j avant l'arrivée, re-bloque avant chaque
+        // expiration (couvre tout séjour), libère 3 j après le départ — off-session sur la carte
+        // enregistrée. Les résas proches (≤3 j) gardent leur caution prise au paiement (inline).
+        try {
+          const siteCa = env.SITE_URL || "https://villamaryllis.com";
+          const caRes = await fetch(`${siteCa}/api/caution-cron?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`);
+          const caData = await caRes.json().catch(() => ({}));
+          console.log(`[caution-cron] ✓ ${caData.total ?? "?"} suivie(s) · posées=${caData.placed ?? 0} re-posées=${caData.reauthed ?? 0} libérées=${caData.released ?? 0} échecs=${caData.failed ?? 0}`);
+        } catch (e) {
+          console.error("[caution-cron] Cron error:", e.message);
+        }
         await runInventoryAlerts(env);
         await runDevisSoldeCron(env); // C2 — solde devis 2 fois : lien J-30 + relances J-25/J-20 + annulation J-15
         await runEnrichFromEmails(env); // complète nom+payout des résas Airbnb depuis les mails (onglet « Emails ») AVANT le contrôle de cohérence
