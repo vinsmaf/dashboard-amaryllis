@@ -61,8 +61,12 @@ export async function onRequestGet(context) {
   }
 
   try {
+    // Migrations idempotentes : ajoute les colonnes si absentes de la table live.
+    try { await db.prepare(`ALTER TABLE direct_bookings ADD COLUMN phone TEXT`).run(); } catch { /* déjà présente */ }
+    try { await db.prepare(`ALTER TABLE direct_bookings ADD COLUMN nb_guests INTEGER DEFAULT 1`).run(); } catch { /* déjà présente */ }
+    try { await db.prepare(`ALTER TABLE direct_bookings ADD COLUMN nb_pets INTEGER DEFAULT 0`).run(); } catch { /* déjà présente */ }
     const rows = await db.prepare(
-      `SELECT payment_intent_id, bien_id, bien_nom, voyageur, email, total, depot, checkin, checkout
+      `SELECT payment_intent_id, bien_id, bien_nom, voyageur, email, phone, nb_guests, nb_pets, total, depot, checkin, checkout
        FROM direct_bookings
        WHERE checkout >= date('now', '-90 days')
        ORDER BY checkin DESC`
@@ -84,7 +88,9 @@ export async function onRequestGet(context) {
         nights,
         montant:   r.total || 0,
         depot:     r.depot || 0,
-        nb_guests: 1,
+        nb_guests: r.nb_guests || 1,
+        nb_pets:   r.nb_pets || 0,
+        phone:     r.phone || "",
         notes:     r.email ? `Email: ${r.email}` : "",
         source:    "Stripe direct",
         status:    "Confirmé",

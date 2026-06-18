@@ -54,29 +54,66 @@ function readEmails_(p) {
 function ingestAirbnbEmails_() {
   var LABEL = "amaryllis-ingested";
   var label = GmailApp.getUserLabelByName(LABEL) || GmailApp.createLabel(LABEL);
-  // Sujet seulement : après transfert le from devient Hotmail (« TR:/Fwd: Reservation confirmed… »).
-  var threads = GmailApp.search(
-    'subject:("reservation confirmed" OR "booking confirmed") newer_than:21d -label:' + LABEL, 0, 30);
+  // Requête large : FR + EN + Airbnb + Booking, transfert Hotmail inclus (from devient expéditeur de transfert).
+  var queries = [
+    'from:(airbnb.com OR noreply@airbnb.com OR automated@airbnb.com) newer_than:60d -label:' + LABEL,
+    'subject:("reservation confirmed" OR "booking confirmed" OR "réservation confirmée" OR "confirmation de réservation" OR "nouvelle réservation") newer_than:60d -label:' + LABEL,
+  ];
+  var seen = {};
+  var allThreads = [];
+  for (var q = 0; q < queries.length; q++) {
+    var found = GmailApp.search(queries[q], 0, 50);
+    for (var t = 0; t < found.length; t++) {
+      var tid = found[t].getId();
+      if (!seen[tid]) { seen[tid] = true; allThreads.push(found[t]); }
+    }
+  }
   var ss = SpreadsheetApp.openById("1xuhU0KraEMxF9NAWO5MKEt23JI_V8mnNnWktzHy6q2U");
   var sheet = ss.getSheetByName("Emails");
   if (!sheet) { sheet = ss.insertSheet("Emails"); sheet.appendRow(["Date", "Sender", "Subject", "Body"]); }
   if (sheet.getLastRow() === 0) sheet.appendRow(["Date", "Sender", "Subject", "Body"]);
   var written = 0;
-  for (var i = 0; i < threads.length; i++) {
-    var msgs = threads[i].getMessages();
+  for (var i = 0; i < allThreads.length; i++) {
+    var msgs = allThreads[i].getMessages();
     for (var j = 0; j < msgs.length; j++) {
       var m = msgs[j];
       var subj = m.getSubject() || "";
-      if (!/(reservation|booking)\s+confirmed/i.test(subj)) continue;
+      var from = m.getFrom() || "";
       var body = m.getPlainBody() || m.getBody() || "";
-      // Sender forcé « Airbnb » : transféré (from = Hotmail) mais contenu Airbnb. enrich-from-emails
-      // filtre /airbnb/i (Sender|Subject) et ignore tout mail qui ne matche aucun bien.
-      sheet.appendRow([m.getDate(), "Airbnb", subj, body.slice(0, 45000)]);
+      var platform = /airbnb/i.test(from + subj + body) ? "Airbnb"
+                   : /booking\.com/i.test(from + subj + body) ? "Booking.com"
+                   : "Autre";
+      sheet.appendRow([m.getDate(), platform + " <" + from + ">", subj, body.slice(0, 45000)]);
       written++;
     }
-    threads[i].addLabel(label);
+    allThreads[i].addLabel(label);
   }
-  return { ok: true, threads: threads.length, written: written };
+  return { ok: true, threads: allThreads.length, written: written };
+}
+
+// Diagnostic : retourne les 10 derniers emails Airbnb trouvés dans Gmail (sans écrire, sans labelliser)
+function debugGmailSearch_() {
+  try {
+    var results = [];
+    var queries = [
+      'from:(airbnb.com) newer_than:90d',
+      'subject:(airbnb OR réservation OR reservation OR booking) newer_than:30d',
+    ];
+    var seen = {};
+    for (var q = 0; q < queries.length; q++) {
+      var threads = GmailApp.search(queries[q], 0, 10);
+      for (var t = 0; t < threads.length; t++) {
+        var tid = threads[t].getId();
+        if (seen[tid]) continue;
+        seen[tid] = true;
+        var msg = threads[t].getMessages()[0];
+        results.push({ from: msg.getFrom(), subject: msg.getSubject(), date: String(msg.getDate()) });
+      }
+    }
+    return json_({ ok: true, found: results.length, emails: results.slice(0, 10) });
+  } catch(e) {
+    return json_({ ok: false, error: e.message, stack: e.stack });
+  }
 }
 
 // À exécuter UNE fois depuis l'éditeur Apps Script : autorise le scope Gmail (lecture) et crée le
@@ -154,6 +191,7 @@ function doGet(e) {
   if (action === "fetchIcal") return fetchIcal_(e.parameter);
   if (action === "syncReservations") return syncReservations_(e.parameter);
   if (action === "importAllReservations") return importAllReservations_(e.parameter);
+  if (action === "updateContactsById") return updateContactsById_(e.parameter);
   if (action === "revenus2026DryRun") return json_({ ok: true, preview: testRevenus2026_dryRun() });
   if (action === "revenus2026Setup")  return json_(setupRevenus2026());
   if (action === "revenus2026Sync")   return json_(syncRevenus2026());
@@ -167,6 +205,12 @@ function doGet(e) {
   if (action === "readEmails")   return readEmails_(e.parameter);
   if (action === "ingestAirbnbEmails") return json_(ingestAirbnbEmails_());
   if (action === "setupAirbnbIngest")  return json_(setupAirbnbIngest());
+  if (action === "debugGmailSearch")   return debugGmailSearch_();
+  if (action === "enrichReservation")  return enrichReservation_(e.parameter);
+  if (action === "revenus2026FromMonth") return json_(revenus2026FromMonth_(parseInt(e.parameter.month||7), e.parameter.apply==="true", e.parameter.ignoreMemo==="true"));
+  if (action === "revenus2026Inspect")   return json_(revenusInspect2026_()); // eslint-disable-line no-undef
+  if (action === "revenus2026Rebuild")   return json_(rebuildRevenus2026_(e.parameter.apply==="true", parseInt(e.parameter.fromMonth||4))); // eslint-disable-line no-undef
+  if (action === "cleanSlate2026")       return json_(cleanSlate2026_()); // eslint-disable-line no-undef
 
   return json_({ error: "action inconnue: " + action });
 }
@@ -177,7 +221,8 @@ function doPost(e) {
   try { body = JSON.parse(e.postData.contents); } catch(err) { return json_({ error: "JSON invalide" }); }
 
   var action = body.action || "";
-  if (action === "importAllReservations") return importAllReservations_(body.reservations || []);
+  if (action === "importAllReservations") return importAllReservations_(body.reservations || [], !!body.skipRevenueSync);
+  if (action === "cleanSlate2026")       return json_(cleanSlate2026_()); // eslint-disable-line no-undef
   if (action === "setConfig")             return setConfig_(body);
   if (action === "read")                  return readAll_();
   if (action === "readEmails")            return readEmails_(body);
@@ -569,10 +614,44 @@ function dedupKey_(bienId, checkin, checkout) {
   return String(bienId || "").toLowerCase().trim() + "|" + normDate_(checkin) + "|" + normDate_(checkout);
 }
 
+// ── ENRICHISSEMENT CONTACTS (Téléphone + Email) par ID de résa ──────────────
+// Reçoit via GET chunks : ?action=updateContactsById&data=[{"id":"...","tel":"...","email":"..."}]
+// Met à jour les colonnes 14 (Téléphone) et 15 (Email) pour chaque ID trouvé.
+function updateContactsById_(params) {
+  var raw;
+  try { raw = JSON.parse(params.data || "[]"); }
+  catch(e) { return json_({ error: "JSON invalide: " + e.message }); }
+  if (!Array.isArray(raw) || raw.length === 0) return json_({ ok: true, updated: 0 });
+
+  var ss    = SpreadsheetApp.openById("1xuhU0KraEMxF9NAWO5MKEt23JI_V8mnNnWktzHy6q2U");
+  var sheet = ss.getSheetByName("Toutes les Réservations");
+  if (!sheet) return json_({ error: "Onglet introuvable" });
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return json_({ ok: true, updated: 0 });
+
+  // Index ID → numéro de ligne
+  var ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+  var idToRow = {};
+  ids.forEach(function(r, i) { if (r[0]) idToRow[String(r[0])] = i + 2; });
+
+  var updated = 0;
+  raw.forEach(function(item) {
+    var rowNum = idToRow[String(item.id || "")];
+    if (!rowNum) return;
+    // Col 14 = Téléphone, Col 15 = Email (seulement si non vide)
+    if (item.tel)   sheet.getRange(rowNum, 14).setValue(item.tel);
+    if (item.email) sheet.getRange(rowNum, 15).setValue(item.email);
+    updated++;
+  });
+
+  return json_({ ok: true, updated: updated, total: raw.length });
+}
+
 function importAllReservations_(input) {
   // Accepte :
   //   – un tableau direct (appel interne)
-  //   – un objet params GET { data: "[{...}]" } (via doGet → chunks Cloudflare)
+  //   – un objet params GET { data: "[{...}]" } (via doGet → chunks)
   var reservations;
   if (Array.isArray(input)) {
     reservations = input;
@@ -703,12 +782,5 @@ function importAllReservations_(input) {
     );
   }
 
-  // ── Auto-remplissage revenus locatif (montant tous canaux + nb résa + nuits) ──
-  // Applique uniquement les NOUVELLES résas (le journal/baseline protège l'existant
-  // → jamais de double-comptage). Temps réel : webhook Beds24, sync horaire iCal, 📊.
-  var rev2026 = null, rev2027 = null;
-  try { rev2026 = syncRevenus2026(); } catch (eRev) { rev2026 = { error: String(eRev) }; }
-  try { rev2027 = syncRevenus2027(); } catch (eRev) { rev2027 = { error: String(eRev) }; }
-
-  return json_({ ok: true, added: added, updated: updated, total: reservations.length, rev2026: rev2026, rev2027: rev2027 });
+  return json_({ ok: true, added: added, updated: updated, total: reservations.length });
 }

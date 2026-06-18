@@ -2086,6 +2086,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
             bienId: bien.id, checkin, checkout,
             voyageur: `${form.prenom} ${form.nom}`, email: form.email,
             prenom: form.prenom?.trim() || "", nom: form.nom?.trim() || "", phone: form.tel?.trim() || "",
+            nb_guests: String(nbGuests || 1), nb_pets: String(nbPets || 0),
             ...(upsellsStr ? { upsells: upsellsStr } : {}),
             ...(isTwoX ? {
               balance_amount: String(balanceAmount(total)),

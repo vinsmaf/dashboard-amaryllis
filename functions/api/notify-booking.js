@@ -36,6 +36,8 @@ const DDL = `CREATE TABLE IF NOT EXISTS direct_bookings (
   prenom     TEXT,
   email      TEXT,
   phone      TEXT,
+  nb_guests  INTEGER DEFAULT 1,
+  nb_pets    INTEGER DEFAULT 0,
   total      INTEGER,
   depot      INTEGER,
   checkin    TEXT,
@@ -100,11 +102,12 @@ export async function onRequest(context) {
   }
 
   const body = await request.json().catch(() => ({}));
-  const { paymentIntentId, bienId = "", bienNom = "?", voyageur = "", total = 0, checkin = "", checkout = "", depot = 0, email = "", phone = "" } = body;
+  const { paymentIntentId, bienId = "", bienNom = "?", voyageur = "", total = 0, checkin = "", checkout = "", depot = 0, email = "", phone = "", nb_guests = "1", nb_pets = "0" } = body;
 
   // ── 1. Vérification anti-spam : le paiement existe-t-il vraiment et est-il réussi ? ──
   const sk = env.STRIPE_SECRET_KEY;
   if (!paymentIntentId || !sk) return json({ error: "paymentIntentId requis" }, 400, request);
+  let fullTotal = total;
   try {
     const r = await fetch(`https://api.stripe.com/v1/payment_intents/${encodeURIComponent(paymentIntentId)}`, {
       headers: { Authorization: `Bearer ${sk}` },
@@ -113,6 +116,8 @@ export async function onRequest(context) {
     if (!r.ok || pi.status !== "succeeded") {
       return json({ error: "Paiement non confirmé", status: pi.status || "unknown" }, 402, request);
     }
+    // Paiement 2x : full_total dans les metadata Stripe = source de vérité si body manquant
+    if (!fullTotal && pi.metadata?.full_total) fullTotal = parseFloat(pi.metadata.full_total) || 0;
   } catch (e) {
     return json({ error: "Vérification Stripe échouée: " + e.message }, 502, request);
   }
@@ -122,8 +127,10 @@ export async function onRequest(context) {
   if (db) {
     try {
       await db.prepare(DDL).run();
-      // Migration idempotente : ajoute phone à la table live créée avant ce champ (RM-10).
-      try { await db.prepare(`ALTER TABLE direct_bookings ADD COLUMN phone TEXT`).run(); } catch { /* colonne déjà présente */ }
+      // Migrations idempotentes sur table live créée avant certains champs.
+      try { await db.prepare(`ALTER TABLE direct_bookings ADD COLUMN phone TEXT`).run(); } catch { /* déjà présente */ }
+      try { await db.prepare(`ALTER TABLE direct_bookings ADD COLUMN nb_guests INTEGER DEFAULT 1`).run(); } catch { /* déjà présente */ }
+      try { await db.prepare(`ALTER TABLE direct_bookings ADD COLUMN nb_pets INTEGER DEFAULT 0`).run(); } catch { /* déjà présente */ }
       const exists = await db.prepare("SELECT 1 FROM direct_bookings WHERE payment_intent_id = ?").bind(paymentIntentId).first();
       if (exists) return json({ ok: true, already: true }, 200, request);
       // Inclut bien_id + email pour que get-availability bloque bien les dates au site public,
@@ -132,21 +139,21 @@ export async function onRequest(context) {
       // host_notified=1 dès l'insert : ce flux envoie l'alerte hôte juste après (lignes ci-dessous).
       // Le webhook stripe (notifyHostOnce) verra host_notified=1 → ne re-notifiera pas (dédup).
       await db.prepare(
-        "INSERT INTO direct_bookings (payment_intent_id, bien_id, bien_nom, voyageur, prenom, email, phone, total, depot, checkin, checkout, host_notified) VALUES (?,?,?,?,?,?,?,?,?,?,?,1)"
-      ).bind(paymentIntentId, bienId || null, bienNom, voyageur, prenom, email || null, String(phone || "").trim() || null, Math.round(total), Math.round(depot), checkin, checkout).run();
+        "INSERT INTO direct_bookings (payment_intent_id, bien_id, bien_nom, voyageur, prenom, email, phone, nb_guests, nb_pets, total, depot, checkin, checkout, host_notified) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,1)"
+      ).bind(paymentIntentId, bienId || null, bienNom, voyageur, prenom, email || null, String(phone || "").trim() || null, parseInt(nb_guests, 10) || 1, parseInt(nb_pets, 10) || 0, Math.round(fullTotal), Math.round(depot), checkin, checkout).run();
     } catch { /* non bloquant */ }
   }
 
   // ── 3. Notifications ──
   const titre = `🎉 NOUVELLE RÉSA — ${bienNom}`;
-  const ligne = `${voyageur || "Voyageur"} · ${fmtDate(checkin)} → ${fmtDate(checkout)} · ${total} €${depot ? ` (caution ${depot}€)` : ""}`;
+  const ligne = `${voyageur || "Voyageur"} · ${fmtDate(checkin)} → ${fmtDate(checkout)} · ${fullTotal} €${depot ? ` (caution ${depot}€)` : ""}`;
   const html = `<div style="font-family:Georgia,serif;color:#2b2b2b;line-height:1.7">
     <h2 style="color:#0e3b3a">🎉 Nouvelle réservation directe</h2>
     <p style="font-size:16px"><strong>${bienNom}</strong></p>
     <table style="font-size:15px;border-collapse:collapse">
       <tr><td style="padding:3px 16px 3px 0">Voyageur</td><td><strong>${voyageur || "—"}</strong></td></tr>
       <tr><td style="padding:3px 16px 3px 0">Dates</td><td>${fmtDate(checkin)} → ${fmtDate(checkout)}</td></tr>
-      <tr><td style="padding:3px 16px 3px 0">Montant payé</td><td><strong>${total} €</strong></td></tr>
+      <tr><td style="padding:3px 16px 3px 0">Montant payé</td><td><strong>${fullTotal} €</strong></td></tr>
       ${depot ? `<tr><td style="padding:3px 16px 3px 0">Caution</td><td>${depot} € (pré-autorisée)</td></tr>` : ""}
     </table>
     <p style="font-size:14px;color:#0e7a5a;margin-top:16px">✅ Dates bloquées automatiquement sur Airbnb + Booking (sync iCal).</p>

@@ -25,6 +25,11 @@ var RESA_SHEET = "r\u00e9servations";            // saisies directes du Planning
 var DST_SHEET = "revenus locatif 2026";
 var MEMO_SHEET = "rev2026_traites";          // memoire des IDs deja appliques (onglet cache)
 
+// Mois à partir duquel le sync AUTO est autorisé (jan-mai = saisi manuellement par Vincent).
+// syncRevenus2026() ne touchera JAMAIS une résa avec arrivée < MIN_AUTO_MONTH.
+// Seules revenus2026FromMonth_ et rebuildRevenus2026_ peuvent opérer sur les mois antérieurs.
+var MIN_AUTO_MONTH = 6;
+
 // Mapping colonnes par onglet (index 0-based) ; statut:-1 = colonne absente
 // "Toutes les R\u00e9servations" : A=ID B=Propriete C=Voyageur D=Canal E=Arrivee F=Depart G=Nuits H=Montant I=Statut K=Notes
 var COL_TOUTES = { id:0, prop:1, voy:2, canal:3, arrivee:4, depart:5, montant:7, statut:8, notes:10, ncols:11 };
@@ -95,6 +100,7 @@ function appendCell_(sheet, row, col, delta) {
 }
 function isBlocage_(voy, statut, notes) {
   voy = String(voy || "").toLowerCase(); statut = String(statut || "").toLowerCase(); notes = String(notes || "").toLowerCase();
+  if (statut === "confirmé" || statut === "confirmed") return false;
   return statut.indexOf("bloqu") >= 0 || statut.indexOf("closed") >= 0 ||
          voy.indexOf("not available") >= 0 || voy.indexOf("indisponible") >= 0 ||
          notes.indexOf("closed") >= 0 || notes.indexOf("not available") >= 0;
@@ -186,11 +192,16 @@ function contentKeyRow_(row, C) {
 }
 
 // Scanne un onglet : applique les resas non encore traitees (ou les liste si dryRun)
-function scanSheet_(ss, name, C, dst, processed, newIds, dryRun, preview) {
+function scanSheet_(ss, name, C, dst, processed, newIds, dryRun, preview, minMonth) {
   var sh = ss.getSheetByName(name); if (!sh) return;
   var last = sh.getLastRow(); if (last < 2) return;
   var rows = sh.getRange(2, 1, last - 1, C.ncols).getValues();
   rows.forEach(function(row) {
+    // Borne inférieure de mois : jamais toucher les mois gérés manuellement
+    if (minMonth) {
+      var a = toNoonUTC_(row[C.arrivee]);
+      if (!a || a.getUTCFullYear() !== 2026 || (a.getUTCMonth() + 1) < minMonth) return;
+    }
     var id = String(row[C.id] || "");
     var ck = contentKeyRow_(row, C);
     if ((!id && !ck) || processed[id] || processed[ck]) return; // dedup par id OU clé-contenu
@@ -202,14 +213,15 @@ function scanSheet_(ss, name, C, dst, processed, newIds, dryRun, preview) {
   });
 }
 
-//  Fonction recurrente (cible du trigger 15 min) 
+//  Fonction recurrente (cible du trigger 15 min)
 function syncRevenus2026() {
   var ss = SpreadsheetApp.openById(SHEET_ID);
   var dst = ss.getSheetByName(DST_SHEET); if (!dst) return;
   var memo = getMemoSheet_(ss), processed = readProcessed_(memo);
   var newIds = [];
-  scanSheet_(ss, SRC_SHEET,  COL_TOUTES, dst, processed, newIds, false, null);
-  scanSheet_(ss, RESA_SHEET, COL_RESA,   dst, processed, newIds, false, null);
+  // MIN_AUTO_MONTH = 6 : jan-mai gérés manuellement par Vincent → jamais touchés ici
+  scanSheet_(ss, SRC_SHEET,  COL_TOUTES, dst, processed, newIds, false, null, MIN_AUTO_MONTH);
+  scanSheet_(ss, RESA_SHEET, COL_RESA,   dst, processed, newIds, false, null, MIN_AUTO_MONTH);
   appendProcessed_(memo, newIds);
   return { applied: newIds.length };
 }
@@ -434,4 +446,18 @@ function rebuildRevenus2026_(apply, fromMonth) {
   var after = dst.getRange(6, startCol, 1, nCols).getValues()[0];
   return { ok:true, mode:"applied", fromMonth:fromMonth, rowsZeroed:dataRows.length,
            appliedBookings:applied, nogentTotalBefore:before, nogentTotalAfter:after };
+}
+
+// ── RESET MEMO + RE-BASELINE (à appeler après une restauration manuelle des cellules) ──
+// 1) Vide le memo (rev2026_traites) pour repartir de zéro
+// 2) Marque TOUTES les réservations actuelles comme "déjà traitées" dans le memo
+// 3) Réinstalle le trigger 15 min
+// → Après ça, syncRevenus2026() ne touchera QUE les NOUVELLES résas (et jamais jan-mai).
+// Appelé via doGet ?action=cleanSlate2026 ou depuis l'éditeur GAS.
+function cleanSlate2026_() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var memo = getMemoSheet_(ss);
+  var last = memo.getLastRow();
+  if (last > 1) memo.getRange(2, 1, last - 1, 1).clearContent();
+  return setupRevenus2026();
 }
