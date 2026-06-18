@@ -1,6 +1,7 @@
 // Cloudflare Pages Function — /api/rm-recommendations
 // CRUD + full pricing engine for Revenue Manager recommendations
 import { occupancyAdjustment } from "../../../src/utils/rmOccupancyAdjust.js";
+import { BIENS } from "../../../src/data/biens.js";
 
 const CORS = {
   "Content-Type": "application/json",
@@ -265,9 +266,10 @@ export function calcDateReco({
   const effectiveMinStay = overrideMinStay !== null ? overrideMinStay : minStay;
 
   // Clamp to [price_min, price_max]
-  // Garde-fou : le plancher ne peut jamais descendre sous base_price_low (prix basse saison).
-  // Un price_min mal configuré (trop bas) ne doit pas permettre des recos sous le plancher saisonnier.
-  const hardFloor = Math.max(property.price_min || 0, property.base_price_low || 0);
+  // Plancher à 3 couches : price_min D1 ≥ base_price_low D1 ≥ prix affiché sur le site (biens.js).
+  // Garantit que le RM ne recommande jamais sous le "dès X€/nuit" affiché aux clients.
+  const siteMinCents = (BIENS[property.id]?.prix || 0) * 100;
+  const hardFloor = Math.max(property.price_min || 0, property.base_price_low || 0, siteMinCents);
   const clampedPrice = Math.max(hardFloor, Math.min(property.price_max || Infinity, effectivePrice));
 
   // 10. Confidence score

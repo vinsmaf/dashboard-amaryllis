@@ -332,8 +332,8 @@ async function runSeed(db) {
     ["geko", "Geko", "Géko", "court", 4, 2, 1, "Sainte-Luce, Martinique", 14.467, -60.92, "EUR", "America/Martinique", 12000, 18000, 22000, 12000, 40000, 3, 2, 3, 4, 2, "standard", null, 1, now, now],
     ["mabouya", "Mabouya", "Mabouya", "court", 3, 1, 1, "Sainte-Luce, Martinique", 14.466, -60.921, "EUR", "America/Martinique", 7000, 9000, 11000, 7000, 18000, 2, 2, 2, 3, 1, "standard", null, 1, now, now],
     ["iguana", "Villa Iguana", "Iguana", "long", 4, 2, 1, "Sainte-Luce, Martinique", 14.465, -60.922, "EUR", "America/Martinique", 60000, 60000, 60000, 50000, 75000, 30, 30, 30, 30, 30, "standard", null, 1, now, now],
-    ["schoelcher", "T2 Schoelcher", "Schoelcher", "moyen", 4, 2, 1, "Schoelcher, Martinique", 14.617, -61.093, "EUR", "America/Martinique", 7000, 9000, 11000, 7000, 18000, 3, 2, 3, 5, 2, "standard", null, 1, now, now],
-    ["nogent", "T2 Nogent", "Nogent", "court", 4, 2, 1, "Nogent-sur-Marne, Île-de-France", 48.836, 2.483, "EUR", "Europe/Paris", 8000, 10000, 13000, 8000, 22000, 1, 1, 2, 3, 1, "standard", null, 1, now, now],
+    ["schoelcher", "T2 Schoelcher", "Schoelcher", "moyen", 4, 2, 1, "Schoelcher, Martinique", 14.617, -61.093, "EUR", "America/Martinique", 9000, 9000, 11000, 9000, 18000, 3, 2, 3, 5, 2, "standard", null, 1, now, now],
+    ["nogent", "T2 Nogent", "Nogent", "court", 4, 2, 1, "Nogent-sur-Marne, Île-de-France", 48.836, 2.483, "EUR", "Europe/Paris", 9000, 10000, 13000, 9000, 22000, 1, 1, 2, 3, 1, "standard", null, 1, now, now],
   ];
 
   const propSQL = `INSERT OR IGNORE INTO rm_properties VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`;
