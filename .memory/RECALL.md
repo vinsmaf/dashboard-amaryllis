@@ -6,6 +6,7 @@
 
 | Quand tu touches… | RAPPELLE-TOI (sinon ça casse) | Réf |
 |---|---|---|
+| **La structure du système** (ajout/déplacement d'une route, page, API function, table, cron, intégration, flux) | Lire d'abord `.memory/ARCHITECTURE.md` (carte vivante : schémas Mermaid, inventaire D1, table des crons). **La mettre à jour à la clôture** (cloture-session §4a) — un nouveau `functions/api/X.js` ou cron absent du doc = oubli. | ARCHITECTURE.md |
 | **Un fait de bien** (prix/capacité/nom/coord/SEO) | `src/data/biens.js` = **source unique** (4 consommateurs : `functions/[slug].js`, `prerender.mjs`, `_biens.js`, `PublicSite.jsx`). Ne jamais coder un fait en dur ailleurs. | LEARNINGS |
 | **Nomenclature** | Seuls **Amaryllis & Iguana = « villas »** · **Iguana `bookable:false`** (bail long). | CLAUDE.md |
 | **Logique métier** (pricing/occupancy/resaDedup/coherenceRules/rmOccupancyAdjust) | **Répercuter le MIROIR** GAS (`appscript/*.gs`) **ET** Worker (`workers/ical-sync`) — ils ne peuvent pas importer de module Node → **drift silencieux non testé** si oublié. | LEARNINGS · BLOCKERS |

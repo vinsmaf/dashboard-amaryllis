@@ -9,6 +9,7 @@
 | Fichier | Rôle | Quand le lire |
 |---|---|---|
 | **[CONTEXT.md](./CONTEXT.md)** | État courant condensé (chiffres frais, où on en est) | **Toujours, en 1er** |
+| **[ARCHITECTURE.md](./ARCHITECTURE.md)** | 🗺️ Carte VIVANTE du système (site public + admin + backend + RM + IA + D1, 2 schémas Mermaid, table des crons). Tenue à jour à chaque `/cloture-session` (§4a). | **Pour comprendre l'ensemble / avant de toucher la structure** |
 | **[ADR.md](./ADR.md)** | Décisions structurantes datées (5 lignes : choix / alternatives / conséquences / périmètre / statut) | Avant de toucher l'archi/les données |
 | **[LEARNINGS.md](./LEARNINGS.md)** | Enseignements réutilisables (pièges déjà rencontrés) | Avant d'agir sur un sujet à risque |
 | **[BLOCKERS.md](./BLOCKERS.md)** | Frictions / dettes / points bloquants + statut | Pour savoir ce qui attend quoi/qui |

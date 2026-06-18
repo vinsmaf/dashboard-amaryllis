@@ -2,6 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+> 🗺️ **CARTE VIVANTE DU SYSTÈME → [`.memory/ARCHITECTURE.md`](./.memory/ARCHITECTURE.md)** (site public + admin + backend + RM + IA + D1, 2 schémas Mermaid, inventaire D1, table des crons). À lire pour comprendre l'ensemble ; tenue à jour à chaque `/cloture-session`.
 > 📌 **Mémoire long terme du projet → lire `PROJECT_MEMORY.md`** (état, décisions, secrets, crons cron-job.org + Worker, Place IDs GBP, système d'agents IA + RAG, contraintes de Vincent, backlog). Ce fichier-ci (`CLAUDE.md`) = référence **architecture/technique**.
 > 🚨 **Lire aussi `docs/ERREURS-LOG.md`** (journal des erreurs déjà commises + garde-fous) — pour ne pas les reproduire. **Y ajouter une entrée à chaque nouvelle erreur.**
 
