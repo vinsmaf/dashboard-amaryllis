@@ -999,12 +999,15 @@ export default function App() {
   const [rapportMois, setRapportMois] = useState(() => new Date().getMonth());
   const [ntfyTopic, setNtfyTopic] = useState(() => localStorage.getItem("ntfy_topic") || "");
   const [hist, setHist] = useState(() => {
+    // 2022-2025 = années clôturées et immuables → HIST_SEED fait foi (jamais écrasé).
+    // On ne récupère du cache QUE l'année courante (reconstruite dynamiquement au sync).
+    // Clé bumpée v1→v2 pour purger le cache pollué par l'ancien readHist_ (lignes total/cumul).
+    const cy = new Date().getFullYear();
     try {
-      const cached = localStorage.getItem("hist_v1");
+      const cached = localStorage.getItem("hist_v2");
       if (cached) {
         const parsed = JSON.parse(cached);
-        // Fusionner avec HIST_SEED pour garantir toutes les années
-        return { ...HIST_SEED, ...parsed };
+        return { ...HIST_SEED, ...(parsed[cy] ? { [cy]: parsed[cy] } : {}) };
       }
     } catch {}
     return HIST_SEED;
@@ -1089,13 +1092,15 @@ export default function App() {
           f.biens.reduce((s, b) => s + (b.revenus[m] || 0), 0)
         ),
       };
-      setHist(prev => {
+      setHist(() => {
+        // HIST_SEED autoritaire pour les années passées (readHist_ GAS lit des lignes
+        // total/cumul sur les onglets historiques → valeurs fausses, on ne le merge plus).
+        // Seule l'année courante est dynamique (reconstruite depuis les biens).
         const next = {
-          ...prev,
-          ...(f.hist && Object.keys(f.hist).length > 0 ? f.hist : {}),
+          ...HIST_SEED,
           [currentYear]: currentYearData,
         };
-        try { localStorage.setItem("hist_v1", JSON.stringify(next)); } catch {}
+        try { localStorage.setItem("hist_v2", JSON.stringify(next)); } catch {}
         return next;
       });
       // ── Restaurer les réservations manquantes depuis Sheets ──────
