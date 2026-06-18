@@ -1868,7 +1868,7 @@ function generateDevis({ bien, checkin, checkout, nights, rawTotal, discountRate
 
   ${depositAmt > 0 ? `<div class="deposit-box">
     <div class="dep-title">🔒 Dépôt de garantie — ${depositAmt}€</div>
-    <div class="dep-desc">Ce montant sera pré-autorisé sur votre carte bancaire au moment de la réservation. Il ne sera pas débité et sera libéré automatiquement après votre départ si aucun dommage n'est constaté.</div>
+    <div class="dep-desc">Ce montant sera pré-autorisé sur votre carte bancaire avant votre séjour (à la réservation, ou quelques jours avant l'arrivée). Il ne sera pas débité et sera libéré automatiquement après votre départ si aucun dommage n'est constaté.</div>
   </div>` : ""}
 
   <div class="validity-box">
@@ -2719,7 +2719,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
             </div>
             {depositAmt > 0 && (
               <div style={{ background: "rgba(16,185,129,0.10)", border: "1px solid rgba(16,185,129,0.30)", borderRadius: 8, padding: "10px 12px", fontFamily: "'Jost', sans-serif", fontSize: 11, color: "#6ee7b7", display: "flex", gap: 8, alignItems: "center" }}>
-                🔒 + {depositAmt.toLocaleString("fr-FR")}€ caution pré-autorisée (jamais débitée)
+                🔒 + {depositAmt.toLocaleString("fr-FR")}€ caution pré-autorisée{cautionInline ? "" : " avant l'arrivée"} (jamais débitée)
               </div>
             )}
           </>
