@@ -89,7 +89,7 @@ describe("leadDays / isNearBooking (répartition inline vs différé)", () => {
 
 describe("decideCautionAction (machine à états poser / re-poser / libérer)", () => {
   it("constantes attendues", () => {
-    expect(REAUTH_LEAD_DAYS).toBe(1);
+    expect(REAUTH_LEAD_DAYS).toBe(2);
     expect(RELEASE_DAYS_AFTER).toBe(3);
   });
 
@@ -98,6 +98,12 @@ describe("decideCautionAction (machine à états poser / re-poser / libérer)", 
     expect(decideCautionAction({ ...base, today: "2026-07-30" })).toBe("noop");
     expect(decideCautionAction({ ...base, today: "2026-07-31" })).toBe("place"); // jour J
     expect(decideCautionAction({ ...base, today: "2026-08-01" })).toBe("place");
+  });
+
+  it("pending : ne pose PAS un hold sur un séjour déjà terminé (ligne stale)", () => {
+    // checkout 09/08, +3 = 12/08 → au 12/08 et après, on ne pose plus rien même si place_date est dépassée.
+    expect(decideCautionAction({ status: "pending", placeDate: "2026-07-31", checkout: "2026-08-09", today: "2026-08-12" })).toBe("noop");
+    expect(decideCautionAction({ status: "pending", placeDate: "2026-07-31", checkout: "2026-08-09", today: "2026-08-11" })).toBe("place"); // encore dans la fenêtre
   });
 
   it("held + hold sain + séjour en cours → rien", () => {

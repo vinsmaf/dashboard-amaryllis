@@ -2,7 +2,8 @@ import { resendFrom } from "./_email.js";
 import { sendEmail as sendEmailHelper } from "./_sendEmail.js";
 import { capiPurchase } from "./_metaCapi.js";
 import { lowAmountInfo } from "../../src/utils/priceGuard.js";
-import { cautionAmountFor, placeDateFor, isNearBooking } from "../../src/utils/caution.js";
+import { cautionAmountFor, placeDateFor, leadDays } from "../../src/utils/caution.js";
+import { ensureCautionTable, createHold } from "./_caution.js";
 // Cloudflare Pages Function — POST /api/stripe-webhook
 // Reçoit les événements Stripe et notifie l'hôte par email
 //
@@ -373,22 +374,11 @@ async function storePaymentSchedule(env, pi) {
   } catch (e) { console.error("[webhook] payment_schedule:", e.message); }
 }
 
-// DDL idempotent — échéancier des cautions (pré-autorisation off-session, re-posée glissante).
-// ⚠️ Doit rester IDENTIQUE au DDL de caution-cron.js (source canonique de la table).
-async function ensureCautionScheduleTable(db) {
-  await db.prepare(`CREATE TABLE IF NOT EXISTS caution_schedule (
-    booking_pi_id TEXT PRIMARY KEY, bien_id TEXT, bien_nom TEXT, email TEXT, prenom TEXT,
-    customer_id TEXT, payment_method_id TEXT, amount INTEGER, currency TEXT DEFAULT 'eur',
-    checkin TEXT, checkout TEXT, place_date TEXT,
-    status TEXT DEFAULT 'pending', caution_pi_id TEXT, capture_before TEXT,
-    attempts INTEGER DEFAULT 0, last_error TEXT,
-    created_at INTEGER NOT NULL DEFAULT (unixepoch()))`).run();
-}
-
-// Programme la caution d'une résa directe : caution-cron.js la posera off-session ~2 j avant l'arrivée,
-// la re-posera avant chaque expiration (couvre tout séjour), puis la libérera 3 j après le départ.
-// Nécessite une carte ENREGISTRÉE (pi.customer + pi.payment_method, posés par create-payment-intent)
-// et un montant de caution > 0 pour le bien. Fail-silent : ne casse jamais le webhook.
+// Programme la caution d'une résa directe (caution différée, tunnel unifié) : caution-cron.js la posera
+// off-session ~2 j avant l'arrivée, la re-posera avant chaque expiration (couvre tout séjour), puis la
+// libérera 3 j après le départ. Si l'arrivée est IMMINENTE (J+0/J+1), on la pose TOUT DE SUITE ici (le
+// cron quotidien serait trop lent). Nécessite une carte ENREGISTRÉE (pi.customer + pi.payment_method,
+// posés par create-payment-intent) et un montant > 0 pour le bien. Fail-silent : ne casse jamais le webhook.
 async function storeCautionSchedule(env, pi) {
   const db = env.revenue_manager;
   if (!db || !pi) return;
@@ -396,24 +386,46 @@ async function storeCautionSchedule(env, pi) {
   if (meta.type === "deposit" || meta.kind === "caution-auto") return; // jamais sur un hold/caution
   const bienId = meta.bienId || "";
   const amount = cautionAmountFor(bienId);
-  // Carte non enregistrée → impossible de poser la caution off-session plus tard : on s'abstient.
+  // Carte non enregistrée → impossible de poser la caution off-session : on s'abstient (lien manuel).
   if (!amount || !pi.customer || !pi.payment_method) return;
   const today = new Date().toISOString().slice(0, 10);
   const checkin = meta.checkin || "";
-  // Résa de dernière minute (arrivée ≤ 3 j) : la caution est prise AU PAIEMENT (inline) → on ne crée
-  // PAS de caution différée ici, sinon double. Le tunnel et le webhook se partagent par ce même seuil.
-  if (isNearBooking(checkin, today)) return;
+  const checkout = meta.checkout || "";
   const place = placeDateFor(checkin, today);
   if (!place) return; // checkin absent/invalide
   try {
-    await ensureCautionScheduleTable(db);
+    await ensureCautionTable(db);
     const prenom = String(meta.voyageur || "").trim().split(/\s+/)[0] || "";
-    await db.prepare(`INSERT INTO caution_schedule
+
+    // GARDE ATOMIQUE anti-double-hold : on INSÈRE d'abord la ligne 'pending'. La PRIMARY KEY
+    // booking_pi_id + ON CONFLICT DO NOTHING garantit qu'UNE SEULE exécution (retry/concurrence
+    // webhook) gagne l'insert → une seule posera le hold ensuite. (Le SELECT-puis-INSERT précédent
+    // laissait une fenêtre de course : 2 exécutions pouvaient poser 2 holds.)
+    const ins = await db.prepare(`INSERT INTO caution_schedule
         (booking_pi_id, bien_id, bien_nom, email, prenom, customer_id, payment_method_id, amount, currency, checkin, checkout, place_date, status)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?, 'pending')
       ON CONFLICT(booking_pi_id) DO NOTHING`)
       .bind(pi.id, bienId, NOMS[bienId] || bienId, meta.email || "", prenom, pi.customer, pi.payment_method,
-            amount, pi.currency || "eur", meta.checkin || "", meta.checkout || "", place).run();
+            amount, pi.currency || "eur", checkin, checkout, place).run();
+    if (!ins.meta || ins.meta.changes === 0) return; // déjà programmée par une autre exécution → stop
+
+    // Arrivée imminente (≤ 1 j) → pose immédiate off-session (le cron quotidien serait trop lent).
+    // On a gagné l'insert → on est seul à poser. Idempotency-Key Stripe = 2e filet (retry réseau).
+    const lead = leadDays(checkin, today);
+    if (lead !== null && lead <= 1) {
+      const row = {
+        booking_pi_id: pi.id, bien_id: bienId, prenom, email: meta.email || "",
+        customer_id: pi.customer, payment_method_id: pi.payment_method,
+        amount, currency: pi.currency || "eur", checkin, checkout,
+      };
+      const { pi: holdPi, captureBefore, error } = await createHold(env.STRIPE_SECRET_KEY, row, `caution-place-${pi.id}-${today}`);
+      if (!error && holdPi) {
+        await db.prepare(`UPDATE caution_schedule SET status='held', caution_pi_id=?, capture_before=? WHERE booking_pi_id=? AND status='pending'`)
+          .bind(holdPi.id, captureBefore, pi.id).run();
+      } else {
+        console.error("[caution] pose immédiate échouée (→ reste pending, repris par le cron):", error);
+      }
+    }
     console.log("[caution] schedule créé", pi.id, bienId, amount + "€", "pose", place);
   } catch (e) { console.error("[caution] schedule:", e.message); }
 }

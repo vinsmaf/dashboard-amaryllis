@@ -54,10 +54,11 @@ export function placeDateFor(checkin, today) {
   return target < today ? today : target;
 }
 
-// On re-pose le hold REAUTH_LEAD_DAYS jour(s) avant son expiration (re-autorisation glissante :
+// On re-pose le hold REAUTH_LEAD_DAYS jours avant son expiration (re-autorisation glissante :
 // un blocage Stripe ne dure ~7 j, on en repose un neuf avant qu'il tombe → couvre les séjours
-// de n'importe quelle durée). Pattern « reauthorization » recommandé par Stripe.
-export const REAUTH_LEAD_DAYS = 1;
+// de n'importe quelle durée). Pattern « reauthorization » recommandé par Stripe. Marge de 2 j →
+// absorbe un run de cron raté (le cron tourne 1×/j).
+export const REAUTH_LEAD_DAYS = 2;
 // Libération automatique RELEASE_DAYS_AFTER jours après le départ (cohérent CGV §5 "levée 3 j après départ").
 export const RELEASE_DAYS_AFTER = 3;
 
@@ -72,6 +73,8 @@ export function decideCautionAction({ status, placeDate, captureBefore, checkout
   if (!isISODate(today)) return "noop";
 
   if (status === "pending") {
+    // Ne jamais poser un hold sur un séjour DÉJÀ terminé (ligne pending stale / cron rattrapé tard).
+    if (isISODate(checkout) && today >= addDaysISO(checkout, RELEASE_DAYS_AFTER)) return "noop";
     return isISODate(placeDate) && today >= placeDate ? "place" : "noop";
   }
 

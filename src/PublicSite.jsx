@@ -9,7 +9,6 @@ import { Eyebrow, Display, Editorial, Button, RatingBadge, Icon, ThemeToggle, Ch
 import { Curtain } from "./Curtain.jsx";
 import { getVariant, trackConversion } from "./utils/abTest.js";
 import { depositAmount, balanceAmount, balanceDueDate, isTwoPartEligible } from "./utils/paymentPlan.js";
-import { isNearBooking } from "./utils/caution.js";
 import { getDiscount, discountLabel } from "./utils/pricing.js";
 import { mpTrack } from "./lib/metaPixel.js";
 import { ssGet, ssSet } from "./lib/safeStorage.js";
@@ -1936,19 +1935,11 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
   const [elements, setElements] = useState(null);
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState("");
-  const [depositElements, setDepositElements] = useState(null);
-  const [depositPaying, setDepositPaying] = useState(false);
-  const [depositError, setDepositError] = useState("");
   const elRef = useRef(null);
   const depositAmt = DEPOSIT_AMOUNTS[bien.id] ?? 0;
   const [payPlan, setPayPlan] = useState("full");
 
   const nights = checkin && checkout ? dateDiff(checkin, checkout) : 0;
-
-  // Caution prise AU PAIEMENT (étape inline) UNIQUEMENT si l'arrivée est proche (≤ 3 j).
-  // Sinon elle est différée : posée automatiquement ~2 j avant l'arrivée par le cron caution-cron
-  // (sur la carte enregistrée). Le webhook applique le même seuil → jamais de double caution.
-  const cautionInline = depositAmt > 0 && isNearBooking(checkin, new Date().toISOString().slice(0, 10));
 
   const [dailyPricesMap, setDailyPricesMap] = useState(() => {
     try { return loadDailyPrices()[bien.id] || {}; } catch { return {}; }
@@ -2108,41 +2099,14 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
       const data = await res.json();
       if (data.error) throw new Error(data.error);
 
-      // Deposit intent (pre-auth) — store clientSecret for use in step 4 / merci page.
-      // Seulement pour les résas PROCHES : pour les lointaines, la caution est posée plus tard par le cron.
-      if (cautionInline) {
-        const dr = await fetch("/api/create-deposit-intent", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ amount: depositAmt * 100, currency: "eur", metadata: { bienId: bien.id, checkin, checkout, voyageur: `${form.prenom} ${form.nom}`, email: form.email } }),
-        });
-        const dd = await dr.json();
-        if (!dd.error && dd.clientSecret) {
-          ssSet("deposit_cs", dd.clientSecret);
-          ssSet("deposit_amt", String(depositAmt));
-          ssSet("deposit_bien", bien.nom);
-          ssSet("deposit_checkin", checkin || "");
-          ssSet("deposit_checkout", checkout || "");
-          ssSet("deposit_voyageur", `${form.prenom} ${form.nom}`.trim());
-          ssSet("deposit_email", form.email || "");
-        }
-      }
-
+      // Caution : plus de pré-autorisation à la réservation. Elle est posée automatiquement avant
+      // l'arrivée (caution-cron, off-session sur la carte enregistrée). Cf. ADR-CAUTION-DEFERRED-001.
       const el = stripe.elements({ clientSecret: data.clientSecret, appearance: stripeAppearance });
       el.create("payment"); // mount happens in useEffect after step renders
       setElements(el);
       setStep(3);
     } catch (e) { setPayError(e.message); }
     setPaying(false);
-  }
-
-  async function goToDeposit() {
-    const cs = sessionStorage.getItem("deposit_cs");
-    if (!cs) { window.location.href = "/merci"; return; }
-    const el2 = stripe.elements({ clientSecret: cs, appearance: stripeAppearance });
-    el2.create("payment"); // mount happens in useEffect after step renders
-    setDepositElements(el2);
-    setStep(4);
   }
 
   // Mount Stripe elements after React renders the target divs
@@ -2152,13 +2116,6 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
       if (pe) pe.mount("#spe");
     }
   }, [step, elements]);
-
-  useEffect(() => {
-    if (step === 4 && depositElements) {
-      const pe = depositElements.getElement("payment");
-      if (pe) pe.mount("#spe-deposit");
-    }
-  }, [step, depositElements]);
 
   async function handlePay() {
     if (!stripe || !elements) return;
@@ -2214,36 +2171,14 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
           }),
         }).catch(() => {}); // fire-and-forget
       }
-      if (depositAmt && sessionStorage.getItem("deposit_cs")) {
-        await goToDeposit();
-      } else {
-        window.location.href = "/merci";
-      }
+      // Paiement réussi → confirmation. La caution est gérée automatiquement avant l'arrivée.
+      window.location.href = "/merci";
     }
     setPaying(false);
   }
 
-  async function handleDeposit() {
-    if (!stripe || !depositElements) return;
-    setDepositPaying(true); setDepositError("");
-    const { error } = await stripe.confirmPayment({
-      elements: depositElements,
-      confirmParams: { return_url: window.location.origin + "/merci?deposit=1" },
-      redirect: "if_required",
-    });
-    if (error) {
-      // À cette étape le séjour est DÉJÀ payé : un échec de caution ne doit JAMAIS
-      // bloquer ni inquiéter (souvent un refus ponctuel de la banque / un souci de
-      // l'autoremplissage de la carte, pas une carte « incompatible »). On rassure
-      // et on laisse finir — la caution sera reprise via un lien séparé si besoin.
-      setDepositError("__CAUTION_SOFT_FAIL__");
-    }
-    setDepositPaying(false);
-  }
-
-  const steps = cautionInline ? ["Dates", "Coordonnées", "Paiement", "Caution"] : ["Dates", "Coordonnées", "Paiement"];
-
-  const stepLabels = cautionInline ? ["Dates", "Vos infos", "Paiement", "Caution"] : ["Dates", "Vos infos", "Paiement"];
+  const steps = ["Dates", "Coordonnées", "Paiement"];
+  const stepLabels = ["Dates", "Vos infos", "Paiement"];
   const nSteps = stepLabels.length;
   const photo0 = bien.photos?.[0] || "";
 
@@ -2549,9 +2484,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
                 Paiement <em style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontWeight: 400, color: CORAL, letterSpacing: 0, textTransform: "none" }}>sécurisé</em>
               </h2>
               <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: 15, color: MUTED }}>
-                Stripe · cryptage 256-bit{depositAmt > 0 ? (cautionInline
-                  ? " · la caution est pré-autorisée à l'étape suivante, jamais débitée."
-                  : ` · une caution de ${depositAmt.toLocaleString("fr-FR")} € sera pré-autorisée ~2 jours avant votre arrivée (jamais débitée).`) : "."}
+                Stripe · cryptage 256-bit{depositAmt > 0 ? ` · une caution de ${depositAmt.toLocaleString("fr-FR")} € sera pré-autorisée ~2 jours avant votre arrivée (jamais débitée).` : "."}
               </div>
             </div>
 
@@ -2583,60 +2516,6 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
               </button>
             </div>
             {payError && <div style={errStyle}>⚠ {payError}</div>}
-          </>
-        )}
-
-        {/* ── ÉTAPE 4 — Caution ── */}
-        {step === 4 && (
-          <>
-            <div style={{ marginBottom: 26 }}>
-              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 10, letterSpacing: "0.45em", textTransform: "uppercase", color: CORAL, marginBottom: 10 }}>Dernière étape</div>
-              <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 28, letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY, margin: "0 0 6px", lineHeight: 1.1 }}>
-                Dépôt de <em style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontWeight: 400, color: CORAL, letterSpacing: 0, textTransform: "none" }}>garantie</em>
-              </h2>
-            </div>
-            <div style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.3)", borderRadius: 12, padding: "16px 20px", marginBottom: 22 }}>
-              <div style={{ fontWeight: 700, color: "#92400e", fontSize: 14, marginBottom: 6 }}>🔒 {depositAmt.toLocaleString("fr-FR")} € — jamais débité</div>
-              <div style={{ color: "#78350f", fontSize: 13, lineHeight: 1.6 }}>
-                Ce montant sera <strong>bloqué</strong> sur votre carte mais <strong>non débité</strong>. Il sera libéré automatiquement après votre départ si aucun dommage n'est constaté.
-              </div>
-            </div>
-            <div id="spe-deposit" style={{ marginBottom: 22 }} />
-            <button onClick={handleDeposit} disabled={paying || depositPaying} style={{ width: "100%", background: depositPaying ? SAND : "#d97706", color: "#fff", border: "none", padding: "15px", borderRadius: 8, fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 13, letterSpacing: "0.12em", textTransform: "uppercase", cursor: depositPaying ? "not-allowed" : "pointer", opacity: (paying || depositPaying) ? 0.6 : 1 }}>
-              {depositPaying ? "Traitement…" : `🔒 Valider la caution — ${depositAmt.toLocaleString("fr-FR")} €`}
-            </button>
-            {depositError && (
-              <div style={{ marginTop: 14, background: "rgba(16,122,120,0.06)", border: "1px solid rgba(16,122,120,0.25)", borderRadius: 10, padding: "16px 18px" }}>
-                <div style={{ fontWeight: 700, color: NAVY, fontSize: 14, marginBottom: 6 }}>
-                  ✓ Votre réservation est confirmée
-                </div>
-                <div style={{ color: "#475569", fontSize: 13, lineHeight: 1.6, marginBottom: 14 }}>
-                  Votre paiement est validé. Le blocage de la caution n'a pas pu aboutir cette fois
-                  (refus ponctuel de votre banque) — ce n'est rien : nous vous enverrons un lien
-                  pour la déposer en quelques secondes. Vous pouvez finaliser dès maintenant.
-                </div>
-                <button
-                  onClick={() => {
-                    // Alerte hôte best-effort : caution non déposée → Vincent envoie un lien séparé.
-                    fetch("/api/contact", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        nom: `${form.prenom} ${form.nom}`.trim(),
-                        email: form.email,
-                        bien: bien.nom,
-                        source: "caution-skipped",
-                        message: `⚠️ CAUTION NON DÉPOSÉE — séjour payé, blocage de caution échoué côté client.\nÀ relancer via l'onglet Cautions → « Générer lien Stripe ».\n\nVoyageur : ${form.prenom} ${form.nom}\nBien : ${bien.nom}\nDates : ${checkin} → ${checkout}\nCaution : ${depositAmt}€`,
-                      }),
-                    }).catch(() => {});
-                    window.location.href = "/merci?deposit=skipped";
-                  }}
-                  style={{ width: "100%", background: CORAL, color: "#fff", border: "none", padding: "14px", borderRadius: 8, fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", cursor: "pointer" }}
-                >
-                  Finaliser ma réservation →
-                </button>
-              </div>
-            )}
           </>
         )}
 
@@ -2719,7 +2598,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
             </div>
             {depositAmt > 0 && (
               <div style={{ background: "rgba(16,185,129,0.10)", border: "1px solid rgba(16,185,129,0.30)", borderRadius: 8, padding: "10px 12px", fontFamily: "'Jost', sans-serif", fontSize: 11, color: "#6ee7b7", display: "flex", gap: 8, alignItems: "center" }}>
-                🔒 + {depositAmt.toLocaleString("fr-FR")}€ caution pré-autorisée{cautionInline ? "" : " avant l'arrivée"} (jamais débitée)
+                🔒 + {depositAmt.toLocaleString("fr-FR")}€ caution pré-autorisée avant l'arrivée (jamais débitée)
               </div>
             )}
           </>

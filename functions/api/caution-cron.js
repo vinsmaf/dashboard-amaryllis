@@ -9,69 +9,16 @@
 // capture_method=manual au lieu d'un débit. Idempotent : l'action est décidée par decideCautionAction
 // sur l'état stocké, qui est mis à jour après chaque opération → relançable sans risque.
 import { decideCautionAction } from "../../src/utils/caution.js";
+import { ensureCautionTable, createHold, cancelHold } from "./_caution.js";
 
 const json = (d, s = 200) => new Response(JSON.stringify(d), {
   status: s, headers: { "Content-Type": "application/json" },
 });
 
-async function ensureCautionTable(db) {
-  await db.prepare(`CREATE TABLE IF NOT EXISTS caution_schedule (
-    booking_pi_id TEXT PRIMARY KEY, bien_id TEXT, bien_nom TEXT, email TEXT, prenom TEXT,
-    customer_id TEXT, payment_method_id TEXT, amount INTEGER, currency TEXT DEFAULT 'eur',
-    checkin TEXT, checkout TEXT, place_date TEXT,
-    status TEXT DEFAULT 'pending', caution_pi_id TEXT, capture_before TEXT,
-    attempts INTEGER DEFAULT 0, last_error TEXT,
-    created_at INTEGER NOT NULL DEFAULT (unixepoch()))`).run();
-}
-
 async function notifyNtfy(env, title, msg, priority = "default") {
   if (!env.NTFY_TOPIC) return;
   try {
     await fetch(`https://ntfy.sh/${env.NTFY_TOPIC}`, { method: "POST", headers: { Title: title, Priority: priority }, body: msg });
-  } catch { /* fail-silent */ }
-}
-
-// Crée une pré-autorisation (hold) off-session sur la carte enregistrée. Renvoie {pi, captureBefore} ou {error}.
-// expand=latest_charge pour lire capture_before (date d'expiration réelle du hold) en une requête.
-async function createHold(sk, r) {
-  const res = await fetch("https://api.stripe.com/v1/payment_intents", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${sk}`, "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      amount: String(Math.round(r.amount * 100)),
-      currency: r.currency || "eur",
-      customer: r.customer_id,
-      payment_method: r.payment_method_id,
-      capture_method: "manual",
-      off_session: "true",
-      confirm: "true",
-      "payment_method_options[card][request_extended_authorization]": "if_available",
-      "metadata[type]": "deposit",
-      "metadata[kind]": "caution-auto",
-      "metadata[booking_pi_id]": r.booking_pi_id,
-      "metadata[bienId]": r.bien_id || "",
-      "metadata[voyageur]": r.prenom || "",
-      "metadata[checkin]": r.checkin || "",
-      "metadata[checkout]": r.checkout || "",
-      "metadata[email]": r.email || "",
-      "expand[0]": "latest_charge",
-    }).toString(),
-  });
-  const pi = await res.json();
-  if (pi.error) return { error: pi.error.message };
-  if (pi.status !== "requires_capture") return { error: `statut inattendu: ${pi.status}` };
-  const cb = pi.latest_charge?.payment_method_details?.card?.capture_before;
-  const captureBefore = cb ? new Date(cb * 1000).toISOString().slice(0, 10) : null;
-  return { pi, captureBefore };
-}
-
-// Annule un hold (libère les fonds). Best-effort — un hold déjà expiré renvoie une erreur sans gravité.
-async function cancelHold(sk, piId) {
-  if (!piId) return;
-  try {
-    await fetch(`https://api.stripe.com/v1/payment_intents/${piId}/cancel`, {
-      method: "POST", headers: { Authorization: `Bearer ${sk}` },
-    });
   } catch { /* fail-silent */ }
 }
 
@@ -118,7 +65,9 @@ export async function onRequestGet(context) {
       }
 
       // place ou reauth : on crée un nouveau hold sur la carte enregistrée.
-      const { pi, captureBefore, error } = await createHold(sk, r);
+      // Idempotency-Key Stripe (par action + jour) : si le cron crashe entre le succès Stripe et
+      // l'UPDATE D1 puis re-tourne le même jour, Stripe renvoie le MÊME PI au lieu d'empiler un 2e hold.
+      const { pi, captureBefore, error } = await createHold(sk, r, `caution-${action}-${r.booking_pi_id}-${today}`);
       if (error) {
         failed++;
         // place : échec → on retente (attempts), puis on escalade à l'hôte. L'ancien hold (reauth)
