@@ -1139,8 +1139,8 @@ export default function App() {
                   if (!prev) {
                     currentMap.set(key, x);
                     changed = true;
-                  } else if (!prev.email || !prev.phone || !prev.nb_guests) {
-                    // Met à jour les champs contact manquants (cache localStorage périmé)
+                  } else {
+                    // D1 = source autoritaire pour les champs contact des résas directes
                     currentMap.set(key, { ...prev, email: x.email || prev.email, phone: x.phone || prev.phone, nb_guests: x.nb_guests || prev.nb_guests, nb_pets: x.nb_pets ?? prev.nb_pets });
                     changed = true;
                   }
