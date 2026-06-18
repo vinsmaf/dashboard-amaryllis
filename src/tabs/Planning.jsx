@@ -157,6 +157,9 @@ export default function Planning() {
   const [ganttBienFilter, setGanttBienFilter] = useState(null); // null = all
   const [searchQuery, setSearchQuery] = useState("");
   const [onlyDirect, setOnlyDirect] = useState(false);
+  const [listSortKey, setListSortKey] = useState("checkin");
+  const [listSortDir, setListSortDir] = useState("asc");
+  const [listYear, setListYear] = useState(String(new Date().getFullYear()));
   const [dailyPrices, setDailyPrices] = useState(loadDailyPrices);
 
   useEffect(() => {
@@ -769,10 +772,31 @@ export default function Planning() {
 
       {view === "list" && (
         <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 13, overflow: "hidden" }}>
+          {/* ── Barre filtres ── */}
           <div style={{ padding: "11px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>
-              Réservations ({filteredReservations.length}{ganttBienFilter ? ` · ${biens.find(b=>b.id===ganttBienFilter)?.nom || ganttBienFilter}` : ""})
-            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>
+                Réservations{ganttBienFilter ? ` · ${biens.find(b=>b.id===ganttBienFilter)?.nom || ganttBienFilter}` : ""}
+              </span>
+              {/* Filtre année */}
+              {(() => {
+                const years = [...new Set(filteredReservations.map(r => (r.checkin || "").slice(0,4)).filter(Boolean))].sort((a,b) => b.localeCompare(a));
+                return (
+                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                    {years.map(y => (
+                      <button key={y} onClick={() => setListYear(listYear === y ? null : y)}
+                        style={{ padding: "3px 9px", borderRadius: 6, border: `1px solid ${listYear === y ? "#0ea5e9" : "rgba(255,255,255,0.1)"}`, background: listYear === y ? "rgba(14,165,233,0.15)" : "transparent", color: listYear === y ? "#0ea5e9" : "#64748b", fontSize: 10, fontWeight: 600, cursor: "pointer" }}
+                      >{y}</button>
+                    ))}
+                    {listYear && (
+                      <button onClick={() => setListYear(null)}
+                        style={{ padding: "3px 9px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "#64748b", fontSize: 10, cursor: "pointer" }}
+                      >Toutes</button>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <input
                 type="text"
@@ -787,17 +811,15 @@ export default function Planning() {
                 title="Afficher uniquement les réservations directes"
                 style={{ padding: "5px 10px", borderRadius: 8, border: `1px solid ${onlyDirect ? "#10b981" : "rgba(255,255,255,0.12)"}`, background: onlyDirect ? "#10b981" : "transparent", color: onlyDirect ? "#06281f" : "#94a3b8", fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}
               >🟢 Directes</button>
-              <span style={{ fontSize: 10, color: "#10b981" }}>
-                {filteredReservations.filter(r => r.fromIcal).length} iCal · {filteredReservations.filter(r => !r.fromIcal).length} manuelles
-                {(() => { const n = filteredReservations.filter(needsManualFill).length; return n > 0 ? <span style={{ color: "#f59e0b", fontWeight: 700 }}> · ⚠️ {n} à compléter (nom/prix)</span> : null; })()}
-              </span>
             </div>
           </div>
+          {/* ── Tableau ── */}
           {(() => {
             const q = searchQuery.toLowerCase().trim();
-            const base = onlyDirect
+            let base = onlyDirect
               ? filteredReservations.filter(r => (r.canal || "").toLowerCase() === "direct")
               : filteredReservations;
+            if (listYear) base = base.filter(r => (r.checkin || "").startsWith(listYear));
             const listResas = q
               ? base.filter(r => {
                   const bien = biens.find(x => x.id === r.bienId);
@@ -810,50 +832,113 @@ export default function Planning() {
                     || (r.reservation_code || "").toLowerCase().includes(q);
                 })
               : base;
-            if (listResas.length === 0) return (
+
+            // Dédup : même bien + voyageur + canal avec dates qui se chevauchent → garder le + complet
+            const dedupedResas = listResas.filter(r => {
+              const key = `${r.bienId}|${(r.voyageur || "").toLowerCase()}|${r.canal}`;
+              const group = listResas.filter(s =>
+                `${s.bienId}|${(s.voyageur || "").toLowerCase()}|${s.canal}` === key
+                && s.checkin < (r.checkout || "9999") && r.checkin < (s.checkout || "9999")
+              );
+              if (group.length <= 1) return true;
+              const score = x => (Number(x.montant) || 0) * 1000 + (x.nb_guests ? 100 : 0) + (x.email ? 10 : 0);
+              const best = group.reduce((a, b) => score(a) >= score(b) ? a : b);
+              return r === best;
+            });
+
+            const toggleSort = (key) => {
+              if (listSortKey === key) setListSortDir(d => d === "asc" ? "desc" : "asc");
+              else { setListSortKey(key); setListSortDir("asc"); }
+            };
+            const sortIcon = (key) => listSortKey === key ? (listSortDir === "asc" ? " ↑" : " ↓") : "";
+
+            const sorted = [...dedupedResas].sort((a, b) => {
+              let va, vb;
+              if (listSortKey === "bien") {
+                va = biens.find(x => x.id === a.bienId)?.nom || a.bienId || "";
+                vb = biens.find(x => x.id === b.bienId)?.nom || b.bienId || "";
+              } else if (listSortKey === "canal") {
+                va = a.canal || ""; vb = b.canal || "";
+              } else if (listSortKey === "montant") {
+                va = Number(a.montant) || 0; vb = Number(b.montant) || 0;
+                return listSortDir === "asc" ? va - vb : vb - va;
+              } else {
+                va = a.checkin || ""; vb = b.checkin || "";
+              }
+              const cmp = va.localeCompare(vb);
+              return listSortDir === "asc" ? cmp : -cmp;
+            });
+
+            if (sorted.length === 0) return (
               <div style={{ padding: 20, textAlign: "center", color: "#475569", fontSize: 12 }}>
-                {q ? `Aucun résultat pour "${q}"` : `Aucune réservation${ganttBienFilter ? " pour ce bien" : ""}`}
+                {q ? `Aucun résultat pour "${q}"` : listYear ? `Aucune réservation en ${listYear}` : `Aucune réservation${ganttBienFilter ? " pour ce bien" : ""}`}
               </div>
             );
+
+            const thStyle = (key) => ({
+              padding: "8px 10px", textAlign: "left", fontSize: 9, color: listSortKey === key ? "#0ea5e9" : "#64748b",
+              fontWeight: 600, textTransform: "uppercase", cursor: "pointer", userSelect: "none", whiteSpace: "nowrap",
+            });
+
             return (
             <div style={{ overflowX: "auto" }}>
+              <div style={{ padding: "4px 16px 4px", fontSize: 10, color: "#475569" }}>
+                {sorted.length} résa{sorted.length > 1 ? "s" : ""}
+                {(() => { const n = listResas.filter(needsManualFill).length; return n > 0 ? <span style={{ color: "#f59e0b", fontWeight: 700, marginLeft: 8 }}>⚠️ {n} à compléter (nom/prix)</span> : null; })()}
+              </div>
               <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 660 }}>
                 <thead>
                   <tr style={{ background: "rgba(255,255,255,0.03)" }}>
-                    {["Bien", "Voyageur", "Canal", "Arrivée", "Heure CI", "Départ", "Heure CO", "👥", "Nuits", "✅", "🧹", ""].map(h => (
-                      <th key={h} style={{ padding: "8px 10px", textAlign: "left", fontSize: 9, color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>{h}</th>
-                    ))}
+                    <th style={thStyle("bien")} onClick={() => toggleSort("bien")}>Bien{sortIcon("bien")}</th>
+                    <th style={{ ...thStyle("voyageur"), cursor: "default", color: "#64748b" }}>Voyageur</th>
+                    <th style={thStyle("canal")} onClick={() => toggleSort("canal")}>Canal{sortIcon("canal")}</th>
+                    <th style={thStyle("checkin")} onClick={() => toggleSort("checkin")}>Arrivée{sortIcon("checkin")}</th>
+                    <th style={{ padding: "8px 10px", textAlign: "left", fontSize: 9, color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>Heure CI</th>
+                    <th style={{ padding: "8px 10px", textAlign: "left", fontSize: 9, color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>Départ</th>
+                    <th style={{ padding: "8px 10px", textAlign: "left", fontSize: 9, color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>👥</th>
+                    <th style={{ padding: "8px 10px", textAlign: "left", fontSize: 9, color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>Nuits</th>
+                    <th style={thStyle("montant")} onClick={() => toggleSort("montant")}>€{sortIcon("montant")}</th>
+                    <th style={{ padding: "8px 10px", textAlign: "left", fontSize: 9, color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>Statut</th>
+                    <th style={{ padding: "8px 10px", textAlign: "left", fontSize: 9, color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>✅</th>
+                    <th style={{ padding: "8px 10px", textAlign: "left", fontSize: 9, color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>🧹</th>
+                    <th style={{ padding: "8px 10px" }}></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {[...listResas].sort((a, b) => a.checkin.localeCompare(b.checkin)).map(r => {
+                  {sorted.map(r => {
                     const b = biens.find(x => x.id === r.bienId);
                     const isPast = r.checkout < td;
                     const isCurr = r.checkin <= td && r.checkout > td;
+                    const isFuture = r.checkin > td;
+                    const statusLabel = isCurr ? "En cours" : isFuture ? "À venir" : "Passée";
+                    const statusColor = isCurr ? "#10b981" : isFuture ? "#0ea5e9" : "#475569";
+                    const statusBg = isCurr ? "rgba(16,185,129,0.12)" : isFuture ? "rgba(14,165,233,0.1)" : "transparent";
                     return (
-                      <tr key={r.id} style={{ borderTop: "1px solid rgba(255,255,255,0.04)", opacity: isPast ? 0.4 : 1, background: isCurr ? "rgba(16,185,129,0.05)" : "transparent" }}>
-                        <td style={{ padding: "8px 10px", fontSize: 11 }}>{b?.emoji} {b?.nom}</td>
-                        <td style={{ padding: "8px 10px", color: "#e2e8f0", fontSize: 11, fontWeight: 500 }}>
+                      <tr key={r.id} style={{ borderTop: "1px solid rgba(255,255,255,0.04)", opacity: isPast ? 0.45 : 1, background: isCurr ? "rgba(16,185,129,0.04)" : "transparent" }}>
+                        <td style={{ padding: "7px 10px", fontSize: 11 }}>{b?.emoji} {b?.nom}</td>
+                        <td style={{ padding: "7px 10px", color: "#e2e8f0", fontSize: 11, fontWeight: 500 }}>
                           {r.voyageur}
-                          {r.fromIcal && <span style={{ fontSize: 8, color: CC[r.canal] || "#FF5A5F", marginLeft: 3, padding: "1px 4px", borderRadius: 4, background: CB[r.canal] || "rgba(255,90,95,0.1)" }}>{r.canal === "booking" ? "Booking" : "Airbnb"}</span>}
-                          {needsManualFill(r) && <span title="L'iCal Airbnb/Booking ne transmet ni nom ni prix — à saisir à la main" style={{ fontSize: 8, color: "#f59e0b", marginLeft: 3, padding: "1px 4px", borderRadius: 4, background: "rgba(245,158,11,0.15)", fontWeight: 700, whiteSpace: "nowrap" }}>✏️ à compléter</span>}
+                          {needsManualFill(r) && <span title="L'iCal ne transmet ni nom ni prix — à saisir à la main" style={{ fontSize: 8, color: "#f59e0b", marginLeft: 4, padding: "1px 4px", borderRadius: 4, background: "rgba(245,158,11,0.15)", fontWeight: 700, whiteSpace: "nowrap" }}>✏️</span>}
                         </td>
-                        <td style={{ padding: "8px 10px" }}>
+                        <td style={{ padding: "7px 10px" }}>
                           <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 8, background: CB[r.canal], color: CC[r.canal], fontWeight: 600 }}>{r.canal}</span>
                         </td>
-                        <td style={{ padding: "8px 10px", color: "#94a3b8", fontSize: 10, fontFamily: "var(--font-mono)" }}>{r.checkin}</td>
-                        <td style={{ padding: "8px 10px", color: "#0ea5e9", fontSize: 10, fontFamily: "var(--font-mono)" }}>{r.checkin_time || "—"}</td>
-                        <td style={{ padding: "8px 10px", color: "#94a3b8", fontSize: 10, fontFamily: "var(--font-mono)" }}>{r.checkout}</td>
-                        <td style={{ padding: "8px 10px", color: "#f59e0b", fontSize: 10, fontFamily: "var(--font-mono)" }}>{r.checkout_time || "—"}</td>
-                        <td style={{ padding: "8px 10px", color: "#64748b", fontSize: 10, textAlign: "center" }}>{r.nb_guests || "—"}</td>
-                        <td style={{ padding: "8px 10px", color: "#64748b", fontSize: 11 }}>{diffDays(r.checkin, r.checkout)}j</td>
-                        <td style={{ padding: "8px 10px", textAlign: "center" }}>
+                        <td style={{ padding: "7px 10px", color: "#94a3b8", fontSize: 10, fontFamily: "var(--font-mono)", whiteSpace: "nowrap" }}>{r.checkin}</td>
+                        <td style={{ padding: "7px 10px", color: "#0ea5e9", fontSize: 10, fontFamily: "var(--font-mono)" }}>{r.checkin_time || "—"}</td>
+                        <td style={{ padding: "7px 10px", color: "#94a3b8", fontSize: 10, fontFamily: "var(--font-mono)", whiteSpace: "nowrap" }}>{r.checkout}</td>
+                        <td style={{ padding: "7px 10px", color: "#64748b", fontSize: 10, textAlign: "center" }}>{r.nb_guests || "—"}</td>
+                        <td style={{ padding: "7px 10px", color: "#64748b", fontSize: 11 }}>{diffDays(r.checkin, r.checkout)}j</td>
+                        <td style={{ padding: "7px 10px", color: "#e2e8f0", fontSize: 10, fontWeight: 600, whiteSpace: "nowrap" }}>{r.montant ? `${Number(r.montant).toLocaleString("fr-FR")} €` : "—"}</td>
+                        <td style={{ padding: "7px 10px" }}>
+                          <span style={{ fontSize: 9, padding: "2px 7px", borderRadius: 6, background: statusBg, color: statusColor, fontWeight: 600, whiteSpace: "nowrap" }}>{statusLabel}</span>
+                        </td>
+                        <td style={{ padding: "7px 10px", textAlign: "center" }}>
                           <button onClick={() => togRes(r.id, "checkin_done")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 13, opacity: r.checkin_done ? 1 : 0.2 }}>✅</button>
                         </td>
-                        <td style={{ padding: "8px 10px", textAlign: "center" }}>
+                        <td style={{ padding: "7px 10px", textAlign: "center" }}>
                           <button onClick={() => togRes(r.id, "menage_done")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 13, opacity: r.menage_done ? 1 : 0.2 }}>🧹</button>
                         </td>
-                        <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>
+                        <td style={{ padding: "7px 10px", whiteSpace: "nowrap" }}>
                           <button onClick={() => openEdit(r)} style={{ background: "none", border: "none", cursor: "pointer", color: "#0ea5e9", fontSize: 11, marginRight: 4 }}>✎</button>
                           <button onClick={() => delRes(r.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#475569", fontSize: 11 }}>✕</button>
                         </td>
