@@ -6,37 +6,31 @@
 
 ---
 
-## En cours → ✅ terminé le 2026-06-18 (soir) — Caution UNIFIÉE différée + durcie (ADR-CAUTION-DEFERRED-001)
-- **Livré & déployé** : tunnel **100% différé** (un seul visuel 3 étapes, caution invisible pour TOUS). Carte enregistrée à la résa → `caution-cron` (Worker 9h) pose ~J-2 / re-bloque glissant / libère J+3 off-session ; **pose immédiate si arrivée ≤1 j**. Module partagé `_caution.js`. **8 correctifs argent-réel** (revue adversariale 2 rounds) : garde atomique anti-double-hold, Idempotency-Key Stripe, fallback capture_before, reauth margin 2j, garde séjour-terminé, **exclusion flux devis (anti-double)**, **checkout invalide→release (anti fonds-gelés-à-vie)**, clé 'place' anti-orphelin. **308 tests**, dry+vrai run OK.
+## 🟡 Caution off-session — suivi post-livraison (✅ déployé 2026-06-18)
 - 🟡 **1er placement off-session RÉEL non encore vu** : Anaïs 31/07 (= seul test grandeur nature ; mécanique prouvée par le solde 2×). Valider le 31/07 (AGENDA). Échec SCA → fallback ntfy + lien manuel câblé.
 - 🟡 **Résas 1× antérieures = pas de carte enregistrée** → caution rétroactive auto impossible. **François Cambier (Mabouya, arrivée 05/07)** : lien manuel ~02/07 (AGENDA), séjour 15 nuits → 2e lien possible.
-- 🟡 **Résa GROUPE = pas de caution auto** (`cautionAmountFor('groupe')=0`). Voulu pour l'instant ; si une caution groupe est souhaitée → ajouter le montant + un bienId de caution.
-- 🟡 **Edge cross-day orphelin** (clé idempotence Stripe expire à 24h) : si pose immédiate réussit côté Stripe mais l'UPDATE D1 échoue ET le cron rattrape >24h après → 2e hold possible (les 2 expirent en 7j, **aucun argent perdu**). Nice-to-have : alerte ntfy sur ligne 'held' sans checkout / orphelin. Très faible proba.
+- 🟡 **Résa GROUPE = pas de caution auto** (`cautionAmountFor('groupe')=0`). Voulu pour l'instant.
+- 🟡 **Edge cross-day orphelin** : clé idempotence Stripe expire à 24h ; si cron rattrape >24h après → 2e hold possible (les 2 expirent en 7j, **aucun argent perdu**). Très faible proba.
 
-## En cours → ✅ terminé le 2026-06-17 — Import historique complet (OTA + directes + fix Joël)
-- **Fait total** : Booking **355** (12 PDF, IDs synthétiques) + Airbnb **281** (2 comptes) + Directes **~56** (6 fichiers Rentila XLSX : Amaryllis/Géko/Mabouya/Schœlcher/Iguana/Zandoli) → **~700 résas 2022-2027** en base. Fichiers TSV : `scripts/booking-historique.tsv` · `scripts/airbnb-historique.tsv` · `scripts/direct-historique.tsv`.
-- **Fix Joël BAILLEUL** : chevauchement Ligne 1/Ligne 2 supprimé → `direct-iguana-2024-10-31` checkout = **03/11/2024** (3 nuits, avant 1er virement 04/11/2024). ADR-JOEL-OVERLAP-001.
-- **En suspens** : workflow d'analyse des ~700 résas (`wf_b3a6734a-492`, 5 analystes) **lancé mais interrompu avant la synthèse** → relançable. ⚠️ Montant **Airbnb = brut host ≠ Booking = total guest** (~15% d'écart) → CA inter-canal à manier avec prudence. **Bails longs termes** (Iguana Joël, Zandoli MAUI) gonflent le CA direct : exclure pour l'ADR/nuitée.
+## 🟡 Import historique — analyse en suspens (✅ ~700 résas importées 2026-06-17)
+- ⚠️ **Workflow d'analyse** (`wf_b3a6734a-492`, 5 analystes) **interrompu avant synthèse** → relançable. ⚠️ Airbnb = brut host ≠ Booking = total guest (~15% d'écart) → CA inter-canal à manier avec prudence. Bails longs termes (Iguana Joël, Zandoli MAUI) gonflent le CA direct.
 
 ## 🔴 Actions humaines (hors dashboard) en attente
-- **🚨 2FA Facebook** (URGENT — compte piraté 2026-06-17) : `accountscenter.facebook.com/password_and_security/two_factor` → saisir code Gmail → activer appli d'authentification. Non fait = récidive assurée.
-- **C2 MOFU Retargeting** : à recréer de zéro avec visuels Amaryllis légitimes (l'ancienne C2 était entièrement frauduleuse, supprimée). Advisory : vérifier d'abord que `purchase` remonte dans GA4/Meta avant d'optimiser sur cette conversion (AGENDA 2026-06-28).
-- **Remboursement dépenses frauduleuses** : contacter Meta Business Support (`business.facebook.com/ads/contact`) — Meta rembourse souvent dans ces cas. Montant estimé : quelques dizaines d'€ max (campagnes récentes).
-- **Déclarations meublé de tourisme** (🔴 urgent, jusqu'à 12 500€ d'enjeu) — Vincent, voir `docs/legal/plan-action-declarations.md`. Prérequis aux citations OT/CMT.
-- **Bot WA + Bot social — Business Verification Meta** : 🟡 SOUMISE le 2026-06-17, en attente validation (1-5 jours ouvrés). Email Meta attendu. Débloque : (1) App Review bot social + (2) vrai numéro WA + (3) token permanent. Dossier `docs/marketing/social-bot-app-review.md`.
-- **Post-BV (dès validation email)** : (1) ajouter vrai numéro WA → WhatsApp Manager → Phone numbers · (2) créer System User token permanent dans Business Manager · (3) soumettre App Review.
+- 🟡 **"Businesss Meta" (ID 111553584645188)** — partenaire frauduleux encore dans Business Manager. Supprimer le **2026-06-20** (AGENDA). Path : Settings → Partners → « ... » → « Remove from business portfolio ».
+- 🟡 **Carte Amex ···· 1000 à retirer** de Meta après que le solde pending €3.33 soit réglé (~2026-06-21, AGENDA).
+- **C2 MOFU Retargeting** : à recréer de zéro. Vérifier d'abord que `purchase` remonte dans GA4/Meta (AGENDA 2026-06-28).
+- 🟡 **Remboursement dépenses frauduleuses** : Meta Business Support — Meta rembourse parfois. Période hack Jun 15-18 = ~€33. Jun 7-11 = légitime.
+- **Déclarations meublé de tourisme** (🔴 urgent, jusqu'à 12 500€) — voir `docs/legal/plan-action-declarations.md`. Prérequis aux citations OT/CMT.
+- **Bot WA + Bot social — Business Verification Meta** : 🟡 SOUMISE 2026-06-17, en attente (1-5 jours ouvrés). Débloque : App Review + vrai numéro WA + token permanent.
+- **Post-BV** : (1) vrai numéro WA · (2) System User token permanent · (3) App Review.
 - **Crédit Beds24** à vérifier ; **prospection netlinking** à envoyer.
 
-## ✅ 2026-06-17 — Bot WhatsApp test mode LIVE
-- App "Amaryllis Conciergerie" (ID `1783600126154478`) · WABA `982907091270661` · test number `+1 555 006 0804`.
-- Secrets CF posés + redeploy · webhook vérifié · subscription `messages` activée · recipient `+33 6 10 88 07 72` · test validé par Vincent.
-
-## En cours → ✅ terminé le 2026-06-16 — CSP fix (workers.dev+ntfy.sh) + null-guards toFixed() + paiement 2× confirmé LIVE
-- ⏳ **Débloqués, à coder dans `calcDateReco`** (advisory, Vincent valide) : **RM-01** (uplift scarcity par capacité/positionnement), **RM-02** (filtre saison sur règles lead-time, nécessite re-seed), **RM-04** (gap orphelin 1 nuit + min-stay).
-- ⛔ **Attendent input Vincent** : **RM-06** (connecter Google Search Console = credentials) · **RM-08** (dépense pub réelle Google/Meta pour CAC) · **RM-11** (code parrainage qui crédite via stripe-webhook = argent LIVE, + montant récompense) · **RM-23** (destinataire ménage par bien Martinique) · **RM-24** (arbitrage ROI : volume litiges caution réels d'abord).
-- ⚠️ **Modif NON committée pré-existante** : `src/components/tabs/TabTrading.jsx` (projection div/mois+an, colonne SAF/GRW) — PAS de cette session, dans l'arbre avant. Vincent décide : committer ou `git checkout`.
-- ⏳ **Reste antérieur** (non bloquant) : **RM-03 NET RevPAR** (NET par bien×canal dans `runOccupancySnapshot` — gros morceau, homonyme distinct du RM-03 moteurs morts). Détail : `docs/AUDIT-PLAYBOOK-PROGRES.md`.
-- ℹ️ Push trading launchd passé 5min→60min (KV diet, écritures partagées entre les 2 projets CF — cf. CROSS-LEARNINGS 2026-06-16).
+## ⏳ Revenue Manager — items en attente (contexte : ✅ livré 2026-06-16)
+- ⏳ **Débloqués, à coder dans `calcDateReco`** : **RM-01** (uplift scarcity), **RM-02** (filtre saison, re-seed), **RM-04** (gap orphelin 1 nuit + min-stay).
+- ⛔ **Attendent input Vincent** : **RM-06** (Google Search Console credentials) · **RM-08** (dépense pub réelle) · **RM-11** (code parrainage stripe-webhook = argent LIVE) · **RM-23** (destinataire ménage par bien Martinique) · **RM-24** (arbitrage ROI caution).
+- ⚠️ **Modif NON committée pré-existante** : `src/components/tabs/TabTrading.jsx` — PAS de cette session. Vincent décide : committer ou `git checkout`.
+- ⏳ **Reste** : **RM-03 NET RevPAR** (`runOccupancySnapshot` — gros morceau). Détail : `docs/AUDIT-PLAYBOOK-PROGRES.md`.
+- ℹ️ Push trading launchd passé 5min→60min (KV diet — cf. CROSS-LEARNINGS 2026-06-16).
 
 ## 📣 2026-06-15 (soir) — Auto-publication réseaux : LIVE, points de vigilance
 - ✅ **Système complet en live** (ADR-SOCIAL-AUTOPUB-001) : re-seed→génère(photos cochées)→gate(4 filtres)→publie. Zéro clic. Token publie FB+IG (vérifié).
@@ -124,6 +118,11 @@
 ---
 
 ## ✅ Archivé (levé — gardé pour traçabilité, 1 ligne chacun)
+- ✅ **Caution UNIFIÉE différée + durcie** (2026-06-18, ADR-CAUTION-DEFERRED-001) : tunnel 100% différé, 8 correctifs argent-réel, `_caution.js`, 308 tests. Commits `ae1922f`/`f07d17e`/`8b73794`.
+- ✅ **Import historique OTA+directes** (2026-06-17, ADR-IMPORT-OTA-001 + DIRECTES + JOEL-OVERLAP) : ~700 résas 2022-2027. Fix Joël BAILLEUL chevauchement Iguana.
+- ✅ **2FA Facebook + compte pub Meta fermé** (2026-06-17/18) : MDP changé, 2FA actif, bilan dépenses €69.33. (Détail : JOURNAL-locatif [2026-06-18])
+- ✅ **Bot WhatsApp test mode LIVE** (2026-06-17) : App ID `1783600126154478` · WABA `982907091270661` · test number `+1 555 006 0804` · webhook vérifié · test validé Vincent.
+- ✅ **CSP workers.dev+ntfy.sh + null-guards toFixed() + paiement 2× LIVE** (2026-06-16).
 - ✅ **Token Meta double-comptage Purchase + fantômes solde 2×** (2026-06-15) → `eventID=pi.id` + guard `kind=solde-2x` + `transaction_id=pi.id`. Commits `f5b1784`→`9a30660`.
 - ✅ **Session 06-14 soir** (tunnels OTA + sécurité devis) : devis R/O (`da82843`), priceGuard (`327c2d5`), Booking scraper (`a813185`), rapport-business V4 (`d077f37`), page projets cerveau (`a95a014`), chat escalade Mistral (`1614d68`,`4695081`).
 - ✅ **Résa Booking NINA GRUBO (Zandoli)** (2026-06-14) : Vincent a re-saisi nom+prix à la main, fix de préservation `9fdcc92` déployé → re-sync ne l'effacera plus. Sheet complet. _(fusion de 2 entrées contradictoires le 2026-06-15.)_
