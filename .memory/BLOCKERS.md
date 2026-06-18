@@ -6,11 +6,12 @@
 
 ---
 
-## En cours → ✅ terminé le 2026-06-18 — Caution différée off-session (ADR-CAUTION-DEFERRED-001)
-- **Livré & déployé** : carte enregistrée à la résa → `caution-cron` (Worker 9h) pose ~J-2 / re-bloque glissant / libère J+3 off-session. Inline pour arrivées ≤3 j, différé au-delà. 306 tests, dry+vrai run OK. Anaïs backfillée (pose 31/07).
-- 🟡 **1er placement off-session RÉEL non encore vu** : Anaïs 31/07. La mécanique est prouvée (= solde 2× qui tourne déjà) mais le 1er vrai hold off-session caution n'a pas encore eu lieu → **valider le 31/07** (AGENDA). Si la banque refuse off-session (SCA) → fallback ntfy + lien manuel déjà câblé.
-- 🟡 **Résas 1× antérieures = pas de carte enregistrée** → caution rétroactive auto impossible. **François Cambier (Mabouya, arrivée 05/07)** : lien manuel à envoyer ~02/07 (AGENDA). Son séjour 15 nuits > 7 j d'un hold → 2e lien possible.
-- 🟡 **Edge near-booking + long séjour** : une résa proche (≤3 j, caution inline) avec un séjour > ~7 nuits n'est PAS re-bloquée (pas de ligne `caution_schedule`, l'inline expire mid-séjour). Rare (réserver 2 j avant un long séjour). À traiter si ça arrive (créer une ligne `caution_schedule` status=held liée au hold inline).
+## En cours → ✅ terminé le 2026-06-18 (soir) — Caution UNIFIÉE différée + durcie (ADR-CAUTION-DEFERRED-001)
+- **Livré & déployé** : tunnel **100% différé** (un seul visuel 3 étapes, caution invisible pour TOUS). Carte enregistrée à la résa → `caution-cron` (Worker 9h) pose ~J-2 / re-bloque glissant / libère J+3 off-session ; **pose immédiate si arrivée ≤1 j**. Module partagé `_caution.js`. **8 correctifs argent-réel** (revue adversariale 2 rounds) : garde atomique anti-double-hold, Idempotency-Key Stripe, fallback capture_before, reauth margin 2j, garde séjour-terminé, **exclusion flux devis (anti-double)**, **checkout invalide→release (anti fonds-gelés-à-vie)**, clé 'place' anti-orphelin. **308 tests**, dry+vrai run OK.
+- 🟡 **1er placement off-session RÉEL non encore vu** : Anaïs 31/07 (= seul test grandeur nature ; mécanique prouvée par le solde 2×). Valider le 31/07 (AGENDA). Échec SCA → fallback ntfy + lien manuel câblé.
+- 🟡 **Résas 1× antérieures = pas de carte enregistrée** → caution rétroactive auto impossible. **François Cambier (Mabouya, arrivée 05/07)** : lien manuel ~02/07 (AGENDA), séjour 15 nuits → 2e lien possible.
+- 🟡 **Résa GROUPE = pas de caution auto** (`cautionAmountFor('groupe')=0`). Voulu pour l'instant ; si une caution groupe est souhaitée → ajouter le montant + un bienId de caution.
+- 🟡 **Edge cross-day orphelin** (clé idempotence Stripe expire à 24h) : si pose immédiate réussit côté Stripe mais l'UPDATE D1 échoue ET le cron rattrape >24h après → 2e hold possible (les 2 expirent en 7j, **aucun argent perdu**). Nice-to-have : alerte ntfy sur ligne 'held' sans checkout / orphelin. Très faible proba.
 
 ## En cours → ✅ terminé le 2026-06-17 — Import historique complet (OTA + directes + fix Joël)
 - **Fait total** : Booking **355** (12 PDF, IDs synthétiques) + Airbnb **281** (2 comptes) + Directes **~56** (6 fichiers Rentila XLSX : Amaryllis/Géko/Mabouya/Schœlcher/Iguana/Zandoli) → **~700 résas 2022-2027** en base. Fichiers TSV : `scripts/booking-historique.tsv` · `scripts/airbnb-historique.tsv` · `scripts/direct-historique.tsv`.

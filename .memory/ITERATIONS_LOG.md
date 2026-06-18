@@ -5,6 +5,11 @@
 
 ---
 
+## 2026-06-18 (session 22 soir) — Caution UNIFIÉE + durcissement (revue adversariale)
+- **Unification** (demande Vincent : un seul visuel) : tunnel 100% différé, étape caution retirée de `PublicSite.jsx` (3 étapes pour tous). Pose immédiate si arrivée ≤1 j. Module partagé `_caution.js`.
+- **Revue adversariale Workflow (2 rounds)** : round 1 a lu le worktree périmé (faux NO_GO) ; round 2 en chemins absolus → GO. **8 correctifs argent-réel** : garde atomique anti-double-hold, Idempotency-Key, fallback capture_before, reauth 2j, garde séjour-terminé, exclusion devis (anti-double), checkout invalide→release (anti fonds-gelés), clé place anti-orphelin.
+- 308 tests, déployé (Pages), cron vérifié (noop). Commits `ae1922f`/`f07d17e`/`8b73794`.
+
 ## 2026-06-18 (session 22) — Caution différée off-session (carte enregistrée → hold avant l'arrivée)
 - **Déclencheur** : résa Antoine FENAERT (Zandoli) → écran d'erreur caution (Link réaffiche une carte refusée) + constat qu'un hold Stripe ne dure que ~7 j → inutile pour les séjours lointains (caution Anaïs réservée juin, séjour août, expire 21/06).
 - **Investigation Stripe (données réelles)** : `capture_before` Anaïs = création +7,0 j pile ; `extended_authorization:disabled` ; compte **blended** (pas IC+) → extended-auth 30 j indispo. Les 2 messages d'erreur du checkout = rendus par l'iframe Stripe (absents du repo). Antoine ≠ Anaïs (lui = vrai refus carte Link ; elle = tunnel réinitialisé, pas de refus).
