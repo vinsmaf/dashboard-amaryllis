@@ -38,6 +38,7 @@ import EditorialPhotosTab from "./tabs/EditorialPhotosTab.jsx";
 import CroissanceTab from "./tabs/CroissanceTab.jsx";
 import SEOAuditTab from "./tabs/SEOAuditTab.jsx";
 import AvisTab from "./tabs/AvisTab.jsx";
+import CrmTab from "./tabs/CrmTab.jsx";
 import WhatsAppTab from "./tabs/WhatsAppTab.jsx";
 import BugReporter from "./components/BugReporter.jsx";
 import BugsTab from "./tabs/BugsTab.jsx";
@@ -1129,10 +1130,23 @@ export default function App() {
             const j = await r.json();
             if (Array.isArray(j.reservations) && j.reservations.length > 0) {
               setReservations(current => {
-                const currentIds = new Set(current.map(x => String(x.id)));
-                const toAdd = j.reservations.filter(x => x.checkin && x.checkout && !currentIds.has(String(x.id)));
-                if (toAdd.length === 0) return current;
-                const merged = [...current, ...toAdd];
+                const currentMap = new Map(current.map(x => [String(x.id), x]));
+                let changed = false;
+                for (const x of j.reservations) {
+                  if (!x.checkin || !x.checkout) continue;
+                  const key = String(x.id);
+                  const prev = currentMap.get(key);
+                  if (!prev) {
+                    currentMap.set(key, x);
+                    changed = true;
+                  } else if (!prev.email || !prev.phone || !prev.nb_guests) {
+                    // Met à jour les champs contact manquants (cache localStorage périmé)
+                    currentMap.set(key, { ...prev, email: x.email || prev.email, phone: x.phone || prev.phone, nb_guests: x.nb_guests || prev.nb_guests, nb_pets: x.nb_pets ?? prev.nb_pets });
+                    changed = true;
+                  }
+                }
+                if (!changed) return current;
+                const merged = Array.from(currentMap.values());
                 try { localStorage.setItem("reservations_v2", JSON.stringify(merged)); } catch {}
                 return merged;
               });
@@ -1309,6 +1323,7 @@ export default function App() {
         { id: "conversion",  icon: "💳", label: "Conversion" },
         { id: "ventes",      icon: "🛎️", label: "Ventes" },
         { id: "avis",        icon: "⭐", label: "Avis" },
+        { id: "crm",         icon: "👥", label: "CRM Clients" },
         { id: "whatsapp",    icon: "💬", label: "WhatsApp" },
       ],
     },
@@ -1579,6 +1594,7 @@ export default function App() {
             {tab === "conversion"    && <ConversionTab />}
             {tab === "ventes"        && <ServiceOrdersTab />}
             {tab === "avis"          && <AvisTab />}
+            {tab === "crm"           && <CrmTab />}
             {tab === "whatsapp"      && <WhatsAppTab />}
             </LocalErrorBoundary>
           </div>
