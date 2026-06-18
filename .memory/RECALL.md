@@ -17,6 +17,7 @@
 | **Lint** | Doc dit « ~557 erreurs » mais c'est **périmé** (~0 erreur aujourd'hui) → envisager de réintégrer le lint au gate. | BLOCKERS |
 | **Mémoire** | 3 niveaux : `.memory/` (vif) · `PROJECT_MEMORY.md` (long terme) · `docs/` (livrables). Archiver le journal daté dans `docs/_archive/` au-delà de ~10 entrées. | LEARNINGS |
 | **Skills / capacités** | **Consulter la LISTE des skills** (Skill tool) avant de déclarer qu'une capacité manque — un `grep ~/.claude/skills` ne suffit pas. | LEARNINGS |
+| **Workflow multi-agents** | Donner les **chemins ABSOLUS** dans les prompts agents — le worktree (cwd session) peut être périmé → verdict faux NO_GO vécu 2026-06-18. | LEARNINGS |
 
 | **BLOCKERS.md — items à proposer** | ⚠️ **VÉRIFIER LE CODE AVANT DE PROPOSER.** Un item BLOCKERS peut être stale (fix appliqué mais entrée non fermée). Règle : avant de proposer un item, grep/read 30s pour confirmer qu'il est encore ouvert. Exemples stales vus : beds24Amount, iCal null guard, smoke test Playwright → déjà fixés sans fermeture. **Ne jamais proposer un item BLOCKERS sans preuve que le problème existe encore dans le code.** | LEARNINGS |
 
