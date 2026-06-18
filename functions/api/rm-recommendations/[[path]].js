@@ -265,7 +265,10 @@ export function calcDateReco({
   const effectiveMinStay = overrideMinStay !== null ? overrideMinStay : minStay;
 
   // Clamp to [price_min, price_max]
-  const clampedPrice = Math.max(property.price_min, Math.min(property.price_max, effectivePrice));
+  // Garde-fou : le plancher ne peut jamais descendre sous base_price_low (prix basse saison).
+  // Un price_min mal configuré (trop bas) ne doit pas permettre des recos sous le plancher saisonnier.
+  const hardFloor = Math.max(property.price_min || 0, property.base_price_low || 0);
+  const clampedPrice = Math.max(hardFloor, Math.min(property.price_max || Infinity, effectivePrice));
 
   // 10. Confidence score
   let confidence = 50;
