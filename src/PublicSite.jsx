@@ -717,8 +717,9 @@ function formatDateShort(ds) {
 const WEEKDAYS = ["Lu", "Ma", "Me", "Je", "Ve", "Sa", "Di"];
 const MONTHS_FR = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
 
-function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, onSelect, onHover, dailyPricesMap = {}, basePrice = 0, minNights = 1, readOnly = false, gapDates = {}, showPrices = true }) {
+function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, onSelect, onHover, dailyPricesMap = {}, basePrice = 0, minNights = 1, readOnly = false, gapDates = {}, showPrices = true, minCheckin = null }) {
   const todayStr = today();
+  const effectiveMin = minCheckin || todayStr;
   const [hoveredCell, setHoveredCell] = useState(null);
   const firstDay = new Date(year, month, 1);
   const lastDate = new Date(year, month + 1, 0).getDate();
@@ -734,7 +735,7 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
 
   // ── Heatmap : calcul min/max sur les jours libres du mois ─────────
   const freePrices = cells
-    .filter(ds => ds && ds >= todayStr && !blockedSet.has(ds))
+    .filter(ds => ds && ds >= effectiveMin && !blockedSet.has(ds))
     .map(ds => dailyPricesMap[ds] ?? basePrice)
     .filter(p => p > 0);
   const heatMin = freePrices.length ? Math.min(...freePrices) : 0;
@@ -742,7 +743,7 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
   const heatRange = heatMax - heatMin;
 
   function heatBg(ds) {
-    if (!ds || !heatRange || ds < todayStr || blockedSet.has(ds)) return null;
+    if (!ds || !heatRange || ds < effectiveMin || blockedSet.has(ds)) return null;
     const p = dailyPricesMap[ds] ?? basePrice;
     if (!p) return null;
     const t = Math.max(0, Math.min(1, (p - heatMin) / heatRange));
@@ -761,7 +762,7 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
 
   function getState(ds) {
     if (!ds) return "empty";
-    if (ds < todayStr) return "past";
+    if (ds < effectiveMin) return "past";
     if (blockedSet.has(ds)) return "blocked";
     if (isBelowMin(ds)) return "belowmin";
     if (ds === checkin) return "checkin";
@@ -883,8 +884,9 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
   );
 }
 
-function DateRangePicker({ checkin, checkout, blockedDates = [], onChange, dailyPricesMap = {}, basePrice = 0, minNights = 1, gapDates = {} }) {
+function DateRangePicker({ checkin, checkout, blockedDates = [], onChange, dailyPricesMap = {}, basePrice = 0, minNights = 1, gapDates = {}, bienNom = "" }) {
   const todayStr = today();
+  const minCheckinStr = addDays(todayStr, 1); // 24h minimum avant arrivée
   const initY = new Date().getFullYear();
   const initM = new Date().getMonth();
   const [offset, setOffset] = useState(0);
@@ -903,6 +905,7 @@ function DateRangePicker({ checkin, checkout, blockedDates = [], onChange, daily
 
   function handleSelect(ds) {
     if (!checkin || (checkin && checkout)) {
+      if (ds < minCheckinStr) return; // bloquer aujourd'hui et le passé
       onChange(ds, null);
     } else if (ds <= checkin) {
       onChange(ds, null);
@@ -935,8 +938,16 @@ function DateRangePicker({ checkin, checkout, blockedDates = [], onChange, daily
         <button onClick={() => setOffset(o => Math.min(o + 1, 20))} style={iconBtn}>→</button>
       </div>
       <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
-        <CalendarMonth year={y1} month={m1} checkin={checkin} checkout={checkout} hovered={hovered} blockedDates={blockedDates} onSelect={handleSelect} onHover={setHovered} dailyPricesMap={dailyPricesMap} basePrice={basePrice} minNights={minNights} gapDates={gapDates} />
-        {!isMobile && <CalendarMonth year={y2} month={m2} checkin={checkin} checkout={checkout} hovered={hovered} blockedDates={blockedDates} onSelect={handleSelect} onHover={setHovered} dailyPricesMap={dailyPricesMap} basePrice={basePrice} minNights={minNights} gapDates={gapDates} />}
+        <CalendarMonth year={y1} month={m1} checkin={checkin} checkout={checkout} hovered={hovered} blockedDates={blockedDates} onSelect={handleSelect} onHover={setHovered} dailyPricesMap={dailyPricesMap} basePrice={basePrice} minNights={minNights} gapDates={gapDates} minCheckin={minCheckinStr} />
+        {!isMobile && <CalendarMonth year={y2} month={m2} checkin={checkin} checkout={checkout} hovered={hovered} blockedDates={blockedDates} onSelect={handleSelect} onHover={setHovered} dailyPricesMap={dailyPricesMap} basePrice={basePrice} minNights={minNights} gapDates={gapDates} minCheckin={minCheckinStr} />}
+      </div>
+      {/* Notice 24h */}
+      <div style={{ marginTop: 10, padding: "8px 12px", background: "#fef9f0", border: "1px solid #f0e0c0", borderRadius: 8, fontSize: 12, color: "#7a5c2e", fontFamily: "'Jost', sans-serif", lineHeight: 1.5 }}>
+        ⏱ Réservation en ligne : minimum 24h à l'avance.{" "}
+        Besoin pour <strong>aujourd'hui</strong> ?{" "}
+        <a href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(`Bonjour, je souhaite réserver ${bienNom || "un logement"} pour cette nuit. Est-ce possible ?`)}`} style={{ color: "#25d366", fontWeight: 600, textDecoration: "none" }}>WhatsApp</a>
+        {" "}ou{" "}
+        <a href="mailto:contact@villamaryllis.com" style={{ color: "#0e3b3a", fontWeight: 600, textDecoration: "none" }}>email</a>.
       </div>
       {/* Légende disponibilité */}
       <div style={{ marginTop: 14, display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
@@ -2287,7 +2298,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
                 <OrganicLoader size={18} color={CORAL} /> Chargement des disponibilités…
               </div>
             )}
-            <DateRangePicker checkin={checkin} checkout={checkout} blockedDates={blockedDates} onChange={(ci, co) => { setCheckin(ci); setCheckout(co); }} dailyPricesMap={dailyPricesMap} basePrice={bien.prix} minNights={minNights} gapDates={gapDates} />
+            <DateRangePicker checkin={checkin} checkout={checkout} blockedDates={blockedDates} onChange={(ci, co) => { setCheckin(ci); setCheckout(co); }} dailyPricesMap={dailyPricesMap} basePrice={bien.prix} minNights={minNights} gapDates={gapDates} bienNom={bien.nom} />
 
             {/* Voyageurs */}
             {bien.capacite > 1 && (
@@ -4038,6 +4049,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                   basePrice={bien.prix}
                   minNights={getMinNights(bien.id, calCheckin)}
                   gapDates={gapDates}
+                  bienNom={bien.nom}
                 />
               )}
 
