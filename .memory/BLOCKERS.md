@@ -4,6 +4,8 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-15 : ✅ levés regroupés en bas, doublons fusionnés._
 
+## En cours → ✅ terminé le 2026-06-19
+
 ---
 
 ## 🟡 Caution off-session — suivi post-livraison (✅ déployé 2026-06-18)
