@@ -2369,9 +2369,18 @@ export default {
       })());
 
     } else if (cron === "0 9 * * *") {
-      // 9h UTC chaque jour — audit + rappels + alertes + gap pricing + agents autonomes
+      // 9h UTC chaque jour — brief matinal + audit + rappels + alertes + gap pricing + agents autonomes
       const { allEvents } = await runSync(env);
       ctx.waitUntil((async () => {
+        // ── Brief matinal locatif (5h Martinique) ─────────────────────────────────────────────────────
+        try {
+          const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+          const briefRes = await fetch(`${siteUrl}/api/morning-brief?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`);
+          const briefData = await briefRes.json().catch(() => ({}));
+          console.log(`[morning-brief] ✓ ntfy=${briefData.ntfyStatus ?? "?"} · ${briefData.title ?? ""}`);
+        } catch (e) {
+          console.error("[morning-brief] Cron error:", e.message);
+        }
         // ── Refresh modèles LLM (AI-Ops) — en premier pour que les agents utilisent les meilleurs modèles ──
         try {
           const siteUrl = env.SITE_URL || "https://villamaryllis.com";
