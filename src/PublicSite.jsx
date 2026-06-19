@@ -4390,8 +4390,10 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
               const y2 = baseY + Math.floor((baseM + calOffset + 1) / 12);
               const m2 = (baseM + calOffset + 1) % 12;
 
+              const minCheckinStr = addDays(today(), 1);
               const handleSelect = (ds) => {
                 if (!calCheckin || (calCheckin && calCheckout)) {
+                  if (ds < minCheckinStr) return; // 24h minimum
                   setCalCheckin(ds); setCalCheckout(null);
                 } else if (ds <= calCheckin) {
                   setCalCheckin(ds); setCalCheckout(null);
@@ -4444,8 +4446,18 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                         onSelect={handleSelect}
                         onHover={setCalHovered}
                         gapDates={gapDates}
+                        minCheckin={minCheckinStr}
                       />
                     ))}
+                  </div>
+
+                  {/* Notice 24h */}
+                  <div style={{ marginTop: 10, padding: "8px 12px", background: "#fef9f0", border: "1px solid #f0e0c0", borderRadius: 8, fontSize: 12, color: "#7a5c2e", fontFamily: "'Jost', sans-serif", lineHeight: 1.5 }}>
+                    ⏱ Réservation en ligne : minimum 24h à l'avance.{" "}
+                    Besoin pour <strong>aujourd'hui</strong> ?{" "}
+                    <a href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(`Bonjour, je souhaite réserver ${bien.nom} pour cette nuit. Est-ce possible ?`)}`} style={{ color: "#25d366", fontWeight: 600, textDecoration: "none" }}>WhatsApp</a>
+                    {" "}ou{" "}
+                    <a href="mailto:contact@villamaryllis.com" style={{ color: "#0e3b3a", fontWeight: 600, textDecoration: "none" }}>email</a>.
                   </div>
 
                   {/* Légende disponibilité */}
@@ -4849,8 +4861,10 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                     const y1 = baseY + Math.floor((baseM + calOffset) / 12);
                     const m1 = (baseM + calOffset) % 12;
 
+                    const minCheckinStr = addDays(today(), 1);
                     const handleSelect = (ds) => {
                       if (!calCheckin || (calCheckin && calCheckout)) {
+                        if (ds < minCheckinStr) return; // 24h minimum
                         setCalCheckin(ds); setCalCheckout(null);
                       } else if (ds <= calCheckin) {
                         setCalCheckin(ds); setCalCheckout(null);
@@ -4898,6 +4912,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                           basePrice={bien.prix}
                           onSelect={handleSelect}
                           onHover={setCalHovered}
+                          minCheckin={minCheckinStr}
                         />
                         {calBelowMinLocal && (
                           <div style={{ marginTop: 8, fontSize: 11, color: "#ef4444", fontWeight: 600, textAlign: "center" }}>
