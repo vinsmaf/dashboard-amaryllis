@@ -474,6 +474,30 @@ export async function onRequestPost(context) {
     // caution pour dégâts ne doit PAS être traité comme une réservation (ni Beds24, ni email, ni CA).
     if (meta.kind === "caution-auto") return json({ received: true, skipped: "caution-auto" });
 
+    // Complément de prix (complement-checkout.js pose metadata.kind="complement") : changement de
+    // logement ou sur-occupation après résa. On encaisse le surplus + on programme la caution
+    // différée (carte enregistrée via setup_future_usage), MAIS on ne recrée NI la réservation
+    // (déjà en D1) NI une conversion publicitaire (la valeur a déjà été comptée à la résa initiale).
+    if (meta.kind === "complement") {
+      await storeCautionSchedule(env, pi).catch(() => {});
+      const cbienNom = NOMS[meta.bienId] || meta.bienId || "?";
+      const cmontant = pi?.amount ? `${(pi.amount / 100).toFixed(0)} €` : "?";
+      await sendEmail(env, {
+        subject: `💶 Complément payé — ${cbienNom} (${meta.voyageur || "voyageur"})`,
+        booking_id: pi.id,
+        bien_id: meta.bienId || null,
+        category: "internal",
+        template: "stripe_complement_host",
+        html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px">
+          <h2 style="color:#0e3b3a">💶 Complément de réservation reçu</h2>
+          <p><strong>${cbienNom}</strong> — ${meta.voyageur || "voyageur"}<br>
+          ${meta.checkin || "?"} → ${meta.checkout || "?"}<br>
+          Montant : <strong>${cmontant}</strong></p>
+          <p style="font-size:13px;color:#0e7a5a">✅ Carte enregistrée — la caution sera pré-autorisée automatiquement ~2 j avant l'arrivée.</p></div>`,
+      }).catch(() => {});
+      return json({ received: true, kind: "complement" });
+    }
+
     const bookingId = meta.bookingId || meta.beds24Id || "";
     const bienId    = meta.bienId    || "";
     const bienNom   = NOMS[bienId]   || bienId || "Amaryllis Locations";
