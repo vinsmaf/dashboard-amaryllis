@@ -11,6 +11,7 @@ import { triageAction } from "./_triage.js";
 import { maybeRefresh } from "./ai-ops.js";
 import { EQUIP_RULES_TEXT } from "./_biens.js"; // #8 source unique des faits
 import { ragBlock } from "./_rag.js"; // #2 RAG — grounding sur les vraies données
+import { clog, timer } from "./_log.js";
 
 // Agents "content" qui bénéficient du grounding sur les vraies données (avis/guides/drafts).
 const RAG_AGENTS = new Set(["community-manager", "seo-content-writer", "voyageur-research", "crm-manager", "commercial-publicite"]);
@@ -1219,6 +1220,7 @@ function renderOutcomesSection(outcomes) {
 }
 
 export async function onRequest(context) {
+  const t = timer();
   const { request, env } = context;
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   if (request.method !== "POST") return json({ error: "POST only" }, 405);
@@ -1745,5 +1747,6 @@ Si verdict=reject : "improved_blocks": null`;
 
   const ok = results.filter(r => r.ok).length;
   const errors = results.filter(r => r.error).length;
+  clog('agents-run', errors > 0 ? 'warn' : 'info', { agents: targetAgents.length, ok, errors, ms: t() });
   return json({ ok: true, agents_run: targetAgents.length, ok_count: ok, error_count: errors, live: !!liveSection, kpi_captured: kpiCaptured, rev_diag: kpiResult.revDiag, outcomes_measured: outcomesMeasured, results });
 }

@@ -10,6 +10,7 @@
 // sur l'état stocké, qui est mis à jour après chaque opération → relançable sans risque.
 import { decideCautionAction } from "../../src/utils/caution.js";
 import { ensureCautionTable, createHold, cancelHold } from "./_caution.js";
+import { clog, timer } from "./_log.js";
 
 const json = (d, s = 200) => new Response(JSON.stringify(d), {
   status: s, headers: { "Content-Type": "application/json" },
@@ -23,6 +24,7 @@ async function notifyNtfy(env, title, msg, priority = "default") {
 }
 
 export async function onRequestGet(context) {
+  const t = timer();
   const { request, env } = context;
   const url = new URL(request.url);
   if (env.POSTSTAY_SECRET && url.searchParams.get("secret") !== env.POSTSTAY_SECRET)
@@ -107,5 +109,6 @@ export async function onRequestGet(context) {
     }
   }
 
+  clog('caution-cron', failed > 0 ? 'warn' : 'info', { total: rows.length, placed, reauthed, released, failed, ms: t() });
   return json({ ok: true, today, total: rows.length, placed, reauthed, released, failed });
 }

@@ -18,6 +18,7 @@
 //   (rétro-compatibilité, migration en douceur).
 
 import { getActiveBeds24Token } from "./beds24-refresh.js";
+import { clog, timer } from "./_log.js";
 
 const BEDS24_V2_URL = "https://beds24.com/api/v2/bookings";
 const PROP_ID       = "158192";
@@ -63,6 +64,7 @@ async function verifyWebhook(request, url, rawBody, secret) {
 }
 
 export async function onRequestPost(context) {
+  const t = timer();
   const { request, env } = context;
   const url = new URL(request.url);
 
@@ -164,8 +166,10 @@ export async function onRequestPost(context) {
     });
     const txt = await r.text();
     console.log("[beds24-webhook] sheets-proxy response:", txt.slice(0, 300));
+    clog('beds24-webhook', 'info', { synced: normalized.length, ms: t() });
     return json({ ok: true, synced: normalized.length, script: txt.slice(0, 500) });
   } catch (err) {
+    clog('beds24-webhook', 'error', { err: err.message, ms: t() });
     console.error("[beds24-webhook] sheets-proxy error:", err.message);
     return json({ error: err.message }, 502);
   }

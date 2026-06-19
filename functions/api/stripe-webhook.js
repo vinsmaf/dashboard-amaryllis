@@ -4,6 +4,7 @@ import { capiPurchase } from "./_metaCapi.js";
 import { lowAmountInfo } from "../../src/utils/priceGuard.js";
 import { cautionAmountFor, placeDateFor, leadDays, isISODate } from "../../src/utils/caution.js";
 import { ensureCautionTable, createHold } from "./_caution.js";
+import { clog, timer } from "./_log.js";
 // Cloudflare Pages Function — POST /api/stripe-webhook
 // Reçoit les événements Stripe et notifie l'hôte par email
 //
@@ -437,17 +438,20 @@ async function storeCautionSchedule(env, pi) {
 }
 
 export async function onRequestPost(context) {
+  const t = timer();
   const { request, env } = context;
   const rawBody = await request.text();
   const sig = request.headers.get("stripe-signature");
 
   // Vérification de signature HMAC — OBLIGATOIRE (STRIPE_WEBHOOK_SECRET requis en production)
   if (!env.STRIPE_WEBHOOK_SECRET) {
+    clog('stripe-webhook', 'error', { err: 'STRIPE_WEBHOOK_SECRET_missing' });
     console.error("[webhook] STRIPE_WEBHOOK_SECRET non configuré — requête rejetée pour sécurité");
     return json({ error: "Webhook not configured" }, 503);
   }
   const valid = await verifyStripeSignature(rawBody, sig, env.STRIPE_WEBHOOK_SECRET);
   if (!valid) {
+    clog('stripe-webhook', 'error', { err: 'invalid_signature', ms: t() });
     console.error("[webhook] Signature Stripe invalide — possible tentative de fraude");
     return json({ error: "Invalid signature" }, 400);
   }
@@ -739,6 +743,7 @@ export async function onRequestPost(context) {
     });
   }
 
+  clog('stripe-webhook', 'info', { event: event.type, ms: t() });
   return json({ ok: true, type: event.type });
 }
 
