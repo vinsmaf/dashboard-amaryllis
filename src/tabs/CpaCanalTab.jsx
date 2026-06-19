@@ -74,13 +74,18 @@ export default function CpaCanalTab() {
   const rows = useMemo(() => {
     const agg = {};
     reservations.forEach((r) => {
-      if (!r.montant || r.montant <= 0 || !r.checkin || !r.checkout) return;
+      const m = Number(r.montant) || 0;
+      if (m <= 0 || !r.checkin || !r.checkout) return;
+      if (m > 100000) {
+        console.warn("[CPA] montant aberrant exclu —", r.bienId, r.canal, m, r.id);
+        return;
+      }
       const canal = normalize(r.canal);
       if (!agg[canal]) agg[canal] = { canal, brut: 0, count: 0, nights: 0, commission: 0 };
-      agg[canal].brut += r.montant;
+      agg[canal].brut += m;
       agg[canal].count += 1;
       agg[canal].nights += nightsOf(r);
-      agg[canal].commission += r.montant * commissionTaux(canal, r.bienId); // per-bien Airbnb
+      agg[canal].commission += m * commissionTaux(canal, r.bienId);
     });
     return Object.values(agg)
       .map((s) => {

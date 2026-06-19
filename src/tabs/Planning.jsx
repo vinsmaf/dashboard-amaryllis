@@ -109,7 +109,9 @@ function parseICS(text, bienId, canal = "airbnb") {
     const phone = descGet(["Téléphone","Telephone","Phone"]);
 
     const montantRaw = descGet(["Montant total","Montant","Prix total","Total payé","Total","Amount","Payout"]);
-    const montant = montantRaw ? parseFloat(montantRaw.replace(/[^0-9.,]/g, "").replace(",", ".")) || 0 : 0;
+    const montantParsed = montantRaw ? parseFloat(montantRaw.replace(/[^0-9.,]/g, "").replace(",", ".")) || 0 : 0;
+    // Garde-fou : cap à 50 000€ (numéro de référence/IBAN capturé par erreur → valeur aberrante)
+    const montant = (montantParsed > 0 && montantParsed <= 50000) ? montantParsed : 0;
 
     const uid = get("UID");
     const defaultName = canal === "booking" ? "Voyageur Booking" : "Voyageur Airbnb";

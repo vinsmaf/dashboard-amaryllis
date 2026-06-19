@@ -131,7 +131,8 @@ function parseICS(text, bienId) {
       return "";
     };
     const montantRaw = descGet(["Montant total","Total","Amount","Payout"]);
-    const montant = montantRaw ? parseFloat(montantRaw.replace(/[^0-9.,]/g, "").replace(",", ".")) || 0 : 0;
+    const montantParsed = montantRaw ? parseFloat(montantRaw.replace(/[^0-9.,]/g, "").replace(",", ".")) || 0 : 0;
+    const montant = (montantParsed > 0 && montantParsed <= 50000) ? montantParsed : 0;
     let voyageur = sum.replace(/^(Réservé|Reserved|Booking)\s*[-–]?\s*/i, "").replace(/\(.*\)/g, "").trim() || "Voyageur";
     events.push({ uid, bienId, nom: NOMS[bienId] || bienId, voyageur, checkin: ci, checkout: co, montant });
   }
