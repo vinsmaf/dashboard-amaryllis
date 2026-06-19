@@ -1,0 +1,12 @@
+#!/bin/sh
+# pre-commit — vite build rapide pour bloquer les commits qui cassent la prod
+# Lint skippé (1200+ erreurs pré-existantes), build attrape ce qui compte réellement.
+# Bypass : git commit --no-verify
+
+printf '⚡ pre-commit: vite build...'
+if ! npx vite build --logLevel=error 2>&1; then
+  echo ''
+  echo '✗ Build échoué — commit bloqué. Corriger ou: git commit --no-verify'
+  exit 1
+fi
+echo ' ✓'
