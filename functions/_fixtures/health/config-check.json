@@ -1,0 +1,9 @@
+{
+  "description": "Health check config — rapide, sans appels réseau",
+  "method": "GET",
+  "url": "/api/health?secret=${POSTSTAY_SECRET}",
+  "expected": {
+    "status": 200,
+    "body": { "ok": true }
+  }
+}
