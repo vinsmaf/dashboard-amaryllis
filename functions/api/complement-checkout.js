@@ -66,8 +66,11 @@ export async function onRequestPost(context) {
   const payload = new URLSearchParams({
     mode: "payment",
     // Enregistre la carte pour la caution différée posée à J-2 par le cron.
-    // setup_future_usage crée déjà le Customer → ne PAS ajouter customer_creation
-    // (Stripe refuse les deux ensemble : "only one of these parameters").
+    // ⚠️ customer_creation:always est OBLIGATOIRE : sans lui, Stripe ne crée PAS le Customer
+    // même avec setup_future_usage (vécu 2026-06-19 : paiement Cambier réussi mais customer=null
+    // → caution off-session impossible). En Checkout mode=payment les deux sont COMPATIBLES
+    // (niveaux différents : customer_creation sur la Session, setup_future_usage sur le PI).
+    "customer_creation": "always",
     "payment_intent_data[setup_future_usage]": "off_session",
     // kind=complement → le webhook encaisse + programme la caution, SANS recréer la résa.
     "payment_intent_data[metadata][kind]": "complement",
