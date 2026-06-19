@@ -2381,6 +2381,15 @@ export default {
         } catch (e) {
           console.error("[morning-brief] Cron error:", e.message);
         }
+        // ── Sentinel KPI (anomalies données — push ntfy si signal détecté) ──────────────────────────
+        try {
+          const sentinelUrl = env.SITE_URL || "https://villamaryllis.com";
+          const sentinelRes = await fetch(`${sentinelUrl}/api/kpi-sentinel?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`);
+          const sentinelData = await sentinelRes.json().catch(() => ({}));
+          console.log(`[kpi-sentinel] ✓ anomalies=${sentinelData.anomalies ?? 0} (🔴${sentinelData.reds ?? 0} 🟡${sentinelData.yellows ?? 0})`);
+        } catch (e) {
+          console.error("[kpi-sentinel] Cron error:", e.message);
+        }
         // ── Refresh modèles LLM (AI-Ops) — en premier pour que les agents utilisent les meilleurs modèles ──
         try {
           const siteUrl = env.SITE_URL || "https://villamaryllis.com";
