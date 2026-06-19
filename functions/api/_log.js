@@ -6,4 +6,4 @@ export const clog = (fn, level, data = {}) =>
     JSON.stringify({ fn, level, ...data })
   )
 
-export const timer = () => { const t = Date.now(); return () => Date.now() - t }
+export const timer = () => { const t = performance.now(); return () => Math.round(performance.now() - t) }
