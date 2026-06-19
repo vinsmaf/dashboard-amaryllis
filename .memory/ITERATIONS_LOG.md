@@ -5,6 +5,18 @@
 
 ---
 
+## 2026-06-18 (session 26) — Bug CPA canal (fix 3 couches) + Audit CRO ultracode (8 chantiers)
+- **CPA bug fix** : `parseICS` capturait les numéros de référence Booking.com (12-15 chiffres) comme montant → CPA 62G€ dans CpaCanalTab. Fix 3 couches : cap 50k€ dans `Planning.jsx` + `workers/ical-sync/index.js`, cap 100k€ dans `CpaCanalTab.jsx`, migration startup `App.jsx`. GAS `fixMontantsAberrants_` → `{fixed:0}` (Sheet propre, pollution localStorage uniquement). → ADR-CPA-BUG-001.
+- **CRO ultracode audit** : workflow 9 dimensions (66 agents, 50 findings confirmés) → Vincent choisit 8 quick wins. Implémentés en 1 session : (1) récap prix mobile sticky, (2) argument -15% vs Airbnb, (3) preuve sociale dans le tunnel, (5) early/late check-in checkboxes, (6) avis Google étendus (Zandoli/Géko/Mabouya), (7) CTA verbe+prix above-the-fold, (9) bouton step 1 dynamique, (10) filmstrip universel toutes fiches. → ADR-CRO-QW-001.
+- **Prix périmés corrigés** : Mabouya 110→70€, Géko 150→110€, Zandoli 220→110€ (confirmé Vincent), Nogent 85→90€, commission 14→15%. Correction dans 11 fichiers (guides, FAQ, prerender, [slug].js, i18n).
+- **Commit** : `d5c36e4` ("feat(cro): audit CRO — 8 chantiers conversion directe + correction prix périmés"). Smoke 🟢, audit invariants 🟢, vérifié live curl + browser.
+
+## 2026-06-19 (session 25) — Couche proactive monitoring (4 axes) + audit ultracode
+- **Couche intelligence** : 4 endpoints ntfy data-driven déployés — `morning-brief` (brief matinal), `kpi-sentinel` (8 signaux + watchdog snapshots), `ack-suggestion` (feedback loop boutons ntfy → `suggestion_acks`), `seasonal-update` (mémoire saisonnière `seasonal_memory`). Greffés sur crons existants `0 9 * * *` et `0 1 1 * *` (limite 5 crons CF free atteinte). DDL partagé `_schema.js`. → ADR-INTEL-LAYER-001.
+- **Audit ultracode** : workflow 50 agents (4 dim review × vérif adversariale × fix) → 45 findings → 36 confirmés → corrigés & déployés. Auth fail-closed sur les 3 endpoints (bypass si secret absent), XSS ack-suggestion, Signal 4 `created_at`, Signal 5 RevPAR dédup, Signal 8 pipeline éditorial. → ADR-INTEL-AUDIT-001.
+- **Re-vérif manuelle** : fix timezone de l'agent incohérent (DDL DEFAULT mort) → corrigé en alignant l'INSERT sur MTQ. Colonne `created_at` confirmée existante (`PRAGMA`). Auth présent en prod (BOGUS→401).
+- **Reste ouvert** : occupation 0% sur 4 biens = vraie donnée (snapshots <48h présents, watchdog muet) ou bug calcul Worker iCal ? Investigation Option B non lancée.
+
 ## 2026-06-19 (session 24) — Bugs dashboard : fix generateDevis guard + triage + consolidation mémoire
 - **Bug generateDevis** : guard `if (!bien?.id) return;` ajouté (`PublicSite.jsx` L1724) — empêche crash `.slice()` sur clic "Devis" sans `bien`. Déployé.
 - **Triage bugs** : 3 entrées `client_errors` fermées (Java object gone → `ignored` ; `.slice()` + `.map()` → `fixed`). Bug section propre.

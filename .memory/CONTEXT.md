@@ -13,8 +13,9 @@ Prod : https://villamaryllis.com (Cloudflare Pages, projet **`dashboard-amarylli
 **Deploy** : `npm run deploy:pages` UNIQUEMENT (jamais `patrimoine-dashboard`). Worker : `npx wrangler deploy`. ⚠️ CF Pages = upload direct, pas git-connecté.
 
 ## Nomenclature des 7 biens (STRICTE)
-Amaryllis (**villa**, 280€, 8p) · Iguana (**villa**, 180€, 6p, `bookable:false` bail long) · Zandoli (**logement**, 220€, 5p) · Géko (**cocon**, 150€, 4p) · Mabouya (**studio** jacuzzi, 110€, 2p) · Bellevue/Schœlcher (**appartement de standing**, 100€) · Nogent (**appartement**, 85€).
+Amaryllis (**villa**, 280€, 8p) · Iguana (**villa**, 180€, 6p, `bookable:false` bail long) · Zandoli (**logement**, 110€, 5p) · Géko (**cocon**, 110€, 4p) · Mabouya (**studio** jacuzzi, 70€, 2p) · Bellevue/Schœlcher (**appartement de standing**, 100€) · Nogent (**appartement**, 90€).
 **Seuls Amaryllis & Iguana = « villas ».** Source unique des faits : `src/data/biens.js`.
+> ⚠️ Prix corrigés 2026-06-18 (Vincent confirmé) — était: Zandoli 220, Géko 150, Mabouya 110, Nogent 85 (périmés). `App.jsx DEFAULT_PRIX` (admin seed) garde encore les anciens prix → ne pas confondre.
 
 ## Où on en est (cap)
 - **Problème n°1 = famine de trafic** (~5 visiteurs/j ; Search Console : pos. moy. 5,8 mais ~289 impr/3 mois, autorité de domaine faible → SEO technique bon mais peu vu). Levier = autorité hors-page (citations/netlinking/GBP) + paid (Google Ads live, Meta demain), PAS plus de contenu.

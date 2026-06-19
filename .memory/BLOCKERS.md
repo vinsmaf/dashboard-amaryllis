@@ -4,9 +4,12 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-15 : ✅ levés regroupés en bas, doublons fusionnés._
 
-## En cours → ✅ terminé le 2026-06-19
+## En cours → ✅ terminé le 2026-06-18 (CPA bug 3-layer defense + CRO 8 chantiers déployés & vérifiés en prod)
 
 ---
+
+## 🟡 Occupation 0% (4 biens) — vraie donnée ou bug calcul ? (Option B non lancée)
+- 🟡 Le sentinel remonte **4🔴 occupation à 0-7%** (Amaryllis, Zandoli, Schœlcher, Géko). Le **watchdog snapshots est muet** → les snapshots `rm_kpi_snapshots` existent et sont frais (<48h). Donc : soit **vraie occupation basse** (juin = basse saison, plausible), soit **bug de calcul `occupancy_rate`** dans le Worker iCal (`runOccupancySnapshot`). **Ce qui débloque** : croiser iCal brut (Airbnb/Booking feeds) vs `rm_kpi_snapshots.occupancy_rate` vs résas réelles `direct_bookings` pour un bien. Si bug → c'est dans le **calcul**, pas la collecte. Lancer Option B si les 🔴 quotidiens deviennent gênants.
 
 ## 🟡 Caution off-session — suivi post-livraison (✅ déployé 2026-06-18)
 - 🟡 **1er placement off-session RÉEL non encore vu** : Anaïs 31/07 (= seul test grandeur nature ; mécanique prouvée par le solde 2×). Valider le 31/07 (AGENDA). Échec SCA → fallback ntfy + lien manuel câblé.
