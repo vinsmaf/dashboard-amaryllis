@@ -1,0 +1,9 @@
+{
+  "description": "Stats agents — lecture D1 uniquement",
+  "method": "GET",
+  "url": "/api/agents-stats?secret=${POSTSTAY_SECRET}",
+  "expected": {
+    "status": 200,
+    "body": { "ok": true }
+  }
+}

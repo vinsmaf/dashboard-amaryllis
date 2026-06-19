@@ -1,0 +1,9 @@
+{
+  "description": "Dry-run du cron caution — aucune écriture Stripe ni D1",
+  "method": "GET",
+  "url": "/api/caution-cron?dry=1&secret=${POSTSTAY_SECRET}",
+  "expected": {
+    "status": 200,
+    "body": { "ok": true, "dry": true }
+  }
+}

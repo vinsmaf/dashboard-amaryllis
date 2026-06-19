@@ -1,0 +1,9 @@
+{
+  "description": "Liste des learnings agents — lecture D1 uniquement",
+  "method": "GET",
+  "url": "/api/agent-lessons?secret=${POSTSTAY_SECRET}",
+  "expected": {
+    "status": 200,
+    "body": { "lessons": [] }
+  }
+}

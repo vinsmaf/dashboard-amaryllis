@@ -13,6 +13,7 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:ui": "vitest --ui",
+    "test:fn": "node scripts/test-function.mjs",
     "visual-review": "node scripts/visual-review.mjs",
     "deploy:script": "clasp push --force",
     "deploy:worker": "wrangler deploy",

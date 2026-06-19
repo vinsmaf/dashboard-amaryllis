@@ -1,0 +1,9 @@
+{
+  "description": "Vérif que agents-run répond (sans token LLM → erreur 503 attendue en local sans clé)",
+  "method": "POST",
+  "url": "/api/agents-run?secret=${POSTSTAY_SECRET}",
+  "body": { "agents": ["rm_pricing"] },
+  "expected": {
+    "status": 200
+  }
+}
