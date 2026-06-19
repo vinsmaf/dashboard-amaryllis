@@ -2352,13 +2352,24 @@ export default {
       ]));
 
     } else if (cron === "0 1 1 * *") {
-      // 1er du mois — export comptable + article SEO long-tail mensuel
+      // 1er du mois — export comptable + article SEO long-tail mensuel + mémoire saisonnière
       const { allEvents } = await runSync(env);
       ctx.waitUntil(Promise.all([
         runMonthlyExport(env, allEvents),
         runMonthlySeoArticle(env),
         runTokenRotationReminder(env), // arch-018 — mensuel (META_PAGE_TOKEN expire ~60j)
         runReviewRefresh(env), // refresh mensuel des avis Airbnb (scrape + D1)
+        (async () => {
+          // Mémoire saisonnière : agrège rm_kpi_snapshots → seasonal_memory
+          try {
+            const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+            const res = await fetch(`${siteUrl}/api/seasonal-update?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`);
+            const data = await res.json().catch(() => ({}));
+            console.log(`[seasonal-update] ✓ total=${data.total ?? "?"} upserted=${data.upserted ?? "?"}`);
+          } catch (e) {
+            console.error("[seasonal-update] Cron error:", e.message);
+          }
+        })(),
       ]));
 
     } else if (cron === "0 12 * * *") {

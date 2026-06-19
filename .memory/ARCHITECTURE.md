@@ -1,6 +1,6 @@
 # 🗺️ ARCHITECTURE — Locatif (villamaryllis.com)
 
-> **Date :** 2026-06-18 · **Statut :** carte de l'état actuel, à maintenir (pas un historique).
+> **Date :** 2026-06-19 · **Statut :** carte de l'état actuel, à maintenir (pas un historique).
 > But : ne plus jamais re-déduire le système depuis le code. Quand l'archi change, on met à jour ICI.
 > **Pointeurs :** état courant volatil → `.memory/CONTEXT.md` · décisions → `.memory/ADR.md` + `DECISIONS.md` ·
 > leçons → `.memory/LEARNINGS.md` · blocages → `.memory/BLOCKERS.md` · rappel par domaine → `.memory/RECALL.md` ·
@@ -288,6 +288,14 @@ flowchart TD
 - **Boucle auto-amélioration** : produire→juger→partager (signaux `_shared`)→distiller (`memory-distill.js` hebdo → `learning:*`). 100% interne/advisory.
 - **Auto-publication réseaux LIVE** : drafts J-2 → gate → posts FB+IG (cron horaire `runEditorialAutoPublish` → `agent-drafts publish` → `social.js`). Fact-check de dernière minute (fail-OPEN à la publication, contrairement au gate fail-CLOSED).
 
+### Couche proactive monitoring (ntfy push — distincte du fleet agents)
+
+4 endpoints data-driven qui poussent vers ntfy (topic `NTFY_TOPIC`), tous gardés par `POSTSTAY_SECRET` (auth **fail-closed** : secret absent → 401), déclenchés par les crons Worker. Schéma DDL partagé `_schema.js` (anti-drift).
+- **`morning-brief.js`** (cron `0 9 * * *`) : brief matinal — arrivées/départs du jour, cautions pending/failed, occupation 7j (résas directes), revenus mois, posts éditoriaux. `?dry=1` retourne un bloc `debug`. Erreurs D1 loggées + ligne `⚠️ Données manquantes`.
+- **`kpi-sentinel.js`** (cron `0 9 * * *`) : sentinelle 8 signaux (occupation 30j, paniers abandonnés, cautions échouées, semaine sans résa via `created_at`, RevPAR -15%, transition saisonnière ≤14j, vs historique `seasonal_memory`, pipeline éditorial <3/14j) **+ watchdog snapshots manquants** (🔴 si Worker cron mort). Ne pousse que si anomalie ≥🟡 (anti-fatigue). Source occupation = `rm_kpi_snapshots` (OTA inclus), PAS `direct_bookings`.
+- **`ack-suggestion.js`** (GET public, pas d'auth forte — XSS-escaped, guard longueur 200) : feedback loop. Les boutons d'action ntfy (`Fait ✅ / Ignorer / Plus tard`) écrivent dans `suggestion_acks`. Le sentinel filtre 7j les anomalies déjà `done`/`ignore` (ID stable `slug+date`). `acked_at` stocké en MTQ (-4h) pour matcher le filtre de lecture.
+- **`seasonal-update.js`** (cron `0 1 1 * *`) : agrège `rm_kpi_snapshots` → `seasonal_memory` (par bien × mois × année, Iguana exclu). Mémoire saisonnière lue par le signal 7 du sentinel (seuil `snapshot_count >= 7`).
+
 ---
 
 ## 11. Données & infra
@@ -306,6 +314,7 @@ flowchart TD
 | **Réservations & paiements** | `direct_bookings` (PK `payment_intent_id`, flags prearrivee/j1_acces/poststay/host_notified, `group_biens`), `abandoned_carts`, `payment_schedule`, `caution_schedule`, `service_orders`, `devis_paiements`, `promo_codes`, `contracts_signed` |
 | **Agents IA & mémoire** | `agent_actions`, `agent_drafts`, `agent_memory`, `agent_lessons`, `agent_triggers`, `orchestrations`, `orchestrator_runs`, `action_outcomes`, `kpi_history`, `llm_outputs`, `llm_evals`, `ai_ops`, `brain_state` |
 | **Contenu / éditorial** | `editorial_calendar`, `editorial_photos`, `property_guides`, `social_bot_log` |
+| **Monitoring proactif** | `suggestion_acks` (feedback loop sentinel : id PK slug+date, status done/ignore/later, acked_at MTQ), `seasonal_memory` (PK bien×mois×année : avg_occupancy, avg_revpar_cents, snapshot_count) |
 | **CRM / leads / feedback** | `contacts`, `crm_clients` (fiches voyageur, ≠ leads), `voyageur_feedback`, `whatsapp_conversations` |
 | **Infra / observabilité** | `rate_limits_v2`, `client_errors`, `short_links`, `beds24_tokens`, `inventory_items`, `inventory_movements`, `emails_log` |
 
@@ -325,10 +334,10 @@ flowchart TD
 | Cron | Horaire | Ce qu'il fait |
 |---|---|---|
 | `*/15 * * * *` | toutes 15 min | `runSync` (iCal+directes→Sheet, dédup KV) · `runCancelUnpaidBeds24Bookings` · `runEditorialAutoPublish` (posts `approved` dus → FB+IG) |
-| `0 9 * * *` | 9h UTC / 5h MTQ | ai-ops refresh · monitor · rappels hôte J-7..J+3 · digest arrivées · alertes occupation · `runOccupancySnapshot`→`rm_kpi_snapshots` · gap/yield pricing · `caution-cron` + caution auto-release · inventaire · `devis-solde-cron` · `runEnrichFromEmails`→`enrich-from-emails.js` (complète nom+payout des résas Airbnb depuis l'onglet « Emails », **AVANT** coherence-check) · coherence-check · agents-run(all) + orchestrator + eval + digest IA |
+| `0 9 * * *` | 9h UTC / 5h MTQ | **`morning-brief` (brief matinal ntfy)** · **`kpi-sentinel` (8 signaux + watchdog ntfy)** · ai-ops refresh · monitor · rappels hôte J-7..J+3 · digest arrivées · alertes occupation · `runOccupancySnapshot`→`rm_kpi_snapshots` · gap/yield pricing · `caution-cron` + caution auto-release · inventaire · `devis-solde-cron` · `runEnrichFromEmails`→`enrich-from-emails.js` (complète nom+payout des résas Airbnb depuis l'onglet « Emails », **AVANT** coherence-check) · coherence-check · agents-run(all) + orchestrator + eval + digest IA |
 | `0 12 * * *` | 12h UTC / 8h MTQ | `runEditorialReseed` (30j) + `runEditorialDraftGen` (drafts J+2 → gate) |
 | `0 6 * * 1` | lundi 6h UTC | rapport hebdo · prix-recap · RAG ingest · agents-execute + digest · token health check · SEO report · bug-triage · memory-distill · guide-write |
-| `0 1 1 * *` | 1er du mois 1h UTC | export comptable CSV · article SEO long-tail · rappel rotation tokens · refresh avis (Apify) |
+| `0 1 1 * *` | 1er du mois 1h UTC | export comptable CSV · article SEO long-tail · rappel rotation tokens · refresh avis (Apify) · **`seasonal-update`→`seasonal_memory`** |
 
 ### Crons cron-job.org (déclencheurs HTTP `?secret=`)
 

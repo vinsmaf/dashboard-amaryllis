@@ -55,7 +55,7 @@ export async function onRequestGet({ request, env }) {
   const t = timer()
   const url = new URL(request.url)
   const secret = url.searchParams.get('secret') ?? ''
-  if (env.POSTSTAY_SECRET && secret !== env.POSTSTAY_SECRET) {
+  if (!env.POSTSTAY_SECRET || secret !== env.POSTSTAY_SECRET) {
     return new Response(JSON.stringify({ ok: false, error: 'Unauthorized' }), { status: 401 })
   }
   const dry = url.searchParams.get('dry') === '1'
@@ -69,45 +69,47 @@ export async function onRequestGet({ request, env }) {
   const tomorrow = addDays(today, 1)
   const weekEnd = addDays(today, 7)
   const monthStart = today.slice(0, 7) + '-01'
-  const monthEnd = addDays(monthStart.slice(0, 7) + '-' + String(new Date(Date.UTC(
+  const monthEnd = today.slice(0, 7) + '-' + String(new Date(Date.UTC(
     parseInt(today.slice(0, 4)), parseInt(today.slice(5, 7)), 0
-  )).getUTCDate()), 0)
+  )).getUTCDate())
 
   const lines = []
   let priority = 3
   let actionLine = ''
+  const errors = []
+  let dbErrors = 0
 
   // ── Arrivées du jour ─────────────────────────────────────────────────────
   const arrivals = await db.prepare(
     `SELECT prenom, bien_nom, bien_id, nb_guests, total FROM direct_bookings WHERE checkin = ? ORDER BY bien_id`
-  ).bind(today).all().then(r => r.results ?? []).catch(() => [])
+  ).bind(today).all().then(r => r.results ?? []).catch(e => { clog('morning-brief', 'warn', { step: 'arrivals', err: e?.message }); errors.push('arrivals'); dbErrors++; return [] })
 
   // ── Départs du jour ──────────────────────────────────────────────────────
   const departures = await db.prepare(
     `SELECT prenom, bien_nom, bien_id FROM direct_bookings WHERE checkout = ? ORDER BY bien_id`
-  ).bind(today).all().then(r => r.results ?? []).catch(() => [])
+  ).bind(today).all().then(r => r.results ?? []).catch(e => { clog('morning-brief', 'warn', { step: 'departures', err: e?.message }); errors.push('departures'); dbErrors++; return [] })
 
   // ── Cautions en attente / échouées ───────────────────────────────────────
   const cautionsPending = await db.prepare(
     `SELECT prenom, bien_id, amount, status, checkout FROM caution_schedule WHERE status IN ('pending','failed') ORDER BY checkout ASC LIMIT 10`
-  ).all().then(r => r.results ?? []).catch(() => [])
+  ).all().then(r => r.results ?? []).catch(e => { clog('morning-brief', 'warn', { step: 'cautionsPending', err: e?.message }); errors.push('cautions'); dbErrors++; return [] })
 
   // ── Occupation forward 7j (nb jours-biens occupés) ───────────────────────
   const occupiedRows = await db.prepare(
     `SELECT DISTINCT bien_id FROM direct_bookings WHERE checkin < ? AND checkout > ?`
-  ).bind(weekEnd, today).all().then(r => r.results ?? []).catch(() => [])
+  ).bind(weekEnd, today).all().then(r => r.results ?? []).catch(e => { clog('morning-brief', 'warn', { step: 'occupiedRows', err: e?.message }); errors.push('occupancy'); dbErrors++; return [] })
 
   // ── Revenus résas directes — mois en cours ────────────────────────────────
   const monthRevenue = await db.prepare(
     `SELECT SUM(total) as total, COUNT(*) as nb FROM direct_bookings WHERE checkin >= ? AND checkin <= ?`
-  ).bind(monthStart, monthEnd).first().catch(() => null)
+  ).bind(monthStart, monthEnd).first().catch(e => { clog('morning-brief', 'warn', { step: 'monthRevenue', err: e?.message }); errors.push('revenue'); dbErrors++; return null })
 
   // ── Posts éditoriaux du jour ─────────────────────────────────────────────
   const todayUnix = dateToUnix(today)
   const tomorrowUnix = dateToUnix(tomorrow)
   const todayPosts = await db.prepare(
     `SELECT bien_id, theme, platform, status FROM editorial_calendar WHERE scheduled_at >= ? AND scheduled_at < ? ORDER BY bien_id`
-  ).bind(todayUnix, tomorrowUnix).all().then(r => r.results ?? []).catch(() => [])
+  ).bind(todayUnix, tomorrowUnix).all().then(r => r.results ?? []).catch(e => { clog('morning-brief', 'warn', { step: 'todayPosts', err: e?.message }); errors.push('editorial'); dbErrors++; return [] })
 
   // ── Action du jour ────────────────────────────────────────────────────────
   if (cautionsPending.some(c => c.status === 'failed')) {
@@ -127,7 +129,7 @@ export async function onRequestGet({ request, env }) {
   const mvt = []
   if (arrivals.length > 0) {
     mvt.push('🛬 Arrivées :\n' + arrivals.map(a =>
-      `• ${nomBien(a.bien_id, a.bien_nom)} · ${a.prenom} · ${a.nb_guests ?? 1}p · ${a.total}€`
+      `• ${nomBien(a.bien_id, a.bien_nom)} · ${a.prenom || 'Voyageur'} · ${a.nb_guests ?? 1}p · ${a.total != null ? a.total : '?'}€`
     ).join('\n'))
   }
   if (departures.length > 0) {
@@ -152,7 +154,7 @@ export async function onRequestGet({ request, env }) {
   const occupied = occupiedRows.length
   const pct = Math.round(occupied / BIENS_TOTAL * 100)
   const occIcon = pct >= 80 ? '🟢' : pct >= 50 ? '🟡' : '🔴'
-  lines.push(`${occIcon} Occupation 7j : ${occupied}/${BIENS_TOTAL} biens (${pct}%)`)
+  lines.push(`${occIcon} Occupation 7j (résas directes) : ${occupied}/${BIENS_TOTAL} biens (${pct}%)`)
 
   // ── Revenus mois ─────────────────────────────────────────────────────────
   if (monthRevenue?.total) {
@@ -171,15 +173,27 @@ export async function onRequestGet({ request, env }) {
     lines.push(`📱 Réseaux sociaux : ${parts.join(' · ')} — ${todayPosts.map(p => nomBien(p.bien_id)).join(', ')}`)
   }
 
+  if (errors.length) lines.push('⚠️ Données manquantes : ' + errors.join(', '))
   lines.push('→ https://villamaryllis.com/admin')
 
   const body = lines.join('\n\n')
   const title = `🏠 Locatif — ${jourFr(today)}`
 
-  clog('morning-brief', 'info', { arrivals: arrivals.length, departures: departures.length, cautions: cautionsPending.length, ms: t() })
+  clog('morning-brief', dbErrors > 0 ? 'warn' : 'info', { arrivals: arrivals.length, departures: departures.length, cautions: cautionsPending.length, occupied, pct, revenusEuros: Math.round(monthRevenue?.total ?? 0), posts: todayPosts.length, priority, dbErrors, ms: t() })
 
   if (dry) {
-    return new Response(JSON.stringify({ ok: true, dry: true, title, priority, body }), {
+    return new Response(JSON.stringify({
+      ok: true, dry: true, title, priority, body,
+      debug: {
+        arrivals: arrivals.length,
+        departures: departures.length,
+        cautions: cautionsPending.length,
+        occupied,
+        pct,
+        revenusEuros: Math.round(monthRevenue?.total ?? 0),
+        posts: todayPosts.length,
+      },
+    }), {
       status: 200, headers: { 'Content-Type': 'application/json' },
     })
   }
@@ -194,6 +208,8 @@ export async function onRequestGet({ request, env }) {
     },
     body,
   })
+
+  if (!ntfyRes.ok) clog('morning-brief', 'error', { step: 'ntfy', status: ntfyRes.status, topic: ntfyTopic?.slice(0, 8) + '…' })
 
   return new Response(JSON.stringify({
     ok: ntfyRes.ok,
