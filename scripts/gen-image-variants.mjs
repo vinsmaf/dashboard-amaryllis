@@ -67,10 +67,21 @@ for await (const src of walk(PHOTOS_DIR)) {
       dropped++;
     }
   }
-  // Manifeste : largeurs dont le fichier existe RÉELLEMENT sur le disque (anti-404 srcset).
+  // Manifeste : VRAIES largeurs pixel de chaque variante (pas les cibles théoriques).
+  // withoutEnlargement = un fichier -1200w.webp peut faire 455px si la source est petite.
+  // Enregistrer la cible (1200) au lieu de la vraie largeur (455) fait mentir le srcset
+  // → le navigateur croit avoir du 1200px, reçoit du 455px, upscale → flou.
   const rel = "/photos/" + src.slice(PHOTOS_DIR.length + 1).split(sep).join("/");
-  const avail = WIDTHS.filter(w => existsSync(join(dir, `${name}-${w}w.webp`)));
-  if (avail.length) manifest[rel] = avail;
+  const seen = new Set();
+  const actualWidths = [];
+  for (const w of WIDTHS) {
+    const varPath = join(dir, `${name}-${w}w.webp`);
+    if (!existsSync(varPath)) continue;
+    const { width: aw } = await sharp(varPath).metadata();
+    if (!seen.has(aw)) { seen.add(aw); actualWidths.push(aw); }
+  }
+  actualWidths.sort((a, b) => a - b);
+  if (actualWidths.length) manifest[rel] = actualWidths;
 }
 
 // Écrit le manifeste consommé par <RImg> (src/primitives.jsx) — bundlé par vite.
