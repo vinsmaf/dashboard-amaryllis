@@ -148,8 +148,9 @@ const BASE_GUESTS      = { amaryllis: 6, zandoli: 4 };   // inclus dans le tarif
 const EXTRA_GUEST_RATE = { amaryllis: 50, zandoli: 30 }; // €/personne supplémentaire/nuit
 
 // Animaux — forfait par séjour, max 2
-const PET_SUPPLEMENT = 40; // € / séjour (1 ou 2 animaux = même forfait)
-const MAX_PETS       = 2;
+const PET_SUPPLEMENT  = 40; // € / séjour (1 ou 2 animaux = même forfait)
+const MAX_PETS        = 2;
+const EARLY_LATE_FEE  = { amaryllis: 80 }; // €/option · défaut 50€ autres biens
 // Biens où les animaux sont interdits (pas de sélecteur)
 const PETS_FORBIDDEN = new Set(["nogent"]);
 
@@ -1721,6 +1722,7 @@ function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) 
 
 // ── Devis PDF (HTML print) ────────────────────────────────────────
 function generateDevis({ bien, checkin, checkout, nights, rawTotal, discountRate, discountAmount, fraisMenage, extraGuestSuppl = 0, extraGuests = 0, petSuppl = 0, nbPets = 0, total, depositAmt }) {
+  if (!bien?.id) return;
   const validUntil = new Date(Date.now() + 48 * 3600 * 1000).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
   const today = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
   const ref = `AMR-${bien.id.slice(0,3).toUpperCase()}-${Date.now().toString(36).toUpperCase().slice(-6)}`;
@@ -1942,6 +1944,8 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
   const [nbPets, setNbPets] = useState(0);
   const [form, setForm] = useState({ prenom: "", nom: "", email: "", tel: "", message: "" });
   const [upsells, setUpsells] = useState({}); // { chef: true, transfert: false, ... }
+  const [earlyCheckin, setEarlyCheckin] = useState(false);
+  const [lateCheckout, setLateCheckout] = useState(false);
   const [stripe, setStripe] = useState(null);
   const [elements, setElements] = useState(null);
   const [paying, setPaying] = useState(false);
@@ -2040,7 +2044,10 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
   const extraGuests     = Math.max(0, nbGuests - baseGuests);
   const extraGuestSuppl = extraGuests * extraGuestRate * nights;
   const petSuppl        = nbPets > 0 ? PET_SUPPLEMENT : 0;
-  const total = rawTotal - discountAmount + fraisMenage + extraGuestSuppl + petSuppl;
+  const earlyLateFee    = EARLY_LATE_FEE[bien.id] ?? 50;
+  const earlySuppl      = earlyCheckin  ? earlyLateFee : 0;
+  const lateSuppl       = lateCheckout  ? earlyLateFee : 0;
+  const total = rawTotal - discountAmount + fraisMenage + extraGuestSuppl + petSuppl + earlySuppl + lateSuppl;
   const todayIso = new Date().toISOString().slice(0, 10);
   const twoPartOk = PAY_2X_ENABLED && isTwoPartEligible({ total, checkin, today: todayIso });
   const minNights = getMinNights(bien.id, checkin);
@@ -2098,6 +2105,8 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
             voyageur: `${form.prenom} ${form.nom}`, email: form.email,
             prenom: form.prenom?.trim() || "", nom: form.nom?.trim() || "", phone: form.tel?.trim() || "",
             nb_guests: String(nbGuests || 1), nb_pets: String(nbPets || 0),
+            ...(earlyCheckin  ? { early_checkin:  "oui" } : {}),
+            ...(lateCheckout  ? { late_checkout:  "oui" } : {}),
             ...(upsellsStr ? { upsells: upsellsStr } : {}),
             ...(isTwoX ? {
               balance_amount: String(balanceAmount(total)),
@@ -2342,9 +2351,29 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
               </div>
             )}
 
+            {/* Early check-in / Late check-out */}
+            {nights > 0 && (
+              <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+                {[
+                  { key: "early", label: "Early check-in", desc: "Arrivée avant 17h · selon disponibilité", icon: "🌅", val: earlyCheckin, set: setEarlyCheckin },
+                  { key: "late",  label: "Late check-out",  desc: "Départ après 12h · selon disponibilité",  icon: "🌇", val: lateCheckout,  set: setLateCheckout  },
+                ].map(opt => (
+                  <label key={opt.key} style={{ display: "flex", alignItems: "center", gap: 14, background: opt.val ? `${CORAL}08` : CREAM, border: `1px solid ${opt.val ? CORAL : SAND}`, borderRadius: 12, padding: "13px 18px", cursor: "pointer" }}>
+                    <input type="checkbox" checked={opt.val} onChange={e => opt.set(e.target.checked)} style={{ width: 16, height: 16, accentColor: CORAL, flexShrink: 0, cursor: "pointer" }} />
+                    <span style={{ fontSize: 16, flexShrink: 0 }}>{opt.icon}</span>
+                    <span style={{ flex: 1 }}>
+                      <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 13, color: NAVY, display: "block" }}>{opt.label}</span>
+                      <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11, color: MUTED }}>{opt.desc}</span>
+                    </span>
+                    <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, color: opt.val ? CORAL : MUTED, whiteSpace: "nowrap" }}>+{earlyLateFee}€</span>
+                  </label>
+                ))}
+              </div>
+            )}
+
             {/* Trust row */}
             <div style={{ display: "flex", gap: 18, padding: "14px 0", borderTop: `1px solid ${SAND}`, borderBottom: `1px solid ${SAND}`, margin: "18px 0", flexWrap: "wrap" }}>
-              {["Annulation gratuite J-7", "Aucun frais caché", "Réponse hôte < 1h"].map(t => (
+              {["Annulation gratuite J-14", "Aucun frais caché", "Réponse hôte < 1h"].map(t => (
                 <span key={t} style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: "'Jost', sans-serif", fontSize: 11, color: MUTED }}>
                   <span style={{ color: "#16a34a", fontSize: 13 }}>✓</span>{t}
                 </span>
@@ -2459,6 +2488,24 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
             <p style={{ fontFamily: "'Jost', sans-serif", fontSize: 10.5, color: MUTED, margin: "8px 0 0", lineHeight: 1.5 }}>
               En réservant, vous acceptez notre <a href="/politique-confidentialite" target="_blank" rel="noopener" style={{ color: CORAL, textDecoration: "underline" }}>politique de confidentialité</a>. Vos données servent uniquement à gérer votre séjour.
             </p>
+
+            {/* Politique d'annulation */}
+            <div style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 10, padding: "12px 16px", marginTop: 14 }}>
+              <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 10, fontWeight: 600, letterSpacing: "0.3em", textTransform: "uppercase", color: MUTED, marginBottom: 8 }}>
+                Politique d'annulation
+              </div>
+              {[
+                ["✓", "#16a34a", "Annulation gratuite jusqu'à J−14 — remboursement intégral"],
+                ["◗", MUTED,     "Entre J−14 et J−2 — 50 % remboursé"],
+                ["✗", MUTED,     "Moins de 48 h — non remboursable (report possible)"],
+                ["🌀", "#0ea5e9", "Vigilance cyclonique orange/rouge — 100 % remboursé"],
+              ].map(([icon, color, text]) => (
+                <div key={text} style={{ display: "flex", gap: 8, fontFamily: "'Jost', sans-serif", fontSize: 11.5, color: NAVY, marginBottom: 4 }}>
+                  <span style={{ width: 16, flexShrink: 0, color }}>{icon}</span>
+                  <span>{text}</span>
+                </div>
+              ))}
+            </div>
 
             {twoPartOk && (
               <div style={{ margin: "14px 0", border: `1px solid ${SAND}`, borderRadius: 12, padding: 12 }}>
@@ -2597,6 +2644,16 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
           {petSuppl > 0 && (
             <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13, color: "rgba(250,245,233,0.7)" }}>
               <span>Animal{nbPets > 1 ? "x" : ""}</span><span>+{petSuppl}€</span>
+            </div>
+          )}
+          {earlySuppl > 0 && (
+            <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13, color: "rgba(250,245,233,0.7)" }}>
+              <span>Early check-in</span><span>+{earlySuppl}€</span>
+            </div>
+          )}
+          {lateSuppl > 0 && (
+            <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13, color: "rgba(250,245,233,0.7)" }}>
+              <span>Late check-out</span><span>+{lateSuppl}€</span>
             </div>
           )}
         </div>

@@ -155,7 +155,7 @@ const faqs = [
   },
   {
     q: "Quelle est la politique d'annulation ?",
-    a: "Annulation gratuite jusqu'à 14 jours avant l'arrivée, remboursement intégral. Entre 7 et 14 jours : remboursement de 50%. Moins de 7 jours : pas de remboursement. Des conditions plus flexibles sont possibles selon la période — contactez-nous.",
+    a: "Annulation gratuite jusqu'à 14 jours avant l'arrivée, remboursement intégral. Entre J-14 et J-2 : 50% remboursé. Moins de 48h : pas de remboursement, report possible selon la période.",
   },
   {
     q: "Y a-t-il une caution ?",
