@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "description": "Routing CF Pages Functions. include /* car >100 Functions dépasse la limite du _routes.json auto-généré (qui excluait silencieusement les routes les plus récentes, ex: /pay/*). exclude = assets purs servis directement, sans réveiller le runtime Functions.",
+  "include": ["/*"],
+  "exclude": [
+    "/assets/*",
+    "/photos/*",
+    "/brand/*",
+    "/email-templates/*",
+    "/icons.svg",
+    "/favicon.svg",
+    "/favicon.ico",
+    "/manifest.json",
+    "/robots.txt",
+    "/sitemap.xml",
+    "/icon-192.png",
+    "/icon-512.png"
+  ]
+}
