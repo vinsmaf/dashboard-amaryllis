@@ -226,7 +226,7 @@ export default function Planning() {
         return {
           ...e,
           voyageur:         isPlaceholderName(prev.voyageur) ? e.voyageur : prev.voyageur,
-          montant:          prev.montant > 0 ? prev.montant : e.montant,
+          montant:          (prev.montant > 0 && prev.montant <= 50000) ? prev.montant : e.montant,
           phone:            prev.phone || e.phone,
           email:            prev.email || e.email,
           nb_guests:        prev.nb_guests || e.nb_guests,

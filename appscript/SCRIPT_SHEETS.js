@@ -211,6 +211,7 @@ function doGet(e) {
   if (action === "revenus2026Inspect")   return json_(revenusInspect2026_()); // eslint-disable-line no-undef
   if (action === "revenus2026Rebuild")   return json_(rebuildRevenus2026_(e.parameter.apply==="true", parseInt(e.parameter.fromMonth||4))); // eslint-disable-line no-undef
   if (action === "cleanSlate2026")       return json_(cleanSlate2026_()); // eslint-disable-line no-undef
+  if (action === "fixMontantsAberrants") return json_(fixMontantsAberrants_(parseInt(e.parameter.cap || 50000, 10)));
 
   return json_({ error: "action inconnue: " + action });
 }
@@ -222,6 +223,7 @@ function doPost(e) {
 
   var action = body.action || "";
   if (action === "importAllReservations") return importAllReservations_(body.reservations || [], !!body.skipRevenueSync);
+  if (action === "fixMontantsAberrants") return json_(fixMontantsAberrants_(parseInt(body.cap || 50000, 10)));
   if (action === "cleanSlate2026")       return json_(cleanSlate2026_()); // eslint-disable-line no-undef
   if (action === "setConfig")             return setConfig_(body);
   if (action === "read")                  return readAll_();
@@ -364,6 +366,28 @@ function readReservations_() {
   } catch (e) {
     return []; // fail-safe : ne casse jamais readAll_
   }
+}
+
+// ── PURGE montants aberrants (iCal descGet → numéro de référence) ───────────
+function fixMontantsAberrants_(cap) {
+  cap = cap || 50000;
+  var sheet = getSheet_("Toutes les Réservations");
+  if (!sheet) return { ok: false, error: "onglet introuvable" };
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return { ok: true, fixed: 0 };
+  // Colonne H = index 8 (1-based) = montant
+  var range = sheet.getRange(2, 8, lastRow - 1, 1);
+  var values = range.getValues();
+  var fixed = 0;
+  values.forEach(function(row, i) {
+    var v = Number(row[0]);
+    if (!isNaN(v) && v > cap) {
+      values[i][0] = 0;
+      fixed++;
+    }
+  });
+  if (fixed > 0) range.setValues(values);
+  return { ok: true, fixed: fixed, cap: cap, totalRows: lastRow - 1 };
 }
 
 // ── LECTURE HISTORIQUE 2022-2025 ─────────────────────────────────

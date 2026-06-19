@@ -1015,7 +1015,11 @@ export default function App() {
   });
   const [globalSyncStatus, setGlobalSyncStatus] = useState("idle"); // idle | syncing | ok | error
   const [reservations, setReservations] = useState(() => {
-    try { const r = localStorage.getItem("reservations_v2"); return r ? JSON.parse(r) : []; } catch { return []; }
+    try {
+      const r = localStorage.getItem("reservations_v2");
+      const parsed = r ? JSON.parse(r) : [];
+      return parsed.map(x => ({ ...x, montant: Number(x.montant) > 100000 ? 0 : (Number(x.montant) || 0) }));
+    } catch { return []; }
   });
   const [icalUrls, setIcalUrls] = useState(() => {
     try { const u = localStorage.getItem("ical_urls"); return u ? { ...ICAL_DEFAULTS, ...JSON.parse(u) } : { ...ICAL_DEFAULTS }; } catch { return { ...ICAL_DEFAULTS }; }
