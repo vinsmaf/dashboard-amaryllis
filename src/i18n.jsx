@@ -19,7 +19,7 @@ export const TR = {
 
     // Section villas
     sectionTitle:   "Villas & locations en Martinique",
-    sectionSub:     "Toutes nos villas avec piscine à Sainte-Luce se réservent en direct, sans frais de service. Location vacances Martinique vue mer, jacuzzi privatif, piscine à débordement — réservez en direct et économisez jusqu'à 20% par rapport aux plateformes.",
+    sectionSub:     "Toutes nos villas avec piscine à Sainte-Luce se réservent en direct, sans frais de service. Location vacances Martinique vue mer, jacuzzi privatif, piscine à débordement — réservez en direct et économisez jusqu'à 15% par rapport aux plateformes.",
     nResults:       (n) => `${n} villa${n !== 1 ? "s" : ""} disponible${n !== 1 ? "s" : ""}`,
 
     // État vide — grille sans résultats
@@ -54,7 +54,7 @@ export const TR = {
     // Réassurance
     whyTitle:       "Pourquoi réserver en direct chez Amaryllis ?",
     why1t:          "Le prix du propriétaire",
-    why1d:          "Sans commission Airbnb ni Booking.com : vous payez le juste prix, jusqu'à −20% sur le même bien.",
+    why1d:          "Sans commission Airbnb ni Booking.com : vous payez le juste prix, jusqu'à −15% sur le même bien.",
     why2t:          "Flexibilité sur mesure",
     why2d:          "Dates, durée, arrivée tardive — l'équipe s'adapte à vos contraintes, pas l'inverse.",
     why3t:          "Votre arrivée préparée",
@@ -115,7 +115,7 @@ export const TR = {
 
     // Section villas
     sectionTitle:   "Villas & rentals in Martinique",
-    sectionSub:     "All our pool villas in Sainte-Luce are booked directly, with no service fees. Sea-view vacation rentals, private jacuzzi, infinity pool — book direct and save up to 20% vs. platforms.",
+    sectionSub:     "All our pool villas in Sainte-Luce are booked directly, with no service fees. Sea-view vacation rentals, private jacuzzi, infinity pool — book direct and save up to 15% vs. platforms.",
     nResults:       (n) => `${n} villa${n !== 1 ? "s" : ""} available`,
 
     // Empty state — no results grid
@@ -150,7 +150,7 @@ export const TR = {
     // Réassurance
     whyTitle:       "Why book directly with Amaryllis?",
     why1t:          "Owner pricing",
-    why1d:          "No Airbnb, no Booking.com commission: you pay the fair price, up to −20% on the same property.",
+    why1d:          "No Airbnb, no Booking.com commission: you pay the fair price, up to −15% on the same property.",
     why2t:          "Flexibility, your way",
     why2d:          "Dates, length of stay, late arrivals — the team adapts to you, not the other way around.",
     why3t:          "Your arrival, prepared",

@@ -313,8 +313,8 @@ export default function GuideNogent() {
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
               {[
                 { id: "amaryllis", name: "Villa Amaryllis", desc: "Piscine débordement · Vue mer · 280€/nuit" },
-                { id: "mabouya",   name: "Mabouya",         desc: "Jacuzzi privatif · Romantique · 110€/nuit" },
-                { id: "zandoli",   name: "Zandoli",         desc: "Piscine privée · Famille · 220€/nuit" },
+                { id: "mabouya",   name: "Mabouya",         desc: "Jacuzzi privatif · Romantique · 70€/nuit" },
+                { id: "zandoli",   name: "Zandoli",         desc: "Piscine privée · Famille · 110€/nuit" },
               ].map(v => (
                 <a key={v.id} href={`/${v.id}`} style={{ display: "flex", flexDirection: "column", background: "#fff", border: `1px solid ${SAND}`, borderRadius: 10, padding: "12px 16px", textDecoration: "none", minWidth: 180 }}>
                   <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 14, color: NAVY, marginBottom: 2 }}>{v.name}</span>

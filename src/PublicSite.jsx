@@ -486,8 +486,8 @@ const BIENS = [
     airbnbTitle: "Studio Mabouya — Jacuzzi privatif · Vue mer · Escapade romantique",
     tag: "❤️ Escapade romantique",
     tagEn: "❤️ Romantic Escape",
-    desc: "Le seul studio de la résidence avec jacuzzi privatif — rien que pour vous deux. Imaginez une soirée dans votre bain bouillonnant, face à la mer des Caraïbes, dans un jardin fleuri où il fait nuit noire et étoilé. Mabouya, c'est l'adresse secrète des couples en Martinique : intimité totale, calme absolu, plages à 7 minutes. À partir de 110 €/nuit en réservation directe.",
-    descEn: "The only studio in the residence with a private jacuzzi — just for the two of you. Picture an evening in your bubbling bath overlooking the Caribbean Sea, in a flower-filled garden under a starry sky. Mabouya is the secret address for couples in Martinique: complete privacy, absolute calm, beaches a 7-minute drive away. From €110/night with direct booking.",
+    desc: "Le seul studio de la résidence avec jacuzzi privatif — rien que pour vous deux. Imaginez une soirée dans votre bain bouillonnant, face à la mer des Caraïbes, dans un jardin fleuri où il fait nuit noire et étoilé. Mabouya, c'est l'adresse secrète des couples en Martinique : intimité totale, calme absolu, plages à 7 minutes. À partir de 70 €/nuit en réservation directe.",
+    descEn: "The only studio in the residence with a private jacuzzi — just for the two of you. Picture an evening in your bubbling bath overlooking the Caribbean Sea, in a flower-filled garden under a starry sky. Mabouya is the secret address for couples in Martinique: complete privacy, absolute calm, beaches a 7-minute drive away. From €70/night with direct booking.",
     descFull: [
       { titre: "Votre cocon privatif", texte: "Le studio Mabouya a été pensé pour le couple qui veut tout — et rien partager. Lit queen-size 160×200, climatisation, TV, terrasse privée avec vue mer : votre espace de vie vous appartient entièrement. Seul studio de la résidence Amaryllis à disposer d'un jacuzzi privatif, il occupe une position privilégiée à flanc de colline, enveloppé de végétation tropicale et de silence." },
       { titre: "Le jacuzzi sous les étoiles", texte: "L'atout absolu de Mabouya : votre jacuzzi privatif, niché dans un jardin fleuri luxuriant, avec vue directe sur la mer des Caraïbes. De nuit, avec les étoiles pour seul plafond et le bruit des grenouilles pour seule musique, c'est une expérience à part entière. La cuisine extérieure équipée et le barbecue au charbon complètent l'espace pour des soirées en amoureux parfaitement autonomes." },
@@ -2229,9 +2229,10 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
       className="bm-grid"
       >
       <style>{`
-        @media(max-width:860px){.bm-grid{grid-template-columns:1fr!important}.bm-summary{display:none!important}}
+        @media(max-width:860px){.bm-grid{grid-template-columns:1fr!important}.bm-summary{display:none!important}.bm-mob-recap{display:flex!important}}
         .bm-body{overflow-y:auto;min-height:0;height:100%;box-sizing:border-box}
         .bm-summary{overflow-y:auto;min-height:0;height:100%;box-sizing:border-box}
+        .bm-mob-recap{display:none}
       `}</style>
 
       {/* ── LEFT — corps ── */}
@@ -2445,13 +2446,18 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
                       try { sessionStorage.setItem("pending_purchase", JSON.stringify({ value: total, bien_id: bien.id, niveau_tarifaire: niveauTarifaire(bien, checkin), items: ckItems })); } catch { /* */ }
                       setStep(2);
                     }}
-                    style={{ background: belowMin ? SAND : CORAL, color: "#fff", border: "none", padding: "14px 30px", borderRadius: 8, fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase", cursor: belowMin ? "not-allowed" : "pointer", boxShadow: belowMin ? "none" : "0 4px 20px rgba(196,114,84,0.35)", opacity: belowMin ? 0.6 : 1 }}
-                  >Continuer →</button>
+                    style={{ background: belowMin ? SAND : CORAL, color: "#fff", border: "none", padding: "14px 30px", borderRadius: 8, fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase", cursor: belowMin ? "not-allowed" : "pointer", boxShadow: belowMin ? "none" : "0 4px 20px rgba(196,114,84,0.35)", opacity: belowMin ? 0.6 : 1, whiteSpace: "nowrap" }}
+                  >{belowMin ? "Continuer →" : `Continuer · ${total}€ →`}</button>
                 </div>
               </>
             ) : (
-              <div style={{ textAlign: "center", color: MUTED, fontSize: 14, padding: "14px 0" }}>
-                Sélectionnez vos dates d'arrivée et de départ
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: "8px 0" }}>
+                <div style={{ textAlign: "center", color: MUTED, fontSize: 14 }}>
+                  Sélectionnez vos dates d'arrivée et de départ
+                </div>
+                <button disabled style={{ background: SAND, color: "#fff", border: "none", padding: "14px 30px", borderRadius: 8, fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase", cursor: "not-allowed", opacity: 0.6, width: "100%", maxWidth: 320 }}>
+                  Choisissez vos dates →
+                </button>
               </div>
             )}
           </>
@@ -2578,6 +2584,26 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
           </>
         )}
 
+        {/* Récap prix mobile sticky — le panneau navy étant masqué <860px, le total reste visible en permanence */}
+        {total > 0 && (
+          <div className="bm-mob-recap" style={{
+            position: "sticky", bottom: 0, marginTop: 16,
+            display: "none", flexDirection: "column", gap: 2,
+            background: "#0e3b3a", color: "var(--c-ivory)",
+            borderRadius: 12, padding: "12px 16px",
+            boxShadow: "0 -6px 20px rgba(0,0,0,0.18)",
+            paddingBottom: "calc(12px + env(safe-area-inset-bottom))",
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+              <span style={{ fontFamily: "'Jost', sans-serif", fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(250,245,233,0.65)" }}>Total tout compris</span>
+              <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 20, color: "var(--c-ivory)" }}>{total}€</span>
+            </div>
+            <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, color: "#6ee7b7" }}>
+              💰 ~−{Math.round(total * 0.15 / 5) * 5}€ vs Airbnb · 0 frais de service
+            </div>
+          </div>
+        )}
+
       </div>
 
       {/* ── RIGHT — panneau récap navy ── */}
@@ -2603,6 +2629,16 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
           <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 20, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--c-ivory)", margin: 0 }}>{bien.nom}</div>
           <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: 13, color: "rgba(250,245,233,0.65)", marginTop: 3 }}>{bien.lieu}</div>
         </div>
+
+        {/* Preuve sociale — maintenue jusqu'au paiement */}
+        {bien.rating > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <RatingBadge rating={bien.rating} count={bien.reviews} dark />
+            <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 12, color: "rgba(250,245,233,0.6)", display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ color: "#6ee7b7" }}>✓</span> Hôte Amaryllis · répond en moins d'1h
+            </div>
+          </div>
+        )}
 
         <hr style={{ border: "none", borderTop: "1px solid rgba(250,245,233,0.10)", margin: "0" }} />
 
@@ -2662,9 +2698,14 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
           <>
             <hr style={{ border: "none", borderTop: "1px solid rgba(250,245,233,0.10)", margin: "0" }} />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-              <span style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(250,245,233,0.65)" }}>Total dû</span>
+              <span style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(250,245,233,0.65)" }}>Total tout compris</span>
               <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 26, color: "var(--c-ivory)" }}>{total}€</span>
             </div>
+            {total > 0 && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: "'Jost', sans-serif", fontSize: 12, color: "#6ee7b7" }}>
+                <span>💰</span> Économie vs Airbnb ~−{Math.round(total * 0.15 / 5) * 5}€ · 0 frais de service
+              </div>
+            )}
             {depositAmt > 0 && (
               <div style={{ background: "rgba(16,185,129,0.10)", border: "1px solid rgba(16,185,129,0.30)", borderRadius: 8, padding: "10px 12px", fontFamily: "'Jost', sans-serif", fontSize: 11, color: "#6ee7b7", display: "flex", gap: 8, alignItems: "center" }}>
                 🔒 + {depositAmt.toLocaleString("fr-FR")}€ caution pré-autorisée avant l'arrivée (jamais débitée)
@@ -3419,12 +3460,19 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
   const [voyageurRevs, setVoyageurRevs] = useState(null); // vrais avis Airbnb (D1, non masqués)
   const infoPanelRef = useRef(null);
   const photos = bien.photos || [];
+  // Filmstrip desktop universel : Amaryllis a un reel à droite (slice dès la photo 2) ;
+  // les autres biens ont déjà 2 vignettes (photos 2-3) → le filmstrip enchaîne dès la photo 4 (pas de doublon).
+  const filmstripStart = bien.id === "amaryllis" ? 1 : 3;
+  const filmstripPhotos = photos.slice(filmstripStart, filmstripStart + 4);
   const touchStartXDetail = useRef(null);
 
-  // Google reviews — uniquement pour Amaryllis, chargé une seule fois
+  // Google reviews — Amaryllis (fiche dédiée) + biens de la résidence Sainte-Luce (place=residence).
+  // Schœlcher/Nogent n'ont pas de fiche Google → avis statiques.
   useEffect(() => {
-    if (bien.id !== "amaryllis") return;
-    fetch("/api/google-reviews")
+    const GOOGLE_PLACE_BY_BIEN = { amaryllis: "amaryllis", zandoli: "residence", geko: "residence", mabouya: "residence" };
+    const place = GOOGLE_PLACE_BY_BIEN[bien.id];
+    if (!place) { setGoogleRevs(STATIC_REVIEWS); return; }
+    fetch(`/api/google-reviews?place=${place}`)
       .then(r => r.json())
       .then(d => { if (d.ok && d.reviews?.length) setGoogleRevs(d.reviews); else setGoogleRevs(STATIC_REVIEWS); })
       .catch(() => setGoogleRevs(STATIC_REVIEWS));
@@ -3748,8 +3796,8 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
             style={{ flexShrink: 0 }}
           >
             {calCheckin && calCheckout && !calBelowMin
-              ? `${calNights} nuits · ${calTotal}€`
-              : isMobile ? `${bien.prix}€/nuit` : `À partir de ${bien.prix}€/nuit`}
+              ? `${calNights} nuits · ${calTotal}€ →`
+              : lang === "fr" ? `${CTA_LABEL_FR} · ${bien.prix}€/nuit` : `BOOK · €${bien.prix}/night`}
           </Button>
         ) : (
           <a
@@ -3982,26 +4030,26 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
 
             </div>
 
-            {/* ── Filmstrip photos sous le héro (amaryllis desktop uniquement) ── */}
-            {bien.id === "amaryllis" && photos.length > 1 && (
+            {/* ── Filmstrip photos sous le héro (desktop, tous les biens) ── */}
+            {filmstripPhotos.length > 0 && (
               <div style={{ display: "flex", height: 110, gap: 3, overflow: "hidden" }}>
-                {photos.slice(1, 5).map((src, i) => (
+                {filmstripPhotos.map((src, i) => (
                   <div
                     key={src}
                     style={{ flex: 1, position: "relative", overflow: "hidden", cursor: "zoom-in" }}
-                    onClick={() => { setPhotoIdx(i + 1); setLightboxOpen(true); }}
+                    onClick={() => { setPhotoIdx(filmstripStart + i); setLightboxOpen(true); }}
                     onMouseEnter={e => { const img = e.currentTarget.querySelector("img"); if (img) img.style.filter = "brightness(1)"; }}
                     onMouseLeave={e => { const img = e.currentTarget.querySelector("img"); if (img) img.style.filter = "brightness(0.82)"; }}
                   >
                     <RImg
                       src={src}
-                      alt={`${bien.nom} — photo ${i + 2}`}
+                      alt={`${bien.nom} — photo ${filmstripStart + i + 1}`}
                       sizes="25vw"
                       loading="eager"
                       style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: "brightness(0.82)", transition: "filter 0.25s" }}
                     />
                     {/* "Voir toutes les photos" sur la dernière vignette */}
-                    {i === 3 && (
+                    {i === filmstripPhotos.length - 1 && photos.length > filmstripStart + filmstripPhotos.length && (
                       <div style={{
                         position: "absolute", inset: 0, background: "rgba(0,0,0,0.48)",
                         display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6,
@@ -4021,7 +4069,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
         )}
 
         {/* ── Transition filmstrip → cream ── */}
-        {bien.id === "amaryllis" && !isMobile && photos.length > 1 && (
+        {!isMobile && filmstripPhotos.length > 0 && (
           <div style={{ height: 32, background: "linear-gradient(to bottom, #061616, var(--c-cream, #f5ede0))" }} />
         )}
 
@@ -4714,7 +4762,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                   <div style={{ height: 1, background: SAND, marginBottom: 26 }} />
                   <div style={{ marginBottom: 32 }}>
                     <Eyebrow color="muted" style={{ marginBottom: 18 }}>
-                      Avis · ★ {bien.rating} · {bien.reviews} avis vérifiés
+                      Avis · ★ {bien.rating} · {totalCount > (bien.reviews ?? 0) ? totalCount : bien.reviews} avis vérifiés
                     </Eyebrow>
                     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                       {allCards.map(c => (
@@ -6757,19 +6805,19 @@ function HeroCarousel({ biens, onDetail, onBook }) {
 const FAQ_ITEMS = [
   {
     q: "Comment réserver sans passer par Airbnb ?",
-    a: "Directement sur ce site : sélectionnez votre villa, choisissez vos dates et payez par carte (Stripe sécurisé). Vous économisez les frais de service Airbnb — jusqu'à 14% du prix — et vous avez un contact direct avec l'hôte.",
+    a: "Directement sur ce site : sélectionnez votre villa, choisissez vos dates et payez par carte (Stripe sécurisé). Vous économisez les frais de service Airbnb — jusqu'à 15% du prix — et vous avez un contact direct avec l'hôte.",
   },
   {
     q: "Quel est le prix d'une villa avec piscine à Sainte-Luce Martinique ?",
-    a: "Nos villas avec piscine sont à partir de 150€/nuit (Géko) jusqu'à 280€/nuit pour la Villa Amaryllis avec piscine à débordement vue mer. Des réductions semaine sont disponibles (-5% à partir de 7 nuits).",
+    a: "Nos villas avec piscine sont à partir de 110€/nuit (Géko) jusqu'à 280€/nuit pour la Villa Amaryllis avec piscine à débordement vue mer. Des réductions semaine sont disponibles (-5% à partir de 7 nuits).",
   },
   {
     q: "Peut-on louer une villa avec jacuzzi privatif en Martinique ?",
-    a: "Oui ! Le studio Mabouya est entièrement dédié au romantisme avec jacuzzi privatif en terrasse et vue mer à partir de 110€/nuit. C'est le seul logement de la résidence à proposer un jacuzzi privé.",
+    a: "Oui ! Le studio Mabouya est entièrement dédié au romantisme avec jacuzzi privatif en terrasse et vue mer à partir de 70€/nuit. C'est le seul logement de la résidence à proposer un jacuzzi privé.",
   },
   {
     q: "Y a-t-il des logements disponibles en Île-de-France ?",
-    a: "Oui, notre Appartement aux Portes de Paris à Nogent-sur-Marne (94) offre un cadre calme à 15 min du centre de Paris, idéal pour les séjours professionnels ou le tourisme parisien à partir de 85€/nuit.",
+    a: "Oui, notre Appartement aux Portes de Paris à Nogent-sur-Marne (94) offre un cadre calme à 15 min du centre de Paris, idéal pour les séjours professionnels ou le tourisme parisien à partir de 90€/nuit.",
   },
   {
     q: "Est-ce que le WiFi est inclus dans toutes les locations ?",

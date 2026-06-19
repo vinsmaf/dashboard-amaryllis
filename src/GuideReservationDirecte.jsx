@@ -135,7 +135,7 @@ const villas = [
   { id: "amaryllis", nom: "Villa Amaryllis", desc: "Piscine débordement, 3 ch., vue mer panoramique", prix: "dès 280€/nuit", photo: "/photos/amaryllis/01.webp" },
   { id: "iguana",    nom: "Villa Iguana",    desc: "Piscine eau salée, vue Rocher du Diamant, 3 ch.", prix: "dès 220€/nuit", photo: "/photos/iguana/01.webp" },
   { id: "mabouya",   nom: "Villa Mabouya",   desc: "Jacuzzi privatif vue mer, jardin, 2 ch.",         prix: "dès 140€/nuit", photo: "/photos/mabouya/01.webp" },
-  { id: "zandoli",   nom: "Zandoli",   desc: "Piscine partagée, jardin tropical, 2 ch.",         prix: "dès 120€/nuit", photo: "/photos/zandoli/01.webp" },
+  { id: "zandoli",   nom: "Zandoli",   desc: "Piscine partagée, jardin tropical, 2 ch.",         prix: "dès 110€/nuit", photo: "/photos/zandoli/01.webp" },
   { id: "geko",      nom: "Géko",      desc: "Piscine partagée, cadre naturel, 2 ch.",           prix: "dès 120€/nuit", photo: "/photos/geko/01.webp" },
   { id: "schoelcher", nom: "Villa Schœlcher", desc: "Terrasse vue mer, piscine partagée, 2 ch.",       prix: "dès 110€/nuit", photo: "/photos/schoelcher/01.webp" },
 ];

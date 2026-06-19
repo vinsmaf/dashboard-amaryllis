@@ -178,7 +178,7 @@ const CATEGORIES = [
       {
         q: "Peut-on louer une villa avec jacuzzi privatif ?",
         a: <>
-          <p>Oui. Le studio <strong>Mabouya</strong> est entièrement dédié au romantisme avec jacuzzi privatif en terrasse et vue mer à partir de 110€/nuit. C'est le seul logement de la résidence à proposer un jacuzzi privé — l'expérience couple idéale.</p>
+          <p>Oui. Le studio <strong>Mabouya</strong> est entièrement dédié au romantisme avec jacuzzi privatif en terrasse et vue mer à partir de 70€/nuit. C'est le seul logement de la résidence à proposer un jacuzzi privé — l'expérience couple idéale.</p>
         </>,
       },
       {

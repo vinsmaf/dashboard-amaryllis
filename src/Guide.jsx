@@ -95,7 +95,7 @@ function closestVillas(distFrom, max = 3) {
 
 /* ─── FAQ ───────────────────────────────────────────────────── */
 const faqs = [
-  { q: "Combien coûte la location d'une villa à Sainte-Luce ?", a: "À partir de 110€/nuit (Mabouya, jacuzzi privatif) jusqu'à 280€/nuit (Villa Amaryllis, piscine à débordement eau salée 4×7 m, vue mer 180°, 3 chambres, 8 personnes). En réservant directement, vous évitez les frais Airbnb — jusqu'à 14% d'économie." },
+  { q: "Combien coûte la location d'une villa à Sainte-Luce ?", a: "À partir de 70€/nuit (Mabouya, jacuzzi privatif) jusqu'à 280€/nuit (Villa Amaryllis, piscine à débordement eau salée 4×7 m, vue mer 180°, 3 chambres, 8 personnes). En réservant directement, vous évitez les frais Airbnb — jusqu'à 15% d'économie." },
   { q: "Quelle villa choisir avec piscine à débordement ?", a: "La Villa Amaryllis est notre propriété phare : piscine infinity eau salée 4×7 m, terrasse 100m² vue Caraïbe 180°, 3 chambres climatisées, 8 personnes. Zandoli et Géko offrent chacune une piscine privative à cascade dès 150€/nuit. Iguana propose la seule piscine eau salée non chlorée de la résidence." },
   { q: "Comment réserver sans passer par Airbnb ?", a: "Directement sur villamaryllis.com — sélectionnez votre logement, choisissez vos dates, payez par carte (Stripe sécurisé). Contact direct WhatsApp avec l'hôte inclus." },
   { q: "Peut-on venir avec des animaux ?", a: "Oui, la Villa Amaryllis et la Villa Iguana acceptent les animaux (supplément 40€/séjour, max 2 animaux). Mentionnez-le à la réservation." },

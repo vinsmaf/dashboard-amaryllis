@@ -252,7 +252,7 @@ const FAQS_PAR_BIEN = {
     { q: "Quelle est la différence entre Géko et Zandoli ?", a: "Zandoli a 2 chambres + mezzanine pour 5 personnes (110€/nuit). Géko est un cocon 4 personnes (110€/nuit). Les deux ont leur propre piscine privative avec cascade." },
   ],
   mabouya: [
-    { q: "Quel est le prix du studio Mabouya en Martinique ?", a: "Studio Mabouya se loue à partir de 110€/nuit en réservation directe sur villamaryllis.com — l'option la plus accessible du portfolio." },
+    { q: "Quel est le prix du studio Mabouya en Martinique ?", a: "Studio Mabouya se loue à partir de 70€/nuit en réservation directe sur villamaryllis.com — l'option la plus accessible du portfolio." },
     { q: "Mabouya a-t-il un jacuzzi privatif ?", a: "Oui — Studio Mabouya dispose d'un jacuzzi privatif en terrasse avec vue mer. C'est le seul logement de la résidence Amaryllis à proposer un jacuzzi privé." },
     { q: "Mabouya est-il adapté pour un couple ?", a: "Absolument — Studio Mabouya est notre studio romantique par excellence : lit queen-size 160×200, jacuzzi privé, terrasse vue mer, intimité totale à flanc de colline." },
     { q: "Combien de personnes peut accueillir Mabouya ?", a: "Studio Mabouya accueille 2 personnes maximum. Pensé pour les couples en escapade romantique." },

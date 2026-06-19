@@ -240,8 +240,8 @@ export default function GuideDiamant() {
               {[
                 { id: "iguana",    name: "Villa Iguana",    desc: "Vue directe sur le Rocher du Diamant · Piscine eau salée · Location longue durée" },
                 { id: "amaryllis", name: "Villa Amaryllis", desc: "Piscine à débordement · Vue océan · Jacuzzi · À partir de 280€/nuit" },
-                { id: "mabouya",   name: "Mabouya",         desc: "Vue mer panoramique · Jacuzzi privatif · À partir de 110€/nuit" },
-                { id: "zandoli",   name: "Zandoli",         desc: "Piscine privée · Vue mer · 5 personnes · À partir de 220€/nuit" },
+                { id: "mabouya",   name: "Mabouya",         desc: "Vue mer panoramique · Jacuzzi privatif · À partir de 70€/nuit" },
+                { id: "zandoli",   name: "Zandoli",         desc: "Piscine privée · Vue mer · 5 personnes · À partir de 110€/nuit" },
               ].map(v => (
                 <a key={v.id} href={`/${v.id}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#fff", border: `1px solid ${SAND}`, borderRadius: 10, padding: "14px 18px", textDecoration: "none" }}>
                   <div>
