@@ -306,6 +306,8 @@ flowchart TD
 - **Pont Google Sheets** : `sheets-proxy.js` → Apps Script → Sheet ID `1xuhU0KraEMxF9NAWO5MKEt23JI_V8mnNnWktzHy6q2U`. ⚠️ **POST direct interdit** (Apps Script supprime le body au redirect) → écriture en GET paginé chunked (`importAllReservations`). Scripts autonomes `REVENUS_AUTO_2026.gs` / `_2027.gs` (trigger 15 min).
 - **CSP** : `public/_headers` (centralisé sur `/*`). Tout domaine tracking/tiers DOIT y être ajouté sinon silencieusement bloqué (vérifié par `audit-invariants.mjs` INV4).
 - **Tracking** : GA4 `G-N9BM709ZBL` (`index.html`, Consent Mode v2) + Meta Pixel `1648064656415946` client (`metaPixel.js`, consent-gated) + CAPI server (`_metaCapi.js` via `stripe-webhook.js`, dédup `event_id=pi.id`).
+  - **Funnel (4 étapes, GA4)** : `view_item` → `begin_checkout` (clic dates+prix = intérêt) → `add_payment_info` (arrivée écran carte = vrai départ paiement) → `purchase`. Lu via `functions/api/analytics.js` (rapport `funnel`). **Outil CLI : `npm run funnel`** (`scripts/funnel.mjs`) = funnel live, source unique, jamais figé en mémoire (ADR-FUNNEL-LIVE-001).
+  - **Attribution purchase** : event client (`Merci.jsx`, attribution native) + failsafe server MP (`stripe-webhook.js` `ga4Event`) qui envoie param `bien_id` + le **vrai `client_id` GA4** (cookie `_ga` capturé par `trackingAttribution.js` → metadata Stripe) → évite "Unassigned"/"(not set)" (ADR-ATTR-001).
 - **Rate limiting** : helper partagé `_ratelimit.js` (`rateLimit(db, {key, limit, windowSec})`, D1 `rate_limits_v2`, fail-open) — consommé par `admin-auth`, `contact`, `chat`, `beds24-*`, `promo-codes`, `client-errors`, `send-custom-email`, `_skills`, etc. Non exposé en endpoint HTTP.
 
 ### INVENTAIRE D1 `revenue_manager` (~50 tables, base UNIQUE, par domaine)

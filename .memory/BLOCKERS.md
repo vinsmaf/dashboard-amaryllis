@@ -4,7 +4,9 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-15 : ✅ levés regroupés en bas, doublons fusionnés._
 
-## En cours → ✅ terminé le 2026-06-20 (Configuration page Facebook : Bio ✅ · Social Links IG+YT ✅ · pipeline auto-pub réparé ✅)
+## En cours → ✅ terminé le 2026-06-20 (Session CRO conversion : funnel live + add_payment_info + attribution + friction paiement + galerie Géko, tous déployés)
+> Session précédente : Config page Facebook (Bio ✅ · Social Links IG+YT ✅ · pipeline auto-pub réparé ✅).
+> ⏳ **À surveiller (pas un blocker) — verdict 03/07** : `add_payment_info` se remplit-il ? les ventes quittent-elles "Unassigned"/"(not set)" ? (fix attribution du 20/06). Tâche programmée `funnel-verdict-propre-locatif` + AGENDA 2026-07-03.
 
 ## 🟡 Config page Facebook — éléments en attente
 - 🟡 **CTA "Book now" URL non vérifiée** : le bouton existe sur la page en vue visiteur, mais l'URL de destination n'a pas été confirmée/éditée (session interrompue). → En vue visiteur : hover bouton → crayon → vérifier que cible = `villamaryllis.com`. Si besoin : Page Settings → Buttons.

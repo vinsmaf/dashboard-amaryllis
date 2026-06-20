@@ -3,6 +3,20 @@
 > 1 entrée par décision qui engage la suite. Format 5 lignes : **Choix · Alternatives refusées · Conséquences attendues · Périmètre · Statut**.
 > Décisions d'archi détaillées (specs complets) → `../docs/superpowers/specs/README.md` (ADR-001→010). Ici = log curaté de session.
 
+## ADR-FUNNEL-LIVE-001 · 2026-06-20 · Chiffres funnel/conversion = source live uniquement, jamais figés en mémoire
+1. **Choix** : les chiffres volatils (funnel, trafic, conversion, revenu) ne vivent QUE dans GA4, lus à la demande via `npm run funnel` (script `scripts/funnel.mjs` → `/api/analytics`, public sans auth, 30j glissants) ou l'onglet admin Analytics. La mémoire pointe vers la source, ne recopie jamais (ADR-G-001 appliqué au funnel).
+2. **Alternatives refusées** : continuer à noter le funnel dans `CONTEXT.md` (rejeté — vécu ce jour : j'ai resservi le funnel du 04/06 figé, faux d'un facteur ~4-10 ; un chiffre volatil copié périme et ment).
+3. **Conséquences attendues** : toute reco conversion/pricing/roadmap DOIT démarrer par `npm run funnel`. 19 chiffres figés purgés/pointés. Ligne RECALL ajoutée (déclencheur auto). Funnel passé à 4 étapes (ajout `add_payment_info`, cf. ADR-ATTR ci-dessous).
+4. **Périmètre** : `scripts/funnel.mjs`, `functions/api/analytics.js` (filtre funnel), `src/tabs/AnalyticsTab.jsx`, `.memory/{CONTEXT,RECALL,BLOCKERS}.md`.
+5. **Statut** : acté, déployé (`620fbd0`, `70d445a`).
+
+## ADR-ATTR-001 · 2026-06-20 · Attribution purchase : 4e étape funnel + rattachement à la vraie session GA4
+1. **Choix** : (a) nouvel event `add_payment_info` émis à l'arrivée écran carte (vrai dénominateur de paiement, isole abandon-formulaire vs abandon-CB) ; (b) purchase server-side (Measurement Protocol, `stripe-webhook.js`) envoie le param top-level `bien_id` ET utilise le vrai `client_id` GA4 (capturé depuis le cookie `_ga` → metadata Stripe).
+2. **Alternatives refusées** : garder `begin_checkout` comme seul dénominateur (rejeté — émis trop tôt, au clic dates+prix = intérêt précoce, dénominateur gonflé). Garder le `client_id` synthétique `booking-xxx` (rejeté — cause les ventes "Unassigned" + bien "(not set)").
+3. **Conséquences attendues** : à partir du 20/06, les ventes doivent quitter "Unassigned"/"(not set)" et le funnel doit montrer la vraie fuite paiement (`add_payment_info→purchase`). Verdict propre attendu le 03/07 (2 sem. de données).
+4. **Périmètre** : `src/PublicSite.jsx` (émission add_payment_info), `src/lib/trackingAttribution.js` (capture `ga_client_id`), `functions/api/stripe-webhook.js` (purchase direct + groupe), `functions/api/analytics.js`.
+5. **Statut** : acté, déployé (`70d445a`, `4d89f0d`). À valider sur données réelles le 03/07 (AGENDA + tâche programmée).
+
 ## ADR-META-REPAIR-001 · 2026-06-19 · Réparation pipeline publication réseaux : 3 root causes identifiées et corrigées
 1. **Choix** : corriger en profondeur les 3 causes racines des publications manquées (Jun 15-19) plutôt qu'un bypass.
 2. **Alternatives refusées** : (a) republier manuellement les 6 posts sans investiguer = récidive certaine ; (b) désactiver le pipeline = retard sur la stratégie éditoriale.
