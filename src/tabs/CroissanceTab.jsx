@@ -187,6 +187,54 @@ Channels : ig + fb`;
         </div>
       )}
 
+      {/* ═════ Funnel d'acquisition IG ═════ */}
+      {insights?.instagram && (
+        <Section title="🎯 Funnel d'acquisition Instagram" sub="Du visiteur de profil au clic vers villamaryllis.com.">
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 10 }}>
+            <MetricCard label="Vues de profil" data={insights.instagram.profile_views} color="#a78bfa" icon="👁" />
+            <MetricCard label="Clics site web" data={insights.instagram.website_clicks} color="#34d399" icon="🔗" tooltip="Clics sur le lien bio → villamaryllis.com" />
+            <MetricCard label="Comptes engagés" data={insights.instagram.accounts_engaged} color="#f59e0b" icon="💬" />
+          </div>
+        </Section>
+      )}
+
+      {/* ═════ Portée & impressions ═════ */}
+      {insights && (
+        <Section title="📡 Portée & impressions" sub={`Sur les ${days} derniers jours — reach = comptes uniques, impressions = affichages totaux.`}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 10, marginBottom: 12 }}>
+            <MetricCard label="Reach IG" data={insights.instagram.reach} color="#e1306c" icon="📸" />
+            <MetricCard label="Impressions IG" data={insights.instagram.impressions} color="#c084fc" icon="👀" />
+            <MetricCard label="Reach FB" data={insights.facebook.reach} color="#1877f2" icon="📘" />
+            <MetricCard label="Impressions FB" data={insights.facebook.impressions} color="#60a5fa" icon="👀" />
+          </div>
+          {/* Organique vs Payant FB */}
+          {insights.facebook.impressions_organic && insights.facebook.impressions_paid && (
+            <OrgVsPaid organic={insights.facebook.impressions_organic} paid={insights.facebook.impressions_paid} />
+          )}
+        </Section>
+      )}
+
+      {/* ═════ Engagement & intention ═════ */}
+      {insights?.instagram && (
+        <Section title="💾 Engagement & intention de réservation" sub="Les sauvegardes (saves) sont le signal d'intention le plus fort — quelqu'un bookmark pour revenir.">
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 10 }}>
+            <MetricCard label="Sauvegardes IG" data={insights.instagram.saves} color="#f97316" icon="🔖" tooltip="Posts sauvegardés = intention de revenir" highlight />
+            <MetricCard label="Engagements FB" data={insights.facebook.post_engagements} color="#1877f2" icon="👍" />
+          </div>
+        </Section>
+      )}
+
+      {/* ═════ Audience géographique ═════ */}
+      {insights?.audience?.countries && (
+        <Section title="🌍 Audience géographique" sub="Top pays des followers Instagram (30 derniers jours). Source : Facebook Graph API.">
+          <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+            {insights.audience.countries.map(c => (
+              <CountryBar key={c.country} country={c.country} count={c.count} pct={c.pct} />
+            ))}
+          </div>
+        </Section>
+      )}
+
       {/* ═════ Générateur de post-concours ═════ */}
       <Section title="🎁 Concours mensuel" sub="Génère un draft de post-concours viral via l'IA Community Manager. À approuver ensuite dans l'onglet Approbations.">
         <button
@@ -238,6 +286,60 @@ Channels : ig + fb`;
 }
 
 // ── Composants internes ────────────────────────────────────────────────────
+
+const COUNTRY_NAMES = { FR:"France", MQ:"Martinique", GP:"Guadeloupe", US:"États-Unis", BE:"Belgique", CH:"Suisse", CA:"Canada", RE:"La Réunion", GB:"Royaume-Uni", DE:"Allemagne", IT:"Italie", ES:"Espagne", BR:"Brésil", SN:"Sénégal", CM:"Cameroun" };
+const fmt = n => n >= 1000 ? `${(n/1000).toFixed(1)}k` : String(n);
+
+function MetricCard({ label, data, color, icon, tooltip, highlight }) {
+  if (!data) return null;
+  const last = data.series?.[data.series.length - 1]?.value ?? null;
+  return (
+    <div style={{ background: highlight ? `rgba(${color === "#f97316" ? "249,115,22" : "255,255,255"},0.06)` : "rgba(255,255,255,0.03)", border: `1px solid ${highlight ? color + "40" : "rgba(255,255,255,0.07)"}`, borderRadius: 11, padding: "11px 13px" }} title={tooltip}>
+      <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 5 }}>{icon} {label}</div>
+      <div style={{ fontSize: 20, fontWeight: 800, color, letterSpacing: "-0.5px", marginBottom: 4 }}>
+        {last !== null ? fmt(last) : "—"}
+      </div>
+      <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 6 }}>
+        {data.delta_7j !== null && <Delta value={data.delta_7j}  label="7j" />}
+        {data.delta_30j !== null && <Delta value={data.delta_30j} label="30j" />}
+      </div>
+      <Sparkline series={data.series} color={color} width={100} height={28} />
+    </div>
+  );
+}
+
+function OrgVsPaid({ organic, paid }) {
+  const orgTotal  = (organic.series || []).reduce((s, p) => s + p.value, 0);
+  const paidTotal = (paid.series   || []).reduce((s, p) => s + p.value, 0);
+  const total     = orgTotal + paidTotal || 1;
+  const orgPct    = Math.round((orgTotal / total) * 100);
+  return (
+    <div style={{ background: "rgba(255,255,255,0.02)", borderRadius: 9, padding: "10px 12px" }}>
+      <div style={{ fontSize: 10, color: "#64748b", marginBottom: 8 }}>📊 Répartition impressions FB — organique vs payant</div>
+      <div style={{ display: "flex", borderRadius: 6, overflow: "hidden", height: 10, marginBottom: 6 }}>
+        <div style={{ width: `${orgPct}%`, background: "#1877f2", transition: "width .4s" }} />
+        <div style={{ flex: 1, background: "#f59e0b" }} />
+      </div>
+      <div style={{ display: "flex", gap: 14, fontSize: 11, color: "#94a3b8" }}>
+        <span><span style={{ color: "#1877f2", fontWeight: 700 }}>{orgPct}%</span> organique ({fmt(orgTotal)})</span>
+        <span><span style={{ color: "#f59e0b", fontWeight: 700 }}>{100 - orgPct}%</span> payant ({fmt(paidTotal)})</span>
+      </div>
+    </div>
+  );
+}
+
+function CountryBar({ country, count, pct }) {
+  const name = COUNTRY_NAMES[country] || country;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <div style={{ width: 110, fontSize: 11, color: "#e2e8f0", flexShrink: 0 }}>{name}</div>
+      <div style={{ flex: 1, background: "rgba(255,255,255,0.05)", borderRadius: 4, height: 7, overflow: "hidden" }}>
+        <div style={{ width: `${pct}%`, background: "linear-gradient(90deg,#a78bfa,#e1306c)", height: "100%", borderRadius: 4, transition: "width .5s" }} />
+      </div>
+      <div style={{ fontSize: 11, color: "#94a3b8", width: 55, textAlign: "right", flexShrink: 0 }}>{count.toLocaleString("fr-FR")} <span style={{ color: "#475569" }}>({pct}%)</span></div>
+    </div>
+  );
+}
 
 function KPI({ label, value, icon, color, sub }) {
   return (
