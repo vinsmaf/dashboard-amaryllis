@@ -44,12 +44,11 @@
 - **Pattern complément/changement de bien** : endpoint `complement-checkout.js` (créé cette session) = Checkout `mode:payment` + `setup_future_usage:off_session` + `metadata.kind="complement"`. Le webhook a une garde `kind==="complement"` → encaisse + `storeCautionSchedule` (caution J-2) MAIS PAS de `storeDirectBooking` (évite doublon résa) ni conversion GA4/Meta (évite fausse valeur). ⚠️ Stripe refuse `customer_creation` + `setup_future_usage` ENSEMBLE ("only one of these parameters") → ne mettre que `setup_future_usage` (crée le customer tout seul).
 - **Checkout Session `expires_at`** : Stripe exige STRICTEMENT < 24h. Ne pas le passer du tout = défaut 24h (robuste). Une valeur ≥ 24h OU une borne edge fragile (Date.now() CF) → erreur "must be less than 24 hours".
 
-## 💶 Prix de réservation = widget site UNIQUEMENT, ni biens.js ni API RM — 2026-06-19
-- **Piège récurrent (2x vécu)** : Claude utilise soit `bien.prix` (ex. 110€ Zandoli) soit `rm-recommendations.recommended_price_cents` (~200€/nuit) → montants faux dans les deux cas. Le vrai prix Zandoli juillet = 133€/nuit moyen = 1 861€/15 nuits.
-- **Source de vérité = prix journaliers du calendrier admin** (Google Sheets → `loadDailyPrices()` → localStorage). Ces données alimentent le widget de réservation sur le site. L'API RM est **advisory only** — Vincent ne les applique pas forcément.
-- **La prochaine fois** : pour tout devis/transfert de résa, dire à Vincent "fais le test sur le site avec les bonnes dates" et utiliser le montant affiché par le widget. Je ne peux pas accéder au localStorage directement.
-- `biens.js` `prix` = prix plancher SEO ("dès X€/nuit") — jamais facturable.
-- `/api/rm-recommendations` = prix conseillés RM — pas les prix réels configurés.
+## 💶 Prix = prix journaliers du calendrier UNIQUEMENT — jamais `biens.js prix` ni API RM — 2026-06-19 (fusion 2026-06-05)
+- **Piège récurrent (3x vécu)** : utiliser `bien.prix` (ex. 110€ Zandoli) ou `rm-recommendations.recommended_price_cents` → montants faux. Le vrai Zandoli juillet = 133€/nuit moy = 1 861€/15 nuits.
+- **Source de vérité = prix journaliers du calendrier admin** (`loadDailyPrices()` = `SEED_DAILY_PRICES` + overrides `/api/site-config?type=prices`). **Devis juste = lien tunnel `…/<bien>?checkin=&checkout=` OU onglet Tarifs OU onglet Devis.** Réf : `docs/PRICING.md`. Je ne peux pas accéder au localStorage directement → dire à Vincent "fais le test sur le site".
+- `biens.js` `prix` = **plancher réel** (min des tarifs) + fallback SEO "dès X€" → jamais facturable directement. À ré-aligner si les tarifs changent fortement.
+- `/api/rm-recommendations` = prix conseillés RM → advisory only, Vincent ne les applique pas forcément.
 
 ## 🐛 iCal parseICS `descGet` peut capturer des numéros de référence (12-15 chiffres) comme montant → toujours cap — 2026-06-18
 - **Piège vécu** : `CpaCanalTab` affichait CPA 62G€ / CA 262T€ pour Booking.com. Cause : le regex `descGet(["Montant", "Total", …])` dans `parseICS` capturait les numéros de référence Booking.com (ex. `BOOKING#1234567890123`) présents en DESCRIPTION iCal, `parseFloat` après strip des non-numériques = un montant de 12+ chiffres. **La prochaine fois** : après tout `parseFloat` sur un montant iCal, ajouter `&& montantParsed <= 50000` avant d'accepter la valeur. Sinon le bug est invisible (aucune erreur JS, juste une valeur aberrante stockée en localStorage).
@@ -269,11 +268,6 @@
 
 ## CF Pages secrets = write-only, inaccessibles localement — 2026-06-11
 - **Les secrets CF Pages (`wrangler pages secret put`) sont write-only côté infra.** Impossible à lire via API Cloudflare, wrangler CLI, ou dashboard. La valeur n'est accessible que depuis une CF Function en runtime (`context.env.MA_CLE`). **Conséquence** : pour configurer un service tiers (ex. Resend, Stripe) qui nécessite la clé API, Vincent doit l'extraire depuis le dashboard du service tiers, pas depuis CF. Pour tester localement = `.dev.vars`.
-
-## 💶 Prix : SOURCE UNIQUE = prix journaliers (onglet Tarifs) — 2026-06-05
-- **À ne PLUS refaire : faire un devis / lire un prix depuis `biens.js prix` ou l'accroche « dès X€ ».** Ce sont des AFFICHAGES, pas le prix facturé. Le prix réel = les **prix journaliers** (`loadDailyPrices()` = `SEED_DAILY_PRICES` + overrides serveur `/api/site-config?type=prices`) que lit le tunnel. **Devis juste = lien tunnel `…/<bien>?checkin=&checkout=` OU onglet Tarifs OU onglet Devis.** Réf : `docs/PRICING.md`.
-- **Cause racine du bug « 2 prix différents » (résolu 2026-06-05)** : un 2ᵉ prix éditable « Prix de base — site public » était fusionné côté public dans `localStorage["amaryllis_prices"]` avec un **format incompatible** (`{bienId:nombre}` vs `{bienId:{date:prix}}`) → collision. **Fix : champ supprimé ; accroche = AUTO (min des prix journaliers, bornée par `biens.js prix`) ; `biens.js prix` = plancher réel + fallback SEO.** Source unique = le calendrier des tarifs.
-- **`biens.js prix` = le PLANCHER réel** (min des tarifs), pas un nombre marketing. À ré-aligner si les tarifs changent fortement (sinon le SEO « dès X€ » dérive).
 
 ## 🔄 Sync iCal → Sheet & notifications (Worker amaryllis-ical-sync) — 2026-06-05
 - **🔴 Apps Script SUPPRIME le body des POST (bug redirect Google).** Tout `fetch(APPS_SCRIPT_URL,{method:"POST",body})` direct n'écrit RIEN. Le Worker `pushToSheets` faisait ça → résas iCal jamais écrites dans le Sheet. **Règle : pour écrire dans le Sheet, TOUJOURS via `/api/sheets-proxy` (forwardChunked = GET paginé), jamais POST direct.**
