@@ -109,8 +109,29 @@ async function main() {
   const loginMode = args.includes("--login");
   const headed = loginMode || process.env.HEADED === "1";
 
-  const ctx = await chromium.launchPersistentContext(PROFILE_DIR, { headless: !headed, viewport: { width: 1366, height: 900 }, locale: "fr-FR" });
+  // Nettoyer les verrous Chrome résiduels (laissés par un --login ou crash précédent)
+  for (const lock of ["SingletonLock", "SingletonCookie", "SingletonSocket"]) {
+    try { fs.unlinkSync(path.join(PROFILE_DIR, lock)); } catch { /* ok si absent */ }
+  }
+
+  const ctx = await chromium.launchPersistentContext(PROFILE_DIR, {
+    headless: !headed,
+    channel: "chrome",
+    viewport: { width: 1366, height: 900 },
+    locale: "fr-FR",
+    args: [
+      "--disable-blink-features=AutomationControlled",
+      "--no-first-run",
+      "--no-default-browser-check",
+    ],
+  });
   const page = ctx.pages()[0] || (await ctx.newPage());
+  // Masquer les traces d'automatisation Playwright
+  await ctx.addInitScript(() => {
+    Object.defineProperty(navigator, "webdriver", { get: () => undefined });
+    delete window.__playwright;
+    delete window.__pw_manual;
+  });
 
   try {
     if (loginMode) {

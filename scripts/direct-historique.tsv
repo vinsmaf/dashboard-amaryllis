@@ -1,0 +1,52 @@
+id	logement	nom du client	arrivée	départ	montant	statut
+direct-amaryllis-2022-02-25	amaryllis	Célia GERME	2022-02-25	2022-03-01	1350	Confirmé
+direct-amaryllis-2022-08-11	amaryllis	Ingrid NADEAU	2022-08-11	2022-08-16	1900	Confirmé
+direct-amaryllis-2022-05-13	amaryllis	Judith rifaux	2022-05-13	2022-05-17	1550	Confirmé
+direct-amaryllis-2023-07-24	amaryllis	Kamel AMROUNE	2023-07-24	2023-08-28	8000	Confirmé
+direct-amaryllis-2023-11-07	amaryllis	Maxime  Maxime	2023-11-07	2023-11-11	1400	Confirmé
+direct-amaryllis-2024-02-16	amaryllis	Estelle et Rodolphe PITHOIS	2024-02-16	2024-02-24	3000	Confirmé
+direct-amaryllis-2024-04-18	amaryllis	Adrien et Sabine PATY	2024-04-18	2024-04-27	2970	Confirmé
+direct-amaryllis-2024-07-26	amaryllis	Eloise coquitte	2024-07-26	2024-07-31	2380	Confirmé
+direct-amaryllis-2025-02-06	amaryllis	David VOLANT	2025-02-06	2025-02-18	4800	Confirmé
+direct-amaryllis-2024-12-29	amaryllis	Nathalie et Laurent BILLON et BECQUEMONT	2024-12-29	2025-01-13	6735	Confirmé
+direct-amaryllis-2025-01-23	amaryllis	Suzanne St André	2025-01-23	2025-01-30	3365	Confirmé
+direct-amaryllis-2025-04-18	amaryllis	Marcin Banasiak	2025-04-18	2025-04-24	2100	Confirmé
+direct-amaryllis-2025-05-22	amaryllis	Nadia Victorin	2025-05-22	2025-05-25	1500	Confirmé
+direct-amaryllis-2025-07-18	amaryllis	mickael celino	2025-07-18	2025-07-22	1550	Confirmé
+direct-amaryllis-2025-07-28	amaryllis	Anne-claire ROLLAND	2025-07-28	2025-08-01	1200	Confirmé
+direct-amaryllis-2025-08-30	amaryllis	Lionel JARRIN	2025-08-30	2025-09-03	1350	Confirmé
+direct-amaryllis-2026-01-05	amaryllis	Maéva  Benoit	2026-01-05	2026-01-19	5976	Confirmé
+direct-amaryllis-2026-07-31	amaryllis	stéphanie FELICITE	2026-07-31	2026-08-14	4800	Confirmé
+direct-amaryllis-2026-04-12	amaryllis	Charlotte SIBILLE	2026-04-12	2026-04-16	1300	Confirmé
+direct-geko-2024-10-23	geko	Annaëlle LAMIC	2024-10-23	2024-10-25	320	Confirmé
+direct-geko-2024-10-26	geko	Axelle ROSALIE	2024-10-26	2024-10-28	340	Confirmé
+direct-geko-2025-02-11	geko	stéphane BICHAT	2025-02-11	2025-03-11	2700	Confirmé
+direct-geko-2025-07-14	geko	Christophe Tisserand	2025-07-14	2025-07-17	450	Confirmé
+direct-geko-2025-08-15	geko	Fatou FAYE	2025-08-15	2025-08-17	400	Confirmé
+direct-geko-2025-10-03	geko	Jordan HOMMAND	2025-10-03	2025-10-06	480	Confirmé
+direct-geko-2026-02-04	geko	Laurent GALLARD	2026-02-04	2026-02-11	1100	Confirmé
+direct-geko-2026-04-08	geko	Pascal Guilbaud	2026-04-08	2026-04-19	1200	Confirmé
+direct-geko-2026-03-08	geko	Line DAUVERGNE	2026-03-08	2026-03-25	2300	Confirmé
+direct-mabouya-2025-05-10	mabouya	Anne Marié Vannier	2025-05-10	2025-05-31	1930	Confirmé
+direct-mabouya-2025-10-11	mabouya	Omar JOUAD	2025-10-11	2025-11-03	700	Confirmé
+direct-mabouya-2025-12-10	mabouya	Dominique LOUIS	2025-12-10	2026-01-15	1400	Confirmé
+direct-mabouya-2025-11-10	mabouya	Steeven Dielna	2025-11-10	2025-11-12	220	Confirmé
+direct-mabouya-2026-02-04	mabouya	Charlotte Gay	2026-02-04	2026-05-03	3000	Confirmé
+direct-schoelcher-2025-12-20	schoelcher	Jean-Francois SAMMUT	2025-12-20	2026-01-03	1600	Confirmé
+direct-schoelcher-2026-02-18	schoelcher	Josette GUYET	2026-02-18	2026-03-09	1970	Confirmé
+direct-schoelcher-2026-04-24	schoelcher	Morgane POMPADOU, Vincent VERMEERSCH	2026-04-24	2026-07-24	3900	Confirmé
+direct-schoelcher-2026-07-30	schoelcher	Eléonore BEVON, Axel COSSON	2026-07-30	2026-08-27	1600	Confirmé
+direct-iguana-2022-07-31	iguana	liana JOF	2022-07-31	2022-08-11	1100	Confirmé
+direct-iguana-2022-08-12	iguana	Ludwig FRANCOIS	2022-08-12	2022-08-15	350	Confirmé
+direct-iguana-2023-07-28	iguana	Matthieu MONTENAY	2023-07-28	2023-07-30	340	Confirmé
+direct-iguana-2023-12-30	iguana	Jaïny HUMBLOT	2023-12-30	2024-01-02	700	Confirmé
+direct-zandoli-2024-03-02	zandoli	romain Chaffard	2024-03-02	2024-03-09	970	Confirmé
+direct-zandoli-2024-02-24	zandoli	Estelle et Rodolphe PITHOIS	2024-02-24	2024-02-26	350	Confirmé
+direct-zandoli-2024-09-28	zandoli	Dimitri Mehala	2024-09-28	2024-09-30	280	Confirmé
+direct-zandoli-2025-12-27	zandoli	Sylvie GERVAIS	2025-12-27	2026-01-03	1300	Confirmé
+direct-zandoli-2026-02-23	zandoli	Véronique DOLIGER	2026-02-23	2026-03-02	1000	Confirmé
+direct-zandoli-2026-05-07	zandoli	Delphine DE FIRMAS	2026-05-07	2026-05-10	465	Confirmé
+direct-iguana-2024-10-31	iguana	Joel BAILLEUL	2024-10-31	2024-12-19	3400	Confirmé
+direct-iguana-2024-11-19	iguana	Joel BAILLEUL	2024-11-19	2025-10-31	21090	Confirmé
+direct-iguana-2025-11-01	iguana	Joel BAILLEUL	2025-11-01	2026-10-31	21600	Confirmé
+direct-zandoli-2025-01-05	zandoli	Société MAUI ENTERTAINMENT (J-P GARBIN)	2025-01-05	2025-07-09	19620	Confirmé
