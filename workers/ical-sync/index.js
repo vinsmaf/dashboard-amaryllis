@@ -73,11 +73,11 @@ const NOMS = {
   nogent:     "Appartement Nogent",
 };
 
-// Plancher absolu = prix affiché sur le site (biens.js). Miroir de src/data/biens.js.
-// Jamais descendre en dessous — même si D1 price_min n'est pas configuré.
+// Plancher absolu = minimums PRIX_LIMITS (App.jsx). Miroir de src/App.jsx PRIX_LIMITS.
+// Utilisé si D1 price_min non configuré. Les remises gap/yield ne descendent jamais sous ces seuils.
 const SITE_PRIX_CENTS = {
-  amaryllis: 28000, zandoli: 11000, iguana: 18000,
-  geko: 11000, mabouya: 7000, schoelcher: 9000, nogent: 9000,
+  amaryllis: 20000, zandoli: 10000, iguana: 5000,
+  geko: 10000, mabouya: 6000, schoelcher: 9000, nogent: 7000,
 };
 
 const GUIDE_URLS = {
