@@ -2380,10 +2380,19 @@ export default {
       ]));
 
     } else if (cron === "0 12 * * *") {
-      // 12h UTC chaque jour (8h Martinique) — re-seed horizon 30j puis génération drafts éditoriaux J+2
+      // 12h UTC chaque jour (8h Martinique) — re-seed horizon 30j puis génération drafts éditoriaux J+2 + alerte ménage
       ctx.waitUntil((async () => {
         await runEditorialReseed(env);
         await runEditorialDraftGen(env);
+        // ── Alerte ménage (8h Martinique) ──────────────────────────────────────────────────────────
+        try {
+          const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+          const mgRes = await fetch(`${siteUrl}/api/send-menage-alert?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`);
+          const mgData = await mgRes.json().catch(() => ({}));
+          console.log(`[send-menage-alert] sent=${mgData.sent ?? 0} skipped=${mgData.skipped ?? 0}`);
+        } catch (e) {
+          console.error("[send-menage-alert] Cron error:", e.message);
+        }
       })());
 
     } else if (cron === "0 9 * * *") {
@@ -2451,6 +2460,15 @@ export default {
           console.log(`[pre-depart J-1]  sent=${rd.sent ?? 0} failed=${rd.failed ?? 0} target=${rd.target ?? "?"}`);
         } catch (e) {
           console.error("[emails-voyageurs] Cron error:", e.message);
+        }
+        // ── Post-séjour (J+1/J+3 résas directes + Beds24 Nogent) ────────────────────────────────────
+        try {
+          const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+          const psRes = await fetch(`${siteUrl}/api/send-poststay?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`);
+          const psData = await psRes.json().catch(() => ({}));
+          console.log(`[send-poststay] sent=${psData.sent ?? 0} failed=${psData.failed ?? 0}`);
+        } catch (e) {
+          console.error("[send-poststay] Cron error:", e.message);
         }
         await runDevisSoldeCron(env); // C2 — solde devis 2 fois : lien J-30 + relances J-25/J-20 + annulation J-15
         await runEnrichFromEmails(env); // complète nom+payout des résas Airbnb depuis les mails (onglet « Emails ») AVANT le contrôle de cohérence
@@ -2595,11 +2613,20 @@ export default {
       })());
 
     } else {
-      // Toutes les heures — sync iCal + annulation Beds24 non payées + publication éditoriale due
+      // Toutes les 15 min — sync iCal + annulation Beds24 non payées + publication éditoriale due + relance panier
       ctx.waitUntil((async () => {
         await runSync(env);
         await runCancelUnpaidBeds24Bookings(env);
         await runEditorialAutoPublish(env);
+        // ── Relance panier abandonné (horaire — D1 de-dup dans l'endpoint) ────────────────────────
+        try {
+          const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+          const rpRes = await fetch(`${siteUrl}/api/send-relance-panier?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`);
+          const rpData = await rpRes.json().catch(() => ({}));
+          if ((rpData.sent ?? 0) > 0) console.log(`[send-relance-panier] sent=${rpData.sent}`);
+        } catch (e) {
+          console.error("[send-relance-panier] Cron error:", e.message);
+        }
       })());
     }
   },
