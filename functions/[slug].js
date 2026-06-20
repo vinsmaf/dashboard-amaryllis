@@ -95,7 +95,7 @@ const BIEN_FAQ = {
 const GUIDE_DIAMANT = {
   title: "Guide Le Diamant Martinique : rocher, plages et plongée",
   desc: "Tout sur Le Diamant en Martinique : le Rocher du Diamant (plongée, histoire), les plus belles plages et les meilleures adresses. À 15 min de Sainte-Luce.",
-  image: `${BASE}/photos/iguana/01.webp`,
+  image: `${BASE}/photos/iguana/04.webp`,
   url: `${BASE}/guide-le-diamant`,
 };
 
@@ -143,7 +143,7 @@ const GROUP_STAY = {
 const SCHOELCHER_APPART = {
   title: "Location appartement vue mer Schœlcher — dès 100€/nuit",
   desc: "Appartement vue mer à Schœlcher, Martinique : panorama sur la baie de Fort-de-France, dernier étage, 2 pers. Réservation directe dès 100€/nuit, sans frais.",
-  image: `${BASE}/photos/schoelcher/01.webp`,
+  image: `${BASE}/photos/schoelcher/16.webp`,
   url: `${BASE}/location-appartement-vue-mer-schoelcher`,
 };
 
@@ -245,7 +245,7 @@ const GUIDE_META = {
   "sainte-luce-martinique": {
     title: "Location Sainte-Luce Martinique — villa & studios dès 100€",
     desc: "Louez une villa à Sainte-Luce, Martinique : piscine privée, vue mer, dès 110€/nuit en direct sans frais. Plages, activités et conseils de vos hôtes.",
-    image: `${BASE}/photos/iguana/01.webp`,
+    image: `${BASE}/photos/iguana/04.webp`,
     faq: [
       { q: "Pourquoi choisir Sainte-Luce pour ses vacances en Martinique ?", a: "Sainte-Luce, dans le sud de la Martinique, offre des plages de sable blanc (Gros Raisin, Corps de Garde), des fonds marins pour le snorkeling et une position centrale pour explorer le sud." },
       { q: "Quels logements proposez-vous à Sainte-Luce ?", a: "Plusieurs villas et logements sur les hauteurs de Sainte-Luce : Amaryllis (piscine à débordement), Zandoli, Géko et le studio Mabouya, tous avec vue mer ou jardin tropical." },
