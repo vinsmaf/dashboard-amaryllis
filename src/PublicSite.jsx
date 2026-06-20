@@ -3941,6 +3941,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                   alt={`${bien.nom} — ${bien.lieu} — photo ${photoIdx + 1}`}
                   sizes="100vw"
                   loading={photoIdx === 0 ? "eager" : "lazy"}
+                  fetchPriority={photoIdx === 0 ? "high" : undefined}
                   style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                 />
               )}

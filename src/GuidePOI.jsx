@@ -127,7 +127,7 @@ export default function GuidePOI() {
 
       {/* Hero */}
       <section className="gp-hero">
-        {photo && <img className="gp-hero-img" src={photo} alt={guide.h1} onError={e => { e.currentTarget.style.display = "none"; }} />}
+        {photo && <img className="gp-hero-img" src={photo} alt={guide.h1} loading="eager" fetchPriority="high" onError={e => { e.currentTarget.style.display = "none"; }} />}
         <span className="gp-hero-emoji" aria-hidden>{meta.emoji}</span>
         <div className="gp-hero-inner">
           {meta.zone && <span className="gp-zone">{meta.zone} · Martinique</span>}
