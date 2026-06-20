@@ -66,7 +66,8 @@ async function executeDraft(env, draft) {
       : ["fb", "ig"];
 
     const origin = new URL(env.PAGES_URL || "https://dashboard-amaryllis.pages.dev").origin;
-    const r = await fetch(`${origin}/api/social`, {
+    // /api/social POST est gaté (verifyBearer OU ?secret=) → appel interne signé par le secret partagé
+    const r = await fetch(`${origin}/api/social?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

@@ -45,7 +45,7 @@ export default function Cautions() {
     try {
       const res = await fetch("/api/manage-deposit", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + (sessionStorage.getItem("ldb_tok") || "") },
         body: JSON.stringify({ action: "list" }),
       });
       const data = await res.json();
@@ -67,7 +67,7 @@ export default function Cautions() {
       if (action === "capture" && amount) body.amount = parseFloat(amount);
       const res = await fetch("/api/manage-deposit", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + (sessionStorage.getItem("ldb_tok") || "") },
         body: JSON.stringify(body),
       });
       const data = await res.json();

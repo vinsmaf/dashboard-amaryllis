@@ -32,7 +32,7 @@ export default function SocialTab() {
     try {
       const r = await fetch("/api/social", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + (sessionStorage.getItem("ldb_tok") || "") },
         body: JSON.stringify({ action: "publish", caption, imageUrl: imageUrl.trim() || undefined, channels }),
       });
       const d = await r.json();

@@ -1,14 +1,32 @@
 // Cloudflare Pages Function — POST /api/manage-deposit
-// action: "capture" | "cancel" | "list"
+// action: "capture" | "cancel" | "list" | "history"
+// 🔒 Admin UNIQUEMENT : capture/annule des cautions Stripe LIVE (argent réel)
+//    et liste la PII voyageur. Gate verifyBearer obligatoire (sinon n'importe qui
+//    connaissant un paymentIntentId pourrait encaisser/annuler une caution).
+
+import { verifyBearer } from "./_adminauth.js";
+
+const ALLOWED_ORIGINS = ["https://villamaryllis.com", "https://www.villamaryllis.com", "https://dashboard-amaryllis.pages.dev"];
+
+function corsOrigin(request) {
+  const origin = request?.headers?.get("Origin") || "";
+  const allowed = ALLOWED_ORIGINS.some(o => origin === o) || origin.endsWith(".dashboard-amaryllis.pages.dev");
+  return allowed ? origin : "https://villamaryllis.com";
+}
 
 export async function onRequestPost(context) {
   const { request, env } = context;
+
+  // 🔒 Gate admin — endpoint mutateur d'argent réel (Stripe LIVE) + PII voyageur
+  const auth = await verifyBearer(request, env);
+  if (!auth.ok) return json({ error: "Non autorisé" }, 401, request);
+
   const sk = env.STRIPE_SECRET_KEY;
-  if (!sk) return json({ error: "STRIPE_SECRET_KEY manquante" }, 500);
+  if (!sk) return json({ error: "STRIPE_SECRET_KEY manquante" }, 500, request);
 
   let body;
   try { body = await request.json(); }
-  catch { return json({ error: "JSON invalide" }, 400); }
+  catch { return json({ error: "JSON invalide" }, 400, request); }
 
   const { action, paymentIntentId, amount } = body;
 
@@ -20,10 +38,10 @@ export async function onRequestPost(context) {
         { headers: { Authorization: `Bearer ${sk}` } }
       );
       const parsed = await res.json();
-      if (parsed.error) return json({ error: parsed.error.message }, 400);
-      return json({ ok: true, data: parsed.data || [] });
+      if (parsed.error) return json({ error: parsed.error.message }, 400, request);
+      return json({ ok: true, data: parsed.data || [] }, 200, request);
     } catch (err) {
-      return json({ error: err.message }, 500);
+      return json({ error: err.message }, 500, request);
     }
   }
 
@@ -38,20 +56,20 @@ export async function onRequestPost(context) {
         { headers: { Authorization: `Bearer ${sk}` } }
       );
       const parsed = await res.json();
-      if (parsed.error) return json({ error: parsed.error.message }, 400);
+      if (parsed.error) return json({ error: parsed.error.message }, 400, request);
       const data = (parsed.data || []).map(pi => ({
         id: pi.id, status: pi.status, amount: pi.amount, created: pi.created,
         canceled_at: pi.canceled_at, capture_method: pi.capture_method,
         bienId: pi.metadata?.bienId, voyageur: pi.metadata?.voyageur,
         checkin: pi.metadata?.checkin, checkout: pi.metadata?.checkout,
       }));
-      return json({ ok: true, data });
+      return json({ ok: true, data }, 200, request);
     } catch (err) {
-      return json({ error: err.message }, 500);
+      return json({ error: err.message }, 500, request);
     }
   }
 
-  if (!paymentIntentId) return json({ error: "paymentIntentId requis" }, 400);
+  if (!paymentIntentId) return json({ error: "paymentIntentId requis" }, 400, request);
 
   let url;
   if (action === "capture") {
@@ -59,7 +77,7 @@ export async function onRequestPost(context) {
   } else if (action === "cancel") {
     url = `https://api.stripe.com/v1/payment_intents/${paymentIntentId}/cancel`;
   } else {
-    return json({ error: "Action invalide (capture | cancel | list)" }, 400);
+    return json({ error: "Action invalide (capture | cancel | list)" }, 400, request);
   }
 
   const capturePayload = action === "capture" && amount
@@ -73,26 +91,31 @@ export async function onRequestPost(context) {
       body: capturePayload,
     });
     const parsed = await res.json();
-    if (parsed.error) return json({ error: parsed.error.message }, 400);
-    return json({ ok: true, status: parsed.status });
+    if (parsed.error) return json({ error: parsed.error.message }, 400, request);
+    return json({ ok: true, status: parsed.status }, 200, request);
   } catch (err) {
-    return json({ error: err.message }, 500);
+    return json({ error: err.message }, 500, request);
   }
 }
 
-export function onRequestOptions() {
+export function onRequestOptions({ request }) {
   return new Response(null, {
     headers: {
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": corsOrigin(request),
       "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Vary": "Origin",
     },
   });
 }
 
-function json(data, status = 200) {
+function json(data, status = 200, request = null) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+    headers: {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": corsOrigin(request),
+      "Vary": "Origin",
+    },
   });
 }

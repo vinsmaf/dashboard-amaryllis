@@ -5,6 +5,8 @@
  *                { action: "schedule", caption, imageUrl, channels, scheduledAt }
  */
 
+import { verifyBearer } from "./_adminauth.js";
+
 const GV = "v25.0";
 
 function json(data, status = 200) {
@@ -200,6 +202,16 @@ export async function onRequestGet({ request, env }) {
 }
 
 export async function onRequestPost({ request, env }) {
+  // 🔒 Écriture publique (publie sur FB/IG, change la photo de profil Page) :
+  //    admin (Bearer) OU appel serveur interne (?secret=POSTSTAY_SECRET, ex. agent-drafts).
+  //    Sans ça, un tiers pourrait publier du contenu arbitraire sur les réseaux.
+  const secret = new URL(request.url).searchParams.get("secret");
+  const internalOk = !!secret && !!env.POSTSTAY_SECRET && secret === env.POSTSTAY_SECRET;
+  if (!internalOk) {
+    const auth = await verifyBearer(request, env);
+    if (!auth.ok) return json({ error: "Non autorisé" }, 401);
+  }
+
   let body;
   try { body = await request.json(); } catch { return json({ error: "Body JSON invalide" }, 400); }
 

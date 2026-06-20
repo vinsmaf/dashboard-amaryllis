@@ -171,8 +171,10 @@ function json(data, status = 200, cache = false) {
     "Content-Type": "application/json",
     "Access-Control-Allow-Origin": "*",
   };
-  // web-008 : cache 5min côté CDN pour les requêtes paginées lourdes
-  if (cache) headers["Cache-Control"] = "public, s-maxage=300, stale-while-revalidate=60";
+  // web-008 : cache court pour les requêtes paginées lourdes. PRIVÉ uniquement
+  // (navigateur de l'admin authentifié) — JAMAIS `public`/`s-maxage` : la réponse
+  // contient la PII voyageur (email/tél) et ne doit pas finir dans un cache CDN partagé.
+  if (cache) headers["Cache-Control"] = "private, max-age=120, stale-while-revalidate=60";
   return new Response(JSON.stringify(data), { status, headers });
 }
 
