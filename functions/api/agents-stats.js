@@ -29,7 +29,7 @@ export async function onRequestGet({ request, env }) {
 
   const weekAgo = "unixepoch() - 604800";
 
-  const [byStatus, byAgent, outcomes, llmUsage, evals, plan] = await Promise.all([
+  const [byStatus, byAgent, outcomes, llmUsage, evals, plan, traces, traceCostDaily] = await Promise.all([
     rows(db, "SELECT status, COUNT(*) n FROM agent_actions GROUP BY status ORDER BY n DESC"),
     rows(db, "SELECT agent, agent_label, COUNT(*) n FROM agent_actions WHERE status IN ('a-planifier','backlog') GROUP BY agent ORDER BY n DESC LIMIT 25"),
     rows(db, "SELECT agent, impact_label, COUNT(*) n FROM action_outcomes WHERE measured_at IS NOT NULL GROUP BY agent, impact_label ORDER BY n DESC LIMIT 20"),
@@ -37,6 +37,12 @@ export async function onRequestGet({ request, env }) {
               FROM llm_outputs WHERE created_at > ${weekAgo} GROUP BY provider, model ORDER BY calls DESC`),
     rows(db, `SELECT source, ROUND(AVG(global),1) avg_global, COUNT(*) n FROM llm_evals WHERE created_at > ${weekAgo} GROUP BY source ORDER BY avg_global ASC LIMIT 25`),
     one(db, "SELECT v FROM ai_ops WHERE k='plan'"),
+    rows(db, `SELECT provider, model, COUNT(*) calls, ROUND(SUM(cost_usd),6) cost_total,
+              ROUND(AVG(latency_ms)) avg_latency_ms, MAX(latency_ms) max_latency_ms,
+              SUM(CASE WHEN ok=0 THEN 1 ELSE 0 END) errors
+              FROM llm_traces WHERE created_at > ${weekAgo} GROUP BY provider, model ORDER BY calls DESC`),
+    rows(db, `SELECT date(created_at,'unixepoch') day, ROUND(SUM(cost_usd),6) cost, COUNT(*) calls
+              FROM llm_traces WHERE created_at > ${weekAgo} GROUP BY day ORDER BY day`),
   ]);
 
   let modelPlan = null;
@@ -48,6 +54,8 @@ export async function onRequestGet({ request, env }) {
     backlog: { par_statut: byStatus, par_agent_ouvert: byAgent },
     feedback_impacts: outcomes,
     llm_usage_7j: llmUsage,
+    llm_traces_7j: traces,
+    llm_cost_daily: traceCostDaily,
     qualite_7j: evals,
     modeles_actifs: modelPlan,
   });

@@ -49,27 +49,34 @@ function LlmWidget({ onRefresh }) {
 
   if (!stats) return null;
 
-  const usage = stats.llm_usage_7j || [];
-  const plan  = stats.modeles_actifs;
+  const usage  = stats.llm_usage_7j  || [];
+  const traces = stats.llm_traces_7j || [];
+  const plan   = stats.modeles_actifs;
 
-  // Totaux
-  const totalCalls = usage.reduce((s, r) => s + (r.calls || 0), 0);
-  const totalAvgLen = usage.reduce((s, r) => s + (r.avg_len || 0) * (r.calls || 0), 0) / (totalCalls || 1);
+  // Totaux (traces réelles si disponibles, sinon fallback llm_outputs)
+  const traceCalls = traces.reduce((s, r) => s + (r.calls || 0), 0);
+  const totalCalls = traceCalls || usage.reduce((s, r) => s + (r.calls || 0), 0);
 
-  // Coût estimé Mistral (seul provider payant potentiel)
-  // avg_len = tokens output estimés. On suppose input ~ 2× output pour les agents.
-  const mistralRows = usage.filter(r => r.provider === "mistral");
-  const mistralTokensM = mistralRows.reduce((s, r) => s + (r.calls || 0) * (r.avg_len || 0) * 3 / 1_000_000, 0);
-  const estimatedCost = mistralTokensM * 0.2; // $0.2/M input
+  // Coût réel USD → EUR (llm_traces)
+  const realCostUsd = traces.reduce((s, r) => s + (r.cost_total || 0), 0);
+  const realCostEur = realCostUsd * 0.93;
+  const hasTraces = traceCalls > 0;
+
+  // Latence moyenne pondérée
+  const avgLatencyMs = hasTraces
+    ? Math.round(traces.reduce((s, r) => s + (r.avg_latency_ms || 0) * (r.calls || 0), 0) / traceCalls)
+    : 0;
+
+  // Erreurs
+  const totalErrors = traces.reduce((s, r) => s + (r.errors || 0), 0);
 
   // Répartition par provider
   const byProvider = {};
-  for (const r of usage) {
+  for (const r of (hasTraces ? traces : usage)) {
     const k = r.provider || "inconnu";
     byProvider[k] = (byProvider[k] || 0) + (r.calls || 0);
   }
   const providers = Object.entries(byProvider).sort((a, b) => b[1] - a[1]);
-  const maxCalls = providers[0]?.[1] || 1;
 
   // Modèle actif depuis AI-Ops
   const activeModel = plan?.models ? Object.entries(plan.models).map(([t, m]) => `${t}:${m}`).join(" · ") : null;
@@ -99,13 +106,31 @@ function LlmWidget({ onRefresh }) {
           <div style={{ fontSize: 22, fontWeight: 700, color: "#f1f5f9" }}>{totalCalls.toLocaleString("fr-FR")}</div>
           <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>appels LLM sur 7j</div>
           <div style={{ marginTop: 10 }}>
-            <div style={{ fontSize: 22, fontWeight: 700, color: estimatedCost < 0.01 ? "#10b981" : "#f59e0b" }}>
-              {estimatedCost < 0.01 ? "~0 €" : `~${(estimatedCost * 0.93).toFixed(2)} €`}
+            <div style={{ fontSize: 22, fontWeight: 700, color: realCostEur < 0.01 ? "#10b981" : "#f59e0b" }}>
+              {realCostEur < 0.01 ? "~0 €" : `${realCostEur.toFixed(3)} €`}
             </div>
-            <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>coût estimé (Mistral ~0.2$/M tokens)</div>
+            <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>
+              {hasTraces ? "coût réel (traces)" : "coût estimé"}
+            </div>
           </div>
+          {hasTraces && (
+            <div style={{ marginTop: 8, display: "flex", gap: 10 }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: avgLatencyMs > 5000 ? "#f59e0b" : "#94a3b8" }}>
+                  {avgLatencyMs > 999 ? `${(avgLatencyMs / 1000).toFixed(1)}s` : `${avgLatencyMs}ms`}
+                </div>
+                <div style={{ fontSize: 9, color: "#475569" }}>latence moy.</div>
+              </div>
+              {totalErrors > 0 && (
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#ef4444" }}>{totalErrors}</div>
+                  <div style={{ fontSize: 9, color: "#475569" }}>erreurs</div>
+                </div>
+              )}
+            </div>
+          )}
           {activeModel && (
-            <div style={{ marginTop: 10, fontSize: 9, color: "#475569", lineHeight: 1.5 }}>
+            <div style={{ marginTop: 8, fontSize: 9, color: "#475569", lineHeight: 1.5 }}>
               <span style={{ color: "#334155", fontWeight: 600 }}>Plan AI-Ops :</span><br />{activeModel}
             </div>
           )}
@@ -115,7 +140,7 @@ function LlmWidget({ onRefresh }) {
         <div style={{ gridColumn: "span 2" }}>
           <div style={{ fontSize: 10, color: "#64748b", fontWeight: 600, marginBottom: 8 }}>Répartition par provider</div>
           {providers.length === 0 ? (
-            <div style={{ fontSize: 11, color: "#334155" }}>Aucune donnée (table llm_outputs vide)</div>
+            <div style={{ fontSize: 11, color: "#334155" }}>Aucune donnée (tables llm_outputs / llm_traces vides)</div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
               {providers.map(([prov, calls]) => {
