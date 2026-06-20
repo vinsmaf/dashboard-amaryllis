@@ -69,7 +69,7 @@ export async function onRequestGet(context) {
         },
         orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
       }),
-      // data-046 : funnel events (view_item → begin_checkout → purchase) — global (non ventilé bien)
+      // data-046 : funnel events (view_item → begin_checkout → add_payment_info → purchase) — global (non ventilé bien)
       // Pas de dimension custom bien_id ici → fonctionne sans déclaration GA4 préalable.
       runReport(token, propertyId, {
         dimensions:  [{ name: "eventName" }],
@@ -78,7 +78,7 @@ export async function onRequestGet(context) {
         dimensionFilter: {
           filter: {
             fieldName: "eventName",
-            inListFilter: { values: ["view_item", "begin_checkout", "purchase", "generate_lead"] },
+            inListFilter: { values: ["view_item", "begin_checkout", "add_payment_info", "purchase", "generate_lead"] },
           },
         },
       }),

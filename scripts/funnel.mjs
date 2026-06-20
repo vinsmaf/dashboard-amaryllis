@@ -29,6 +29,7 @@ const data = await fetch(URL, { headers: { "User-Agent": "amaryllis-funnel-cli" 
 const f = Object.fromEntries((data.funnel || []).map((x) => [x.eventName, x.eventCount]));
 const vi = f.view_item || 0;
 const bc = f.begin_checkout || 0;
+const api = f.add_payment_info || 0;
 const pu = f.purchase || 0;
 const lead = f.generate_lead || 0;
 
@@ -42,12 +43,14 @@ const today = new Date().toISOString().slice(0, 10);
 console.log(`\n📊 FUNNEL LIVE — villamaryllis.com — ${today} (30 j glissants, source GA4)\n`);
 console.log(`   Trafic 30j     : ${sessions} sessions  (~${Math.round(sessions / 30)}/jour)`);
 console.log(`   Revenu 30j     : ${eur(revenue)}\n`);
-console.log(`   view_item       ${String(vi).padStart(5)}`);
-console.log(`        │  ${pct(bc, vi)}`);
-console.log(`   begin_checkout  ${String(bc).padStart(5)}`);
-console.log(`        │  ${pct(pu, bc)}   ◀── la fuite à surveiller`);
-console.log(`   purchase        ${String(pu).padStart(5)}   (${pct(pu, vi)} global)`);
-console.log(`   generate_lead   ${String(lead).padStart(5)}\n`);
+console.log(`   view_item         ${String(vi).padStart(5)}`);
+console.log(`          │  ${pct(bc, vi)}   (intérêt : clic dates+prix)`);
+console.log(`   begin_checkout    ${String(bc).padStart(5)}`);
+console.log(`          │  ${pct(api, bc)}   (formulaire + technique)`);
+console.log(`   add_payment_info  ${String(api).padStart(5)}   ${api === 0 ? "(nouveau event — données à venir)" : "(écran carte affiché)"}`);
+console.log(`          │  ${pct(pu, api)}   (saisie CB / 3DS)  ◀── fuite paiement réelle`);
+console.log(`   purchase          ${String(pu).padStart(5)}   (${pct(pu, vi)} global)`);
+console.log(`   generate_lead     ${String(lead).padStart(5)}\n`);
 
 if (data.byChannel?.length) {
   console.log("   Canaux (sessions · achats · revenu) :");

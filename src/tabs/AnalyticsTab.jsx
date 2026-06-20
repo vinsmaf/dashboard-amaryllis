@@ -97,11 +97,12 @@ export default function AnalyticsTab() {
   // ── Funnel de conversion (data-046) ──
   const funnel = data.funnel || [];
   const sumEvent = (name) => funnel.filter(r => r.eventName === name).reduce((s, r) => s + (r.eventCount || 0), 0);
-  const fVi = sumEvent("view_item"), fBc = sumEvent("begin_checkout"), fPu = sumEvent("purchase"), fLead = sumEvent("generate_lead");
+  const fVi = sumEvent("view_item"), fBc = sumEvent("begin_checkout"), fApi = sumEvent("add_payment_info"), fPu = sumEvent("purchase"), fLead = sumEvent("generate_lead");
   const tauxBC = fVi ? Math.round(fBc / fVi * 100) : 0;
-  const tauxPU = fBc ? Math.round(fPu / fBc * 100) : 0;
+  const tauxApi = fBc ? Math.round(fApi / fBc * 100) : 0;
+  const tauxPU = fApi ? Math.round(fPu / fApi * 100) : 0;
   const tauxGlobal = fVi ? (fPu / fVi * 100).toFixed(1) : "0";
-  const hasFunnel = (fVi + fBc + fPu + fLead) > 0;
+  const hasFunnel = (fVi + fBc + fApi + fPu + fLead) > 0;
 
   // ── Business : revenu, panier moyen, taux de conversion (data-049) ──
   const totalRevenue = (data.revenue && data.revenue[0] && data.revenue[0].totalRevenue) || 0;
@@ -197,7 +198,8 @@ export default function AnalyticsTab() {
           <div style={{ display: "flex", alignItems: "stretch", gap: 8, flexWrap: mob ? "wrap" : "nowrap" }}>
             {[
               { label: "view_item", desc: "Fiche vue", v: fVi, color: "#0ea5e9" },
-              { taux: tauxBC, label: "begin_checkout", desc: "Checkout", v: fBc, color: "#f59e0b" },
+              { taux: tauxBC, label: "begin_checkout", desc: "Intérêt", v: fBc, color: "#f59e0b" },
+              { taux: tauxApi, label: "add_payment_info", desc: "Écran CB", v: fApi, color: "#f97316" },
               { taux: tauxPU, label: "purchase", desc: "Achat", v: fPu, color: "#10b981" },
             ].map((step, i) => (
               <div key={step.label} style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: mob ? "100%" : 0 }}>

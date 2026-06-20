@@ -1964,6 +1964,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
   const [elements, setElements] = useState(null);
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState("");
+  const addPaymentInfoFired = useRef(false); // n'émettre add_payment_info qu'une fois (aller-retour étape 2↔3)
   const elRef = useRef(null);
   const depositAmt = DEPOSIT_AMOUNTS[bien.id] ?? 0;
   const [payPlan, setPayPlan] = useState("full");
@@ -2167,6 +2168,15 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
       el.create("payment"); // mount happens in useEffect after step renders
       setElements(el);
       setStep(3);
+      // add_payment_info — vrai dénominateur de paiement : le voyageur a rempli ses infos,
+      // le PaymentIntent est créé, l'écran carte va s'afficher. Isole 2 fuites distinctes
+      // (begin_checkout→add_payment_info = formulaire/technique ; add_payment_info→purchase = CB).
+      if (!addPaymentInfoFired.current) {
+        addPaymentInfoFired.current = true;
+        const ckItems = [{ item_id: bien.id, item_name: bien.nom, price: bien.prix, quantity: nights }];
+        if (window.gtag) window.gtag("event", "add_payment_info", { bien_id: bien.id, currency: "EUR", value: total, items: ckItems });
+        mpTrack("AddPaymentInfo", { value: total, currency: "EUR", content_ids: [bien.id], content_type: "product" });
+      }
     } catch (e) { setPayError(e.message); }
     setPaying(false);
   }
