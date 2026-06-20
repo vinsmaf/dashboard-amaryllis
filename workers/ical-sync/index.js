@@ -73,6 +73,13 @@ const NOMS = {
   nogent:     "Appartement Nogent",
 };
 
+// Plancher absolu = prix affiché sur le site (biens.js). Miroir de src/data/biens.js.
+// Jamais descendre en dessous — même si D1 price_min n'est pas configuré.
+const SITE_PRIX_CENTS = {
+  amaryllis: 28000, zandoli: 11000, iguana: 18000,
+  geko: 11000, mabouya: 7000, schoelcher: 9000, nogent: 9000,
+};
+
 const GUIDE_URLS = {
   amaryllis:  "https://villamaryllis.com/bienvenue/amaryllis",
   schoelcher: "https://villamaryllis.com/bienvenue/schoelcher",
@@ -1779,8 +1786,10 @@ async function runYieldPricing(env, allEvents) {
       if (!yieldPrices[bienId]) yieldPrices[bienId] = {};
       const reserved = reservedDates[bienId] || new Set();
       const pmData = priceMinMap[bienId] || {};
-      const priceMinCents = pmData.priceMin || 0;
-      const basePriceCents = pmData.basePriceLow || 0;
+      // Plancher : price_min D1 si configuré, sinon prix site biens.js (jamais 0)
+      const siteFloor = SITE_PRIX_CENTS[bienId] || 0;
+      const priceMinCents = pmData.priceMin || siteFloor;
+      const basePriceCents = pmData.basePriceLow || siteFloor;
 
       for (let d = 0; d < 14; d++) {
         const dateStr = addDays(todayStr, d);
@@ -1789,18 +1798,16 @@ async function runYieldPricing(env, allEvents) {
         const discount = adjustDiscountPct(d <= 4 ? 20 : 15, bienId, d); // RM-01 (bien) + RM-02 (lead-time = d jours)
         if (discount <= 0) continue; // bien protégé (amiral/iguana)
 
-        // Vérifier que le prix après remise respecte le price_min
+        // Vérifier que le prix après remise respecte le plancher absolu
         if (priceMinCents > 0 && basePriceCents > 0) {
           const discountedCents = Math.round(basePriceCents * (1 - discount / 100));
           if (discountedCents < priceMinCents) {
-            // Calculer la remise max qui respecte le plancher
             const maxDiscountPct = Math.floor((1 - priceMinCents / basePriceCents) * 100);
             if (maxDiscountPct <= 0) {
-              console.log(`[yield] ${bienId} ${dateStr} — prix après remise (${discountedCents/100}€) < price_min (${priceMinCents/100}€), remise annulée`);
-              continue; // Plancher déjà atteint, pas de remise
+              console.log(`[yield] ${bienId} ${dateStr} — plancher atteint (${priceMinCents/100}€), remise annulée`);
+              continue;
             }
-            // Appliquer une remise réduite qui respecte le plancher
-            console.log(`[yield] ${bienId} ${dateStr} — remise plafonnée à ${maxDiscountPct}% (price_min ${priceMinCents/100}€)`);
+            console.log(`[yield] ${bienId} ${dateStr} — remise plafonnée à ${maxDiscountPct}% (plancher ${priceMinCents/100}€)`);
             yieldPrices[bienId][dateStr] = maxDiscountPct;
             totalAdjusted++;
             continue;

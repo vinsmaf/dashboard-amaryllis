@@ -2028,13 +2028,14 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
           };
 
           // Essayer de charger le price_min depuis D1 (endpoint public)
+          // Fallback : bien.prix (prix affiché sur le site) = plancher absolu
           fetch(`/api/rm-properties?id=${bien.id}`)
             .then(r => r.ok ? r.json() : null)
             .then(d => {
               const pm = d?.property?.price_min;
-              applyGaps(pm ? Math.round(pm / 100) : 0);
+              applyGaps(pm ? Math.round(pm / 100) : bien.prix);
             })
-            .catch(() => applyGaps(0));
+            .catch(() => applyGaps(bien.prix));
         }
       })
       .catch(() => {});
@@ -3657,8 +3658,8 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
           };
           fetch(`/api/rm-properties?id=${bien.id}`)
             .then(r => r.ok ? r.json() : null)
-            .then(d => applyGaps(d?.property?.price_min ? Math.round(d.property.price_min / 100) : 0))
-            .catch(() => applyGaps(0));
+            .then(d => applyGaps(d?.property?.price_min ? Math.round(d.property.price_min / 100) : bien.prix))
+            .catch(() => applyGaps(bien.prix));
         }
       })
       .catch(() => {});
