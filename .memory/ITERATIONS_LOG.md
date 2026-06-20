@@ -3,6 +3,7 @@
 > 1 entrée par session : date · ce qui a été fait · commits clés. Le plus récent en haut.
 > **Archive des sessions antérieures : `../PROJECT_MEMORY.md` + `../docs/_archive/`.**
 
+- **2026-06-20** — **Session sécurité + CSP** — (1) **3 findings audit sécurité** : `manage-deposit` gate Bearer+CORS (CRITIQUE, argent réel LIVE), `social` POST gate Bearer|secret (ÉLEVÉE, publication FB/IG), `beds24-bookings` cache public→private (ÉLEVÉE, PII CDN). Frontend : Bearer ajouté `Cautions.jsx` + `SocialTab.jsx` ; `agent-drafts.js` passe `?secret`. (2) **2 bugs CSP** : `connect-src` +`api.open-meteo.com` (météo `/explorer` silencieusement bloquée), `style-src` +`https://unpkg.com` (CSS Leaflet cartes). (3) **Audit multimédia** : fetchPriority déjà en place partout, 100% webp, rien à faire. (4) **Nettoyage AGENDA** : auto-pub réseaux cochée ✅. Commits : `439744a` · `89f3f03`. ADR-SEC-001 · ADR-CSP-001.
 - **2026-06-20** — **Session CRO conversion (skill `/chef-produit-web`)** — 5 déploiements prod (tous smoke verts). (1) **Mécanisme anti-périmé** : créé `scripts/funnel.mjs` (`npm run funnel` = funnel GA4 live, source unique) ; purgé 19 chiffres figés de `.memory` → pointeurs ; ligne RECALL déclencheur. Cause racine : j'avais resservi le funnel du 04/06 figé (faux ×4-10). (2) **`add_payment_info`** : 4e étape funnel (begin_checkout = clic intérêt = dénominateur gonflé) → isole abandon-formulaire vs abandon-CB. (3) **Attribution** : purchase MP server-side via vrai `client_id` GA4 (cookie `_ga`→metadata Stripe) + param `bien_id` → fin "Unassigned"/"(not set)". (4) **Friction paiement** : feedback explicite chargement Stripe + état `stripeFailed`. (5) **Galerie Géko 4→9 HD** (masters 16-23 @2000px, hero crépuscule 01.webp gardé sur choix Vincent ; HEIC→sips JPG→sharp webp). Diagnostic clé : le "63→4" était un trompe-l'œil (dénominateur gonflé + fenêtre polluée par correctifs 18-19/06) → verdict propre repoussé au 03/07 (tâche programmée `funnel-verdict-propre-locatif`). Commits : `a0012ad` `620fbd0` `70d445a` `4d89f0d` `a3bbfc2`. ADR-FUNNEL-LIVE-001 · ADR-ATTR-001.
 - **2026-06-19/20** — Config FB page Amaryllis Location : (1) Pipeline auto-pub réparé (3 root causes : token Meta invalidé post-hack → régénéré via `meta-token-exchange.js` · POSTSTAY_SECRET mismatch Pages vs Worker → resync · FB page access downgraded → corrigé) · 6 posts Jun15-20 reschedulés. (2) FB page : Bio 101 chars confirmée + Social Links IG (`@amaryllislocations`) + YT (`UC76I8BM3dCr5zgFAHt-q2oA`) confirmés. CTA "Book now" existe mais URL non vérifiée (session interrompue). Lead gen form + WhatsApp = en attente BV. ADR-META-REPAIR-001 · ADR-FB-PAGE-001.
 
@@ -51,29 +52,15 @@
 - **Airbnb** : 2 comptes hôte → `scripts/airbnb-historique.tsv`, vrais codes `airbnb-<code>`. Import **chunked GET direct vers GAS** (contournement du **403 WAF** sur `/api/sheets-proxy` POST). 281 résas.
 - **Résultat** : Sheet « Toutes les Réservations » = **664 résas 2022-2027** (Booking 370, Airbnb 284, direct 8). ConversionTab multi-années réel. ADR-IMPORT-OTA-001.
 
-## 2026-06-16 (session 18) — CSP fix + null-guards + paiement 2× confirmé LIVE
-- **Pollinisation** : 2 tags `[à vérifier: locatif]` fermés dans CROSS-LEARNINGS (cascade 5 providers confirmée · CSP gap = bugs réels → fix).
-- **CSP connect-src** : `amaryllis-ical-sync.vinsmaf.workers.dev` + `ntfy.sh` manquants → gap-prices silencieusement bloqué en browser, alerts admin coupées. Fix : commit `a354cac`, déployé.
-- **Paiement 2×** : confirmé LIVE (`PAY_2X_ENABLED: Value Encrypted` + commits `572fdec→fa317dd`). 285 tests verts.
-- **Null-guards** : `b.occ/b.adr.toFixed()` crashait si Sheet retourne null. Fix `?? 0` (App.jsx). Commit `0439281`.
-
-## 2026-06-16 (session 17) — Audit Playbook RM : les 🟡 « propres » (RM-03/22/26)
-- **RM-03** : tranché la source de vérité pricing → **suppression** de `pricingEngine.js` + `minStayEngine.js` (morts, 0 import prod). Moteur unique = `calcDateReco`. ADR-PRICING-SOT-001.
-- **RM-22** : wording MaillageCluster orienté lieu (« Nos maisons à Sainte-Luce » / « Où loger à Sainte-Luce »). « maisons » (pas « villas »).
-- **RM-26** : créé `docs/runbooks/` (README + cyclone/double-booking/no-show/stripe-down).
-- **Commits** : `2563378` (RM-03+22) · `8f1fdb5` (RM-26). 285 tests verts.
-
-## 2026-06-15 (nuit) — Auto-rédaction guides D1 → mode LIVE + cron hebdo
-- `runGuideWrite(env)` ajoutée au Worker, branchée sur cron `0 6 * * 1` (lundi 6h UTC). Tourne sur les 7 biens séquentiellement, escalade ntfy si fact-check échoue.
-- `GUIDE_WRITE_MODE=live` posé en secret CF Pages. Commit `7072da4`. Déployé Worker + Pages.
-- 1er passage automatique : **lundi 22 juin 2026, 6h UTC**.
-
 ---
 
 ## Sessions antérieures (résumé 1 ligne / session — détail `../PROJECT_MEMORY.md` + `../docs/_archive/` + git)
 
-> Condensé le 2026-06-19 (consolidation). Les 8 sessions ci-dessus = clair ; ci-dessous = archive 1 ligne.
+> Condensé le 2026-06-20 (consolidation). Les 8 sessions ci-dessus = clair ; ci-dessous = archive 1 ligne.
 
+- **2026-06-16 (s18)** — CSP connect-src workers.dev+ntfy.sh (gap-prices silencieux). Paiement 2× confirmé LIVE. Null-guards toFixed(). 285 tests. Commits `a354cac`/`0439281`.
+- **2026-06-16 (s17)** — Audit Playbook RM : suppression `pricingEngine.js`+`minStayEngine.js` (morts). ADR-PRICING-SOT-001. RM-22 wording Sainte-Luce. RM-26 runbooks. Commits `2563378`/`8f1fdb5`.
+- **2026-06-15 (nuit)** — Auto-rédaction guides D1 → `runGuideWrite` LIVE, cron lundi 6h UTC, escalade fact-check. 1er passage 22/06. Commit `7072da4`.
 - **2026-06-15 (soir)** — Auto-publication réseaux SANS validation humaine (gate de qualité ADR-SOCIAL-AUTOPUB-001) → LIVE. `_editorialGate.js` (4 filtres, 20 tests) · whitelist 42 photos · test grandeur réelle OK (FB+IG). 258 tests.
 - **2026-06-15 (suite)** — Token Meta permanent renouvelé (20 scopes) · diagnostic FB feed bloqué par Advanced Access (App Review) · ADR-META-TOKEN-001.
 - **2026-06-15** — Tracking pub Meta/Google : audit adversarial → 50 findings confirmés · anti double-comptage (eventID=pi.id) · CAPI enrichi (EMQ 60-75%) · CSP Ads · 223 tests. Commits `f5b1784→9a30660`.

@@ -2,11 +2,13 @@
 
 > Ce qui reviendra nous embêter si on ne le documente pas. Format : statut · sujet · ce qui débloque.
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
-> _Consolidé le 2026-06-15 : ✅ levés regroupés en bas, doublons fusionnés._
+> _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
-## En cours → ✅ terminé le 2026-06-20 (Session CRO conversion : funnel live + add_payment_info + attribution + friction paiement + galerie Géko, tous déployés)
-> Session précédente : Config page Facebook (Bio ✅ · Social Links IG+YT ✅ · pipeline auto-pub réparé ✅).
-> ⏳ **À surveiller (pas un blocker) — verdict 03/07** : `add_payment_info` se remplit-il ? les ventes quittent-elles "Unassigned"/"(not set)" ? (fix attribution du 20/06). Tâche programmée `funnel-verdict-propre-locatif` + AGENDA 2026-07-03.
+## En cours → ✅ terminé le 2026-06-20 (Session sécurité : 3 trous fermés + 2 bugs CSP + audit multimédia)
+> Findings #1-3 de l'audit architecte-réseau déployés (manage-deposit auth, social auth, beds24 cache private).
+> CSP corrigée : api.open-meteo.com + unpkg style-src.
+> Findings #4-13 restants en backlog (non demandés).
+> ⏳ **À surveiller — verdict 03/07** : `add_payment_info` se remplit-il ? ventes quittent "Unassigned" ? AGENDA 2026-07-03.
 
 ## 🟡 Config page Facebook — éléments en attente
 - 🟡 **CTA "Book now" URL non vérifiée** : le bouton existe sur la page en vue visiteur, mais l'URL de destination n'a pas été confirmée/éditée (session interrompue). → En vue visiteur : hover bouton → crayon → vérifier que cible = `villamaryllis.com`. Si besoin : Page Settings → Buttons.
@@ -45,9 +47,7 @@
 - ⏳ **Reste** : **RM-03 NET RevPAR** (`runOccupancySnapshot` — gros morceau). Détail : `docs/AUDIT-PLAYBOOK-PROGRES.md`.
 - ℹ️ Push trading launchd passé 5min→60min (KV diet — cf. CROSS-LEARNINGS 2026-06-16).
 
-## 📣 2026-06-15 (soir) — Auto-publication réseaux : LIVE, points de vigilance
-- ✅ **Système complet en live** (ADR-SOCIAL-AUTOPUB-001) : re-seed→génère(photos cochées)→gate(4 filtres)→publie. Zéro clic. Token publie FB+IG (vérifié).
-- ✅ **Seuil 85 validé atteignable** : un post Amaryllis frais a obtenu 88/100 → gate PASS → auto-approuvé en live (pipeline prouvé end-to-end 2026-06-15 soir). Le système publie réellement, pas que des escalades. Reste à surveiller le TAUX de passage sur la durée (`EDITORIAL_GATE_MIN_SCORE` ajustable si trop d'escalades).
+## 📣 2026-06-15 (soir) — Auto-publication réseaux : points de vigilance
 - 🟡 **Post Bellevue 102 publié dit « votre villa »** (Bellevue ≠ villa) — passé avant le durcissement de la règle. La règle `\bvillas?\b` onlyFor empêche les FUTURS. Le 102 reste en ligne (Vincent décide de le garder/supprimer).
 - 🟡 **Iguana = 0 photo cochée** (normal, bail long, exclu du seed). Si un jour besoin de publier Iguana → cocher des photos.
 - 🟡 **Faux négatifs fact-check possibles** : le fact-check regex ne couvre pas tout (ex « 5 min Montagne Pelée » depuis Schœlcher = faux mais non détecté). Compléter les règles au fil des erreurs vues. Bannir un mot = onglet Approbations → « Bannir mot » (agent_lessons).
@@ -66,8 +66,7 @@
 - **Google conversion = déjà bien configurée** : action *« amaryllis (web) purchase »*, Source GA4, **Principale**, 90j — mais **0,00 / « Aucune conversion récente »** = trou d'attribution (Unassigned), corrigé par le code du 2026-06-15. **Ménage optionnel** : conversion *« Pages vues »* comptée en Vente (valeur bidon 1,00) → passer en Secondaire.
 - **⏳ Lever 2 (bid → conversions) DIFFÉRÉ** : NE PAS basculer Google « Max conversions » ni Meta « Purchase » tant que purchase = 0 (l'algo crève sans historique). Déclencheur : quand `purchase` se remplit (post-fix). Re-check AGENDA 2026-06-28.
 
-## 🟡 2026-06-15 — Tracking serveur : 2 secrets posés, reste à valider la santé du token CAPI
-- ✅ Vérifié `wrangler pages secret list --project-name dashboard-amaryllis` : **`META_CAPI_TOKEN` ET `GA4_API_SECRET` posés** (l'audit qui les disait absents = faux positif d'un sous-agent). GA4 MP fonctionne (purchases en « Unassigned »).
+## 🟡 2026-06-15 — Tracking serveur : reste à valider la santé du token CAPI
 - **Reste à valider** : validité du **`META_CAPI_TOKEN`** (peut être expiré ~60j, valeur non lisible). Vérif Vincent = Meta Events Manager → Pixel 1648064656415946 → *Événements* : events **Serveur** récents + score **EMQ** Purchase. Si 0/erreurs → régénérer (Conversions API → générer) + `wrangler pages secret put META_CAPI_TOKEN --project-name dashboard-amaryllis`.
 - **Account-side (advisory)** : (1) vérifier **dédup** Navigateur+Serveur sur un Purchase test + EMQ Purchase (cible >6/10) ; (2) Google Ads conversion `purchase` en Principale + valeurs d'enchères + Enhanced Conversions ; (3) optionnel : action conversion Google Ads directe (`AW-XXXX/label`) → à ajouter dans `Merci.jsx`. Réf : ADR-TRACKING-001.
 
@@ -85,7 +84,6 @@
 ## 🟡 SEO hors-page — autorité de domaine = LE levier (diagnostic Search Console 2026-06-04)
 - **Le SEO technique est bon (position 5,8) mais le site manque d'autorité** → seules 3 pages reçoivent des impressions, les 47 guides + 5 landings ~0. **Ne PAS produire de contenu tant que l'autorité ne monte pas** (ferait plus de pages à 0 impression). **Débloque** : citations + netlinking + GBP (kits prêts), mesurer à 4-8 sem (Search Console → Liens).
 - **Citations off-page (Top 5 « semaine 1 »)** :
-  - ✅ **Post GBP « Studio Mabouya »** publié 04/06. Les 3 fiches GBP (patrimoine + Villa Amaryllis + Résidence) sous vinsmaf@gmail.com.
   - ⏸️ **Bing Places** : l'import a pris la mauvaise fiche (diversifiersonpatrimoine) ; Villa Amaryllis pas indexée. **Débloque** : reprendre l'ajout des 2 fiches Amaryllis.
   - ⏸️ **Apple Business Connect** : revendiquer la fiche depuis l'app iPhone Plans, ou Business Connect avec Apple ID dédié.
   - 📧 **3 emails institutionnels prêts** (`docs/marketing/emails-prospection-institutionnels-2026-06.md`) : CMT, Mairie Sainte-Luce, OT Sainte-Luce (tél 0596 62 53 53). Vincent envoie.
@@ -101,22 +99,18 @@
 
 ## 🟢 Google Ads LANCÉ (2026-06-04) — suivi
 - **C1 « Offre Groupe Sainte-Luce »** (campaignId **23904365229**) : 8€/j, CPC max 0,80€, landing `/location-groupe-sainte-luce`, 13 mots-clés. **C2 « Brand »** (**23913930124**) : 2€/j, landing `/`, 7 mots-clés marque. Liste « Négatifs globaux » (120 mots) sur les 2. Conversion GA4 `purchase` = Principale.
-- ✅ Fix consentement déployé (`ad_storage=granted` confirmé live). 2 anciennes campagnes Smart supprimées (ménage 06-04).
 - 📌 **À surveiller** : termes de recherche → négatifs ; bascule objectif « Ventes » + retargeting en septembre. Backlog tech : routes explicites des 3 landings dans `main.jsx` (marchent via fallback `KNOWN`).
 
 ## 🟡 Dettes & frictions techniques (latentes)
 - **Drift miroir GAS/Worker** : `src/utils/{pricing,coherenceRules,resaDedup,occupancy,rmOccupancyAdjust}.js` dupliqués à la main dans `appscript/*.gs` + `workers/ical-sync/index.js`. Modifier l'util sans répercuter = bug silencieux. **Débloque** : checklist + à terme un test qui compare les implémentations.
 - **Lint delta crash sur `[slug].js`** (crochets = glob bash). Contournement : `SKIP_LINT=1`. Débloque : échapper les crochets dans `deploy-pages.sh`. Chip `task_cef1560f`.
 - **Visual-review Playwright rapport vide** (`scripts/visual-review.mjs` → 0 pages crawlées, probable timeout/rate-limit nuit). Débloque : relancer en journée / augmenter timeout / `npx playwright install chromium`.
-- **Findings audit 06-04** : doc « 557 erreurs eslint » périmée (mesure réelle ~0 err / ~17 warnings) ; prix en dur dans la prose marketing de `functions/[slug].js` (« dès 110€/nuit » en texte libre → drift si tarif change, harmoniser au prochain changement de prix). Inclut homepage prerender « Dès 85€/nuit » (aligner sur Nogent 90€ si Vincent confirme).
+- **Findings audit 06-04** : prix en dur dans la prose marketing de `functions/[slug].js` (« dès 110€/nuit » en texte libre → drift si tarif change, harmoniser au prochain changement de prix). Inclut homepage prerender « Dès 85€/nuit » (aligner sur Nogent 90€ si Vincent confirme).
 - **Warnings smoke /mabouya + /guide-hub** (titres) : bénins — la Function de meta-injection met 30-60s à s'activer post-deploy alors que le smoke teste à 30s. Titres vérifiés corrects. Non bloquant.
 - **Résas groupe passées (`group_biens` NULL)** : le blocage auto par-bien (ADR-GROUP-001) ne couvre que les nouvelles. Anciennes déjà bloquées à la main par Vincent ; sinon remplir `group_biens` en D1.
 - **`caffeinate` LaunchAgent redondant** : `~/Library/LaunchAgents/com.vincentsalomon.caffeinate.plist` installé pour l'ancienne règle Mail (devenue côté serveur Outlook). Débloque : `launchctl unload … && rm` pour laisser le Mac redormir (proposé, en attente go Vincent).
 - **`RESEND_FROM` du Worker cassée** (dashboard CF, domaine manquant) — contournée par `resendFrom(env)`. Débloque : Vincent corrige/supprime la variable. Non urgent.
-
-## ✅ Tracking `purchase` — LEVÉ le 2026-06-20 (le fix marche : 4 purchases trackées, 2 894 €)
-- Au 04/06 : 0 purchase tracké (data-049). Le fix eventID/attribution du 14-15/06 a marché → `npm run funnel` au 20/06 montre `purchase` qui remonte avec revenu. **Tracking OK.**
-- 🟡 **Reste : l'attribution.** 3/4 ventes en canal « Unassigned » + bien « (not set) » → on ne sait pas quelle pub/quel bien convertit (bloque l'optim Ads). Sous-sujet ouvert. Chiffres à jour : `npm run funnel`.
+- 🟡 **Findings sécurité #4-13 en backlog** (audit architecte-réseau 2026-06-20, non demandés) : rate-limit `/api/ai-summary`, webhook Beds24 fail-open, logs PII emails dans 8 endpoints, rate-limits paiement, notify-booking test ouvert. À adresser si Vincent le demande.
 
 ## 🟡 Vérifs en attente côté Vincent (livré, non re-validé par lui)
 - Sync 📊 → onglet « Toutes les Réservations » sans nouveau doublon + revenus cohérents (imports idempotents).
@@ -132,33 +126,40 @@
 ---
 
 ## ✅ Archivé (levé — gardé pour traçabilité, 1 ligne chacun)
-- ✅ **generateDevis crash FB IAB** (2026-06-19) : guard `if (!bien?.id) return` ajouté + 3 bugs D1 triagés (Java object gone → `ignored`, `.slice`/`.map` → `fixed`). PublicSite.jsx L1724. Déployé.
+- ✅ **Sécurité #1-3 fermés** (2026-06-20) : manage-deposit gate Bearer+CORS, social gate Bearer|secret, beds24 cache private. ADR-SEC-001.
+- ✅ **CSP #8-9 débloqués** (2026-06-20) : api.open-meteo.com (météo /explorer) + unpkg style-src (CSS Leaflet). ADR-CSP-001.
+- ✅ **Tracking purchase LEVÉ** (2026-06-20) : 4 purchases trackées 2 894€. Reste : attribution (3/4 en "Unassigned"). Source vive = `npm run funnel`.
+- ✅ **Système auto-pub complet en live** (2026-06-15, ADR-SOCIAL-AUTOPUB-001) : re-seed→gate(4 filtres)→publie. Token publie FB+IG. Seuil 85 atteint (88/100 Amaryllis). Posts 16-19/06 passés sans dérapage.
+- ✅ **META_CAPI_TOKEN + GA4_API_SECRET posés** (2026-06-15) : vérifié `wrangler pages secret list`.
+- ✅ **Fix consentement Google Ads** (2026-06-04) : `ad_storage=granted` confirmé live. 2 campagnes Smart supprimées.
+- ✅ **Post GBP « Studio Mabouya »** publié 04/06. Les 3 fiches GBP (patrimoine + Villa Amaryllis + Résidence) sous vinsmaf@gmail.com.
+- ✅ **generateDevis crash FB IAB** (2026-06-19) : guard `if (!bien?.id) return` ajouté + 3 bugs D1 triagés. PublicSite.jsx L1724.
 - ✅ **Caution UNIFIÉE différée + durcie** (2026-06-18, ADR-CAUTION-DEFERRED-001) : tunnel 100% différé, 8 correctifs argent-réel, `_caution.js`, 308 tests. Commits `ae1922f`/`f07d17e`/`8b73794`.
 - ✅ **Import historique OTA+directes** (2026-06-17, ADR-IMPORT-OTA-001 + DIRECTES + JOEL-OVERLAP) : ~700 résas 2022-2027. Fix Joël BAILLEUL chevauchement Iguana.
-- ✅ **2FA Facebook + compte pub Meta fermé** (2026-06-17/18) : MDP changé, 2FA actif, bilan dépenses €69.33. (Détail : JOURNAL-locatif [2026-06-18])
-- ✅ **Bot WhatsApp test mode LIVE** (2026-06-17) : App ID `1783600126154478` · WABA `982907091270661` · test number `+1 555 006 0804` · webhook vérifié · test validé Vincent.
+- ✅ **2FA Facebook + compte pub Meta fermé** (2026-06-17/18) : MDP changé, 2FA actif, bilan dépenses €69.33.
+- ✅ **Bot WhatsApp test mode LIVE** (2026-06-17) : App ID `1783600126154478` · WABA `982907091270661` · test `+1 555 006 0804`.
 - ✅ **CSP workers.dev+ntfy.sh + null-guards toFixed() + paiement 2× LIVE** (2026-06-16).
-- ✅ **Token Meta double-comptage Purchase + fantômes solde 2×** (2026-06-15) → `eventID=pi.id` + guard `kind=solde-2x` + `transaction_id=pi.id`. Commits `f5b1784`→`9a30660`.
-- ✅ **Session 06-14 soir** (tunnels OTA + sécurité devis) : devis R/O (`da82843`), priceGuard (`327c2d5`), Booking scraper (`a813185`), rapport-business V4 (`d077f37`), page projets cerveau (`a95a014`), chat escalade Mistral (`1614d68`,`4695081`).
-- ✅ **Résa Booking NINA GRUBO (Zandoli)** (2026-06-14) : Vincent a re-saisi nom+prix à la main, fix de préservation `9fdcc92` déployé → re-sync ne l'effacera plus. Sheet complet. _(fusion de 2 entrées contradictoires le 2026-06-15.)_
-- ✅ **Changeset session non commité** (2026-06-13) : 4 fichiers déployés mais hors git → réglé par commit `1ec6a06` « aligner git sur l'état déployé ».
-- ✅ **Resend domaine `villamaryllis.com`** (2026-06-11) : Verified ; `mail.villamaryllis.com` n'a jamais existé. `resendFrom()` → `contact@villamaryllis.com` OK.
-- ✅ **Placeholder téléphone guides** (2026-06-11) : la vraie source = D1 `property_guides` (pas le JSON public) ; UPDATE des 6 lignes → `+33 6 10 88 07 72`. Vérifié live.
-- ✅ **AI-Ops modèle Groq.smart aberrant** (2026-06-11) → auto-corrigé par AI-Ops (`groq.smart=llama-3.3-70b-versatile`, cerebras disabled).
-- ✅ **Prix en prose `slug.js`** (2026-06-13, chantier SEO A) : 9 prix corrigés (source `src/data/biens.js`). Commit `14c817d`. (Reste homepage prerender → voir Findings audit ci-dessus.)
-- ✅ **Résa Laurent Maignan total=340€ < caution=500€** (2026-06-11) : VALIDÉ NORMAL — court séjour, caution = montant fixe. `coherenceRules.js` n'a jamais flaggé ce cas (correct). Réf LEARNINGS « total < caution ». _(3 entrées fusionnées.)_
-- ✅ **Rename `beds24Amount` → `chargeAmount`** : déjà fait (`PublicSite.jsx` ~L1340, commentaire Beds24=Nogent). _(2 entrées fusionnées.)_
-- ✅ **iCal null guard checkin/checkout** : `ical-export.js` L71-72 `WHERE … IS NOT NULL` + guard. Pas de `functions/ical/` côté locatif. _(2 entrées fusionnées.)_
-- ✅ **`sessionStorage` guards** (2026-06-11) : 5 derniers accès migrés vers `ssGet`/`ssSet`. 172 tests verts.
-- ✅ **Findings « [revue code] » LLM triagés** (2026-06-11) : 72 entrées D1, 4 fixed / 67 ignored / 1 faux positif. Inbox propre.
-- ✅ **Meta Ads LANCÉ** (2026-06-05, confirmé 06-11) : compte « Amaryllis corp » `act_853205825762332`, Pixel `714189639771397`, C1 TOFU + C2 MOFU. (Suivi perf actuel → §📈 ci-dessus.)
+- ✅ **Token Meta double-comptage Purchase + fantômes solde 2×** (2026-06-15) → `eventID=pi.id` + guard `kind=solde-2x`. Commits `f5b1784→9a30660`.
+- ✅ **Session 06-14 soir** : devis R/O (`da82843`), priceGuard (`327c2d5`), Booking scraper (`a813185`), rapport-business V4 (`d077f37`), chat escalade Mistral.
+- ✅ **Résa Booking NINA GRUBO (Zandoli)** (2026-06-14) : fix préservation `9fdcc92`.
+- ✅ **Changeset session non commité** (2026-06-13) → réglé commit `1ec6a06`.
+- ✅ **Resend domaine `villamaryllis.com`** (2026-06-11) : Verified ; `resendFrom()` → `contact@villamaryllis.com` OK.
+- ✅ **Placeholder téléphone guides** (2026-06-11) : UPDATE 6 lignes D1 → `+33 6 10 88 07 72`.
+- ✅ **AI-Ops modèle Groq.smart aberrant** (2026-06-11) → auto-corrigé.
+- ✅ **Prix en prose `slug.js`** (2026-06-13) : 9 prix corrigés (source `src/data/biens.js`). Commit `14c817d`.
+- ✅ **Résa Laurent Maignan total=340€ < caution=500€** (2026-06-11) : VALIDÉ NORMAL — court séjour, caution fixe.
+- ✅ **Rename `beds24Amount` → `chargeAmount`** : fait PublicSite.jsx ~L1340.
+- ✅ **iCal null guard checkin/checkout** : `ical-export.js` L71-72 + guard.
+- ✅ **`sessionStorage` guards** (2026-06-11) : 5 accès → `ssGet`/`ssSet`. 172 tests.
+- ✅ **Findings « [revue code] » LLM triagés** (2026-06-11) : 72 entrées, 4 fixed / 67 ignored.
+- ✅ **Meta Ads LANCÉ** (2026-06-05) : compte `act_853205825762332`, Pixel `714189639771397`, C1 TOFU + C2 MOFU.
 - ✅ **Doublons docs archivés** (2026-06-11) : `google-ads-kit.md` + `google-business-profiles-kit.md` → `docs/_archive/`.
-- ✅ **Keepalive tokens** (2026-06-11) : `runMonitor` (alerte expiration Beds24) + `runTokenRotationReminder` (rappel mensuel) actifs.
-- ✅ **Crons hebdo créés** (2026-06-10) : `consolidation-memoire-hebdo` (lundi 6h MTQ) + `point-ads-hebdo` (lundi 7h MTQ).
-- ✅ **Smoke test renforcé** (2026-06-07/11) : `admin-smoke.mjs` (Playwright `/admin`) + sentinel anti-chunk-périmé dans `deploy-pages.sh`.
-- ✅ **Chunk périmé v2** (2026-06-07) → `[[asset]].js` + sentinel (`524fb3d`). Crash Redesign Tarifs → rollback `1b6dd02`.
-- ✅ **notify-booking.js + get-availability.js** DDL/bien_id (2026-06-07) → corrigés `14771f1`.
-- ✅ **CLAUDE.md « no tests » / PROJECT_MEMORY 52KB / index ADR** (2026-06-04) → corrigés (vitest documenté, dégraissé 35KB, `docs/INDEX.md` + specs créés). Hook SessionStart actif (ADR-S-004).
+- ✅ **Keepalive tokens** (2026-06-11) : `runMonitor` + `runTokenRotationReminder` actifs.
+- ✅ **Crons hebdo créés** (2026-06-10) : `consolidation-memoire-hebdo` + `point-ads-hebdo` (lundi 6h/7h MTQ).
+- ✅ **Smoke test renforcé** (2026-06-07/11) : `admin-smoke.mjs` + sentinel anti-chunk-périmé.
+- ✅ **Chunk périmé v2** (2026-06-07) → `[[asset]].js` + sentinel (`524fb3d`).
+- ✅ **notify-booking.js + get-availability.js** DDL/bien_id → corrigés `14771f1`.
+- ✅ **CLAUDE.md « no tests » / PROJECT_MEMORY 52KB / index ADR** (2026-06-04) → corrigés.
 
 ### À surveiller (résiduel, bénin)
 - **Cache CDN Cloudflare** : peut retenir temporairement de vieux chunks (`text/html`) — le filet client renforcé déclenche le reload ; expire au TTL ou purge manuelle.
