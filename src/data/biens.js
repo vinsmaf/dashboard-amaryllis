@@ -37,7 +37,7 @@ export const BIENS = {
     id: "geko", nom: "Géko", type: "cocon",
     prix: 110, capacite: 4, chambres: 1, lieu: "Sainte-Luce", postal: "97228",
     coords: { lat: 14.4729, lng: -60.9194 }, rating: 4.83, reviews: 24, bookable: true,
-    photos: ["/photos/geko/01.webp","/photos/geko/02.webp","/photos/geko/03.webp","/photos/geko/04.webp"],
+    photos: ["/photos/geko/01.webp","/photos/geko/16.webp","/photos/geko/18.webp","/photos/geko/19.webp","/photos/geko/17.webp","/photos/geko/22.webp","/photos/geko/20.webp","/photos/geko/21.webp","/photos/geko/23.webp"],
     seoTitle: "Géko Sainte-Luce — cocon piscine cascade Martinique",
     seoDesc: "Cocon Géko à Sainte-Luce : piscine privative à cascade, jardin tropical, sur les hauteurs. 4 personnes. Dès 110€/nuit en réservation directe.",
   },
