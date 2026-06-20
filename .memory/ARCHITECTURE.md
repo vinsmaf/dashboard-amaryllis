@@ -1,6 +1,6 @@
 # 🗺️ ARCHITECTURE — Locatif (villamaryllis.com)
 
-> **Date :** 2026-06-19 · **Statut :** carte de l'état actuel, à maintenir (pas un historique).
+> **Date :** 2026-06-20 · **Statut :** carte de l'état actuel, à maintenir (pas un historique).
 > But : ne plus jamais re-déduire le système depuis le code. Quand l'archi change, on met à jour ICI.
 > **Pointeurs :** état courant volatil → `.memory/CONTEXT.md` · décisions → `.memory/ADR.md` + `DECISIONS.md` ·
 > leçons → `.memory/LEARNINGS.md` · blocages → `.memory/BLOCKERS.md` · rappel par domaine → `.memory/RECALL.md` ·
@@ -31,12 +31,14 @@ Conciergerie + site de réservation directe sans commission OTA pour **7 logemen
 2. **Gate tests** vitest (~148 tests) — bloquant (`SKIP_TESTS=1` pour bypass).
 3. **Lint** ESLint delta-baseline — bloque uniquement si AJOUT d'erreurs.
 4. Build : `gen-image-variants` + `photos-manifest` + `vite build` + `scripts/prerender.mjs`.
-5. `wrangler pages deploy dist --project-name dashboard-amaryllis`.
-6. **Smoke test** sur alias frais (home/villa 200, /admin Playwright, bundle JS, sentinelle chunk périmé, sw.js kill-switch, /guide-hub, API get-config/social, sitemap, /mabouya meta) — bloquant.
+5. `wrangler pages deploy dist --project-name dashboard-amaryllis --branch "$DEPLOY_BRANCH"` (`DEPLOY_BRANCH=main` par défaut).
+6. **Smoke test** sur alias frais (home/villa 200, /admin Playwright, bundle JS, sentinelle chunk périmé, sw.js kill-switch, /guide-hub, API get-config/social, sitemap, /mabouya meta) **+ ancrage prod** (villamaryllis.com sert le bundle local) — bloquant.
 7. Post-deploy NON bloquant : `code-review-diff.mjs` (LLM), `audit-invariants.mjs`, `visual-review.mjs`.
 
+> 🚨 **PROD vs PREVIEW — branche de déploiement (corrigé 2026-06-20).** `wrangler pages deploy` SANS `--branch` prend la **branche git courante** : depuis un **worktree** (`claude/*`), il déploie en **PREVIEW de branche** (`<branche>.dashboard-amaryllis.pages.dev`), **jamais villamaryllis.com**. Le smoke testait l'alias du déploiement → passait en preview = villamaryllis.com restait sur l'ancienne version sans alerte (vécu plusieurs fois). `deploy-pages.sh` force désormais `DEPLOY_BRANCH=main` + un check « ancrage prod » qui FAIL si villamaryllis.com ne sert pas le bundle qu'on vient de builder. `npm run deploy:pages` = TOUJOURS la prod ; preview délibéré = `DEPLOY_BRANCH=x npm run deploy:pages`.
 > ⚠️ **Cross-deploy interdit (règle absolue n°4).** Locatif → `npm run deploy:pages` (cible `dashboard-amaryllis`). Pousser un build locatif sur `patrimoine-dashboard` l'écrase. Worker : `npx wrangler deploy`. Apps Script : `clasp push -f` puis redéployer sur le MÊME deployment id `AKfycbw-t5kd…` (= `APPS_SCRIPT_URL`).
 > ⚠️ **CF Pages = upload direct wrangler, PAS git-connecté** : ne jamais déduire la prod de `origin/main`.
+> ⚠️ **Worktree = scripts potentiellement PÉRIMÉS.** Un worktree (`claude/*`) part d'un snapshot de `main` qui a pu diverger : `deploy-pages.sh` et `.memory/` du worktree peuvent être plus vieux que `main`. Avant de corriger un script « d'infra », comparer avec `/Users/vincentsalomon/locatif-dashboard/` (main) et **ne pas régresser main au merge**.
 
 ---
 

@@ -90,11 +90,26 @@ if [[ "${SKIP_BUILD:-0}" != "1" ]]; then
   echo ""
 fi
 
-echo "🚀 Déploiement → projet Cloudflare Pages '$PROJECT_NAME' (villamaryllis.com)"
+# ── BRANCHE DE DÉPLOIEMENT — production vs preview ───────────────────────────
+# 🚨 PIÈGE RÉCURRENT (corrigé 2026-06-20) : `wrangler pages deploy` SANS --branch
+# associe le déploiement à la branche git COURANTE. Depuis un worktree (branche
+# `claude/*`, `feature/*`…), ça crée un déploiement de PREVIEW de branche
+# (https://<branche>.dashboard-amaryllis.pages.dev) qui N'EST PAS villamaryllis.com.
+# Le smoke ci-dessous teste l'alias du déploiement (preview OU prod) → il passe
+# même en preview = faux positif total : villamaryllis.com reste sur l'ancienne version.
+# → On force TOUJOURS la branche de PRODUCTION `main` (= live villamaryllis.com).
+#   CF Pages n'est PAS git-connecté : --branch ne touche pas ton git, il dit juste
+#   à Cloudflare « ce upload est la production ». L'ancrage prod (vérif n°0 du smoke)
+#   confirme ensuite que villamaryllis.com sert bien ce build.
+# Override exceptionnel (vrai preview délibéré) :
+#   DEPLOY_BRANCH=ma-branche npm run deploy:pages
+DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
+
+echo "🚀 Déploiement → projet '$PROJECT_NAME' · branche '$DEPLOY_BRANCH'$([ "$DEPLOY_BRANCH" = "main" ] && echo " = PRODUCTION villamaryllis.com" || echo " = ⚠️ PREVIEW (pas la prod !)")"
 echo ""
 
 DEPLOY_LOG=$(mktemp)
-npx wrangler pages deploy dist --project-name "$PROJECT_NAME" "$@" 2>&1 | tee "$DEPLOY_LOG"
+npx wrangler pages deploy dist --project-name "$PROJECT_NAME" --branch "$DEPLOY_BRANCH" "$@" 2>&1 | tee "$DEPLOY_LOG"
 # Alias de déploiement (URL unique <hash>.<projet>.pages.dev, live immédiatement, SANS cache
 # CDN). On smoke-teste cette URL plutôt que villamaryllis.com : le CDN met >30s à propager,
 # ce qui faisait échouer le smoke (bundle en text/plain, titres absents) sur des déploiements
@@ -116,6 +131,28 @@ else
   sleep 6
 fi
 SMOKE_FAIL=0
+
+# 0. ⚓ ANCRAGE PROD — villamaryllis.com DOIT finir par servir le bundle qu'on vient
+#    de builder. Indépendant de l'alias testé ci-dessous : c'est CE check qui détecte
+#    le piège "preview de branche" (alias sain mais prod jamais mise à jour). Retry
+#    6×/5s pour absorber la propagation CDN.
+LOCAL_JS=$(grep -oE 'assets/index-[A-Za-z0-9_-]+\.js' dist/index.html 2>/dev/null | head -1)
+if [[ -n "$LOCAL_JS" ]]; then
+  PROD_MATCH=0
+  for _i in 1 2 3 4 5 6; do
+    LIVE_JS=$(curl -s "https://villamaryllis.com/" | grep -oE 'assets/index-[A-Za-z0-9_-]+\.js' | head -1)
+    if [[ "$LIVE_JS" == "$LOCAL_JS" ]]; then PROD_MATCH=1; break; fi
+    sleep 5
+  done
+  if [[ "$PROD_MATCH" == "1" ]]; then
+    echo "   ✅ Ancrage prod : villamaryllis.com sert bien ce build ($LOCAL_JS)"
+  else
+    echo "   ❌ Ancrage prod ÉCHOUÉ : villamaryllis.com sert '$LIVE_JS' ≠ build local '$LOCAL_JS'"
+    echo "      🚨 Ce déploiement n'a PAS atteint la PRODUCTION (preview de branche ?)."
+    echo "      → Relancer : DEPLOY_BRANCH=main npm run deploy:pages"
+    SMOKE_FAIL=1
+  fi
+fi
 
 # Helper : retry 3× / 5s — absorbe la propagation CF Pages alias URL (inconsistante)
 smoke_check() {

@@ -9,4 +9,7 @@
 /guide       /guide-hub  301
 /guide/      /guide-hub  301
 
+# Guides JSON — bloqués en accès direct (données sensibles en D1 uniquement)
+/guides/*    /index.html  404
+
 /*  /index.html  200

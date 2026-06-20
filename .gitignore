@@ -47,5 +47,9 @@ docs/_audits/AUDIT-latest.md
 # Variables locales wrangler (secrets test/dev — NE JAMAIS committer)
 .dev.vars
 
+# Données sensibles — jamais commitées (codes accès, intel concurrentielle)
+public/guides/*.json
+public/competitors/*.csv
+
 # Sortie générée par le skill graphify (knowledge graph) — ne pas committer
 graphify-out/

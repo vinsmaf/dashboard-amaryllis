@@ -5,6 +5,13 @@
 
 ---
 
+## ADR-DEPLOY-001 · 2026-06-20 · `deploy-pages.sh` force la branche de PRODUCTION
+1. **Choix** : `deploy-pages.sh` passe désormais `--branch "${DEPLOY_BRANCH:-main}"` à `wrangler pages deploy` + check « ancrage prod » (villamaryllis.com doit servir le bundle local, sinon smoke FAIL).
+2. **Alternatives refusées** : (a) laisser sans `--branch` et « penser à le passer » → erreur refaite plusieurs fois ; (b) seulement avertir si branche ≠ main → un warning ne bloque pas, le faux positif persistait.
+3. **Conséquences attendues** : `npm run deploy:pages` déploie TOUJOURS en prod, même depuis un worktree. Preview délibéré = `DEPLOY_BRANCH=x`. Le smoke ne peut plus mentir (faux positif preview éliminé).
+4. **Périmètre** : `scripts/deploy-pages.sh` (corrigé dans main ET worktree, identiques → pas de régression au merge). Doc : `.memory/RECALL.md`, `.memory/ARCHITECTURE.md` §2 + pièges.
+5. **Statut** : acté & en prod (validé : villamaryllis.com sert hero schoelcher/16, iguana/04, nogent/09, mabouya/13).
+
 ## ADR-CRO-QW-001 · 2026-06-18 · Audit ultracode CRO public site — 8 chantiers déployés
 1. **Choix** : lancer un audit CRO multi-agents (9 dimensions, 66 agents) sur le site public → sélectionner 8 quick wins parmi 50 findings confirmés et les déployer en une seule session.
 2. **Alternatives refusées** : (a) corriger tous les 50 findings — refusé, certains sont structurels (i18n tunnel EN, identité hôte avec visage, fusion étapes 2+3 = bigger bets) ; (b) demi-mesures progressives — refusé, Vincent a choisi 8 et dit « go ».
