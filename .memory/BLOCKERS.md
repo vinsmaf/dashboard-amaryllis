@@ -112,8 +112,9 @@
 - **`caffeinate` LaunchAgent redondant** : `~/Library/LaunchAgents/com.vincentsalomon.caffeinate.plist` installé pour l'ancienne règle Mail (devenue côté serveur Outlook). Débloque : `launchctl unload … && rm` pour laisser le Mac redormir (proposé, en attente go Vincent).
 - **`RESEND_FROM` du Worker cassée** (dashboard CF, domaine manquant) — contournée par `resendFrom(env)`. Débloque : Vincent corrige/supprime la variable. Non urgent.
 
-## 🟡 Tracking `purchase` — historique 16 begin_checkout / 0 purchase (data-049, 2026-06-04)
-- GA4 30j (au 06-04) : 240 view_item → 16 begin_checkout → 0 purchase. Hypothèses : (a) aucune résa **directe** ce mois (OTA ne passent pas par notre checkout = normal) ou (b) trou de tracking sur `/merci`. Le fix du 14-15/06 (eventID, attribution) doit faire remonter les ventes directes. **Suivi** : AGENDA 2026-06-28 — vérifier que `purchase` quitte « Unassigned ».
+## ✅ Tracking `purchase` — LEVÉ le 2026-06-20 (le fix marche : 4 purchases trackées, 2 894 €)
+- Au 04/06 : 0 purchase tracké (data-049). Le fix eventID/attribution du 14-15/06 a marché → `npm run funnel` au 20/06 montre `purchase` qui remonte avec revenu. **Tracking OK.**
+- 🟡 **Reste : l'attribution.** 3/4 ventes en canal « Unassigned » + bien « (not set) » → on ne sait pas quelle pub/quel bien convertit (bloque l'optim Ads). Sous-sujet ouvert. Chiffres à jour : `npm run funnel`.
 
 ## 🟡 Vérifs en attente côté Vincent (livré, non re-validé par lui)
 - Sync 📊 → onglet « Toutes les Réservations » sans nouveau doublon + revenus cohérents (imports idempotents).

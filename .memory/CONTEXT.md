@@ -18,8 +18,8 @@ Amaryllis (**villa**, 280€, 8p) · Iguana (**villa**, 180€, 6p, `bookable:fa
 > ⚠️ Prix corrigés 2026-06-18 (Vincent confirmé) — était: Zandoli 220, Géko 150, Mabouya 110, Nogent 85 (périmés). `App.jsx DEFAULT_PRIX` (admin seed) garde encore les anciens prix → ne pas confondre.
 
 ## Où on en est (cap)
-- **Problème n°1 = famine de trafic** (~5 visiteurs/j ; Search Console : pos. moy. 5,8 mais ~289 impr/3 mois, autorité de domaine faible → SEO technique bon mais peu vu). Levier = autorité hors-page (citations/netlinking/GBP) + paid (Google Ads live, Meta demain), PAS plus de contenu.
-- **Diagnostic conversion** : 240 view_item → 16 begin_checkout → purchase (tracking réparé le 04/06, à confirmer sur la prochaine résa directe).
+- 🔴 **CHIFFRES FUNNEL/TRAFIC/CONVERSION = JAMAIS ICI (ADR-G-001).** Source unique live = `npm run funnel` (lit `/api/analytics`, GA4 30j glissants, public sans auth) ou onglet admin Analytics (`AnalyticsTab.jsx`). Tout chiffre figé en mémoire périme et ment (vécu 2026-06-20 : j'ai resservi le funnel du 04/06, faux d'un facteur ~4-10). **Avant toute reco conversion/pricing/roadmap → lancer `npm run funnel`.**
+- **Problème n°1 = la fuite begin_checkout → purchase** (constat 2026-06-20 : trafic OK depuis les Ads, view_item→checkout ~7% correct, mais checkout→purchase très faible → abandon au paiement). Le trafic n'est plus le frein principal. Vérifier l'ampleur à jour avec `npm run funnel`. Sujet n°2 = attribution (ventes en "Unassigned" + bien "(not set)").
 - **Revenue Manager = RECO uniquement** ; **Emails voyageurs = résas DIRECTES (Stripe) only** ; **Claude prépare, Vincent lance/paie/publie** (Ads, GBP, comptes).
 - **Stripe LIVE = argent réel** (services additionnels) → tester avant de s'appuyer dessus.
 
