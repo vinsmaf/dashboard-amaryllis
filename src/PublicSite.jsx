@@ -1960,6 +1960,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
   const [earlyCheckin, setEarlyCheckin] = useState(false);
   const [lateCheckout, setLateCheckout] = useState(false);
   const [stripe, setStripe] = useState(null);
+  const [stripeFailed, setStripeFailed] = useState(false); // Stripe injoignable après ~10s (réseau/adblock) → message au lieu d'un bouton mort
   const [elements, setElements] = useState(null);
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState("");
@@ -2087,10 +2088,12 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
     let cancelled = false;
     (async () => {
       for (let i = 0; i < 50 && !window.Stripe; i++) await new Promise(r => setTimeout(r, 200));
-      if (cancelled || !window.Stripe) return;
+      if (cancelled) return;
+      if (!window.Stripe) { setStripeFailed(true); return; }
       let pk = STRIPE_PK;
       if (!pk) { try { const c = await fetch("/api/get-config").then(r => r.json()); pk = c.stripePk; } catch { /* ignore */ } }
-      if (cancelled || !pk) return;
+      if (cancelled) return;
+      if (!pk) { setStripeFailed(true); return; }
       setStripe(window.Stripe(pk));
     })();
     return () => { cancelled = true; };
@@ -2594,8 +2597,16 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
                 onClick={goToPayment}
                 disabled={!formOk || paying || !stripe}
                 style={{ background: formOk && !paying && stripe ? CORAL : SAND, color: "#fff", border: "none", padding: "14px 30px", borderRadius: 8, fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase", cursor: formOk && !paying && stripe ? "pointer" : "not-allowed", opacity: formOk && !paying && stripe ? 1 : 0.5, boxShadow: formOk && !paying && stripe ? "0 4px 20px rgba(196,114,84,0.35)" : "none" }}
-              >{paying ? "Chargement…" : payPlan === "2x" && twoPartOk ? `Payer l'acompte ${depositAmount(total)} € →` : "Passer au paiement →"}</button>
+              >{
+                paying ? "Préparation du paiement sécurisé…"
+                : stripeFailed ? "Paiement indisponible"
+                : (formOk && !stripe) ? "Chargement du paiement sécurisé…"
+                : payPlan === "2x" && twoPartOk ? `Payer l'acompte ${depositAmount(total)} € →`
+                : "Passer au paiement →"
+              }</button>
             </div>
+            {/* Stripe injoignable (réseau/adblock) : ne pas laisser un bouton mort sans explication */}
+            {stripeFailed && <div style={errStyle}>⚠ Le module de paiement n'a pas pu se charger (réseau ou bloqueur de publicité). Réessayez, ou écrivez-nous : on vous envoie un lien de paiement sécurisé.</div>}
             {payError && <div style={errStyle}>⚠ {payError}</div>}
           </>
         )}
