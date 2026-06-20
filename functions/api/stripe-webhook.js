@@ -542,9 +542,10 @@ export async function onRequestPost(context) {
       {
         await ga4Event(env, "purchase", {
           transaction_id: pi.id, value: grpValue, currency: "EUR",
+          bien_id: "groupe", // param top-level → dimension custom bien_id
           items: [{ item_id: "groupe", item_name: logements || "Réservation groupe", price: grpValue, quantity: 1 }],
           channel: "direct-groupe",
-        }, `booking-${pi.id}`);
+        }, pi.metadata?.ga_client_id || `booking-${pi.id}`); // vrai client_id GA4 → évite "Unassigned"
         await ga4Event(env, "booking_completed", { bien_id: "groupe", booking_id: pi.id, value: grpValue, currency: "EUR", channel: "direct-groupe", checkin });
       }
       await storeDirectBooking(env, { paymentIntentId: pi.id, email: guestEmail, voyageur, bienId: "groupe", bienNom: logements, checkin, checkout, total: grpValue, groupBiens: meta.bienIds || "", phone: meta.phone });
@@ -614,9 +615,10 @@ export async function onRequestPost(context) {
       transaction_id: pi.id,
       value: piValue,
       currency: piCur,
+      bien_id: bienId || "unknown", // param top-level → alimente la dimension custom bien_id (items[] ne suffit pas)
       items: [{ item_id: bienId || "unknown", item_name: bienNom || bienId || "Réservation directe", price: piValue, quantity: 1 }],
       channel: meta.channel || "direct",
-    }, `booking-${txId}`);
+    }, meta.ga_client_id || `booking-${txId}`); // vrai client_id GA4 → attribution à la session d'origine (sinon "Unassigned")
     // 3b. "booking_completed" : conservé pour l'historique / rapports existants.
     await ga4Event(env, "booking_completed", {
       bien_id: bienId || "unknown",

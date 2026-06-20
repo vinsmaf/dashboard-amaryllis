@@ -80,6 +80,11 @@ export function getAttributionMetadata() {
     const fbc = rd("_fbc") || (meta.fbclid ? `fb.1.${Date.now()}.${meta.fbclid}` : "");
     if (fbp) meta.fbp = fbp.slice(0, 200);
     if (fbc) meta.fbc = fbc.slice(0, 200);
+    // client_id GA4 (_ga = "GA1.1.<cid1>.<cid2>") → indispensable pour que le purchase
+    // server-side (Measurement Protocol) se rattache à la VRAIE session du visiteur.
+    // Sans lui, GA4 invente un client_id et la vente tombe en "Unassigned".
+    const ga = rd("_ga"); // ex: GA1.1.1234567890.1700000000
+    if (ga) { const cid = ga.split(".").slice(-2).join("."); if (/^\d+\.\d+$/.test(cid)) meta.ga_client_id = cid; }
   } catch { /* */ }
   return meta;
 }
