@@ -33,7 +33,9 @@ export async function onRequestGet(context) {
   const db = env.revenue_manager;
   if (!db) return json({ error: "D1 indisponible" }, 503);
 
-  const target = dateStrPlusDays(1); // arrivées demain
+  // ?date=YYYY-MM-DD permet de déclencher manuellement pour une date donnée
+  const dateParam = url.searchParams.get("date");
+  const target = dateParam || dateStrPlusDays(1); // arrivées demain par défaut
   try {
     // Ajouter la colonne si elle n'existe pas (idempotent)
     await db.prepare("ALTER TABLE direct_bookings ADD COLUMN j1_acces_sent INTEGER DEFAULT 0").run().catch(() => {});

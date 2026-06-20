@@ -1,15 +1,11 @@
 // functions/api/promo-codes.js
 // Gestion des codes promo : génération + listing
 //
-// POST /api/promo-codes   → génère un code unique + insert D1
+// GET  /api/promo-codes?validate=CODE&bien_id=X → public, rate-limited (widget réservation)
+// GET  /api/promo-codes?active=1  → liste codes (auth requise)
+// POST /api/promo-codes           → génère un code unique + insert D1 (auth requise)
 //   Body: { type: "percent"|"amount_eur", value: 10, validity_days: 14,
 //           bien_id?: "amaryllis", for_email?: "x@y.com", note?: "...", max_uses?: 1 }
-//   Réponse: { ok, code, expires_at, valid_for_days, type, value, bien_id }
-//
-// GET /api/promo-codes?active=1  → liste codes (optionnellement: non expirés et utilisables)
-//   Réponse: { codes: [...] }
-//
-// Auth : Bearer admin OU ?secret=<POSTSTAY_SECRET>
 
 import { verifyBearer } from "./_adminauth.js";
 import { rateLimit } from "./_ratelimit.js";
@@ -44,21 +40,13 @@ export async function onRequest(context) {
   const { request, env } = context;
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
 
-  // Auth : Bearer ou secret query param
   const url = new URL(request.url);
-  const secret = url.searchParams.get("secret");
-  const secretOk = env.POSTSTAY_SECRET && secret === env.POSTSTAY_SECRET;
-  const { ok: adminOk } = await verifyBearer(request, env);
-  if (!secretOk && !adminOk) return json({ error: "Non autorisé" }, 401);
-
   const db = env.revenue_manager;
   if (!db) return json({ error: "D1 indisponible" }, 503);
 
-  try {
-    // ── Route publique : GET ?validate=CODE ─────────────────────────────────
-    // Valide un code depuis le widget de réservation (pas d'auth requise).
-    // Rate-limited : 10 validations/IP/minute pour limiter le brute-force.
-    if (request.method === "GET" && url.searchParams.get("validate")) {
+  // ── Route publique : GET ?validate=CODE — pas d'auth requise ──────────────
+  if (request.method === "GET" && url.searchParams.get("validate")) {
+    try {
       const ip = request.headers.get("cf-connecting-ip") || "unknown";
       const rl = await rateLimit(db, { key: `promo_validate:${ip}`, limit: 10, windowSec: 60 });
       if (!rl.ok) return json({ error: "Trop de tentatives, réessayez dans 1 minute" }, 429);
@@ -75,21 +63,29 @@ export async function onRequest(context) {
       if (!row) return json({ valid: false, error: "Code invalide" }, 404);
       if (row.expires_at < now) return json({ valid: false, error: "Code expiré" }, 410);
       if (row.used_count >= row.max_uses) return json({ valid: false, error: "Code déjà utilisé" }, 410);
-      // Si le code est restreint à un bien, vérifier
       if (row.bien_id && bienId && row.bien_id !== bienId)
         return json({ valid: false, error: "Code non valable pour ce logement" }, 409);
 
       return json({
         valid: true,
         code: row.code,
-        type: row.type,       // "percent" | "amount_eur"
-        value: row.value,     // 5 (%) ou 50 (€)
+        type: row.type,
+        value: row.value,
         bien_id: row.bien_id,
       });
+    } catch (e) {
+      return json({ error: e.message }, 500);
     }
+  }
 
+  // ── Routes protégées (auth Bearer ou ?secret) ──────────────────────────────
+  const secret = url.searchParams.get("secret");
+  const secretOk = env.POSTSTAY_SECRET && secret === env.POSTSTAY_SECRET;
+  const { ok: adminOk } = await verifyBearer(request, env);
+  if (!secretOk && !adminOk) return json({ error: "Non autorisé" }, 401);
+
+  try {
     if (request.method === "GET") {
-      // Liste codes, optionnellement filtrés (actifs = non expirés + utilisables)
       const onlyActive = url.searchParams.get("active") === "1";
       const now = Date.now();
       const sql = onlyActive
@@ -116,13 +112,11 @@ export async function onRequest(context) {
       const note = body.note || null;
       const maxUses = parseInt(body.max_uses, 10) || 1;
 
-      // Validation
       if (!value || value < 1 || value > 9999) return json({ error: "value invalide (1-9999)" }, 400);
       if (type === "percent" && value > 99) return json({ error: "percent max 99" }, 400);
       if (validityDays < 1 || validityDays > 365) return json({ error: "validity_days 1-365" }, 400);
       if (maxUses < 1 || maxUses > 999) return json({ error: "max_uses 1-999" }, 400);
 
-      // Générer code unique (max 3 essais en cas de collision)
       const prefix = buildPrefix(forEmail);
       const now = Date.now();
       const expiresAt = now + validityDays * 86400_000;
@@ -141,7 +135,6 @@ export async function onRequest(context) {
           code = candidate;
           break;
         } catch (e) {
-          // Collision (UNIQUE constraint sur PRIMARY KEY) — on re-roll
           if (!/UNIQUE|already exists/i.test(String(e.message || ""))) throw e;
         }
       }

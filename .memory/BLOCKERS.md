@@ -4,7 +4,13 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-15 : ✅ levés regroupés en bas, doublons fusionnés._
 
-## En cours → ✅ terminé le 2026-06-18 (CPA bug 3-layer defense + CRO 8 chantiers déployés & vérifiés en prod)
+## En cours → ✅ terminé le 2026-06-20 (Configuration page Facebook : Bio ✅ · Social Links IG+YT ✅ · pipeline auto-pub réparé ✅)
+
+## 🟡 Config page Facebook — éléments en attente
+- 🟡 **CTA "Book now" URL non vérifiée** : le bouton existe sur la page en vue visiteur, mais l'URL de destination n'a pas été confirmée/éditée (session interrompue). → En vue visiteur : hover bouton → crayon → vérifier que cible = `villamaryllis.com`. Si besoin : Page Settings → Buttons.
+- 🟡 **Lead gen form FB** : non démarré. Champs à collecter : Nom, Email, Téléphone, Dates, Bien → privacy policy. Créer via Meta Business Suite → Forms.
+- 🟡 **WhatsApp business** : en attente Business Verification (soumise 2026-06-17, 1-5j ouvrés). Une fois validée : ajouter numéro réel WA + lier à la Page (Page Settings → WhatsApp). **Action humaine requise** (code de vérification SMS).
+- 🟡 **`meta-token-exchange.js`** : endpoint TEMPORAIRE à supprimer une fois le System User token permanent obtenu post-BV. (ADR-META-REPAIR-001)
 
 ---
 

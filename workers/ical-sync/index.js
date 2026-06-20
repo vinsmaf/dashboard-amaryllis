@@ -2430,6 +2430,21 @@ export default {
           console.error("[caution-cron] Cron error:", e.message);
         }
         await runInventoryAlerts(env);
+        // ── Emails voyageurs résas directes : J-3 (infos pratiques) + J-1 (codes d'accès) ──
+        try {
+          const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+          const sec = encodeURIComponent(env.POSTSTAY_SECRET || "");
+          const [r3, r1, rd] = await Promise.all([
+            fetch(`${siteUrl}/api/send-prearrivee?secret=${sec}`).then(r => r.json()).catch(() => ({})),
+            fetch(`${siteUrl}/api/send-j1-acces?secret=${sec}`).then(r => r.json()).catch(() => ({})),
+            fetch(`${siteUrl}/api/send-pre-depart?secret=${sec}`).then(r => r.json()).catch(() => ({})),
+          ]);
+          console.log(`[prearrivee J-3]  sent=${r3.sent ?? 0} failed=${r3.failed ?? 0} target=${r3.target ?? "?"}`);
+          console.log(`[j1-acces J-1]    sent=${r1.sent ?? 0} failed=${r1.failed ?? 0} target=${r1.target ?? "?"}`);
+          console.log(`[pre-depart J-1]  sent=${rd.sent ?? 0} failed=${rd.failed ?? 0} target=${rd.target ?? "?"}`);
+        } catch (e) {
+          console.error("[emails-voyageurs] Cron error:", e.message);
+        }
         await runDevisSoldeCron(env); // C2 — solde devis 2 fois : lien J-30 + relances J-25/J-20 + annulation J-15
         await runEnrichFromEmails(env); // complète nom+payout des résas Airbnb depuis les mails (onglet « Emails ») AVANT le contrôle de cohérence
         // ── Contrôle de cohérence des réservations (chantier 2 Robustesse) ──

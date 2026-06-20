@@ -509,12 +509,18 @@ const BIENS = [
     sdb: "1",
     couleur: "#ec4899",
     photos: [
+      "/photos/mabouya/13.webp",
       "/photos/mabouya/02.webp",
+      "/photos/mabouya/14.webp",
+      "/photos/mabouya/15.webp",
       "/photos/mabouya/12.webp",
+      "/photos/mabouya/16.webp",
       "/photos/mabouya/03.webp",
       "/photos/mabouya/09.webp",
+      "/photos/mabouya/17.webp",
       "/photos/mabouya/11.webp",
       "/photos/mabouya/10.webp",
+      "/photos/mabouya/18.webp",
       "/photos/mabouya/04.webp",
       "/photos/mabouya/08.webp",
       "/photos/mabouya/05.webp",
@@ -1953,6 +1959,10 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
   const elRef = useRef(null);
   const depositAmt = DEPOSIT_AMOUNTS[bien.id] ?? 0;
   const [payPlan, setPayPlan] = useState("full");
+  const [promoInput,   setPromoInput]   = useState("");
+  const [promoData,    setPromoData]    = useState(null);
+  const [promoError,   setPromoError]   = useState("");
+  const [promoLoading, setPromoLoading] = useState(false);
 
   const nights = checkin && checkout ? dateDiff(checkin, checkout) : 0;
 
@@ -2047,7 +2057,13 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
   const earlyLateFee    = EARLY_LATE_FEE[bien.id] ?? 50;
   const earlySuppl      = earlyCheckin  ? earlyLateFee : 0;
   const lateSuppl       = lateCheckout  ? earlyLateFee : 0;
-  const total = rawTotal - discountAmount + fraisMenage + extraGuestSuppl + petSuppl + earlySuppl + lateSuppl;
+  const baseTotal = rawTotal - discountAmount + fraisMenage + extraGuestSuppl + petSuppl + earlySuppl + lateSuppl;
+  const promoDiscountAmt = promoData
+    ? promoData.type === "percent"
+      ? Math.round(baseTotal * promoData.value / 100)
+      : Math.min(promoData.value, baseTotal)
+    : 0;
+  const total = baseTotal - promoDiscountAmt;
   const todayIso = new Date().toISOString().slice(0, 10);
   const twoPartOk = PAY_2X_ENABLED && isTwoPartEligible({ total, checkin, today: todayIso });
   const minNights = getMinNights(bien.id, checkin);
@@ -2081,6 +2097,19 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
 
   const stripeAppearance = { theme: "stripe", variables: { colorPrimary: CORAL, borderRadius: "8px", colorBackground: CREAM, colorText: NAVY } };
 
+  async function validatePromo() {
+    const code = promoInput.trim().toUpperCase();
+    if (!code) return;
+    setPromoLoading(true); setPromoError("");
+    try {
+      const r = await fetch(`/api/promo-codes?validate=${encodeURIComponent(code)}&bien_id=${bien.id}`);
+      const d = await r.json();
+      if (d.valid) { setPromoData(d); setPromoError(""); }
+      else setPromoError(d.error || "Code invalide");
+    } catch { setPromoError("Erreur réseau"); }
+    setPromoLoading(false);
+  }
+
   async function goToPayment() {
     setPaying(true); setPayError("");
     try {
@@ -2108,6 +2137,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
             ...(earlyCheckin  ? { early_checkin:  "oui" } : {}),
             ...(lateCheckout  ? { late_checkout:  "oui" } : {}),
             ...(upsellsStr ? { upsells: upsellsStr } : {}),
+            ...(promoData ? { promo_code: promoData.code, promo_value: String(promoDiscountAmt) } : {}),
             ...(isTwoX ? {
               balance_amount: String(balanceAmount(total)),
               due_date: balanceDueDate(checkin),
@@ -2425,6 +2455,28 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
                     </div>
                   );
                 })()}
+
+                {/* Code promo */}
+                {nights > 0 && (
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <input
+                        value={promoInput}
+                        onChange={e => { setPromoInput(e.target.value.toUpperCase()); setPromoData(null); setPromoError(""); }}
+                        onKeyDown={e => e.key === "Enter" && validatePromo()}
+                        placeholder="Code promo (optionnel)"
+                        maxLength={20}
+                        style={{ flex: 1, padding: "10px 14px", borderRadius: 8, border: `1px solid ${promoData ? "#10b981" : SAND}`, background: IVORY, fontFamily: "'Jost', sans-serif", fontSize: 13, letterSpacing: "0.05em", color: NAVY, outline: "none" }}
+                      />
+                      <button onClick={validatePromo} disabled={!promoInput.trim() || promoLoading}
+                        style={{ padding: "10px 14px", borderRadius: 8, border: `1px solid ${SAND}`, background: IVORY, fontFamily: "'Jost', sans-serif", fontSize: 12, fontWeight: 600, color: NAVY, cursor: !promoInput.trim() || promoLoading ? "not-allowed" : "pointer", opacity: !promoInput.trim() || promoLoading ? 0.5 : 1, whiteSpace: "nowrap" }}>
+                        {promoLoading ? "…" : "Appliquer"}
+                      </button>
+                    </div>
+                    {promoData && <div style={{ fontSize: 11, color: "#10b981", marginTop: 6, fontFamily: "'Jost', sans-serif" }}>✓ Code valide — −{promoDiscountAmt}€ appliqué</div>}
+                    {promoError && <div style={{ fontSize: 11, color: "#e53e3e", marginTop: 6, fontFamily: "'Jost', sans-serif" }}>{promoError}</div>}
+                  </div>
+                )}
 
                 {belowMin && (
                   <div style={{ fontSize: 13, color: "#ef4444", fontWeight: 600, marginBottom: 12 }}>

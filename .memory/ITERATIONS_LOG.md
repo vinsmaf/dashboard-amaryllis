@@ -3,6 +3,8 @@
 > 1 entrée par session : date · ce qui a été fait · commits clés. Le plus récent en haut.
 > **Archive des sessions antérieures : `../PROJECT_MEMORY.md` + `../docs/_archive/`.**
 
+- **2026-06-19/20** — Config FB page Amaryllis Location : (1) Pipeline auto-pub réparé (3 root causes : token Meta invalidé post-hack → régénéré via `meta-token-exchange.js` · POSTSTAY_SECRET mismatch Pages vs Worker → resync · FB page access downgraded → corrigé) · 6 posts Jun15-20 reschedulés. (2) FB page : Bio 101 chars confirmée + Social Links IG (`@amaryllislocations`) + YT (`UC76I8BM3dCr5zgFAHt-q2oA`) confirmés. CTA "Book now" existe mais URL non vérifiée (session interrompue). Lead gen form + WhatsApp = en attente BV. ADR-META-REPAIR-001 · ADR-FB-PAGE-001.
+
 ---
 
 ## 2026-06-18 (session 26) — Bug CPA canal (fix 3 couches) + Audit CRO ultracode (8 chantiers)

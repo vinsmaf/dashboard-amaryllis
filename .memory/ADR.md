@@ -3,6 +3,20 @@
 > 1 entrée par décision qui engage la suite. Format 5 lignes : **Choix · Alternatives refusées · Conséquences attendues · Périmètre · Statut**.
 > Décisions d'archi détaillées (specs complets) → `../docs/superpowers/specs/README.md` (ADR-001→010). Ici = log curaté de session.
 
+## ADR-META-REPAIR-001 · 2026-06-19 · Réparation pipeline publication réseaux : 3 root causes identifiées et corrigées
+1. **Choix** : corriger en profondeur les 3 causes racines des publications manquées (Jun 15-19) plutôt qu'un bypass.
+2. **Alternatives refusées** : (a) republier manuellement les 6 posts sans investiguer = récidive certaine ; (b) désactiver le pipeline = retard sur la stratégie éditoriale.
+3. **Conséquences attendues** : pipeline stable. Runbook `docs/runbook-rotation-tokens.md` enrichi. Token META_PAGE_TOKEN désormais renouvelé via `functions/api/meta-token-exchange.js` (endpoint temporaire, POSTSTAY_SECRET auth, stocke en D1 `kv_store`). Les 6 posts Jun 15-20 ont été reschedulés (voir ITERATIONS_LOG).
+4. **Périmètre** : `workers/ical-sync/index.js` (POSTSTAY_SECRET aligné) · `functions/api/meta-token-exchange.js` (créé, temporaire) · D1 `kv_store` (token stocké, jamais renvoyé en clair) · secrets CF Pages (`POSTSTAY_SECRET` resynchronisé).
+5. **Statut** : ✅ acté. `meta-token-exchange.js` = TEMPORAIRE (à supprimer quand Business Verification → System User token permanent).
+
+## ADR-FB-PAGE-001 · 2026-06-19 · Configuration page Facebook "Amaryllis Location" — Bio + Social Links
+1. **Choix** : configurer la page FB dans Business Suite (Edit Page modal) : Bio 101 chars + Social Links IG + YT.
+2. **Alternatives refusées** : (a) Bio > 101 chars = rejetée par Meta (limite stricte) — texte initial 139 chars, tronqué.
+3. **Conséquences attendues** : Bio visible sur l'onglet "À propos". Liens IG + YT avec icônes natifs. La page présente désormais les 2 réseaux et l'argument résa directe.
+4. **Périmètre** : Facebook page `facebook.com/Amaryllis.villa` · Business Suite "Edit Page" modal · champs Social Links (IG `@amaryllislocations` · YT `UC76I8BM3dCr5zgFAHt-q2oA`).
+5. **Statut** : ✅ Bio confirmée (Vincent a collé le texte manuellement). Social Links confirmés (IG + YT avec icônes). CTA "Book now" existe sur la page mais URL de destination **non vérifiée** (session interrompue avant cette étape).
+
 ---
 
 ## ADR-DEPLOY-001 · 2026-06-20 · `deploy-pages.sh` force la branche de PRODUCTION

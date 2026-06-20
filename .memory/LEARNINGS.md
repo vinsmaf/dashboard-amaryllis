@@ -398,6 +398,15 @@
 
 - **Avant tout rebuild rétroactif sur un Sheet Google, demander : "ces données viennent-elles toutes d'un onglet source ?"** Si la réponse est "non" (données manuelles, corrections, imports externes), un rebuild qui zéro+reapply va détruire les données orphelines sans avertissement.
 
+## 2026-06-19 — FB page Business Suite, token Meta, pipeline auto-pub
+
+- **La limite de la Bio FB = 101 caractères STRICTEMENT.** Pas de troncature silencieuse : le champ bloque à 101. Pour vider une textarea remplie via Business Suite avec computer-use : `Ctrl+A` sélectionne TOUTE la page (pas le champ), et `super+a` + Delete ne supprime que les derniers caractères. La seule voie fiable = demander à Vincent de coller le texte exact (≤ 101 chars).
+- **Deux stores CF secrets distincts : Pages vs Worker.** `wrangler pages secret put --project-name X` ≠ `wrangler secret put --name worker-name`. Un secret posé côté Pages n'est pas visible par le Worker et vice versa. Toujours vérifier les deux si un secret est partagé entre les deux runtimes.
+- **Le CTA "Book now" FB n'est PAS éditable en mode "Manage Page".** En mode gestion, le bouton disparaît de la vue. Pour modifier l'URL cible → passer en vue visiteur (icône œil) → hover sur le bouton → crayon d'édition. Ou passer par Page Settings → Buttons.
+- **Business Suite "Edit Page" modal = seul endroit pour Social Links et Bio.** Onglet "À propos" de la page = lecture seule. Pour éditer : business.facebook.com → Pages → Amaryllis → Edit Page → sections "Links" et "About".
+- **`meta-token-exchange.js` = runbook de renouvellement token Meta.** Endpoint temporaire (auth POSTSTAY_SECRET). Flow : short-lived user token → `oauth/access_token?grant_type=fb_exchange_token` → long-lived → `/me/accounts` → page token non expirant → stocké en D1 `kv_store`. Jamais renvoyé en clair. À supprimer après Business Verification → System User token permanent.
+- **Auto-publication pipeline confirmé fonctionnel.** Post Zandoli a été publié automatiquement par le Worker pendant la session (37min après le début). Le cron `runEditorialAutoPublish` (horaire) publie les drafts `approved`. Statut `drafted` ≠ publié : `approved` requis.
+
 ## 2026-06-16 (audit Playbook)
 - **`BIENS[].lieu` est ENRICHI** ("…, Martinique") → `isMartinique(b)` se trompe sur un élément BIENS. Pour le marché d'un bien, passer par le canonique BRUT `CANON[id]` (RM-20).
 - **Donnée saisie puis JETÉE** : `form.tel` collecté mais jamais transmis (metadata/INSERT). Avant de "capturer", vérifier si c'est déjà saisi côté front et juste perdu en aval (RM-10).

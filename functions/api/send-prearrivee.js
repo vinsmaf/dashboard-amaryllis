@@ -41,7 +41,9 @@ export async function onRequestGet(context) {
   const db = env.revenue_manager;
   if (!db) return json({ error: "D1 indisponible" }, 503);
 
-  const target = dateStrPlusDays(3); // arrivées dans 3 jours
+  // ?date=YYYY-MM-DD permet de déclencher manuellement pour une date donnée
+  const dateParam = url.searchParams.get("date");
+  const target = dateParam || dateStrPlusDays(3); // arrivées dans 3 jours par défaut
   try {
     await db.prepare(`CREATE TABLE IF NOT EXISTS direct_bookings (
       payment_intent_id TEXT PRIMARY KEY, bien_nom TEXT, voyageur TEXT,

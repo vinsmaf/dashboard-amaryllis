@@ -176,6 +176,29 @@
 
 ---
 
+## 2026-06-20 — ASSETS SENSIBLES dans git HEAD + déploiement PREVIEW depuis worktree (fuite sécurité)
+
+**SEC-002 (P0)** — `villamaryllis.com/guides/*.json` (codes wifi + accès) et `/competitors/*.csv` (intel pricing Airbnb) **accessibles publiquement** en production sur une période indéterminée.
+
+**Cause 1 — fichiers committés dans git HEAD** : `public/guides/*.json` et `public/competitors/*.csv` étaient trackés dans git. Vite copie `public/` → `dist/` verbatim → **tout fichier de `public/` dans git apparaît dans chaque déploiement**, même si on pense l'avoir supprimé du disque (working-tree deletion ≠ `git rm`). Les guides contenaient des codes WiFi en clair (`"wifi_password":"amaryllis"`, `"wifi_password":"bienvenue"`).
+
+**Cause 2 — déploiements dans un worktree périmé → PREVIEW** : la session travaillait dans `.claude/worktrees/sad-bartik-02a3c2` (branche `claude/*`). `wrangler pages deploy` sans `--branch` associe le déploiement à la branche git courante → **déploiement PREVIEW** (`<hash>.dashboard-amaryllis.pages.dev`), PAS villamaryllis.com. Le smoke test vérifiait l'URL alias (toujours green) → **faux positif total** : plusieurs sessions de fixes ne touchaient pas la prod.
+
+**Cause 3 — cache CDN CF survit au redéploiement** : même après un déploiement propre (sans les fichiers), le cache edge CF continue de servir l'ancienne réponse jusqu'à purge explicite. `?cb=random` bypasse le cache edge → permet de distinguer "gelé en cache" vs "encore en origin".
+
+**Corrections appliquées** :
+1. `git rm public/guides/*.json public/competitors/*.csv` + `.gitignore` → bloqués définitivement
+2. `scripts/deploy-pages.sh` : `DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"` forcé + "ancrage prod" (vérifie que villamaryllis.com sert le même bundle que le build local)
+3. `functions/guides/[name].js` + `functions/competitors/[name].js` → 404 (CF Functions prioritaires sur cache CDN → override immédiat sans purge API)
+4. `public/_redirects` : `/guides/*  /index.html  404` en backup
+
+**Garde-fous permanents** :
+- `git rm` (pas suppression disque seule) pour retirer un fichier public du déploiement
+- Tout fichier sensible UNIQUEMENT via une API protégée (`/api/guides`, auth Bearer) — jamais un fichier statique
+- `npm run deploy:pages` depuis `~/locatif-dashboard` (main) uniquement — jamais depuis un worktree
+- Pour bypasser cache CDN → `?cb=random` (teste l'origin) ; pour purger → CF Dashboard "Cache Purge by URL" (nécessite token `cache_purge` non dispo en OAuth wrangler) → alternative : CF Pages Function (prioritaire sur le cache)
+- `wrangler pages deployment list --project-name dashboard-amaryllis` → colonne "Environment" (Preview vs Production) pour diagnostiquer
+
 ## 2026-06-03 — Statut Villa Iguana : LONGUE DURÉE uniquement (ne pas "corriger")
 **Fait confirmé par Vincent** : Villa Iguana = **Sainte-Luce, résidence Amaryllis** (PAS Le Diamant — vue seulement) ET **location longue durée uniquement** (`bookable:false`, pas de réservation court séjour). Un sous-agent juriste avait supposé "saisonnier" et retiré la mention "longue durée" des CGV → annulé. Cohérence : fiche PublicSite + prerender (bookable:false) + CGV disent tous "longue durée uniquement".
 **Garde-fou** : ne pas activer la réservation court séjour d'Iguana ni retirer "longue durée" sans confirmation de Vincent.

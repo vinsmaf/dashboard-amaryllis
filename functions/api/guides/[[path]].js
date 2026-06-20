@@ -66,6 +66,21 @@ export async function onRequest(context) {
 
     if (!guide) return json({ error: "Guide not found", property_id }, 404);
 
+    // Section `access` (codes d'entrée) retirée de la réponse publique.
+    // Les codes sont transmis uniquement par email (send-j1-acces) côté serveur.
+    // L'admin authentifié reçoit le guide complet.
+    const { ok: isAdmin } = await verifyBearer(request, env).catch(() => ({ ok: false }));
+    if (!isAdmin) {
+      guide = {
+        ...guide,
+        sections: (guide.sections || []).map(s =>
+          s.id === "access"
+            ? { ...s, items: [{ label: "Codes d'accès", value: "Transmis par email la veille de votre arrivée." }] }
+            : s
+        ),
+      };
+    }
+
     return json({ ok: true, guide, source });
   }
 

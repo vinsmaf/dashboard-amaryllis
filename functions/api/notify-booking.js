@@ -1,5 +1,6 @@
 import { resendFrom } from "./_email.js";
 import { sendEmail as sendEmailHelper } from "./_sendEmail.js";
+import { sendGuestEmail } from "./send-guest-email.js";
 // Cloudflare Pages Function — POST /api/notify-booking
 // Alerte fiable de NOUVELLE RÉSERVATION DIRECTE, déclenchée côté client juste
 // après un paiement Stripe réussi (indépendant de la config webhook Stripe).
@@ -144,7 +145,24 @@ export async function onRequest(context) {
     } catch { /* non bloquant */ }
   }
 
-  // ── 3. Notifications ──
+  // ── 3. Email de confirmation au voyageur ──
+  if (email) {
+    sendGuestEmail(env, url0.origin, {
+      template: "confirmation",
+      to: email,
+      subject: `✓ Votre séjour à ${bienNom} est confirmé`,
+      vars: {
+        prenom: String(voyageur || "").trim().split(/\s+/)[0] || "",
+        bien_nom: bienNom,
+        checkin, checkout,
+        nb_guests: String(nb_guests || 1),
+        total: String(Math.round(fullTotal)),
+        wa_hote: "33610880772",
+      },
+    }).catch(() => {}); // non bloquant
+  }
+
+  // ── 4. Notifications hôte ──
   const titre = `🎉 NOUVELLE RÉSA — ${bienNom}`;
   const ligne = `${voyageur || "Voyageur"} · ${fmtDate(checkin)} → ${fmtDate(checkout)} · ${fullTotal} €${depot ? ` (caution ${depot}€)` : ""}`;
   const html = `<div style="font-family:Georgia,serif;color:#2b2b2b;line-height:1.7">
