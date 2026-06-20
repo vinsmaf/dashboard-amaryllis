@@ -90,17 +90,18 @@ function inOutQuad(p) {
 // ── Image preloader avec img.decode() ────────────────────────────────────────
 function useImagePreload(srcs) {
   const [loaded, setLoaded] = useState(0);
+  const [firstReady, setFirstReady] = useState(false);
   useEffect(() => {
     let cancelled = false;
     let n = 0;
-    const total = srcs.length;
-    srcs.forEach(src => {
+    srcs.forEach((src, i) => {
       const img = new Image();
       img.src = src;
       const done = () => {
         if (cancelled) return;
         n++;
         setLoaded(n);
+        if (i === 0) setFirstReady(true); // slide 0 prête → on peut révéler
       };
       // img.decode() garantit que le GPU est prêt avant d'afficher
       img.decode ? img.decode().then(done).catch(done) : (img.onload = img.onerror = done);
@@ -108,7 +109,7 @@ function useImagePreload(srcs) {
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  return loaded / srcs.length;
+  return { progress: loaded / srcs.length, firstReady };
 }
 
 // ── Container-aware scale (ResizeObserver) ────────────────────────────────────
@@ -217,8 +218,11 @@ export default function VillaAmaryllisReel({
 
   // Preload
   const photoSrcs    = useMemo(() => SHOTS.map(s => s.src), []);
-  const loadProgress = useImagePreload(photoSrcs);
-  const ready        = loadProgress >= 1;
+  const { progress: loadProgress, firstReady } = useImagePreload(photoSrcs);
+  // Révèle le reel dès la 1re image décodée (slide 0) ; les 4 autres préchargent
+  // derrière et sont prêtes avant leur slide. Évite le bloc noir « préchargement »
+  // sur cache froid (≈1-2 Mo à charger avant le 1er pixel auparavant).
+  const ready        = firstReady;
 
   // Sync playingRef avec state playing
   useEffect(() => { playingRef.current = playing; }, [playing]);
