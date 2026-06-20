@@ -43,6 +43,7 @@ import WhatsAppTab from "./tabs/WhatsAppTab.jsx";
 import BugReporter from "./components/BugReporter.jsx";
 import BugsTab from "./tabs/BugsTab.jsx";
 import ProjetsCerveauTab from "./tabs/ProjetsCerveauTab.jsx";
+import DevStatusTab from "./tabs/DevStatusTab.jsx";
 import { AppDataProvider } from "./AppDataContext.jsx";
 import { SEED_DAILY_PRICES, loadDailyPrices, saveDailyPrices, loadPriceOverrides, applyServerPriceOverrides } from "./seedPrices.js";
 import {
@@ -1374,6 +1375,7 @@ export default function App() {
         { id: "agents", icon: "🤖", label: "Agents", badge: null },
         { id: "bugs", icon: "🐞", label: "Bugs", badge: bugsBadge > 0 ? bugsBadge : null, badgeColor: "#ef4444" },
         { id: "projets-cerveau", icon: "🧩", label: "Projets cerveau" },
+        { id: "deploy-status", icon: "⚙️", label: "Déploiement" },
       ],
     },
   ];
@@ -1593,6 +1595,7 @@ export default function App() {
             {tab === "chat-admin"    && <AdminChatTab />}
             {tab === "orchestrateur" && <OrchestratorTab />}
             {tab === "projets-cerveau" && <ProjetsCerveauTab />}
+            {tab === "deploy-status" && <DevStatusTab />}
             {tab === "interventions" && <InterventionsTab />}
             {tab === "inventaire"    && <InventaireTab />}
             {tab === "conversion"    && <ConversionTab />}
