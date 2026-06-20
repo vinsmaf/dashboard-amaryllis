@@ -242,6 +242,17 @@ export function calcDateReco({
       adjMarket += adj;
       factors.push({ type: "market_low", adj, pressure: signal.market_pressure_score });
     }
+    // RM-01 — uplift scarcité marché : quand la rareté est élevée, monter le prix
+    const scarcity = signal.scarcity_score || 0;
+    if (scarcity > 85) {
+      const adj = Math.round(basePrice * 0.10);
+      adjMarket += adj;
+      factors.push({ type: "scarcity_very_high", adj, scarcity });
+    } else if (scarcity > 70) {
+      const adj = Math.round(basePrice * 0.05);
+      adjMarket += adj;
+      factors.push({ type: "scarcity_high", adj, scarcity });
+    }
   }
 
   // 7b. Ajustement selon NOTRE occupation réelle (advisory — phase 2)
@@ -255,8 +266,8 @@ export function calcDateReco({
     }
   }
 
-  // 8. Gap fill (not implemented at this level — would need calendar data)
-  // adjGapFill stays 0
+  // 8. Gap fill — non implémenté (RM-04 rejeté)
+  const isOrphan = false;
 
   // 9. Final price computation
   let finalPrice = basePrice + adjWeekend + adjHoliday + adjEvent + adjLeadTime + adjMarket + adjGapFill + adjOccupancy;
