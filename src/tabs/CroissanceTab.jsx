@@ -3,6 +3,7 @@
  *
  * Centralise les leviers de croissance sociale identifiés au refactor 2026 :
  * - KPIs followers FB + IG temps réel via /api/social?action=status
+ * - Évolution historique (sparklines + deltas J-7/J-30/J-90) via /api/meta-insights
  * - Bouton générateur de post-concours mensuel (via agents-run + draft IG/FB)
  * - Checklist tactiques (UGC, reels, hashtags géo, ambassadeurs)
  *
@@ -11,19 +12,58 @@
 import { useState, useEffect } from "react";
 import { adminFetch } from "../lib/apiFetch.js";
 
-export default function CroissanceTab() {
-  const [status, setStatus] = useState(null);
-  const [statusErr, setStatusErr] = useState(null);
-  const [genStatus, setGenStatus] = useState("idle"); // idle | gen | ok | err
-  const [genMsg, setGenMsg] = useState("");
+// ── Sparkline SVG ─────────────────────────────────────────────────────────────
+function Sparkline({ series, color, width = 120, height = 36 }) {
+  const vals = (series || []).map(p => p.value).filter(v => typeof v === "number");
+  if (vals.length < 2) return null;
+  const mn = Math.min(...vals), mx = Math.max(...vals);
+  const range = mx - mn || 1;
+  const pts = vals.map((v, i) => {
+    const x = (i / (vals.length - 1)) * width;
+    const y = height - ((v - mn) / range) * (height - 4) - 2;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+  return (
+    <svg width={width} height={height} style={{ display: "block", overflow: "visible" }}>
+      <polyline points={pts} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" opacity={0.9} />
+    </svg>
+  );
+}
 
-  // Charge les KPIs followers via l'endpoint social
+function Delta({ value, label }) {
+  if (value === null || value === undefined) return null;
+  const pos = value >= 0;
+  return (
+    <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 5, background: pos ? "rgba(16,185,129,0.14)" : "rgba(239,68,68,0.14)", color: pos ? "#10b981" : "#ef4444" }}>
+      {pos ? "+" : ""}{value} <span style={{ fontWeight: 400, opacity: 0.8 }}>{label}</span>
+    </span>
+  );
+}
+
+export default function CroissanceTab() {
+  const [status, setStatus]       = useState(null);
+  const [statusErr, setStatusErr] = useState(null);
+  const [insights, setInsights]   = useState(null);
+  const [insErr, setInsErr]       = useState(null);
+  const [days, setDays]           = useState(30);
+  const [genStatus, setGenStatus] = useState("idle"); // idle | gen | ok | err
+  const [genMsg, setGenMsg]       = useState("");
+
+  // Count temps réel
   useEffect(() => {
     fetch("/api/social?action=status")
       .then(r => r.json())
       .then(d => { if (d.error) setStatusErr(d.error); else setStatus(d); })
       .catch(e => setStatusErr(e.message));
   }, []);
+
+  // Évolution historique
+  useEffect(() => {
+    adminFetch(`/api/meta-insights?days=${days}`)
+      .then(r => r.json())
+      .then(d => { if (!d.ok) setInsErr(d.error || "Erreur API"); else setInsights(d); })
+      .catch(e => setInsErr(e.message));
+  }, [days]);
 
   // Génère un draft "post-concours du mois" qui apparaîtra dans Approbations
   const generateConcours = async () => {
@@ -66,25 +106,79 @@ Channels : ig + fb`;
   const fbFollowers = status?.page?.followers_count ?? null;
   const igFollowers = status?.ig?.followers_count ?? null;
   const igPosts     = status?.ig?.media_count ?? null;
+  const total       = fbFollowers !== null && igFollowers !== null ? fbFollowers + igFollowers : null;
 
   return (
     <div>
       {/* ═════ Header ═════ */}
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 18, fontWeight: 700, color: "#e2e8f0", marginBottom: 4 }}>
-          📈 Croissance audience
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
+        <div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: "#e2e8f0", marginBottom: 4 }}>
+            📈 Croissance audience
+          </div>
+          <div style={{ fontSize: 12, color: "#64748b" }}>
+            Pilotage followers Facebook + Instagram, génération automatique de concours, tactiques d'engagement.
+          </div>
         </div>
-        <div style={{ fontSize: 12, color: "#64748b" }}>
-          Pilotage followers Facebook + Instagram, génération automatique de concours, tactiques d'engagement.
+        {/* Sélecteur période historique */}
+        <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+          {[30, 60, 90].map(d => (
+            <button key={d} onClick={() => setDays(d)} style={{ padding: "4px 10px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.1)", background: days === d ? "rgba(255,255,255,0.09)" : "transparent", color: days === d ? "#e2e8f0" : "#64748b", fontSize: 11, cursor: "pointer" }}>
+              {d}j
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* ═════ KPIs followers ═════ */}
+      {/* ═════ KPIs + évolution ═════ */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+
+        {/* Instagram */}
+        <div style={{ background: "rgba(225,48,108,0.07)", border: "1px solid rgba(225,48,108,0.18)", borderRadius: 13, padding: "14px 16px" }}>
+          <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>📸 Instagram</div>
+          <div style={{ fontSize: 26, fontWeight: 800, color: "#e2e8f0", letterSpacing: "-0.5px" }}>
+            {igFollowers !== null ? igFollowers.toLocaleString("fr-FR") : "—"}
+          </div>
+          <div style={{ fontSize: 10, color: "#64748b", marginBottom: 10 }}>{igPosts !== null ? `${igPosts} posts publiés` : ""}</div>
+          {insights?.instagram && (
+            <>
+              <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
+                <Delta value={insights.instagram.delta_7j}  label="7j" />
+                <Delta value={insights.instagram.delta_30j} label="30j" />
+              </div>
+              <Sparkline series={insights.instagram.series} color="#e1306c" width={130} />
+            </>
+          )}
+          {insErr && <div style={{ fontSize: 9, color: "#94a3b8", marginTop: 6 }}>{insErr}</div>}
+        </div>
+
+        {/* Facebook */}
+        <div style={{ background: "rgba(24,119,242,0.07)", border: "1px solid rgba(24,119,242,0.18)", borderRadius: 13, padding: "14px 16px" }}>
+          <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>📘 Facebook</div>
+          <div style={{ fontSize: 26, fontWeight: 800, color: "#e2e8f0", letterSpacing: "-0.5px" }}>
+            {fbFollowers !== null ? fbFollowers.toLocaleString("fr-FR") : "—"}
+          </div>
+          <div style={{ fontSize: 10, color: "#64748b", marginBottom: 10 }}>{status?.page?.name || ""}</div>
+          {insights?.facebook && (
+            <>
+              <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
+                <Delta value={insights.facebook.delta_7j}  label="7j" />
+                <Delta value={insights.facebook.delta_30j} label="30j" />
+              </div>
+              <Sparkline series={insights.facebook.series} color="#1877f2" width={130} />
+            </>
+          )}
+          {insErr && <div style={{ fontSize: 9, color: "#94a3b8", marginTop: 6 }}>{insErr}</div>}
+        </div>
+      </div>
+
+      {/* KPIs secondaires */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10, marginBottom: 20 }}>
-        <KPI label="Instagram followers" value={igFollowers} icon="📸" color="#e91e63" sub={igPosts !== null ? `${igPosts} posts publiés` : ""} />
-        <KPI label="Facebook fans"       value={fbFollowers} icon="📘" color="#1877f2" sub={status?.page?.name || ""} />
-        <KPI label="Token Meta"          value={status?.token?.isValid ? "Valide" : statusErr ? "Erreur" : "—"} icon="🔐" color={status?.token?.isValid ? "#10b981" : "#ef4444"} sub={status?.token?.expiresIn !== null && status?.token?.expiresIn !== undefined ? `Expire dans ${status.token.expiresIn} j` : "N'expire pas"} />
-        <KPI label="Audience totale"     value={fbFollowers !== null && igFollowers !== null ? fbFollowers + igFollowers : null} icon="🌟" color="#f59e0b" sub="FB + IG cumulés" />
+        <KPI label="Token Meta"      value={status?.token?.isValid ? "Valide" : statusErr ? "Erreur" : "—"} icon="🔐" color={status?.token?.isValid ? "#10b981" : "#ef4444"} sub={status?.token?.expiresIn !== null && status?.token?.expiresIn !== undefined ? `Expire dans ${status.token.expiresIn} j` : "N'expire pas"} />
+        <KPI label="Audience totale" value={total} icon="🌟" color="#f59e0b" sub="FB + IG cumulés" />
+        {insights && (
+          <KPI label={`Gain ${days}j total`} value={(insights.facebook?.delta_30j || 0) + (insights.instagram?.delta_30j || 0)} icon="📊" color="#a855f7" sub="FB + IG combinés" />
+        )}
       </div>
 
       {statusErr && (

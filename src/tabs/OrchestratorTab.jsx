@@ -190,127 +190,6 @@ function LlmWidget({ onRefresh }) {
   );
 }
 
-// ── Sparkline SVG minimal (pas de lib externe) ───────────────────────────────
-function Sparkline({ series, color }) {
-  const vals = (series || []).map(p => p.value).filter(v => typeof v === "number");
-  if (vals.length < 2) return <span style={{ color: "#334155", fontSize: 10 }}>–</span>;
-  const W = 80, H = 28;
-  const mn = Math.min(...vals), mx = Math.max(...vals);
-  const range = mx - mn || 1;
-  const pts = vals.map((v, i) => {
-    const x = (i / (vals.length - 1)) * W;
-    const y = H - ((v - mn) / range) * H;
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(" ");
-  return (
-    <svg width={W} height={H} style={{ display: "block", overflow: "visible" }}>
-      <polyline points={pts} fill="none" stroke={color} strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function DeltaTag({ value, label }) {
-  if (value === null || value === undefined) return null;
-  const pos = value >= 0;
-  return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 2, fontSize: 10, fontWeight: 600, padding: "2px 5px", borderRadius: 5, background: pos ? "rgba(16,185,129,0.12)" : "rgba(239,68,68,0.12)", color: pos ? "#10b981" : "#ef4444" }}>
-      {pos ? "+" : ""}{value} {label}
-    </span>
-  );
-}
-
-function MetaAudienceWidget() {
-  const [data, setData]     = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [err, setErr]       = useState(null);
-  const [days, setDays]     = useState(30);
-
-  async function load(d) {
-    setLoading(true); setErr(null);
-    try {
-      const r = await adminFetch(`/api/meta-insights?days=${d}`);
-      const j = await r.json();
-      if (!j.ok) setErr(j.error || "Erreur API");
-      else setData(j);
-    } catch (e) { setErr(e.message); }
-    setLoading(false);
-  }
-
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { load(days); }, [days]);
-
-  const card = { background: "#1e293b", borderRadius: 12, border: "1px solid rgba(255,255,255,0.06)", marginBottom: 10, overflow: "hidden" };
-
-  return (
-    <div style={{ ...card, padding: "14px 16px 16px" }}>
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 16 }}>📱</span>
-          <span style={{ fontSize: 13, fontWeight: 700, color: "#e2e8f0" }}>Audience Réseaux Sociaux</span>
-          {loading && <span style={{ fontSize: 10, color: "#64748b" }}>⟳</span>}
-        </div>
-        <div style={{ display: "flex", gap: 4 }}>
-          {[30, 90].map(d => (
-            <button key={d} onClick={() => setDays(d)} style={{ padding: "3px 9px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)", background: days === d ? "rgba(255,255,255,0.08)" : "transparent", color: days === d ? "#e2e8f0" : "#64748b", fontSize: 10, cursor: "pointer" }}>
-              {d}j
-            </button>
-          ))}
-          <button onClick={() => load(days)} style={{ padding: "3px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.06)", background: "transparent", color: "#475569", fontSize: 10, cursor: "pointer" }}>↺</button>
-        </div>
-      </div>
-
-      {err && <div style={{ fontSize: 11, color: "#ef4444", padding: "6px 0" }}>⚠ {err}</div>}
-
-      {data && (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          {/* Facebook */}
-          <div style={{ background: "rgba(24,119,242,0.07)", border: "1px solid rgba(24,119,242,0.15)", borderRadius: 10, padding: "12px 14px" }}>
-            <div style={{ fontSize: 10, color: "#93a3b8", marginBottom: 6, display: "flex", alignItems: "center", gap: 5 }}>
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#1877f2", display: "inline-block" }} />
-              Facebook · {data.facebook?.name || "Page"}
-            </div>
-            <div style={{ fontSize: 24, fontWeight: 800, color: "#e2e8f0", letterSpacing: "-0.5px", marginBottom: 6 }}>
-              {(data.facebook?.fans || 0).toLocaleString("fr-FR")}
-            </div>
-            <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 8 }}>
-              <DeltaTag value={data.facebook?.delta_7j} label="J-7" />
-              <DeltaTag value={data.facebook?.delta_30j} label="J-30" />
-            </div>
-            <Sparkline series={data.facebook?.series || []} color="#1877f2" />
-            {data.facebook?.error && <div style={{ fontSize: 9, color: "#94a3b8", marginTop: 4 }}>{data.facebook.error}</div>}
-          </div>
-
-          {/* Instagram */}
-          <div style={{ background: "rgba(225,48,108,0.07)", border: "1px solid rgba(225,48,108,0.15)", borderRadius: 10, padding: "12px 14px" }}>
-            <div style={{ fontSize: 10, color: "#93a3b8", marginBottom: 6, display: "flex", alignItems: "center", gap: 5 }}>
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)", display: "inline-block" }} />
-              Instagram · @{data.instagram?.username || "amaryllislocations"}
-            </div>
-            <div style={{ fontSize: 24, fontWeight: 800, color: "#e2e8f0", letterSpacing: "-0.5px", marginBottom: 6 }}>
-              {(data.instagram?.followers || 0).toLocaleString("fr-FR")}
-            </div>
-            <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 8 }}>
-              <DeltaTag value={data.instagram?.delta_7j} label="J-7" />
-              <DeltaTag value={data.instagram?.delta_30j} label="J-30" />
-            </div>
-            <Sparkline series={data.instagram?.series || []} color="#e1306c" />
-            {data.instagram?.error && <div style={{ fontSize: 9, color: "#94a3b8", marginTop: 4 }}>{data.instagram.error}</div>}
-          </div>
-        </div>
-      )}
-
-      {!data && !loading && !err && (
-        <div style={{ fontSize: 11, color: "#475569", textAlign: "center", padding: "16px 0" }}>Chargement des données audience…</div>
-      )}
-
-      {data?.generated_at && (
-        <div style={{ fontSize: 9, color: "#334155", marginTop: 10 }}>Généré le {data.generated_at} · cache 4h</div>
-      )}
-    </div>
-  );
-}
-
 export default function OrchestratorTab() {
   const { mob } = useAppData();
   const [runs,     setRuns]     = useState([]);
@@ -408,9 +287,6 @@ export default function OrchestratorTab() {
 
       {/* Widget consommation LLM */}
       <LlmWidget onRefresh={loadData} />
-
-      {/* Widget audience réseaux sociaux */}
-      <MetaAudienceWidget />
 
       {/* Architecture réseau agents */}
       <div style={{ ...oCard, marginBottom: 16, padding: "14px 16px" }}>
