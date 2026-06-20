@@ -328,6 +328,7 @@
 3. **Conséquences attendues** : 1 URL par bien sur n'importe quelle TV à navigateur ; pousse le trafic vers le site (QR guide/site/services) ; images de secours générées (`scripts/gen-tv-screens.mjs` → `public/tv/<bien>.png`).
 4. **Périmètre** : `src/TvScreen.jsx`, `src/utils/tvScreen.js` (+tests), `src/GuestGuide.jsx`, `functions/api/tv-context.js`, `scripts/gen-tv-screens.mjs`. Spec `docs/superpowers/specs/2026-06-04-tv-welcome-screen-design.md`.
 5. **Statut** : **acté & déployé** (Phases 1-3). Action Vincent : mots de passe WiFi réels.
+   - **MAJ 2026-06-20** : mode TV live `?tv=1` toujours actif ✅. Le **fallback statique** (Phase 3 : `public/tv/<bien>.png` + `scripts/gen-tv-screens.mjs` + `npm run gen:tv-screens`) **supprimé** — confirmé inutilisé par Vincent (aucune TV ne pointait vers ces PNG), ~10 Mo orphelins. Régénérable depuis git si besoin (commit `005a48a`).
 
 ## ADR-S-009 · 2026-06-04 · Ventes additionnelles = QR → page `/services/<bien>` → Stripe (prix validé serveur)
 1. **Choix** : vendre des services (départ tardif, ménage, planteur 15€, Nespresso 10€, champagne, kit plage/bébé) via **catalogue `extras[]` par livret** (éditable admin onglet Services), page publique `/services/<bien>`, paiement **Stripe Payment Link** créé par `/api/service-checkout` qui **valide le prix CÔTÉ SERVEUR** (anti-fraude). Webhook `type=service` → email + ntfy hôte + D1 `service_orders` (onglet admin Ventes).
