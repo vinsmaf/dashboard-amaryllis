@@ -73,10 +73,19 @@ async function executeDraft(env, draft) {
   }
 
   if (draft.type === "reel_post") {
-    // Reel Instagram : délègue à /api/social (flux REELS via video_url public R2).
-    // videoUrl est null tant que le render Container n'a pas tourné.
+    // Reel Instagram : délègue à /api/social (flux REELS via video_url public).
+    // videoUrl est déterministe : /videos/reel-{bienId}.mp4 (uploadé via npm run reel:video).
     if (!payload.videoUrl) {
-      return { ok: false, error: "videoUrl absent — render la vidéo d'abord puis mets à jour le draft" };
+      return { ok: false, error: "videoUrl absent" };
+    }
+    // Vérifier que la vidéo est effectivement accessible
+    try {
+      const check = await fetch(payload.videoUrl, { method: "HEAD" });
+      if (!check.ok) {
+        return { ok: false, error: `Vidéo inaccessible (${check.status}) — lance: npm run reel:video ${payload.bienId || ""} <fichier.mp4>` };
+      }
+    } catch (e) {
+      return { ok: false, error: `Vidéo inaccessible: ${e.message}` };
     }
     const channels = Array.isArray(payload.channels) && payload.channels.length
       ? payload.channels

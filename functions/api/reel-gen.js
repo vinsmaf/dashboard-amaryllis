@@ -83,6 +83,8 @@ Retourne UNIQUEMENT le caption brut.`;
   };
 
   // 3. Draft reel_post en D1 ───────────────────────────────────────────────
+  const siteUrl  = new URL(request.url).origin;
+  const videoUrl = `${siteUrl}/videos/reel-${bienId}.mp4`;
   const now = Math.floor(Date.now() / 1000);
   const r   = await db.prepare(`
     INSERT INTO agent_drafts (agent, agent_label, agent_emoji, type, payload, rationale, preview, status, created_at, updated_at)
@@ -90,7 +92,7 @@ Retourne UNIQUEMENT le caption brut.`;
   `).bind(
     "community-manager", "Community Manager", "🎬",
     "reel_post",
-    JSON.stringify({ caption, videoUrl: null, coverUrl: null, channels: ["ig"], plan, bienId }),
+    JSON.stringify({ caption, videoUrl, coverUrl: null, channels: ["ig"], plan, bienId }),
     `Reel ${bienName} — ${theme}${variante ? " / " + variante : ""}`,
     caption.slice(0, 200),
     now, now,
