@@ -120,22 +120,41 @@ function main() {
 
   const work = mkdtempSync(join(tmpdir(), "reel-"));
   try {
-    // ── 1. Un clip Ken Burns par photo ──────────────────────────────────────────
+    // ── 1. Encoder chaque clip (image → Ken Burns, vidéo → trim+scale) ──────────
     const clipPaths = [];
     clips.forEach((clip, i) => {
-      const src = join(photosDir, clip.src);
-      if (!existsSync(src)) throw new Error(`Photo introuvable : ${src}`);
-      const dur = clip.duration || 3;
-      const kb = clip.kenburns || (i % 2 ? "out" : "in");
       const clipOut = join(work, `clip${i}.mp4`);
-      run("ffmpeg", [
-        "-y", "-loop", "1", "-i", src, "-t", String(dur),
-        "-filter_complex", kenburnsFilter(kb, dur, FPS, W, H),
-        "-c:v", "libx264", "-preset", "medium", "-crf", "20",
-        "-pix_fmt", "yuv420p", "-r", String(FPS), clipOut,
-      ]);
-      clipPaths.push({ path: clipOut, dur });
-      console.log(`  ✓ clip ${i + 1}/${clips.length} (${clip.src}, ${kb}, ${dur}s)`);
+
+      if (clip.type === "video") {
+        // Clip vidéo réelle : trim + scale 9:16 + H.264 (pas de Ken Burns)
+        const src = clip.src.startsWith("/") ? clip.src : join(photosDir, clip.src);
+        if (!existsSync(src)) throw new Error(`Vidéo introuvable : ${src}`);
+        const dur = clip.duration || clip.trim?.duration || 5;
+        const ss  = clip.trim?.start ?? 0;
+        run("ffmpeg", [
+          "-y", "-ss", String(ss), "-t", String(dur), "-i", src,
+          "-vf", `scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},format=yuv420p,setsar=1`,
+          "-c:v", "libx264", "-preset", "medium", "-crf", "20",
+          "-pix_fmt", "yuv420p", "-r", String(FPS), "-an", clipOut,
+        ]);
+        clipPaths.push({ path: clipOut, dur });
+        const base = clip.src.split("/").pop();
+        console.log(`  ✓ clip ${i + 1}/${clips.length} (vidéo ${base}, ${ss}s→${ss + dur}s)`);
+      } else {
+        // Clip photo : Ken Burns (chemin existant)
+        const src = join(photosDir, clip.src);
+        if (!existsSync(src)) throw new Error(`Photo introuvable : ${src}`);
+        const dur = clip.duration || 3;
+        const kb = clip.kenburns || (i % 2 ? "out" : "in");
+        run("ffmpeg", [
+          "-y", "-loop", "1", "-i", src, "-t", String(dur),
+          "-filter_complex", kenburnsFilter(kb, dur, FPS, W, H),
+          "-c:v", "libx264", "-preset", "medium", "-crf", "20",
+          "-pix_fmt", "yuv420p", "-r", String(FPS), clipOut,
+        ]);
+        clipPaths.push({ path: clipOut, dur });
+        console.log(`  ✓ clip ${i + 1}/${clips.length} (${clip.src}, ${kb}, ${dur}s)`);
+      }
     });
 
     // ── 2. Chaîne de crossfades (offset cumulé, gère durées variables) ──────────
