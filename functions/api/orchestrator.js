@@ -1,5 +1,5 @@
 // Cloudflare Pages Function — /api/orchestrator
-// Orchestrateur multi-agents : utilise claude-sonnet pour coordonner les 17 agents
+// Orchestrateur multi-agents : utilise claude-sonnet pour coordonner les 28 agents
 // GET  : liste les 20 derniers runs d'orchestration
 // POST : déclenche une orchestration complète
 // D1 binding : revenue_manager
@@ -24,16 +24,27 @@ const AGENT_IDS = [
   "webdesigner",
   "chef-produit-web",
   "community-manager",
+  "repondeur-social",
   "commercial-publicite",
   "crm-manager",
   "consultant-ebusiness",
   "responsable-service-client",
   "responsable-logistique",
   "seo-content-writer",
+  "qa-tester",
+  "growth-experiments",
+  "veille-concurrentielle",
+  "prompt-engineer",
+  "seo-local",
+  "voyageur-research",
+  "fiscaliste",
+  "controleur-fiscal",
+  "comptable",
+  "notaire-assurance",
 ];
 
 const SYSTEM_PROMPT = `Tu es l'orchestrateur IA d'Amaryllis Locations, plateforme de 7 propriétés de location premium.
-Tu coordonnes 17 agents spécialisés. Ton rôle : analyser la situation globale, identifier les synergies entre agents, prioriser les actions cross-fonctionnelles.
+Tu coordonnes 28 agents spécialisés. Ton rôle : analyser la situation globale, identifier les synergies entre agents, prioriser les actions cross-fonctionnelles.
 
 AGENTS DISPONIBLES : ${AGENT_IDS.join(", ")}`;
 
