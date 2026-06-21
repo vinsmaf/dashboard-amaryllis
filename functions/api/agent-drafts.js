@@ -71,6 +71,31 @@ async function executeDraft(env, draft) {
     return { ok: true, results: data.results };
   }
 
+  if (draft.type === "reel_post") {
+    // Reel Instagram : délègue à /api/social (flux REELS via video_url public R2).
+    const channels = Array.isArray(payload.channels) && payload.channels.length
+      ? payload.channels
+      : ["ig"];
+
+    const origin = new URL(env.PAGES_URL || "https://dashboard-amaryllis.pages.dev").origin;
+    const r = await fetch(`${origin}/api/social`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "publish_reel",
+        caption: payload.caption,
+        videoUrl: payload.videoUrl,
+        coverUrl: payload.coverUrl,
+        channels,
+      }),
+    });
+    const data = await r.json();
+    if (!data.ok) {
+      return { ok: false, error: "Reel non publié", results: data.results };
+    }
+    return { ok: true, results: data.results };
+  }
+
   if (draft.type === "price_change") {
     // payload: { property_id, date, price, reason }
     // Appel interne → authentifié via secret partagé (rm-overrides est admin-only).
