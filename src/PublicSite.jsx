@@ -802,7 +802,7 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
 
   return (
     <div style={{ flex: "1 1 240px" }}>
-      <div style={{ textAlign: "center", fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 13, letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 12, color: NAVY }}>
+      <div style={{ textAlign: "center", fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 12, letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 6, color: NAVY }}>
         {MONTHS_FR[month]} {year}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 0 }}>
@@ -842,13 +842,13 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
               onMouseLeave={() => { if (!readOnly) setHoveredCell(null); }}
               onClick={() => { if (!readOnly && !disabled) onSelect(ds); }}
               style={{
-                height: 40,
+                height: 30,
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
                 gap: 1,
-                fontSize: 13,
+                fontSize: 12,
                 cursor: readOnly ? "default" : disabled ? "not-allowed" : "pointer",
                 background: bg,
                 color: blocked ? "#a89878" : past ? "#D4C8BC" : belowMin ? "#D4C8BC" : isFree ? NAVY : color,
@@ -3686,6 +3686,39 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
     return () => panel.removeEventListener("scroll", handler);
   }, []);
 
+  // Auto-scroll on page load: scroll just enough to show the full booking widget
+  // (calendar + CTA button) without the user having to scroll manually.
+  // Uses ResizeObserver to wait for full calendar render (≥480px).
+  // Disables Chrome scroll restoration so the page always starts at top.
+  // Skipped for Amaryllis (dedicated full-width calendar) and mobile.
+  useEffect(() => {
+    if (!isPage || isMobile || bien.id === "amaryllis" || BOOKING_DISABLED.has(bien.id)) return;
+    if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+    window.scrollTo({ top: 0 });
+    let done = false;
+    const tryScroll = (el) => {
+      if (done) return;
+      if (el.scrollHeight < 400) return; // calendar not yet rendered
+      const panel = infoPanelRef.current;
+      if (!panel) return;
+      done = true;
+      // Scroll the inner panel (not window) so the sticky widget snaps into view.
+      // target = distance from panel top to widget top, minus sticky offset + small margin.
+      const elRect = el.getBoundingClientRect();
+      const panelRect = panel.getBoundingClientRect();
+      const contentOffset = elRect.top - panelRect.top + panel.scrollTop;
+      const target = Math.max(0, contentOffset - 16 + 8);
+      panel.scrollTo({ top: target });
+    };
+    const el = document.getElementById("booking-section");
+    if (!el) return;
+    tryScroll(el);
+    const ro = new ResizeObserver(() => tryScroll(el));
+    ro.observe(el);
+    const timeout = setTimeout(() => { done = true; ro.disconnect(); }, 5000);
+    return () => { ro.disconnect(); clearTimeout(timeout); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const arrowBtn = (label, fn) => (
     <button key={label} aria-label={label === "←" ? "Photo précédente" : "Photo suivante"} onClick={e => { e.stopPropagation(); fn(); }} style={{
       pointerEvents: "auto",
@@ -4926,7 +4959,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                 overflow: "hidden",
               }}>
                 {/* Widget header */}
-                <div style={{ padding: "18px 24px 14px" }}>
+                <div style={{ padding: "12px 20px 10px" }}>
                   {!PRICE_HIDDEN.has(bien.id) && (() => {
                     const airbnbPrice = Math.round(bien.prix * 1.142);
                     const saving      = airbnbPrice - bien.prix;
@@ -4955,7 +4988,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                 <div style={{ height: 1, background: SAND }} />
 
                 {/* Mini calendar */}
-                <div style={{ padding: "12px 16px 12px" }}>
+                <div style={{ padding: "8px 14px 8px" }}>
                   {loadingAvail ? (
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                       {[120, 80, 100].map((w, i) => (
@@ -4996,7 +5029,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                           </div>
                         )}
                         {/* Instruction */}
-                        <div style={{ fontSize: 11, color: MUTED, fontFamily: "'Jost', sans-serif", marginBottom: 10, textAlign: "center" }}>
+                        <div style={{ fontSize: 11, color: MUTED, fontFamily: "'Jost', sans-serif", marginBottom: 6, textAlign: "center" }}>
                           {!calCheckin
                             ? `Choisissez vos dates${minNights > 1 ? ` (min. ${minNights} nuits)` : ""}`
                             : !calCheckout
@@ -5004,7 +5037,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                               : `${formatDateShort(calCheckin)} → ${formatDateShort(calCheckout)}`}
                         </div>
                         {/* Nav */}
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                           <button aria-label="Mois précédent" onClick={() => setCalOffset(o => Math.max(0, o - 1))} style={{ ...iconBtn, opacity: calOffset > 0 ? 1 : 0.2 }}>‹</button>
                           <button aria-label="Mois suivant" onClick={() => setCalOffset(o => Math.min(o + 1, 20))} style={iconBtn}>›</button>
                         </div>

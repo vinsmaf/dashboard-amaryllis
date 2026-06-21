@@ -4,7 +4,8 @@
 
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import L from "leaflet";
+import * as LModule from "leaflet";
+const L = LModule.default ?? LModule;
 import { DESTINATIONS } from "./data/destinations.js";
 
 export default function PropertyMap({ bien, height = 280 }) {
