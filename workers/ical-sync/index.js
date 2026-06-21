@@ -2146,7 +2146,7 @@ async function runEditorialAutoPublish(env) {
     // Fenêtre 14j en arrière pour récupérer les posts bloqués (bug fenêtre 24h, fix 2026-06-18)
     const now    = Math.floor(Date.now() / 1000);
     const upTo   = now + 3600;
-    const fromYMD = new Date((now - 14 * 86400) * 1000).toISOString().slice(0, 10);
+    const fromYMD = new Date((now - 30 * 86400) * 1000).toISOString().slice(0, 10);
     const toYMD   = new Date(upTo * 1000).toISOString().slice(0, 10);
 
     // Vérifier si un post a été publié dans les 2 dernières heures (rythme 1 post/2h)
