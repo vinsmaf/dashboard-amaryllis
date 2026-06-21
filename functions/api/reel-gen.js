@@ -62,12 +62,14 @@ INTERDIT (biens sur les hauteurs) : vagues, clapotis, plage privée, pieds dans 
 
 Retourne UNIQUEMENT le caption brut.`;
 
-  const caption = (await callLLM(env, {
+  const captionRes = await callLLM(env, {
     provider: "mistral",
     tier: "fast",
     messages: [{ role: "user", content: captionPrompt }],
     max_tokens: 600,
-  })).trim();
+  });
+  if (!captionRes.ok) return json({ error: `LLM erreur: ${captionRes.errors?.[0]?.error || "provider unavailable"}` }, 502);
+  const caption = captionRes.text.trim();
   if (!caption) return json({ error: "LLM caption vide" }, 500);
 
   // 2. Plan déterministe ───────────────────────────────────────────────────
@@ -104,14 +106,14 @@ Retourne UNIQUEMENT le caption brut.`;
 CAPTION : """${caption}"""
 Critères : hook stop-scroll(20) · immersion(25) · CTA(15) · hashtags(20) · voix "vous"(10) · pas d'erreurs factuelles(10).
 Retourne UNIQUEMENT : {"score":0-100,"verdict":"approve"|"reject","reason":"1 phrase"}`;
-    const jText = await callLLM(env, {
+    const jRes2 = await callLLM(env, {
       provider: "mistral",
       tier: "fast",
       messages: [{ role: "user", content: judgePrompt }],
       max_tokens: 120,
     });
     let judge = {};
-    try { judge = JSON.parse((jText || "{}").match(/\{[\s\S]*\}/)?.[0] || "{}"); } catch (e) { void e; }
+    try { judge = JSON.parse((jRes2.text || "{}").match(/\{[\s\S]*\}/)?.[0] || "{}"); } catch (e) { void e; }
     score   = Math.min(100, Math.max(0, Number(judge.score) || 0));
     verdict = judge.verdict || "reject";
     reason  = judge.reason  || "";
