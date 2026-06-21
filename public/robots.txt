@@ -2,3 +2,4 @@ User-agent: *
 Allow: /
 
 Sitemap: https://villamaryllis.com/sitemap.xml
+LLM-Hints: https://villamaryllis.com/llms.txt

@@ -111,6 +111,24 @@ export const MODELS = {
   },
 };
 
+// Coûts réels en $/M tokens (input / output). Source : tarifs publics juin 2026.
+const COST_RATES = {
+  "llama-3.1-8b-instant":                     { in: 0.05,  out: 0.08  },
+  "meta-llama/llama-4-scout-17b-16e-instruct": { in: 0.11,  out: 0.34  },
+  "llama-3.3-70b-versatile":                  { in: 0.59,  out: 0.79  },
+  "mistral-small-2506":                        { in: 0.10,  out: 0.30  },
+  "mistral-medium-2505":                       { in: 0.40,  out: 2.00  },
+  "mistral-large-2512":                        { in: 2.00,  out: 6.00  },
+  "gemini-2.0-flash-lite":                     { in: 0.075, out: 0.30  },
+  "gemini-2.0-flash":                          { in: 0.10,  out: 0.40  },
+  "gemini-2.5-flash":                          { in: 0.15,  out: 0.60  },
+};
+function estimateCost(model, inTok, outTok) {
+  const r = model ? COST_RATES[model] : null;
+  if (!r || (!inTok && !outTok)) return 0;
+  return (inTok * r.in + outTok * r.out) / 1_000_000;
+}
+
 // Cascade par défaut : groq → cloudflare → mistral → cerebras → gemini(si clé)
 const DEFAULT_CASCADE = ["groq", "cloudflare", "mistral", "cerebras", "gemini"];
 
@@ -170,6 +188,7 @@ export async function callLLM(env, opts) {
     while (attempt < 2) {
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+      const t0 = Date.now();
       try {
         res = await fetch(endpoint, {
           method: "POST",
@@ -179,7 +198,9 @@ export async function callLLM(env, opts) {
         });
       } catch (e) {
         clearTimeout(timer);
-        errors.push({ provider: providerId, model, error: e.name === "AbortError" ? "timeout" : e.message });
+        const errMsg = e.name === "AbortError" ? "timeout" : e.message;
+        errors.push({ provider: providerId, model, error: errMsg });
+        logLLMTrace(env, { source: opts.logSource, tier, provider: providerId, model, latencyMs: Date.now() - t0, ok: false, error: errMsg });
         break; // network error → cascade
       }
       clearTimeout(timer);
@@ -187,16 +208,23 @@ export async function callLLM(env, opts) {
       if (res.status === 200) {
         try {
           const data = await res.json();
+          const latencyMs = Date.now() - t0;
+          const u = data.usage || {};
+          const inputTokens  = u.prompt_tokens  || u.input_tokens  || 0;
+          const outputTokens = u.completion_tokens || u.output_tokens || 0;
           let text = provider.parseResponse(data);
           // Sécurise toujours en string non-vide
           if (typeof text !== "string") text = text ? JSON.stringify(text) : "";
           if (text && text.trim()) {
+            // llm-ops : trace légère systématique (tokens, coût, latence)
+            logLLMTrace(env, { source: opts.logSource, tier, provider: providerId, model, inputTokens, outputTokens, latencyMs, ok: true });
             // prompt-004 — log opt-in des sorties LLM en D1 (analyse a posteriori).
             if (opts.logSource) {
               await logLLMOutput(env, { source: opts.logSource, tier, provider: providerId, model, messages, text, attempts: attempt + 1 });
             }
             return { ok: true, text, provider: providerId, model, attempts: attempt + 1, errors: errors.length ? errors : undefined };
           }
+          logLLMTrace(env, { source: opts.logSource, tier, provider: providerId, model, latencyMs, ok: false, error: "empty response" });
           errors.push({ provider: providerId, model, error: "empty response" });
         } catch (e) {
           errors.push({ provider: providerId, model, error: `parse: ${e.message}` });
@@ -215,6 +243,7 @@ export async function callLLM(env, opts) {
 
       // 400 décommissionné ou autre → cascade direct
       const txt = await res.text().catch(() => "");
+      logLLMTrace(env, { source: opts.logSource, tier, provider: providerId, model, latencyMs: Date.now() - t0, ok: false, error: `${res.status}` });
       errors.push({ provider: providerId, model, error: `${res.status}: ${txt.slice(0, 120)}` });
       break;
     }
@@ -248,4 +277,24 @@ async function logLLMOutput(env, { source, tier, provider, model, messages, text
   } catch (e) {
     console.error("[llm-log] erreur D1:", e.message);
   }
+}
+
+// llm-ops : trace légère et systématique (tokens, coût, latence, erreurs).
+// Appelé sur TOUS les appels (succès et erreurs). Fire-and-forget, jamais bloquant.
+function logLLMTrace(env, { source, tier, provider, model, inputTokens = 0, outputTokens = 0, latencyMs = 0, ok = true, error = null }) {
+  const db = env?.revenue_manager;
+  if (!db) return;
+  const cost = estimateCost(model, inputTokens, outputTokens);
+  db.prepare(`CREATE TABLE IF NOT EXISTS llm_traces (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source TEXT, provider TEXT, model TEXT, tier TEXT,
+    input_tokens INTEGER DEFAULT 0, output_tokens INTEGER DEFAULT 0,
+    cost_usd REAL DEFAULT 0, latency_ms INTEGER DEFAULT 0,
+    ok INTEGER DEFAULT 1, error TEXT,
+    created_at INTEGER NOT NULL DEFAULT (unixepoch())
+  )`).run().then(() =>
+    db.prepare("INSERT INTO llm_traces (source,provider,model,tier,input_tokens,output_tokens,cost_usd,latency_ms,ok,error) VALUES (?,?,?,?,?,?,?,?,?,?)")
+      .bind(source || null, provider || null, model || null, tier || null, inputTokens, outputTokens, cost, latencyMs, ok ? 1 : 0, error || null)
+      .run()
+  ).catch(e => console.error("[llm-trace]", e.message));
 }
