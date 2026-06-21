@@ -162,6 +162,17 @@ function ReelCard({ draft, onAction, onVideoUrlSet }) {
           </>
         )}
 
+        {/* Publier sur Instagram — si approuvé */}
+        {draft.status === "approved" && (
+          <button
+            onClick={() => doAction("execute")}
+            disabled={acting}
+            style={{ padding: "6px 14px", borderRadius: 8, background: "#6366f1", color: "#fff", border: "none", cursor: acting ? "wait" : "pointer", fontSize: 13, fontWeight: 600 }}
+          >
+            {acting ? "Publication…" : "🚀 Publier sur Instagram"}
+          </button>
+        )}
+
         {/* Plan JSON */}
         {plan.clips && (
           <button
