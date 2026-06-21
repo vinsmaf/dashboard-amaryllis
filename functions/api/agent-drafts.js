@@ -233,17 +233,35 @@ export async function onRequest(context) {
     }
 
     if (action === "publish") {
-      // Exécute la publication réelle
-      const result = await executeDraft(env, draft);
+      // Si un précédent essai a laissé un container_id (timeout encodage Meta), tenter publish_container
+      let prevResult = {};
+      try { prevResult = JSON.parse(draft.result || "{}"); } catch (e) { void e; }
+      const existingContainerId = prevResult?.results?.ig?.container_id;
+
+      let result;
+      if (existingContainerId) {
+        const origin = new URL(env.PAGES_URL || "https://dashboard-amaryllis.pages.dev").origin;
+        const secret = encodeURIComponent(env.POSTSTAY_SECRET || "");
+        const r = await fetch(`${origin}/api/social?secret=${secret}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "publish_container", containerId: existingContainerId }),
+        });
+        const data = await r.json().catch(() => ({}));
+        result = data.ok ? { ok: true, id: data.id, container_id: existingContainerId, results: { ig: { ok: true, id: data.id } } }
+                        : { ok: false, error: data.error || "publish_container échoué", results: { ig: { error: data.error, container_id: existingContainerId } } };
+      } else {
+        result = await executeDraft(env, draft);
+      }
+
       const newStatus = result.ok ? "published" : "failed";
       await db.prepare(`
         UPDATE agent_drafts SET status=?, result=?, published_at=?, updated_at=?
         WHERE id=?
       `).bind(newStatus, JSON.stringify(result), result.ok ? now : null, now, id).run();
       // Propage au calendrier
-      const calStatus = result.ok ? "published" : "failed";
       await db.prepare("UPDATE editorial_calendar SET status=?, published_at=?, result=?, updated_at=? WHERE draft_id=?")
-        .bind(calStatus, result.ok ? now : null, JSON.stringify(result), now, id).run().catch(() => {});
+        .bind(newStatus, result.ok ? now : null, JSON.stringify(result), now, id).run().catch(() => {});
       return json({ ok: result.ok, status: newStatus, result });
     }
 

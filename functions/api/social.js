@@ -206,6 +206,25 @@ async function pollContainer(containerId, token, { maxTries = 5, intervalMs = 40
   return { ready: false, timeout: true };
 }
 
+// Publie un container déjà encodé par Meta (pour reprendre après un timeout de polling)
+async function handlePublishContainer(env, { containerId, igAccountId }) {
+  const token = env.META_PAGE_TOKEN;
+  const igId  = igAccountId || env.META_IG_ACCOUNT_ID;
+  if (!token) return json({ error: "META_PAGE_TOKEN manquant" }, 500);
+  if (!containerId) return json({ error: "containerId requis" }, 400);
+  if (!igId) return json({ error: "META_IG_ACCOUNT_ID manquant" }, 500);
+
+  // Vérifier que l'encodage est terminé
+  const status = await graphGet(`${containerId}?fields=status_code,status`, token);
+  const code = status?.status_code;
+  if (code !== "FINISHED") {
+    return json({ ok: false, error: `Container pas prêt : ${code || "inconnu"}`, status_code: code }, 422);
+  }
+  const publish = await graphPost(`${igId}/media_publish`, token, { creation_id: containerId });
+  if (publish.error) return json({ ok: false, error: publish.error.message }, 422);
+  return json({ ok: true, id: publish.id, container_id: containerId });
+}
+
 async function handlePublishReel(env, { caption, videoUrl, coverUrl, channels = ["ig"], dryRun }) {
   const token = env.META_PAGE_TOKEN;
   const igId  = env.META_IG_ACCOUNT_ID;
@@ -280,6 +299,7 @@ export async function onRequestPost({ request, env }) {
 
   if (body.action === "publish") return handlePublish(env, body);
   if (body.action === "publish_reel") return handlePublishReel(env, body);
+  if (body.action === "publish_container") return handlePublishContainer(env, body);
   if (body.action === "update-profile-pic") return handleUpdateProfilePic(env, body);
   return json({ error: "action inconnue" }, 400);
 }

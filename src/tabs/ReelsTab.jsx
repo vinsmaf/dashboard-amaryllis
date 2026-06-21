@@ -162,14 +162,14 @@ function ReelCard({ draft, onAction, onVideoUrlSet }) {
           </>
         )}
 
-        {/* Publier sur Instagram — si approuvé */}
-        {draft.status === "approved" && (
+        {/* Publier sur Instagram — si approuvé ou failed (retry) */}
+        {(draft.status === "approved" || draft.status === "failed") && (
           <button
             onClick={() => doAction("publish")}
             disabled={acting}
-            style={{ padding: "6px 14px", borderRadius: 8, background: "#6366f1", color: "#fff", border: "none", cursor: acting ? "wait" : "pointer", fontSize: 13, fontWeight: 600 }}
+            style={{ padding: "6px 14px", borderRadius: 8, background: draft.status === "failed" ? "#b45309" : "#6366f1", color: "#fff", border: "none", cursor: acting ? "wait" : "pointer", fontSize: 13, fontWeight: 600 }}
           >
-            {acting ? "Publication…" : "🚀 Publier sur Instagram"}
+            {acting ? "Publication…" : draft.status === "failed" ? "🔄 Réessayer Instagram" : "🚀 Publier sur Instagram"}
           </button>
         )}
 
