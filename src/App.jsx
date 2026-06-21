@@ -32,6 +32,7 @@ import ConversionTab from "./tabs/ConversionTab.jsx";
 import ServiceOrdersTab from "./tabs/ServiceOrdersTab.jsx";
 import OrchestratorTab from "./tabs/OrchestratorTab.jsx";
 import SocialTab from "./tabs/SocialTab.jsx";
+import ReelsTab  from "./tabs/ReelsTab.jsx";
 import ApprobationsTab from "./tabs/ApprobationsTab.jsx";
 import EditorialCalendarTab from "./tabs/EditorialCalendarTab.jsx";
 import CroissanceTab from "./tabs/CroissanceTab.jsx";
@@ -1328,6 +1329,7 @@ export default function App() {
       id: "marketing", label: "Marketing",
       items: [
         { id: "social", icon: "📣", label: "Réseaux sociaux" },
+        { id: "reels",  icon: "🎬", label: "Reels" },
         { id: "approbations", icon: "📥", label: "Approbations" },
         { id: "editorial", icon: "📅", label: "Planning éditorial" },
         { id: "croissance", icon: "📈", label: "Croissance audience" },
@@ -1557,6 +1559,7 @@ export default function App() {
             {tab === "agents" && <AgentsKanban mob={mob} />}
             {tab === "bugs" && <BugsTab />}
             {tab === "social"        && <SocialTab />}
+            {tab === "reels"         && <ReelsTab />}
             {tab === "approbations"  && <ApprobationsTab />}
             {tab === "editorial"     && <EditorialCalendarTab />}
             {tab === "croissance"    && <CroissanceTab />}

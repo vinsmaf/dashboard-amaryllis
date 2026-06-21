@@ -160,10 +160,12 @@ export async function onRequest(context) {
     const agent  = url.searchParams.get("agent");
     const limit  = parseInt(url.searchParams.get("limit") || "50");
 
+    const type   = url.searchParams.get("type");
     let q = "SELECT * FROM agent_drafts WHERE 1=1";
     const params = [];
     if (status) { q += " AND status = ?"; params.push(status); }
     if (agent)  { q += " AND agent = ?";  params.push(agent); }
+    if (type)   { q += " AND type = ?";   params.push(type); }
     q += " ORDER BY created_at DESC LIMIT ?";
     params.push(limit);
 
