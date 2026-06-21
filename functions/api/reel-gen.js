@@ -92,7 +92,7 @@ Retourne UNIQUEMENT le caption brut.`;
   `).bind(
     "community-manager", "Community Manager", "🎬",
     "reel_post",
-    JSON.stringify({ caption, videoUrl, coverUrl: null, channels: ["ig"], plan, bienId }),
+    JSON.stringify({ caption, videoUrl, coverUrl: null, channels: ["ig", "fb"], plan, bienId }),
     `Reel ${bienName} — ${theme}${variante ? " / " + variante : ""}`,
     caption.slice(0, 200),
     now, now,
@@ -123,7 +123,7 @@ Retourne UNIQUEMENT : {"score":0-100,"verdict":"approve"|"reject","reason":"1 ph
     // Mettre à jour le payload avec les reviews
     await db.prepare("UPDATE agent_drafts SET payload=?, updated_at=? WHERE id=?")
       .bind(
-        JSON.stringify({ caption, videoUrl: null, coverUrl: null, channels: ["ig"], plan, bienId, reviews: { score, verdict, reason } }),
+        JSON.stringify({ caption, videoUrl: null, coverUrl: null, channels: ["ig", "fb"], plan, bienId, reviews: { score, verdict, reason } }),
         now, draftId,
       ).run();
 

@@ -1972,7 +1972,7 @@ Retourne UNIQUEMENT le caption brut (pas de JSON, pas de balises).`;
           caption,
           videoUrl: null,    // Rempli après render Container
           coverUrl: null,    // Rempli après render Container
-          channels: ["ig"],
+          channels: ["ig", "fb"],
           plan,              // Contrat JSON pour render.mjs
           calendarId: entry.id,
           bienId,
@@ -2031,7 +2031,7 @@ Retourne UNIQUEMENT : {"score":0-100,"verdict":"approve"|"reject","reason":"1 ph
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         payload: {
-          caption, videoUrl: null, coverUrl: null, channels: ["ig"], plan,
+          caption, videoUrl: null, coverUrl: null, channels: ["ig", "fb"], plan,
           calendarId: entry.id, bienId, scheduledAt: entry.scheduled_at,
           reviews: { score, verdict: judge.verdict, reason: judge.reason || "" },
         },

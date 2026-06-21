@@ -269,8 +269,28 @@ async function handlePublishReel(env, { caption, videoUrl, coverUrl, channels = 
   }
 
   if (channels.includes("fb")) {
-    // Facebook Reels = flux video_reels (start/upload/finish), à implémenter en phase ultérieure.
-    results.fb = { error: "Facebook Reels pas encore supporté (phase ultérieure)" };
+    const fbPageId = env.META_PAGE_ID;
+    if (!fbPageId) {
+      results.fb = { error: "META_PAGE_ID non configuré" };
+    } else {
+      try {
+        // Facebook Reels : upload par URL publique → publication directe
+        const fbBody = {
+          video_url: videoUrl,
+          description: caption || "",
+          title: caption ? caption.split("\n")[0].slice(0, 100) : "Reel",
+          published: dryRun ? "false" : "true",
+        };
+        const fbResp = await graphPost(`${fbPageId}/video_reels`, token, fbBody);
+        if (fbResp.error) {
+          results.fb = { error: fbResp.error.message || JSON.stringify(fbResp.error) };
+        } else {
+          results.fb = { ok: true, id: fbResp.video_id || fbResp.id, dryRun: !!dryRun };
+        }
+      } catch (e) {
+        results.fb = { error: e.message };
+      }
+    }
   }
 
   const hasSuccess = Object.values(results).some(r => r.ok);
