@@ -43,6 +43,10 @@ function niveauTarifaire(bien, checkinIso) {
   return "essentiel";
 }
 
+// ── Availability cache (module-level, survit aux re-renders) ──────
+const _availCache = {}; // { [bienId]: { data: string[], ts: number } }
+const AVAIL_CACHE_TTL = 5 * 60 * 1000; // 5 min
+
 // ── Retry utility for availability fetch ────────────────────────
 async function fetchWithRetry(url, options = {}, retries = 3, delay = 800) {
   for (let i = 0; i < retries; i++) {
@@ -298,6 +302,7 @@ const BIENS = [
       "/photos/amaryllis/20.webp",
       "/photos/amaryllis/21.webp",
       "/photos/amaryllis/22.webp",
+      "/photos/amaryllis/23.webp",
     ],
     mapsEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3863.107902087125!2d-60.943493625540455!3d14.478492985993562!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8c4021b8748ab759%3A0x99f47752da739a0a!2svilla%20Amaryllis!5e0!3m2!1sfr!2sfr!4v1779046798123!5m2!1sfr!2sfr",
     amenities: ["Piscine à débordement eau salée", "Vue océan", "Wifi Starlink", "Parking", "Animaux OK"],
@@ -392,19 +397,18 @@ const BIENS = [
     sdb: "1",
     couleur: "#22c55e",
     photos: [
-      "/photos/iguana/01.webp",
-      "/photos/iguana/02.webp",
-      "/photos/iguana/03.webp",
       "/photos/iguana/04.webp",
-      "/photos/iguana/05.webp",
       "/photos/iguana/06.webp",
+      "/photos/iguana/05.webp",
+      "/photos/iguana/10.webp",
       "/photos/iguana/07.webp",
       "/photos/iguana/08.webp",
-      "/photos/iguana/09.webp",
-      "/photos/iguana/10.webp",
+      "/photos/iguana/02.webp",
+      "/photos/iguana/03.webp",
       "/photos/iguana/11.webp",
       "/photos/iguana/12.webp",
       "/photos/iguana/13.webp",
+      "/photos/iguana/09.webp",
       "/photos/iguana/14.webp",
       "/photos/iguana/15.webp",
     ],
@@ -500,12 +504,18 @@ const BIENS = [
     sdb: "1",
     couleur: "#ec4899",
     photos: [
+      "/photos/mabouya/13.webp",
       "/photos/mabouya/02.webp",
+      "/photos/mabouya/14.webp",
+      "/photos/mabouya/15.webp",
       "/photos/mabouya/12.webp",
+      "/photos/mabouya/16.webp",
       "/photos/mabouya/03.webp",
       "/photos/mabouya/09.webp",
+      "/photos/mabouya/17.webp",
       "/photos/mabouya/11.webp",
       "/photos/mabouya/10.webp",
+      "/photos/mabouya/18.webp",
       "/photos/mabouya/04.webp",
       "/photos/mabouya/08.webp",
       "/photos/mabouya/05.webp",
@@ -551,21 +561,29 @@ const BIENS = [
     sdb: "1",
     couleur: "#8b5cf6",
     photos: [
-      "/photos/schoelcher/01.webp",
-      "/photos/schoelcher/02.webp",
-      "/photos/schoelcher/03.webp",
-      "/photos/schoelcher/04.webp",
+      "/photos/schoelcher/16.webp",
       "/photos/schoelcher/05.webp",
-      "/photos/schoelcher/06.webp",
-      "/photos/schoelcher/07.webp",
-      "/photos/schoelcher/08.webp",
-      "/photos/schoelcher/09.webp",
-      "/photos/schoelcher/10.webp",
+      "/photos/schoelcher/17.webp",
+      "/photos/schoelcher/03.webp",
+      "/photos/schoelcher/18.webp",
       "/photos/schoelcher/11.webp",
-      "/photos/schoelcher/12.webp",
+      "/photos/schoelcher/08.webp",
       "/photos/schoelcher/13.webp",
+      "/photos/schoelcher/19.webp",
+      "/photos/schoelcher/02.webp",
+      "/photos/schoelcher/22.webp",
+      "/photos/schoelcher/07.webp",
+      "/photos/schoelcher/20.webp",
+      "/photos/schoelcher/04.webp",
+      "/photos/schoelcher/21.webp",
+      "/photos/schoelcher/10.webp",
+      "/photos/schoelcher/12.webp",
+      "/photos/schoelcher/09.webp",
+      "/photos/schoelcher/06.webp",
       "/photos/schoelcher/14.webp",
+      "/photos/schoelcher/23.webp",
       "/photos/schoelcher/15.webp",
+      "/photos/schoelcher/01.webp",
     ],
     mapsEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2905.414139928121!2d-61.10181910968834!3d14.634222460364626!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8c6aa753fde6522f%3A0x414570ed7905d25c!2sR%C3%A9sidence%20Belle%20Vue!5e0!3m2!1sfr!2sfr!4v1779047169810!5m2!1sfr!2sfr",
     amenities: ["Vue baie", "Terrasse", "TV HD", "Wifi", "Parking", "Animaux OK"],
@@ -607,26 +625,26 @@ const BIENS = [
     sdb: "1",
     couleur: "#6366f1",
     photos: [
-      "/photos/nogent/01.webp",
-      "/photos/nogent/02.webp",
-      "/photos/nogent/03.webp",
-      "/photos/nogent/04.webp",
-      "/photos/nogent/05.webp",
-      "/photos/nogent/06.webp",
-      "/photos/nogent/07.webp",
-      "/photos/nogent/08.webp",
       "/photos/nogent/09.webp",
+      "/photos/nogent/03.webp",
+      "/photos/nogent/05.webp",
       "/photos/nogent/10.webp",
-      "/photos/nogent/11.webp",
-      "/photos/nogent/12.webp",
-      "/photos/nogent/13.webp",
-      "/photos/nogent/14.webp",
-      "/photos/nogent/15.webp",
-      "/photos/nogent/16.webp",
-      "/photos/nogent/17.webp",
-      "/photos/nogent/18.webp",
+      "/photos/nogent/08.webp",
+      "/photos/nogent/06.webp",
+      "/photos/nogent/01.webp",
+      "/photos/nogent/04.webp",
       "/photos/nogent/19.webp",
       "/photos/nogent/20.webp",
+      "/photos/nogent/14.webp",
+      "/photos/nogent/15.webp",
+      "/photos/nogent/02.webp",
+      "/photos/nogent/07.webp",
+      "/photos/nogent/11.webp",
+      "/photos/nogent/13.webp",
+      "/photos/nogent/12.webp",
+      "/photos/nogent/18.webp",
+      "/photos/nogent/16.webp",
+      "/photos/nogent/17.webp",
     ],
     useBeds24: true, // Réservation via notre API beds24-create (plus d'iframe)
     mapsEmbed: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d463.17188664330297!2d2.4757244130102185!3d48.83615034492648!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x47e60d41b4fd90d1%3A0x4f6c2445f955ea44!2s21%20Gd%20Rue%20Charles%20de%20Gaulle%2C%2094130%20Nogent-sur-Marne!5e0!3m2!1sfr!2sfr!4v1779047281540!5m2!1sfr!2sfr",
@@ -2372,7 +2390,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
                 <OrganicLoader size={18} color={CORAL} /> Chargement des disponibilités…
               </div>
             )}
-            <DateRangePicker checkin={checkin} checkout={checkout} blockedDates={blockedDates} onChange={(ci, co) => { setCheckin(ci); setCheckout(co); }} dailyPricesMap={dailyPricesMap} basePrice={bien.prix} minNights={minNights} gapDates={gapDates} />
+            <DateRangePicker checkin={checkin} checkout={checkout} blockedDates={blockedDates} onChange={(ci, co) => { setCheckin(ci); setCheckout(co); if (ci && co && window.gtag) window.gtag("event", "date_selected", { bien_id: bien.id, checkin: ci, checkout: co, context: "booking_modal" }); }} dailyPricesMap={dailyPricesMap} basePrice={bien.prix} minNights={minNights} gapDates={gapDates} />
 
             {/* Voyageurs */}
             {bien.capacite > 1 && (
@@ -2913,7 +2931,7 @@ function useAvailBadge(bienId) {
   return { badge, nudge };
 }
 
-function BienCard({ bien, onDetail, onBook, isFavorite = false, onToggleFavorite, isCompared = false, onToggleCompare, compareDisabled = false, geoBadge = null }) {
+function BienCard({ bien, onDetail, onBook, onPrefetch, isFavorite = false, onToggleFavorite, isCompared = false, onToggleCompare, compareDisabled = false, geoBadge = null }) {
   const { t, lang } = useLang();
   const [photoIdx, setPhotoIdx] = useState(0);
   const [hovered, setHovered] = useState(false);
@@ -2983,7 +3001,7 @@ function BienCard({ bien, onDetail, onBook, isFavorite = false, onToggleFavorite
   return (
     <div
       onClick={() => onDetail(bien)}
-      onMouseEnter={() => setHovered(true)}
+      onMouseEnter={() => { setHovered(true); if (onPrefetch) onPrefetch(bien.id); }}
       onMouseLeave={() => setHovered(false)}
       style={{
         background: CREAM,
@@ -4118,7 +4136,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                   checkin={calCheckin}
                   checkout={calCheckout}
                   blockedDates={blockedDates}
-                  onChange={(ci, co) => { setCalCheckin(ci); setCalCheckout(co); }}
+                  onChange={(ci, co) => { setCalCheckin(ci); setCalCheckout(co); if (ci && co && window.gtag) window.gtag("event", "date_selected", { bien_id: bien.id, checkin: ci, checkout: co, context: "fiche" }); }}
                   dailyPricesMap={dailyPricesMap}
                   basePrice={bien.prix}
                   minNights={getMinNights(bien.id, calCheckin)}
@@ -8300,6 +8318,15 @@ export default function PublicSite() {
 
   // Fetch availability for a bien (used by detail view + booking modal)
   async function fetchAvailability(bienId) {
+    // Cache hit (5 min TTL) → résultat immédiat, pas de spinner
+    const cached = _availCache[bienId];
+    if (cached && Date.now() - cached.ts < AVAIL_CACHE_TTL) {
+      setBlockedDates(cached.data);
+      setLoadingAvail(false);
+      if (window.gtag) window.gtag("event", "availability_ready", { bien_id: bienId, blocked_count: cached.data.length, cache_hit: true });
+      return;
+    }
+
     // Abort any in-flight request before starting a new one
     if (fetchAbortRef.current) {
       fetchAbortRef.current.abort();
@@ -8317,12 +8344,34 @@ export default function PublicSite() {
       const r = await fetchWithRetry(apiUrl, { signal: ctrl.signal });
       if (r.ok) {
         const d = await r.json();
-        setBlockedDates(d.blockedDates || []);
+        const blocked = d.blockedDates || [];
+        _availCache[bienId] = { data: blocked, ts: Date.now() };
+        setBlockedDates(blocked);
+        if (window.gtag) window.gtag("event", "availability_ready", { bien_id: bienId, blocked_count: blocked.length, cache_hit: false });
       }
     } catch (e) {
       if (e.name !== "AbortError") { /* ignore aborted requests */ }
     }
     setLoadingAvail(false);
+  }
+
+  // Précharge silencieuse (hover) — stocke dans le cache module, pas dans le state
+  async function prefetchAvailability(bienId) {
+    if (BOOKING_DISABLED.has(bienId)) return;
+    const cached = _availCache[bienId];
+    if (cached && Date.now() - cached.ts < AVAIL_CACHE_TTL) return;
+    try {
+      let apiUrl = `/api/get-availability?bienId=${bienId}`;
+      try {
+        const bookingUrls = JSON.parse(localStorage.getItem("ical_urls_booking") || "{}");
+        if (bookingUrls[bienId]) apiUrl += `&bookingUrl=${encodeURIComponent(bookingUrls[bienId])}`;
+      } catch {}
+      const r = await fetch(apiUrl);
+      if (r.ok) {
+        const d = await r.json();
+        _availCache[bienId] = { data: d.blockedDates || [], ts: Date.now() };
+      }
+    } catch { /* prefetch silencieux — jamais bloquant */ }
   }
 
   // Open property detail — navigation SPA (pushState), pas de rechargement
@@ -8767,7 +8816,7 @@ export default function PublicSite() {
           title="Location appartement vue mer Schœlcher — Martinique"
           description="Appartement de standing à Schœlcher : vue panoramique sur la baie de Fort-de-France, dernier étage, 2 personnes, à 10 min du centre. Réservation directe sans frais."
           canonical="/location-appartement-vue-mer-schoelcher"
-          image="https://villamaryllis.com/photos/schoelcher/01.webp"
+          image="https://villamaryllis.com/photos/schoelcher/16.webp"
         />
         <CookieBanner />
         <header style={{ position: "sticky", top: 0, zIndex: 200, background: "#0e3b3a", height: 58, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px" }}>
@@ -8775,7 +8824,7 @@ export default function PublicSite() {
           <a href="/" style={{ color: "rgba(250,245,233,0.75)", textDecoration: "none", fontFamily: "'Jost', sans-serif", fontSize: 12, letterSpacing: "0.1em", textTransform: "uppercase" }}>← Tous nos logements</a>
         </header>
 
-        <section style={{ position: "relative", background: `#0e2020 url('/photos/schoelcher/01.webp') center/cover no-repeat`, padding: "90px 24px 96px" }}>
+        <section style={{ position: "relative", background: `#0e2020 url('/photos/schoelcher/16.webp') center/cover no-repeat`, padding: "90px 24px 96px" }}>
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(14,59,58,0.35) 0%, rgba(14,59,58,0.78) 100%)" }} />
           <div style={{ position: "relative", maxWidth: 820, margin: "0 auto", textAlign: "center" }}>
             <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, letterSpacing: "0.4em", textTransform: "uppercase", color: "rgba(250,245,233,0.7)", marginBottom: 16 }}>Schœlcher · Martinique</div>
@@ -9248,7 +9297,7 @@ export default function PublicSite() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: 24, paddingBottom: 48 }}>
               {filtered.map((b, i) => (
                 <Reveal key={b.id} delay={Math.min(i * 0.08, 0.4)}>
-                  <BienCard bien={b} onDetail={openDetail} onBook={openBien} isFavorite={favorites.has(b.id)} onToggleFavorite={toggleFavorite} isCompared={compareIds.has(b.id)} onToggleCompare={toggleCompare} compareDisabled={compareIds.size >= 3 && !compareIds.has(b.id)} geoBadge={
+                  <BienCard bien={b} onDetail={openDetail} onBook={openBien} onPrefetch={prefetchAvailability} isFavorite={favorites.has(b.id)} onToggleFavorite={toggleFavorite} isCompared={compareIds.has(b.id)} onToggleCompare={toggleCompare} compareDisabled={compareIds.size >= 3 && !compareIds.has(b.id)} geoBadge={
                     geo?.isIDF && b.id === "nogent" ? "📍 À 15 min de Paris" :
                     geo?.isCaribbean && b.id !== "nogent" ? "🌴 Proche de vous" :
                     null

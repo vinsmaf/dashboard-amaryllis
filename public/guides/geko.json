@@ -16,20 +16,20 @@
     {
       "id": "access",
       "icon": "🔑",
-      "title": "Accès — étape par étape",
+      "title": "Accès et arrivée",
       "type": "steps",
       "items": [
         {
-          "label": "Portail résidence",
-          "value": "Code ••••, poussez le portail après le bip."
-        },
-        {
-          "label": "Boîtier à clé",
-          "value": "Sur le mur gauche de la porte, code ••••."
-        },
-        {
           "label": "Parking",
-          "value": "Place privative devant la villa."
+          "value": "1 place disponible en bas de la résidence (pas de portail, pas de code)"
+        },
+        {
+          "label": "Clés",
+          "value": "Les clés se trouvent directement sur la porte du logement"
+        },
+        {
+          "label": "Arrivée",
+          "value": "Check-in à partir de 17h. Prévenez-nous de votre heure d'arrivée sur WhatsApp."
         },
         {
           "label": "Piscine",
@@ -81,10 +81,26 @@
         {
           "label": "Cafetière filtre",
           "value": "Café en grains + moulin sur le plan de travail."
+        }
+      ]
+    },
+    {
+      "id": "bbq",
+      "icon": "🍖",
+      "title": "Barbecue",
+      "type": "steps",
+      "items": [
+        {
+          "label": "Type",
+          "value": "Barbecue à gaz"
         },
         {
-          "label": "Barbecue charbon",
-          "value": "Sur la terrasse. Charbon dans le rangement extérieur, allume-feu fournis."
+          "label": "Mise en marche",
+          "value": "Appuyez sur le bouton du détendeur pour libérer le gaz avant d'allumer"
+        },
+        {
+          "label": "Après utilisation",
+          "value": "Fermez le robinet de la bouteille de gaz après chaque utilisation"
         }
       ]
     },
@@ -151,8 +167,7 @@
         "Ranger le matériel snorkeling dans la buanderie",
         "Sortir les poubelles dans les bacs résidence",
         "Laisser draps et serviettes sur le lit",
-        "Remettre les clés dans le boîtier",
-        "Fermer la porte à double tour"
+        "Fermer la porte à double tour et laisser les clés à l'intérieur"
       ]
     },
     {
@@ -296,11 +311,11 @@
   "faq": [
     {
       "q": "Quels sont les horaires d'arrivée et de départ ?",
-      "a": "L'arrivée est possible à partir de 15h00, le départ doit se faire avant 10h00. Si vous avez un vol tôt le matin, vous pouvez laisser vos bagages la veille — prévenez-nous simplement par WhatsApp."
+      "a": "L'arrivée est possible à partir de 17h00, le départ doit se faire avant 12h00. Si vous avez un vol tôt le matin, vous pouvez laisser vos bagages la veille — prévenez-nous simplement par WhatsApp."
     },
     {
       "q": "Comment accéder à la villa à mon arrivée ?",
-      "a": "L'accès est entièrement autonome : un premier code ouvre le portail de la résidence, un second déverrouille le boîtier à clé fixé sur le mur gauche de la porte d'entrée. Vous recevrez les deux codes par message 48h avant votre arrivée."
+      "a": "L'accès est simple et autonome : le parking est en bas de la résidence (pas de portail), et les clés se trouvent directement sur la porte du logement. Prévenez-nous de votre heure d'arrivée par WhatsApp."
     },
     {
       "q": "La piscine est-elle privée ? Y a-t-il du matériel de snorkeling ?",
@@ -308,7 +323,7 @@
     },
     {
       "q": "Y a-t-il un barbecue et comment fonctionne-t-il ?",
-      "a": "Oui, un barbecue à charbon est installé sur la terrasse. Le charbon et les allume-feu sont dans le rangement extérieur. Après utilisation, attendez que les braises soient entièrement éteintes avant de refermer le couvercle."
+      "a": "Oui, un barbecue à gaz est installé sur la terrasse. Avant d'allumer, appuyez sur le bouton du détendeur pour libérer le gaz. Après utilisation, pensez à fermer le robinet de la bouteille de gaz."
     },
     {
       "q": "La climatisation fonctionne-t-elle dans toutes les pièces ?",
@@ -319,7 +334,7 @@
       "a": "Vincent est joignable par WhatsApp au +33 6 10 88 07 72 — réponse sous 1 heure. Pour les urgences médicales : SAMU 15, pompiers 18 ou 112. La pharmacie de Sainte-Luce (0596 62 50 12) est ouverte du lundi au samedi. Urgences hospitalières : Clinique Sainte-Marie au Lamentin, 0596 57 37 37."
     }
   ],
-  "updated_at": "2026-05-21",
+  "updated_at": "2026-06-19",
   "extras": [
     {
       "id": "late-early",
