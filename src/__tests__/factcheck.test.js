@@ -6,7 +6,7 @@ import { factCheckCaption, FACT_CHECK_RULES } from '../../functions/api/_factche
 
 describe('factCheckCaption — équipements interdits par bien', () => {
   it('rejette "eau salée" associé à Mabouya (jacuzzi, pas de piscine eau salée)', () => {
-    const errs = factCheckCaption('Studio Mabouya et sa piscine eau salée face à la mer')
+    const errs = factCheckCaption('Mabouya et sa piscine eau salée face à la mer')
     expect(errs.length).toBeGreaterThan(0)
   })
 

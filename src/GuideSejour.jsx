@@ -18,7 +18,7 @@ const NAMES = {
   iguana:    "Villa Iguana",
   zandoli:   "Zandoli",
   geko:      "Géko",
-  mabouya:   "Studio Mabouya",
+  mabouya:   "Mabouya",
   schoelcher:"Appartement Bellevue",
   nogent:    "Appartement Nogent",
 };

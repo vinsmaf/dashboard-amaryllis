@@ -503,7 +503,7 @@ export default function GuideVillaPiscine() {
                 { name: "Zandoli",   cap: "5 pers.", piscine: "Privative à cascade",          vue: "Mer + jardin",   prix: "dès 110 €" },
                 { name: "Villa Iguana",    cap: "6 pers.", piscine: "Eau salée non chlorée",        vue: "Rocher Diamant", prix: "dès 180 €" },
                 { name: "Géko",      cap: "4 pers.", piscine: "Privative à cascade",          vue: "Jardin tropical",prix: "dès 110 €" },
-                { name: "Studio Mabouya",  cap: "2 pers.", piscine: "Jacuzzi privatif",             vue: "Mer terrasse",   prix: "dès 70 €" },
+                { name: "Mabouya",  cap: "2 pers.", piscine: "Jacuzzi privatif",             vue: "Mer terrasse",   prix: "dès 70 €" },
               ].map(row => (
                 <div key={row.name} className="gvp-compare-row">
                   <div className="gvp-compare-cell name">{row.name}</div>

@@ -16,7 +16,7 @@ const propertiesMartinique = [
   { id: "zandoli",   name: "Zandoli",         location: "Sainte-Luce", price: 220, guests: 5, highlight: "Private cascade pool · Sea view · Mezzanine · Tropical garden" },
   { id: "iguana",    name: "Villa Iguana",    location: "Sainte-Luce", price: 180, guests: 6, highlight: "Salt water pool (non-chlorinated) · Diamond Rock view" },
   { id: "geko",      name: "Géko",            location: "Sainte-Luce", price: 150, guests: 4, highlight: "Private cascade pool · Tropical garden · BBQ" },
-  { id: "mabouya",   name: "Studio Mabouya",  location: "Sainte-Luce", price: 110, guests: 2, highlight: "Private jacuzzi · Sea view · Romantic" },
+  { id: "mabouya",   name: "Mabouya",  location: "Sainte-Luce", price: 110, guests: 2, highlight: "Private jacuzzi · Sea view · Romantic" },
   { id: "schoelcher",name: "Bellevue",        location: "Schœlcher",   price: 100, guests: 2, highlight: "Panoramic Fort-de-France Bay view" },
 ];
 
@@ -30,7 +30,7 @@ const properties = [...propertiesMartinique, ...propertiesIDF];
 const faqs = [
   { q: "How do I book a villa in Martinique without Airbnb?", a: "Book directly on villamaryllis.com using our secure payment system (Stripe). You save up to 14% in Airbnb service fees and get direct contact with the host." },
   { q: "What is the best area to rent a villa in Martinique?", a: "Sainte-Luce in the south is ideal — 20 min from the beaches of Sainte-Anne and Les Salines, 15 min from Le Diamant, 35 min from the airport. A perfect base to explore the entire island." },
-  { q: "Do your villas have a private pool?", a: "Yes — most of our properties have a private pool. Villa Amaryllis features a 4×7 m salt water infinity pool with 180° ocean views. Zandoli and Géko each have their own private cascade pool. Villa Iguana offers the resort's only non-chlorinated salt water pool. Studio Mabouya has a private jacuzzi (no pool)." },
+  { q: "Do your villas have a private pool?", a: "Yes — most of our properties have a private pool. Villa Amaryllis features a 4×7 m salt water infinity pool with 180° ocean views. Zandoli and Géko each have their own private cascade pool. Villa Iguana offers the resort's only non-chlorinated salt water pool. Mabouya has a private jacuzzi (no pool)." },
   { q: "Are pets allowed?", a: "Yes, pets are welcome in several properties (Villa Amaryllis, Villa Iguana). A supplement of €50 per stay applies. Please mention it when booking." },
   { q: "What is the best time to visit Martinique?", a: "The dry season (December–April) offers the best weather — sunny days, calm sea, constant trade winds. July–August is also popular despite occasional showers. Book 3–6 months in advance for high season." },
   { q: "Is there WiFi in your villas?", a: "Yes, all properties include Starlink high-speed WiFi at no extra charge." },
@@ -42,7 +42,7 @@ const COMPARE_COLS = [
   { id: "zandoli",   label: "Zandoli",          photo: "/photos/zandoli/01.webp",    price: "€220",  guests: 5, pool: "Cascade private",  jacuzzi: false, view: "Sea + garden", wifi: "Starlink", pets: true,  badge: null },
   { id: "iguana",    label: "Villa Iguana",     photo: "/photos/iguana/01.webp",     price: "€180",  guests: 6, pool: "Salt water",       jacuzzi: false, view: "Diamond Rock", wifi: "Starlink", pets: true,  badge: null },
   { id: "geko",      label: "Géko",             photo: "/photos/geko/01.webp",       price: "€150",  guests: 4, pool: "Cascade private",  jacuzzi: false, view: "Garden",     wifi: "Starlink", pets: true,  badge: null },
-  { id: "mabouya",   label: "Studio Mabouya",   photo: "/photos/mabouya/01.webp",    price: "€110",  guests: 2, pool: null,               jacuzzi: true,  view: "Sea",        wifi: "Starlink", pets: false, badge: "💑 Romantic" },
+  { id: "mabouya",   label: "Mabouya",   photo: "/photos/mabouya/01.webp",    price: "€110",  guests: 2, pool: null,               jacuzzi: true,  view: "Sea",        wifi: "Starlink", pets: false, badge: "💑 Romantic" },
   { id: "nogent",    label: "Apt. Paris Gates", photo: "/photos/nogent/01.webp",     price: "€85",   guests: 4, pool: null,          jacuzzi: false, view: "Courtyard",  wifi: "Fiber",    pets: true,  badge: "🗼 Near Paris" },
 ];
 

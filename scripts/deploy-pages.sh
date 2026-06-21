@@ -54,11 +54,12 @@ if [[ "${SKIP_LINT:-0}" != "1" ]]; then
     LINT_FAIL=0
     LINT_NEW_ERRORS=""
     while IFS= read -r f; do
-      # Erreurs actuelles (wc -l : exit 0 toujours, pas de double-output comme grep -c)
-      CURRENT=$(npx eslint "$f" 2>&1 | grep -E "^\s+[0-9]+:[0-9]+\s+error" | wc -l | tr -d ' ')
+      # Erreurs actuelles. { … || true; } neutralise l'exit 1 d'ESLint (errors found)
+      # pour ne pas déclencher set -o pipefail sur l'assignation.
+      CURRENT=$({ npx eslint "$f" 2>&1 || true; } | { grep -E "^\s+[0-9]+:[0-9]+\s+error" || true; } | wc -l | tr -d ' ')
       # Erreurs à HEAD (baseline). Fichier nouveau → baseline=0.
       if git cat-file -e "HEAD:$f" 2>/dev/null; then
-        BASELINE=$(git show "HEAD:$f" 2>/dev/null | npx eslint --stdin --stdin-filename "$f" 2>&1 | grep -E "^\s+[0-9]+:[0-9]+\s+error" | wc -l | tr -d ' ')
+        BASELINE=$(git show "HEAD:$f" 2>/dev/null | { npx eslint --stdin --stdin-filename "$f" 2>&1 || true; } | { grep -E "^\s+[0-9]+:[0-9]+\s+error" || true; } | wc -l | tr -d ' ')
       else
         BASELINE=0
       fi
@@ -89,36 +90,93 @@ if [[ "${SKIP_BUILD:-0}" != "1" ]]; then
   echo ""
 fi
 
-echo "🚀 Déploiement → projet Cloudflare Pages '$PROJECT_NAME' (villamaryllis.com)"
+# ── BRANCHE DE DÉPLOIEMENT — production vs preview ───────────────────────────
+# 🚨 PIÈGE RÉCURRENT (corrigé 2026-06-20) : `wrangler pages deploy` SANS --branch
+# associe le déploiement à la branche git COURANTE. Depuis un worktree (branche
+# `claude/*`, `feature/*`…), ça crée un déploiement de PREVIEW de branche
+# (https://<branche>.dashboard-amaryllis.pages.dev) qui N'EST PAS villamaryllis.com.
+# Le smoke ci-dessous teste l'alias du déploiement (preview OU prod) → il passe
+# même en preview = faux positif total : villamaryllis.com reste sur l'ancienne version.
+# → On force TOUJOURS la branche de PRODUCTION `main` (= live villamaryllis.com).
+#   CF Pages n'est PAS git-connecté : --branch ne touche pas ton git, il dit juste
+#   à Cloudflare « ce upload est la production ». L'ancrage prod (vérif n°0 du smoke)
+#   confirme ensuite que villamaryllis.com sert bien ce build.
+# Override exceptionnel (vrai preview délibéré) :
+#   DEPLOY_BRANCH=ma-branche npm run deploy:pages
+DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
+
+echo "🚀 Déploiement → projet '$PROJECT_NAME' · branche '$DEPLOY_BRANCH'$([ "$DEPLOY_BRANCH" = "main" ] && echo " = PRODUCTION villamaryllis.com" || echo " = ⚠️ PREVIEW (pas la prod !)")"
 echo ""
 
-npx wrangler pages deploy dist --project-name "$PROJECT_NAME" "$@"
+DEPLOY_LOG=$(mktemp)
+npx wrangler pages deploy dist --project-name "$PROJECT_NAME" --branch "$DEPLOY_BRANCH" "$@" 2>&1 | tee "$DEPLOY_LOG"
+# Alias de déploiement (URL unique <hash>.<projet>.pages.dev, live immédiatement, SANS cache
+# CDN). On smoke-teste cette URL plutôt que villamaryllis.com : le CDN met >30s à propager,
+# ce qui faisait échouer le smoke (bundle en text/plain, titres absents) sur des déploiements
+# pourtant sains. L'alias reflète exactement le déploiement → zéro faux négatif de propagation.
+ALIAS_URL=$(grep -oE "https://[a-z0-9-]+\.${PROJECT_NAME}\.pages\.dev" "$DEPLOY_LOG" | head -1 || true)
+rm -f "$DEPLOY_LOG"
 
 # ── Smoke test post-déploiement ──────────────────────────────────────────────
 # Vérifie que les pages clés rendent et que le bundle référencé est bien servi
 # en JS (pas en HTML = symptôme d'empoisonnement). La protection anti-cache est
 # assurée par sw.js (v5) + rotation de hash (window.__BUILD__).
+DOMAIN="${ALIAS_URL:-https://villamaryllis.com}"
 echo ""
-echo "🔎 Smoke test post-déploiement (propagation 6s)…"
-sleep 6
-DOMAIN="https://villamaryllis.com"
+if [[ -n "$ALIAS_URL" ]]; then
+  echo "🔎 Smoke test post-déploiement → alias frais $DOMAIN (attente propagation 5s)…"
+  sleep 5   # CF Pages alias : déploiement déclaré ≠ propagé — 5s absorbent la latence typique
+else
+  echo "🔎 Smoke test post-déploiement → $DOMAIN (alias non capturé, fallback prod, propagation 6s)…"
+  sleep 6
+fi
 SMOKE_FAIL=0
 
-# 1. Pages clés répondent en 200 (home, villa, admin)
-for route in "/" "/amaryllis" "/admin"; do
-  ST=$(curl -s -o /dev/null -w "%{http_code}" "$DOMAIN$route" || echo "000")
-  if [[ "$ST" == "200" ]]; then
-    echo "   ✅ $route → 200"
+# 0. ⚓ ANCRAGE PROD — villamaryllis.com DOIT finir par servir le bundle qu'on vient
+#    de builder. Indépendant de l'alias testé ci-dessous : c'est CE check qui détecte
+#    le piège "preview de branche" (alias sain mais prod jamais mise à jour). Retry
+#    6×/5s pour absorber la propagation CDN.
+LOCAL_JS=$(grep -oE 'assets/index-[A-Za-z0-9_-]+\.js' dist/index.html 2>/dev/null | head -1)
+if [[ -n "$LOCAL_JS" ]]; then
+  PROD_MATCH=0
+  for _i in 1 2 3 4 5 6; do
+    LIVE_JS=$(curl -s "https://villamaryllis.com/" | grep -oE 'assets/index-[A-Za-z0-9_-]+\.js' | head -1)
+    if [[ "$LIVE_JS" == "$LOCAL_JS" ]]; then PROD_MATCH=1; break; fi
+    sleep 5
+  done
+  if [[ "$PROD_MATCH" == "1" ]]; then
+    echo "   ✅ Ancrage prod : villamaryllis.com sert bien ce build ($LOCAL_JS)"
   else
-    echo "   ❌ $route → $ST (attendu 200)"
+    echo "   ❌ Ancrage prod ÉCHOUÉ : villamaryllis.com sert '$LIVE_JS' ≠ build local '$LOCAL_JS'"
+    echo "      🚨 Ce déploiement n'a PAS atteint la PRODUCTION (preview de branche ?)."
+    echo "      → Relancer : DEPLOY_BRANCH=main npm run deploy:pages"
     SMOKE_FAIL=1
   fi
+fi
+
+# Helper : retry 3× / 5s — absorbe la propagation CF Pages alias URL (inconsistante)
+smoke_check() {
+  local route="$1" expected="$2" label="${3:-$1}" st
+  for _r in 1 2 3; do
+    st=$(curl -s -o /dev/null -w "%{http_code}" "$DOMAIN$route" || echo "000")
+    if [[ "$st" == "$expected" ]]; then echo "   ✅ $label → $st"; return 0; fi
+    [[ $_r -lt 3 ]] && sleep 5
+  done
+  echo "   ❌ $label → $st (attendu $expected, 3 essais)"
+  SMOKE_FAIL=1
+}
+
+# 1. Pages clés répondent en 200 (home, villa)
+#    /admin exclue du curl check : CF Pages renvoie 404 pour le routage SPA
+#    côté serveur (normal) — la vérification admin est couverte par le playwright (1b).
+for route in "/" "/amaryllis"; do
+  smoke_check "$route" "200"
 done
 
 # 1b. Playwright smoke /admin — vérifie que React monte sans pageerror ni chunk 404
 #     (un import circulaire passe le HTTP 200 ci-dessus mais crashe au runtime)
 if command -v node >/dev/null 2>&1; then
-  if node scripts/admin-smoke.mjs 2>&1; then
+  if BASE_URL="$DOMAIN" node scripts/admin-smoke.mjs 2>&1; then
     : # succès déjà loggué par le script
   else
     echo "   ❌ /admin — crash React détecté (voir ci-dessus)"
@@ -172,50 +230,60 @@ else
   echo "   ⚠️  sw.js n'est pas le kill-switch attendu"
 fi
 
-# 4. Anti-asset-gelé : /guide-hub doit contenir son titre SEO attendu
-#    (comparaison contenu, pas taille — le remote peut être légèrement différent du local)
-GUIDE_TITLE=$(grep -oE "<title>[^<]+</title>" dist/guide-hub/index.html 2>/dev/null | head -1 | sed 's/<[^>]*>//g' | cut -c1-30 || echo "")
-if [[ -n "$GUIDE_TITLE" ]]; then
-  if curl -s "$DOMAIN/guide-hub" | grep -qF "$GUIDE_TITLE"; then
-    echo "   ✅ /guide servi à jour (titre « $GUIDE_TITLE… » présent)"
-  else
-    echo "   ⚠️  /guide possiblement gelé — titre attendu absent de la réponse live"
-  fi
+# 4. Anti-asset-gelé : /guide-hub doit avoir un <title> non vide en live
+#    (on vérifie le live directement — le titre local peut différer de l'injection Function)
+GUIDE_LIVE_TITLE=$(curl -s "$DOMAIN/guide-hub" | grep -oE "<title>[^<]+</title>" | head -1 | sed 's/<[^>]*>//g')
+if [[ -n "$GUIDE_LIVE_TITLE" ]]; then
+  echo "   ✅ /guide-hub servi à jour (titre « ${GUIDE_LIVE_TITLE:0:40}… » présent)"
+else
+  echo "   ❌ /guide-hub sans <title> en live — page potentiellement gelée ou cassée"
+  SMOKE_FAIL=1
 fi
 
 # 5. (qa-003) Endpoints API critiques répondent (pas de 5xx ni 404)
 for api in "/api/get-config" "/api/social?action=status"; do
-  ST=$(curl -s -o /dev/null -w "%{http_code}" -H "User-Agent: Mozilla/5.0" "$DOMAIN$api" || echo "000")
-  if [[ "$ST" =~ ^(200|401|405)$ ]]; then
-    echo "   ✅ API $api → $ST (vivant)"
-  else
-    echo "   ❌ API $api → $ST (5xx/404 = fonction cassée)"
-    SMOKE_FAIL=1
-  fi
+  for _r in 1 2 3; do
+    ST=$(curl -s -o /dev/null -w "%{http_code}" -H "User-Agent: Mozilla/5.0" "$DOMAIN$api" || echo "000")
+    if [[ "$ST" =~ ^(200|401|405)$ ]]; then echo "   ✅ API $api → $ST (vivant)"; break; fi
+    if [[ $_r -lt 3 ]]; then sleep 5; else
+      echo "   ❌ API $api → $ST (5xx/404 = fonction cassée, 3 essais)"
+      SMOKE_FAIL=1
+    fi
+  done
 done
 
 # 6. (qa-003) sitemap.xml servi en XML et non vide
 SMAP=$(curl -s "$DOMAIN/sitemap.xml")
-if echo "$SMAP" | grep -q "<urlset"; then
-  echo "   ✅ sitemap.xml valide ($(echo "$SMAP" | grep -c "<loc>") URLs)"
-else
-  echo "   ❌ sitemap.xml absent ou invalide"
+SMAP_OK=0
+for _r in 1 2 3; do
+  SMAP=$(curl -s "$DOMAIN/sitemap.xml")
+  if echo "$SMAP" | grep -q "<urlset"; then
+    echo "   ✅ sitemap.xml valide ($(echo "$SMAP" | grep -c "<loc>") URLs)"
+    SMAP_OK=1; break
+  fi
+  [[ $_r -lt 3 ]] && sleep 5
+done
+if [[ "$SMAP_OK" == "0" ]]; then
+  echo "   ❌ sitemap.xml absent ou invalide (3 essais)"
   SMOKE_FAIL=1
 fi
 
-# 7. (qa-003) une fiche villa prérendue contient bien son <title> SEO (meta injectée)
-#    Retry 3× / 4s pour absorber la latence de propagation CF Pages Function
+# 7. (qa-003) une fiche villa contient bien son <title> SEO (meta injectée au runtime)
+#    Vérifie le titre live directement — plus fiable que comparer à un pattern hardcodé.
+#    Retry 8× / 10s (~80s) pour absorber la propagation CF Pages Function.
 MABOUYA_OK=0
-for _i in 1 2 3; do
-  if curl -s "$DOMAIN/mabouya" | grep -qi "<title>.*Mabouya"; then
+for _i in 1 2 3 4 5 6 7 8; do
+  MABOUYA_TITLE=$(curl -s "$DOMAIN/mabouya" | grep -oE "<title>[^<]+</title>" | head -1 | sed 's/<[^>]*>//g')
+  if [[ -n "$MABOUYA_TITLE" ]]; then
     MABOUYA_OK=1; break
   fi
-  sleep 4
+  sleep 10
 done
 if [[ "$MABOUYA_OK" == "1" ]]; then
-  echo "   ✅ Meta prérendue OK (/mabouya a son <title>)"
+  echo "   ✅ Meta OK (/mabouya — « $MABOUYA_TITLE »)"
 else
-  echo "   ⚠️  /mabouya sans <title> attendu après 3 essais — vérifier le prerender"
+  echo "   ❌ /mabouya sans <title> après 8 essais — vérifier functions/[slug].js (injectMeta)"
+  SMOKE_FAIL=1
 fi
 
 if [[ "$SMOKE_FAIL" == "1" ]]; then

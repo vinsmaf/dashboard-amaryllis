@@ -576,7 +576,7 @@ ${bienId === "amaryllis"  ? "  Villa Amaryllis, Sainte-Luce — 8 pers · 3 cham
 ${bienId === "zandoli"    ? "  Zandoli, Sainte-Luce (résidence Amaryllis) — 5 pers · 2 chambres · 4,5★ · cocon tropical, mezzanine, jardin, PISCINE PRIVATIVE AVEC CASCADE (chaque logement de la résidence a sa propre piscine)" : ""}
 ${bienId === "iguana"     ? "  Villa Iguana, Sainte-Luce — 6 pers · 2 chambres · 4,75★ · vue Rocher du Diamant, PISCINE EAU SALÉE (la seule de la résidence, non chlorée)" : ""}
 ${bienId === "geko"       ? "  Géko, Sainte-Luce (résidence Amaryllis hauteurs) — 4 pers · 1 chambre · 4,83★ · jardin tropical, PISCINE PRIVATIVE AVEC CASCADE (chaque logement de la résidence a sa propre piscine)" : ""}
-${bienId === "mabouya"    ? "  Studio Mabouya (résidence Amaryllis hauteurs) — 2 pers · 1 chambre · 4,55★ · JACUZZI privatif terrasse avec VUE mer (pas de piscine, pas pieds dans l'eau)" : ""}
+${bienId === "mabouya"    ? "  Mabouya (résidence Amaryllis hauteurs) — 2 pers · 1 chambre · 4,55★ · JACUZZI privatif terrasse avec VUE mer (pas de piscine, pas pieds dans l'eau)" : ""}
 ${bienId === "schoelcher" ? "  Bellevue, Schœlcher (hauteurs) — 2 pers · 1 chambre · 4,8★ · vue baie Fort-de-France + Trois-Îlets (pas de piscine)" : ""}
 ${bienId === "nogent"     ? "  Appt Nogent-sur-Marne — 2 pers · 1 chambre · jardin + terrasse · bord de Marne, RER A 20min Paris" : ""}
 
@@ -619,7 +619,7 @@ ${bienId === "nogent"     ? "  Appt Nogent-sur-Marne — 2 pers · 1 chambre · 
     "Géko, son jardin tropical et sa piscine privative avec cascade pour un week-end en couple."
 
   Bien=mabouya :
-    "Studio Mabouya, son jacuzzi privatif sur la terrasse avec vue mer pour un séjour romantique."
+    "Mabouya, son jacuzzi privatif sur la terrasse avec vue mer pour un séjour romantique."
 
   Bien=schoelcher :
     "Bellevue à Schœlcher, sa vue panoramique sur la baie de Fort-de-France et les Trois-Îlets."
@@ -632,7 +632,7 @@ ${bienId === "nogent"     ? "  Appt Nogent-sur-Marne — 2 pers · 1 chambre · 
   ❌ "Villa Amaryllis et son jacuzzi privatif sous les étoiles"
      → FAUX : Amaryllis a une PISCINE à débordement, PAS de jacuzzi.
 
-  ❌ "Studio Mabouya et sa grande piscine eau salée"
+  ❌ "Mabouya et sa grande piscine eau salée"
      → FAUX : Mabouya = jacuzzi privatif uniquement, AUCUNE piscine.
 
   ❌ "Géko et sa piscine eau salée non chlorée"
@@ -691,13 +691,13 @@ MISSION : Identifie les actions concrètes NOUVELLES à réaliser dans ton domai
 • Zandoli (Sainte-Luce, résidence Amaryllis hauteurs) : 220€/nuit · 5 pers · 2 chambres · 1 SDB · 4,5★ · cocon tropical
 • Villa Iguana (Sainte-Luce, résidence hauteurs) : 180€/nuit · 6 pers · 2 chambres · 1 SDB · 4,75★ · vue Rocher du Diamant
 • Géko (Sainte-Luce, résidence Amaryllis hauteurs) : 150€/nuit · 4 pers · 1 chambre · 1 SDB · 4,83★ · jardin tropical
-• Studio Mabouya (Sainte-Luce, résidence hauteurs) : 110€/nuit · 2 pers · 1 chambre · 1 SDB · 4,55★ · jacuzzi privatif VUE mer
+• Mabouya (Sainte-Luce, résidence hauteurs) : 110€/nuit · 2 pers · 1 chambre · 1 SDB · 4,55★ · jacuzzi privatif VUE mer
 • Bellevue (Schœlcher, hauteurs) : 100€/nuit · 2 pers · 1 chambre · 1 SDB · 4,8★ · vue baie Fort-de-France
 • Appt Nogent-sur-Marne (IDF) : 85€/nuit · 2 pers · 1 chambre · 1 SDB · bord de Marne
 
 🏷️ NOMENCLATURE EXACTE — NE JAMAIS ajouter ni retirer « Villa » :
   ✅ SONT des villas (et SEULEMENT elles) : « Villa Amaryllis », « Villa Iguana ».
-  ❌ NE SONT PAS des villas → écrire SANS « Villa » : « Zandoli » (logement), « Géko » (cocon), « Studio Mabouya » (studio), « Bellevue » (appartement), « Appartement Nogent ».
+  ❌ NE SONT PAS des villas → écrire SANS « Villa » : « Zandoli » (logement), « Géko » (cocon), « Mabouya » (studio), « Bellevue » (appartement), « Appartement Nogent ».
   ❌ INTERDIT ABSOLU : « Villa Zandoli », « Villa Géko », « Villa Mabouya », « Villa Bellevue ».
 
 ${EQUIP_RULES_TEXT}

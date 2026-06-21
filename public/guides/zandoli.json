@@ -16,24 +16,44 @@
     {
       "id": "access",
       "icon": "🔑",
-      "title": "Accès — étape par étape",
+      "title": "Accès et arrivée",
       "type": "steps",
       "items": [
         {
-          "label": "Portail résidence",
-          "value": "Code ••••, poussez le portail après le bip."
-        },
-        {
-          "label": "Boîtier à clé",
-          "value": "Sur le mur gauche de l'entrée, code ••••."
-        },
-        {
           "label": "Parking",
-          "value": "Place privative devant la villa."
+          "value": "1 place disponible en bas de la résidence (pas de portail, pas de code)"
+        },
+        {
+          "label": "Clés",
+          "value": "Les clés se trouvent directement sur la porte du logement"
+        },
+        {
+          "label": "Arrivée",
+          "value": "Check-in à partir de 17h. Prévenez-nous de votre heure d'arrivée sur WhatsApp."
         },
         {
           "label": "Piscine",
           "value": "Accessible depuis la terrasse couverte. Douche obligatoire avant baignade."
+        }
+      ]
+    },
+    {
+      "id": "bbq",
+      "icon": "🍖",
+      "title": "Barbecue",
+      "type": "steps",
+      "items": [
+        {
+          "label": "Type",
+          "value": "Barbecue à gaz"
+        },
+        {
+          "label": "Mise en marche",
+          "value": "Appuyez sur le bouton du détendeur pour libérer le gaz avant d'allumer"
+        },
+        {
+          "label": "Après utilisation",
+          "value": "Fermez le robinet de la bouteille de gaz après chaque utilisation"
         }
       ]
     },
@@ -180,8 +200,7 @@
         "Lancer le lave-vaisselle",
         "Sortir les poubelles dans les bacs résidence",
         "Laisser draps et serviettes sur les lits",
-        "Remettre les clés dans le boîtier",
-        "Fermer la porte à double tour"
+        "Fermer la porte à double tour et laisser les clés à l'intérieur"
       ]
     },
     {
@@ -330,11 +349,11 @@
   "faq": [
     {
       "q": "Quels sont les horaires de check-in et de check-out ?",
-      "a": "L'accueil est possible à partir de 15h00 et le départ doit s'effectuer avant 10h00. Pour toute arrivée tardive ou demande de flexibilité, contactez-nous par WhatsApp — nous ferons notre possible en fonction de l'occupation."
+      "a": "L'accueil est possible à partir de 17h00 et le départ doit s'effectuer avant 12h00. Pour toute arrivée tardive ou demande de flexibilité, contactez-nous par WhatsApp — nous ferons notre possible en fonction de l'occupation."
     },
     {
       "q": "Comment accéder à la villa à mon arrivée ?",
-      "a": "Deux codes suffisent pour entrer en toute autonomie : le premier ouvre le portail de la résidence (attendez le bip puis poussez), le second déverrouille le boîtier à clé fixé sur le mur gauche de l'entrée. Les codes vous seront transmis par message 48h avant votre arrivée."
+      "a": "L'accès est simple et autonome : le parking est en bas de la résidence (pas de portail), et les clés se trouvent directement sur la porte du logement. Prévenez-nous de votre heure d'arrivée par WhatsApp."
     },
     {
       "q": "La piscine est-elle privée et quand est-elle entretenue ?",
@@ -353,7 +372,7 @@
       "a": "Vincent est disponible par WhatsApp au +33 6 10 88 07 72, avec une réponse sous 1 heure en saison haute. En cas d'urgence médicale : SAMU au 15 ou 112. Pharmacie de Sainte-Luce : 0596 62 50 12. Urgences hospitalières 24h/24 à la Clinique Sainte-Marie (Le Lamentin) : 0596 57 37 37."
     }
   ],
-  "updated_at": "2026-05-21",
+  "updated_at": "2026-06-19",
   "extras": [
     {
       "id": "late-early",

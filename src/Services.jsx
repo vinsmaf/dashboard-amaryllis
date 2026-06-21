@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import SEOMeta from "./SEOMeta.jsx";
 
 const NAVY = "#0e3b3a", CORAL = "#c47254", GOLD = "#c9a673", IVORY = "#faf5e9", SAND = "#e0d4bc", TEXT = "#3a3530", MUTED = "#7a6b5a";
-const NAMES = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko", mabouya: "Studio Mabouya", schoelcher: "Appartement Bellevue", nogent: "Appartement Nogent" };
+const NAMES = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko", mabouya: "Mabouya", schoelcher: "Appartement Bellevue", nogent: "Appartement Nogent" };
 
 export default function Services() {
   const bien = window.location.pathname.split("/services/")[1]?.replace(/\/$/, "").toLowerCase() || "amaryllis";

@@ -11,6 +11,7 @@ export default function ConversionTab() {
 
   const cutoff = (() => {
     const d = new Date();
+    if (period === "ytd") return `${d.getFullYear()}-01-01`;
     d.setMonth(d.getMonth() - parseInt(period, 10));
     return d.toISOString().slice(0, 10);
   })();
@@ -62,10 +63,12 @@ export default function ConversionTab() {
           <p style={{ margin: "3px 0 0", fontSize: 11, color: "#64748b" }}>Répartition des réservations et revenus par source</p>
         </div>
         <select value={period} onChange={e => setPeriod(e.target.value)} style={selInp}>
-          <option value="3">3 derniers mois</option>
-          <option value="6">6 derniers mois</option>
-          <option value="12">12 derniers mois</option>
-          <option value="24">24 derniers mois</option>
+          <option value="1">1 mois</option>
+          <option value="3">3 mois</option>
+          <option value="6">6 mois</option>
+          <option value="ytd">Année en cours</option>
+          <option value="12">12 mois</option>
+          <option value="24">24 mois</option>
         </select>
       </div>
 

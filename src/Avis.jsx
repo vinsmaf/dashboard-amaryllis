@@ -73,7 +73,7 @@ const BIENS_AVIS = [
   },
   {
     id: "mabouya",
-    nom: "Studio Mabouya",
+    nom: "Mabouya",
     lieu: "Sainte-Luce, Martinique",
     rating: "4,55",
     reviews: 11,

@@ -77,6 +77,34 @@ export async function onRequest(context) {
       bien_id: r.bien_id || null,
     }));
 
+  } else if (segment === "past_guests") {
+    // Voyageurs ayant séjourné (direct_bookings, checkout < aujourd'hui)
+    const today = new Date().toISOString().slice(0, 10);
+    let sql = `SELECT DISTINCT email, prenom, bien_id FROM direct_bookings
+               WHERE email IS NOT NULL AND email != '' AND checkout < '${today}'`;
+    if (bien_id) sql += ` AND bien_id = '${bien_id.replace(/'/g, "''")}'`;
+    sql += ` ORDER BY checkout DESC LIMIT ${MAX_RECIPIENTS}`;
+    const { results } = await db.prepare(sql).all();
+    recipients = (results || []).map(r => ({
+      email: r.email.trim().toLowerCase(),
+      prenom: r.prenom || "",
+      bien_id: r.bien_id || null,
+    }));
+
+  } else if (segment === "repeaters") {
+    // Voyageurs ayant séjourné 2+ fois (priorité fidélisation)
+    const today = new Date().toISOString().slice(0, 10);
+    let sql = `SELECT email, prenom, bien_id, COUNT(*) AS cnt FROM direct_bookings
+               WHERE email IS NOT NULL AND email != '' AND checkout < '${today}'`;
+    if (bien_id) sql += ` AND bien_id = '${bien_id.replace(/'/g, "''")}'`;
+    sql += ` GROUP BY LOWER(TRIM(email)) HAVING cnt >= 2 ORDER BY cnt DESC LIMIT ${MAX_RECIPIENTS}`;
+    const { results } = await db.prepare(sql).all();
+    recipients = (results || []).map(r => ({
+      email: r.email.trim().toLowerCase(),
+      prenom: r.prenom || "",
+      bien_id: r.bien_id || null,
+    }));
+
   } else {
     return json({ error: `segment inconnu: ${segment}` }, 400);
   }

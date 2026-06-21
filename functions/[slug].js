@@ -98,7 +98,7 @@ const GROUP_STAY = {
 const SCHOELCHER_APPART = {
   title: "Location appartement vue mer Schœlcher — dès 90€/nuit",
   desc: "Appartement vue mer à Schœlcher, Martinique : panorama sur la baie de Fort-de-France, dernier étage, 2 pers. Réservation directe dès 90€/nuit, sans frais.",
-  image: `${BASE}/photos/schoelcher/01.webp`,
+  image: `${BASE}/photos/schoelcher/16.webp`,
   url: `${BASE}/location-appartement-vue-mer-schoelcher`,
 };
 

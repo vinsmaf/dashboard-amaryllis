@@ -1,0 +1,356 @@
+id réservation	logement	nom du client	arrivée	départ	montant	statut
+BK-amaryllis-2022-04-08	amaryllis	Arnaud Darsonval	2022-04-08	2022-04-17	3150	Confirmé
+BK-amaryllis-2022-06-08	amaryllis	Joffrey Tetaz	2022-06-08	2022-06-12	1750	Confirmé
+BK-nogent-2022-07-05	nogent	Patrick Da Silva	2022-07-05	2022-07-06	133.10	Confirmé
+BK-nogent-2022-07-06	nogent	Djessy Nzau D'oliveira	2022-07-06	2022-07-07	133.10	Confirmé
+BK-nogent-2022-07-15	nogent	Nathalie Chossat	2022-07-15	2022-07-17	292.82	Confirmé
+BK-amaryllis-2022-07-20	amaryllis	Lynda FOURNIER	2022-07-20	2022-07-24	1750	Confirmé
+BK-nogent-2022-07-26	nogent	Candy Kasonga	2022-07-26	2022-07-31	653.56	Confirmé
+BK-nogent-2022-08-01	nogent	Rokia Lova	2022-08-01	2022-08-03	244.70	Confirmé
+BK-nogent-2022-08-03	nogent	Bosloup Anais	2022-08-03	2022-08-05	203.56	Confirmé
+BK-nogent-2022-09-20	nogent	Wilfrid MARGUET	2022-09-20	2022-09-21	132.11	Confirmé
+BK-nogent-2022-09-21	nogent	Amel Siham	2022-09-21	2022-09-22	132.11	Confirmé
+BK-nogent-2022-09-26	nogent	Virginie LaplaceBuilhe	2022-09-26	2022-09-29	349.38	Confirmé
+BK-nogent-2022-10-05	nogent	Jose David Aponte	2022-10-05	2022-10-08	376.59	Confirmé
+BK-nogent-2022-10-09	nogent	Younes Ben Omar	2022-10-09	2022-10-10	137.01	Confirmé
+BK-nogent-2022-10-10	nogent	Sheila Gomez	2022-10-10	2022-10-18	921.09	Confirmé
+BK-nogent-2022-11-02	nogent	Frédéric GHERSI	2022-11-02	2022-11-04	256.80	Confirmé
+BK-nogent-2022-11-04	nogent	Kady Sissoko	2022-11-04	2022-11-05	147.90	Confirmé
+BK-nogent-2022-11-05	nogent	Kady Sissoko	2022-11-05	2022-11-06	147.90	Confirmé
+BK-nogent-2022-11-09	nogent	Jo Ackable	2022-11-09	2022-11-11	191.46	Confirmé
+BK-nogent-2022-11-11	nogent	RITA SCIOTTI	2022-11-11	2022-11-20	1171.43	Confirmé
+BK-schoelcher-2022-11-24	schoelcher	claire romain	2022-11-24	2022-12-01	670	Confirmé
+BK-nogent-2022-12-03	nogent	Margaux Binaghi	2022-12-03	2022-12-05	204.53	Confirmé
+BK-nogent-2022-12-05	nogent	Marc olivier Mollard	2022-12-05	2022-12-07	213.24	Confirmé
+BK-nogent-2022-12-07	nogent	Menno Diks	2022-12-07	2022-12-10	317.78	Confirmé
+BK-iguana-2022-12-12	iguana	Brigitte GayraudVergier	2022-12-12	2022-12-16	640	Confirmé
+BK-iguana-2022-12-16	iguana	Manuela LIXFE	2022-12-16	2022-12-18	384	Confirmé
+BK-iguana-2022-12-24	iguana	nabetse ordaz	2022-12-24	2022-12-26	384	Confirmé
+BK-schoelcher-2022-12-27	schoelcher	Ralph Juergen Peters	2022-12-27	2022-12-30	310	Confirmé
+BK-schoelcher-2022-12-30	schoelcher	AUDREY APAT	2022-12-30	2023-01-02	310	Confirmé
+BK-schoelcher-2023-01-13	schoelcher	DOMINIQUE MARIANI	2023-01-13	2023-01-18	490	Confirmé
+BK-zandoli-2023-01-13	zandoli	Yanis Chojnacki	2023-01-13	2023-01-14	178	Confirmé
+BK-nogent-2023-01-13	nogent	Alexandra Bourhil	2023-01-13	2023-01-17	324.56	Confirmé
+BK-zandoli-2023-01-18	zandoli	Beatrice Louis	2023-01-18	2023-01-30	1586	Confirmé
+BK-iguana-2023-01-20	iguana	Kraaz Frank	2023-01-20	2023-01-21	192	Confirmé
+BK-nogent-2023-01-22	nogent	Jonathan GREBIL	2023-01-22	2023-01-28	561.72	Confirmé
+BK-iguana-2023-01-23	iguana	sebastien Cayoux	2023-01-23	2023-01-27	640	Confirmé
+BK-iguana-2023-01-28	iguana	Claire Sioufi	2023-01-28	2023-02-05	1280	Confirmé
+BK-nogent-2023-02-09	nogent	javier luis cardo	2023-02-09	2023-02-13	492.70	Confirmé
+BK-iguana-2023-02-10	iguana	Agnes retiere	2023-02-10	2023-02-15	960	Confirmé
+BK-nogent-2023-02-15	nogent	orzolla zikria	2023-02-15	2023-02-18	339.03	Confirmé
+BK-iguana-2023-02-17	iguana	Richard PETIT	2023-02-17	2023-02-20	576	Confirmé
+BK-zandoli-2023-02-19	zandoli	Solène MARGUERITE	2023-02-19	2023-02-22	530	Confirmé
+BK-iguana-2023-02-20	iguana	Jean-Michel MAURIN	2023-02-20	2023-02-24	768	Confirmé
+BK-nogent-2023-02-20	nogent	Stefan Anka	2023-02-20	2023-02-27	683.68	Confirmé
+BK-nogent-2023-02-27	nogent	Esther van de Put	2023-02-27	2023-03-03	341.20	Confirmé
+BK-amaryllis-2023-02-27	amaryllis	shek delon kim	2023-02-27	2023-03-04	2150	Confirmé
+BK-nogent-2023-03-03	nogent	fabien Low	2023-03-03	2023-03-04	123.41	Confirmé
+BK-nogent-2023-03-04	nogent	Djessy Nzau D'oliveira	2023-03-04	2023-03-06	201.82	Confirmé
+BK-schoelcher-2023-03-04	schoelcher	yannick Tenne	2023-03-04	2023-03-14	1040	Confirmé
+BK-nogent-2023-03-06	nogent	Michael Davison	2023-03-06	2023-03-13	761.32	Confirmé
+BK-amaryllis-2023-03-11	amaryllis	Beatrice Ducloux	2023-03-11	2023-03-19	3190	Confirmé
+BK-iguana-2023-03-11	iguana	Frédéric SAINTROMAS	2023-03-11	2023-03-24	2080	Confirmé
+BK-nogent-2023-03-13	nogent	Juanita Samba	2023-03-13	2023-03-14	141.80	Confirmé
+BK-nogent-2023-03-16	nogent	Andy PELAGO	2023-03-16	2023-03-18	210.53	Confirmé
+BK-schoelcher-2023-03-17	schoelcher	vincenzo scognamiglio	2023-03-17	2023-03-21	440	Confirmé
+BK-nogent-2023-03-18	nogent	Irina Orlova	2023-03-18	2023-03-23	498.02	Confirmé
+BK-nogent-2023-03-27	nogent	Raphaël lebel	2023-03-27	2023-04-04	707.12	Confirmé
+BK-nogent-2023-04-04	nogent	David Jonglez	2023-04-04	2023-04-06	219.24	Confirmé
+BK-nogent-2023-04-06	nogent	Lisa Krief	2023-04-06	2023-04-11	613.70	Confirmé
+BK-iguana-2023-04-06	iguana	Adam Kesraoui	2023-04-06	2023-04-10	768	Confirmé
+BK-zandoli-2023-04-06	zandoli	CHAMET Larry	2023-04-06	2023-04-08	302	Confirmé
+BK-zandoli-2023-04-08	zandoli	clément mille	2023-04-08	2023-04-12	554	Confirmé
+BK-nogent-2023-04-12	nogent	Alexis Berthelot	2023-04-12	2023-04-15	426.15	Confirmé
+BK-zandoli-2023-04-14	zandoli	Lindsay Barrus	2023-04-14	2023-04-16	326	Confirmé
+BK-zandoli-2023-04-21	zandoli	Katleen MARTIAL	2023-04-21	2023-04-23	340	Confirmé
+BK-nogent-2023-04-27	nogent	Yao Dokunor	2023-04-27	2023-05-01	450.11	Confirmé
+BK-zandoli-2023-04-27	zandoli	Corinne Dalesme	2023-04-27	2023-05-02	690	Confirmé
+BK-nogent-2023-05-02	nogent	Jose Chico	2023-05-02	2023-05-04	208.36	Confirmé
+BK-nogent-2023-05-04	nogent	Goundo Toure	2023-05-04	2023-05-05	118.51	Confirmé
+BK-zandoli-2023-05-05	zandoli	Damien Cesar	2023-05-05	2023-05-07	299.40	Confirmé
+BK-nogent-2023-05-10	nogent	MarieNoëlle Delong	2023-05-10	2023-05-12	219.24	Confirmé
+BK-nogent-2023-05-13	nogent	Alfoussene Gory	2023-05-13	2023-05-14	166	Confirmé
+BK-nogent-2023-05-17	nogent	Djessy Nzau D'oliveira	2023-05-17	2023-05-22	615.63	Confirmé
+BK-nogent-2023-05-25	nogent	Sandra Mekam	2023-05-25	2023-05-28	371.70	Confirmé
+BK-iguana-2023-05-25	iguana	Cyrille Goffin	2023-05-25	2023-05-28	502	Confirmé
+BK-nogent-2023-05-28	nogent	Abdoul Diaby	2023-05-28	2023-05-29	153.90	Confirmé
+BK-nogent-2023-05-29	nogent	David Labedays	2023-05-29	2023-06-01	371.70	Confirmé
+BK-iguana-2023-06-08	iguana	Michèle Conil	2023-06-08	2023-06-13	800	Confirmé
+BK-zandoli-2023-06-09	zandoli	Racine Alexis	2023-06-09	2023-06-11	312	Confirmé
+BK-nogent-2023-06-24	nogent	Anis Sarmachek	2023-06-24	2023-06-25	172.41	Confirmé
+BK-nogent-2023-06-26	nogent	Jérémy Liebgott	2023-06-26	2023-06-29	437.04	Confirmé
+BK-nogent-2023-07-04	nogent	Sophie Wolf	2023-07-04	2023-07-10	894.42	Confirmé
+BK-nogent-2023-07-12	nogent	Abdallah Abouzaid	2023-07-12	2023-07-13	137.57	Confirmé
+BK-nogent-2023-07-13	nogent	Abdallah Abouzaid	2023-07-13	2023-07-14	137.57	Confirmé
+BK-nogent-2023-07-14	nogent	Shainez Guenab	2023-07-14	2023-07-15	159.95	Confirmé
+BK-amaryllis-2023-07-14	amaryllis	Célia FREY	2023-07-14	2023-07-21	2331.20	Confirmé
+BK-nogent-2023-07-21	nogent	Nell Quenon	2023-07-21	2023-07-22	150.85	Confirmé
+BK-nogent-2023-07-26	nogent	jeanclaude alégoet	2023-07-26	2023-07-29	437.04	Confirmé
+BK-zandoli-2023-07-28	zandoli	Aline Thamaïcka	2023-07-28	2023-07-30	299.40	Confirmé
+BK-iguana-2023-08-01	iguana	HELENE NORDIN	2023-08-01	2023-08-03	415.60	Confirmé
+BK-nogent-2023-08-02	nogent	gilles monchicourt	2023-08-02	2023-08-10	883.52	Confirmé
+BK-iguana-2023-08-04	iguana	Lélia SAINTPRIX	2023-08-04	2023-08-06	340	Confirmé
+BK-iguana-2023-08-06	iguana	Pauline Bourdette	2023-08-06	2023-08-20	2086	Confirmé
+BK-zandoli-2023-08-11	zandoli	Andréa Viersac	2023-08-11	2023-08-13	360	Confirmé
+BK-schoelcher-2023-08-12	schoelcher	amanda cabrimol	2023-08-12	2023-08-14	221	Confirmé
+BK-zandoli-2023-08-13	zandoli	CELINE VIRETTO	2023-08-13	2023-08-18	816	Confirmé
+BK-nogent-2023-08-13	nogent	Franciely Gama Gomes	2023-08-13	2023-08-15	236.66	Confirmé
+BK-zandoli-2023-08-18	zandoli	Romain ScheninKing	2023-08-18	2023-08-20	299.40	Confirmé
+BK-amaryllis-2023-08-18	amaryllis	Aude GELAN	2023-08-18	2023-08-22	1590	Confirmé
+BK-nogent-2023-08-29	nogent	Murielle Morisson	2023-08-29	2023-09-01	404.37	Confirmé
+BK-schoelcher-2023-09-01	schoelcher	Jean-Marie FRIEDRICH	2023-09-01	2023-09-12	1149	Confirmé
+BK-nogent-2023-09-02	nogent	Sarah Levavasseur	2023-09-02	2023-09-06	480.60	Confirmé
+BK-nogent-2023-09-18	nogent	Nathalie Pay	2023-09-18	2023-09-21	420.72	Confirmé
+BK-iguana-2023-09-21	iguana	MARIEJOSEE CORTANA	2023-09-21	2023-09-23	340	Confirmé
+BK-nogent-2023-09-25	nogent	Joseba Cantero Polo	2023-09-25	2023-10-06	1302.85	Confirmé
+BK-iguana-2023-09-29	iguana	Harry Maugee	2023-09-29	2023-10-01	340	Confirmé
+BK-nogent-2023-10-10	nogent	Amira Anabi	2023-10-10	2023-10-14	538.76	Confirmé
+BK-nogent-2023-10-24	nogent	Ayoube OUQAMRA	2023-10-24	2023-10-26	307.90	Confirmé
+BK-iguana-2023-11-02	iguana	Chupachups Radial	2023-11-02	2023-11-04	394.90	Confirmé
+BK-nogent-2023-11-03	nogent	alex kouchere	2023-11-03	2023-11-10	959.40	Confirmé
+BK-nogent-2023-11-22	nogent	JeanPhilippe Maratray	2023-11-22	2023-11-28	602.56	Confirmé
+BK-nogent-2023-11-28	nogent	Didier Desgrois	2023-11-28	2023-12-07	1119.42	Confirmé
+BK-amaryllis-2023-11-30	amaryllis	agnes blachon	2023-11-30	2023-12-06	2166	Confirmé
+BK-nogent-2023-12-15	nogent	SERGE BUDRIA	2023-12-15	2023-12-19	502.20	Confirmé
+BK-amaryllis-2023-12-21	amaryllis	Lydie Kichenamagourouvaya	2023-12-21	2023-12-26	2319	Confirmé
+BK-iguana-2023-12-23	iguana	DAngio Monique	2023-12-23	2023-12-26	502	Confirmé
+BK-amaryllis-2023-12-26	amaryllis	Coralie Bleau	2023-12-26	2024-01-09	4698.60	Confirmé
+BK-iguana-2023-12-28	iguana	CEDRIC VALEY	2023-12-28	2023-12-30	486	Confirmé
+BK-zandoli-2023-12-30	zandoli	Sonia Sgrn	2023-12-30	2024-01-01	420	Confirmé
+BK-iguana-2023-12-31	iguana	Jessie SAINTE FOIE	2023-12-31	2024-01-02	473.20	Confirmé
+BK-iguana-2024-01-04	iguana	Miroslav Hrebec	2024-01-04	2024-01-13	1489.30	Confirmé
+BK-amaryllis-2024-01-09	amaryllis	FREDERIC COUPET	2024-01-09	2024-01-18	3851.70	Confirmé
+BK-iguana-2024-01-16	iguana	Ewelina Becker	2024-01-16	2024-01-19	556	Confirmé
+BK-mabouya-2024-01-18	mabouya	francoise gladin	2024-01-18	2024-02-02	1370	Confirmé
+BK-zandoli-2024-01-18	zandoli	Cynthia CAYOL	2024-01-18	2024-01-21	465	Confirmé
+BK-schoelcher-2024-01-22	schoelcher	Gilles GUYET	2024-01-22	2024-02-12	2035.05	Confirmé
+BK-iguana-2024-01-22	iguana	Marion Wagner	2024-01-22	2024-02-02	1762.90	Confirmé
+BK-zandoli-2024-01-25	zandoli	Clémence Lemeteyer	2024-01-25	2024-02-08	1855.50	Confirmé
+BK-mabouya-2024-02-02	mabouya	christophe CANIARD	2024-02-02	2024-02-06	498	Confirmé
+BK-iguana-2024-02-02	iguana	boris darodes de tailly	2024-02-02	2024-02-07	849.50	Confirmé
+BK-amaryllis-2024-02-07	amaryllis	Mélissa Archipczuk	2024-02-07	2024-02-16	3886.35	Confirmé
+BK-iguana-2024-02-09	iguana	Donald jean philippe	2024-02-09	2024-02-11	422	Confirmé
+BK-mabouya-2024-02-09	mabouya	Audrey-Line JACQUES	2024-02-09	2024-02-11	350	Confirmé
+BK-nogent-2024-02-10	nogent	gilles monchicourt	2024-02-10	2024-02-18	637.56	Confirmé
+BK-zandoli-2024-02-10	zandoli	Lauréna Louis Alexandre	2024-02-10	2024-02-14	636	Confirmé
+BK-mabouya-2024-02-11	mabouya	Hyacinthe Adelaide	2024-02-11	2024-02-15	530	Confirmé
+BK-iguana-2024-02-13	iguana	Justine Bosc	2024-02-13	2024-02-16	640	Confirmé
+BK-zandoli-2024-02-14	zandoli	Said Gargouri	2024-02-14	2024-02-17	492	Confirmé
+BK-schoelcher-2024-02-17	schoelcher	Christian Langfeldt	2024-02-17	2024-02-20	448	Confirmé
+BK-iguana-2024-02-18	iguana	Nadège DevillardDiziain	2024-02-18	2024-02-26	1301.20	Confirmé
+BK-nogent-2024-02-21	nogent	Anessa Fautrai	2024-02-21	2024-02-24	350.74	Confirmé
+BK-amaryllis-2024-02-24	amaryllis	STEPHANE REGRAFFE	2024-02-24	2024-02-28	1770	Confirmé
+BK-amaryllis-2024-02-28	amaryllis	Samia Khaous	2024-02-28	2024-03-12	3904.40	Confirmé
+BK-iguana-2024-02-28	iguana	Corentin Lacroix	2024-02-28	2024-03-06	1207.15	Confirmé
+BK-nogent-2024-02-28	nogent	Liz Barreto Martínez	2024-02-28	2024-03-03	415.32	Confirmé
+BK-iguana-2024-03-10	iguana	Magali Noel	2024-03-10	2024-03-16	1051	Confirmé
+BK-nogent-2024-03-17	nogent	Giovanni Nappi	2024-03-17	2024-03-22	507.90	Confirmé
+BK-iguana-2024-03-17	iguana	JeanJacques TIBERGHIEN	2024-03-17	2024-03-21	764	Confirmé
+BK-amaryllis-2024-03-18	amaryllis	Arash Arzideh	2024-03-18	2024-03-29	4260.04	Confirmé
+BK-iguana-2024-03-29	iguana	Elodie AINAMA	2024-03-29	2024-04-01	572.48	Confirmé
+BK-amaryllis-2024-03-30	amaryllis	Meike Knott	2024-03-30	2024-04-03	1806	Confirmé
+BK-amaryllis-2024-04-05	amaryllis	Linda Danel	2024-04-05	2024-04-09	1836	Confirmé
+BK-nogent-2024-04-20	nogent	Georg Draxinger	2024-04-20	2024-04-22	230.16	Confirmé
+BK-nogent-2024-05-09	nogent	Nigel MONPIERRE	2024-05-09	2024-05-12	322.74	Confirmé
+BK-nogent-2024-05-14	nogent	Aileen Goodman	2024-05-14	2024-05-21	933.79	Confirmé
+BK-nogent-2024-05-24	nogent	MONPIERRE Nigel	2024-05-24	2024-05-26	230.16	Confirmé
+BK-nogent-2024-05-28	nogent	Djessim Nechadi	2024-05-28	2024-05-30	230.16	Confirmé
+BK-nogent-2024-05-31	nogent	Nour Nasri	2024-05-31	2024-06-05	559.35	Confirmé
+BK-iguana-2024-06-06	iguana	Lorinne Sleman	2024-06-06	2024-06-09	473.12	Confirmé
+BK-nogent-2024-06-10	nogent	marc Pons de Vincent	2024-06-10	2024-06-13	426	Confirmé
+BK-nogent-2024-06-17	nogent	Owen Matou	2024-06-17	2024-06-19	230.16	Confirmé
+BK-zandoli-2024-06-28	zandoli	Donais NERET	2024-06-28	2024-07-01	468	Confirmé
+BK-amaryllis-2024-07-06	amaryllis	Benedicte Thomas	2024-07-06	2024-07-13	3052.80	Confirmé
+BK-nogent-2024-07-09	nogent	Djessim Nechadi	2024-07-09	2024-07-11	250.74	Confirmé
+BK-zandoli-2024-07-12	zandoli	Pascal POTOR	2024-07-12	2024-07-16	700	Confirmé
+BK-amaryllis-2024-07-19	amaryllis	Jean Hyrbert FRANCOIS	2024-07-19	2024-07-24	2205	Confirmé
+BK-iguana-2024-07-27	iguana	Michel Celma	2024-07-27	2024-07-30	703.70	Confirmé
+BK-mabouya-2024-07-28	mabouya	VERROUX CLARISSIA	2024-07-28	2024-07-31	320	Confirmé
+BK-amaryllis-2024-08-05	amaryllis	Fairn Glaieul	2024-08-05	2024-08-09	1980	Confirmé
+BK-zandoli-2024-08-06	zandoli	Lucie Scholastique	2024-08-06	2024-08-09	532.50	Confirmé
+BK-mabouya-2024-08-09	mabouya	Nicole &Joël EUSTACHEROOLS	2024-08-09	2024-08-12	320	Confirmé
+BK-zandoli-2024-08-10	zandoli	Pierre Gaillard	2024-08-10	2024-08-26	2248.80	Confirmé
+BK-iguana-2024-08-12	iguana	Antony Tricart	2024-08-12	2024-08-16	678.52	Confirmé
+BK-schoelcher-2024-09-18	schoelcher	Thomas Vincent	2024-09-18	2024-09-20	339.10	Confirmé
+BK-schoelcher-2024-09-24	schoelcher	Tabita Roberts	2024-09-24	2024-09-27	421	Confirmé
+BK-geko-2024-10-11	geko	Coralie DUPARC	2024-10-11	2024-10-12	152	Confirmé
+BK-schoelcher-2024-10-25	schoelcher	Marlyne CRAMER	2024-10-25	2024-10-28	403.45	Confirmé
+BK-mabouya-2024-11-01	mabouya	Elode Tanger	2024-11-01	2024-11-03	190.04	Confirmé
+BK-nogent-2024-11-07	nogent	HENRIMICHEL KADIO YAPO	2024-11-07	2024-11-10	281.61	Confirmé
+BK-mabouya-2024-11-09	mabouya	Cédric LOUISET	2024-11-09	2024-11-11	217.58	Confirmé
+BK-nogent-2024-11-19	nogent	Bruno Segura	2024-11-19	2024-11-21	189.02	Confirmé
+BK-amaryllis-2024-11-21	amaryllis	Wilfried Jefferson Pomponne	2024-11-21	2024-11-28	2574	Confirmé
+BK-nogent-2024-11-22	nogent	Kassi Robinet	2024-11-22	2024-11-25	319.32	Confirmé
+BK-nogent-2024-11-25	nogent	JEAN PAUL BERNEAU	2024-11-25	2024-11-30	369.05	Confirmé
+BK-nogent-2024-12-01	nogent	Marc Beaujard	2024-12-01	2024-12-07	538.80	Confirmé
+BK-schoelcher-2024-12-05	schoelcher	Numa Claudia	2024-12-05	2024-12-07	358	Confirmé
+BK-nogent-2024-12-15	nogent	Mohamed Dhif	2024-12-15	2024-12-21	526.45	Confirmé
+BK-nogent-2024-12-21	nogent	Mohamed Dhif	2024-12-21	2024-12-22	132.44	Confirmé
+BK-amaryllis-2024-12-25	amaryllis	Girdary Élodie	2024-12-25	2024-12-29	2100	Confirmé
+BK-nogent-2024-12-26	nogent	Davini Chinacanen	2024-12-26	2025-01-01	702.25	Confirmé
+BK-schoelcher-2024-12-28	schoelcher	Ladislav Bodnar	2024-12-28	2025-01-18	2540.95	Confirmé
+BK-mabouya-2024-12-31	mabouya	Sohane Telga	2024-12-31	2025-01-02	302	Confirmé
+BK-zandoli-2025-01-01	zandoli	isabelle coeur	2025-01-01	2025-01-12	1932.45	Confirmé
+BK-nogent-2025-01-11	nogent	joao Tandu Baka	2025-01-11	2025-01-12	132.44	Confirmé
+BK-nogent-2025-01-12	nogent	Estelle Vivier	2025-01-12	2025-01-18	569.64	Confirmé
+BK-schoelcher-2025-01-18	schoelcher	Soazig Verré	2025-01-18	2025-01-27	1070.35	Confirmé
+BK-mabouya-2025-01-19	mabouya	Amine Redjimi	2025-01-19	2025-01-21	284	Confirmé
+BK-mabouya-2025-01-23	mabouya	quentin remy	2025-01-23	2025-01-26	425.39	Confirmé
+BK-nogent-2025-01-23	nogent	Enya Quinn	2025-01-23	2025-01-28	454.24	Confirmé
+BK-schoelcher-2025-01-30	schoelcher	COMPAGNON jean-pierre	2025-01-30	2025-02-03	538	Confirmé
+BK-mabouya-2025-02-02	mabouya	Saverio Tevere	2025-02-02	2025-02-05	401	Confirmé
+BK-nogent-2025-02-06	nogent	Sophie DUBOIS	2025-02-06	2025-02-07	132.44	Confirmé
+BK-mabouya-2025-02-06	mabouya	Nicole Karrasch	2025-02-06	2025-02-09	437	Confirmé
+BK-schoelcher-2025-02-06	schoelcher	Igor Andrensek	2025-02-06	2025-02-08	359.80	Confirmé
+BK-nogent-2025-02-07	nogent	Aurore Dupuy	2025-02-07	2025-02-08	132.44	Confirmé
+BK-schoelcher-2025-02-13	schoelcher	Davinia Casas	2025-02-13	2025-02-16	466	Confirmé
+BK-nogent-2025-02-14	nogent	Mehdi Kalem	2025-02-14	2025-02-15	137.58	Confirmé
+BK-mabouya-2025-02-14	mabouya	Maïra Edward	2025-02-14	2025-02-16	320	Confirmé
+BK-nogent-2025-02-15	nogent	Batuhan Kilinc	2025-02-15	2025-02-16	137.58	Confirmé
+BK-schoelcher-2025-02-18	schoelcher	THIERRY REGOLE	2025-02-18	2025-02-24	826	Confirmé
+BK-mabouya-2025-02-23	mabouya	Maryline Probst	2025-02-23	2025-03-07	1418	Confirmé
+BK-schoelcher-2025-02-24	schoelcher	Orzes Serge	2025-02-24	2025-02-27	448	Confirmé
+BK-nogent-2025-02-28	nogent	Lambert Mathys	2025-02-28	2025-03-02	230.16	Confirmé
+BK-schoelcher-2025-03-03	schoelcher	Torben Nøies Goldin	2025-03-03	2025-03-08	754	Confirmé
+BK-nogent-2025-03-04	nogent	FREDERIC MANIN	2025-03-04	2025-03-05	142.16	Confirmé
+BK-schoelcher-2025-03-11	schoelcher	Rejean Binet	2025-03-11	2025-03-20	1070.35	Confirmé
+BK-nogent-2025-03-14	nogent	Deborah Bouaziz	2025-03-14	2025-03-15	132.44	Confirmé
+BK-nogent-2025-03-15	nogent	Martin Prassler	2025-03-15	2025-03-16	142.16	Confirmé
+BK-amaryllis-2025-03-18	amaryllis	REMY TOURNIAIRE	2025-03-18	2025-03-22	1980	Confirmé
+BK-schoelcher-2025-03-20	schoelcher	Stephane OLINDO	2025-03-20	2025-03-27	907.90	Confirmé
+BK-nogent-2025-03-22	nogent	Martin Prassler	2025-03-22	2025-03-23	142.16	Confirmé
+BK-nogent-2025-03-24	nogent	Hevillym Rodrigues	2025-03-24	2025-03-26	219.88	Confirmé
+BK-nogent-2025-03-27	nogent	Yannick Danile	2025-03-27	2025-03-30	294.21	Confirmé
+BK-geko-2025-03-28	geko	Audrey CINCINNATUS	2025-03-28	2025-03-30	428	Confirmé
+BK-nogent-2025-03-30	nogent	Hevillym Rodrigues	2025-03-30	2025-04-01	219.88	Confirmé
+BK-mabouya-2025-04-01	mabouya	Jeanny Marie Claude	2025-04-01	2025-04-03	258.80	Confirmé
+BK-zandoli-2025-04-02	zandoli	Fabien Riverain	2025-04-02	2025-04-16	1708.92	Confirmé
+BK-amaryllis-2025-04-05	amaryllis	Mathieu Sanlaville	2025-04-05	2025-04-18	5549.40	Confirmé
+BK-nogent-2025-04-06	nogent	Diniz Angelica	2025-04-06	2025-04-09	294.21	Confirmé
+BK-nogent-2025-04-11	nogent	Martin Jakob	2025-04-11	2025-04-12	142.16	Confirmé
+BK-nogent-2025-04-12	nogent	thierry megret	2025-04-12	2025-04-15	321.90	Confirmé
+BK-nogent-2025-04-15	nogent	Hevillym Rodrigues	2025-04-15	2025-04-18	294.21	Confirmé
+BK-geko-2025-04-18	geko	Maurice CASTANDET	2025-04-18	2025-04-21	598	Confirmé
+BK-nogent-2025-04-18	nogent	Abdoul Diaby	2025-04-18	2025-04-19	132.44	Confirmé
+BK-mabouya-2025-04-18	mabouya	Timothée Henry	2025-04-18	2025-04-21	404.60	Confirmé
+BK-nogent-2025-04-19	nogent	Paalanne Mika	2025-04-19	2025-04-21	249.04	Confirmé
+BK-nogent-2025-04-22	nogent	Nicole Majeune	2025-04-22	2025-04-25	394.77	Confirmé
+BK-geko-2025-04-22	geko	Nolwenn Maillet	2025-04-22	2025-04-26	744	Confirmé
+BK-nogent-2025-04-25	nogent	PHILIPPE PAQUET	2025-04-25	2025-04-27	219.88	Confirmé
+BK-nogent-2025-05-04	nogent	Lydia Beuerle	2025-05-04	2025-05-09	482.20	Confirmé
+BK-nogent-2025-05-09	nogent	Pierre-Yves Guillaume	2025-05-09	2025-05-12	324.82	Confirmé
+BK-nogent-2025-05-13	nogent	Sourya Sahim	2025-05-13	2025-05-15	219.88	Confirmé
+BK-nogent-2025-05-15	nogent	Sourya Sahim	2025-05-15	2025-05-16	132.44	Confirmé
+BK-nogent-2025-05-16	nogent	VIRELY JEAN CYRILLE	2025-05-16	2025-05-18	239.32	Confirmé
+BK-nogent-2025-05-19	nogent	Guy Gustin	2025-05-19	2025-05-24	438.50	Confirmé
+BK-nogent-2025-05-25	nogent	Sourya Sahim	2025-05-25	2025-05-27	219.88	Confirmé
+BK-nogent-2025-05-27	nogent	derveaux melina	2025-05-27	2025-05-28	132.44	Confirmé
+BK-nogent-2025-05-28	nogent	Abdoul Diaby	2025-05-28	2025-05-29	134.50	Confirmé
+BK-nogent-2025-05-30	nogent	Youn Sangsoon	2025-05-30	2025-06-07	776.42	Confirmé
+BK-nogent-2025-06-08	nogent	Ana Mester	2025-06-08	2025-06-11	324.07	Confirmé
+BK-nogent-2025-06-11	nogent	Ferrari Cristina	2025-06-11	2025-06-16	530.80	Confirmé
+BK-nogent-2025-06-16	nogent	Aron Fabiankovits	2025-06-16	2025-06-21	533.65	Confirmé
+BK-nogent-2025-06-21	nogent	Aurelie JOURAU	2025-06-21	2025-06-22	132.44	Confirmé
+BK-nogent-2025-06-22	nogent	Mariana Bernardino	2025-06-22	2025-06-26	396.80	Confirmé
+BK-nogent-2025-06-26	nogent	Majd Alnawaqil	2025-06-26	2025-06-29	349.05	Confirmé
+BK-nogent-2025-06-29	nogent	Véronique Vigier	2025-06-29	2025-07-02	321.90	Confirmé
+BK-nogent-2025-07-06	nogent	Brian Attia	2025-07-06	2025-07-08	250.74	Confirmé
+BK-nogent-2025-07-15	nogent	Fabrice said	2025-07-15	2025-07-19	456.48	Confirmé
+BK-nogent-2025-07-19	nogent	Abdoul Diaby	2025-07-19	2025-07-20	147.87	Confirmé
+BK-nogent-2025-07-27	nogent	Uta Schröder	2025-07-27	2025-08-01	438.50	Confirmé
+BK-nogent-2025-08-01	nogent	Rajaa DANDOUNI	2025-08-01	2025-08-05	377.28	Confirmé
+BK-nogent-2025-08-06	nogent	Sofia Mezaber	2025-08-06	2025-08-07	147.87	Confirmé
+BK-geko-2025-08-07	geko	Jean christophe Therese	2025-08-07	2025-08-10	540	Confirmé
+BK-nogent-2025-08-09	nogent	Maurice Taieb	2025-08-09	2025-08-10	147.87	Confirmé
+BK-zandoli-2025-08-09	zandoli	Nicolas MONTABORD	2025-08-09	2025-08-11	439	Confirmé
+BK-mabouya-2025-08-10	mabouya	Mérédith Paulin	2025-08-10	2025-08-12	230	Confirmé
+BK-zandoli-2025-08-12	zandoli	laura Boror	2025-08-12	2025-08-17	988	Confirmé
+BK-nogent-2025-08-13	nogent	FIDENCIO PEREZ LAVIN	2025-08-13	2025-08-16	353.61	Confirmé
+BK-mabouya-2025-08-15	mabouya	Andrea jeanbolo	2025-08-15	2025-08-17	248	Confirmé
+BK-amaryllis-2025-08-17	amaryllis	Rémi Ranguin	2025-08-17	2025-08-22	1890	Confirmé
+BK-nogent-2025-08-19	nogent	Alessia Grall	2025-08-19	2025-08-23	456.48	Confirmé
+BK-amaryllis-2025-08-22	amaryllis	Rémi Ranguin	2025-08-22	2025-08-27	1908	Confirmé
+BK-geko-2025-08-24	geko	Annie-claude Arnerin	2025-08-24	2025-08-27	510	Confirmé
+BK-zandoli-2025-08-25	zandoli	Sorayya Samathay	2025-08-25	2025-08-27	430	Confirmé
+BK-nogent-2025-08-27	nogent	Murielle Morisson	2025-08-27	2025-08-30	353.61	Confirmé
+BK-nogent-2025-08-30	nogent	Jelena Zlokolica	2025-08-30	2025-09-03	456.48	Confirmé
+BK-geko-2025-09-05	geko	Libos yasmina	2025-09-05	2025-09-07	384	Confirmé
+BK-zandoli-2025-09-05	zandoli	Jenny Smite	2025-09-05	2025-09-07	394	Confirmé
+BK-nogent-2025-09-06	nogent	Piera Cacioppo	2025-09-06	2025-09-11	482.20	Confirmé
+BK-nogent-2025-09-15	nogent	Ania Hertel	2025-09-15	2025-09-19	433.64	Confirmé
+BK-nogent-2025-09-19	nogent	Giorgio Polese	2025-09-19	2025-09-21	219.88	Confirmé
+BK-nogent-2025-09-21	nogent	Jones Jennifer	2025-09-21	2025-09-26	530.80	Confirmé
+BK-nogent-2025-09-27	nogent	Laurent DUVERNEUIL	2025-09-27	2025-10-02	559.35	Confirmé
+BK-nogent-2025-10-03	nogent	Tim Wightman	2025-10-03	2025-10-06	353.61	Confirmé
+BK-nogent-2025-10-07	nogent	Henry Van Andel	2025-10-07	2025-10-21	1501.22	Confirmé
+BK-zandoli-2025-10-13	zandoli	Mike CIRENCIEN	2025-10-13	2025-10-15	421	Confirmé
+BK-nogent-2025-10-24	nogent	Serge Klein	2025-10-24	2025-10-26	250.74	Confirmé
+BK-nogent-2025-10-27	nogent	Jean-Marc DUFOUR	2025-10-27	2025-11-03	793.16	Confirmé
+BK-zandoli-2025-10-31	zandoli	Marie Hélène Toussay	2025-10-31	2025-11-02	403	Confirmé
+BK-nogent-2025-11-03	nogent	Michelle Hooper	2025-11-03	2025-11-06	365.64	Confirmé
+BK-nogent-2025-11-06	nogent	Dias de Sá Ana Karoline	2025-11-06	2025-11-09	336.48	Confirmé
+BK-schoelcher-2025-11-07	schoelcher	Hoang Marie-Ange TANG	2025-11-07	2025-11-12	587.50	Confirmé
+BK-geko-2025-11-07	geko	Maurice CASTANDET	2025-11-07	2025-11-11	680	Confirmé
+BK-zandoli-2025-11-08	zandoli	Lauriane ZELINE	2025-11-08	2025-11-10	380.50	Confirmé
+BK-nogent-2025-11-14	nogent	Alexis Marie	2025-11-14	2025-11-15	147.87	Confirmé
+BK-zandoli-2025-11-14	zandoli	Lydia Holande	2025-11-14	2025-11-16	430	Confirmé
+BK-nogent-2025-11-18	nogent	Nicolas MUYLLE	2025-11-18	2025-11-21	336.48	Confirmé
+BK-nogent-2025-11-21	nogent	CLAUDE DARNIS	2025-11-21	2025-11-23	250.74	Confirmé
+BK-nogent-2025-11-28	nogent	Catalina Adomnitei	2025-11-28	2025-12-03	559.35	Confirmé
+BK-zandoli-2025-11-28	zandoli	Christelle VILLET	2025-11-28	2025-11-30	394	Confirmé
+BK-geko-2025-11-29	geko	Loïc Lacaille	2025-11-29	2025-12-04	709.90	Confirmé
+BK-nogent-2025-12-03	nogent	AndaMihaela Banuta	2025-12-03	2025-12-08	559.35	Confirmé
+BK-nogent-2025-12-08	nogent	Guy Gustin	2025-12-08	2025-12-14	662.22	Confirmé
+BK-amaryllis-2025-12-13	amaryllis	ANNIE DASSONVAL	2025-12-13	2025-12-25	4614.84	Confirmé
+BK-zandoli-2025-12-14	zandoli	Eden Autin	2025-12-14	2025-12-25	1891.18	Confirmé
+BK-nogent-2025-12-18	nogent	Elina Rosenqvist	2025-12-18	2025-12-23	553.64	Confirmé
+BK-nogent-2025-12-23	nogent	Roger Friderich	2025-12-23	2025-12-27	501.65	Confirmé
+BK-amaryllis-2025-12-25	amaryllis	prisca chiapello	2025-12-25	2026-01-01	3121.20	Confirmé
+BK-nogent-2025-12-27	nogent	Natasha Azza	2025-12-27	2025-12-30	394.76	Confirmé
+BK-nogent-2026-01-01	nogent	Vanessa Merdaci	2026-01-01	2026-01-03	250.74	Confirmé
+BK-nogent-2026-01-07	nogent	Vanessa Merdaci	2026-01-07	2026-01-10	342.19	Confirmé
+BK-schoelcher-2026-01-12	schoelcher	Brigitte Massart	2026-01-12	2026-01-20	993.44	Confirmé
+BK-zandoli-2026-01-16	zandoli	Nordin Sephora	2026-01-16	2026-01-18	426.40	Confirmé
+BK-nogent-2026-01-20	nogent	Manuarii Guilbeaud	2026-01-20	2026-01-26	593.64	Confirmé
+BK-amaryllis-2026-01-22	amaryllis	OLIVIER POINTEAU	2026-01-22	2026-02-05	6264	Confirmé
+BK-zandoli-2026-01-23	zandoli	Solene TAMBUZZO	2026-01-23	2026-02-06	2378.50	Confirmé
+BK-schoelcher-2026-01-23	schoelcher	Andrea Dvorák	2026-01-23	2026-01-27	556	Confirmé
+BK-geko-2026-01-25	geko	Marie Paule CERISERE	2026-01-25	2026-02-02	1376.70	Confirmé
+BK-mabouya-2026-01-26	mabouya	Dion Eric	2026-01-26	2026-02-03	776.75	Confirmé
+BK-schoelcher-2026-01-28	schoelcher	Messaouda Seghirani	2026-01-28	2026-02-02	677.50	Confirmé
+BK-nogent-2026-02-05	nogent	Yann Stempfel	2026-02-05	2026-02-07	267.25	Confirmé
+BK-zandoli-2026-02-07	zandoli	Ablanc Arnaud	2026-02-07	2026-02-11	731.50	Confirmé
+BK-zandoli-2026-02-13	zandoli	Aurélien Bini	2026-02-13	2026-02-19	1082.68	Confirmé
+BK-nogent-2026-02-15	nogent	Myriam Rezgui	2026-02-15	2026-02-18	319.32	Confirmé
+BK-amaryllis-2026-02-15	amaryllis	Ludovic Fillocque	2026-02-15	2026-02-22	3069.90	Confirmé
+BK-nogent-2026-02-19	nogent	Henry Van Andel	2026-02-19	2026-02-25	593.64	Confirmé
+BK-amaryllis-2026-02-24	amaryllis	Sarah Ozimek	2026-02-24	2026-03-04	3497.40	Confirmé
+BK-nogent-2026-03-01	nogent	Liza Meddour	2026-03-01	2026-03-02	136.44	Confirmé
+BK-nogent-2026-03-03	nogent	dominique ressiot	2026-03-03	2026-03-06	353.61	Confirmé
+BK-nogent-2026-03-06	nogent	Alessia Grall	2026-03-06	2026-03-08	239.32	Confirmé
+BK-amaryllis-2026-03-08	amaryllis	david archinard	2026-03-08	2026-03-18	3488.85	Confirmé
+BK-schoelcher-2026-03-13	schoelcher	Steven Naday	2026-03-13	2026-03-23	1173	Confirmé
+BK-amaryllis-2026-03-21	amaryllis	Pierre Blanquart	2026-03-21	2026-03-28	2608.20	Confirmé
+BK-zandoli-2026-03-22	zandoli	Annie Clavet	2026-03-22	2026-03-29	1224.25	Confirmé
+BK-nogent-2026-03-30	nogent	Dominique Mayol	2026-03-30	2026-04-03	410.76	Confirmé
+BK-zandoli-2026-03-31	zandoli	Olaf Nedorn	2026-03-31	2026-04-02	385	Confirmé
+BK-geko-2026-03-31	geko	nicolas klein	2026-03-31	2026-04-03	519	Confirmé
+BK-schoelcher-2026-04-01	schoelcher	Bruno Lebeau	2026-04-01	2026-04-06	677.50	Confirmé
+BK-zandoli-2026-04-02	zandoli	MARIE JOSE REBELO	2026-04-02	2026-04-13	1944.88	Confirmé
+BK-geko-2026-04-03	geko	EMERANCIENNE Sandrine	2026-04-03	2026-04-06	550.50	Confirmé
+BK-amaryllis-2026-04-05	amaryllis	alexandre laguerre	2026-04-05	2026-04-12	2881.80	Confirmé
+BK-schoelcher-2026-04-07	schoelcher	Reynier Gonzalez	2026-04-07	2026-04-12	650.50	Confirmé
+BK-nogent-2026-04-10	nogent	Pierre Desroches	2026-04-10	2026-04-12	285.04	Confirmé
+BK-nogent-2026-04-14	nogent	Lilas Metais	2026-04-14	2026-04-18	507.92	Confirmé
+BK-nogent-2026-05-05	nogent	Alpha Kaba	2026-05-05	2026-05-06	159.30	Confirmé
+BK-geko-2026-05-07	geko	Athanaelle Grimeau	2026-05-07	2026-05-10	519	Confirmé
+BK-nogent-2026-05-08	nogent	Alessia Grall	2026-05-08	2026-05-10	273.60	Confirmé
+BK-nogent-2026-05-25	nogent	Sylvie Carrière	2026-05-25	2026-06-08	1776.69	Confirmé
+BK-zandoli-2026-05-29	zandoli	Pascale Perfait	2026-05-29	2026-06-01	502	Confirmé
+BK-nogent-2026-06-09	nogent	Anne Rossignol	2026-06-09	2026-06-14	610.81	Confirmé
+BK-nogent-2026-06-15	nogent	Ferry Vergeer	2026-06-15	2026-06-19	578.40	Confirmé
+BK-nogent-2026-06-19	nogent	Sorcha Heaslip	2026-06-19	2026-06-24	599.37	Confirmé
+BK-nogent-2026-06-26	nogent	SALZE Bérengère	2026-06-26	2026-06-29	365.05	Confirmé
+BK-nogent-2026-06-29	nogent	jean-paul berneau	2026-06-29	2026-07-03	536.50	Confirmé
+BK-zandoli-2026-08-10	zandoli	NINA GRUBO	2026-08-10	2026-08-15	820.78	Confirmé

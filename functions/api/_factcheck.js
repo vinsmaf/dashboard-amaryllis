@@ -32,15 +32,15 @@ export const FACT_CHECK_RULES = [
   { rx: /eau\s+sal(é|e)e.*(zandoli|g(é|e)ko|mabouya|sch(œ|oe)lcher|nogent|bellevue)/i, reason: "Piscine eau salée uniquement pour Villa Amaryllis et Villa Iguana" },
   { rx: /(zandoli|g(é|e)ko|mabouya|sch(œ|oe)lcher|nogent|bellevue).*eau\s+sal(é|e)e/i, reason: "Piscine eau salée uniquement pour Villa Amaryllis et Villa Iguana" },
   // Jacuzzi : UNIQUEMENT Mabouya (privatif)
-  { rx: /jacuzzi\s+privati(f|ve).*(amaryllis|zandoli|iguana|g(é|e)ko|sch(œ|oe)lcher|nogent|bellevue)/i, reason: "Jacuzzi privatif uniquement pour Studio Mabouya" },
-  { rx: /(amaryllis|zandoli|iguana|g(é|e)ko|sch(œ|oe)lcher|nogent|bellevue).*jacuzzi\s+privati(f|ve)/i, reason: "Jacuzzi privatif uniquement pour Studio Mabouya" },
+  { rx: /jacuzzi\s+privati(f|ve).*(amaryllis|zandoli|iguana|g(é|e)ko|sch(œ|oe)lcher|nogent|bellevue)/i, reason: "Jacuzzi privatif uniquement pour Mabouya" },
+  { rx: /(amaryllis|zandoli|iguana|g(é|e)ko|sch(œ|oe)lcher|nogent|bellevue).*jacuzzi\s+privati(f|ve)/i, reason: "Jacuzzi privatif uniquement pour Mabouya" },
   // Pas de piscine pour Nogent (jardin + terrasse seulement)
   { rx: /nogent.*piscine|piscine.*nogent/i, reason: "Nogent : pas de piscine — jardin et terrasse uniquement" },
   // Pas de piscine pour Bellevue (Schœlcher) — vue panoramique uniquement
   { rx: /bellevue.*piscine|piscine.*bellevue/i, reason: "Bellevue (Schœlcher) : pas de piscine — vue panoramique uniquement" },
   { rx: /sch(œ|oe)lcher.*piscine|piscine.*sch(œ|oe)lcher/i, reason: "Bellevue Schœlcher : pas de piscine — vue panoramique uniquement" },
   // Pas de piscine pour Mabouya (jacuzzi privatif uniquement)
-  { rx: /mabouya.*piscine|piscine.*mabouya/i, reason: "Studio Mabouya : pas de piscine — jacuzzi privatif uniquement" },
+  { rx: /mabouya.*piscine|piscine.*mabouya/i, reason: "Mabouya : pas de piscine — jacuzzi privatif uniquement" },
   // Débordement uniquement Amaryllis
   { rx: /d(é|e)bordement.*(iguana|zandoli|g(é|e)ko|mabouya|sch(œ|oe)lcher|nogent|bellevue)/i, reason: "Piscine à débordement uniquement pour Villa Amaryllis" },
   { rx: /(iguana|zandoli|g(é|e)ko|mabouya|sch(œ|oe)lcher|nogent|bellevue).*d(é|e)bordement/i, reason: "Piscine à débordement uniquement pour Villa Amaryllis" },

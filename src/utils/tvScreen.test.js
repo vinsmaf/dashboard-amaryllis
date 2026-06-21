@@ -37,7 +37,7 @@ describe("wifiQrPayload", () => {
 });
 
 const GUIDE = {
-  property_id: "mabouya", property_name: "Studio Mabouya", tagline: "Cocon pour deux",
+  property_id: "mabouya", property_name: "Mabouya", tagline: "Cocon pour deux",
   welcome_message: "Bienvenue chez vous", host_signature: "Vincent",
   wifi_ssid: "MabouyaNet", wifi_password: "jacuzzi972",
   checkout_time: "10h00", contacts: { whatsapp: "+33610880772" },
@@ -50,7 +50,7 @@ describe("buildSlides", () => {
   });
   it("titre générique sans guest", () => {
     const s = buildSlides(GUIDE, { tv: true, guest: null });
-    expect(s[0].title).toContain("Studio Mabouya");
+    expect(s[0].title).toContain("Mabouya");
   });
   it("titre personnalisé avec guest + dates", () => {
     const s = buildSlides(GUIDE, { tv: true, guest: "Vincent", du: "05-06", au: "12-06" });

@@ -6,7 +6,7 @@ const BIENS = [
   { id: "zandoli",    emoji: "🌴", nom: "Zandoli",          sub: "Sainte-Luce · 5 pers · jardin tropical" },
   { id: "iguana",     emoji: "🌋", nom: "Villa Iguana",     sub: "Sainte-Luce · 6 pers · vue Rocher du Diamant" },
   { id: "geko",       emoji: "🍃", nom: "Géko",             sub: "Sainte-Luce · 4 pers · jardin fleuri" },
-  { id: "mabouya",    emoji: "♨️", nom: "Studio Mabouya",   sub: "Sainte-Luce · 2 pers · jacuzzi privatif" },
+  { id: "mabouya",    emoji: "♨️", nom: "Mabouya",   sub: "Sainte-Luce · 2 pers · jacuzzi privatif" },
   { id: "schoelcher", emoji: "🌅", nom: "Bellevue",         sub: "Schœlcher · 2 pers · vue baie Fort-de-France" },
   { id: "nogent",     emoji: "🌳", nom: "Appt Nogent",      sub: "Nogent-sur-Marne · 2 pers · bord de Marne" },
 ];

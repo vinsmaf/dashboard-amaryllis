@@ -47,7 +47,7 @@ export const EQUIP_RULES_TEXT = `🌊 GÉOGRAPHIE — TOUS LES BIENS MARTINIQUE 
 📚 EXEMPLES À NE PAS REPRODUIRE :
   ❌ "Villa Amaryllis et son jacuzzi"            → Amaryllis = piscine à débordement, pas de jacuzzi
   ❌ "Géko et sa piscine eau salée"              → Géko = cascade, eau classique
-  ❌ "Studio Mabouya et sa piscine"              → Mabouya = jacuzzi uniquement
+  ❌ "Mabouya et sa piscine"              → Mabouya = jacuzzi uniquement
   ❌ "Bellevue et sa piscine"                    → Bellevue n'a aucune piscine
   ❌ "Iguana et sa piscine à débordement"        → débordement = Amaryllis uniquement
   ❌ "Amaryllis a 4 chambres pour 10 personnes" → 3 chambres, 8 personnes max`;

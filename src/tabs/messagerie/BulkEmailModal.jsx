@@ -13,7 +13,7 @@ const BIENS = [
   { id: "amaryllis", label: "Villa Amaryllis" },
   { id: "zandoli",   label: "Zandoli" },
   { id: "geko",      label: "Géko" },
-  { id: "mabouya",   label: "Studio Mabouya" },
+  { id: "mabouya",   label: "Mabouya" },
   { id: "schoelcher", label: "Schœlcher" },
   { id: "nogent",    label: "Nogent" },
 ];
