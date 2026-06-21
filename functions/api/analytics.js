@@ -22,7 +22,7 @@ export async function onRequestGet(context) {
     const token = await getAccessToken(clientEmail, privateKey);
 
     // Exécuter les rapports en parallèle (data-006 : conversions par bien ; data-046 : funnel events)
-    const [overview, pages, countries, sources, devices, bienConversions, funnel, revenue, byBien, byChannel, byChannel7d] = await Promise.all([
+    const [overview, pages, countries, sources, devices, bienConversions, funnel, revenue, byBien, byChannel, byChannel7d, funnelByBien] = await Promise.all([
       runReport(token, propertyId, {
         dimensions:  [{ name: "date" }],
         metrics:     [{ name: "sessions" }, { name: "totalUsers" }, { name: "screenPageViews" }, { name: "bounceRate" }, { name: "averageSessionDuration" }],
@@ -69,8 +69,7 @@ export async function onRequestGet(context) {
         },
         orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
       }),
-      // data-046 : funnel events (view_item → begin_checkout → add_payment_info → purchase) — global (non ventilé bien)
-      // Pas de dimension custom bien_id ici → fonctionne sans déclaration GA4 préalable.
+      // data-046 : funnel complet (view_item → availability_ready → date_selected → begin_checkout → add_payment_info → purchase)
       runReport(token, propertyId, {
         dimensions:  [{ name: "eventName" }],
         metrics:     [{ name: "eventCount" }],
@@ -78,7 +77,7 @@ export async function onRequestGet(context) {
         dimensionFilter: {
           filter: {
             fieldName: "eventName",
-            inListFilter: { values: ["view_item", "begin_checkout", "add_payment_info", "purchase", "generate_lead"] },
+            inListFilter: { values: ["view_item", "availability_ready", "date_selected", "begin_checkout", "add_payment_info", "purchase", "generate_lead"] },
           },
         },
       }),
@@ -113,6 +112,20 @@ export async function onRequestGet(context) {
         orderBys:   [{ metric: { metricName: "sessions" }, desc: true }],
         limit:      12,
       }),
+      // data-funnel-bien : funnel complet × bien_id (disponible ~24h après déploiement events)
+      runReportSafe(token, propertyId, {
+        dimensions:  [{ name: "eventName" }, { name: "customEvent:bien_id" }],
+        metrics:     [{ name: "eventCount" }],
+        dateRanges:  [{ startDate: "30daysAgo", endDate: "today" }],
+        dimensionFilter: {
+          filter: {
+            fieldName: "eventName",
+            inListFilter: { values: ["view_item", "availability_ready", "date_selected", "begin_checkout", "add_payment_info", "purchase"] },
+          },
+        },
+        orderBys: [{ dimension: { dimensionName: "eventName" } }],
+        limit:    200,
+      }),
     ]);
 
     // traf-011 : stale-while-revalidate — sert le cache pendant le refresh background
@@ -129,6 +142,7 @@ export async function onRequestGet(context) {
       byBien:           parseReport(byBien),           // data-049 : résas + revenu / bien
       byChannel:        parseReport(byChannel),        // data-049 : résas + revenu / canal
       byChannel7d:      parseReport(byChannel7d),      // data-pub : canal 7j (perf pub)
+      funnelByBien:     parseReport(funnelByBien),     // data-funnel-bien : funnel × bien_id
     }), {
       headers: {
         "Content-Type": "application/json",

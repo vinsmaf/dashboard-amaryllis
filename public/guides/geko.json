@@ -1,0 +1,389 @@
+{
+  "property_id": "geko",
+  "property_name": "Géko",
+  "emoji": "🦎",
+  "tagline": "Villa vue mer avec piscine · Sainte-Luce, Martinique",
+  "welcome_message": "Bienvenue dans notre cocon Géko !\n\nVous avez choisi l'un de nos logements préférés — la vue depuis la terrasse le matin avec un café est quelque chose d'assez magique.\n\nConseils pour votre séjour : le snorkeling depuis l'Anse Meunier est exceptionnel (vous trouverez les masques dans l'armoire de la buanderie). Et si vous voulez éviter les touristes, les plages du Nord de l'île valent largement le détour.\n\nBon séjour !",
+  "host_signature": "L'équipe Amaryllis",
+  "address": "Résidence Amaryllis, Sainte-Luce, Martinique 97228",
+  "maps_url": "https://maps.google.com/?q=Sainte-Luce+Martinique",
+  "checkin_time": "17h",
+  "checkout_time": "12h",
+  "wifi_ssid": "VillaGeko",
+  "wifi_password": "amaryllis",
+  "code_acces": "",
+  "sections": [
+    {
+      "id": "access",
+      "icon": "🔑",
+      "title": "Accès et arrivée",
+      "type": "steps",
+      "items": [
+        {
+          "label": "Parking",
+          "value": "1 place disponible en bas de la résidence (pas de portail, pas de code)"
+        },
+        {
+          "label": "Clés",
+          "value": "Les clés se trouvent directement sur la porte du logement"
+        },
+        {
+          "label": "Arrivée",
+          "value": "Check-in à partir de 17h. Prévenez-nous de votre heure d'arrivée sur WhatsApp."
+        },
+        {
+          "label": "Piscine",
+          "value": "Terrasse de plain-pied. Douche obligatoire avant de plonger."
+        }
+      ]
+    },
+    {
+      "id": "pool",
+      "icon": "🏊",
+      "title": "Piscine",
+      "type": "info",
+      "items": [
+        {
+          "label": "Horaires",
+          "value": "8h00 – 22h00"
+        },
+        {
+          "label": "Matériel snorkeling",
+          "value": "Masques et tubas dans l'armoire de la buanderie — à votre disposition !"
+        },
+        {
+          "label": "Entretien",
+          "value": "Prestataire le jeudi matin — piscine inutilisable 1h"
+        }
+      ]
+    },
+    {
+      "id": "climate",
+      "icon": "❄️",
+      "title": "Climatisation",
+      "type": "text",
+      "content": "Clim réversible dans le séjour et la chambre. Télécommande sur la table de nuit et le meuble TV. Réglage conseillé : 25°C. Le ventilateur de plafond suffit souvent la nuit avec les fenêtres entrouvertes — l'alizé martiniquais fait le reste."
+    },
+    {
+      "id": "kitchen",
+      "icon": "🍳",
+      "title": "Coin cuisine",
+      "type": "info",
+      "items": [
+        {
+          "label": "Plaque vitrocéramique",
+          "value": "3 feux — récipients standard."
+        },
+        {
+          "label": "Lave-linge",
+          "value": "Dans la buanderie, lessive disponible."
+        },
+        {
+          "label": "Cafetière filtre",
+          "value": "Café en grains + moulin sur le plan de travail."
+        }
+      ]
+    },
+    {
+      "id": "bbq",
+      "icon": "🍖",
+      "title": "Barbecue",
+      "type": "steps",
+      "items": [
+        {
+          "label": "Type",
+          "value": "Barbecue à gaz"
+        },
+        {
+          "label": "Mise en marche",
+          "value": "Appuyez sur le bouton du détendeur pour libérer le gaz avant d'allumer"
+        },
+        {
+          "label": "Après utilisation",
+          "value": "Fermez le robinet de la bouteille de gaz après chaque utilisation"
+        }
+      ]
+    },
+    {
+      "id": "rules",
+      "icon": "🤝",
+      "title": "Règles",
+      "type": "list",
+      "items": [
+        "Silence après 22h",
+        "Non-fumeur à l'intérieur",
+        "Animaux non admis",
+        "Maximum 3 personnes"
+      ]
+    },
+    {
+      "id": "picks",
+      "icon": "⭐",
+      "title": "Mes recommandations",
+      "type": "picks",
+      "items": [
+        {
+          "icon": "🏖",
+          "name": "Anse Meunier",
+          "distance": "5 min à pied",
+          "note": "Snorkeling exceptionnel — poissons tropicaux garantis avec le masque."
+        },
+        {
+          "icon": "🌋",
+          "name": "Montagne Pelée",
+          "distance": "1h30",
+          "note": "La randonnée incontournable de Martinique. Partez tôt le matin pour voir le sommet avant les nuages."
+        },
+        {
+          "icon": "🍽",
+          "name": "Le Petibonum (Le Carbet)",
+          "distance": "50 min",
+          "note": "Table d'exception en bord de mer, cuisine créole gastronomique. Réservation obligatoire."
+        },
+        {
+          "icon": "🏄",
+          "name": "Surf à la Caravelle",
+          "distance": "45 min",
+          "note": "Meilleur spot de surf de l'île — école de surf sur place."
+        }
+      ]
+    },
+    {
+      "id": "transport",
+      "icon": "🚗",
+      "title": "Se déplacer",
+      "type": "text",
+      "content": "La voiture est indispensable. Fort-de-France à 30 min, l'aéroport Aimé Césaire à 25 min. Le Nord de l'île (Montagne Pelée, Saint-Pierre) vaut vraiment le détour mais comptez 1h30 de route."
+    },
+    {
+      "id": "checkout",
+      "icon": "✅",
+      "title": "Checklist de départ",
+      "type": "checklist",
+      "items": [
+        "Éteindre climatisation et lumières",
+        "Fermer fenêtres et volets",
+        "Vider le réfrigérateur",
+        "Ranger le matériel snorkeling dans la buanderie",
+        "Sortir les poubelles dans les bacs résidence",
+        "Laisser draps et serviettes sur le lit",
+        "Fermer la porte à double tour et laisser les clés à l'intérieur"
+      ]
+    },
+    {
+      "id": "bonnes_adresses",
+      "icon": "📍",
+      "title": "Bonnes adresses du quartier",
+      "type": "bonnes_adresses",
+      "data": {
+        "restaurants": [
+          {
+            "nom": "La Maison du Biguine",
+            "cuisine": "Créole traditionnel",
+            "note": "Notre adresse préférée à Sainte-Luce. Carte courte, produits frais, accueil chaleureux."
+          },
+          {
+            "nom": "Le Coin des Pêcheurs",
+            "cuisine": "Créole / Crustacés",
+            "note": "Incontournable. Vue sur mer, langouste grillée, ti' punch maison. Réservez."
+          },
+          {
+            "nom": "Le Routier",
+            "cuisine": "Snack / Créole rapide",
+            "note": "Le casse-croûte des habitants. Budget maîtrisé, saveurs authentiques."
+          },
+          {
+            "nom": "Le Karukera (Rivière-Pilote)",
+            "cuisine": "Créole / Grillades",
+            "note": "À 10 min. Tenu par une famille depuis trois générations. Le cabri massalé est une institution."
+          }
+        ],
+        "epiceries": [
+          {
+            "nom": "Super U Sainte-Luce",
+            "horaires": "Lun–Sam 7h30–20h, Dim 8h–12h",
+            "note": "La plus proche. Rayons antillais complets, fruits frais locaux."
+          },
+          {
+            "nom": "Marché couvert de Sainte-Luce",
+            "horaires": "Ven–Sam 6h–13h",
+            "note": "Épices, légumes pays, jus de canne frais."
+          }
+        ],
+        "plages": [
+          {
+            "nom": "Plage de Sainte-Luce",
+            "description": "La plus accessible depuis la résidence. Eaux calmes et peu profondes."
+          },
+          {
+            "nom": "Anse Figuier",
+            "description": "10 min en voiture. Plus intime. Excellent spot de snorkeling."
+          },
+          {
+            "nom": "Plage du Diamant",
+            "description": "20 min. La plus longue plage de Martinique avec vue sur le Rocher — spectaculaire au coucher du soleil."
+          }
+        ],
+        "activites": [
+          {
+            "nom": "Écomusée de la Martinique",
+            "type": "Culture",
+            "note": "10 min. Entrée accessible."
+          },
+          {
+            "nom": "Plongée sous-marine (Saint-Luce Plongée)",
+            "type": "Nautisme",
+            "note": "Tombants coraliens, tortues, raies. Baptêmes acceptés."
+          },
+          {
+            "nom": "Distillerie La Mauny",
+            "type": "Gastronomie",
+            "note": "20 min à travers les champs de canne. Visite guidée + dégustation."
+          },
+          {
+            "nom": "Randonnée Montagne du Vauclin",
+            "type": "Nature",
+            "note": "30 min de route, 1h de marche. Vue 360° sur l'île. Départ tôt conseillé."
+          }
+        ],
+        "urgences": {
+          "pharmacie": "Pharmacie de Sainte-Luce — Bourg, tél. 0596 62 50 12. Lun–Sam 8h–19h.",
+          "hopital": "Clinique Sainte-Marie — Le Lamentin (30 min), urgences 24h/24 : 0596 57 37 37.",
+          "gendarmerie": "Gendarmerie de Rivière-Pilote — 0596 62 60 05. Urgences : 17."
+        }
+      }
+    }
+  ],
+  "guide_arlet": {
+    "titre": "Grande Anse d'Arlet — les tortues marines",
+    "distance": "25 min de Sainte-Luce",
+    "accroche": "Le spot le plus émouvant de Martinique : nager avec des tortues marines à 2 mètres du bord, sans bouteille, sans guide.",
+    "sections": [
+      {
+        "titre": "Comment y aller",
+        "contenu": "Prenez la N5 direction Le Diamant puis la D7 vers Arlet. Comptez 25 min depuis Sainte-Luce. Parking payant à l'entrée du bourg (2€/h). Arrivez avant 8h pour avoir une place facilement en haute saison."
+      },
+      {
+        "titre": "Trouver les tortues",
+        "contenu": "Entrez dans l'eau côté gauche de la plage, vers la pointe rocheuse. Les tortues sont présentes toute l'année mais quasi-certaines entre 7h et 9h. Restez immobile à la surface, ne les touchez pas, elles remontent respirer toutes les 5-10 min. Un masque et un tuba suffisent (location sur la plage, 5-8€)."
+      },
+      {
+        "titre": "Conseils pratiques",
+        "contenu": "Crème solaire minérale uniquement (les filtres chimiques abîment les coraux). Apportez de l'eau — peu de commerces à l'ouverture. Après la baignade, le village mérite une heure de flânerie : église créole, bœufs sur la plage, restaurant de poisson. Évitez les week-ends de juillet-août, très fréquentés."
+      }
+    ],
+    "infos": {
+      "distance_km": 18,
+      "duree_trajet": "25 min",
+      "parking": "Payant, 2€/h",
+      "meilleur_moment": "7h-9h du matin",
+      "materiel": "Masque + tuba (location 5-8€ sur place)"
+    }
+  },
+  "contacts": [
+    {
+      "label": "Vincent (propriétaire)",
+      "phone": "+33 6 10 88 07 72",
+      "icon": "👤",
+      "note": "WhatsApp de préférence"
+    },
+    {
+      "label": "SAMU",
+      "phone": "15",
+      "icon": "🚑"
+    },
+    {
+      "label": "Police secours",
+      "phone": "17",
+      "icon": "🚓"
+    },
+    {
+      "label": "Pompiers",
+      "phone": "18",
+      "icon": "🚒"
+    },
+    {
+      "label": "Urgences européen",
+      "phone": "112",
+      "icon": "🆘"
+    }
+  ],
+  "faq": [
+    {
+      "q": "Quels sont les horaires d'arrivée et de départ ?",
+      "a": "L'arrivée est possible à partir de 17h00, le départ doit se faire avant 12h00. Si vous avez un vol tôt le matin, vous pouvez laisser vos bagages la veille — prévenez-nous simplement par WhatsApp."
+    },
+    {
+      "q": "Comment accéder à la villa à mon arrivée ?",
+      "a": "L'accès est simple et autonome : le parking est en bas de la résidence (pas de portail), et les clés se trouvent directement sur la porte du logement. Prévenez-nous de votre heure d'arrivée par WhatsApp."
+    },
+    {
+      "q": "La piscine est-elle privée ? Y a-t-il du matériel de snorkeling ?",
+      "a": "Oui, la piscine est privée et accessible de plain-pied depuis la terrasse, de 8h00 à 22h00. Le prestataire passe le jeudi matin (indisponibilité d'environ 1h). En bonus : masques et tubas sont mis à votre disposition dans l'armoire de la buanderie pour le snorkeling en mer."
+    },
+    {
+      "q": "Y a-t-il un barbecue et comment fonctionne-t-il ?",
+      "a": "Oui, un barbecue à gaz est installé sur la terrasse. Avant d'allumer, appuyez sur le bouton du détendeur pour libérer le gaz. Après utilisation, pensez à fermer le robinet de la bouteille de gaz."
+    },
+    {
+      "q": "La climatisation fonctionne-t-elle dans toutes les pièces ?",
+      "a": "La climatisation réversible couvre le séjour et la chambre. Les télécommandes se trouvent sur la table de nuit et le meuble TV. Réglage conseillé : 25°C. Pour les nuits fraîches, le ventilateur de plafond suffit souvent — laissez une fenêtre entreouverte côté jardin pour profiter de l'alizé martiniquais."
+    },
+    {
+      "q": "Comment joindre l'hôte en cas d'urgence ?",
+      "a": "Vincent est joignable par WhatsApp au +33 6 10 88 07 72 — réponse sous 1 heure. Pour les urgences médicales : SAMU 15, pompiers 18 ou 112. La pharmacie de Sainte-Luce (0596 62 50 12) est ouverte du lundi au samedi. Urgences hospitalières : Clinique Sainte-Marie au Lamentin, 0596 57 37 37."
+    }
+  ],
+  "updated_at": "2026-06-19",
+  "extras": [
+    {
+      "id": "late-early",
+      "label": "Départ tardif / arrivée anticipée",
+      "price": 50,
+      "desc": "Selon disponibilité — profitez du logement quelques heures de plus.",
+      "kind": "sur-demande"
+    },
+    {
+      "id": "menage-suppl",
+      "label": "Ménage supplémentaire",
+      "price": 60,
+      "desc": "Un ménage en cours de séjour, à la demande.",
+      "kind": "sur-demande"
+    },
+    {
+      "id": "planteur",
+      "label": "Bouteille de planteur maison",
+      "price": 15,
+      "desc": "Notre planteur de bienvenue maison, à savourer ou emporter.",
+      "kind": "immediat"
+    },
+    {
+      "id": "nespresso",
+      "label": "Étui de capsules Nespresso",
+      "price": 10,
+      "desc": "Un étui de capsules pour votre machine Nespresso.",
+      "kind": "immediat"
+    },
+    {
+      "id": "champagne",
+      "label": "Champagne + fruits frais à l'arrivée",
+      "price": 50,
+      "desc": "Une bouteille de champagne et une coupelle de fruits frais pour fêter votre arrivée.",
+      "kind": "sur-demande"
+    },
+    {
+      "id": "kit-plage",
+      "label": "Kit plage (parasol, glacière, serviettes, jeux)",
+      "price": 20,
+      "desc": "Tout le nécessaire pour une journée à la plage, prêt à l'emploi.",
+      "kind": "sur-demande"
+    },
+    {
+      "id": "kit-bebe",
+      "label": "Kit bébé (lit parapluie + chaise haute)",
+      "price": 20,
+      "desc": "Lit parapluie et chaise haute installés pour la durée de votre séjour.",
+      "kind": "sur-demande"
+    }
+  ]
+}
