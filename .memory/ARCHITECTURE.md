@@ -28,12 +28,18 @@ Conciergerie + site de réservation directe sans commission OTA pour **7 logemen
 
 **Build/deploy (gate) — `scripts/deploy-pages.sh`** (`npm run deploy:pages`) :
 1. Garde anti-cross-deploy : force `PROJECT_NAME=dashboard-amaryllis`, **refuse l'argument `patrimoine-dashboard`**, alerte si cwd ≠ locatif-dashboard.
-2. **Gate tests** vitest (~148 tests) — bloquant (`SKIP_TESTS=1` pour bypass).
-3. **Lint** ESLint delta-baseline — bloque uniquement si AJOUT d'erreurs.
-4. Build : `gen-image-variants` + `photos-manifest` + `vite build` + `scripts/prerender.mjs`.
-5. `wrangler pages deploy dist --project-name dashboard-amaryllis --branch "$DEPLOY_BRANCH"` (`DEPLOY_BRANCH=main` par défaut).
-6. **Smoke test** sur alias frais (home/villa 200, /admin Playwright, bundle JS, sentinelle chunk périmé, sw.js kill-switch, /guide-hub, API get-config/social, sitemap, /mabouya meta) **+ ancrage prod** (villamaryllis.com sert le bundle local) — bloquant.
-7. Post-deploy NON bloquant : `code-review-diff.mjs` (LLM), `audit-invariants.mjs`, `visual-review.mjs`.
+2. **Garde de branche** (ajouté 2026-06-21) : bloque le deploy manuel si la branche courante ≠ `main` (bypass conscient : `ALLOW_BRANCH_DEPLOY=1`).
+3. **Gate tests** vitest (~308 tests) — bloquant (`SKIP_TESTS=1` pour bypass).
+4. **Lint** ESLint delta-baseline — bloque uniquement si AJOUT d'erreurs.
+5. Build : `gen-image-variants` + `photos-manifest` + `vite build` + `scripts/prerender.mjs`.
+6. `wrangler pages deploy dist --project-name dashboard-amaryllis --branch "$DEPLOY_BRANCH"` (`DEPLOY_BRANCH=main` par défaut).
+7. **Smoke test** sur alias frais (home/villa 200, /admin Playwright, bundle JS, sentinelle chunk périmé, sw.js kill-switch, /guide-hub, API get-config/social, sitemap, /mabouya meta) **+ ancrage prod** (villamaryllis.com sert le bundle local) — bloquant.
+8. Post-deploy NON bloquant : `code-review-diff.mjs` (LLM), `audit-invariants.mjs`, `visual-review.mjs`.
+
+**CI GitHub Actions (ajouté 2026-06-21 — sync permanent main = prod) :**
+- **`deploy.yml`** : push code sur `main` (paths `src/**`, `functions/**`, `public/**`, `workers/**`, `scripts/**`, `index.html`, `package*.json`) → tests + build + functions build + `wrangler pages deploy` (+ Worker si `workers/` changé) + smoke `/` et `/amaryllis`. Secrets requis : `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`.
+- **`drift-detector.yml`** : cron toutes les 6h → compare commit déployé (API CF) vs HEAD `main` → ntfy prio 4 (retard) ou 5 (hors-main). Secret requis : `NTFY_TOPIC`. Ne déploie rien.
+- **`ci.yml`** : tests + build + prerender + functions build sur les PR uniquement (push retiré → géré par `deploy.yml`).
 
 > 🚨 **PROD vs PREVIEW — branche de déploiement (corrigé 2026-06-20).** `wrangler pages deploy` SANS `--branch` prend la **branche git courante** : depuis un **worktree** (`claude/*`), il déploie en **PREVIEW de branche** (`<branche>.dashboard-amaryllis.pages.dev`), **jamais villamaryllis.com**. Le smoke testait l'alias du déploiement → passait en preview = villamaryllis.com restait sur l'ancienne version sans alerte (vécu plusieurs fois). `deploy-pages.sh` force désormais `DEPLOY_BRANCH=main` + un check « ancrage prod » qui FAIL si villamaryllis.com ne sert pas le bundle qu'on vient de builder. `npm run deploy:pages` = TOUJOURS la prod ; preview délibéré = `DEPLOY_BRANCH=x npm run deploy:pages`.
 > ⚠️ **Cross-deploy interdit (règle absolue n°4).** Locatif → `npm run deploy:pages` (cible `dashboard-amaryllis`). Pousser un build locatif sur `patrimoine-dashboard` l'écrase. Worker : `npx wrangler deploy`. Apps Script : `clasp push -f` puis redéployer sur le MÊME deployment id `AKfycbw-t5kd…` (= `APPS_SCRIPT_URL`).
@@ -321,7 +327,7 @@ flowchart TD
 | **Contenu / éditorial** | `editorial_calendar`, `editorial_photos`, `property_guides`, `social_bot_log` |
 | **Monitoring proactif** | `suggestion_acks` (feedback loop sentinel : id PK slug+date, status done/ignore/later, acked_at MTQ), `seasonal_memory` (PK bien×mois×année : avg_occupancy, avg_revpar_cents, snapshot_count) |
 | **CRM / leads / feedback** | `contacts`, `crm_clients` (fiches voyageur, ≠ leads), `voyageur_feedback`, `whatsapp_conversations` |
-| **Infra / observabilité** | `rate_limits_v2`, `client_errors`, `short_links`, `beds24_tokens`, `inventory_items`, `inventory_movements`, `emails_log` |
+| **Infra / observabilité** | `rate_limits_v2`, `client_errors`, `short_links`, `beds24_tokens`, `inventory_items`, `inventory_movements`, `emails_log`, `llm_traces` (coût/latence/erreur par appel LLM — créée à la volée par `_llm.js` `logLLMTrace`, lue par `agents-stats.js` `llm_traces_7j` + `llm_cost_daily`) |
 
 > ⚠️ Une SEULE base D1 héberge tous les domaines (pas de séparation). DDL éparpillé : `db/migrations/001` + `migrations/0001-0002` + dizaines de `CREATE TABLE IF NOT EXISTS` inline. Schéma réel = union de tout ça.
 > ⚠️ **Drift v1/v2 `agent_actions`** : `agents-actions.js` contient un `MIGRATE_DDL` qui crée `agent_actions_v2` (sans le CHECK constraint sur `status`, pour supporter `'a-planifier'`), y copie les lignes (`INSERT OR IGNORE … SELECT * FROM agent_actions`), **DROP `agent_actions`**, puis `ALTER … RENAME TO agent_actions`. C'est un **pattern rebuild-to-drop-constraint** : `agent_actions_v2` n'est qu'une **table de migration transitoire**, le nom final qui **fait foi reste `agent_actions`** (9 réfs `functions/` vs 1 seule pour le `_v2` = le bloc de migration lui-même).
@@ -382,7 +388,7 @@ flowchart TD
 7. **Caution = carte uniquement** (jamais Stripe Link) dans `create-deposit-intent` + `caution-checkout`. Hold Stripe ~7j (compte blended) → caution glissante. Caution soft-fail ne bloque jamais le séjour payé.
 8. **Apps Script POST = body perdu** au redirect → toujours `/api/sheets-proxy` en GET chunked. Beds24 = Nogent UNIQUEMENT (158192) ; jamais de résa Beds24 pour la Martinique.
 9. **CSP** — tout domaine tracking/tiers DOIT être dans `public/_headers`. Meta `seoTitle` ≤60c, `seoDesc` ≤158c.
-10. **CF Pages = upload direct** (pas git-connecté) ; ne jamais déduire la prod de `origin/main`.
+10. **CF Pages = upload direct** (pas git-connecté) ; ne jamais déduire la prod de `origin/main`. **Depuis 2026-06-21 : `deploy.yml` CI connecte main → prod automatiquement** (push code sur main → deploy). Le détecteur de drift alerte si ça diverge.
 11. **Cross-deploy interdit** — `deploy-pages.sh` refuse `patrimoine-dashboard`. Ne jamais cross-déployer un artefact.
 12. **RM advisory only** — aucun prix RM ne sort vers le voyageur ; `rm_published_rates` est une table morte. Prix réel = `seedPrices.js` + Beds24.
 13. **Routing sans react-router** — full reload à chaque nav ; nouvelle route à ajouter à `main.jsx` + `prerender.mjs ROUTES` + sitemap. `guidesPoiSlugs.js` à garder synchro avec `guidesPoi.js`.

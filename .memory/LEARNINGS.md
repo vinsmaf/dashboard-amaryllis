@@ -434,3 +434,10 @@
 - **Cache `public` sur réponse avec PII = faille** — `Cache-Control: public, s-maxage=300` sur `beds24-bookings` permettait à Cloudflare CDN de mettre en cache email/téléphone d'un voyageur et de le servir à un autre. Toute réponse personnalisée (auth requise, données user) doit être `private`.
 - **Dual-gate serveur-à-serveur** — quand un endpoint a deux appelants légitimes (admin humain via Bearer + script interne via secret), utiliser `secret === env.SECRET || verifyBearer(ok)` plutôt que choisir l'un ou l'autre. Voir `social.js onRequestPost`.
 - **Vérifier avant de proposer un chantier média** — j'ai proposé d'ajouter `fetchPriority="high"` sur les heroes (Chantier C) sans vérifier le code : c'était déjà en place pour tous les biens depuis la session précédente. Toujours `grep -n "fetchPriority"` avant de le mettre au plan.
+
+## 2026-06-21 — Sync main = prod
+
+- **La prochaine fois : un deploy manuel depuis une branche ≠ main = drift silencieux assuré.** `wrangler pages deploy` ne sait pas quelle branche est "prod" — il envoie ce qu'il a. La garde dans `deploy-pages.sh` + la CI sont les seuls garde-fous.
+- **CI smoke test : ne jamais tester un endpoint qui dépend d'un secret externe** (OpenWeatherMap) sur l'alias preview CF Pages. Les secrets CF Pages ne s'appliquent qu'à l'env `production`. Tester uniquement les routes statiques React (/ et /amaryllis) dans la CI ; les APIs avec clés externes = test depuis prod directement (curl post-deploy manuel si nécessaire).
+- **Token API Cloudflare pour CI** : doit avoir les 2 permissions `Cloudflare Pages: Edit` + `Workers Scripts: Edit`. Le token existant `amaryllis` (Workers AI + Account Settings) est insuffisant pour déployer.
+- **Git push origin main déclenche la CI** — mais origin/main était ~100 commits en retard depuis des mois. Penser à pusher régulièrement pour ne pas accumuler ce delta.

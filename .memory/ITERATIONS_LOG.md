@@ -93,3 +93,11 @@
 - **2026-06-05 (suite)** — Emails Worker (RESEND_FROM) · fix chunk admin · « mots interdits agents ».
 - **2026-06-05** — Sync iCal fiabilisée · prix source unique · Google Ads C1 · Meta Pixel aligné.
 - **2026-06-04** — Grosse journée : tracking purchase · TV Phases 1-3 · SEO hors-page · Analytics · Google Ads LIVE · système mémoire `.memory/` (ADR-S-001→006) · audit gouvernance.
+
+## 2026-06-21 — Session sync permanent main = prod + couche monitoring live
+
+**Quoi :** Résolution du drift prod (monitoring layer absent 3 jours). Réconciliation merge Reels→main (10 conflits). 3 garde-fous CI déployés. LLM observabilité. Secrets GitHub posés. 1er run CI.
+
+**Pourquoi :** morning-brief/kpi-sentinel/ack-suggestion répondaient HTML au lieu de JSON en prod → la couche monitoring était inexistante. Cause racine : deploy manuel depuis le worktree `claude/sad-bartik-02a3c2` jamais mergé dans main.
+
+**Commits clés :** `bf9851c` (llm traces + llms.txt) · `33df642` (merge Reels→main) · `9d8661c` (CI deploy + drift detector + garde branche) · `b04a8ec` (imageVariants) + fix smoke test CI (à committer)

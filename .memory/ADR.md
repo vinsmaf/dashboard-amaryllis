@@ -520,3 +520,11 @@
 3. **Conséquences attendues** : widget météo `/explorer` et cartes Leaflet fonctionnent sans erreur CSP dans la console. Aucun impact fonctionnel négatif.
 4. **Périmètre** : `public/_headers` (1 ligne modifiée). Commit : `89f3f03`.
 5. **Statut** : **acté & déployé**. Vérifié live curl — les deux entrées présentes dans le header servi.
+
+## ADR-SYNC-001 · 2026-06-21 · Sync permanent main = prod (CI + détecteur de drift + garde branche)
+
+1. **Choix** : 3 garde-fous empilés pour garantir que villamaryllis.com tourne TOUJOURS sur le HEAD de `main` : (A) `deploy.yml` CI — push code sur `main` → tests + build + deploy automatique (path-filter : src/functions/public/workers/scripts) ; (B) `drift-detector.yml` — cron toutes les 6h, compare commit déployé (API CF) vs `main`, ntfy prio 4/5 si divergence ; (C) garde de branche dans `deploy-pages.sh` — deploy manuel bloqué si branche ≠ `main` (bypass conscient `ALLOW_BRANCH_DEPLOY=1`).
+2. **Alternatives refusées** : CI seule sans détecteur (invisible si la CI plante sans alerte) ; git-connect CF Pages natif (pas disponible sur le plan, upload wrangler reste le seul chemin) ; garde branche seule (ne couvre pas les push d'urgence ou les worktrees).
+3. **Conséquences attendues** : le drift du 2026-06-21 (monitoring layer absent en prod 3 jours après merge dans main) ne peut plus se reproduire. Tout futur merge code sur main → déploiement auto en ≤5 min. Si la CI plante → alerte ntfy dans les 6h.
+4. **Périmètre** : `.github/workflows/deploy.yml` · `.github/workflows/drift-detector.yml` · `.github/workflows/ci.yml` (push retiré) · `scripts/deploy-pages.sh` (garde branche L15-30). Secrets GitHub créés : `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `NTFY_TOPIC`. Commits : `9d8661c` + `b04a8ec` (imageVariants).
+5. **Statut** : **acté & actif**. Premier run CI `27903572148` : deploy réussi, smoke test KO (faux-positif `/api/weather` sur alias preview sans OPENWEATHERMAP_API_KEY). Corrigé → `deploy.yml` smoke test ne teste plus que `/` et `/amaryllis`.

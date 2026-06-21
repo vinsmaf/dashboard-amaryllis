@@ -93,7 +93,8 @@ jobs:
           if [[ -z "$URL" ]]; then URL="https://villamaryllis.com"; fi
           echo "Smoke sur $URL"
           FAIL=0
-          for path in "/" "/amaryllis" "/api/weather?loc=martinique"; do
+          # /api/weather exclu : dépend de OPENWEATHERMAP_API_KEY absent sur l'alias preview
+          for path in "/" "/amaryllis"; do
             CODE=$(curl -s -o /dev/null -w '%{http_code}' "$URL$path" || echo "000")
             echo "  $path → $CODE"
             [[ "$CODE" == "200" ]] || FAIL=1
