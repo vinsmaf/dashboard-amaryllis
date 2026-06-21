@@ -45,8 +45,8 @@ export async function onRequestPost({ request, env }) {
   const variante = body.variante || "";
 
   const bienName = BIEN_NAMES[bienId] || bienId;
-  const origin   = new URL(request.url).origin;
-  const secretQ  = env.POSTSTAY_SECRET ? `?secret=${encodeURIComponent(env.POSTSTAY_SECRET)}` : "";
+  const anthropicKey = env.ANTHROPIC_API_KEY;
+  if (!anthropicKey) return json({ error: "ANTHROPIC_API_KEY manquante" }, 503);
 
   // 1. Caption LLM ─────────────────────────────────────────────────────────
   const captionPrompt = `Tu es le community manager d'Amaryllis Locations (conciergerie Martinique). Rédige un caption Instagram Reel pour "${bienName}", thème "${theme}"${variante ? `, angle "${variante}"` : ""}.
@@ -63,13 +63,22 @@ INTERDIT (biens sur les hauteurs) : vagues, clapotis, plage privée, pieds dans 
 
 Retourne UNIQUEMENT le caption brut.`;
 
-  const aiRes = await fetch(`${origin}/api/ai-summary`, {
+  const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt: captionPrompt, maxTokens: 600 }),
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": anthropicKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: "claude-haiku-4-5",
+      max_tokens: 600,
+      messages: [{ role: "user", content: captionPrompt }],
+    }),
   });
   const aiData = await aiRes.json().catch(() => ({}));
-  const caption = (aiData.summary || aiData.text || "").trim();
+  if (!aiRes.ok) return json({ error: `Anthropic ${aiRes.status}: ${aiData.error?.message || "erreur"}` }, 502);
+  const caption = (aiData.content?.[0]?.text || "").trim();
   if (!caption) return json({ error: "LLM caption vide" }, 500);
 
   // 2. Plan déterministe ───────────────────────────────────────────────────
@@ -106,14 +115,14 @@ Retourne UNIQUEMENT le caption brut.`;
 CAPTION : """${caption}"""
 Critères : hook stop-scroll(20) · immersion(25) · CTA(15) · hashtags(20) · voix "vous"(10) · pas d'erreurs factuelles(10).
 Retourne UNIQUEMENT : {"score":0-100,"verdict":"approve"|"reject","reason":"1 phrase"}`;
-    const jRes  = await fetch(`${origin}/api/ai-summary`, {
+    const jRes  = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: judgePrompt, maxTokens: 120 }),
+      headers: { "Content-Type": "application/json", "x-api-key": anthropicKey, "anthropic-version": "2023-06-01" },
+      body: JSON.stringify({ model: "claude-haiku-4-5", max_tokens: 120, messages: [{ role: "user", content: judgePrompt }] }),
     });
     const jData = await jRes.json().catch(() => ({}));
     let judge   = {};
-    try { judge = JSON.parse((jData.summary || jData.text || "{}").match(/\{[\s\S]*\}/)?.[0] || "{}"); } catch {}
+    try { judge = JSON.parse((jData.content?.[0]?.text || "{}").match(/\{[\s\S]*\}/)?.[0] || "{}"); } catch (e) { void e; }
     score   = Math.min(100, Math.max(0, Number(judge.score) || 0));
     verdict = judge.verdict || "reject";
     reason  = judge.reason  || "";
@@ -130,7 +139,7 @@ Retourne UNIQUEMENT : {"score":0-100,"verdict":"approve"|"reject","reason":"1 ph
       await db.prepare("UPDATE agent_drafts SET status='approved', approved_at=?, updated_at=? WHERE id=?")
         .bind(now, now, draftId).run();
     }
-  } catch {}
+  } catch (e) { void e; }
 
   return json({ ok: true, id: draftId, score, verdict, reason, bienId, theme });
 }
