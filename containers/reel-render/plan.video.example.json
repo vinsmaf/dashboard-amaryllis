@@ -1,0 +1,16 @@
+{
+  "bienId": "amaryllis",
+  "title": "Villa Amaryllis · Sainte-Luce",
+  "fps": 30,
+  "width": 1080,
+  "height": 1920,
+  "transition": "fade",
+  "transitionDuration": 0.5,
+  "clips": [
+    { "type": "video", "src": "/Users/vincentsalomon/Downloads/175E9819-151C-4DB7-9E4B-51CF9E8080A7.MP4", "trim": { "start": 5,  "duration": 5 } },
+    { "type": "video", "src": "/Users/vincentsalomon/Downloads/175E9819-151C-4DB7-9E4B-51CF9E8080A7.MP4", "trim": { "start": 50, "duration": 5 } },
+    { "type": "video", "src": "/Users/vincentsalomon/Downloads/175E9819-151C-4DB7-9E4B-51CF9E8080A7.MP4", "trim": { "start": 100, "duration": 5 } },
+    { "type": "video", "src": "/Users/vincentsalomon/Downloads/175E9819-151C-4DB7-9E4B-51CF9E8080A7.MP4", "trim": { "start": 150, "duration": 5 } }
+  ],
+  "audio": null
+}

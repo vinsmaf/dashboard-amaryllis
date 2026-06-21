@@ -19,7 +19,8 @@
     "funnel": "node scripts/funnel.mjs",
     "deploy:script": "clasp push --force",
     "deploy:worker": "wrangler deploy",
-    "deploy:pages": "bash scripts/deploy-pages.sh"
+    "deploy:pages": "bash scripts/deploy-pages.sh",
+    "reel:video": "node scripts/reel-video-upload.mjs"
   },
   "dependencies": {
     "@sentry/react": "^10.53.1",

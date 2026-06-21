@@ -1,0 +1,17 @@
+{
+  "bienId": "amaryllis",
+  "title": "Villa Amaryllis · Sainte-Luce",
+  "fps": 30,
+  "width": 1080,
+  "height": 1920,
+  "transition": "fade",
+  "transitionDuration": 0.5,
+  "clips": [
+    { "src": "01.webp", "duration": 3, "kenburns": "in" },
+    { "src": "03.webp", "duration": 3, "kenburns": "out" },
+    { "src": "05.webp", "duration": 3, "kenburns": "left" },
+    { "src": "07.webp", "duration": 3, "kenburns": "in" },
+    { "src": "09.webp", "duration": 3, "kenburns": "right" }
+  ],
+  "audio": "tropical-01.mp3"
+}

@@ -31,7 +31,7 @@ const BIEN_EXTRA = {
     amenities: ["Jacuzzi privatif", "Vue mer", "Jardin fleuri", "Terrasse privée"],
   },
   schoelcher: {
-    desc: "Appartement de standing au dernier étage avec vue panoramique sur la mer des Caraïbes et la baie de Fort-de-France depuis Schœlcher. Brise marine, calme, à 5 min des plages. Dès 100€/nuit.",
+    desc: "Appartement de standing au dernier étage avec vue panoramique sur la mer des Caraïbes et la baie de Fort-de-France depuis Schœlcher. Brise marine, calme, à 5 min des plages. Dès 90€/nuit.",
     amenities: ["Vue panoramique mer", "Dernier étage", "Résidence sécurisée", "Parking"],
   },
   nogent: {
@@ -108,7 +108,7 @@ const GUIDE_SAINTE_ANNE = {
 
 const GUIDE_EN = {
   title: "Villa Rental Martinique — Book Direct, No Airbnb Fees",
-  desc: "Rent a luxury villa in Martinique with private pool and ocean view. Direct booking, no service fees. Sainte-Luce, Schœlcher. From €85/night.",
+  desc: "Rent a luxury villa in Martinique with private pool and ocean view. Direct booking, no service fees. Sainte-Luce, Schœlcher. From €70/night.",
   image: `${BASE}/photos/amaryllis/02.webp`,
   url: `${BASE}/villa-rental-martinique`,
 };
@@ -235,7 +235,7 @@ const GUIDE_META = {
   },
   "reservation-directe-martinique": {
     title: "Réservation directe Martinique — Sans frais | Amaryllis",
-    desc: "Réservez vos villas en Martinique en direct, sans frais Airbnb ni Booking : −15% en moyenne, contact hôte, paiement Stripe sécurisé. Dès 85€/nuit.",
+    desc: "Réservez vos villas en Martinique en direct, sans frais Airbnb ni Booking : −15% en moyenne, contact hôte, paiement Stripe sécurisé. Dès 70€/nuit.",
     faq: [
       { q: "Pourquoi réserver en direct plutôt que par Airbnb ou Booking ?", a: "La réservation directe supprime les frais de service des plateformes (jusqu'à −15% en moyenne), avec un contact direct avec l'hôte et les mêmes garanties." },
       { q: "Le paiement en direct est-il sécurisé ?", a: "Oui, les paiements sont traités par Stripe, plateforme de paiement sécurisée. Une caution peut être demandée par pré-autorisation." },
@@ -290,7 +290,7 @@ function heroPreloadTag(slug) {
     `imagesizes="(max-width: 768px) 100vw, (max-width: 1200px) 72vw, 900px" />`;
 }
 
-function injectMeta(html, { title, desc, url, image, imageAlt, slug }, ldJson) {
+function injectMeta(html, { title, desc, url, image, imageAlt, slug, hreflang }, ldJson) {
   // Remplace le preload hero statique (amaryllis en dur dans index.html) par le bon slug.
   // Si aucun preload existant, on l'insère avant </head>.
   const preload = slug ? heroPreloadTag(slug) : "";
@@ -312,6 +312,11 @@ function injectMeta(html, { title, desc, url, image, imageAlt, slug }, ldJson) {
   // Si pas de preload statique à remplacer (guides etc.), injecter avant </head>
   if (preload && !html.includes('rel="preload" as="image"')) {
     result = result.replace("</head>", `${preload}\n</head>`);
+  }
+  // Hreflang : injecter avant </head> (supprime les éventuelles balises existantes d'abord)
+  if (hreflang) {
+    result = result.replace(/<link rel="alternate" hreflang=[^>]+>\n?/g, "");
+    result = result.replace("</head>", `${hreflang}\n</head>`);
   }
   return result;
 }
@@ -362,37 +367,63 @@ export async function onRequest(context) {
       }
     } catch { /* fallback valeurs codées */ }
 
-    const ldJson = JSON.stringify({
-      "@context": "https://schema.org",
-      "@type": "LodgingBusiness",
-      "@id": url,
-      "name": bien.nom,
-      "url": url,
-      "description": extra.desc,
-      "image": image,
-      "priceRange": `À partir de ${bien.prix}€/nuit`,
-      "aggregateRating": {
-        "@type": "AggregateRating",
-        "ratingValue": ratingValue,
-        "reviewCount": reviewCount,
-        "bestRating": "5",
+    const isMarti = isMartinique(bien);
+    const ldJson = JSON.stringify([
+      {
+        "@context": "https://schema.org",
+        "@type": "VacationRental",
+        "@id": url,
+        "name": bien.nom,
+        "url": url,
+        "description": extra.desc,
+        "image": (bien.photos || [`/photos/${slug}/01.webp`]).slice(0, 4).map(p => ({
+          "@type": "ImageObject",
+          "url": `${BASE}${p}`,
+        })),
+        ...(bien.bookable !== false ? { "priceRange": `À partir de ${bien.prix}€/nuit` } : {}),
+        "checkinTime": isMarti ? "T17:00" : "T15:00",
+        "checkoutTime": isMarti ? "T12:00" : "T11:00",
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": ratingValue,
+          "reviewCount": reviewCount,
+          "bestRating": "5",
+        },
+        ...(reviewLd.length ? { "review": reviewLd } : {}),
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": lieuFull.split(",")[0]?.trim(),
+          "addressRegion": isMarti ? "Martinique" : "Île-de-France",
+          "addressCountry": isMarti ? "MQ" : "FR",
+        },
+        "amenityFeature": extra.amenities.map(a => ({
+          "@type": "LocationFeatureSpecification",
+          "name": a,
+        })),
+        "provider": { "@id": `${BASE}/#organization` },
       },
-      ...(reviewLd.length ? { "review": reviewLd } : {}),
-      "address": {
-        "@type": "PostalAddress",
-        "addressLocality": lieuFull.split(",")[0]?.trim(),
-        "addressRegion": lieuFull.includes("Martinique") ? "Martinique" : "Île-de-France",
-        "addressCountry": "FR",
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Amaryllis Locations", "item": BASE },
+          { "@type": "ListItem", "position": 2, "name": bien.nom, "item": url },
+        ],
       },
-      "amenityFeature": extra.amenities.map(a => ({
-        "@type": "LocationFeatureSpecification",
-        "name": a,
-      })),
-      "provider": { "@id": `${BASE}/#organization` },
-    });
+    ]);
 
-    const imageAlt = `${bien.nom} — ${isMartinique(bien) ? bien.lieu + ", Martinique" : bien.lieu}`;
-    const meta = { ...buildMeta(title, desc, url, image), slug, imageAlt };
+    const imageAlt = `${bien.nom} — ${isMarti ? bien.lieu + ", Martinique" : bien.lieu}`;
+    const hreflang = isMarti
+      ? [
+          `<link rel="alternate" hreflang="fr" href="${url}" />`,
+          `<link rel="alternate" hreflang="en" href="${BASE}/villa-rental-martinique" />`,
+          `<link rel="alternate" hreflang="x-default" href="${url}" />`,
+        ].join("\n")
+      : [
+          `<link rel="alternate" hreflang="fr" href="${url}" />`,
+          `<link rel="alternate" hreflang="x-default" href="${url}" />`,
+        ].join("\n");
+    const meta = { ...buildMeta(title, desc, url, image), slug, imageAlt, hreflang };
 
     // Fetch the base index.html via the next handler (static serving)
     const resp = await context.next();
@@ -490,7 +521,12 @@ export async function onRequest(context) {
       "author": { "@id": `${BASE}/#organization` },
       "publisher": { "@id": `${BASE}/#organization` },
     });
-    const meta = buildMeta(g.title, g.desc, g.url, g.image);
+    const hreflang = [
+      `<link rel="alternate" hreflang="en" href="${BASE}/villa-rental-martinique" />`,
+      `<link rel="alternate" hreflang="fr" href="${BASE}/" />`,
+      `<link rel="alternate" hreflang="x-default" href="${BASE}/" />`,
+    ].join("\n");
+    const meta = { ...buildMeta(g.title, g.desc, g.url, g.image), hreflang };
     const resp = await context.next();
     const html = await resp.text();
     return new Response(injectMeta(html, meta, ldJson), {

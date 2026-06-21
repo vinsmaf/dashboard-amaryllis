@@ -174,14 +174,8 @@ const GOLD   = "var(--c-gold)";   // star ratings, accents
 
 // ── CSS Animations ────────────────────────────────────────────────
 if (typeof document !== "undefined" && !document.getElementById("__site_styles")) {
-  // Google Fonts — Jost (display) + Cormorant Garamond (serif/italic)
-  if (!document.getElementById("__site_fonts")) {
-    const link = document.createElement("link");
-    link.id = "__site_fonts";
-    link.rel = "stylesheet";
-    link.href = "https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,200;0,300;0,400;0,700;1,300&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&display=swap";
-    document.head.appendChild(link);
-  }
+  // Google Fonts chargées en superset dans index.html via <link rel="stylesheet">
+  // — injection dynamique supprimée (évite une double requête fonts.googleapis.com).
   const s = document.createElement("style");
   s.id = "__site_styles";
   s.textContent = `
@@ -8612,7 +8606,9 @@ export default function PublicSite() {
         item_list_id: "villas",
         items: [{ item_id: bien.id, item_name: bien.nom, item_category: bien.lieu?.split(",")[0]?.trim() || "Martinique", price: bien.prix || 0, currency: "EUR" }],
       });
-      mpTrack("ViewContent", { content_ids: [bien.id], content_name: bien.nom, content_type: "product", value: bien.prix || 0, currency: "EUR" });
+      const _vcP = { content_ids: [bien.id], content_name: bien.nom, content_type: "product", value: bien.prix || 0, currency: "EUR" };
+      mpTrack("ViewContent", _vcP);
+      window.addEventListener("meta-pixel-ready", () => mpTrack("ViewContent", _vcP), { once: true });
 
       if (!BOOKING_DISABLED.has(bien.id)) fetchAvailability(bien.id);
     } else {
@@ -8751,6 +8747,13 @@ export default function PublicSite() {
             }],
           });
         }
+        // Meta Pixel ViewContent — fires immediately if pixel is loaded (returning visitor),
+        // or deferred via meta-pixel-ready for new visitors who consent after page load.
+        const vcParams = { content_ids: [match.id], content_name: match.nom, content_type: "product", value: withPrice.prix || 0, currency: "EUR" };
+        mpTrack("ViewContent", vcParams);
+        const onPixelReady = () => mpTrack("ViewContent", vcParams);
+        window.addEventListener("meta-pixel-ready", onPixelReady, { once: true });
+
         if (!BOOKING_DISABLED.has(match.id) && !directBienFetchedRef.current) {
           directBienFetchedRef.current = true;
           fetchAvailability(match.id);

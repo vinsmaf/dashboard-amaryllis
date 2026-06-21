@@ -191,6 +191,113 @@ async function handlePublish(env, { caption, imageUrl, channels = ["ig", "fb"], 
   return json({ results, ok: hasSuccess }, hasSuccess ? 200 : 422);
 }
 
+// ── Publication d'un Reel Instagram via Graph API ──────────────────────────────
+// Flux REELS (différent de l'image) : container media_type=REELS + video_url
+// → polling status_code (l'encodage vidéo côté Meta est asynchrone) → media_publish.
+// `dryRun` s'arrête à FINISHED sans publier (validation du tuyau sans poster).
+// Facebook Reels = flux distinct (video_reels), traité dans une phase ultérieure.
+async function pollContainer(containerId, token, { maxTries = 5, intervalMs = 4000 } = {}) {
+  for (let i = 0; i < maxTries; i++) {
+    const s = await graphGet(`${containerId}?fields=status_code,status`, token);
+    const code = s?.status_code;
+    if (code === "FINISHED") return { ready: true, status: s };
+    if (code === "ERROR" || code === "EXPIRED") return { ready: false, error: s?.status || code, status: s };
+    await new Promise(r => setTimeout(r, intervalMs));
+  }
+  return { ready: false, timeout: true };
+}
+
+// Publie un container déjà encodé par Meta (pour reprendre après un timeout de polling)
+async function handlePublishContainer(env, { containerId, igAccountId }) {
+  const token = env.META_PAGE_TOKEN;
+  const igId  = igAccountId || env.META_IG_ACCOUNT_ID;
+  if (!token) return json({ error: "META_PAGE_TOKEN manquant" }, 500);
+  if (!containerId) return json({ error: "containerId requis" }, 400);
+  if (!igId) return json({ error: "META_IG_ACCOUNT_ID manquant" }, 500);
+
+  // Vérifier que l'encodage est terminé
+  const status = await graphGet(`${containerId}?fields=status_code,status`, token);
+  const code = status?.status_code;
+  if (code !== "FINISHED") {
+    return json({ ok: false, error: `Container pas prêt : ${code || "inconnu"}`, status_code: code }, 422);
+  }
+  const publish = await graphPost(`${igId}/media_publish`, token, { creation_id: containerId });
+  if (publish.error) return json({ ok: false, error: publish.error.message }, 422);
+  return json({ ok: true, id: publish.id, container_id: containerId });
+}
+
+async function handlePublishReel(env, { caption, videoUrl, coverUrl, channels = ["ig"], dryRun }) {
+  const token = env.META_PAGE_TOKEN;
+  const igId  = env.META_IG_ACCOUNT_ID;
+
+  if (!token) return json({ error: "META_PAGE_TOKEN non configuré" }, 500);
+  if (!videoUrl) return json({ error: "videoUrl requis (URL MP4 publique)" }, 400);
+
+  const results = {};
+
+  if (channels.includes("ig")) {
+    if (!igId) {
+      results.ig = { error: "META_IG_ACCOUNT_ID non configuré" };
+    } else {
+      try {
+        // Étape 1 : créer le container REELS
+        const containerBody = { media_type: "REELS", video_url: videoUrl, caption: caption || "", share_to_feed: "true" };
+        if (coverUrl) containerBody.cover_url = coverUrl;
+        const container = await graphPost(`${igId}/media`, token, containerBody);
+
+        if (container.error) {
+          results.ig = { error: container.error.message };
+        } else {
+          // Étape 2 : attendre la fin de l'encodage Meta (asynchrone côté Meta)
+          const poll = await pollContainer(container.id, token);
+          if (!poll.ready) {
+            results.ig = {
+              error: poll.timeout ? "Encodage Meta non terminé (timeout)" : `Encodage échoué : ${poll.error}`,
+              container_id: container.id,
+            };
+          } else if (dryRun) {
+            results.ig = { ok: true, dryRun: true, container_id: container.id, status: "FINISHED", note: "Container prêt — media_publish NON exécuté (dry-run)" };
+          } else {
+            // Étape 3 : publier le container encodé
+            const publish = await graphPost(`${igId}/media_publish`, token, { creation_id: container.id });
+            results.ig = publish.error ? { error: publish.error.message } : { id: publish.id, ok: true };
+          }
+        }
+      } catch (e) {
+        results.ig = { error: e.message };
+      }
+    }
+  }
+
+  if (channels.includes("fb")) {
+    const fbPageId = env.META_PAGE_ID;
+    if (!fbPageId) {
+      results.fb = { error: "META_PAGE_ID non configuré" };
+    } else {
+      try {
+        // Facebook Reels : upload par URL publique → publication directe
+        const fbBody = {
+          video_url: videoUrl,
+          description: caption || "",
+          title: caption ? caption.split("\n")[0].slice(0, 100) : "Reel",
+          published: dryRun ? "false" : "true",
+        };
+        const fbResp = await graphPost(`${fbPageId}/video_reels`, token, fbBody);
+        if (fbResp.error) {
+          results.fb = { error: fbResp.error.message || JSON.stringify(fbResp.error) };
+        } else {
+          results.fb = { ok: true, id: fbResp.video_id || fbResp.id, dryRun: !!dryRun };
+        }
+      } catch (e) {
+        results.fb = { error: e.message };
+      }
+    }
+  }
+
+  const hasSuccess = Object.values(results).some(r => r.ok);
+  return json({ results, ok: hasSuccess }, hasSuccess ? 200 : 422);
+}
+
 export async function onRequestGet({ request, env }) {
   const url    = new URL(request.url);
   const action = url.searchParams.get("action") || "status";
@@ -216,6 +323,8 @@ export async function onRequestPost({ request, env }) {
   try { body = await request.json(); } catch { return json({ error: "Body JSON invalide" }, 400); }
 
   if (body.action === "publish") return handlePublish(env, body);
+  if (body.action === "publish_reel") return handlePublishReel(env, body);
+  if (body.action === "publish_container") return handlePublishContainer(env, body);
   if (body.action === "update-profile-pic") return handleUpdateProfilePic(env, body);
   return json({ error: "action inconnue" }, 400);
 }

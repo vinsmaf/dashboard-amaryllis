@@ -212,6 +212,8 @@ function doGet(e) {
   if (action === "revenus2026Rebuild")   return json_(rebuildRevenus2026_(e.parameter.apply==="true", parseInt(e.parameter.fromMonth||4))); // eslint-disable-line no-undef
   if (action === "cleanSlate2026")       return json_(cleanSlate2026_()); // eslint-disable-line no-undef
   if (action === "fixMontantsAberrants") return json_(fixMontantsAberrants_(parseInt(e.parameter.cap || 50000, 10)));
+  if (action === "importFromAirbnb")  return json_(importFromAirbnbSheet_());
+  if (action === "importFromBooking") return json_(importFromBookingSheet_());
 
   return json_({ error: "action inconnue: " + action });
 }
@@ -849,4 +851,184 @@ function importAllReservations_(input) {
   }
 
   return json_({ ok: true, added: added, updated: updated, total: reservations.length });
+}
+
+// ── IMPORT HISTORIQUE DEPUIS ONGLETS CSV ────────────────────────────────────
+//
+// Usage :
+//   1. Dans le Sheet, créer un onglet "Import Airbnb" → y coller le CSV exporté
+//      depuis l'extranet Airbnb (Réservations > Exporter en CSV).
+//   2. Appeler ?action=importFromAirbnb  (ou lancer importFromAirbnbSheet_() dans l'éditeur)
+//   3. Idem pour Booking.com : onglet "Import Booking" + ?action=importFromBooking
+//
+// Les fonctions détectent les colonnes automatiquement (FR et EN) et
+// appellent importAllReservations_ → dédoublonnage + alimentation "Toutes les Réservations".
+
+// Mappe le nom d'annonce Airbnb / d'établissement Booking → bienId
+function guessAirbnbBienId_(listing) {
+  if (!listing) return "";
+  var l = String(listing).toLowerCase();
+  if (l.includes("amaryllis")) return "amaryllis";
+  if (l.includes("iguana"))    return "iguana";
+  if (l.includes("zandoli"))   return "zandoli";
+  if (l.includes("geko") || l.includes("gecko")) return "geko";
+  if (l.includes("mabouya"))   return "mabouya";
+  if (l.includes("schoel"))    return "schoelcher";
+  if (l.includes("nogent") || l.includes("t2 nogent")) return "nogent";
+  return "";
+}
+
+// Parse dates en plusieurs formats → YYYY-MM-DD
+function parseCsvDate_(v) {
+  if (!v) return "";
+  if (v instanceof Date) { return v.getUTCFullYear() + "-" + String(v.getUTCMonth()+1).padStart(2,"0") + "-" + String(v.getUTCDate()).padStart(2,"0"); }
+  var s = String(v).trim().replace(/\u00a0/g, " ");
+  if (!s || s === "—" || s === "-") return "";
+  // ISO : YYYY-MM-DD
+  var m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return m[1] + "-" + m[2] + "-" + m[3];
+  // DD/MM/YYYY (FR) ou MM/DD/YYYY (US) : si premier chiffre > 12 → forcément jour (FR)
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m) {
+    var a = parseInt(m[1]);
+    if (a > 12) return m[3] + "-" + m[2].padStart(2,"0") + "-" + m[1].padStart(2,"0"); // FR
+    return m[3] + "-" + m[1].padStart(2,"0") + "-" + m[2].padStart(2,"0"); // US (Airbnb EN)
+  }
+  // D MMM YYYY (ex: "15 Jun 2024")
+  m = s.match(/^(\d{1,2})\s+([A-Za-zéû]+)\s+(\d{4})/);
+  if (m) {
+    var MONTHS = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12,
+                  janv:1,févr:2,mars:3,avr:4,mai:5,juin:6,juil:7,août:8,sept:9};
+    var mo = MONTHS[m[2].slice(0,4).toLowerCase()];
+    if (mo) return m[3] + "-" + String(mo).padStart(2,"0") + "-" + m[1].padStart(2,"0");
+  }
+  return "";
+}
+
+// Construit un mapping logique → index colonne à partir des en-têtes
+function buildColMap_(headers) {
+  var ALIASES = {
+    id:        ["confirmation code","code de confirmation","booking number","numéro de réservation","reservation id","id réservation"],
+    status:    ["status","statut","booking status","état"],
+    listing:   ["listing","annonce","accommodation name","établissement","property name","nom du logement","logement"],
+    firstName: ["guest first name","prénom du voyageur","first name","prénom"],
+    lastName:  ["guest last name","nom du voyageur","last name"],
+    guestName: ["guest name","nom du voyageur","guest","nom du client","client","booker name","nom du locataire","prénom et nom du client","voyageur"],
+    checkin:   ["start date","date d'arrivée","arrival date","check-in date","arrivée","check in","checkin","date arrivée"],
+    checkout:  ["end date","date de départ","departure date","check-out date","départ","check out","checkout","date départ"],
+    nights:    ["nights booked","nuits réservées","nights","nuits","durée (nuits)"],
+    amount:    ["gross earnings","revenus bruts","amount paid","montant payé","price","montant","gross price",
+                "montant de la réservation","prix brut","prix total","total","amount","earnings"],
+    email:     ["contact","email","e-mail","courriel"],
+    persons:   ["number of adults","number of guests","adults","personnes","persons","voyageurs","nb voyageurs"],
+  };
+  var map = {};
+  headers.forEach(function(h, i) {
+    var hLow = String(h).toLowerCase().trim().replace(/\s+/g," ");
+    Object.keys(ALIASES).forEach(function(key) {
+      if (!Object.prototype.hasOwnProperty.call(map, key) && ALIASES[key].some(function(a) { return hLow === a || hLow.includes(a); })) {
+        map[key] = i;
+      }
+    });
+  });
+  return map;
+}
+
+function importFromAirbnbSheet_() {
+  var sheet = getSheet_("Import Airbnb");
+  if (!sheet) return { ok: false, error: "Onglet 'Import Airbnb' introuvable. Créer l'onglet, puis File > Import > coller le CSV Airbnb." };
+  var data = sheet.getDataRange().getValues();
+  if (data.length < 2) return { ok: true, added: 0, updated: 0, total: 0, message: "Onglet vide" };
+
+  var col = buildColMap_(data[0]);
+  var reservations = [];
+  for (var i = 1; i < data.length; i++) {
+    var r = data[i];
+    var id = col.id !== undefined ? String(r[col.id] || "").trim() : "";
+    if (!id || id === "—" || id === "") continue;
+
+    var guestName = "";
+    if (col.guestName !== undefined) guestName = String(r[col.guestName] || "").trim();
+    if (!guestName && col.firstName !== undefined) {
+      guestName = (String(r[col.firstName] || "") + " " + String(col.lastName !== undefined ? r[col.lastName] : "")).trim();
+    }
+
+    var listing = col.listing !== undefined ? String(r[col.listing] || "").trim() : "";
+    var bienId  = guessAirbnbBienId_(listing);
+    var status  = col.status !== undefined ? String(r[col.status] || "").toLowerCase() : "";
+    var isCancelled = status.includes("cancel") || status.includes("annul") || status === "no-show";
+    var amount  = col.amount !== undefined ? parseFloat(String(r[col.amount] || "0").replace(/[^0-9.,]/g,"").replace(",",".")) : 0;
+
+    reservations.push({
+      id:       "airbnb-" + id,
+      bienId:   bienId,
+      voyageur: guestName || "—",
+      canal:    "airbnb",
+      checkin:  col.checkin  !== undefined ? parseCsvDate_(r[col.checkin])  : "",
+      checkout: col.checkout !== undefined ? parseCsvDate_(r[col.checkout]) : "",
+      nights:   col.nights   !== undefined ? parseInt(r[col.nights] || 0, 10) : 0,
+      montant:  amount,
+      status:   isCancelled ? "Annulé" : "Confirmé",
+      email:    col.email   !== undefined ? String(r[col.email]   || "").trim() : "",
+      nb_guests: col.persons !== undefined ? parseInt(r[col.persons] || 1, 10) : 1,
+      source:   "Import Airbnb CSV",
+    });
+  }
+
+  var valid   = reservations.filter(function(r) { return r.bienId && r.checkin && r.checkout; });
+  var skipped = reservations.length - valid.length;
+  if (valid.length === 0) {
+    return { ok: false, error: "Aucune ligne valide (bienId ou dates manquants). Vérifier le mapping colonnes.", skipped_no_match: skipped, col_map: col, headers: data[0] };
+  }
+  var result = JSON.parse(importAllReservations_(valid).getContent());
+  result.skipped_no_match = skipped;
+  result.total_rows = reservations.length;
+  return result;
+}
+
+function importFromBookingSheet_() {
+  var sheet = getSheet_("Import Booking");
+  if (!sheet) return { ok: false, error: "Onglet 'Import Booking' introuvable. Créer l'onglet, puis File > Import > coller le CSV Booking.com." };
+  var data = sheet.getDataRange().getValues();
+  if (data.length < 2) return { ok: true, added: 0, updated: 0, total: 0, message: "Onglet vide" };
+
+  var col = buildColMap_(data[0]);
+  var reservations = [];
+  for (var i = 1; i < data.length; i++) {
+    var r = data[i];
+    var id = col.id !== undefined ? String(r[col.id] || "").trim() : "";
+    if (!id || id === "—" || id === "") continue;
+
+    var listing    = col.listing  !== undefined ? String(r[col.listing]   || "").trim() : "";
+    var bienId     = guessAirbnbBienId_(listing);
+    var guestName  = col.guestName !== undefined ? String(r[col.guestName] || "").trim() : "—";
+    var status     = col.status    !== undefined ? String(r[col.status]    || "").toLowerCase() : "";
+    var isCancelled = status.includes("cancel") || status.includes("annul") || status === "no show" || status === "no_show";
+    var amount     = col.amount    !== undefined ? parseFloat(String(r[col.amount] || "0").replace(/[^0-9.,]/g,"").replace(",",".")) : 0;
+
+    reservations.push({
+      id:       "booking-" + id,
+      bienId:   bienId,
+      voyageur: guestName || "—",
+      canal:    "booking",
+      checkin:  col.checkin  !== undefined ? parseCsvDate_(r[col.checkin])  : "",
+      checkout: col.checkout !== undefined ? parseCsvDate_(r[col.checkout]) : "",
+      nights:   col.nights   !== undefined ? parseInt(r[col.nights] || 0, 10) : 0,
+      montant:  amount,
+      status:   isCancelled ? "Annulé" : "Confirmé",
+      email:    col.email   !== undefined ? String(r[col.email]   || "").trim() : "",
+      nb_guests: col.persons !== undefined ? parseInt(r[col.persons] || 1, 10) : 1,
+      source:   "Import Booking CSV",
+    });
+  }
+
+  var valid   = reservations.filter(function(r) { return r.bienId && r.checkin && r.checkout; });
+  var skipped = reservations.length - valid.length;
+  if (valid.length === 0) {
+    return { ok: false, error: "Aucune ligne valide. Vérifier le mapping colonnes.", skipped_no_match: skipped, col_map: col, headers: data[0] };
+  }
+  var result = JSON.parse(importAllReservations_(valid).getContent());
+  result.skipped_no_match = skipped;
+  result.total_rows = reservations.length;
+  return result;
 }

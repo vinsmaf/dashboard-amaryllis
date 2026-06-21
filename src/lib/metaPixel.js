@@ -25,6 +25,7 @@ export function loadMetaPixel() {
   try {
     window.fbq("init", META_PIXEL_ID);
     window.fbq("track", "PageView");
+    window.dispatchEvent(new CustomEvent("meta-pixel-ready"));
   } catch { /* */ }
 }
 
