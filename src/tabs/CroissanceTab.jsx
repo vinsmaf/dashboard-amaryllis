@@ -108,6 +108,10 @@ Channels : ig + fb`;
   const igPosts     = status?.ig?.media_count ?? null;
   const total       = fbFollowers !== null && igFollowers !== null ? fbFollowers + igFollowers : null;
 
+  const igReachTotal   = (insights?.instagram?.reach?.series || []).reduce((s, p) => s + p.value, 0);
+  const igEngagedTotal = (insights?.instagram?.accounts_engaged?.series || []).reduce((s, p) => s + p.value, 0);
+  const engagementRate = igReachTotal > 0 ? Math.round((igEngagedTotal / igReachTotal) * 1000) / 10 : null;
+
   return (
     <div>
       {/* ═════ Header ═════ */}
@@ -270,15 +274,32 @@ Channels : ig + fb`;
         />
       </Section>
 
-      {/* ═════ Diagnostic actuel ═════ */}
-      <Section title="📊 Diagnostic" sub="Référence rapide pour évaluer où on en est.">
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, fontSize: 12, color: "#94a3b8" }}>
-          <Fact label="Objectif court terme"     value="+50% IG d'ici 6 mois (1031 → 1500)" />
-          <Fact label="Objectif court terme FB"  value="x2 Villa Amaryllis (337 → 700)" />
-          <Fact label="Fréquence cible posts"    value="1 post/jour automatique" />
-          <Fact label="Fréquence cible Reels"    value="2 Reels/semaine" />
-          <Fact label="Concours par mois"        value="1 concours viral / mois" />
-          <Fact label="Engagement rate cible"    value=">3% (likes + commentaires)" />
+      {/* ═════ Objectifs en cours ═════ */}
+      <Section title="🎯 Objectifs en cours" sub="Progression live vers les cibles fixées.">
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <Objectif label="Followers Instagram" current={igFollowers} target={1500} color="#e1306c" sub="Cible 6 mois · départ 1 031" />
+          <Objectif label="Fans Facebook" current={fbFollowers} target={700} color="#1877f2" sub="x2 Villa Amaryllis · départ 337" />
+          <Objectif label="Audience totale FB+IG" current={total} target={2200} color="#f59e0b" sub="1 500 IG + 700 FB" />
+          {engagementRate !== null && (
+            <Objectif label="Taux d'engagement IG" current={engagementRate} target={3} unit="%" decimals={1} color="#10b981" sub={`Engagés / reach sur ${days}j`} />
+          )}
+          {insights?.instagram?.website_clicks && (
+            <Objectif label="Clics site web / mois" current={insights.instagram.website_clicks.series?.reduce((s,p) => s + p.value, 0) || 0} target={200} color="#a78bfa" sub="Clic bio → villamaryllis.com" />
+          )}
+          {insights?.instagram?.saves && (
+            <Objectif label="Sauvegardes IG / mois" current={insights.instagram.saves.series?.reduce((s,p) => s + p.value, 0) || 0} target={150} color="#f97316" sub="Signal intention de réservation" />
+          )}
+        </div>
+        <div style={{ marginTop: 14, display: "flex", flexWrap: "wrap", gap: 8 }}>
+          {[
+            { label: "1 post/jour automatique", done: true },
+            { label: "2 Reels/semaine", done: false },
+            { label: "1 concours viral/mois", done: false },
+          ].map(o => (
+            <span key={o.label} style={{ fontSize: 10, padding: "3px 9px", borderRadius: 20, background: o.done ? "rgba(16,185,129,0.12)" : "rgba(255,255,255,0.04)", color: o.done ? "#10b981" : "#64748b", border: `1px solid ${o.done ? "rgba(16,185,129,0.25)" : "rgba(255,255,255,0.07)"}` }}>
+              {o.done ? "✓" : "○"} {o.label}
+            </span>
+          ))}
         </div>
       </Section>
     </div>
@@ -337,6 +358,30 @@ function CountryBar({ country, count, pct }) {
         <div style={{ width: `${pct}%`, background: "linear-gradient(90deg,#a78bfa,#e1306c)", height: "100%", borderRadius: 4, transition: "width .5s" }} />
       </div>
       <div style={{ fontSize: 11, color: "#94a3b8", width: 55, textAlign: "right", flexShrink: 0 }}>{count.toLocaleString("fr-FR")} <span style={{ color: "#475569" }}>({pct}%)</span></div>
+    </div>
+  );
+}
+
+function Objectif({ label, current, target, unit = "", decimals = 0, color, sub }) {
+  const val = current !== null && current !== undefined ? current : null;
+  const pct = val !== null && target ? Math.min(100, Math.round((val / target) * 100)) : 0;
+  const done = pct >= 100;
+  const display = val !== null ? (decimals > 0 ? val.toFixed(decimals) : val.toLocaleString("fr-FR")) : "—";
+  return (
+    <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 11, padding: "12px 14px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 7 }}>
+        <span style={{ fontSize: 12, color: "#e2e8f0", fontWeight: 600 }}>{label}</span>
+        <span style={{ fontSize: 11, color: done ? "#10b981" : "#94a3b8", fontVariantNumeric: "tabular-nums" }}>
+          {display}{unit} <span style={{ color: "#475569" }}>/ {target.toLocaleString("fr-FR")}{unit}</span>
+        </span>
+      </div>
+      <div style={{ background: "rgba(255,255,255,0.06)", borderRadius: 5, height: 8, overflow: "hidden", marginBottom: 7 }}>
+        <div style={{ width: `${pct}%`, background: done ? "#10b981" : color, height: "100%", borderRadius: 5, transition: "width .5s ease" }} />
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span style={{ fontSize: 10, color: "#475569" }}>{sub}</span>
+        <span style={{ fontSize: 13, fontWeight: 800, color: done ? "#10b981" : color }}>{pct}%</span>
+      </div>
     </div>
   );
 }
@@ -402,11 +447,3 @@ function Checklist({ items }) {
   );
 }
 
-function Fact({ label, value }) {
-  return (
-    <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 8, padding: "8px 11px" }}>
-      <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 3 }}>{label}</div>
-      <div style={{ fontSize: 12, color: "#e2e8f0", fontWeight: 500 }}>{value}</div>
-    </div>
-  );
-}
