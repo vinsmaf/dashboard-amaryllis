@@ -794,6 +794,24 @@ async function runWeeklyReport(env, allEvents) {
   const weekLabel = new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
   const siteUrl = env.SITE_URL || "https://villamaryllis.com";
 
+  // ── Réservations directes — 30j glissant (santé projet) ──
+  let directCount = 0, directNights = 0, directRevEur = 0;
+  if (env.revenue_manager) {
+    try {
+      const row = await env.revenue_manager.prepare(
+        `SELECT COUNT(*) as cnt,
+                COALESCE(SUM(CAST(julianday(checkout) - julianday(checkin) AS INTEGER)), 0) as nights,
+                COALESCE(SUM(CAST(total AS REAL) / 100.0), 0) as rev
+         FROM direct_bookings WHERE created_at >= unixepoch('now', '-30 days')`
+      ).first();
+      directCount  = row?.cnt    || 0;
+      directNights = row?.nights || 0;
+      directRevEur = Math.round(row?.rev || 0);
+    } catch (e) { console.error("[weekly] direct_bookings:", e.message); }
+  }
+  const directColor = directCount >= 3 ? "#1a6e3c" : directCount >= 1 ? "#b45309" : "#dc2626";
+  const directEmoji = directCount >= 3 ? "🟢" : directCount >= 1 ? "🟡" : "🔴";
+
   await sendEmail(env, {
     subject: `📊 Rapport semaine — ${globalPct7}% occ. · ~${totalRev7.toLocaleString("fr-FR")}€`,
     html: emailWrapper(`
@@ -814,6 +832,12 @@ async function runWeeklyReport(env, allEvents) {
           <div style="font-size:22px;font-weight:800;color:#0369a1;">~${totalRev30.toLocaleString("fr-FR")}€</div>
           <div style="font-size:11px;color:#7a6b5a;margin-top:3px;">Revenus 30j estimés</div>
         </div>
+      </div>
+
+      <!-- Santé projet : ratio réservations directes -->
+      <div style="background:#fff7ed;border-radius:8px;padding:12px 16px;margin-bottom:20px;border-left:3px solid ${directColor};">
+        <strong style="color:${directColor};">${directEmoji} Résas directes 30j : ${directCount} résa · ${directNights} nuits · ~${directRevEur.toLocaleString("fr-FR")}€</strong>
+        <span style="color:#9a8a7a;font-size:12px;display:block;margin-top:4px;">Indicateur santé projet — viser ≥3 résas/mois. Ratio direct/OTA à comparer dans le dashboard.</span>
       </div>
 
       ${gapCount > 0 ? `
@@ -1872,6 +1896,106 @@ async function runPrixRecap(env) {
   else console.log(`[prix-recap] ✓ Rappel envoyé à ${dest}`);
 }
 
+// ── Génération d'un draft Reel pour une entrée format=reel ─────────────────
+// Chemin séparé du social_post : caption LLM + plan de montage déterministe.
+// videoUrl reste null jusqu'au render Container (Phase future).
+async function generateReelDraft(env, entry, siteUrl) {
+  const bienId   = entry.bien_id  || "amaryllis";
+  const theme    = entry.theme    || "logement";
+  const variante = entry.variante || "";
+
+  const BIEN_NAMES = {
+    amaryllis: "Villa Amaryllis", iguana: "Villa Iguana",
+    zandoli: "Zandoli", geko: "Géko", mabouya: "Mabouya",
+    schoelcher: "Schœlcher", nogent: "Nogent",
+  };
+  const bienName = BIEN_NAMES[bienId] || bienId;
+
+  // 1. Caption LLM via /api/ai-summary ───────────────────────────────────────
+  const captionPrompt = `Tu es le community manager d'Amaryllis Locations (conciergerie Martinique). Rédige un caption Instagram Reel pour "${bienName}", thème "${theme}"${variante ? `, angle "${variante}"` : ""}.
+
+Structure OBLIGATOIRE (5 blocs séparés par \\n\\n) :
+1. HOOK (1 ligne sensorielle stop-scroll — pas de question)
+2. DESCRIPTION (2-3 lignes immersives, vue/lumière/ambiance)
+3. BÉNÉFICE voyageur (1 ligne concrète)
+4. CTA : "Réservez sur https://villamaryllis.com/${bienId} ⤴️"
+5. HASHTAGS (8-10 hashtags : #martinique #villamaryllis + lieu + ambiance)
+
+VOIX : "vous" formel, sensoriel, jamais pub Meta.
+INTERDIT (biens sur les hauteurs, pas en bord de mer) : vagues, clapotis, plage privée, pieds dans l'eau.
+
+Retourne UNIQUEMENT le caption brut (pas de JSON, pas de balises).`;
+
+  const aiRes  = await fetch(`${siteUrl}/api/ai-summary`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt: captionPrompt, maxTokens: 600 }),
+  });
+  const aiData = await aiRes.json().catch(() => ({}));
+  const caption = (aiData.summary || aiData.text || "").trim();
+  if (!caption) throw new Error("LLM caption vide");
+
+  // 2. Plan de montage déterministe (5 photos par bien, Ken Burns varié) ────
+  const PHOTO_SETS = {
+    amaryllis:  ["01.webp","03.webp","05.webp","07.webp","09.webp"],
+    iguana:     ["01.webp","02.webp","03.webp","04.webp","05.webp"],
+    zandoli:    ["01.webp","02.webp","03.webp","04.webp","05.webp"],
+    geko:       ["01.webp","02.webp","03.webp","04.webp","05.webp"],
+    mabouya:    ["01.webp","02.webp","03.webp","04.webp","05.webp"],
+    schoelcher: ["01.webp","02.webp","03.webp","04.webp","05.webp"],
+    nogent:     ["01.webp","02.webp","03.webp","04.webp","05.webp"],
+  };
+  const KB_CYCLE = ["in","out","left","in","right"];
+  const photos   = PHOTO_SETS[bienId] || PHOTO_SETS.amaryllis;
+  const clips    = photos.map((src, i) => ({ src, duration: 3, kenburns: KB_CYCLE[i % KB_CYCLE.length] }));
+
+  const plan = {
+    bienId, title: bienName,
+    fps: 30, width: 1080, height: 1920,
+    transition: "fade", transitionDuration: 0.5,
+    clips,
+    audio: null, // À compléter manuellement ou par le Container
+  };
+
+  // 3. Créer le draft reel_post en D1 ───────────────────────────────────────
+  const draftRes  = await fetch(
+    `${siteUrl}/api/agent-drafts?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        agent: "community-manager",
+        agent_label: "Community Manager",
+        agent_emoji: "🎬",
+        type: "reel_post",
+        payload: {
+          caption,
+          videoUrl: null,    // Rempli après render Container
+          coverUrl: null,    // Rempli après render Container
+          channels: ["ig"],
+          plan,              // Contrat JSON pour render.mjs
+          calendarId: entry.id,
+          bienId,
+          scheduledAt: entry.scheduled_at,
+        },
+        rationale: `Reel ${bienName} — ${theme}${variante ? " / " + variante : ""}`,
+        preview: caption.slice(0, 200),
+      }),
+    },
+  );
+  const draftData = await draftRes.json();
+  if (!draftData.ok || !draftData.id) throw new Error(`Draft création échouée : ${JSON.stringify(draftData)}`);
+
+  // 4. Lier le draft au calendrier éditorial ────────────────────────────────
+  await fetch(`${siteUrl}/api/editorial-calendar?id=${entry.id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ draft_id: draftData.id, status: "drafted" }),
+  }).catch(() => {});
+
+  console.log(`[editorial-J-2] 🎬 reel_post #${draftData.id} créé pour entry ${entry.id} (${bienName})`);
+}
+
 // ── Editorial Calendar : génération drafts J+2 (cron quotidien 12h UTC) ────
 async function runEditorialDraftGen(env) {
   const siteUrl = env.SITE_URL || "https://villamaryllis.com";
@@ -1895,6 +2019,21 @@ async function runEditorialDraftGen(env) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "generating" }),
       }).catch(() => {});
+
+      // Reels → chemin dédié (caption LLM + plan déterministe, pas de community-manager)
+      if (e.format === "reel") {
+        try {
+          await generateReelDraft(env, e, siteUrl);
+        } catch (err) {
+          console.error(`[editorial-J-2] reel entry ${e.id}:`, err.message);
+          await fetch(`${siteUrl}/api/editorial-calendar?id=${e.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: "failed" }),
+          }).catch(() => {});
+        }
+        continue;
+      }
 
       // Brief enrichi → community-manager
       const brief = `BRIEF CALENDRIER ÉDITORIAL — date=${new Date(e.scheduled_at*1000).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})}, bien=${e.bien_id}, thème=${e.theme}, variante=${e.variante}, format=${e.format}, photo=${e.photo_url}, CTA="${e.cta}". Génère UN draft social_post selon ce brief précis.`;
@@ -1931,14 +2070,28 @@ async function runEditorialAutoPublish(env) {
   const siteUrl = env.SITE_URL || "https://villamaryllis.com";
   try {
     // Cible : entrées dont status='approved' ET scheduled_at <= maintenant + 1h
+    // Fenêtre 14j en arrière pour récupérer les posts bloqués (bug fenêtre 24h, fix 2026-06-18)
     const now    = Math.floor(Date.now() / 1000);
     const upTo   = now + 3600;
-    const fromYMD = new Date((now - 86400) * 1000).toISOString().slice(0, 10);
+    const fromYMD = new Date((now - 14 * 86400) * 1000).toISOString().slice(0, 10);
     const toYMD   = new Date(upTo * 1000).toISOString().slice(0, 10);
+
+    // Vérifier si un post a été publié dans les 2 dernières heures (rythme 1 post/2h)
+    const recentR = await fetch(`${siteUrl}/api/editorial-calendar?from=${new Date((now - 7200) * 1000).toISOString().slice(0,10)}&to=${toYMD}&status=published`);
+    const recentD = await recentR.json().catch(() => ({}));
+    const lastPub = (recentD.entries || []).filter(e => e.published_at && e.published_at >= now - 7200);
+    if (lastPub.length > 0) {
+      console.log(`[editorial-publish] Post publié il y a <2h — skip (rythme 1/2h)`);
+      return;
+    }
 
     const r = await fetch(`${siteUrl}/api/editorial-calendar?from=${fromYMD}&to=${toYMD}&status=approved`);
     const d = await r.json();
-    const dueEntries = (d.entries || []).filter(e => e.scheduled_at <= upTo);
+    // 1 post par run max (rythme 1/2h garanti par le check ci-dessus)
+    const dueEntries = (d.entries || [])
+      .filter(e => e.scheduled_at <= upTo)
+      .sort((a, b) => a.scheduled_at - b.scheduled_at)
+      .slice(0, 1);
     if (dueEntries.length === 0) { console.log("[editorial-publish] Aucun draft à publier"); return; }
 
     console.log(`[editorial-publish] ${dueEntries.length} draft(s) à publier`);
