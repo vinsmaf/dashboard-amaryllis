@@ -2,6 +2,7 @@
 // Body : { bienId, theme, variante }
 // Auth : Bearer admin
 import { verifyBearer } from "./_adminauth.js";
+import { callLLM } from "./_llm.js";
 
 const CORS = {
   "Content-Type": "application/json",
@@ -45,10 +46,8 @@ export async function onRequestPost({ request, env }) {
   const variante = body.variante || "";
 
   const bienName = BIEN_NAMES[bienId] || bienId;
-  const anthropicKey = env.ANTHROPIC_API_KEY;
-  if (!anthropicKey) return json({ error: "ANTHROPIC_API_KEY manquante" }, 503);
 
-  // 1. Caption LLM ─────────────────────────────────────────────────────────
+  // 1. Caption LLM via callLLM (cascade Groq→Mistral→Cerebras) ─────────────
   const captionPrompt = `Tu es le community manager d'Amaryllis Locations (conciergerie Martinique). Rédige un caption Instagram Reel pour "${bienName}", thème "${theme}"${variante ? `, angle "${variante}"` : ""}.
 
 Structure OBLIGATOIRE (5 blocs séparés par \\n\\n) :
@@ -63,22 +62,12 @@ INTERDIT (biens sur les hauteurs) : vagues, clapotis, plage privée, pieds dans 
 
 Retourne UNIQUEMENT le caption brut.`;
 
-  const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": anthropicKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: "claude-haiku-4-5",
-      max_tokens: 600,
-      messages: [{ role: "user", content: captionPrompt }],
-    }),
-  });
-  const aiData = await aiRes.json().catch(() => ({}));
-  if (!aiRes.ok) return json({ error: `Anthropic ${aiRes.status}: ${aiData.error?.message || "erreur"}` }, 502);
-  const caption = (aiData.content?.[0]?.text || "").trim();
+  const caption = (await callLLM(env, {
+    provider: "mistral",
+    tier: "fast",
+    messages: [{ role: "user", content: captionPrompt }],
+    max_tokens: 600,
+  })).trim();
   if (!caption) return json({ error: "LLM caption vide" }, 500);
 
   // 2. Plan déterministe ───────────────────────────────────────────────────
@@ -115,14 +104,14 @@ Retourne UNIQUEMENT le caption brut.`;
 CAPTION : """${caption}"""
 Critères : hook stop-scroll(20) · immersion(25) · CTA(15) · hashtags(20) · voix "vous"(10) · pas d'erreurs factuelles(10).
 Retourne UNIQUEMENT : {"score":0-100,"verdict":"approve"|"reject","reason":"1 phrase"}`;
-    const jRes  = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": anthropicKey, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({ model: "claude-haiku-4-5", max_tokens: 120, messages: [{ role: "user", content: judgePrompt }] }),
+    const jText = await callLLM(env, {
+      provider: "mistral",
+      tier: "fast",
+      messages: [{ role: "user", content: judgePrompt }],
+      max_tokens: 120,
     });
-    const jData = await jRes.json().catch(() => ({}));
-    let judge   = {};
-    try { judge = JSON.parse((jData.content?.[0]?.text || "{}").match(/\{[\s\S]*\}/)?.[0] || "{}"); } catch (e) { void e; }
+    let judge = {};
+    try { judge = JSON.parse((jText || "{}").match(/\{[\s\S]*\}/)?.[0] || "{}"); } catch (e) { void e; }
     score   = Math.min(100, Math.max(0, Number(judge.score) || 0));
     verdict = judge.verdict || "reject";
     reason  = judge.reason  || "";
