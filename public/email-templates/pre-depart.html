@@ -1,22 +1,11 @@
 <!DOCTYPE html>
 <!--
   ============================================================
-  AMARYLLIS LOCATIONS — Email PRÉ-DÉPART (J-1 checkout)
+  AMARYLLIS LOCATIONS — Email PRÉ-DÉPART (J-1)
   ============================================================
-  OBJETS A/B (à tester) :
-    A : {{prenom}}, tout est prêt pour votre départ demain de {{bien_nom}}
-    B : Votre départ de {{bien_nom}} demain — consignes &amp; late check-out disponible
-    C : {{prenom}}, avant de rendre les clés de {{bien_nom}}…
-  PRÉHEADER (texte masqué d'aperçu boîte de réception) :
-    Consignes de départ, late check-out disponible et un code fidélité pour votre prochain séjour.
-  ============================================================
-  VARIABLES :
-    {{prenom}}               Prénom du voyageur principal
-    {{bien_nom}}             Nom du bien (ex. Villa Amaryllis)
-    {{checkout}}             Date de départ formatée (ex. samedi 21 juin 2026)
-    {{instructions_depart}}  HTML généré depuis le livret (peut contenir <br> et <strong>)
-    {{wa_hote}}              Numéro WhatsApp hôte (format international, ex. 33696000000)
-    {{lien_avis_google}}     URL de la fiche Google du bien
+  OBJET : {{prenom}}, votre départ de {{bien_nom}} est demain
+  PRÉHEADER : Départ à 12h00. Besoin de rester un peu plus ? On s'arrange.
+  VARIABLES : prenom, bien_nom, bien_id, checkout, wa_hote, late_checkout_url
   ============================================================
 -->
 <html lang="fr" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
@@ -25,7 +14,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="x-apple-disable-message-reformatting">
-  <title>Votre départ de {{bien_nom}} — demain</title>
+  <title>Votre départ de {{bien_nom}} est demain</title>
   <!--[if mso]>
   <noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
   <![endif]-->
@@ -33,7 +22,6 @@
     @media only screen and (max-width:600px){
       .container{width:100% !important;}
       .px{padding-left:24px !important;padding-right:24px !important;}
-      .stack{display:block !important;width:100% !important;}
       .h1{font-size:26px !important;line-height:32px !important;}
     }
     a{color:#c47254;}
@@ -42,7 +30,7 @@
 <body style="margin:0;padding:0;background-color:#fffdf8;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
   <!-- Préheader masqué -->
   <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#fffdf8;opacity:0;">
-    Consignes de départ, late check-out disponible et un code fidélité pour votre prochain séjour.&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
+    Départ à 12h00. Besoin de rester un peu plus ? On s'arrange.&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
   </div>
 
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#fffdf8;">
@@ -51,7 +39,7 @@
 
         <table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background-color:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 1px 4px rgba(31,42,61,0.06);">
 
-          <!-- 1. Bandeau -->
+          <!-- Bandeau -->
           <tr>
             <td style="background-color:#1f2a3d;padding:28px 32px;" align="center">
               <div style="font-family:Georgia,'Times New Roman',serif;font-size:22px;letter-spacing:3px;color:#fffdf8;text-transform:uppercase;">Amaryllis</div>
@@ -62,78 +50,92 @@
           <!-- Filet corail -->
           <tr><td style="height:4px;background-color:#c47254;line-height:4px;font-size:0;">&nbsp;</td></tr>
 
-          <!-- 2. Intro -->
+          <!-- Intro -->
           <tr>
             <td class="px" style="padding:36px 40px 8px 40px;font-family:Georgia,'Times New Roman',serif;">
-              <h1 class="h1" style="margin:0;font-size:30px;line-height:38px;color:#1f2a3d;font-weight:normal;">Bonjour {{prenom}},</h1>
+              <h1 class="h1" style="margin:0;font-size:28px;line-height:36px;color:#1f2a3d;font-weight:normal;">Demain, c'est déjà le départ, {{prenom}}.</h1>
               <p style="margin:18px 0 0 0;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:26px;color:#3a4658;">
-                Votre séjour à <strong style="color:#1f2a3d;">{{bien_nom}}</strong> touche à sa fin demain. Nous espérons qu'il vous a apporté détente et de merveilleux souvenirs. Avant votre départ, quelques informations pratiques.
+                Merci d'avoir profité de <strong style="color:#1f2a3d;">{{bien_nom}}</strong>. Avant de boucler vos valises, voici les derniers détails pour un départ sans stress.
               </p>
             </td>
           </tr>
 
-          <!-- 3. Bloc checkout — Consignes de départ -->
+          <!-- Bloc horaire départ -->
           <tr>
             <td class="px" style="padding:28px 40px 0 40px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#fffdf8;border:1px solid #ece6d9;border-radius:12px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#fffdf8;border-radius:12px;">
                 <tr>
-                  <td style="padding:24px 26px;font-family:Arial,Helvetica,sans-serif;">
-                    <div style="font-size:13px;letter-spacing:2px;text-transform:uppercase;color:#c47254;font-weight:bold;margin-bottom:16px;">Consignes de départ</div>
-                    <div style="font-size:15px;line-height:25px;color:#3a4658;">
-                      {{instructions_depart}}
-                    </div>
-                    <div style="margin-top:18px;padding-top:16px;border-top:1px solid #ece6d9;font-size:15px;line-height:24px;color:#3a4658;">
-                      Départ au plus tard à <strong style="color:#1f2a3d;">12h00</strong>
-                    </div>
+                  <td style="padding:22px 24px;font-family:Arial,Helvetica,sans-serif;" align="center">
+                    <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#c47254;font-weight:bold;">Heure de départ</div>
+                    <div style="font-size:42px;color:#1f2a3d;font-family:Georgia,'Times New Roman',serif;margin-top:8px;font-weight:normal;">12h00</div>
+                    <div style="font-size:13px;color:#8a8170;margin-top:4px;">le {{checkout}}</div>
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
 
-          <!-- 4. Question heure de départ -->
+          <!-- Checklist départ -->
           <tr>
-            <td class="px" style="padding:20px 40px 0 40px;">
+            <td class="px" style="padding:28px 40px 0 40px;font-family:Arial,Helvetica,sans-serif;">
+              <div style="font-size:13px;letter-spacing:2px;text-transform:uppercase;color:#1f2a3d;font-weight:bold;border-bottom:2px solid #c47254;display:inline-block;padding-bottom:4px;">Avant de partir</div>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:18px;">
+                <tr>
+                  <td style="padding:0 0 12px 0;font-size:15px;line-height:24px;color:#3a4658;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="width:28px;vertical-align:top;font-size:16px;padding-top:2px;">&#x2713;</td>
+                        <td style="font-size:15px;line-height:24px;color:#3a4658;">Laisser les clés sur la table de l'entrée ou dans la boîte à clés (code communiqué à l'arrivée)</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:0 0 12px 0;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="width:28px;vertical-align:top;font-size:16px;padding-top:2px;">&#x2713;</td>
+                        <td style="font-size:15px;line-height:24px;color:#3a4658;">Fermer les fenêtres et couper la climatisation</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="width:28px;vertical-align:top;font-size:16px;padding-top:2px;">&#x2713;</td>
+                        <td style="font-size:15px;line-height:24px;color:#3a4658;">Déposer le linge utilisé dans le bac prévu, pas besoin de faire les lits</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Late checkout push -->
+          <tr>
+            <td class="px" style="padding:28px 40px 0 40px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#faf5e9;border:1px solid #e0d4bc;border-radius:12px;">
                 <tr>
-                  <td style="padding:24px 26px;font-family:Arial,Helvetica,sans-serif;">
-                    <div style="font-family:Georgia,'Times New Roman',serif;font-size:18px;color:#1f2a3d;margin-bottom:10px;">Votre heure de départ prévue&nbsp;?</div>
-                    <div style="font-size:15px;line-height:25px;color:#3a4658;margin-bottom:18px;">
-                      Pourriez-vous nous indiquer votre heure de départ prévue demain (au plus tard à midi)&nbsp;? Cela nous permet d'organiser la remise en état sereinement.
-                    </div>
-                    <!--[if mso]>
-                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://wa.me/{{wa_hote}}" style="height:46px;v-text-anchor:middle;width:290px;" arcsize="22%" strokecolor="#c47254" fillcolor="#c47254">
-                      <w:anchorlock/>
-                      <center style="color:#ffffff;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Nous indiquer l'heure sur WhatsApp</center>
-                    </v:roundrect>
-                    <![endif]-->
-                    <!--[if !mso]><!-- -->
-                    <a href="https://wa.me/{{wa_hote}}" style="background-color:#c47254;color:#ffffff;display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;text-decoration:none;padding:13px 28px;border-radius:10px;">Nous indiquer l'heure sur WhatsApp</a>
-                    <!--<![endif]-->
-                  </td>
+                  <td style="height:4px;background-color:#c47254;line-height:4px;font-size:0;border-radius:12px 12px 0 0;">&nbsp;</td>
                 </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- 5. Encart Late Check-Out -->
-          <tr>
-            <td class="px" style="padding:20px 40px 0 40px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#fffdf8;border:1px solid #ece6d9;border-top:3px solid #c47254;border-radius:12px;">
                 <tr>
-                  <td style="padding:24px 26px;font-family:Arial,Helvetica,sans-serif;">
-                    <div style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#c47254;font-weight:bold;margin-bottom:10px;">Envie de rester un peu plus&nbsp;?</div>
-                    <div style="font-size:15px;line-height:25px;color:#3a4658;margin-bottom:18px;">
-                      Sur demande et selon nos disponibilités, nous proposons un Late Check-Out jusqu'à <strong style="color:#1f2a3d;">19h</strong> pour un supplément de <strong style="color:#1f2a3d;">80&nbsp;€</strong>. Contactez-nous dès maintenant si cela vous intéresse.
-                    </div>
+                  <td style="padding:22px 24px;font-family:Arial,Helvetica,sans-serif;">
+                    <div style="font-size:20px;line-height:1;margin-bottom:10px;">&#x23F0;</div>
+                    <div style="font-family:Georgia,'Times New Roman',serif;font-size:18px;color:#1f2a3d;margin-bottom:8px;">Pas prêts à 12h ?</div>
+                    <p style="margin:0 0 16px 0;font-size:15px;line-height:24px;color:#3a4658;">
+                      Si vous avez besoin de deux heures de plus, un départ tardif jusqu'à <strong style="color:#1f2a3d;">14h00</strong> est possible selon disponibilité. Il suffit de nous écrire.
+                    </p>
                     <!--[if mso]>
-                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://wa.me/{{wa_hote}}" style="height:46px;v-text-anchor:middle;width:260px;" arcsize="22%" strokecolor="#1f2a3d" fillcolor="#1f2a3d">
+                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://wa.me/{{wa_hote}}?text=Bonjour%2C%20je%20souhaite%20un%20d%C3%A9part%20tardif%20pour%20{{bien_nom}}" style="height:46px;v-text-anchor:middle;width:230px;" arcsize="22%" strokecolor="#c47254" fillcolor="#c47254">
                       <w:anchorlock/>
-                      <center style="color:#ffffff;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Demander un Late Check-Out</center>
+                      <center style="color:#ffffff;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Demander un départ tardif</center>
                     </v:roundrect>
                     <![endif]-->
                     <!--[if !mso]><!-- -->
-                    <a href="https://wa.me/{{wa_hote}}" style="background-color:#1f2a3d;color:#ffffff;display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;text-decoration:none;padding:13px 28px;border-radius:10px;">Demander un Late Check-Out</a>
+                    <a href="https://wa.me/{{wa_hote}}?text=Bonjour%2C%20je%20souhaite%20un%20d%C3%A9part%20tardif%20pour%20{{bien_nom}}" style="background-color:#c47254;color:#ffffff;display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;text-decoration:none;padding:13px 28px;border-radius:10px;">Demander un départ tardif</a>
                     <!--<![endif]-->
                   </td>
                 </tr>
@@ -141,70 +143,21 @@
             </td>
           </tr>
 
-          <!-- 6. Encart fidélité -->
-          <tr>
-            <td class="px" style="padding:20px 40px 0 40px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#fffdf8;border:1px solid #ece6d9;border-radius:12px;">
-                <tr>
-                  <td style="padding:24px 26px;font-family:Arial,Helvetica,sans-serif;">
-                    <div style="font-family:Georgia,'Times New Roman',serif;font-size:19px;color:#1f2a3d;margin-bottom:10px;">Un geste pour vous remercier</div>
-                    <div style="font-size:15px;line-height:25px;color:#3a4658;margin-bottom:18px;">
-                      En réservant directement auprès de nous lors de votre prochain séjour, vous bénéficiez d'une remise exclusive de <strong style="color:#1f2a3d;">10&nbsp;%</strong> sur le tarif. Il vous suffit de saisir le code <strong style="color:#1f2a3d;">FIDELITE</strong> lors de votre prochaine réservation sur villamaryllis.com.
-                    </div>
-                    <!--[if mso]>
-                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://villamaryllis.com?utm_source=email&utm_medium=email&utm_campaign=pre-depart" style="height:46px;v-text-anchor:middle;width:220px;" arcsize="22%" strokecolor="#1f2a3d" fillcolor="#1f2a3d">
-                      <w:anchorlock/>
-                      <center style="color:#ffffff;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Réserver en direct</center>
-                    </v:roundrect>
-                    <![endif]-->
-                    <!--[if !mso]><!-- -->
-                    <a href="https://villamaryllis.com?utm_source=email&utm_medium=email&utm_campaign=pre-depart" style="background-color:#1f2a3d;color:#ffffff;display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;text-decoration:none;padding:13px 28px;border-radius:10px;">Réserver en direct</a>
-                    <!--<![endif]-->
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- 7. Bloc avis Google -->
-          <tr>
-            <td class="px" style="padding:20px 40px 0 40px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#fffdf8;border:1px solid #ece6d9;border-radius:12px;">
-                <tr>
-                  <td style="padding:24px 26px;font-family:Arial,Helvetica,sans-serif;">
-                    <div style="font-size:15px;line-height:25px;color:#3a4658;margin-bottom:18px;">
-                      Si vous avez apprécié votre séjour, votre avis Google est notre plus belle récompense et aide d'autres voyageurs à nous découvrir.
-                    </div>
-                    <!--[if mso]>
-                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{{lien_avis_google}}" style="height:46px;v-text-anchor:middle;width:560px;" arcsize="10%" strokecolor="#1f2a3d" fillcolor="#1f2a3d">
-                      <w:anchorlock/>
-                      <center style="color:#ffffff;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Laisser un avis Google</center>
-                    </v:roundrect>
-                    <![endif]-->
-                    <!--[if !mso]><!-- -->
-                    <a href="{{lien_avis_google}}" style="background-color:#1f2a3d;color:#ffffff;display:block;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;text-decoration:none;padding:14px 28px;border-radius:10px;text-align:center;">Laisser un avis Google</a>
-                    <!--<![endif]-->
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- 8. Signature -->
+          <!-- Signature -->
           <tr>
             <td class="px" style="padding:30px 40px 36px 40px;font-family:Georgia,'Times New Roman',serif;">
               <p style="margin:0;font-size:16px;line-height:26px;color:#3a4658;">
-                Nous vous souhaitons un excellent retour et espérons vous revoir bientôt sous le soleil de la Martinique. À très vite&nbsp;!
+                Profitez bien de votre dernière soirée. À bientôt sous le soleil de Martinique.
               </p>
               <p style="margin:16px 0 0 0;font-size:16px;color:#1f2a3d;">L'équipe Amaryllis</p>
             </td>
           </tr>
 
-          <!-- 9. Footer -->
+          <!-- Footer -->
           <tr>
             <td style="background-color:#1f2a3d;padding:24px 40px;font-family:Arial,Helvetica,sans-serif;" align="center">
               <div style="font-size:12px;line-height:20px;color:#aeb6c2;">Amaryllis Locations &middot; Sainte-Luce, Martinique</div>
-              <div style="font-size:11px;line-height:18px;color:#7c8593;margin-top:6px;">Vous recevez ce message car vous séjournez dans l'une de nos maisons.</div>
+              <div style="font-size:11px;line-height:18px;color:#7c8593;margin-top:6px;">Vous recevez ce message car un séjour est réservé à votre nom.</div>
             </td>
           </tr>
 

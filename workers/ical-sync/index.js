@@ -2565,6 +2565,18 @@ async function runBugTriage(env) {
   } catch (e) { console.error("[bug-triage] erreur:", e.message); }
 }
 
+// ── Email pré-départ J-1 (late-checkout push) ────────────────────────────────
+async function runPredepart(env) {
+  const secret = env.POSTSTAY_SECRET || "";
+  if (!secret) { console.log("[predepart] POSTSTAY_SECRET absent — skip"); return; }
+  const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+  try {
+    const r = await fetch(`${siteUrl}/api/send-predepart?secret=${encodeURIComponent(secret)}`);
+    const d = await r.json().catch(() => ({}));
+    console.log(`[predepart] ✓ ${d.sent ?? 0} envoyés / ${d.candidats ?? 0} candidats (checkout demain ${d.target ?? "?"})`);
+  } catch (e) { console.error("[predepart] erreur:", e.message); }
+}
+
 export default {
   async scheduled(event, env, ctx) {
     const cron = event.cron;
@@ -2698,6 +2710,7 @@ export default {
         }
         await runDevisSoldeCron(env); // C2 — solde devis 2 fois : lien J-30 + relances J-25/J-20 + annulation J-15
         await runEnrichFromEmails(env); // complète nom+payout des résas Airbnb depuis les mails (onglet « Emails ») AVANT le contrôle de cohérence
+        await runPredepart(env);        // crm — email pré-départ J-1 (late-checkout push)
         // ── Contrôle de cohérence des réservations (chantier 2 Robustesse) ──
         //    Détecte double-bookings / totaux aberrants / bien inconnu → inbox 🐞 Bugs + ntfy si critique.
         try {
