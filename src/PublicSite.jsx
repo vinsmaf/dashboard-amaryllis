@@ -5058,9 +5058,6 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                         <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 800, color: NAVY, fontSize: 16 }}>
                           <span>Total</span><span>{calTotal}€</span>
                         </div>
-                        <div style={{ fontSize: 10, color: "#16a34a", fontWeight: 600, marginTop: 6 }}>
-                          💰 ~{Math.round(calTotal * 0.15 / 5) * 5}€ économisés vs Airbnb
-                        </div>
                       </div>
                     </>
                   );
@@ -5091,11 +5088,6 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                       Effacer les dates
                     </button>
                   )}
-                  <div style={{ marginTop: 14, display: "flex", justifyContent: "center" }}>
-                    <button onClick={() => setShowAlerte(true)} style={{ background: "none", border: "none", color: MUTED, fontSize: 11, fontFamily: "'Jost', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, padding: 0, textDecoration: "underline", textDecorationColor: SAND }}>
-                      🔔 M'alerter des disponibilités
-                    </button>
-                  </div>
                 </div>
               </div>
             </div>
