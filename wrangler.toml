@@ -5,11 +5,12 @@ compatibility_flags = ["nodejs_compat"]
 
 [triggers]
 crons = [
-  "*/15 * * * *", # Sync iCal (résas Airbnb/Booking → Sheet) + publication auto éditoriale — toutes les 15 min
-  "0 9 * * *",   # Audit + rappels + alertes + agents IA — chaque jour à 9h UTC (5h MQ)
-  "0 12 * * *",  # Génération drafts éditoriaux J+2 — chaque jour à 12h UTC (8h MQ)
-  "0 6 * * 1",   # Rapport hebdomadaire — lundi 6h UTC (2h Martinique / 8h Paris)
-  "0 1 1 * *",   # Mensuel — export comptable + article SEO long-tail (1er du mois 1h UTC)
+  "*/10 * * * *", # Sync iCal + annulations non payées + publication éditoriale + relance panier (était */15)
+  "0 9 * * *",    # Brief matinal + agents + orchestrateur + prearrivee + poststay + j1-acces — 9h UTC (5h MQ)
+  "0 12 * * *",   # Génération drafts éditoriaux J+2 + alerte ménage — 12h UTC (8h MQ)
+  "0 13 * * *",   # Charge balance soldes 2× J-30 — 13h UTC (migré depuis cron-job.org 7798126)
+  "0 6 * * 1",    # Rapport hebdomadaire + prix-recap — lundi 6h UTC (2h Martinique / 8h Paris)
+  "0 1 1 * *",    # Mensuel — export comptable + article SEO long-tail (1er du mois 1h UTC)
 ]
 
 # KV namespace pour stocker les UIDs connus (anti-doublon notifications)

@@ -2851,8 +2851,21 @@ export default {
         }
       })());
 
+    } else if (cron === "0 13 * * *") {
+      // 13h UTC chaque jour — charge-balance soldes 2× J-30 (migré cron-job.org 7798126)
+      ctx.waitUntil((async () => {
+        try {
+          const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+          const r = await fetch(`${siteUrl}/api/charge-balance?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`);
+          const d = await r.json().catch(() => ({}));
+          console.log(`[charge-balance] charged=${d.charged ?? 0} skipped=${d.skipped ?? 0} failed=${d.failed ?? 0}`);
+        } catch (e) {
+          console.error("[charge-balance] Cron error:", e.message);
+        }
+      })());
+
     } else {
-      // Toutes les 15 min — sync iCal + annulation Beds24 non payées + publication éditoriale due + relance panier
+      // Toutes les 10 min — sync iCal + annulation Beds24 non payées + publication éditoriale due + relance panier
       ctx.waitUntil((async () => {
         await runSync(env);
         await runCancelUnpaidBeds24Bookings(env);
