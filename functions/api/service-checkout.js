@@ -21,7 +21,7 @@ const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, header
 
 const BIEN_LABELS = {
   amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko",
-  mabouya: "Studio Mabouya", schoelcher: "Appartement Bellevue", nogent: "Appartement Nogent",
+  mabouya: "Mabouya", schoelcher: "Appartement Bellevue", nogent: "Appartement Nogent",
 };
 
 // Lit le catalogue extras[] du bien depuis D1 (fallback : fichier statique).

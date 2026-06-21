@@ -16,7 +16,7 @@ import MaillageCluster from "./components/seo/MaillageCluster.jsx";
 import { BIENS as CANON, isMartinique as isMartiniqueCanon } from "./data/biens.js";
 
 // Noms canoniques des biens pour le maillage interne SEO ("villa" = Amaryllis + Iguana uniquement).
-const BIEN_NAMES = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko", mabouya: "Studio Mabouya", schoelcher: "Bellevue Schœlcher", iguana: "Villa Iguana", nogent: "Appartement Nogent-sur-Marne" };
+const BIEN_NAMES = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko", mabouya: "Mabouya", schoelcher: "Bellevue Schœlcher", iguana: "Villa Iguana", nogent: "Appartement Nogent-sur-Marne" };
 
 // A/B test growth-001 : libellé du CTA réservation principal
 // Variante A (contrôle) = "RÉSERVER" · Variante B = "VÉRIFIER LES DISPOS"
@@ -480,8 +480,8 @@ const BIENS = [
   },
   {
     id: "mabouya",
-    nom: "Studio Mabouya",
-    airbnbTitle: "Studio Mabouya — Jacuzzi privatif · Vue mer · Escapade romantique",
+    nom: "Mabouya",
+    airbnbTitle: "Mabouya — Jacuzzi privatif · Vue mer · Escapade romantique",
     tag: "❤️ Escapade romantique",
     tagEn: "❤️ Romantic Escape",
     desc: "Le seul studio de la résidence avec jacuzzi privatif — rien que pour vous deux. Imaginez une soirée dans votre bain bouillonnant, face à la mer des Caraïbes, dans un jardin fleuri où il fait nuit noire et étoilé. Mabouya, c'est l'adresse secrète des couples en Martinique : intimité totale, calme absolu, plages à 7 minutes. À partir de 70 €/nuit en réservation directe.",
@@ -6946,7 +6946,7 @@ const STATIC_REVIEWS = [
 const CURATED_TESTIMONIALS = [
   { nom: "Sophie M.",      pays: "🇫🇷", note: 5, texte: "Vue extraordinaire, piscine à débordement parfaite et hôte très réactif. Un endroit hors du temps face aux Caraïbes. On reviendra sans hésiter !", villa: "Villa Amaryllis", villaId: "amaryllis", date: "Avr. 2025" },
   { nom: "Pierre & Claire",pays: "🇫🇷", note: 5, texte: "Vue imprenable sur le rocher du Diamant ! La piscine d'eau salée est un vrai plus. Villa propre, bien équipée, accueil aux petits soins.", villa: "Villa Iguana",    villaId: "iguana",    date: "Avr. 2025" },
-  { nom: "Élise & Romain", pays: "🇫🇷", note: 5, texte: "Weekend romantique parfait ! Le jacuzzi privatif sous les étoiles avec vue mer est juste magique. Jardin fleuri superbe, endroit très paisible.", villa: "Studio Mabouya",  villaId: "mabouya",   date: "Avr. 2025" },
+  { nom: "Élise & Romain", pays: "🇫🇷", note: 5, texte: "Weekend romantique parfait ! Le jacuzzi privatif sous les étoiles avec vue mer est juste magique. Jardin fleuri superbe, endroit très paisible.", villa: "Mabouya",  villaId: "mabouya",   date: "Avr. 2025" },
   { nom: "Lucie B.",       pays: "🇫🇷", note: 5, texte: "Cocon parfait ! La mezzanine est charmante, la piscine délicieuse, et la vue sur la mer au réveil est inoubliable. Hôte très disponible.", villa: "Zandoli",          villaId: "zandoli",   date: "Avr. 2025" },
 ];
 
@@ -7414,7 +7414,7 @@ function FooterSection() {
             ["Zandoli (5 pers.)", "/zandoli"],
             ["Villa Iguana (6 pers.)", "/iguana"],
             ["Géko (4 pers.)", "/geko"],
-            ["Studio Mabouya (2 pers.)", "/mabouya"],
+            ["Mabouya (2 pers.)", "/mabouya"],
             ["Tous nos avis", "/avis"],
           ]},
         ].map(col => (

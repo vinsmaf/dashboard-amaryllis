@@ -73,7 +73,7 @@ const BIENS = [
   { id: "amaryllis", name: "Villa Amaryllis", desc: "Sainte-Luce · piscine à débordement, vue mer, jacuzzi" },
   { id: "zandoli", name: "Zandoli", desc: "Sainte-Luce · piscine à cascade, jardin tropical" },
   { id: "geko", name: "Géko", desc: "Sainte-Luce · cocon avec piscine privative" },
-  { id: "mabouya", name: "Studio Mabouya", desc: "Sainte-Luce · studio avec jacuzzi privatif vue mer" },
+  { id: "mabouya", name: "Mabouya", desc: "Sainte-Luce · studio avec jacuzzi privatif vue mer" },
   { id: "schoelcher", name: "Bellevue Schœlcher", desc: "Schœlcher · vue sur la baie de Fort-de-France" },
   { id: "iguana", name: "Villa Iguana", desc: "Sainte-Luce · piscine eau salée, vue Diamant" },
   { id: "nogent", name: "Appartement Nogent-sur-Marne", desc: "Nogent-sur-Marne · bord de Marne, Paris en 20 min" },

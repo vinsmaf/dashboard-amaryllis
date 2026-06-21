@@ -30,8 +30,8 @@ describe("checkReservations", () => {
   it("bien inconnu", () => {
     expect(checkReservations([{ ...ok, bien: "Chalet Mystère" }], { validBiens: BIENS }).some((x) => x.rule === "bien_inconnu")).toBe(true);
   });
-  it("noms d'affichage variés reconnus (Studio Mabouya, Bellevue)", () => {
-    expect(checkReservations([{ ...ok, bien: "Studio Mabouya" }], { validBiens: BIENS }).some((x) => x.rule === "bien_inconnu")).toBe(false);
+  it("noms d'affichage variés reconnus (Mabouya, Bellevue)", () => {
+    expect(checkReservations([{ ...ok, bien: "Mabouya" }], { validBiens: BIENS }).some((x) => x.rule === "bien_inconnu")).toBe(false);
     expect(checkReservations([{ ...ok, bien: "Bellevue Schœlcher" }], { validBiens: BIENS }).some((x) => x.rule === "bien_inconnu")).toBe(false);
   });
   it("double-booking : chevauchement même bien", () => {

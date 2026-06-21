@@ -1000,7 +1000,7 @@ export const GUIDES_POI = [
         "a": "Oui. Le studio Mabouya, à Sainte-Luce, dispose d'un jacuzzi privatif avec vue sur la mer, pensé pour un couple en quête d'intimité."
       }
     ],
-    "depuisNosVillas": "Le Studio Mabouya, avec son jacuzzi privatif vue mer, est notre adresse des amoureux à Sainte-Luce ; nos autres logements raviront aussi les couples en quête de calme.",
+    "depuisNosVillas": "Le Mabouya, avec son jacuzzi privatif vue mer, est notre adresse des amoureux à Sainte-Luce ; nos autres logements raviront aussi les couples en quête de calme.",
     "ctaLabel": "Voir nos logements"
   },
   {

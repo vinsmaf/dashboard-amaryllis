@@ -77,13 +77,13 @@ export async function onRequest(context) {
       bien_id: r.bien_id || null,
     }));
 
-  } else if (segment === "repeaters") {
-    // RM-19 : voyageurs directs FIDÈLES (≥2 séjours en direct) — échelle de fidélité,
-    // le segment le plus rentable (0% commission, réacquisition quasi nulle).
-    let sql = `SELECT lower(trim(email)) AS email, MAX(prenom) AS prenom, MAX(bien_id) AS bien_id, COUNT(*) AS n
-               FROM direct_bookings WHERE email IS NOT NULL AND email != ''
-               GROUP BY lower(trim(email)) HAVING COUNT(*) >= 2
-               ORDER BY n DESC LIMIT ${MAX_RECIPIENTS}`;
+  } else if (segment === "past_guests") {
+    // Voyageurs ayant séjourné (direct_bookings, checkout < aujourd'hui)
+    const today = new Date().toISOString().slice(0, 10);
+    let sql = `SELECT DISTINCT email, prenom, bien_id FROM direct_bookings
+               WHERE email IS NOT NULL AND email != '' AND checkout < '${today}'`;
+    if (bien_id) sql += ` AND bien_id = '${bien_id.replace(/'/g, "''")}'`;
+    sql += ` ORDER BY checkout DESC LIMIT ${MAX_RECIPIENTS}`;
     const { results } = await db.prepare(sql).all();
     recipients = (results || []).map(r => ({
       email: r.email.trim().toLowerCase(),
@@ -91,14 +91,13 @@ export async function onRequest(context) {
       bien_id: r.bien_id || null,
     }));
 
-  } else if (segment === "past_guests") {
-    // RM-19/RM-10 : anciens voyageurs DIRECTS (base repeat) — relance fidélité hors OTA.
-    // Même pattern que les autres segments : résout les destinataires, n'envoie que si !dry_run.
-    let sql = `SELECT DISTINCT email, prenom, bien_id FROM direct_bookings
-               WHERE email IS NOT NULL AND email != ''`;
+  } else if (segment === "repeaters") {
+    // Voyageurs ayant séjourné 2+ fois (priorité fidélisation)
+    const today = new Date().toISOString().slice(0, 10);
+    let sql = `SELECT email, prenom, bien_id, COUNT(*) AS cnt FROM direct_bookings
+               WHERE email IS NOT NULL AND email != '' AND checkout < '${today}'`;
     if (bien_id) sql += ` AND bien_id = '${bien_id.replace(/'/g, "''")}'`;
-    sql += ` ORDER BY created_at DESC LIMIT ${MAX_RECIPIENTS}`;
-
+    sql += ` GROUP BY LOWER(TRIM(email)) HAVING cnt >= 2 ORDER BY cnt DESC LIMIT ${MAX_RECIPIENTS}`;
     const { results } = await db.prepare(sql).all();
     recipients = (results || []).map(r => ({
       email: r.email.trim().toLowerCase(),

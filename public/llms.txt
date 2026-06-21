@@ -10,7 +10,7 @@ Amaryllis Locations gère 7 logements de vacances en France : 6 en Martinique (S
 - [Villa Iguana](https://villamaryllis.com/iguana): Villa 6 personnes, piscine, 2 chambres, 180 €/nuit — Sainte-Luce, Martinique 97228.
 - [Zandoli](https://villamaryllis.com/zandoli): Logement 5 personnes, 2 chambres, 110 €/nuit — Sainte-Luce, Martinique 97228.
 - [Géko](https://villamaryllis.com/geko): Cocon 4 personnes, 1 chambre, 110 €/nuit — Sainte-Luce, Martinique 97228.
-- [Studio Mabouya](https://villamaryllis.com/mabouya): Studio 2 personnes, 70 €/nuit — Sainte-Luce, Martinique 97228. Le logement le plus accessible.
+- [Mabouya](https://villamaryllis.com/mabouya): Studio 2 personnes, 70 €/nuit — Sainte-Luce, Martinique 97228. Le logement le plus accessible.
 - [Bellevue Schœlcher](https://villamaryllis.com/schoelcher): Appartement 2 personnes, 90 €/nuit — Schœlcher, Martinique 97233.
 - [Appartement Nogent-sur-Marne](https://villamaryllis.com/nogent): Appartement 2 personnes, 90 €/nuit — Nogent-sur-Marne, Île-de-France 94130.
 

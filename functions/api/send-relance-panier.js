@@ -22,7 +22,7 @@ const json = (d, s = 200) => new Response(JSON.stringify(d), {
 
 const NOMS = {
   amaryllis: "Villa Amaryllis", iguana: "Villa Iguana", zandoli: "Zandoli",
-  geko: "Géko", mabouya: "Studio Mabouya", bellevue: "Appartement Bellevue",
+  geko: "Géko", mabouya: "Mabouya", bellevue: "Appartement Bellevue",
   schoelcher: "Appartement Bellevue", nogent: "Appartement Nogent", groupe: "Résidence Amaryllis",
 };
 

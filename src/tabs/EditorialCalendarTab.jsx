@@ -80,7 +80,7 @@ export default function EditorialCalendarTab() {
     { id: "zandoli",    label: "Zandoli",         color: "#10b981" },
     { id: "iguana",     label: "Villa Iguana",    color: "#f59e0b" },
     { id: "geko",       label: "Géko",            color: "#22c55e" },
-    { id: "mabouya",    label: "Studio Mabouya",  color: "#ec4899" },
+    { id: "mabouya",    label: "Mabouya",  color: "#ec4899" },
     { id: "schoelcher", label: "Bellevue",        color: "#3b82f6" },
     { id: "nogent",     label: "Nogent",          color: "#8b5cf6" },
   ];
