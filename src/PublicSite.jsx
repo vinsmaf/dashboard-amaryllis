@@ -3450,9 +3450,15 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
   const [showFull, setShowFull] = useState(false);
   const [calCheckin, setCalCheckin] = useState(initialCheckin || null);
   const [calCheckout, setCalCheckout] = useState(initialCheckout || null);
-  // Sync when dates arrive async (availability loaded after mount)
+  // Sync when dates arrive async (availability loaded after mount) + navigate calendar to the right month
   useEffect(() => {
-    if (initialCheckin && !calCheckin) setCalCheckin(initialCheckin);
+    if (initialCheckin && !calCheckin) {
+      setCalCheckin(initialCheckin);
+      const now = new Date();
+      const ci = new Date(initialCheckin + "T12:00:00");
+      const off = (ci.getFullYear() - now.getFullYear()) * 12 + (ci.getMonth() - now.getMonth());
+      if (off > 0) setCalOffset(off);
+    }
     if (initialCheckout && !calCheckout) setCalCheckout(initialCheckout);
   }, [initialCheckin, initialCheckout]); // eslint-disable-line react-hooks/exhaustive-deps
   const [calHovered, setCalHovered] = useState(null);
