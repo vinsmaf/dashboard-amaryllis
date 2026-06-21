@@ -8740,8 +8740,8 @@ export default function PublicSite() {
           onBook={openBien}
           blockedDates={blockedDates}
           loadingAvail={loadingAvail}
-          initialCheckin={_directCheckin}
-          initialCheckout={_directCheckout}
+          initialCheckin={_directCheckin || bookingInitialDates.checkin}
+          initialCheckout={_directCheckout || bookingInitialDates.checkout}
         />
         {selectedBien && (
           <BookingModal
@@ -9444,7 +9444,7 @@ export default function PublicSite() {
 
       {/* ── PROPERTY DETAIL ── */}
       {detailBien && !selectedBien && (
-        <PropertyDetail bien={detailBien} onClose={() => openDetail(null)} onBook={openBien} blockedDates={blockedDates} loadingAvail={loadingAvail} />
+        <PropertyDetail bien={detailBien} onClose={() => openDetail(null)} onBook={openBien} blockedDates={blockedDates} loadingAvail={loadingAvail} initialCheckin={bookingInitialDates.checkin} initialCheckout={bookingInitialDates.checkout} />
       )}
 
       {/* ── BEDS24 MODAL (Nogent) ── */}
