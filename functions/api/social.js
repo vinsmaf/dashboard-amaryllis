@@ -195,7 +195,7 @@ async function handlePublish(env, { caption, imageUrl, channels = ["ig", "fb"], 
 // → polling status_code (l'encodage vidéo côté Meta est asynchrone) → media_publish.
 // `dryRun` s'arrête à FINISHED sans publier (validation du tuyau sans poster).
 // Facebook Reels = flux distinct (video_reels), traité dans une phase ultérieure.
-async function pollContainer(containerId, token, { maxTries = 12, intervalMs = 5000 } = {}) {
+async function pollContainer(containerId, token, { maxTries = 5, intervalMs = 4000 } = {}) {
   for (let i = 0; i < maxTries; i++) {
     const s = await graphGet(`${containerId}?fields=status_code,status`, token);
     const code = s?.status_code;
