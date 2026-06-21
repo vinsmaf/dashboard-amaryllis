@@ -29,6 +29,7 @@ import DevisEditor from "./tabs/DevisEditor.jsx";
 import InterventionsTab from "./tabs/InterventionsTab.jsx";
 import InventaireTab from "./tabs/InventaireTab.jsx";
 import ConversionTab from "./tabs/ConversionTab.jsx";
+import FunnelTab from "./tabs/FunnelTab.jsx";
 import ServiceOrdersTab from "./tabs/ServiceOrdersTab.jsx";
 import OrchestratorTab from "./tabs/OrchestratorTab.jsx";
 import SocialTab from "./tabs/SocialTab.jsx";
@@ -1300,6 +1301,7 @@ export default function App() {
         { id: "previsionnel",icon: "🔮", label: "Prévisionnel" },
         { id: "historique",  icon: "📈", label: "Historique" },
         { id: "analytics",   icon: "📊", label: "Analytics" },
+        { id: "funnel",      icon: "🔭", label: "Funnel" },
         { id: "conversion",  icon: "💳", label: "Conversion" },
         { id: "ventes",      icon: "🛎️", label: "Ventes" },
         { id: "avis",        icon: "⭐", label: "Avis" },
@@ -1568,6 +1570,7 @@ export default function App() {
             {tab === "orchestrateur" && <OrchestratorTab />}
             {tab === "interventions" && <InterventionsTab />}
             {tab === "inventaire"    && <InventaireTab />}
+            {tab === "funnel"        && <FunnelTab />}
             {tab === "conversion"    && <ConversionTab />}
             {tab === "ventes"        && <ServiceOrdersTab />}
             {tab === "avis"          && <AvisTab />}
