@@ -715,6 +715,24 @@ function addDays(ds, n) {
 function dateDiff(a, b) {
   return Math.round((new Date(b + "T12:00:00") - new Date(a + "T12:00:00")) / 86400000);
 }
+function nextAvailWindow(blocked, minN = 3) {
+  const s = new Set(blocked);
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() + 1);
+  for (let i = 0; i < 180; i++) {
+    const ci = d.toISOString().slice(0, 10);
+    if (!s.has(ci)) {
+      let ok = true;
+      for (let j = 1; j < minN; j++) {
+        const n = new Date(d); n.setUTCDate(n.getUTCDate() + j);
+        if (s.has(n.toISOString().slice(0, 10))) { ok = false; break; }
+      }
+      if (ok) return { checkin: ci, checkout: addDays(ci, minN) };
+    }
+    d.setUTCDate(d.getUTCDate() + 1);
+  }
+  return null;
+}
 function formatDateLong(ds) {
   if (!ds) return "";
   const [y, m, d] = ds.split("-").map(Number);
@@ -3518,6 +3536,11 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
   const [showFull, setShowFull] = useState(false);
   const [calCheckin, setCalCheckin] = useState(initialCheckin || null);
   const [calCheckout, setCalCheckout] = useState(initialCheckout || null);
+  // Sync when dates arrive async (availability loaded after mount)
+  useEffect(() => {
+    if (initialCheckin && !calCheckin) setCalCheckin(initialCheckin);
+    if (initialCheckout && !calCheckout) setCalCheckout(initialCheckout);
+  }, [initialCheckin, initialCheckout]); // eslint-disable-line react-hooks/exhaustive-deps
   const [calHovered, setCalHovered] = useState(null);
   const [calOffset, setCalOffset] = useState(0);
   const [showAlerte, setShowAlerte] = useState(false);
@@ -8457,6 +8480,8 @@ export default function PublicSite() {
       setBlockedDates(cached.data);
       setLoadingAvail(false);
       if (window.gtag) window.gtag("event", "availability_ready", { bien_id: bienId, blocked_count: cached.data.length, cache_hit: true });
+      const next = nextAvailWindow(cached.data);
+      if (next) setBookingInitialDates(prev => prev.checkin ? prev : next);
       return;
     }
 
@@ -8481,6 +8506,8 @@ export default function PublicSite() {
         _availCache[bienId] = { data: blocked, ts: Date.now() };
         setBlockedDates(blocked);
         if (window.gtag) window.gtag("event", "availability_ready", { bien_id: bienId, blocked_count: blocked.length, cache_hit: false });
+        const next = nextAvailWindow(blocked);
+        if (next) setBookingInitialDates(prev => prev.checkin ? prev : next);
       }
     } catch (e) {
       if (e.name !== "AbortError") { /* ignore aborted requests */ }
