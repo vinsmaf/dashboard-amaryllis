@@ -4,7 +4,8 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import SEOMeta from "./SEOMeta.jsx";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import L from "leaflet";
+import * as LModule from "leaflet";
+const L = LModule.default ?? LModule;
 import { DESTINATIONS } from "./data/destinations.js";
 import { ALL_BIENS, isMartinique as isMtq } from "./data/biens.js";
 
