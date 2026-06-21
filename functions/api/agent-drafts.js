@@ -53,7 +53,8 @@ async function executeDraft(env, draft) {
       : ["fb", "ig"];
 
     const origin = new URL(env.PAGES_URL || "https://dashboard-amaryllis.pages.dev").origin;
-    const r = await fetch(`${origin}/api/social`, {
+    const secretQ = env.POSTSTAY_SECRET ? `?secret=${encodeURIComponent(env.POSTSTAY_SECRET)}` : "";
+    const r = await fetch(`${origin}/api/social${secretQ}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -78,7 +79,8 @@ async function executeDraft(env, draft) {
       : ["ig"];
 
     const origin = new URL(env.PAGES_URL || "https://dashboard-amaryllis.pages.dev").origin;
-    const r = await fetch(`${origin}/api/social`, {
+    const secretQ = env.POSTSTAY_SECRET ? `?secret=${encodeURIComponent(env.POSTSTAY_SECRET)}` : "";
+    const r = await fetch(`${origin}/api/social${secretQ}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

@@ -5,6 +5,8 @@
  *                { action: "schedule", caption, imageUrl, channels, scheduledAt }
  */
 
+import { verifyBearer } from "./_adminauth.js";
+
 const GV = "v25.0";
 
 function json(data, status = 200) {
@@ -267,6 +269,12 @@ export async function onRequestGet({ request, env }) {
 }
 
 export async function onRequestPost({ request, env }) {
+  // sec : publication réseaux → admin (Bearer) OU secret partagé (cron/agent-drafts interne).
+  const _url = new URL(request.url);
+  const _secretOk = env.POSTSTAY_SECRET && _url.searchParams.get("secret") === env.POSTSTAY_SECRET;
+  const { ok: _adminOk } = await verifyBearer(request, env);
+  if (!_secretOk && !_adminOk) return json({ error: "Non autorisé" }, 401);
+
   let body;
   try { body = await request.json(); } catch { return json({ error: "Body JSON invalide" }, 400); }
 
