@@ -1,0 +1,64 @@
+name: Drift detector — prod vs main
+
+# Filet de sécurité par-dessus l'auto-deploy : vérifie toutes les 6h que le commit
+# déployé en prod (lu via l'API Cloudflare Pages) == HEAD de main. Si ça diverge
+# (CI échoué non vu, ou deploy manuel hors-main), alerte ntfy. Ne déploie rien.
+#
+# Secrets requis : CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, NTFY_TOPIC
+#   (NTFY_TOPIC = amaryllis-alertes-7r4k9)
+
+on:
+  schedule:
+    - cron: "0 */6 * * *" # toutes les 6h
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Comparer commit déployé (CF) vs main
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: |
+          set -uo pipefail
+          MAIN_SHA=$(git rev-parse HEAD)
+          MAIN_SHORT=${MAIN_SHA:0:8}
+
+          RESP=$(curl -s -H "Authorization: Bearer $CF_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/pages/projects/dashboard-amaryllis/deployments?env=production&per_page=1")
+          PROD_SHA=$(echo "$RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print((d['result'][0].get('deployment_trigger',{}).get('metadata',{}) or {}).get('commit_hash',''))" 2>/dev/null || echo "")
+          PROD_SHORT=${PROD_SHA:0:8}
+          echo "main=$MAIN_SHORT  prod=$PROD_SHORT"
+
+          if [[ -z "$PROD_SHA" ]]; then
+            echo "::warning::Commit prod illisible via l'API CF (pas d'alerte, pas de faux positif)"
+            exit 0
+          fi
+
+          if [[ "$MAIN_SHA" == "$PROD_SHA" ]]; then
+            echo "✅ prod = main — aucun drift"
+            exit 0
+          fi
+
+          if git merge-base --is-ancestor "$PROD_SHA" "$MAIN_SHA" 2>/dev/null; then
+            N=$(git rev-list --count "$PROD_SHA".."$MAIN_SHA" 2>/dev/null || echo "?")
+            MSG="⚠️ DRIFT villamaryllis : prod=$PROD_SHORT en retard de $N commit(s) sur main=$MAIN_SHORT. CI auto-deploy en échec ? Vérifier l'onglet Actions."
+            PRIO=4
+          else
+            MSG="🚨 DRIFT villamaryllis : prod=$PROD_SHORT n'est PAS dans main=$MAIN_SHORT (déploiement hors-main détecté). Réconcilier d'urgence."
+            PRIO=5
+          fi
+          echo "$MSG"
+          if [[ -n "${NTFY_TOPIC:-}" ]]; then
+            curl -s -H "Title: Drift prod villamaryllis" -H "Priority: $PRIO" -H "Tags: warning,rotating_light" \
+              -d "$MSG" "https://ntfy.sh/$NTFY_TOPIC" >/dev/null || true
+          fi
+          exit 1

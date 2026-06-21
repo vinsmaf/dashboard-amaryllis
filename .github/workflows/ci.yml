@@ -1,13 +1,11 @@
 name: CI — Tests & Build
 
-# Filet anti-régression : à chaque push/PR sur main, lance la suite vitest + valide
-# que tout compile (front + prerender + Functions). Complète le gate de deploy-pages.sh
-# (qui ne tourne qu'au déploiement) — ici on attrape les régressions dès le commit.
+# Filet anti-régression sur les PR : lance la suite vitest + valide que tout compile
+# (front + prerender + Functions). Les push sur main sont couverts par deploy.yml
+# (mêmes tests + functions build AVANT le déploiement) → on évite le double-run.
 # NB : `npm run lint` n'est PAS inclus (code historique = 557 erreurs eslint ; nettoyage séparé).
 
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:

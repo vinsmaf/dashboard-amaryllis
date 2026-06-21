@@ -1,0 +1,102 @@
+name: Deploy — Pages (auto sur merge main)
+
+# Source unique de la prod = main. Ce workflow déploie villamaryllis.com
+# automatiquement dès qu'un commit CODE arrive sur main (tests verts → build →
+# wrangler deploy). Les commits docs/mémoire (.memory, docs, *.md) ne déclenchent
+# PAS de deploy grâce au filtre `paths`. Le Worker (amaryllis-ical-sync) n'est
+# redéployé que si workers/ a changé.
+#
+# Prérequis (secrets GitHub à créer une fois — Settings → Secrets → Actions) :
+#   CLOUDFLARE_API_TOKEN   (token avec droit "Cloudflare Pages: Edit" + "Workers Scripts: Edit")
+#   CLOUDFLARE_ACCOUNT_ID  = 3c031c79a864a3e1f0d8c17c433b2247
+#
+# Garde anti-cross-deploy : project-name codé en dur = dashboard-amaryllis (JAMAIS patrimoine-dashboard).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "functions/**"
+      - "public/**"
+      - "workers/**"
+      - "scripts/**"
+      - "index.html"
+      - "package.json"
+      - "package-lock.json"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-pages-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # besoin de l'historique pour le diff Worker
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22" # wrangler ≥4.94 exige Node >=22
+          cache: "npm"
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Tests (gate dur)
+        run: npm run test:run
+
+      - name: Build front + prerender
+        run: npm run build
+
+      - name: Build Functions (valide imports Functions ← src/)
+        run: npx wrangler pages functions build --outdir /tmp/fn-build
+
+      - name: Deploy Pages → dashboard-amaryllis
+        id: deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npx wrangler pages deploy dist --project-name dashboard-amaryllis --branch main 2>&1 | tee deploy.log
+          ALIAS=$(grep -oE 'https://[a-z0-9]+\.dashboard-amaryllis\.pages\.dev' deploy.log | head -1)
+          echo "alias=$ALIAS" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy Worker (uniquement si workers/ a changé)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          BEFORE="${{ github.event.before }}"
+          # Premier push / force-push (before = zéros) → déploie le Worker par sécurité.
+          if [[ -z "$BEFORE" || "$BEFORE" == "0000000000000000000000000000000000000000" ]]; then
+            CHANGED_WORKER=1
+          elif git diff --name-only "$BEFORE" "${{ github.sha }}" | grep -q '^workers/'; then
+            CHANGED_WORKER=1
+          else
+            CHANGED_WORKER=0
+          fi
+          if [[ "$CHANGED_WORKER" == "1" ]]; then
+            echo "workers/ a changé → déploiement du Worker amaryllis-ical-sync"
+            npx wrangler deploy
+          else
+            echo "workers/ inchangé → skip déploiement Worker"
+          fi
+
+      - name: Smoke test (alias de déploiement, sans cache CDN)
+        run: |
+          URL="${{ steps.deploy.outputs.alias }}"
+          if [[ -z "$URL" ]]; then URL="https://villamaryllis.com"; fi
+          echo "Smoke sur $URL"
+          FAIL=0
+          for path in "/" "/amaryllis" "/api/weather?loc=martinique"; do
+            CODE=$(curl -s -o /dev/null -w '%{http_code}' "$URL$path" || echo "000")
+            echo "  $path → $CODE"
+            [[ "$CODE" == "200" ]] || FAIL=1
+          done
+          if [[ "$FAIL" == "1" ]]; then echo "❌ Smoke test échoué"; exit 1; fi
+          echo "✅ Smoke test OK"

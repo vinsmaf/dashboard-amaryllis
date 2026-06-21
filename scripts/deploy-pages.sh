@@ -31,6 +31,29 @@ if [[ "$(basename "$(pwd)")" != "locatif-dashboard" ]]; then
   sleep 5
 fi
 
+# ── 0a. GARDE DE BRANCHE — main = source unique de la prod ──────────────────────
+# Le drift prod≠main du 2026-06-21 venait d'un deploy manuel depuis une branche
+# worktree (claude/*) jamais mergée dans main. Désormais : on ne déploie QUE main.
+# Le chemin normal est le CI auto-deploy (.github/workflows/deploy.yml) sur merge main.
+# Ce deploy manuel reste un secours ponctuel → exige main + propre.
+# Échappatoire d'urgence explicite : ALLOW_BRANCH_DEPLOY=1 npm run deploy:pages
+if [[ "${ALLOW_BRANCH_DEPLOY:-0}" != "1" ]]; then
+  CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')"
+  if [[ "$CURRENT_BRANCH" != "main" ]]; then
+    echo "🚨 STOP — déploiement manuel hors de 'main' (branche actuelle : $CURRENT_BRANCH)."
+    echo "   La prod = main UNIQUEMENT (sinon drift silencieux, vécu le 2026-06-21)."
+    echo "   → Merge ta branche dans main, puis déploie depuis main."
+    echo "   → Ou, en secours conscient : ALLOW_BRANCH_DEPLOY=1 npm run deploy:pages"
+    exit 1
+  fi
+  if [[ -n "$(git status --porcelain 2>/dev/null)" ]]; then
+    echo "⚠️  Working tree non propre : des changements non-committés vont partir en prod"
+    echo "   mais ne seront PAS sur origin/main → drift garanti au prochain push."
+    echo "   Committe d'abord (recommandé), ou patiente 5s…"
+    sleep 5
+  fi
+fi
+
 # ── 0. GATE TESTS — barrière dure : aucun déploiement si la suite vitest échoue ──
 if [[ "${SKIP_TESTS:-0}" != "1" ]]; then
   echo "🧪 Tests unitaires (gate)…"
