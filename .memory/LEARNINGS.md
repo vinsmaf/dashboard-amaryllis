@@ -3,6 +3,14 @@
 > Pièges déjà rencontrés + comment les éviter. 1 entrée = 1 leçon actionnable « la prochaine fois ».
 > Le journal d'erreurs exhaustif reste `../docs/ERREURS-LOG.md`.
 
+## 🤖 Registre agents : fleet + interactive doivent rester synchronisés — 2026-06-21
+- **Piège** : 11 agents existaient dans la fleet (`agents-run.js`) mais n'avaient pas de fiche `~/.claude/agents/*.md` → impossibles à convoquer en session par nom ; le registre dans ORG.md signalait "fleet only pour l'instant" mais ça crée une dette invisible.
+- **La prochaine fois** : quand on crée un agent fleet → créer la fiche interactive en même temps. Les deux registres (fleet + `~/.claude/agents/`) DOIVENT rester synchronisés. L'ORG.md est le single source of truth.
+
+## ⏰ Cron-job.org : vérifier l'état réel avant de planifier une migration — 2026-06-21
+- **Découverte** : lors de la migration cron-job.org→CF Worker, 6 des 7 jobs locatif étaient déjà supprimés dans les sessions précédentes. Seul `charge-balance` restait. J'avais prévu une migration de 7 jobs, il n'en restait qu'un.
+- **La prochaine fois** : avant toute migration de service, faire un `GET /jobs` (ou équivalent) sur le service source pour lister l'état réel. Ne pas supposer que tous les jobs listés dans la mémoire existent encore.
+
 ## 📊 Funnel/trafic : un chiffre volatil figé en mémoire MENT — toujours `npm run funnel` — 2026-06-20
 - **Piège vécu** : j'ai resservi à Vincent le funnel noté dans `CONTEXT.md` au 04/06 (« ~5 visiteurs/j, 240 view_item → 16 begin_checkout ») comme « actuel ». Réalité live (`/api/analytics`) : ~24 sessions/j, 900 view_item, 63 begin_checkout, 4 purchases, 2 894€. **Faux d'un facteur ~4-10.** Un chiffre volatil copié hors de sa source périme et diverge (ADR-G-001).
 - **La prochaine fois** : avant TOUTE reco conversion/pricing/roadmap → `npm run funnel` (lit GA4 30j, public sans auth, jamais cache client). Ne JAMAIS citer un chiffre funnel de `.memory`. Source = GA4, point.

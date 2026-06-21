@@ -232,7 +232,7 @@ flowchart TD
 
 ## 8. Sync canaux & messagerie
 
-- **Sync résas** : Worker `runSync` (cron `*/15`) aspire iCal Airbnb+Booking + résas directes Stripe (D1 `direct_bookings`) → dédup UIDs via KV `ICAL_STORE` → `/api/sheets-proxy` → Google Sheet « Toutes les Réservations ». **iCal export sortant** (`ical-export.js`) souscrit par Airbnb/Booking pour bloquer les dates directes.
+- **Sync résas** : Worker `runSync` (cron `*/10`) aspire iCal Airbnb+Booking + résas directes Stripe (D1 `direct_bookings`) → dédup UIDs via KV `ICAL_STORE` → `/api/sheets-proxy` → Google Sheet « Toutes les Réservations ». **iCal export sortant** (`ical-export.js`) souscrit par Airbnb/Booking pour bloquer les dates directes.
 - **Beds24 = NOGENT UNIQUEMENT** (propId 158192, roomId 348880). Le webhook `beds24-webhook.js` + le bouton 📊 manuel sont les SEULS chemins d'écriture Sheet pour Nogent (Nogent exclu du Worker iCal). Token rotatif D1 `beds24_tokens` (`beds24-refresh.js`, `getActiveBeds24Token`).
 - **WhatsApp** (`whatsapp.js`) : bot voyageur Meta Cloud API v21.0 → detectBien → guide D1 → LLM Groq → réponse, transcription vocale Voxtral, log D1 `whatsapp_conversations`, escalade/irritation → ntfy hôte (RM-18).
 - **Social** : `social-webhook.js` (live/shadow, dédup `social_bot_log`), `social-poll.js` (sans webhook, shadow), `social-draft.js` (veille groupes FB), `social.js` (publication FB+IG des drafts éditoriaux). Mode **shadow par défaut**.
@@ -344,9 +344,10 @@ flowchart TD
 
 | Cron | Horaire | Ce qu'il fait |
 |---|---|---|
-| `*/15 * * * *` | toutes 15 min | `runSync` (iCal+directes→Sheet, dédup KV) · `runCancelUnpaidBeds24Bookings` · `runEditorialAutoPublish` (posts `approved` dus → FB+IG) |
+| `*/10 * * * *` | toutes 10 min | `runSync` (iCal+directes→Sheet, dédup KV) · `runCancelUnpaidBeds24Bookings` · `runEditorialAutoPublish` (posts `approved` dus → FB+IG) · `send-relance-panier` |
 | `0 9 * * *` | 9h UTC / 5h MTQ | **`morning-brief` (brief matinal ntfy)** · **`kpi-sentinel` (8 signaux + watchdog ntfy)** · ai-ops refresh · monitor · rappels hôte J-7..J+3 · digest arrivées · alertes occupation · `runOccupancySnapshot`→`rm_kpi_snapshots` · gap/yield pricing · `caution-cron` + caution auto-release · inventaire · `devis-solde-cron` · `runEnrichFromEmails`→`enrich-from-emails.js` (complète nom+payout des résas Airbnb depuis l'onglet « Emails », **AVANT** coherence-check) · coherence-check · agents-run(all) + orchestrator + eval + digest IA |
 | `0 12 * * *` | 12h UTC / 8h MTQ | `runEditorialReseed` (30j) + `runEditorialDraftGen` (drafts J+2 → gate) |
+| `0 13 * * *` | 13h UTC / 9h MTQ | `charge-balance` (soldes 2× J-30 — migré cron-job.org 7798126) |
 | `0 6 * * 1` | lundi 6h UTC | rapport hebdo · prix-recap · RAG ingest · agents-execute + digest · token health check · SEO report · bug-triage · memory-distill · guide-write |
 | `0 1 1 * *` | 1er du mois 1h UTC | export comptable CSV · article SEO long-tail · rappel rotation tokens · refresh avis (Apify) · **`seasonal-update`→`seasonal_memory`** |
 

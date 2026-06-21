@@ -3,6 +3,27 @@
 > 1 entrée par décision qui engage la suite. Format 5 lignes : **Choix · Alternatives refusées · Conséquences attendues · Périmètre · Statut**.
 > Décisions d'archi détaillées (specs complets) → `../docs/superpowers/specs/README.md` (ADR-001→010). Ici = log curaté de session.
 
+## ADR-CRON-MIGRATION-001 · 2026-06-21 · Tous les crons locatif migrés vers CF Worker natif
+1. **Choix** : charge-balance (dernier cron-job.org locatif restant, job 7798126) migré vers CF Worker `0 13 * * *`. iCal sync monté de `*/15` → `*/10`. Tous les crons locatif sont désormais dans `wrangler.toml` uniquement.
+2. **Alternatives refusées** : garder cron-job.org pour le monitoring externe (écarté — health-check reste optionnel, les drift-detector CI jouent ce rôle ; la complexité d'un service tiers n'est plus justifiée).
+3. **Conséquences attendues** : 0 dépendance cron-job.org locatif. Résilience = celle de CF Workers (SLA 99,9%). iCal sync passe de 4→6 fois/heure.
+4. **Périmètre** : `workers/ical-sync/index.js` · `wrangler.toml` · `.memory/ARCHITECTURE.md` (tables crons).
+5. **Statut** : acté, déployé (`6c163e7`). cron-job.org job 7798126 disabled.
+
+## ADR-AGENTS-COMPLETS-001 · 2026-06-21 · Tous les agents fleet ont maintenant une fiche interactive
+1. **Choix** : créer les 11 fiches `~/.claude/agents/*.md` manquantes (qa-tester, growth-experiments, veille-concurrentielle, prompt-engineer, seo-local, voyageur-research, repondeur-social, fiscaliste, controleur-fiscal, comptable, notaire-assurance).
+2. **Alternatives refusées** : les garder "fleet only" (écarté — empêche de les convoquer en session par nom ; le double registre crée une divergence invisible).
+3. **Conséquences attendues** : les 28 agents locatif sont convocables en session interactive ET dans le cron fleet. L'ORG.md est le registre de référence. Toute future création d'agent fleet → créer la fiche interactive en même temps.
+4. **Périmètre** : `~/.claude/agents/` (11 fichiers créés) · `~/.claude/ORG.md`.
+5. **Statut** : acté, commité cerveau (`b4b015e`).
+
+## ADR-REUNIONS-V2-001 · 2026-06-21 · Réunions V2 live — trigger fleet avant lecture KV
+1. **Choix** : les 6 skills de réunion (`/reunion-marketing`, `/point-revenus`, `/revue-deploy`, `/revue-voyageur`, `/conseil`, `/reunion-generale`) déclenchent désormais un POST `/api/agents-run` + sleep 90s avant de lire le KV. Données garanties fraîches à chaque `/reunion-*`.
+2. **Alternatives refusées** : filtrage fin par agent (POST avec liste d'IDs) — écarté car l'API `agents-run.js` ne supporte pas le filtrage natif ; le run complet est acceptable (fleet complète = ~90s).
+3. **Conséquences attendues** : fin des briefs stale. Coût : 90s d'attente par réunion. `/reunion-generale` = 2 min (deux fleets). Si trop lent à l'usage → ajouter filtrage API côté `agents-run.js` (scope futur).
+4. **Périmètre** : `~/.claude/skills/reunion-{generale,marketing}/` · `point-revenus/` · `revue-{deploy,voyageur}/` · `conseil/` — chaque SKILL.md.
+5. **Statut** : acté, commité cerveau (`b4b015e`).
+
 ## ADR-FUNNEL-LIVE-001 · 2026-06-20 · Chiffres funnel/conversion = source live uniquement, jamais figés en mémoire
 1. **Choix** : les chiffres volatils (funnel, trafic, conversion, revenu) ne vivent QUE dans GA4, lus à la demande via `npm run funnel` (script `scripts/funnel.mjs` → `/api/analytics`, public sans auth, 30j glissants) ou l'onglet admin Analytics. La mémoire pointe vers la source, ne recopie jamais (ADR-G-001 appliqué au funnel).
 2. **Alternatives refusées** : continuer à noter le funnel dans `CONTEXT.md` (rejeté — vécu ce jour : j'ai resservi le funnel du 04/06 figé, faux d'un facteur ~4-10 ; un chiffre volatil copié périme et ment).

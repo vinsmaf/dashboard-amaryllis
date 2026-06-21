@@ -4,6 +4,10 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
+## En cours → ✅ terminé le 2026-06-21 (Session organisation société d'agents + crons)
+
+---
+
 ## En cours → ✅ terminé le 2026-06-21 (Session sync permanent main=prod + couche monitoring live)
 
 ---
