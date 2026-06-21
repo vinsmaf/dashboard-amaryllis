@@ -399,6 +399,14 @@
 
 - **Meta Pixel consent-gating = race condition ViewContent.** `loadMetaPixel()` charge le pixel APRÈS acceptation cookies. `ViewContent` appelé avant = no-op (fbq pas encore dispo). Fix : dispatch `CustomEvent("meta-pixel-ready")` depuis `loadMetaPixel()`, ajouter listener `{ once: true }` aux call sites. Pour les URLs directes (click Meta Ads → `/amaryllis`), le fire ViewContent était totalement absent — l'ajouter dans le useEffect d'initialisation de la route.
 
+## 2026-06-21 — Reels IG+FB, pipeline auto-pub
+
+- **IG Reels timeout ≠ échec définitif** : Meta prend jusqu'à 60s pour encoder une vidéo côté serveur ; CF Pages timeout = 30s → le container est créé MAIS le polling expire avant `FINISHED`. Solution : stocker le `container_id` dès l'étape 1 dans le résultat D1 ; au retry, appeler `publish_container` directement (container déjà encodé entre temps). Ne JAMAIS recréer le container à chaque tentative.
+- **FB Reels = endpoint séparé** : `POST /{page-id}/video_reels` (pas `/{pageId}/feed`, pas `/{igId}/media`). Corps : `{ video_url, description, title, published }`. Distinct des posts photo/texte FB. `META_PAGE_ID` requis (déjà dans les secrets).
+- **Dual-gate serveur-à-serveur** (confirmé) : `social.js POST` accepte Bearer admin OU `?secret=POSTSTAY_SECRET`. Quand `agent-drafts.js` appelle `/api/social` en interne, passer `?secret=` — le Bearer ne se propage pas entre Functions CF.
+- **Fenêtre auto-publish : mettre ≥30j, idéalement 90j** — une fenêtre de 14j laisse silencieusement orphelins tous les drafts `approved` planifiés > 14j en arrière (typique après backlog ou pause). Symptôme : cron tourne mais ne publie rien. Diagnostic : simuler la query de sélection D1 manuellement.
+- **`callLLM` retourne `{ok, text}` jamais une string** — ne JAMAIS écrire `captionRes.trim()` ou `captionRes.split()` directement sur le résultat. Toujours `captionRes.text.trim()` après avoir vérifié `captionRes.ok`.
+
 - **`rebuildRevenus2026_` = DESTRUCTIF si le Sheet contient des données mixtes (système + manuel).** La fonction zéro TOUTES les lignes data des colonnes cibles AVANT de re-appliquer depuis les onglets source. Toute donnée saisie manuellement hors des onglets source (Airbnb historique, corrections, données hors-système) est définitivement perdue. **La prochaine fois : NE JAMAIS faire de zéro global sans avoir exporté une copie du Sheet.** L'alternative safe = trigger `syncRevenus2026` (mémo-based = incremental, jamais destructif).
 
 - **Le trigger `syncRevenus2026` (15 min) est la seule voie safe pour les incréments.** Il utilise le mémo `rev2026_traites` pour ne traiter que les résas nouvelles, jamais les existantes. Il ne touche jamais les cellules qui n'ont pas de delta à appliquer. Utiliser TOUJOURS cette voie pour les nouveaux enregistrements ; la fonction rebuild est réservée à un reset total sur données 100% système.
@@ -419,3 +427,10 @@
 - **Donnée saisie puis JETÉE** : `form.tel` collecté mais jamais transmis (metadata/INSERT). Avant de "capturer", vérifier si c'est déjà saisi côté front et juste perdu en aval (RM-10).
 - **A/B = proxy ≠ conversion** : câbler `trackConversion(step:"purchase")` à la résa confirmée (Merci.jsx), n'attribuer qu'aux tests EXPOSÉS (`listActiveVariants`).
 - **Findings sur réalité d'une donnée = confirmation humaine** : RM-13 (avis statiques) faux positif (réels). Demander la provenance à Vincent avant de "corriger".
+
+## 2026-06-20 — Sécurité & CSP
+
+- **CSP : domaine racine ≠ sous-domaine** — `connect-src: https://open-meteo.com` ne couvre PAS `https://api.open-meteo.com`. Toujours lister le sous-domaine exact utilisé par le code (vérifier les appels fetch réels, pas juste le domaine marketing).
+- **Cache `public` sur réponse avec PII = faille** — `Cache-Control: public, s-maxage=300` sur `beds24-bookings` permettait à Cloudflare CDN de mettre en cache email/téléphone d'un voyageur et de le servir à un autre. Toute réponse personnalisée (auth requise, données user) doit être `private`.
+- **Dual-gate serveur-à-serveur** — quand un endpoint a deux appelants légitimes (admin humain via Bearer + script interne via secret), utiliser `secret === env.SECRET || verifyBearer(ok)` plutôt que choisir l'un ou l'autre. Voir `social.js onRequestPost`.
+- **Vérifier avant de proposer un chantier média** — j'ai proposé d'ajouter `fetchPriority="high"` sur les heroes (Chantier C) sans vérifier le code : c'était déjà en place pour tous les biens depuis la session précédente. Toujours `grep -n "fetchPriority"` avant de le mettre au plan.

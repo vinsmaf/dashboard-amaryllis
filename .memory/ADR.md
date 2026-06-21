@@ -490,3 +490,33 @@
 3. **Conséquences attendues** : `applyOne_()` dans `REVENUS_AUTO_2026.gs` et `REVENUS_AUTO_2027.gs` implémentent la nouvelle règle. Toute nouvelle résa (trigger syncRevenus2026) utilisera cette règle. Les données antérieures ont été restaurées manuellement par Vincent.
 4. **Périmètre** : `appscript/REVENUS_AUTO_2026.gs` · `appscript/REVENUS_AUTO_2027.gs`. Déployé via clasp deploy (@37). Commit : **non commité**.
 5. **Statut** : **acté** (Vincent) · déployé GAS · données Sheet rétablies manuellement.
+
+## ADR-SEC-001 · 2026-06-20 · 3 trous sécurité fermés (audit architecte-réseau findings #1-3)
+1. **Choix** : (a) `manage-deposit.js` → gate `verifyBearer` + CORS whitelist (avant : ouvert à tous, n'importe qui pouvait débiter/annuler une caution Stripe LIVE ou énumérer la PII voyageur) ; (b) `social.js` POST → gate Bearer OU `?secret=POSTSTAY_SECRET` (avant : publication FB/IG ouverte sans auth) ; (c) `beds24-bookings.js` → cache `private, max-age=120` au lieu de `public, s-maxage=300` (avant : CDN pouvait servir email/téléphone d'un voyageur à un autre).
+2. **Alternatives refusées** : bloquer seulement par IP (trop fragile) ; ne rien faire (manage-deposit = argent réel LIVE, risque immédiat).
+3. **Conséquences attendues** : onglet Cautions et SocialTab envoient le Bearer `ldb_tok`. `agent-drafts.js` passe `?secret=POSTSTAY_SECRET` pour l'auto-pub serveur. PII Beds24 jamais mis en cache CDN.
+4. **Périmètre** : `functions/api/manage-deposit.js` · `functions/api/social.js` · `functions/api/agent-drafts.js` · `functions/api/beds24-bookings.js` · `src/tabs/Cautions.jsx` · `src/tabs/SocialTab.jsx`. Commits : `439744a`.
+5. **Statut** : **acté & déployé**. Vérifié live (curl → 401 sur les 2 endpoints sensibles, 200 sur le GET public `/api/social?action=status`).
+
+## ADR-REELS-001 · 2026-06-21 · Pipeline Reels complet IG+FB — container_id retry + Ken Burns 7 biens
+
+1. **Choix** : pipeline Reels en 3 phases : (A) container Meta créé + `container_id` stocké immédiatement dans le résultat D1 si polling timeout ; (B) retry via `publish_container` qui réutilise le container existant sans recréer ; (C) Facebook Reels via `/{page-id}/video_reels`. Bouton « 🔄 Réessayer Instagram » affiché pour status `failed`. Tous les drafts reels ont `channels: ["ig", "fb"]` (agent-drafts, reel-gen, Worker generateReelDraft).
+2. **Alternatives refusées** : recréer le container à chaque retry (Meta facture l'encodage, risque de doublon publié) ; ne pas publier sur FB (perte portée gratuite). Polling 5×4s=20s déjà optimal pour timeout CF Pages 30s.
+3. **Conséquences attendues** : plus aucun reel bloqué en `failed` après timeout d'encodage Meta. Les 7 biens ont un fichier `public/videos/reel-{bienId}.mp4` (Ken Burns 5 photos, 1080×1920, ~13s). Remplacement réel : `npm run reel:video <bienId> <fichier.mp4>`. 43 entrées `editorial_calendar` planifiées juin-sept 2026 (`publish_hour=18`).
+4. **Périmètre** : `functions/api/agent-drafts.js` · `functions/api/social.js` (`handlePublishReel`, `handlePublishContainer`, FB `video_reels`) · `functions/api/reel-gen.js` (new) · `src/tabs/ReelsTab.jsx` · `workers/ical-sync/index.js` (`generateReelDraft` channels ig+fb) · `public/videos/reel-*.mp4` (7 fichiers). Commits : `042ce8c` `87bf9dd` `8185c5f` `b7fd047` `294da7c`.
+5. **Statut** : **acté & déployé**. Draft 114 publié IG+FB ✅. 5 posts bloqués purgés manuellement ✅.
+
+## ADR-EDITORIAL-WINDOW-001 · 2026-06-21 · Fenêtre auto-publish 14 j → 90 j
+
+1. **Choix** : `runEditorialAutoPublish` (Worker cron horaire) cherche les entrées `approved` dans `now - 90j` au lieu de `now - 14j`.
+2. **Alternatives refusées** : rappel manuel (oubli garanti) ; fenêtre infinie (charge DB inutile).
+3. **Conséquences attendues** : aucun draft `approved` ne reste orphelin pour cause de fenêtre trop courte. Entrées de mai 2026 publiables jusqu'en août.
+4. **Périmètre** : `workers/ical-sync/index.js` (L2149). Commit : `484d5b6`.
+5. **Statut** : **acté & déployé**.
+
+## ADR-CSP-001 · 2026-06-20 · CSP corrective — météo et carte Leaflet débloqués
+1. **Choix** : ajouter `https://api.open-meteo.com` dans `connect-src` (le widget météo `/explorer` appelait le sous-domaine, pas le domaine racine — silencieusement bloqué) et `https://unpkg.com` dans `style-src` (CSS Leaflet chargé depuis unpkg, silencieusement bloqué sur toutes les cartes).
+2. **Alternatives refusées** : wildcard `*.open-meteo.com` (inutile — un seul sous-domaine utilisé, plus précis avec l'entrée exacte).
+3. **Conséquences attendues** : widget météo `/explorer` et cartes Leaflet fonctionnent sans erreur CSP dans la console. Aucun impact fonctionnel négatif.
+4. **Périmètre** : `public/_headers` (1 ligne modifiée). Commit : `89f3f03`.
+5. **Statut** : **acté & déployé**. Vérifié live curl — les deux entrées présentes dans le header servi.

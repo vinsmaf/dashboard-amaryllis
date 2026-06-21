@@ -4,6 +4,13 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
+## En cours → ✅ terminé le 2026-06-21 (Session Reels IG+FB + purge auto-pub + fenêtre 90j)
+
+## 🟡 META_PAGE_TOKEN — migration System User token permanent
+- 🟡 **Token actuel ≈ 60j (page token long-lived)** : renouvellement via `meta-token-exchange.js` (D1 `kv_store`). Le seul chemin "jamais expire" = **System User token** (Meta Business Manager → Business Settings → System Users → Create → Admin → Générer token avec toutes les permissions Meta). Disponible seulement après Business Verification complète.
+- **Débloque** : BV validée (soumise 2026-06-17) → créer System User → générer token sans date d'expiration → remplacer `META_PAGE_TOKEN` dans les secrets CF (Pages + Worker). Supprimer `meta-token-exchange.js` ensuite.
+- **Action AGENDA ajoutée** : 2026-06-25 (dès validation BV).
+
 ## En cours → ✅ terminé le 2026-06-20 (Session sécurité : 3 trous fermés + 2 bugs CSP + audit multimédia)
 > Findings #1-3 de l'audit architecte-réseau déployés (manage-deposit auth, social auth, beds24 cache private).
 > CSP corrigée : api.open-meteo.com + unpkg style-src.

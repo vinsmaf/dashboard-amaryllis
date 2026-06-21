@@ -1,6 +1,6 @@
 # 🗺️ ARCHITECTURE — Locatif (villamaryllis.com)
 
-> **Date :** 2026-06-20 · **Statut :** carte de l'état actuel, à maintenir (pas un historique).
+> **Date :** 2026-06-21 · **Statut :** carte de l'état actuel, à maintenir (pas un historique).
 > But : ne plus jamais re-déduire le système depuis le code. Quand l'archi change, on met à jour ICI.
 > **Pointeurs :** état courant volatil → `.memory/CONTEXT.md` · décisions → `.memory/ADR.md` + `DECISIONS.md` ·
 > leçons → `.memory/LEARNINGS.md` · blocages → `.memory/BLOCKERS.md` · rappel par domaine → `.memory/RECALL.md` ·
@@ -288,7 +288,8 @@ flowchart TD
 - **RAG** : `rag-ingest.js` (faits biens + avis Google + drafts → Vectorize bge-m3, cron lundi). `ragBlock` injecté dans les prompts des RAG_AGENTS.
 - **Auto-rédaction guides** : `_guideWriter.js` (logique PURE testée, conso `guide-write.js`, cron lundi) — l'IA ne réécrit QUE la prose d'accueil/marketing ; les champs **CRITIQUES** (wifi, code d'accès, horaires, adresse, contacts, distances) sont **INTOUCHABLES** (merge des seuls champs éditables fact-checkés ; rejet si l'IA touche un champ protégé).
 - **Boucle auto-amélioration** : produire→juger→partager (signaux `_shared`)→distiller (`memory-distill.js` hebdo → `learning:*`). 100% interne/advisory.
-- **Auto-publication réseaux LIVE** : drafts J-2 → gate → posts FB+IG (cron horaire `runEditorialAutoPublish` → `agent-drafts publish` → `social.js`). Fact-check de dernière minute (fail-OPEN à la publication, contrairement au gate fail-CLOSED).
+- **Auto-publication réseaux LIVE** : drafts J-2 → gate → posts FB+IG (cron horaire `runEditorialAutoPublish` → `agent-drafts publish` → `social.js`). Fact-check de dernière minute (fail-OPEN à la publication, contrairement au gate fail-CLOSED). Fenêtre de recherche : **90 jours** en arrière (pour ne pas laisser de drafts `approved` orphelins).
+- **Reels IG+FB** (`reel-gen.js` + `social.js handlePublishReel/handlePublishContainer`) : container Meta créé (`media_type=REELS`) → polling 5×4s → publish. Timeout CF Pages 30s < encodage Meta 60s → `container_id` stocké dans D1 result → retry via `publish_container` (bypass re-encodage). FB Reels = `/{page-id}/video_reels` (endpoint séparé). 7 biens × MP4 Ken Burns (`public/videos/reel-{bienId}.mp4`). `reel-gen.js` (POST admin) : caption LLM Mistral + scoring auto-approve. `editorial_calendar` : 43 entrées juin-sept 2026 (`platform=ig`, `format=reel`, `publish_hour=18`).
 
 ### Couche proactive monitoring (ntfy push — distincte du fleet agents)
 
