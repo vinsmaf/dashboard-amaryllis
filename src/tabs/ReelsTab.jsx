@@ -203,7 +203,95 @@ function ReelCard({ draft, onAction, onVideoUrlSet }) {
   );
 }
 
-const STATUS_ORDER = ["pending", "drafted", "approved", "published", "failed", "rejected"];
+const BIENS = ["amaryllis","iguana","zandoli","geko","mabouya","schoelcher","nogent"];
+const BIEN_LABELS = { amaryllis:"Villa Amaryllis", iguana:"Villa Iguana", zandoli:"Zandoli", geko:"Géko", mabouya:"Mabouya", schoelcher:"Schœlcher", nogent:"Nogent" };
+
+function NewReelForm({ onCreated }) {
+  const [open, setOpen]       = useState(false);
+  const [bienId, setBienId]   = useState("amaryllis");
+  const [theme, setTheme]     = useState("luxe et sérénité");
+  const [variante, setVariante] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [result, setResult]   = useState(null);
+
+  async function create() {
+    setCreating(true);
+    setResult(null);
+    try {
+      const r = await apiFetch("/api/reel-gen", {
+        method: "POST",
+        body: JSON.stringify({ bienId, theme, variante }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
+      setResult(d);
+      setTimeout(() => { setOpen(false); setResult(null); onCreated(); }, 2000);
+    } catch (e) {
+      setResult({ error: e.message });
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  if (!open) return (
+    <button
+      onClick={() => setOpen(true)}
+      style={{ padding: "8px 18px", borderRadius: 8, background: "#6366f1", color: "#fff", border: "none", cursor: "pointer", fontSize: 14, fontWeight: 600 }}
+    >
+      + Nouveau Reel
+    </button>
+  );
+
+  return (
+    <div style={{ background: "var(--c-surface, #1e293b)", border: "1px solid #6366f1", borderRadius: 12, padding: 20, display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ fontWeight: 700, fontSize: 15, color: "var(--c-text, #f1f5f9)" }}>🎬 Créer un Reel</div>
+
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: "0 0 auto" }}>
+          <label style={{ fontSize: 12, color: "var(--c-muted, #94a3b8)" }}>Bien</label>
+          <select value={bienId} onChange={e => setBienId(e.target.value)}
+            style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid var(--c-border, #334155)", background: "var(--c-bg, #0f172a)", color: "var(--c-text, #f1f5f9)", fontSize: 13 }}>
+            {BIENS.map(b => <option key={b} value={b}>{BIEN_LABELS[b]}</option>)}
+          </select>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1, minWidth: 160 }}>
+          <label style={{ fontSize: 12, color: "var(--c-muted, #94a3b8)" }}>Thème</label>
+          <input value={theme} onChange={e => setTheme(e.target.value)}
+            placeholder="luxe et sérénité, piscine, coucher de soleil…"
+            style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid var(--c-border, #334155)", background: "var(--c-bg, #0f172a)", color: "var(--c-text, #f1f5f9)", fontSize: 13 }} />
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1, minWidth: 120 }}>
+          <label style={{ fontSize: 12, color: "var(--c-muted, #94a3b8)" }}>Angle (optionnel)</label>
+          <input value={variante} onChange={e => setVariante(e.target.value)}
+            placeholder="famille, couple, télétravail…"
+            style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid var(--c-border, #334155)", background: "var(--c-bg, #0f172a)", color: "var(--c-text, #f1f5f9)", fontSize: 13 }} />
+        </div>
+      </div>
+
+      {result && !result.error && (
+        <div style={{ background: "rgba(16,185,129,0.1)", border: "1px solid #10b981", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "#6ee7b7" }}>
+          ✅ Draft créé (score {result.score}/100 · {result.verdict === "approve" ? "auto-approuvé" : "à valider"})
+        </div>
+      )}
+      {result?.error && (
+        <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid #ef4444", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "#fca5a5" }}>
+          ✗ {result.error}
+        </div>
+      )}
+
+      <div style={{ display: "flex", gap: 8 }}>
+        <button onClick={create} disabled={creating || !theme.trim()}
+          style={{ padding: "8px 18px", borderRadius: 8, background: creating ? "#4f46e5" : "#6366f1", color: "#fff", border: "none", cursor: creating ? "wait" : "pointer", fontSize: 13, fontWeight: 600 }}>
+          {creating ? "Génération…" : "Générer"}
+        </button>
+        <button onClick={() => setOpen(false)}
+          style={{ padding: "8px 14px", borderRadius: 8, background: "transparent", color: "var(--c-muted, #94a3b8)", border: "1px solid var(--c-border, #334155)", cursor: "pointer", fontSize: 13 }}>
+          Annuler
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function ReelsTab() {
   const [drafts, setDrafts]   = useState([]);
@@ -262,12 +350,15 @@ export default function ReelsTab() {
             Drafts générés par l'agent éditorial — valider, render, publier.
           </p>
         </div>
-        <button
-          onClick={load}
-          style={{ padding: "8px 16px", borderRadius: 8, background: "transparent", border: "1px solid var(--c-border, #334155)", color: "var(--c-muted, #94a3b8)", cursor: "pointer", fontSize: 13 }}
-        >
-          ↻ Actualiser
-        </button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <NewReelForm onCreated={load} />
+          <button
+            onClick={load}
+            style={{ padding: "8px 14px", borderRadius: 8, background: "transparent", border: "1px solid var(--c-border, #334155)", color: "var(--c-muted, #94a3b8)", cursor: "pointer", fontSize: 13 }}
+          >
+            ↻
+          </button>
+        </div>
       </div>
 
       {/* Filtres */}
