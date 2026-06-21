@@ -715,13 +715,14 @@ function addDays(ds, n) {
 function dateDiff(a, b) {
   return Math.round((new Date(b + "T12:00:00") - new Date(a + "T12:00:00")) / 86400000);
 }
-function nextAvailWindow(blocked, minN = 3) {
+function nextAvailWindow(blocked, bienId = null) {
   const s = new Set(blocked);
   const d = new Date();
   d.setUTCDate(d.getUTCDate() + 1);
   for (let i = 0; i < 180; i++) {
     const ci = d.toISOString().slice(0, 10);
     if (!s.has(ci)) {
+      const minN = bienId ? Math.max(1, getMinNights(bienId, ci)) : 3;
       let ok = true;
       for (let j = 1; j < minN; j++) {
         const n = new Date(d); n.setUTCDate(n.getUTCDate() + j);
@@ -5025,14 +5026,14 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
             </div>
           )}
           {!isMobile && !BOOKING_DISABLED.has(bien.id) && (
-            <div id="booking-section" style={{ width: 380, flexShrink: 0, boxSizing: "border-box", position: "sticky", top: 24, alignSelf: "flex-start", paddingTop: 40, paddingBottom: 40, maxHeight: "calc(100vh - 48px)", overflowY: "auto", overflowX: "hidden" }}>
+            <div id="booking-section" style={{ width: 380, flexShrink: 0, boxSizing: "border-box", position: "sticky", top: 16, alignSelf: "flex-start", paddingTop: 8, paddingBottom: 8, maxHeight: "calc(100vh - 24px)", overflowY: "auto", overflowX: "hidden" }}>
               <div style={{
                 background: IVORY, border: `1px solid ${SAND}`, borderRadius: 16,
                 boxShadow: "0 8px 40px rgba(14,40,58,0.10), 0 2px 8px rgba(14,40,58,0.06)",
                 overflow: "hidden",
               }}>
                 {/* Widget header */}
-                <div style={{ padding: "24px 24px 20px" }}>
+                <div style={{ padding: "18px 24px 14px" }}>
                   {!PRICE_HIDDEN.has(bien.id) && (() => {
                     const airbnbPrice = Math.round(bien.prix * 1.142);
                     const saving      = airbnbPrice - bien.prix;
@@ -5061,7 +5062,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                 <div style={{ height: 1, background: SAND }} />
 
                 {/* Mini calendar */}
-                <div style={{ padding: "20px 16px 16px" }}>
+                <div style={{ padding: "12px 16px 12px" }}>
                   {loadingAvail ? (
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                       {[120, 80, 100].map((w, i) => (
@@ -5176,7 +5177,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                 })()}
 
                 {/* Reserve button */}
-                <div style={{ padding: "0 24px 24px" }}>
+                <div style={{ padding: "0 24px 16px" }}>
                   <button
                     data-cta-reservation data-cta-position="calendar-main"
                     onClick={() => { trackConversion("cta_label", { position: "calendar-main" }); return calCheckin && calCheckout ? onBook(bien, calCheckin, calCheckout) : onBook(bien); }}
@@ -8486,7 +8487,7 @@ export default function PublicSite() {
       setBlockedDates(cached.data);
       setLoadingAvail(false);
       if (window.gtag) window.gtag("event", "availability_ready", { bien_id: bienId, blocked_count: cached.data.length, cache_hit: true });
-      const next = nextAvailWindow(cached.data);
+      const next = nextAvailWindow(cached.data, bienId);
       if (next) setBookingInitialDates(prev => prev.checkin ? prev : next);
       return;
     }
@@ -8512,7 +8513,7 @@ export default function PublicSite() {
         _availCache[bienId] = { data: blocked, ts: Date.now() };
         setBlockedDates(blocked);
         if (window.gtag) window.gtag("event", "availability_ready", { bien_id: bienId, blocked_count: blocked.length, cache_hit: false });
-        const next = nextAvailWindow(blocked);
+        const next = nextAvailWindow(blocked, bienId);
         if (next) setBookingInitialDates(prev => prev.checkin ? prev : next);
       }
     } catch (e) {
