@@ -1994,6 +1994,79 @@ Retourne UNIQUEMENT le caption brut (pas de JSON, pas de balises).`;
   }).catch(() => {});
 
   console.log(`[editorial-J-2] 🎬 reel_post #${draftData.id} créé pour entry ${entry.id} (${bienName})`);
+
+  // 5. Auto-validation gate — scorer le caption, approuver si ≥ 75 ──────────
+  const SCORE_THRESHOLD = 75;
+  try {
+    const judgePrompt = `Tu es un expert Instagram Reels. Note ce caption de 0 à 100.
+CAPTION :
+"""
+${caption}
+"""
+Critères (total 100pts) :
+- Hook stop-scroll sensoriel : 20pts
+- Immersion (vue/lumière/ambiance) : 25pts
+- CTA clair avec URL villamaryllis.com : 15pts
+- Hashtags stratégiques (8-10) : 20pts
+- Voix formelle "vous" respectée : 10pts
+- Pas d'erreurs factuelles (biens sur hauteurs, pas bord de mer) : 10pts
+Retourne UNIQUEMENT : {"score":0-100,"verdict":"approve"|"reject","reason":"1 phrase"}`;
+
+    const jRes  = await fetch(`${siteUrl}/api/ai-summary`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: judgePrompt, maxTokens: 120 }),
+    });
+    const jData = await jRes.json().catch(() => ({}));
+    const jText = jData.summary || jData.text || "{}";
+    let judge = { score: 0, verdict: "reject", reason: "parse error" };
+    try { judge = JSON.parse(jText.match(/\{[\s\S]*\}/)?.[0] || "{}"); } catch {}
+
+    const score  = Math.min(100, Math.max(0, Number(judge.score) || 0));
+    const autoOK = score >= SCORE_THRESHOLD && judge.verdict === "approve";
+
+    // Stocker le score dans le payload
+    await fetch(`${siteUrl}/api/agent-drafts?id=${draftData.id}&action=edit&secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        payload: {
+          caption, videoUrl: null, coverUrl: null, channels: ["ig"], plan,
+          calendarId: entry.id, bienId, scheduledAt: entry.scheduled_at,
+          reviews: { score, verdict: judge.verdict, reason: judge.reason || "" },
+        },
+      }),
+    }).catch(() => {});
+
+    // Approuver automatiquement si score suffisant
+    if (autoOK) {
+      await fetch(`${siteUrl}/api/agent-drafts?id=${draftData.id}&action=approve&secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
+        method: "PATCH",
+      }).catch(() => {});
+      console.log(`[editorial-J-2] ✅ reel_post #${draftData.id} AUTO-APPROUVÉ (${score}/100)`);
+    } else {
+      console.log(`[editorial-J-2] ⚠️ reel_post #${draftData.id} — score ${score}/100 < seuil → révision manuelle`);
+    }
+
+    // ntfy Vincent
+    const ntfyTopic = env.NTFY_TOPIC || "amaryllis-alertes-7r4k9";
+    const ntfyBody  = autoOK
+      ? `${bienName} — ${score}/100 ✅ Caption approuvée. Render la vidéo et remplis videoUrl pour activer la publi.`
+      : `${bienName} — ${score}/100 ⚠️ ${judge.reason || "qualité insuffisante"} · Révision manuelle.`;
+    await fetch(`https://ntfy.sh/${ntfyTopic}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/plain",
+        "Title": autoOK ? "🎬 Reel approuvé" : "⚠️ Reel à relire",
+        "Priority": autoOK ? "default" : "high",
+        "Tags": "film_strip",
+      },
+      body: ntfyBody,
+    }).catch(() => {});
+
+  } catch (judgeErr) {
+    console.warn(`[editorial-J-2] scoring reel #${draftData.id} échoué:`, judgeErr.message);
+  }
 }
 
 // ── Editorial Calendar : génération drafts J+2 (cron quotidien 12h UTC) ────

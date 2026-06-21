@@ -74,6 +74,10 @@ async function executeDraft(env, draft) {
 
   if (draft.type === "reel_post") {
     // Reel Instagram : délègue à /api/social (flux REELS via video_url public R2).
+    // videoUrl est null tant que le render Container n'a pas tourné.
+    if (!payload.videoUrl) {
+      return { ok: false, error: "videoUrl absent — render la vidéo d'abord puis mets à jour le draft" };
+    }
     const channels = Array.isArray(payload.channels) && payload.channels.length
       ? payload.channels
       : ["ig"];
