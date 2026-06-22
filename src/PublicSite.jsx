@@ -3780,37 +3780,10 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
   }, []);
 
   // Auto-scroll on page load: scroll just enough to show the full booking widget
-  // (calendar + CTA button) without the user having to scroll manually.
-  // Uses ResizeObserver to wait for full calendar render (≥480px).
-  // Disables Chrome scroll restoration so the page always starts at top.
-  // Skipped for Amaryllis (dedicated full-width calendar) and mobile.
+  // Disable Chrome scroll restoration so the page always starts at top.
   useEffect(() => {
-    if (!isPage || isMobile || bien.id === "amaryllis" || BOOKING_DISABLED.has(bien.id)) return;
     if ("scrollRestoration" in history) history.scrollRestoration = "manual";
-    window.scrollTo({ top: 0 });
-    let done = false;
-    const tryScroll = (el) => {
-      if (done) return;
-      if (el.scrollHeight < 400) return; // calendar not yet rendered
-      const panel = infoPanelRef.current;
-      if (!panel) return;
-      done = true;
-      // Scroll the inner panel (not window) so the sticky widget snaps into view.
-      // target = distance from panel top to widget top, minus sticky offset + small margin.
-      const elRect = el.getBoundingClientRect();
-      const panelRect = panel.getBoundingClientRect();
-      const contentOffset = elRect.top - panelRect.top + panel.scrollTop;
-      const target = Math.max(0, contentOffset - 16 + 8);
-      panel.scrollTo({ top: target });
-    };
-    const el = document.getElementById("booking-section");
-    if (!el) return;
-    tryScroll(el);
-    const ro = new ResizeObserver(() => tryScroll(el));
-    ro.observe(el);
-    const timeout = setTimeout(() => { done = true; ro.disconnect(); }, 5000);
-    return () => { ro.disconnect(); clearTimeout(timeout); };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const arrowBtn = (label, fn) => (
     <button key={label} aria-label={label === "←" ? "Photo précédente" : "Photo suivante"} onClick={e => { e.stopPropagation(); fn(); }} style={{
