@@ -28,7 +28,7 @@ on:
 
 concurrency:
   group: deploy-pages-prod
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   deploy:
