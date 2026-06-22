@@ -70,6 +70,12 @@ Sentry.init({
   ignoreErrors: [
     "ResizeObserver loop limit exceeded",
     "Non-Error promise rejection",
+    // Stale chunks post-déploiement — auto-récupérés par onError (reload page).
+    // Ces erreurs sont transitoires (~30s après un deploy) et ne nécessitent pas d'alerte.
+    /Failed to fetch dynamically imported module/,
+    /error loading dynamically imported module/,
+    /ChunkLoadError/,
+    /Loading chunk \d+ failed/,
     // Bugs du navigateur in-app Facebook/Instagram (Android)
     "Java object is gone",
     "Error invoking postMessage",
