@@ -93,15 +93,19 @@ export async function onRequest(context) {
     if (!draft) { out.skipped++; continue; }
 
     let payload = {}, reviews = {};
-    try { payload = JSON.parse(draft.payload || "{}"); } catch {}
-    try { reviews = JSON.parse(draft.reviews || "{}"); } catch {}
+    try { payload = JSON.parse(draft.payload || "{}"); } catch (e1) { console.error("[gate-payload]", e1.message); }
+    try { reviews = JSON.parse(draft.reviews || "{}"); } catch (e2) { console.error("[gate-reviews]", e2.message); }
 
     // Idempotence : déjà jugé par le gate → on ne re-notifie pas (sauf dry)
     if (reviews.gate && !dry) { out.skipped++; continue; }
 
+    // Pour les reels (reel_post) : pas d'imageUrl unique → dériver de la 1ère clip du plan
+    const reelImageUrl = draft.type === "reel_post" && payload.plan?.bienId && payload.plan?.clips?.[0]?.src
+      ? `/photos/${payload.plan.bienId}/${payload.plan.clips[0].src}`
+      : null;
     const verdict = evaluateGate({
       caption: payload.caption,
-      imageUrl: payload.imageUrl,
+      imageUrl: payload.imageUrl || reelImageUrl,
       channels: payload.channels,
       score: reviews.score,
       verdict: reviews.verdict,
@@ -118,12 +122,128 @@ export async function onRequest(context) {
 
     if (dry) continue;
 
+    const short = (payload.caption || "").split("\n")[0].slice(0, 80);
+    const siteUrl = new URL(request.url).origin;
+
+    // ── Boucle de réécriture ───────────────────────────────────────────────────
+    // Si le seul blocage est score/verdict (pas doublon / mots_interdits / photo),
+    // l'agent réécrit le caption avec les recommandations, puis on re-score.
+    // Max 1 tentative (budget CPU CF Pages Function).
+    if (!verdict.pass) {
+      const blockingFilters = new Set(verdict.fails.map(f => f.filter));
+      const onlyScoreIssue = !["doublon", "mots_interdits", "missing_photo", "channels"].some(f => blockingFilters.has(f));
+
+      if (onlyScoreIssue && !reviews.rewrite_attempted) {
+        const failReasons = verdict.fails.map(f => `• ${f.reason}`).join("\n");
+        const currentScore = reviews.score ?? 0;
+
+        const rewritePrompt = `Tu es un expert Instagram & Facebook pour une conciergerie de location saisonnière en Martinique.
+
+Ce caption a obtenu un score de ${currentScore}/100 (seuil requis : ${minScore}/100).
+
+Caption actuel :
+"""
+${payload.caption || ""}
+"""
+
+Raisons de l'échec :
+${failReasons}
+
+Critères de notation (total 100 pts) :
+- Hook stop-scroll sensoriel (première ligne accroche) : 20 pts
+- Immersion sensorielle (vue, lumière, chaleur, sons, ambiance) : 25 pts
+- CTA clair avec URL villamaryllis.com : 15 pts
+- Hashtags stratégiques 8-10 (#martinique #locationvacances…) : 20 pts
+- Voix formelle "vous" (jamais "tu") : 10 pts
+- Aucune erreur factuelle (biens sur les hauteurs, PAS en bord de mer direct) : 10 pts
+
+Réécris ce caption pour atteindre ${minScore}/100 minimum.
+Réponds UNIQUEMENT avec le texte du caption réécrit, sans explication ni balises.`;
+
+        try {
+          const rwRes = await fetch(`${siteUrl}/api/ai-summary`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt: rewritePrompt, maxTokens: 700 }),
+          });
+          const rwData = await rwRes.json().catch(() => ({}));
+          const newCaption = (rwData.summary || rwData.text || "").trim();
+
+          if (newCaption && newCaption.length > 80) {
+            // Re-score le nouveau caption
+            const scorePrompt = `Tu es un expert Instagram. Note ce caption de 0 à 100.
+CAPTION :
+"""
+${newCaption}
+"""
+Critères (total 100pts) :
+- Hook stop-scroll sensoriel : 20pts
+- Immersion (vue/lumière/ambiance) : 25pts
+- CTA clair avec URL villamaryllis.com : 15pts
+- Hashtags stratégiques (8-10) : 20pts
+- Voix formelle "vous" respectée : 10pts
+- Pas d'erreurs factuelles (biens sur hauteurs, pas bord de mer) : 10pts
+Retourne UNIQUEMENT : {"score":0-100,"verdict":"approve"|"reject"|"needs_edits","reason":"1 phrase"}`;
+
+            const scRes = await fetch(`${siteUrl}/api/ai-summary`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ prompt: scorePrompt, maxTokens: 120 }),
+            });
+            const scData = await scRes.json().catch(() => ({}));
+            const scText = scData.summary || scData.text || "{}";
+            let newJudge = { score: 0, verdict: "reject", reason: "parse error" };
+            try { newJudge = JSON.parse(scText.match(/\{[\s\S]*\}/)?.[0] || "{}"); } catch (parseErr) { console.error("[gate-rescore]", parseErr.message); }
+
+            const newScore = Math.min(100, Math.max(0, Number(newJudge.score) || 0));
+            const newPass = newScore >= minScore && newJudge.verdict === "approve";
+
+            // Stocker le résultat de réécriture dans reviews
+            reviews.rewrite_attempted = true;
+            reviews.score = newScore;
+            reviews.verdict = newJudge.verdict;
+            reviews.reason = newJudge.reason;
+
+            if (newPass) {
+              // Réécriture réussie → met à jour le payload + approuve
+              payload.caption = newCaption;
+              reviews.gate = { decision: mode === "live" ? "approved" : "would_publish", mode, at: now, rewritten: true, originalScore: currentScore, newScore };
+              await db.prepare("UPDATE agent_drafts SET payload=?, reviews=?, status=?, approved_at=?, updated_at=? WHERE id=?")
+                .bind(JSON.stringify(payload), JSON.stringify(reviews), mode === "live" ? "approved" : "pending", mode === "live" ? now : null, now, e.draft_id).run().catch(() => {});
+              if (mode === "live") {
+                await db.prepare("UPDATE editorial_calendar SET status='approved', updated_at=? WHERE id=?").bind(now, e.id).run().catch(() => {});
+                out.queued_for_publish++;
+                detail.pass = true;
+                detail.rewritten = true;
+                detail.newScore = newScore;
+                await notify(env, `✅ Post réécrit & approuvé — ${e.bien_id}`, `Score ${currentScore}→${newScore}/100 ✍️\n${newCaption.split("\n")[0].slice(0, 80)}…\n\nPublication automatique à l'heure prévue.`, "low");
+              } else {
+                out.would_publish++;
+                await notify(env, `👁 SHADOW réécrit — ${e.bien_id}`, `Score ${currentScore}→${newScore}/100 ✍️\n${newCaption.split("\n")[0].slice(0, 80)}…`, "low");
+              }
+              continue;
+            }
+
+            // Réécriture insuffisante → on escalade avec le nouveau score
+            reviews.gate = { decision: "escalated", mode, at: now, fails: verdict.fails, rewrite_score: newScore };
+            await db.prepare("UPDATE agent_drafts SET reviews=?, updated_at=? WHERE id=?")
+              .bind(JSON.stringify(reviews), now, e.draft_id).run().catch(() => {});
+            out.escalated++;
+            const why = verdict.fails.map((f) => `• ${f.filter}: ${f.reason}`).join("\n");
+            await notify(env, `⚠️ Post à valider — ${e.bien_id}`, `${short}…\n\nRéécriture tentée : ${currentScore}→${newScore}/100 (seuil ${minScore})\n${why}\n\n→ onglet Approbations`, "high");
+            continue;
+          }
+        } catch (rwErr) {
+          console.error("[editorial-gate] rewrite error:", rwErr.message);
+        }
+      }
+    }
+    // ── Fin boucle réécriture ──────────────────────────────────────────────────
+
     // Marque la décision dans reviews (idempotence + traçabilité)
     reviews.gate = { decision: verdict.pass ? (mode === "live" ? "approved" : "would_publish") : "escalated", mode, at: now, fails: verdict.fails };
     await db.prepare("UPDATE agent_drafts SET reviews=?, updated_at=? WHERE id=?")
       .bind(JSON.stringify(reviews), now, e.draft_id).run().catch(() => {});
-
-    const short = (payload.caption || "").split("\n")[0].slice(0, 80);
 
     if (verdict.pass && mode === "live") {
       // Auto-approbation → le cron runEditorialAutoPublish publiera à l'heure prévue

@@ -1,6 +1,7 @@
 // Villa Rental Martinique — English landing page — /villa-rental-martinique
 
 import SEOMeta from "./SEOMeta.jsx";
+import NewsletterForm from "./NewsletterForm.jsx";
 
 const NAVY  = "#0e3b3a";
 const IVORY = "#faf5e9";
@@ -314,6 +315,10 @@ export default function GuideEn() {
               All villas
             </a>
           </div>
+        </div>
+
+        <div style={{ padding: "48px 24px", background: "#f6f1e7" }}>
+          <NewsletterForm source="villa-rental-martinique" />
         </div>
 
         <div style={{ background: NAVY, padding: "24px", textAlign: "center" }}>

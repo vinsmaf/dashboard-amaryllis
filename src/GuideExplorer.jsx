@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import SEOMeta from "./SEOMeta.jsx";
+import NewsletterForm from "./NewsletterForm.jsx";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import * as LModule from "leaflet";
@@ -863,6 +864,10 @@ export default function GuideExplorer() {
           </aside>
 
         </div>
+      </div>
+
+      <div style={{ padding: "48px 24px", background: "#f6f1e7" }}>
+        <NewsletterForm source="explorer" />
       </div>
 
       {/* ── Séminaires ── */}

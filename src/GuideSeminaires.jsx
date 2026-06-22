@@ -3,6 +3,7 @@
 
 import SEOMeta from "./SEOMeta.jsx";
 import { useState } from "react";
+import NewsletterForm from "./NewsletterForm.jsx";
 
 const NAVY  = "#0e3b3a";
 const IVORY = "#faf5e9";
@@ -437,6 +438,10 @@ export default function GuideSeminaires() {
             </p>
           </div>
 
+        </div>
+
+        <div style={{ padding: "48px 24px", background: "#f6f1e7" }}>
+          <NewsletterForm source="guide-seminaires" />
         </div>
 
         {/* FOOTER */}

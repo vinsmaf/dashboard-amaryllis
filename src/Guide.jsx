@@ -6,6 +6,7 @@ import { FAQAccordion } from "./primitives.jsx";
 import { GUIDES_INDEX } from "./data/guidesIndex.js";
 import { GUIDE_HUB_SECTIONS } from "./data/guideHubSections.js";
 
+
 const BASE = "https://villamaryllis.com";
 
 /* ─── Villas (pour les distances) ─────────────────────────── */
@@ -574,18 +575,13 @@ function NewsletterForm() {
     if (!/.+@.+\..+/.test(email)) { setState("err"); return; }
     setState("sending");
     try {
-      const r = await fetch("/api/contact", {
+      const r = await fetch("/api/newsletter-subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nom: "Abonné guide PDF",
-          email,
-          message: "Demande du guide PDF du Sud Martinique (opt-in newsletter depuis /guide-hub).",
-          source: "newsletter-guide-hub",
-        }),
+        body: JSON.stringify({ email, source: "guide-hub" }),
       });
       const d = await r.json().catch(() => ({}));
-      setState(r.ok && d.ok !== false ? "ok" : "err");
+      setState(r.ok && d.ok ? "ok" : "err");
     } catch { setState("err"); }
   };
 

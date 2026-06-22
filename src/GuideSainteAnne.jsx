@@ -2,6 +2,7 @@
 
 import SEOMeta from "./SEOMeta.jsx";
 import MaillageCluster from "./components/seo/MaillageCluster.jsx";
+import NewsletterForm from "./NewsletterForm.jsx";
 
 // Noms canoniques des biens pour le maillage interne SEO ("villa" = Amaryllis + Iguana uniquement).
 const BIEN_NAMES = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko", mabouya: "Mabouya", schoelcher: "Bellevue Schœlcher", iguana: "Villa Iguana", nogent: "Appartement Nogent-sur-Marne" };
@@ -308,6 +309,10 @@ export default function GuideSainteAnne() {
             <a href="/guide-hub"            style={{ padding: "12px 24px", border: `1px solid ${SAND}`, borderRadius: 8, textDecoration: "none", color: NAVY, fontSize: 13, letterSpacing: "0.08em" }}>Tous les guides</a>
             <a href="/guide-arlet"      style={{ padding: "12px 24px", border: `1px solid ${SAND}`, borderRadius: 8, textDecoration: "none", color: NAVY, fontSize: 13, letterSpacing: "0.08em" }}>Guide Arlet →</a>
           </div>
+        </div>
+
+        <div style={{ padding: "48px 24px", background: "#f6f1e7" }}>
+          <NewsletterForm source="guide-sainte-anne" />
         </div>
 
         <div style={{ background: NAVY, padding: "24px", textAlign: "center" }}>

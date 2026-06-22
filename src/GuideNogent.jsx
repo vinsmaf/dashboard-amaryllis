@@ -2,6 +2,7 @@
 // traf-012 : page SEO guide destination + maillage vers appartement Nogent
 
 import SEOMeta from "./SEOMeta.jsx";
+import NewsletterForm from "./NewsletterForm.jsx";
 
 const NAVY  = "#0e3b3a";
 const IVORY = "#faf5e9";
@@ -329,6 +330,10 @@ export default function GuideNogent() {
             <a href="/" style={{ padding: "12px 24px", border: `1px solid ${SAND}`, borderRadius: 8, textDecoration: "none", color: NAVY, fontSize: 13, letterSpacing: "0.08em" }}>← Toutes nos villas</a>
             <a href="/guide-hub" style={{ padding: "12px 24px", border: `1px solid ${SAND}`, borderRadius: 8, textDecoration: "none", color: NAVY, fontSize: 13, letterSpacing: "0.08em" }}>Guides Martinique</a>
           </div>
+        </div>
+
+        <div style={{ padding: "48px 24px", background: "#f6f1e7" }}>
+          <NewsletterForm source="guide-nogent" />
         </div>
 
         <div style={{ background: NAVY, padding: "24px", textAlign: "center" }}>

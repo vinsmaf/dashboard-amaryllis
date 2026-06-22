@@ -46,6 +46,7 @@ import BugReporter from "./components/BugReporter.jsx";
 import BugsTab from "./tabs/BugsTab.jsx";
 import ProjetsCerveauTab from "./tabs/ProjetsCerveauTab.jsx";
 import DevStatusTab from "./tabs/DevStatusTab.jsx";
+import NewsletterTab from "./tabs/NewsletterTab.jsx";
 import { AppDataProvider } from "./AppDataContext.jsx";
 import { SEED_DAILY_PRICES, loadDailyPrices, saveDailyPrices, loadPriceOverrides, applyServerPriceOverrides } from "./seedPrices.js";
 import {
@@ -1333,6 +1334,7 @@ export default function App() {
         { id: "avis",        icon: "⭐", label: "Avis" },
         { id: "crm",         icon: "👥", label: "CRM Clients" },
         { id: "whatsapp",    icon: "💬", label: "WhatsApp" },
+        { id: "newsletter",  icon: "📨", label: "Newsletter" },
       ],
     },
     {
@@ -1609,6 +1611,7 @@ export default function App() {
             {tab === "avis"          && <AvisTab />}
             {tab === "crm"           && <CrmTab />}
             {tab === "whatsapp"      && <WhatsAppTab />}
+            {tab === "newsletter"    && <NewsletterTab />}
             </LocalErrorBoundary>
           </div>
           </AppDataProvider>

@@ -3,6 +3,7 @@
 // Charge le guide JSON depuis /api/guides?property_id=<bien>.
 // Mobile-first, surface "site" (IVORY/NAVY/CORAL).
 import { useState, useEffect } from "react";
+import NewsletterForm from "./NewsletterForm.jsx";
 import SEOMeta from "./SEOMeta.jsx";
 import { getReviewUrl, isGoogleReview } from "./data/googleReview.js";
 
@@ -326,6 +327,10 @@ export default function GuideSejour() {
           >
             {isGoogleReview(bien) ? "Laisser un avis Google →" : "Laisser un avis →"}
           </a>
+        </div>
+
+        <div style={{ padding: "48px 24px", background: "#f6f1e7" }}>
+          <NewsletterForm source="guide-sejour" />
         </div>
 
         {/* Footer */}

@@ -1,6 +1,7 @@
 // Guide activités à proximité de la Villa Amaryllis — /guide-proximite
 
 import SEOMeta from "./SEOMeta.jsx";
+import NewsletterForm from "./NewsletterForm.jsx";
 
 const NAVY  = "#0e3b3a";
 const IVORY = "#faf5e9";
@@ -188,6 +189,10 @@ export default function GuideProximite() {
             <a href="/activites-sainte-luce" style={{ padding: "12px 24px", border: `1px solid ${SAND}`, borderRadius: 8, textDecoration: "none", color: NAVY, fontSize: 13, letterSpacing: "0.08em" }}>← Top 10 activités</a>
             <a href="/guide-hub" style={{ padding: "12px 24px", border: `1px solid ${SAND}`, borderRadius: 8, textDecoration: "none", color: NAVY, fontSize: 13, letterSpacing: "0.08em" }}>Guide Sainte-Luce →</a>
           </div>
+        </div>
+
+        <div style={{ padding: "48px 24px", background: "#f6f1e7" }}>
+          <NewsletterForm source="guide-proximite" />
         </div>
 
         <div style={{ background: NAVY, padding: "24px", textAlign: "center" }}>

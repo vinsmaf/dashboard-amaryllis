@@ -3,6 +3,7 @@
 
 import SEOMeta from "./SEOMeta.jsx";
 import WikiImg from "./WikiImg.jsx";
+import NewsletterForm from "./NewsletterForm.jsx";
 
 const NAVY  = "#0e3b3a";
 const IVORY = "#faf5e9";
@@ -693,6 +694,10 @@ export default function GuideVillaPiscine() {
             <a href="/guide-arlet">Guide Arlet →</a>
           </nav>
 
+        </div>
+
+        <div style={{ padding: "48px 24px", background: "#f6f1e7" }}>
+          <NewsletterForm source="guide-villa-piscine" />
         </div>
 
         {/* ── Footer ── */}

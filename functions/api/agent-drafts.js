@@ -40,7 +40,7 @@ CREATE INDEX IF NOT EXISTS idx_drafts_type   ON agent_drafts(type);
 `;
 
 async function ensureTable(db) {
-  try { for (const s of DDL.split(";").filter(Boolean)) await db.prepare(s).run(); } catch {}
+  try { for (const s of DDL.split(";").filter(Boolean)) await db.prepare(s).run(); } catch (ddlErr) { console.error("[agent-drafts] DDL:", ddlErr.message); }
 }
 
 // ── Exécuteurs de drafts par type ─────────────────────────────────────────────
@@ -220,11 +220,22 @@ export async function onRequest(context) {
     }
 
     if (action === "edit") {
-      // Permet de modifier le payload avant publication
+      // Permet de modifier le payload avant publication.
+      // reset_gate=true : efface reviews.gate (force une re-évaluation au prochain passage du gate).
       const body = await request.json().catch(() => ({}));
-      if (!body.payload) return json({ error: "payload requis" }, 400);
-      await db.prepare("UPDATE agent_drafts SET payload=?, updated_at=? WHERE id=?")
-        .bind(JSON.stringify(body.payload), now, id).run();
+      if (!body.payload && !body.reset_gate) return json({ error: "payload ou reset_gate requis" }, 400);
+      if (body.payload) {
+        await db.prepare("UPDATE agent_drafts SET payload=?, updated_at=? WHERE id=?")
+          .bind(JSON.stringify(body.payload), now, id).run();
+      }
+      if (body.reset_gate) {
+        let reviews = {};
+        try { reviews = JSON.parse(draft.reviews || "{}"); } catch {}
+        delete reviews.gate;
+        delete reviews.rewrite_attempted;
+        await db.prepare("UPDATE agent_drafts SET reviews=?, updated_at=? WHERE id=?")
+          .bind(JSON.stringify(reviews), now, id).run();
+      }
       return json({ ok: true });
     }
 
@@ -236,7 +247,7 @@ export async function onRequest(context) {
 
       const payload = JSON.parse(draft.payload);
       let reviews = {};
-      try { reviews = JSON.parse(draft.reviews || "{}"); } catch {}
+      try { reviews = JSON.parse(draft.reviews || "{}"); } catch (rErr) { console.error("[agent-drafts] reviews parse:", rErr.message); }
 
       const currentCaption = payload.caption || "";
       const trafficFb = reviews.traffic_manager?.feedback || "";

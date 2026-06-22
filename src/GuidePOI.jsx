@@ -3,6 +3,7 @@
 // Contenu : src/data/guidesPoi.js (rédigé par l'agent seo-content-writer).
 
 import SEOMeta from "./SEOMeta.jsx";
+import NewsletterForm from "./NewsletterForm.jsx";
 import MaillageCluster from "./components/seo/MaillageCluster.jsx";
 import { GUIDES_POI } from "./data/guidesPoi.js";
 import { GUIDE_PHOTOS } from "./data/guidePhotos.js";
@@ -197,6 +198,9 @@ export default function GuidePOI() {
         <a href="/guide-hub">Tous les guides Martinique</a>
         <a href="/">Nos villas →</a>
       </nav>
+      <div style={{ padding: "48px 24px", background: "#f6f1e7" }}>
+        <NewsletterForm source="guide-poi" />
+      </div>
       <div className="gp-copy">
         © {new Date().getFullYear()} Amaryllis Locations · <a href="/">villamaryllis.com</a>
       </div>
