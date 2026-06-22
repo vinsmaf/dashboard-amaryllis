@@ -1,0 +1,23 @@
+{
+  "amaryllis": [
+    { "file": "reel-amaryllis.mp4", "label": "Tour Amaryllis (Ken Burns)" }
+  ],
+  "zandoli": [
+    { "file": "reel-zandoli.mp4", "label": "Tour Zandoli (Ken Burns)" }
+  ],
+  "iguana": [
+    { "file": "reel-iguana.mp4", "label": "Tour Iguana (Ken Burns)" }
+  ],
+  "geko": [
+    { "file": "reel-geko.mp4", "label": "Tour Géko (vraie vidéo 4K)" }
+  ],
+  "mabouya": [
+    { "file": "reel-mabouya.mp4", "label": "Tour Mabouya (Ken Burns)" }
+  ],
+  "schoelcher": [
+    { "file": "reel-schoelcher.mp4", "label": "Tour Bellevue (Ken Burns)" }
+  ],
+  "nogent": [
+    { "file": "reel-nogent.mp4", "label": "Tour Nogent (Ken Burns)" }
+  ]
+}

@@ -84,7 +84,16 @@ Retourne UNIQUEMENT le caption brut.`;
 
   // 3. Draft reel_post en D1 ───────────────────────────────────────────────
   const siteUrl  = new URL(request.url).origin;
-  const videoUrl = `${siteUrl}/videos/reel-${bienId}.mp4`;
+
+  // Choisir la vidéo depuis la whitelist D1, avec fallback sur reel-{bien}.mp4
+  let videoFile = `reel-${bienId}.mp4`;
+  try {
+    const { results: vids } = await db.prepare(
+      "SELECT filename FROM editorial_videos WHERE bien_id=? ORDER BY created_at ASC"
+    ).bind(bienId).all();
+    if (vids && vids.length > 0) videoFile = vids[Math.floor(Math.random() * vids.length)].filename;
+  } catch { /* table absente → fallback */ }
+  const videoUrl = `${siteUrl}/videos/${videoFile}`;
   const now = Math.floor(Date.now() / 1000);
   const r   = await db.prepare(`
     INSERT INTO agent_drafts (agent, agent_label, agent_emoji, type, payload, rationale, preview, status, created_at, updated_at)
