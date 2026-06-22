@@ -3,6 +3,27 @@
 > 1 entrée par décision qui engage la suite. Format 5 lignes : **Choix · Alternatives refusées · Conséquences attendues · Périmètre · Statut**.
 > Décisions d'archi détaillées (specs complets) → `../docs/superpowers/specs/README.md` (ADR-001→010). Ici = log curaté de session.
 
+## ADR-CRON-RG-001 · 2026-06-22 · Réunion générale = Worker cron (pas Claude Code scheduled task)
+1. **Choix** : `runReunioneGenerale(env)` dans le Worker `amaryllis-ical-sync`, cron `0 11 * * 1` (lundi 11h UTC = 7h MTQ). Accès D1 direct (binding `revenue_manager`) + patrimoine via HTTP (`FLEET_SECRET`). Synthèse via `/api/ai-summary`. Résultats en D1 `category=reunion` + ntfy.
+2. **Alternatives refusées** : Claude Code scheduled task (ne tourne que si l'app est ouverte) ; cron-job.org externe (aurait nécessité un endpoint HTTP dédié + séquencement manuel).
+3. **Conséquences attendues** : réunion hebdo garantie sans intervention humaine. Accountability en D1. `FLEET_SECRET` doit rester présent dans les secrets Worker (si absent → patrimoine ignoré, message clair dans les logs). Plan payant CF requis (limite = 250 crons/Worker).
+4. **Périmètre** : `workers/ical-sync/index.js` (fn `runReunioneGenerale` + case scheduled) · `wrangler.toml` (cron `0 11 * * 1`) · skill `~/.claude/skills/reunion-generale/SKILL.md` v2 (inchangé, utilisé pour run manuel).
+5. **Statut** : acté, déployé `69118c6`, `FLEET_SECRET` uploadé.
+
+## ADR-UI-CAL-001 · 2026-06-21 · Scroll auto via infoPanelRef (pas window) + calendrier compact
+1. **Choix** : le scroll au chargement des fiches biens (non-Amaryllis) cible `infoPanelRef.current.scrollTo()` — pas `window.scrollTo()` — car le document a `height: 100dvh` (maxScroll fenêtre ≈ 58px) et le vrai container scrollable est le div interne avec `overflowY: auto`. Cellules calendrier réduites 40 → 30px pour tenir dans le viewport 617px.
+2. **Alternatives refusées** : `window.scrollTo()` (erreur précédente — clampé à 58px, widget hors vue) ; réduire davantage (< 28px illisible sur mobile) ; passer à un calendrier sans prix inline.
+3. **Conséquences attendues** : bouton RÉSERVER visible dès le chargement (Chrome 1440×617). Formule pérenne : `contentOffset - stickyTop + margin`. À ré-appliquer si layout outer change.
+4. **Périmètre** : `src/PublicSite.jsx` (useEffect scroll + CalendarMonth + widget paddings).
+5. **Statut** : acté — déployé 2026-06-21.
+
+## ADR-LEAFLET-ESM-001 · 2026-06-21 · Leaflet import * as LModule → default ?? module
+1. **Choix** : remplacer `import L from "leaflet"` par `import * as LModule from "leaflet"; const L = LModule.default ?? LModule` dans `PropertyMap.jsx` et `GuideExplorer.jsx` pour corriger le crash Sentry (`TypeError: Cannot read properties of undefined (reading 'default')`) en production Vite.
+2. **Alternatives refusées** : `optimizeDeps.include` dans vite.config.js (fix dev seulement, pas prod) ; supprimer Leaflet (fonctionnalité clé).
+3. **Conséquences attendues** : plus de crash `/amaryllis` prod. Pattern à appliquer à tout import CJS dans Vite.
+4. **Périmètre** : `src/PropertyMap.jsx` · `src/GuideExplorer.jsx`.
+5. **Statut** : acté — déployé 2026-06-21.
+
 ## ADR-CRON-MIGRATION-001 · 2026-06-21 · Tous les crons locatif migrés vers CF Worker natif
 1. **Choix** : charge-balance (dernier cron-job.org locatif restant, job 7798126) migré vers CF Worker `0 13 * * *`. iCal sync monté de `*/15` → `*/10`. Tous les crons locatif sont désormais dans `wrangler.toml` uniquement.
 2. **Alternatives refusées** : garder cron-job.org pour le monitoring externe (écarté — health-check reste optionnel, les drift-detector CI jouent ce rôle ; la complexité d'un service tiers n'est plus justifiée).
@@ -294,7 +315,7 @@
 5. **Statut** : ✅ déployé 2026-06-13 (commit `14c817d`).
 
 ## ADR-PAY-001 · 2026-06-11 · Paiement en 2 fois = acompte/solde (J-30), pas Klarna
-1. **Choix** : « payer en 2 fois » = acompte 30 % maintenant + solde 70 % débité off-session à J-30, **optionnel** (proposé, pas imposé, défaut = paiement total). Plan écrit, à exécuter session suivante.
+1. **Choix** : « payer en 2 fois » = acompte 30 % maintenant + solde 70 % débité off-session à J-30, **optionnel** (proposé, pas imposé, défaut = paiement total).
 2. **Alternatives refusées** : **Klarna** (3×) — surcharge au client **interdite** par CGV Klarna + réglementation EU, et absorber le frais BNPL (~3-5 %) ne convient pas à Vincent (regardant sur le coût) ; **Alma** (compte/intégration séparés, plus lourd).
 3. **Conséquences attendues** : 0 € de frais en plus (carte ~1,5 % répartie sur 2 débits) ; Vincent porte le risque d'annulation (couvert par la politique d'annulation existante) ; nouvelle table D1 `payment_schedule` + cron quotidien `charge-balance.js`. Argent réel → valider en mode Stripe TEST avant LIVE, flag `PAY_2X_ENABLED`.
 4. **Périmètre** : spec `docs/superpowers/specs/2026-06-11-paiement-2-fois-design.md` · plan `docs/superpowers/plans/2026-06-11-paiement-2-fois.md`.

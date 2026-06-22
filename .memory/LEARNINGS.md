@@ -3,6 +3,27 @@
 > Pièges déjà rencontrés + comment les éviter. 1 entrée = 1 leçon actionnable « la prochaine fois ».
 > Le journal d'erreurs exhaustif reste `../docs/ERREURS-LOG.md`.
 
+## ⏰ CF Workers crons : limite 5 = plan gratuit, plan payant = 250 — 2026-06-22
+- La limite de 5 crons par Worker s'applique au **plan gratuit** (Workers Free). Le plan Workers Paid = 250 crons/Worker. Ne pas confondre.
+- Actuellement : 7 crons sur `amaryllis-ical-sync` (`*/10`, `0 9`, `0 11 1`, `0 12`, `0 13`, `0 6 1`, `0 1 1`). Marge confortable.
+
+## 🏛️ Réunion générale : `FLEET_SECRET` Worker = condition critique — 2026-06-22
+- Si `FLEET_SECRET` est absent des secrets du Worker `amaryllis-ical-sync`, la fleet patrimoine n'est PAS appelée → la réunion tourne en mode locatif-only sans erreur visible.
+- **La prochaine fois** : avant tout re-déploiement du Worker, vérifier que `FLEET_SECRET` est listé dans les secrets CF (dashboard Workers → Settings → Variables → Secrets). Si absent : `echo "valeur" | npx wrangler secret put FLEET_SECRET --name amaryllis-ical-sync`.
+
+## 🐛 Vite worktree : toujours vérifier `lsof -p <pid> | grep cwd` avant d'éditer — 2026-06-21
+- **Piège** : le serveur Vite (port 5173) tournait depuis le **worktree** (`/.claude/worktrees/sad-bartik-02a3c2`), pas le repo principal. J'ai édité les fichiers du repo principal → aucun effet, HMR silencieux. Perdu ~30 min à diagnostiquer.
+- **La prochaine fois** : dès la première session dans un worktree, lancer `lsof -p $(pgrep -f "vite$") | grep cwd` pour confirmer quel chemin le serveur sert. Éditer UNIQUEMENT les fichiers dans ce chemin.
+
+## 📐 Layout 100dvh : `window.scrollTo()` est inutile si `overflowY: auto` est sur un div interne — 2026-06-21
+- **Piège** : wrapper externe `height: 100dvh` → `document.scrollHeight ≈ 675px`, `maxScroll ≈ 58px`. `window.scrollTo({top: 300})` se clamp à 58, silencieusement. Le vrai container scrollable est le div interne (`infoPanelRef`) avec `overflowY: auto`.
+- **La prochaine fois** : si `window.scrollY` ne bouge pas malgré `scrollTo()`, chercher le vrai scrollable avec `el => getComputedStyle(el).overflowY === 'auto'` ou vérifier `document.scrollingElement.scrollHeight`.
+- **Formule sticky** : `target = contentOffset - stickyTop + margin` où `contentOffset = elRect.top - panelRect.top + panel.scrollTop`.
+
+## 🌿 Leaflet + Vite prod : `import L from "leaflet"` → crash CJS/ESM — 2026-06-21
+- **Piège** : en prod Vite, le chunk Leaflet peut exposer `undefined` comme export default → `L.divIcon()` crash. Sentry `handled=yes` masque l'impact réel.
+- **La prochaine fois** : `import * as LModule from "leaflet"; const L = LModule.default ?? LModule` pour tout import CJS dans Vite. Valable aussi pour d'autres libs CJS (Moment, lodash, etc.).
+
 ## 🤖 Registre agents : fleet + interactive doivent rester synchronisés — 2026-06-21
 - **Piège** : 11 agents existaient dans la fleet (`agents-run.js`) mais n'avaient pas de fiche `~/.claude/agents/*.md` → impossibles à convoquer en session par nom ; le registre dans ORG.md signalait "fleet only pour l'instant" mais ça crée une dette invisible.
 - **La prochaine fois** : quand on crée un agent fleet → créer la fiche interactive en même temps. Les deux registres (fleet + `~/.claude/agents/`) DOIVENT rester synchronisés. L'ORG.md est le single source of truth.

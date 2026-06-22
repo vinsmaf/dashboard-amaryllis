@@ -1,6 +1,6 @@
 # 🗺️ ARCHITECTURE — Locatif (villamaryllis.com)
 
-> **Date :** 2026-06-21 · **Statut :** carte de l'état actuel, à maintenir (pas un historique).
+> **Date :** 2026-06-22 · **Statut :** carte de l'état actuel, à maintenir (pas un historique).
 > But : ne plus jamais re-déduire le système depuis le code. Quand l'archi change, on met à jour ICI.
 > **Pointeurs :** état courant volatil → `.memory/CONTEXT.md` · décisions → `.memory/ADR.md` + `DECISIONS.md` ·
 > leçons → `.memory/LEARNINGS.md` · blocages → `.memory/BLOCKERS.md` · rappel par domaine → `.memory/RECALL.md` ·
@@ -346,6 +346,7 @@ flowchart TD
 |---|---|---|
 | `*/10 * * * *` | toutes 10 min | `runSync` (iCal+directes→Sheet, dédup KV) · `runCancelUnpaidBeds24Bookings` · `runEditorialAutoPublish` (posts `approved` dus → FB+IG) · `send-relance-panier` |
 | `0 9 * * *` | 9h UTC / 5h MTQ | **`morning-brief` (brief matinal ntfy)** · **`kpi-sentinel` (8 signaux + watchdog ntfy)** · ai-ops refresh · monitor · rappels hôte J-7..J+3 · digest arrivées · alertes occupation · `runOccupancySnapshot`→`rm_kpi_snapshots` · gap/yield pricing · `caution-cron` + caution auto-release · inventaire · `devis-solde-cron` · `runEnrichFromEmails`→`enrich-from-emails.js` (complète nom+payout des résas Airbnb depuis l'onglet « Emails », **AVANT** coherence-check) · coherence-check · agents-run(all) + orchestrator + eval + digest IA |
+| `0 11 * * 1` | lundi 11h UTC / 7h MTQ | **`runReunioneGenerale`** — accountability D1 (`category=reunion`) + backlog locatif (critique/haute) + fleet patrimoine HTTP + synthèse LLM (`/api/ai-summary`) + top 3 actions créées D1 (`rg-YYYYMMDD-N`, `category=reunion`) + mémoire delta (`rg-memory-last`) + ntfy · `FLEET_SECRET` Worker requis |
 | `0 12 * * *` | 12h UTC / 8h MTQ | `runEditorialReseed` (30j) + `runEditorialDraftGen` (drafts J+2 → gate) |
 | `0 13 * * *` | 13h UTC / 9h MTQ | `charge-balance` (soldes 2× J-30 — migré cron-job.org 7798126) |
 | `0 6 * * 1` | lundi 6h UTC | rapport hebdo · prix-recap · RAG ingest · agents-execute + digest · token health check · SEO report · bug-triage · memory-distill · guide-write |
