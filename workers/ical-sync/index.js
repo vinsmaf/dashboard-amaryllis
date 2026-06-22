@@ -1050,6 +1050,26 @@ async function runOccupancyAlerts(env, allEvents) {
     `),
   });
 
+  // Push ntfy — résumé concis pour le téléphone
+  if (env.NTFY_TOPIC) {
+    const ntfyLines = alerts.map(([id, nom]) => {
+      const occ = byProp[id] || 0;
+      const pct = Math.round(occ / 30 * 100);
+      return `${nom} : ${pct}% (${occ}/30 nuits)`;
+    });
+    if (hasUrgent) ntfyLines.unshift(`🚨 0 résa 14j : ${zeroAlerts.map(id => NOMS[id] || id).join(", ")}`);
+    await fetch(`https://ntfy.sh/${env.NTFY_TOPIC}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Title": hasUrgent ? "🚨 Vacance URGENTE" : "⚠️ Vacance 30j",
+        "Priority": hasUrgent ? "urgent" : "default",
+        "Tags": "chart_decreasing",
+      },
+      body: ntfyLines.join("\n"),
+    }).catch(e => console.error("[occupancy] ntfy:", e.message));
+  }
+
   console.log(`[occupancy] Alerte envoyée — ${alerts.length} logement(s) sous le seuil${hasUrgent ? `, ${zeroAlerts.length} URGENT(s) 0 résa 14j` : ""}`);
 }
 
@@ -2577,11 +2597,227 @@ async function runPredepart(env) {
   } catch (e) { console.error("[predepart] erreur:", e.message); }
 }
 
+// ── Newsletter : séquence J+7 (offre abonné) ─────────────────────────────────
+async function runNewsletterSequence(env) {
+  const db = env.revenue_manager;
+  if (!db) return;
+  const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+  const resendKey = env.RESEND_API_KEY;
+  if (!resendKey) return;
+
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  let rows;
+  try {
+    const res = await db.prepare(`
+      SELECT id, email, first_name, unsub_token
+      FROM newsletter_subscribers
+      WHERE confirmed_at IS NOT NULL
+        AND unsubscribed_at IS NULL
+        AND sequence_step = 0
+        AND confirmed_at <= ?
+      LIMIT 50
+    `).bind(sevenDaysAgo).all();
+    rows = res.results || [];
+  } catch (e) {
+    console.error("[newsletter-seq] DB error:", e?.message); return;
+  }
+  if (!rows.length) return;
+
+  let sent = 0;
+  for (const row of rows) {
+    try {
+      const unsubUrl = `${siteUrl}/api/newsletter-unsubscribe?token=${row.unsub_token}`;
+      const prenom = row.first_name || "Voyageur";
+
+      const tplRes = await fetch(`${siteUrl}/email-templates/newsletter-offer?cb=${Date.now()}`, {
+        cache: "no-store", cf: { cacheTtl: 0, cacheEverything: false },
+      });
+      const raw = tplRes.ok ? await tplRes.text() : null;
+      const html = raw
+        ? raw.replace(/\{\{(\w+)\}\}/g, (_, k) => ({ prenom, unsub_url: unsubUrl })[k] ?? "")
+        : `<p>Bonjour ${prenom},<br>Réservez en direct sur <a href="${siteUrl}">${siteUrl}</a> et mentionnez le code DIRECT10.</p><p><a href="${unsubUrl}">Se désabonner</a></p>`;
+
+      const r = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: "Amaryllis Locations <contact@villamaryllis.com>",
+          to: [row.email],
+          subject: `Votre avantage abonné — réservez en direct, ${prenom}`,
+          html,
+        }),
+      });
+      if (r.ok) {
+        await db.prepare(
+          "UPDATE newsletter_subscribers SET sequence_step=1, sequence_sent_at=? WHERE id=?"
+        ).bind(Date.now(), row.id).run();
+        sent++;
+      } else {
+        console.error("[newsletter-seq] Resend error:", await r.text());
+      }
+    } catch (e) {
+      console.error("[newsletter-seq] row error:", e?.message);
+    }
+  }
+  if (sent > 0) console.log(`[newsletter-seq] ✓ ${sent} offres J+7 envoyées`);
+}
+
+// ── Réunion Générale Cross-Fleet (cron lundi 11h UTC = 7h Martinique) ────────
+async function runReunioneGenerale(env) {
+  const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+  const today = new Date();
+  const dateTag = today.toISOString().slice(0, 10).replace(/-/g, "");
+  const nowTs = Math.floor(Date.now() / 1000);
+
+  // 1. ACCOUNTABILITY — actions réunion N-1 depuis D1
+  let execRate = null;
+  let openActions = [];
+  try {
+    const { results: prev } = await env.revenue_manager
+      .prepare("SELECT action, status FROM agent_actions WHERE category='reunion' AND id != 'rg-memory-last' ORDER BY created_at DESC LIMIT 20")
+      .all();
+    if (prev.length) {
+      const fait = prev.filter(a => a.status === "fait").length;
+      execRate = Math.round(fait / prev.length * 100);
+      openActions = prev.filter(a => a.status !== "fait").map(a => a.action.slice(0, 80));
+    }
+    // Mémoire delta (alertes semaine passée)
+    const memRow = await env.revenue_manager
+      .prepare("SELECT notes FROM agent_actions WHERE id='rg-memory-last'").first();
+    var lastMem = memRow?.notes ? JSON.parse(memRow.notes) : {};
+  } catch (e) {
+    console.error("[reunion] accountability:", e.message);
+    var lastMem = {};
+  }
+
+  // 2. LOCATIF — backlog critique/haute depuis D1
+  let alerts = [], watches = [];
+  try {
+    const { results } = await env.revenue_manager
+      .prepare(`SELECT agent, agent_label, agent_emoji, action, priority
+                FROM agent_actions
+                WHERE status='backlog' AND category != 'reunion'
+                ORDER BY CASE priority WHEN 'critique' THEN 1 WHEN 'haute' THEN 2 ELSE 3 END
+                LIMIT 30`)
+      .all();
+    alerts  = results.filter(a => a.priority === "critique");
+    watches = results.filter(a => a.priority === "haute").slice(0, 8);
+  } catch (e) {
+    console.error("[reunion] locatif D1:", e.message);
+  }
+
+  // 3. PATRIMOINE — fleet HTTP (si FLEET_SECRET configuré)
+  let patrimoineText = "(FLEET_SECRET absent — configurer via: wrangler secret put FLEET_SECRET --name amaryllis-ical-sync)";
+  if (env.FLEET_SECRET) {
+    try {
+      const pRes = await fetch("https://patrimoine-dashboard.pages.dev/api/patrimoine-agents-run", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${env.FLEET_SECRET}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ which: "all" }),
+      });
+      const pData = await pRes.json().catch(() => ({}));
+      const pAlerts = (pData.results || []).filter(r => r.signal === "alert").map(r => `• ${r.id}: ${String(r.message).slice(0, 100)}`);
+      const pWatch  = (pData.results || []).filter(r => r.signal === "watch").map(r => `• ${r.id}: ${String(r.message).slice(0, 100)}`);
+      patrimoineText = `Alertes: ${pAlerts.join("\n") || "aucune"}\nWatch: ${pWatch.join("\n") || "aucun"}`;
+    } catch (e) {
+      patrimoineText = `Erreur patrimoine: ${e.message}`;
+    }
+  }
+
+  // 4. LLM SYNTHESIS via /api/ai-summary
+  const prompt = `Rédige un compte-rendu de Réunion Générale cross-fleet Amaryllis pour le ${today.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}.
+
+ACCOUNTABILITY N-1: taux ${execRate !== null ? execRate + "%" : "première réunion"} | non faites: ${openActions.slice(0, 2).join(" / ") || "aucune"}
+
+LOCATIF — ${alerts.length} alertes critiques:
+${alerts.slice(0, 4).map(a => `🔴 ${a.agent_emoji}${a.agent_label} — ${a.action.slice(0, 100)}`).join("\n") || "Aucune"}
+
+LOCATIF — ${watches.length} points d'attention:
+${watches.slice(0, 4).map(a => `🟡 ${a.agent_emoji}${a.agent_label} — ${a.action.slice(0, 100)}`).join("\n") || "Aucun"}
+
+PATRIMOINE:
+${patrimoineText.slice(0, 400)}
+
+Delta signals vs semaine passée: alertes ${alerts.length} (était ${lastMem.alerts ?? "?"}) | watch ${watches.length} (était ${lastMem.watch ?? "?"})
+
+Format de réponse (français, concis, max 400 mots):
+📊 ACCOUNTABILITY — 1 ligne
+🔴 ALERTES — 3 max, avec l'agent responsable
+🟡 WATCH — 3 max
+⚡ SYNERGIE — 1 connexion locatif×patrimoine pertinente (réelle, pas inventée)
+📋 TOP 3 ACTIONS SEMAINE — agent · action courte · priorité`;
+
+  let synthesis = "Synthèse indisponible";
+  try {
+    const aiRes = await fetch(`${siteUrl}/api/ai-summary`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, maxTokens: 700 }),
+    });
+    const aiData = await aiRes.json().catch(() => ({}));
+    synthesis = aiData.result || aiData.summary || synthesis;
+  } catch (e) {
+    console.error("[reunion] LLM:", e.message);
+  }
+
+  // 5. CRÉER TOP 3 ACTIONS EN D1 (category=reunion, id=rg-YYYYMMDD-N)
+  const top3 = [...alerts.slice(0, 2), ...watches.slice(0, 1)];
+  for (let i = 0; i < top3.length; i++) {
+    const a = top3[i];
+    const id = `rg-${dateTag}-${i + 1}`;
+    try {
+      await env.revenue_manager.prepare(`
+        INSERT INTO agent_actions (id, agent, agent_label, agent_emoji, category, action, priority, effort, status, created_at, updated_at)
+        VALUES (?, ?, ?, ?, 'reunion', ?, ?, '?', 'backlog', ?, ?)
+        ON CONFLICT(id) DO NOTHING
+      `).bind(id, a.agent || "reunion", a.agent_label || "Réunion", a.agent_emoji || "🏛️", a.action, a.priority, nowTs, nowTs).run();
+    } catch (e) {
+      console.error(`[reunion] insert ${id}:`, e.message);
+    }
+  }
+
+  // 6. MÉMOIRE (rg-memory-last) — delta pour la prochaine réunion
+  const memJson = JSON.stringify({ date: dateTag, ts: nowTs, alerts: alerts.length, watch: watches.length, exec_rate: execRate, actions: top3.map((_, i) => `rg-${dateTag}-${i + 1}`) });
+  try {
+    await env.revenue_manager.prepare(`
+      INSERT INTO agent_actions (id, agent, agent_label, agent_emoji, category, action, priority, effort, status, notes, created_at, updated_at)
+      VALUES ('rg-memory-last','reunion-generale','Réunion Générale','🏛️','reunion',?,'basse','auto','backlog',?,?,?)
+      ON CONFLICT(id) DO UPDATE SET action=excluded.action, notes=excluded.notes, updated_at=excluded.updated_at
+    `).bind(`Mémoire réunion ${dateTag}`, memJson, nowTs, nowTs).run();
+  } catch (e) {
+    console.error("[reunion] mémoire:", e.message);
+  }
+
+  // 7. PUSH NTFY
+  const ntfyTitle = `🏛️ Réunion Générale ${today.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })}`;
+  const ntfyBody  = `📊 Exec N-1: ${execRate !== null ? execRate + "%" : "1ère"} | 🔴${alerts.length} | 🟡${watches.length}\n\n${synthesis.slice(0, 800)}`;
+  try {
+    await fetch(`https://ntfy.sh/${env.NTFY_TOPIC || "amaryllis-alertes-7r4k9"}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Title": ntfyTitle,
+        "Priority": alerts.length > 0 ? "high" : "default",
+        "Tags": "office",
+      },
+      body: ntfyBody,
+    }).catch(e => console.error("[reunion] ntfy:", e.message));
+  } catch (e) {
+    console.error("[reunion] ntfy outer:", e.message);
+  }
+
+  console.log(`[reunion] ✅ exec=${execRate}% alertes=${alerts.length} watch=${watches.length} top3=${top3.length} date=${dateTag}`);
+}
+
 export default {
   async scheduled(event, env, ctx) {
     const cron = event.cron;
 
-    if (cron === "0 6 * * 1") {
+    if (cron === "0 11 * * 1") {
+      // Lundi 11h UTC (7h Martinique) — Réunion Générale cross-fleet
+      ctx.waitUntil(runReunioneGenerale(env));
+
+    } else if (cron === "0 6 * * 1") {
       // Lundi 6h UTC — rapport hebdomadaire + rappel prix Airbnb
       const { allEvents } = await runSync(env);
       ctx.waitUntil(Promise.all([
@@ -2849,6 +3085,8 @@ export default {
             }
           }
         }
+        // ── Newsletter séquence J+7 (offre abonné) ───────────────────────────────
+        try { await runNewsletterSequence(env); } catch (e) { console.error("[newsletter-seq] Cron error:", e.message); }
       })());
 
     } else if (cron === "0 13 * * *") {
