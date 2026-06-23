@@ -17,7 +17,7 @@ const L = {
   en: { eyebrow: "Book this experience",      eyebrowLocal: "Available now",          book: "Book now", bookLocal: "Book today",             from: "from", reviews: "reviews", also: "Also on", disc: "Sponsored link · no extra cost to you" },
 };
 
-const viatorHref = (p) => `${VIATOR_BASE}${p}?m=69894`;
+const viatorHref = (p) => `${VIATOR_BASE}${p}?pid=P00306913&mcid=42383&medium=link`;
 const gygHref    = (q) => `${GYG_BASE}${q || "martinique"}`;
 
 function primaryFor(act, platform) {
