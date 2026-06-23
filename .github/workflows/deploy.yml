@@ -92,11 +92,20 @@ jobs:
           URL="${{ steps.deploy.outputs.alias }}"
           if [[ -z "$URL" ]]; then URL="https://villamaryllis.com"; fi
           echo "Smoke sur $URL"
+          # CF Pages met ~15-30s à propager un déploiement sur l'alias hash.
+          # Sans attente, le curl arrive avant la propagation → 404 garanti.
+          echo "⏳ Attente propagation CF Pages (20s)…"
+          sleep 20
           FAIL=0
           # /api/weather exclu : dépend de OPENWEATHERMAP_API_KEY absent sur l'alias preview
           for path in "/" "/amaryllis"; do
-            CODE=$(curl -s -o /dev/null -w '%{http_code}' "$URL$path" || echo "000")
-            echo "  $path → $CODE"
+            CODE="000"
+            for attempt in 1 2 3; do
+              CODE=$(curl -s -o /dev/null -w '%{http_code}' "$URL$path" || echo "000")
+              echo "  $path → $CODE (tentative $attempt/3)"
+              [[ "$CODE" == "200" ]] && break
+              [[ "$attempt" -lt 3 ]] && sleep 10
+            done
             [[ "$CODE" == "200" ]] || FAIL=1
           done
           if [[ "$FAIL" == "1" ]]; then echo "❌ Smoke test échoué"; exit 1; fi
