@@ -118,6 +118,17 @@ const GuideVillaPiscine        = lazy(() => import('./GuideVillaPiscine.jsx'))
 const Partenaires              = lazy(() => import('./Partenaires.jsx'))
 const GuideLocationVoiture     = lazy(() => import('./GuideLocationVoiture.jsx')) // eslint-disable-line react-refresh/only-export-components
 const GuideQueFaire            = lazy(() => import('./GuideQueFaire.jsx'))
+const GuideEnFamille           = lazy(() => import('./GuideEnFamille.jsx'))
+const GuideEnCouple            = lazy(() => import('./GuideEnCouple.jsx'))
+const GuideSnorkeling          = lazy(() => import('./GuideSnorkeling.jsx'))
+const GuideSeDeplacer          = lazy(() => import('./GuideSeDeplacer.jsx'))
+const GuideItineraire          = lazy(() => import('./GuideItineraire.jsx'))
+const GuideBudget              = lazy(() => import('./GuideBudget.jsx'))
+const GuideSainteLucePluie     = lazy(() => import('./GuideSainteLucePluie.jsx'))
+const GuideOuLoger             = lazy(() => import('./GuideOuLoger.jsx'))
+const GuideNogentQueFaire      = lazy(() => import('./GuideNogentQueFaire.jsx'))
+const GuideNogentDormir        = lazy(() => import('./GuideNogentDormir.jsx'))
+const GuideNogentGuinguettes   = lazy(() => import('./GuideNogentGuinguettes.jsx'))
 const Avis             = lazy(() => import('./Avis.jsx'))
 const Faq              = lazy(() => import('./Faq.jsx'))
 const MentionsLegales          = lazy(() => import('./MentionsLegales.jsx'))
@@ -245,7 +256,7 @@ document.addEventListener("change", (e) => {
 })();
 
 const BIEN_IDS = ["amaryllis", "zandoli", "iguana", "geko", "mabouya", "schoelcher", "nogent"];
-const KNOWN = ["/", "/links", "/merci", "/devis", "/guide", "/guide-hub", "/explorer", "/guide-le-diamant", "/guide-sainte-anne", "/villa-rental-martinique", "/activites-sainte-luce", "/guide-proximite", "/guide-arlet", "/guide-trois-ilets", "/guide-plongee-martinique", "/guide-saint-pierre-martinique", "/guide-francois-martinique", "/guide-distilleries-martinique", "/guide-randonnees-martinique", "/guide-gastronomie-martinique", "/avis", "/faq", "/mentions-legales", "/politique-confidentialite", "/conditions-generales", "/sainte-luce-martinique", "/reservation-directe-martinique", "/meilleure-saison-martinique", "/seminaires", "/guide-nogent-sur-marne", "/location-villa-martinique-piscine", "/location-groupe-sainte-luce", "/location-appartement-vue-mer-schoelcher", "/plus-belles-plages-sud-martinique", "/nos-partenaires", "/location-voiture-martinique-pas-cher", "/que-faire-martinique"];
+const KNOWN = ["/", "/links", "/merci", "/devis", "/guide", "/guide-hub", "/explorer", "/guide-le-diamant", "/guide-sainte-anne", "/villa-rental-martinique", "/activites-sainte-luce", "/guide-proximite", "/guide-arlet", "/guide-trois-ilets", "/guide-plongee-martinique", "/guide-saint-pierre-martinique", "/guide-francois-martinique", "/guide-distilleries-martinique", "/guide-randonnees-martinique", "/guide-gastronomie-martinique", "/avis", "/faq", "/mentions-legales", "/politique-confidentialite", "/conditions-generales", "/sainte-luce-martinique", "/reservation-directe-martinique", "/meilleure-saison-martinique", "/seminaires", "/guide-nogent-sur-marne", "/location-villa-martinique-piscine", "/location-groupe-sainte-luce", "/location-appartement-vue-mer-schoelcher", "/plus-belles-plages-sud-martinique", "/nos-partenaires", "/location-voiture-martinique-pas-cher", "/que-faire-martinique", "/guide-martinique-en-famille-sud", "/guide-martinique-en-couple-sud", "/guide-snorkeling-tortues-martinique", "/guide-se-deplacer-martinique-sud", "/guide-itineraire-une-semaine-sud-martinique", "/guide-budget-vacances-martinique", "/guide-sainte-luce-jour-de-pluie", "/guide-ou-loger-martinique-secteur", "/guide-que-faire-nogent-sur-marne", "/guide-ou-dormir-est-paris-nogent", "/guide-nogent-guinguettes-bord-de-marne"];
 const isKnown = KNOWN.includes(path)
   || GUIDES_POI_SLUGS.includes(path)
   || path.startsWith("/admin")
@@ -316,8 +327,30 @@ if (!isKnown) {
   Component = Partenaires;
 } else if (path === "/que-faire-martinique") {
   Component = GuideQueFaire;
+} else if (path === "/guide-martinique-en-famille-sud") {
+  Component = GuideEnFamille;
+} else if (path === "/guide-martinique-en-couple-sud") {
+  Component = GuideEnCouple;
 } else if (path === "/location-voiture-martinique-pas-cher") {
   Component = GuideLocationVoiture;
+} else if (path === "/guide-snorkeling-tortues-martinique") {
+  Component = GuideSnorkeling;
+} else if (path === "/guide-se-deplacer-martinique-sud") {
+  Component = GuideSeDeplacer;
+} else if (path === "/guide-itineraire-une-semaine-sud-martinique") {
+  Component = GuideItineraire;
+} else if (path === "/guide-budget-vacances-martinique") {
+  Component = GuideBudget;
+} else if (path === "/guide-sainte-luce-jour-de-pluie") {
+  Component = GuideSainteLucePluie;
+} else if (path === "/guide-ou-loger-martinique-secteur") {
+  Component = GuideOuLoger;
+} else if (path === "/guide-que-faire-nogent-sur-marne") {
+  Component = GuideNogentQueFaire;
+} else if (path === "/guide-ou-dormir-est-paris-nogent") {
+  Component = GuideNogentDormir;
+} else if (path === "/guide-nogent-guinguettes-bord-de-marne") {
+  Component = GuideNogentGuinguettes;
 } else if (path === "/avis") {
   Component = Avis;
 } else if (path === "/faq") {
