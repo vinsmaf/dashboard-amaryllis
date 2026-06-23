@@ -61,7 +61,7 @@ function Li({ children }) {
 }
 
 export default function ConditionsGenerales() {
-  const dateMAJ = "24 mai 2026";
+  const dateMAJ = "23 juin 2026";
 
   return (
     <>
@@ -132,7 +132,7 @@ export default function ConditionsGenerales() {
               <Li><strong>Zandoli</strong> — Sainte-Luce, Martinique (97228)</Li>
               <Li><strong>Géko</strong> — Sainte-Luce, Martinique (97228)</Li>
               <Li><strong>Mabouya</strong> — Sainte-Luce, Martinique (97228)</Li>
-              <Li><strong>Bellevue Schœlcher</strong> — Schœlcher, Martinique (97228)</Li>
+              <Li><strong>Schœlcher</strong> — Schœlcher, Martinique (97228)</Li>
               <Li><strong>Villa Iguana</strong> — Sainte-Luce, Martinique (97228) — location longue durée uniquement</Li>
               <Li><strong>Appartement Nogent</strong> — Nogent-sur-Marne, Île-de-France (94130)</Li>
             </Ul>
@@ -159,7 +159,7 @@ export default function ConditionsGenerales() {
             <P>Ne sont pas inclus : le ménage de fin de séjour (forfait indiqué à la réservation) et les consommations exceptionnelles.</P>
             <P><strong>Taxe de séjour :</strong> La taxe de séjour instituée par la commune du bien (Sainte-Luce, Schœlcher ou Nogent-sur-Marne) est due par le Voyageur conformément au Code général des collectivités territoriales. Pour les réservations via les plateformes (Airbnb, Booking.com), elle est collectée et reversée directement par celles-ci. Pour les <strong>réservations en direct</strong>, elle est facturée séparément, indiquée dans le récapitulatif de réservation, et reversée à la commune par le Propriétaire.</P>
             <P><strong>Moyen de paiement :</strong> Carte bancaire via Stripe (Visa, Mastercard, American Express). Les données de paiement sont traitées exclusivement par Stripe Inc. et ne sont pas stockées par Amaryllis Locations.</P>
-            <P><strong>Acompte et solde :</strong> Pour les réservations en direct, un <strong>acompte de 40 %</strong> du montant total est prélevé à la réservation pour la confirmer. Le <strong>solde de 60 %</strong> est prélevé automatiquement <strong>au plus tard 30 jours avant l'arrivée</strong>. Pour une réservation effectuée à moins de 30 jours de l'arrivée, la totalité est due immédiatement. À défaut de paiement du solde à l'échéance, la réservation peut être considérée comme annulée et l'acompte conservé (cf. conditions d'annulation).</P>
+            <P><strong>Paiement intégral :</strong> Pour les réservations en direct, le <strong>montant total du séjour est prélevé intégralement à la confirmation de la réservation</strong>. Aucun paiement différé n'est proposé. En cas d'annulation, les conditions de l'article 6 s'appliquent.</P>
           </Section>
 
           <Section num="5" title="Caution (dépôt de garantie)">

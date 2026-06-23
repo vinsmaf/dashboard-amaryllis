@@ -238,8 +238,8 @@ export const AGENTS = [
     label: "CRM Manager",
     emoji: "📧",
     prefix: "crm",
-    focus: "CRM, emails automatiques, segmentation, fidélisation, collecte données voyageurs, Brevo",
-    files_hint: "functions/api/contact.js, src/GuestGuide.jsx, src/PublicSite.jsx (formulaires)",
+    focus: "CRM, emails automatiques (Resend + D1), segmentation, fidélisation, collecte données voyageurs, séquences post-séjour, newsletter, leads D1 `contacts`",
+    files_hint: "functions/api/contact.js, functions/api/newsletter-*.js, functions/api/send-poststay.js, functions/api/send-relance-panier.js, D1 tables: contacts / newsletter_subscribers / direct_bookings",
   },
   {
     id: "consultant-ebusiness",
