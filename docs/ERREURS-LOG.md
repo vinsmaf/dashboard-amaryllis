@@ -4,6 +4,13 @@
 > **Règle** : à chaque erreur commise, ajouter une entrée ici (symptôme → cause → solution → garde-fou).
 > Lire ce fichier **au début de chaque session** (en plus de `PROJECT_MEMORY.md` + `CLAUDE.md`).
 
+## 🤖 AGENTS — Hallucination biens inexistants
+
+**AGENT-001 (2026-06-23)** — Les agents backlog proposent parfois des actions sur des biens/outils qui n'existent pas : "Domaine des Châteaux", "ImagXpert", "Bellevue" (inexistant), "Chalet des Alpes".
+- *Cause* : les LLM de la fleet (`agents-run.js`) hallucinent des noms de propriétés ou d'outils quand le grounding RAG est insuffisant ou absent.
+- *Solution appliquée* : refuser systématiquement toute action qui cite un bien non présent dans la nomenclature stricte des 7 biens (Amaryllis · Iguana · Zandoli · Géko · Mabouya · Schœlcher · Nogent).
+- *Garde-fou* : **lors de la revue backlog, tout item mentionnant un bien hors-liste = faux positif automatique → marquer `fait` (refusé)**. La fleet `agents-run.js` utilise déjà `_biens.js` pour le grounding — vérifier que tous les agents content ont bien `ragBlock` activé.
+
 ## 🔻 PROD DOWN — quota KV partagé (compte) + put non protégé
 
 **INFRA-001 (2026-06-15)** — UptimeRobot : `villamaryllis.com/api/get-availability?bienId=nogent` → **HTTP 500** (Cloudflare 1101 = exception JS). Les autres biens (amaryllis, zandoli) → 200.

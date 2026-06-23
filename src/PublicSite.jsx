@@ -34,6 +34,17 @@ const NogentReel    = lazy(() => import("./components/reel/NogentReel.jsx"));
 // data-049 — niveau tarifaire pour le tracking GA4 ROI (par bien + saison).
 // Saison Martinique : haute nov–avr, moyenne juil–août, basse mai/juin/sept/oct.
 // Repli sur la gamme de prix du bien si aucune date de séjour n'est connue.
+function propCategory(bienId) {
+  if (bienId === "amaryllis" || bienId === "iguana") return "villa";
+  if (bienId === "mabouya") return "studio";
+  return "logement";
+}
+function leadTimeDays(checkinIso) {
+  if (!checkinIso) return null;
+  const d = Math.round((new Date(checkinIso) - Date.now()) / 86400000);
+  return d >= 0 ? d : null;
+}
+
 function niveauTarifaire(bien, checkinIso) {
   if (checkinIso) {
     const d = new Date(checkinIso);
@@ -1525,6 +1536,7 @@ function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) 
           window.gtag("event", "purchase", {
             transaction_id: paymentIntent.id, currency: "EUR", value: amount,
             bien_id: bien.id, niveau_tarifaire: niveauTarifaire(bien, localCheckin),
+            property_category: propCategory(bien.id), lead_time_days: leadTimeDays(localCheckin),
             items: [{ item_id: bien.id, item_name: bien.nom, price: bien.prix, quantity: nights || 1 }],
           });
           mpTrack("Purchase", { value: amount, currency: "EUR", eventID: paymentIntent.id, content_ids: [bien.id], content_type: "product" });
@@ -2246,6 +2258,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
             value: total,
             bien_id: bien.id,
             niveau_tarifaire: niveauTarifaire(bien, checkin),
+            property_category: propCategory(bien.id), lead_time_days: leadTimeDays(checkin),
             items: [{ item_id: bien.id, item_name: bien.nom, price: bien.prix, quantity: nights }],
           });
           mpTrack("Purchase", { value: total, currency: "EUR", eventID: paymentIntent.id, content_ids: [bien.id], content_type: "product" });
@@ -2537,7 +2550,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
                     onClick={() => {
                       if (belowMin) return;
                       const ckItems = [{ item_id: bien.id, item_name: bien.nom, price: bien.prix, quantity: nights }];
-                      if (window.gtag) window.gtag("event", "begin_checkout", { bien_id: bien.id, niveau_tarifaire: niveauTarifaire(bien, checkin), currency: "EUR", value: total, items: ckItems });
+                      if (window.gtag) window.gtag("event", "begin_checkout", { bien_id: bien.id, niveau_tarifaire: niveauTarifaire(bien, checkin), property_category: propCategory(bien.id), lead_time_days: leadTimeDays(checkin), currency: "EUR", value: total, items: ckItems });
                       mpTrack("InitiateCheckout", { value: total, currency: "EUR", content_ids: [bien.id], content_type: "product" });
                       // Contexte pour le purchase fiable sur /merci après redirection 3DS
                       try { sessionStorage.setItem("pending_purchase", JSON.stringify({ value: total, bien_id: bien.id, niveau_tarifaire: niveauTarifaire(bien, checkin), items: ckItems })); } catch { /* */ }
@@ -6304,7 +6317,7 @@ function GroupPaymentModal({ biens, checkin, checkout, guests, nights, total, on
         const guardKey = `ga_purchase_fired_${paymentIntent.id}`;
         if (!ssGet(guardKey)) {
           ssSet(guardKey, "1");
-          try { window.gtag("event", "purchase", { transaction_id: paymentIntent.id, currency: "EUR", value: total, bien_id: biens?.[0]?.id, niveau_tarifaire: niveauTarifaire(biens?.[0], checkin), items: (biens || []).map(b => ({ item_id: b.id, item_name: b.nom, price: b.prix, quantity: nights || 1 })) }); } catch { /* */ }
+          try { window.gtag("event", "purchase", { transaction_id: paymentIntent.id, currency: "EUR", value: total, bien_id: biens?.[0]?.id, niveau_tarifaire: niveauTarifaire(biens?.[0], checkin), property_category: propCategory(biens?.[0]?.id), lead_time_days: leadTimeDays(checkin), items: (biens || []).map(b => ({ item_id: b.id, item_name: b.nom, price: b.prix, quantity: nights || 1 })) }); } catch { /* */ }
           mpTrack("Purchase", { value: total, currency: "EUR", eventID: paymentIntent.id, content_ids: (biens || []).map(b => b.id), content_type: "product" });
         }
       }
