@@ -3,6 +3,14 @@
 > 1 entrée par décision qui engage la suite. Format 5 lignes : **Choix · Alternatives refusées · Conséquences attendues · Périmètre · Statut**.
 > Décisions d'archi détaillées (specs complets) → `../docs/superpowers/specs/README.md` (ADR-001→010). Ici = log curaté de session.
 
+## ADR-DEPLOY-001 · 2026-06-23 · CI = seul chemin de déploiement pour les instances Claude
+
+1. **Choix** : toute instance Claude doit faire `git push origin main` uniquement. Le CI auto-deploy (`.github/workflows/deploy.yml`) prend le relais → tests → build → wrangler → smoke.
+2. **Alternatives refusées** : `npm run deploy:pages` depuis une instance Claude → drift prod≠main garanti si 2 instances travaillent en parallèle (vécu 3× en 24h le 2026-06-23). Prod s'écrase avec l'état local d'une seule machine.
+3. **Conséquences attendues** : `deploy-pages.sh` reste mais usage = Vincent seul en urgence CI cassée. CI a `concurrency: cancel-in-progress: true` → 2 pushes simultanés = le dernier gagne, proprement. Fix smoke test (sleep 20 + retry ×3) élimine les faux-négatifs de propagation CF Pages.
+4. **Périmètre** : `.github/workflows/deploy.yml` · `scripts/deploy-pages.sh` (non modifié, accès restreint).
+5. **Statut** : **acté** (2026-06-23). Fix smoke test : commit `1107f31`.
+
 ## ADR-REVENUSCANAL-001 · 2026-06-23 · REVENUS_CANAL_2025 extrait vers src/data/revenusCanal.js
 
 1. **Choix** : extraire `REVENUS_CANAL_2025` de `App.jsx` vers `src/data/revenusCanal.js` (module pur) ; re-exporter depuis `App.jsx` pour backward compat.

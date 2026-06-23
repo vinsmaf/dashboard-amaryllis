@@ -3,6 +3,12 @@
 > Pièges déjà rencontrés + comment les éviter. 1 entrée = 1 leçon actionnable « la prochaine fois ».
 > Le journal d'erreurs exhaustif reste `../docs/ERREURS-LOG.md`.
 
+## 🚀 RÈGLE ABSOLUE DÉPLOIEMENT — Claude ne fait JAMAIS `npm run deploy:pages` — 2026-06-23
+- **Piège vécu** : 2 instances Claude déployaient depuis des états locaux différents (sans pusher sur git) → drift prod≠main répété (vécu 3 fois en 24h le 2026-06-23).
+- **La règle** : Claude fait **toujours** `git push origin main` → le CI deploy.yml s'occupe du reste.
+- `npm run deploy:pages` = outil d'urgence **Vincent seul** si la CI est cassée (secret absent, wrangler down). Jamais depuis une session Claude.
+- **Vérif** : avant tout déploiement, `git status` + `git push` est le seul chemin valide.
+
 ## 🔄 Import circulaire App.jsx : extraire les données dans src/data/ — 2026-06-23
 - **Piège vécu** : `NetRevParTab.jsx` importait `REVENUS_CANAL_2025` depuis `App.jsx`. App.jsx importe NetRevParTab. Résultat = import circulaire → crash React silencieux au démarrage admin (écran blanc, aucun message clair).
 - **Fix** : extraire la donnée partagée dans `src/data/revenusCanal.js` (module pur, zéro import React). Re-exporter depuis App.jsx pour backward compat.
