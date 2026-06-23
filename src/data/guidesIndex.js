@@ -218,6 +218,13 @@ export const GUIDES_INDEX = [
         dist: { amaryllis:15, zandoli:15, geko:14, mabouya:14, iguana:16, schoelcher:45 },
       },
       {
+        emoji: "🗺️", nom: "Que faire en Martinique", href: "/que-faire-martinique",
+        accroche: "20 expériences incontournables — le guide complet par vos hôtes",
+        photo: "/photos/martinique-panorama.jpg",
+        types: ["Culture", "Nature", "Mer", "Randonnée"],
+        commune: "Toute la Martinique",
+      },
+      {
         emoji: "🌟", nom: "10 activités incontournables", href: "/activites-sainte-luce",
         accroche: "La sélection de vos hôtes — testée et approuvée",
         photo: "/photos/activites-martinique.jpg",

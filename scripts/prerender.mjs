@@ -483,6 +483,21 @@ const ROUTES = [
     ],
   },
 
+  {
+    path: "/que-faire-martinique",
+    title: "Que faire en Martinique — 20 expériences incontournables | Amaryllis",
+    desc:  "Notre guide complet des meilleures activités en Martinique : nautique, randonnées, culture créole, gastronomie et rhum. Sélectionné par vos hôtes de Sainte-Luce.",
+    image: `${BASE}/photos/martinique-panorama.jpg`,
+    h1:    "Que faire en Martinique — nos 20 expériences incontournables",
+    intro: "Mer turquoise, volcan, rhum AOC, cuisine créole : la Martinique concentre une diversité d'expériences rare dans les Caraïbes. Voici la sélection de vos hôtes.",
+    sections: [
+      { h2: "Mer & Nautique", body: "Nager avec les tortues aux Anses d'Arlet, catamaran vers les îlets du Sud, plongée sur les épaves de Saint-Pierre et baignade dans les fonds blancs du François." },
+      { h2: "Randonnées & Nature", body: "Ascension de la Montagne Pelée (1 397 m), randonnée sur la presqu'île de la Caravelle, sentiers de la forêt de Montravail à 10 minutes des villas." },
+      { h2: "Culture & Rhum", body: "Route des distilleries AOC depuis Trois-Rivières, ville de Saint-Pierre et ses épaves, mémorial de l'Anse-Caffard face au Rocher du Diamant." },
+      { h2: "Gastronomie créole", body: "Accras, colombo, blaff et langouste — marchés du bourg de Sainte-Luce, étals de Fort-de-France et restaurants de bord de mer." },
+    ],
+  },
+
   /* ── Partenaires & bonnes adresses ── */
   {
     path: "/nos-partenaires",
@@ -888,6 +903,7 @@ const SITEMAP_META = {
   "/location-villa-martinique-piscine": { priority: "0.95", changefreq: "monthly" },
   "/nos-partenaires":                { priority: "0.6",  changefreq: "monthly" },
   "/location-voiture-martinique-pas-cher": { priority: "0.85", changefreq: "monthly" },
+  "/que-faire-martinique":             { priority: "0.95", changefreq: "monthly" },
 };
 
 const today = new Date().toISOString().slice(0, 10);
