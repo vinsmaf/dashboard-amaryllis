@@ -25,17 +25,19 @@
 
 ## Phases
 
-### Phase 0 — Quick wins (fait / en cours)
-- [x] Vue segments dans l'onglet CRM (2026-06-23).
-- [ ] **Nettoyer `contacts`** : marquer les 8 test/spam (`status='ignore'`). 1 vrai lead → suivi manuel.
-- [x] Décision : ne PAS blaster DIRECT10 (cible = adresses bidon).
+### Phase 0 — Quick wins ✅ (2026-06-23)
+- [x] Vue segments dans l'onglet CRM.
+- [x] Nettoyé `contacts` : 8 test/spam → `status='archivé'` (CHECK constraint : statut ∈ nouveau/répondu/archivé). Reste 1 vrai lead (Isabelle Hartock) → suivi manuel.
+- [x] Décision : promo DIRECT10 NON lancée (cible = adresses bidon).
 
-### Phase 1 — Réactivation saisonnière (Must — RM-10/RM-19) · **build juillet-août**
-> ⏰ La relance haute saison déc-avr part **dès septembre** (T-6/8 sem). Donc construire en juillet-août.
-- Cron `runCrmLifecycle` (segmente + déclenche, mode `dry` d'abord).
-- Séquence **"Accès prioritaire anciens"** : nominatif, tarif fidélité direct, avant ouverture publique. Cible : diaspora + locaux.
-- Séquence **win-back dormants** (12–24 mois) : offre de retour.
-- Templates : `fidelite-acces.html`, `winback.html`.
+### Phase 1 — Réactivation (Must — RM-10/RM-19) · **moteur construit 2026-06-23**
+- [x] **Endpoint `functions/api/crm-lifecycle.js`** : `GET ?secret&segment=winback|fidelite[&dry=1]`.
+  - `winback` : dormants/perdus (dernier_sejour 6–36 mois).
+  - `fidelite` : accès prioritaire saisonnier à tous les anciens (`nb_sejours ≥ 1`).
+  - Anti-doublon : table D1 `crm_campaigns` (1 client ≠ recontacté 2× / campagne).
+  - Secret **fail-closed**. **Aucune remise codée** (argument = direct sans frais d'agence ; barème fidélité = manuel Vincent).
+- [ ] **Déclenchement** : manuel pour l'instant (`dry=1` d'abord). ⏰ La campagne `fidelite` part **dès septembre** (T-6/8 sem avant haute saison déc-avr) → greffer un cron Worker `runCrmLifecycle` à ce moment, ou déclencher à la main.
+- [ ] Affiner les copies par segment + A/B sujet si volume suffisant.
 
 ### Phase 2 — Échelle de fidélité multi-biens (Should — RM-19)
 - Cross-sell montée en gamme : Mabouya 2p → Géko 4p → Amaryllis 8p (selon `biens` + capacité).
