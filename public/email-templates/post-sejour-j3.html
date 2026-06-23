@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<!--
+  ============================================================
+  AMARYLLIS LOCATIONS — Email POST-SÉJOUR J+3
+  ============================================================
+  OBJET : {{prenom}}, votre avis sur {{bien_nom}} nous intéresse
+  PRÉHEADER : 3 questions rapides + une offre pour revenir.
+  VARIABLES :
+    {{prenom}}         — prénom du voyageur
+    {{bien_nom}}       — nom du logement (ex. Villa Amaryllis)
+    {{bien_url}}       — URL de la fiche (ex. https://villamaryllis.com/amaryllis)
+    {{check_out_date}} — date de départ formatée (ex. 20 juin 2026)
+  UTILISATION :
+    Envoyé J+3 après le départ depuis /api/send-poststay (segment direct_bookings).
+    Distinct du J+1 (remerciement + avis Google) : ici on demande la satisfaction
+    + on active l'offre fidélité RETOUR10.
+  ============================================================
+-->
+<html lang="fr" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="x-apple-disable-message-reformatting">
+  <title>Votre séjour à {{bien_nom}} — quelques mots ?</title>
+  <!--[if mso]>
+  <noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
+  <![endif]-->
+  <style>
+    @media only screen and (max-width:600px){
+      .container{width:100% !important;}
+      .px{padding-left:24px !important;padding-right:24px !important;}
+      .stack{display:block !important;width:100% !important;}
+      .btnfull{width:100% !important;display:block !important;text-align:center !important;}
+      .h1{font-size:26px !important;line-height:32px !important;}
+    }
+    a{color:#c47254;}
+  </style>
+</head>
+<body style="margin:0;padding:0;background-color:#fffdf8;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
+
+  <!-- Préheader masqué -->
+  <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#fffdf8;opacity:0;">
+    3 questions rapides sur votre séjour + une offre pour revenir directement.&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#fffdf8;">
+    <tr>
+      <td align="center" style="padding:24px 12px;">
+
+        <table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background-color:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 1px 4px rgba(31,42,61,0.06);">
+
+          <!-- Bandeau -->
+          <tr>
+            <td style="background-color:#1f2a3d;padding:28px 32px;" align="center">
+              <div style="font-family:Georgia,'Times New Roman',serif;font-size:22px;letter-spacing:3px;color:#fffdf8;text-transform:uppercase;">Amaryllis</div>
+              <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;letter-spacing:4px;color:#c47254;text-transform:uppercase;margin-top:6px;">Locations &middot; Martinique</div>
+            </td>
+          </tr>
+
+          <!-- Filet corail -->
+          <tr><td style="height:4px;background-color:#c47254;line-height:4px;font-size:0;">&nbsp;</td></tr>
+
+          <!-- Intro -->
+          <tr>
+            <td class="px" style="padding:36px 40px 8px 40px;font-family:Georgia,'Times New Roman',serif;">
+              <h1 class="h1" style="margin:0;font-size:30px;line-height:38px;color:#1f2a3d;font-weight:normal;">{{prenom}}, quelques mots&nbsp;?</h1>
+              <p style="margin:18px 0 0 0;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:26px;color:#3a4658;">
+                Trois jours après votre départ de <strong style="color:#1f2a3d;">{{bien_nom}}</strong>, nous aimerions savoir comment s'est passé votre séjour. Deux minutes suffisent, et chaque retour nous aide à faire mieux.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Section satisfaction -->
+          <tr>
+            <td class="px" style="padding:28px 40px 0 40px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#fffdf8;border:1px solid #ece6d9;border-radius:12px;">
+                <tr>
+                  <td style="height:4px;background-color:#c47254;line-height:4px;font-size:0;border-radius:12px 12px 0 0;">&nbsp;</td>
+                </tr>
+                <tr>
+                  <td style="padding:24px 26px 8px 26px;font-family:Arial,Helvetica,sans-serif;">
+                    <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#c47254;font-weight:bold;">Votre satisfaction</div>
+                  </td>
+                </tr>
+
+                <!-- Question 1 -->
+                <tr>
+                  <td style="padding:12px 26px 4px 26px;font-family:Arial,Helvetica,sans-serif;">
+                    <div style="font-size:14px;font-weight:bold;color:#1f2a3d;margin-bottom:10px;">1. Le logement correspondait à vos attentes&nbsp;?</div>
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="padding-right:8px;"><a href="mailto:contact@villamaryllis.com?subject=Satisfaction+logement+{{bien_nom}}&body=Question+1+%E2%80%94+Le+logement+%3A+1/5" style="background-color:#ece6d9;color:#1f2a3d;display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:14px;text-decoration:none;padding:8px 12px;border-radius:8px;font-weight:bold;">1</a></td>
+                        <td style="padding-right:8px;"><a href="mailto:contact@villamaryllis.com?subject=Satisfaction+logement+{{bien_nom}}&body=Question+1+%E2%80%94+Le+logement+%3A+2/5" style="background-color:#ece6d9;color:#1f2a3d;display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:14px;text-decoration:none;padding:8px 12px;border-radius:8px;font-weight:bold;">2</a></td>
+                        <td style="padding-right:8px;"><a href="mailto:contact@villamaryllis.com?subject=Satisfaction+logement+{{bien_nom}}&body=Question+1+%E2%80%94+Le+logement+%3A+3/5" style="background-color:#ece6d9;color:#1f2a3d;display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:14px;text-decoration:none;padding:8px 12px;border-radius:8px;font-weight:bold;">3</a></td>
+                        <td style="padding-right:8px;"><a href="mailto:contact@villamaryllis.com?subject=Satisfaction+logement+{{bien_nom}}&body=Question+1+%E2%80%94+Le+logement+%3A+4/5" style="background-color:#ece6d9;color:#1f2a3d;display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:14px;text-decoration:none;padding:8px 12px;border-radius:8px;font-weight:bold;">4</a></td>
+                        <td><a href="mailto:contact@villamaryllis.com?subject=Satisfaction+logement+{{bien_nom}}&body=Question+1+%E2%80%94+Le+logement+%3A+5/5" style="background-color:#c47254;color:#ffffff;display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:14px;text-decoration:none;padding:8px 12px;border-radius:8px;font-weight:bold;">5</a></td>
+                        <td style="padding-left:10px;font-size:12px;color:#8a8170;font-family:Arial,Helvetica,sans-serif;">1 = déçu · 5 = parfait</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- Séparateur -->
+                <tr><td style="padding:8px 26px;"><div style="height:1px;background-color:#ece6d9;"></div></td></tr>
+
+                <!-- Question 2 -->
+                <tr>
+                  <td style="padding:4px 26px 4px 26px;font-family:Arial,Helvetica,sans-serif;">
+                    <div style="font-size:14px;font-weight:bold;color:#1f2a3d;margin-bottom:10px;">2. La propreté à votre arrivée était&nbsp;?</div>
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="padding-right:8px;"><a href="mailto:contact@villamaryllis.com?subject=Satisfaction+proprete+{{bien_nom}}&body=Question+2+%E2%80%94+La+propret%C3%A9+%3A+1/5" style="background-color:#ece6d9;color:#1f2a3d;display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:14px;text-decoration:none;padding:8px 12px;border-radius:8px;font-weight:bold;">1</a></td>
+                        <td style="padding-right:8px;"><a href="mailto:contact@villamaryllis.com?subject=Satisfaction+proprete+{{bien_nom}}&body=Question+2+%E2%80%94+La+propret%C3%A9+%3A+2/5" style="background-color:#ece6d9;color:#1f2a3d;display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:14px;text-decoration:none;padding:8px 12px;border-radius:8px;font-weight:bold;">2</a></td>
+                        <td style="padding-right:8px;"><a href="mailto:contact@villamaryllis.com?subject=Satisfaction+proprete+{{bien_nom}}&body=Question+2+%E2%80%94+La+propret%C3%A9+%3A+3/5" style="background-color:#ece6d9;color:#1f2a3d;display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:14px;text-decoration:none;padding:8px 12px;border-radius:8px;font-weight:bold;">3</a></td>
+                        <td style="padding-right:8px;"><a href="mailto:contact@villamaryllis.com?subject=Satisfaction+proprete+{{bien_nom}}&body=Question+2+%E2%80%94+La+propret%C3%A9+%3A+4/5" style="background-color:#ece6d9;color:#1f2a3d;display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:14px;text-decoration:none;padding:8px 12px;border-radius:8px;font-weight:bold;">4</a></td>
+                        <td><a href="mailto:contact@villamaryllis.com?subject=Satisfaction+proprete+{{bien_nom}}&body=Question+2+%E2%80%94+La+propret%C3%A9+%3A+5/5" style="background-color:#c47254;color:#ffffff;display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:14px;text-decoration:none;padding:8px 12px;border-radius:8px;font-weight:bold;">5</a></td>
+                        <td style="padding-left:10px;font-size:12px;color:#8a8170;font-family:Arial,Helvetica,sans-serif;">1 = déçu · 5 = parfait</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- Séparateur -->
+                <tr><td style="padding:8px 26px;"><div style="height:1px;background-color:#ece6d9;"></div></td></tr>
+
+                <!-- Question 3 -->
+                <tr>
+                  <td style="padding:4px 26px 4px 26px;font-family:Arial,Helvetica,sans-serif;">
+                    <div style="font-size:14px;font-weight:bold;color:#1f2a3d;margin-bottom:10px;">3. Recommanderiez-vous Amaryllis Locations&nbsp;?</div>
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="padding-right:8px;"><a href="mailto:contact@villamaryllis.com?subject=NPS+{{bien_nom}}&body=Question+3+%E2%80%94+Recommandation+%3A+1/5" style="background-color:#ece6d9;color:#1f2a3d;display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:14px;text-decoration:none;padding:8px 12px;border-radius:8px;font-weight:bold;">1</a></td>
+                        <td style="padding-right:8px;"><a href="mailto:contact@villamaryllis.com?subject=NPS+{{bien_nom}}&body=Question+3+%E2%80%94+Recommandation+%3A+2/5" style="background-color:#ece6d9;color:#1f2a3d;display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:14px;text-decoration:none;padding:8px 12px;border-radius:8px;font-weight:bold;">2</a></td>
+                        <td style="padding-right:8px;"><a href="mailto:contact@villamaryllis.com?subject=NPS+{{bien_nom}}&body=Question+3+%E2%80%94+Recommandation+%3A+3/5" style="background-color:#ece6d9;color:#1f2a3d;display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:14px;text-decoration:none;padding:8px 12px;border-radius:8px;font-weight:bold;">3</a></td>
+                        <td style="padding-right:8px;"><a href="mailto:contact@villamaryllis.com?subject=NPS+{{bien_nom}}&body=Question+3+%E2%80%94+Recommandation+%3A+4/5" style="background-color:#ece6d9;color:#1f2a3d;display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:14px;text-decoration:none;padding:8px 12px;border-radius:8px;font-weight:bold;">4</a></td>
+                        <td><a href="mailto:contact@villamaryllis.com?subject=NPS+{{bien_nom}}&body=Question+3+%E2%80%94+Recommandation+%3A+5/5" style="background-color:#c47254;color:#ffffff;display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:14px;text-decoration:none;padding:8px 12px;border-radius:8px;font-weight:bold;">5</a></td>
+                        <td style="padding-left:10px;font-size:12px;color:#8a8170;font-family:Arial,Helvetica,sans-serif;">1 = non · 5 = oui !</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- Séparateur -->
+                <tr><td style="padding:8px 26px;"><div style="height:1px;background-color:#ece6d9;"></div></td></tr>
+
+                <!-- Champ libre -->
+                <tr>
+                  <td style="padding:4px 26px 22px 26px;font-family:Arial,Helvetica,sans-serif;">
+                    <div style="font-size:14px;font-weight:bold;color:#1f2a3d;margin-bottom:8px;">Un moment particulier à partager&nbsp;?</div>
+                    <p style="margin:0 0 12px;font-size:13px;color:#3a4658;line-height:20px;">Un souvenir, une suggestion, quelque chose qui vous a marqué — en bien ou à améliorer.</p>
+                    <a href="mailto:contact@villamaryllis.com?subject=Retour+sejour+{{bien_nom}}&body=Bonjour,%0D%0A%0D%0AJe+vous+partage+mon+retour+sur+mon+s%C3%A9jour+%C3%A0+{{bien_nom}}+:%0D%0A%0D%0A" style="background-color:#ece6d9;color:#1f2a3d;display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;text-decoration:none;padding:10px 20px;border-radius:8px;">Envoyer un message</a>
+                  </td>
+                </tr>
+
+              </table>
+            </td>
+          </tr>
+
+          <!-- Offre fidélité -->
+          <tr>
+            <td class="px" style="padding:28px 40px 0 40px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#1f2a3d;border-radius:12px;">
+                <tr>
+                  <td style="padding:28px 26px;text-align:center;">
+                    <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#c47254;margin-bottom:10px;">Votre avantage fidélité</div>
+                    <div style="font-family:Georgia,'Times New Roman',serif;font-size:20px;color:#fffdf8;font-weight:normal;margin-bottom:16px;line-height:28px;">
+                      &minus;10&nbsp;% sur votre prochain séjour<br>
+                      <span style="font-size:15px;color:#aeb6c2;">en réservation directe</span>
+                    </div>
+                    <div style="font-family:'Courier New',Courier,monospace;font-size:24px;letter-spacing:8px;color:#fffdf8;font-weight:bold;background-color:rgba(255,255,255,0.08);display:inline-block;padding:14px 28px;border-radius:10px;border:1px solid rgba(196,114,84,0.4);">RETOUR10</div>
+                    <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#7c8593;margin-top:10px;line-height:18px;">
+                      Code à saisir lors de votre prochaine réservation sur villamaryllis.com
+                    </div>
+                    <div style="margin-top:20px;">
+                      <!--[if mso]>
+                      <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{{bien_url}}?utm_source=email&utm_medium=email&utm_campaign=post-sejour-j3" style="height:46px;v-text-anchor:middle;width:230px;" arcsize="22%" strokecolor="#c47254" fillcolor="#c47254">
+                        <w:anchorlock/>
+                        <center style="color:#ffffff;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Voir les disponibilités</center>
+                      </v:roundrect>
+                      <![endif]-->
+                      <!--[if !mso]><!-- -->
+                      <a href="{{bien_url}}?utm_source=email&utm_medium=email&utm_campaign=post-sejour-j3" class="btnfull" style="background-color:#c47254;color:#ffffff;display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;text-decoration:none;padding:13px 30px;border-radius:10px;">Voir les disponibilités</a>
+                      <!--<![endif]-->
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Signature -->
+          <tr>
+            <td class="px" style="padding:30px 40px 36px 40px;font-family:Georgia,'Times New Roman',serif;">
+              <p style="margin:0;font-size:16px;line-height:26px;color:#3a4658;">
+                Merci pour votre confiance, {{prenom}}. Nous espérons avoir le plaisir de vous accueillir à nouveau bientôt.
+              </p>
+              <p style="margin:16px 0 0 0;font-size:16px;color:#1f2a3d;">L'équipe Amaryllis</p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#1f2a3d;padding:24px 40px;font-family:Arial,Helvetica,sans-serif;" align="center">
+              <div style="font-size:12px;line-height:20px;color:#aeb6c2;">Amaryllis Locations &middot; Sainte-Luce, Martinique</div>
+              <div style="font-size:11px;line-height:18px;color:#7c8593;margin-top:8px;">
+                Vous recevez ce message car vous avez séjourné dans l'une de nos maisons.
+                Vous ne souhaitez plus recevoir ce type d'email&nbsp;?
+                <a href="mailto:contact@villamaryllis.com?subject=Desinscription&body=Bonjour%2C+je+souhaite+me+d%C3%A9sinscrire+des+emails+post-s%C3%A9jour." style="color:#7c8593;text-decoration:underline;">Se désinscrire</a>.
+              </div>
+              <div style="font-size:11px;color:#7c8593;margin-top:6px;">
+                <a href="https://villamaryllis.com" style="color:#7c8593;text-decoration:none;">villamaryllis.com</a>
+                &middot; contact@villamaryllis.com
+              </div>
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

@@ -79,7 +79,7 @@ const BIEN_FAQ = {
     { q: "Où se trouve le studio Mabouya ?", a: "Dans la résidence Amaryllis à Sainte-Luce, Martinique. Sur les hauteurs avec vue mer panoramique." },
   ],
   schoelcher: [
-    { q: "Quel est le prix de l'appartement Bellevue à Schœlcher ?", a: "Bellevue se loue à partir de 100€/nuit en réservation directe — option idéale pour un séjour économique en Martinique." },
+    { q: "Quel est le prix de l'appartement Bellevue à Schœlcher ?", a: "Bellevue se loue à partir de 90€/nuit en réservation directe — option idéale pour un séjour économique en Martinique." },
     { q: "Quelle est la vue depuis Bellevue ?", a: "Vue panoramique sur la baie de Fort-de-France et les Trois-Îlets depuis les hauteurs de Schœlcher. Une des vues les plus dégagées du portfolio." },
     { q: "Combien de personnes peut accueillir Bellevue ?", a: "Bellevue accueille jusqu'à 2 personnes — idéal pour un séjour calme et économique en couple." },
     { q: "Où se trouve l'appartement Bellevue ?", a: "À Schœlcher, sur les hauteurs avec vue baie de Fort-de-France. À 5 minutes des plages." },
@@ -243,7 +243,7 @@ const GUIDE_META = {
     ],
   },
   "sainte-luce-martinique": {
-    title: "Location Sainte-Luce Martinique — villa & studios dès 100€",
+    title: "Location Sainte-Luce Martinique — villa & studios dès 70€",
     desc: "Louez une villa à Sainte-Luce, Martinique : piscine privée, vue mer, dès 110€/nuit en direct sans frais. Plages, activités et conseils de vos hôtes.",
     image: `${BASE}/photos/iguana/04.webp`,
     faq: [

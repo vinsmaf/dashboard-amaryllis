@@ -245,7 +245,7 @@ const FAQS_PAR_BIEN = {
     { q: "Où se trouve Villa Iguana ?", a: "Dans la résidence Amaryllis à Sainte-Luce, sud Martinique. Vue panoramique sur le Rocher du Diamant et la mer Caraïbes." },
   ],
   geko: [
-    { q: "Quel est le prix de Géko en Martinique ?", a: "Géko se loue à partir de 150€/nuit en réservation directe sur villamaryllis.com — sans frais Airbnb." },
+    { q: "Quel est le prix de Géko en Martinique ?", a: "Géko se loue à partir de 110€/nuit en réservation directe sur villamaryllis.com — sans frais Airbnb." },
     { q: "Géko a-t-elle une piscine ?", a: "Oui — Géko dispose de sa propre piscine privative avec cascade, dans la résidence Amaryllis à Sainte-Luce sur les hauteurs." },
     { q: "Combien de personnes peut accueillir Géko ?", a: "Géko accueille jusqu'à 4 personnes — idéal pour les couples ou petites familles. Climatisation, cuisine extérieure, barbecue." },
     { q: "Où se trouve Géko ?", a: "Sur les hauteurs de Sainte-Luce, dans la résidence Amaryllis, à 7 minutes des plages du sud." },
@@ -259,7 +259,7 @@ const FAQS_PAR_BIEN = {
     { q: "Où se trouve le studio Mabouya ?", a: "Dans la résidence Amaryllis à Sainte-Luce, Martinique. Sur les hauteurs avec vue mer panoramique." },
   ],
   schoelcher: [
-    { q: "Quel est le prix de l'appartement Bellevue à Schœlcher ?", a: "Bellevue se loue à partir de 100€/nuit en réservation directe — option idéale pour un séjour économique en Martinique." },
+    { q: "Quel est le prix de l'appartement Bellevue à Schœlcher ?", a: "Bellevue se loue à partir de 90€/nuit en réservation directe — option idéale pour un séjour économique en Martinique." },
     { q: "Quelle est la vue depuis Bellevue ?", a: "Vue panoramique sur la baie de Fort-de-France et les Trois-Îlets depuis les hauteurs de Schœlcher. Une des vues les plus dégagées du portfolio." },
     { q: "Combien de personnes peut accueillir Bellevue ?", a: "Bellevue accueille jusqu'à 2 personnes — idéal pour un séjour calme et économique en couple." },
     { q: "Où se trouve l'appartement Bellevue ?", a: "À Schœlcher, sur les hauteurs avec vue baie de Fort-de-France. À 5 minutes des plages." },
@@ -281,7 +281,7 @@ const ROUTES = [
   {
     path: "/",
     title: "Amaryllis — Location villa Martinique avec piscine | Réservation directe",
-    desc:  "Louez directement nos villas et appartements en Martinique (Sainte-Luce, Schœlcher) et à Nogent-sur-Marne. Piscine, vue mer, sans frais Airbnb. Dès 85€/nuit.",
+    desc:  "Louez directement nos villas et appartements en Martinique (Sainte-Luce, Schœlcher) et à Nogent-sur-Marne. Piscine, vue mer, sans frais Airbnb. Dès 70€/nuit.",
     image: `${BASE}/photos/amaryllis/01.webp`,
     h1:    "Locations de vacances en Martinique & à Nogent — réservation directe",
     lcpPreload: true,
@@ -420,14 +420,14 @@ const ROUTES = [
   /* ── Sainte-Luce + Réservation directe ── */
   {
     path: "/sainte-luce-martinique",
-    title: "Location Sainte-Luce Martinique — villa & studios dès 100€",
+    title: "Location Sainte-Luce Martinique — villa villa & studios dès 100€ studios dès 70€",
     desc:  "Louez une villa à Sainte-Luce, Martinique : piscine privée, vue mer, dès 110€/nuit en direct sans frais. Plages, activités et conseils de vos hôtes.",
     image: `${BASE}/photos/iguana/04.webp`,
   },
   {
     path: "/reservation-directe-martinique",
     title: "Réservation directe Martinique — Sans frais | Amaryllis",
-    desc:  "Réservez vos villas en Martinique en direct, sans frais Airbnb ni Booking : −15% en moyenne, contact hôte, paiement Stripe sécurisé. Dès 85€/nuit.",
+    desc:  "Réservez vos villas en Martinique en direct, sans frais Airbnb ni Booking : −15% en moyenne, contact hôte, paiement Stripe sécurisé. Dès 70€/nuit.",
     image: `${BASE}/photos/amaryllis/01.webp`,
   },
   {
@@ -438,8 +438,8 @@ const ROUTES = [
   },
   {
     path: "/location-appartement-vue-mer-schoelcher",
-    title: "Location appartement vue mer Schœlcher — dès 100€/nuit",
-    desc:  "Appartement vue mer à Schœlcher, Martinique : panorama sur la baie de Fort-de-France, dernier étage, 2 pers. Réservation directe dès 100€/nuit, sans frais.",
+    title: "Location appartement vue mer Schœlcher — dès 90€/nuit",
+    desc:  "Appartement vue mer à Schœlcher, Martinique : panorama sur la baie de Fort-de-France, dernier étage, 2 pers. Réservation directe dès 90€/nuit, sans frais.",
     image: `${BASE}/photos/schoelcher/16.webp`,
   },
   {
@@ -465,6 +465,22 @@ const ROUTES = [
     title: "Location villa Martinique avec piscine — dès 110€/nuit",
     desc:  "Villa avec piscine privée en Martinique à Sainte-Luce : débordement eau salée, cascade ou jacuzzi. Dès 110€/nuit en direct, sans frais Airbnb.",
     image: `${BASE}/photos/amaryllis/01.webp`,
+  },
+
+  /* ── Location voiture ── */
+  {
+    path: "/location-voiture-martinique-pas-cher",
+    title: "Location voiture Martinique pas cher 2026 — Guide & bons plans | Amaryllis",
+    desc:  "Comment louer une voiture en Martinique sans payer trop cher ? 8 conseils testés : réserver tôt, éviter l'assurance de comptoir, comparer les loueurs FDF. Guide Amaryllis 2026.",
+    image: `${BASE}/photos/amaryllis/01.webp`,
+    h1:    "Location voiture en Martinique : comment payer moins en 2026",
+    intro: "Louer une voiture est indispensable pour explorer la Martinique. Voici nos 8 conseils pour réduire la note sans sacrifier la tranquillité.",
+    sections: [
+      { h2: "Réserver 3 à 4 semaines à l'avance", body: "Les tarifs sont en moyenne 25 à 35 % moins chers réservés à l'avance. Plus la période se rapproche, plus les rares véhicules restants coûtent cher." },
+      { h2: "Comparer tous les loueurs en une seule recherche", body: "Europcar, Sixt, Hertz, Budget et Avis sont tous présents à l'aéroport de Fort-de-France. Un comparateur vous évite de vérifier chaque site." },
+      { h2: "Choisir une voiture automatique", body: "La Martinique est montagneuse. Une boîte manuelle fatigue dans les côtes du Nord. La différence de tarif est souvent inférieure à 5 €/jour." },
+      { h2: "Privilégier les assurances carte bancaire", body: "Visa Gold et Mastercard Premium couvrent souvent le vol et la casse du véhicule. Refusez l'assurance de comptoir et économisez 15 à 25 € par jour." },
+    ],
   },
 
   /* ── Partenaires & bonnes adresses ── */
@@ -871,6 +887,7 @@ const SITEMAP_META = {
   "/seminaires":                     { priority: "0.75", changefreq: "monthly" },
   "/location-villa-martinique-piscine": { priority: "0.95", changefreq: "monthly" },
   "/nos-partenaires":                { priority: "0.6",  changefreq: "monthly" },
+  "/location-voiture-martinique-pas-cher": { priority: "0.85", changefreq: "monthly" },
 };
 
 const today = new Date().toISOString().slice(0, 10);
