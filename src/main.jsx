@@ -134,6 +134,8 @@ const Faq              = lazy(() => import('./Faq.jsx'))
 const MentionsLegales          = lazy(() => import('./MentionsLegales.jsx'))
 const PolitiqueConfidentialite = lazy(() => import('./PolitiqueConfidentialite.jsx'))
 const ConditionsGenerales      = lazy(() => import('./ConditionsGenerales.jsx'))
+const ArticlesIndex            = lazy(() => import('./ArticlesIndex.jsx'))
+const ArticlePage              = lazy(() => import('./ArticlePage.jsx'))
 const NotFound                 = lazy(() => import('./NotFound.jsx'))
 const CookieBanner = lazy(() => import('./CookieBanner.jsx')) // eslint-disable-line react-refresh/only-export-components
 const ChatWidget   = lazy(() => import('./ChatWidget.jsx'))   // eslint-disable-line react-refresh/only-export-components
@@ -256,9 +258,11 @@ document.addEventListener("change", (e) => {
 })();
 
 const BIEN_IDS = ["amaryllis", "zandoli", "iguana", "geko", "mabouya", "schoelcher", "nogent"];
-const KNOWN = ["/", "/links", "/merci", "/devis", "/guide", "/guide-hub", "/explorer", "/guide-le-diamant", "/guide-sainte-anne", "/villa-rental-martinique", "/activites-sainte-luce", "/guide-proximite", "/guide-arlet", "/guide-trois-ilets", "/guide-plongee-martinique", "/guide-saint-pierre-martinique", "/guide-francois-martinique", "/guide-distilleries-martinique", "/guide-randonnees-martinique", "/guide-gastronomie-martinique", "/avis", "/faq", "/mentions-legales", "/politique-confidentialite", "/conditions-generales", "/sainte-luce-martinique", "/reservation-directe-martinique", "/meilleure-saison-martinique", "/seminaires", "/guide-nogent-sur-marne", "/location-villa-martinique-piscine", "/location-groupe-sainte-luce", "/location-appartement-vue-mer-schoelcher", "/plus-belles-plages-sud-martinique", "/nos-partenaires", "/location-voiture-martinique-pas-cher", "/que-faire-martinique", "/guide-martinique-en-famille-sud", "/guide-martinique-en-couple-sud", "/guide-snorkeling-tortues-martinique", "/guide-se-deplacer-martinique-sud", "/guide-itineraire-une-semaine-sud-martinique", "/guide-budget-vacances-martinique", "/guide-sainte-luce-jour-de-pluie", "/guide-ou-loger-martinique-secteur", "/guide-que-faire-nogent-sur-marne", "/guide-ou-dormir-est-paris-nogent", "/guide-nogent-guinguettes-bord-de-marne"];
+const KNOWN = ["/", "/links", "/merci", "/devis", "/guide", "/guide-hub", "/explorer", "/guide-le-diamant", "/guide-sainte-anne", "/villa-rental-martinique", "/activites-sainte-luce", "/guide-proximite", "/guide-arlet", "/guide-trois-ilets", "/guide-plongee-martinique", "/guide-saint-pierre-martinique", "/guide-francois-martinique", "/guide-distilleries-martinique", "/guide-randonnees-martinique", "/guide-gastronomie-martinique", "/avis", "/faq", "/mentions-legales", "/politique-confidentialite", "/conditions-generales", "/sainte-luce-martinique", "/reservation-directe-martinique", "/meilleure-saison-martinique", "/seminaires", "/guide-nogent-sur-marne", "/location-villa-martinique-piscine", "/location-groupe-sainte-luce", "/location-appartement-vue-mer-schoelcher", "/plus-belles-plages-sud-martinique", "/nos-partenaires", "/articles", "/location-voiture-martinique-pas-cher", "/que-faire-martinique", "/guide-martinique-en-famille-sud", "/guide-martinique-en-couple-sud", "/guide-snorkeling-tortues-martinique", "/guide-se-deplacer-martinique-sud", "/guide-itineraire-une-semaine-sud-martinique", "/guide-budget-vacances-martinique", "/guide-sainte-luce-jour-de-pluie", "/guide-ou-loger-martinique-secteur", "/guide-que-faire-nogent-sur-marne", "/guide-ou-dormir-est-paris-nogent", "/guide-nogent-guinguettes-bord-de-marne"];
 const isKnown = KNOWN.includes(path)
   || GUIDES_POI_SLUGS.includes(path)
+  || path === "/articles"
+  || path.startsWith("/article/")
   || path.startsWith("/admin")
   || path.startsWith("/landing")
   || path.startsWith("/bienvenue")
@@ -279,6 +283,10 @@ if (!isKnown) {
   Component = Landing;
 } else if (path === "/links") {
   Component = Links;
+} else if (path === "/articles") {
+  Component = ArticlesIndex;
+} else if (path.startsWith("/article/")) {
+  Component = ArticlePage;
 } else if (GUIDES_POI_SLUGS.includes(path)) {
   Component = GuidePOI;
 } else if (path === "/guide" || path === "/guide-hub") {

@@ -277,6 +277,14 @@ const FAQS_PAR_BIEN = {
 /* ── Métadonnées par route ──────────────────────────────────────────── */
 const ROUTES = [
 
+  /* ── Articles SEO (index) ── */
+  {
+    path: "/articles",
+    title: "Guides & Conseils Martinique — Amaryllis Locations",
+    desc:  "Tous nos guides pratiques pour préparer votre séjour en Martinique : activités, plages, itinéraires, logement, meilleure saison et bons plans du Sud.",
+    image: `${BASE}/photos/amaryllis/01.webp`,
+  },
+
   /* ── Accueil ── */
   {
     path: "/",
@@ -904,17 +912,37 @@ const SITEMAP_META = {
   "/nos-partenaires":                { priority: "0.6",  changefreq: "monthly" },
   "/location-voiture-martinique-pas-cher": { priority: "0.85", changefreq: "monthly" },
   "/que-faire-martinique":             { priority: "0.95", changefreq: "monthly" },
+  "/articles":                         { priority: "0.9",  changefreq: "weekly"  },
 };
 
 const today = new Date().toISOString().slice(0, 10);
 
-// Page d'accueil + toutes les routes prérendues
+/* ── Articles SEO longue traîne (D1) — slugs extraits du seed pour le sitemap ──
+   Les 30 articles vivent en D1 (table seo_articles) mais ne sont pas dans ROUTES.
+   On lit les slugs « published » depuis scripts/seed-articles-30.sql pour qu'ils
+   soient indexés. Un article ajouté via l'admin après coup n'y sera pas tant qu'il
+   n'est pas reflété ici (refinement possible : sitemap dynamique lisant D1). */
+const ARTICLE_ROUTES = (() => {
+  try {
+    const sql = fs.readFileSync(path.resolve("scripts/seed-articles-30.sql"), "utf8");
+    const slugs = [];
+    const re = /INSERT[^(]*\(slug,[^)]*\)\s*VALUES\s*\('([^']+)'/gi;
+    let m;
+    while ((m = re.exec(sql)) !== null) slugs.push(m[1]);
+    return [...new Set(slugs)].map(s => ({ path: `/article/${s}`, priority: "0.8", changefreq: "monthly" }));
+  } catch {
+    return [];
+  }
+})();
+
+// Page d'accueil + toutes les routes prérendues + articles D1
 const sitemapEntries = [
   { path: "/", ...SITEMAP_META["/"] },
   ...ROUTES.map(r => ({
     path: r.path,
     ...(SITEMAP_META[r.path] ?? { priority: "0.7", changefreq: "monthly" }),
   })),
+  ...ARTICLE_ROUTES,
 ];
 
 const xmlLines = [
