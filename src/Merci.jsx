@@ -35,6 +35,7 @@ export default function MerciPage() {
   const [elements, setElements] = useState(null);
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState("");
+  const [bienId, setBienId] = useState("");
 
   // Payment redirected via 3DS + deposit pending → mount deposit form
   const showDepositForm = paymentRedirected && depositCs && !depositDone;
@@ -96,6 +97,7 @@ export default function MerciPage() {
     const effectivePi = pi || ctx.pi;
     if (!effectivePi) return; // pas de paiement à tracker
 
+    if (ctx.bien_id) setBienId(ctx.bien_id);
     const guardKey = `ga_purchase_fired_${effectivePi}`;
     if (ssGet(guardKey)) { ssRemove("pending_purchase"); return; } // déjà firé inline
 
@@ -187,20 +189,62 @@ export default function MerciPage() {
     );
   }
 
+  const REVIEW_LINKS = {
+    amaryllis:  "https://search.google.com/local/writereview?placeid=ChIJWbeKdLghQIwRCppz2lJ39Jk",
+    zandoli:    "https://search.google.com/local/writereview?placeid=ChIJc2hlO7chQIwRQaczraCwlNs",
+    geko:       "https://search.google.com/local/writereview?placeid=ChIJc2hlO7chQIwRQaczraCwlNs",
+    mabouya:    "https://search.google.com/local/writereview?placeid=ChIJc2hlO7chQIwRQaczraCwlNs",
+    iguana:     "https://search.google.com/local/writereview?placeid=ChIJc2hlO7chQIwRQaczraCwlNs",
+  };
+  const reviewUrl = REVIEW_LINKS[bienId] || "https://search.google.com/local/writereview?placeid=ChIJWbeKdLghQIwRCppz2lJ39Jk";
+  const waShareText = encodeURIComponent("Je viens de réserver un logement via villamaryllis.com 🌴 — si tu cherches un hébergement en Martinique, je te le recommande !");
+  const waShareUrl = `https://wa.me/?text=${waShareText}`;
+
   return (
     <div style={{ minHeight: "100vh", background: IVORY, display: "flex", alignItems: "center", justifyContent: "center", color: NAVY, textAlign: "center", padding: 32 }}>
-      <div>
+      <div style={{ maxWidth: 480, width: "100%" }}>
         <div style={{ width: 80, height: 80, borderRadius: "50%", background: `rgba(200,85,61,0.1)`, border: `2px solid ${CORAL}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36, margin: "0 auto 28px" }}>✓</div>
         <h1 style={{ fontSize: 34, fontWeight: 900, marginBottom: 12, color: NAVY }}>Réservation confirmée !</h1>
-        <p style={{ color: MUTED, fontSize: 16, maxWidth: 420, margin: "0 auto 32px", lineHeight: 1.6 }}>
+        <p style={{ color: MUTED, fontSize: 16, maxWidth: 420, margin: "0 auto 24px", lineHeight: 1.6 }}>
           Merci pour votre réservation. Un email de confirmation vous sera envoyé dans quelques minutes.
         </p>
         {depositDone && (
-          <p style={{ color: "#92400e", fontSize: 14, maxWidth: 380, margin: "-20px auto 28px", background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 10, padding: "12px 16px" }}>
+          <p style={{ color: "#92400e", fontSize: 14, margin: "0 auto 24px", background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 10, padding: "12px 16px" }}>
             🔒 Dépôt de garantie bloqué · Libéré automatiquement après votre séjour
           </p>
         )}
-        <a href="/" style={{ ...btnPrimary, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 8, background: CORAL, color: "#fff" }}>← Retour à l'accueil</a>
+
+        {/* Avis Google */}
+        <div style={{ background: "rgba(200,85,61,0.04)", border: "1px solid rgba(200,85,61,0.15)", borderRadius: 12, padding: "20px 24px", marginBottom: 16, textAlign: "left" }}>
+          <div style={{ fontWeight: 700, color: NAVY, fontSize: 15, marginBottom: 6 }}>⭐ Un avis, ça compte beaucoup</div>
+          <p style={{ color: MUTED, fontSize: 13, lineHeight: 1.6, margin: "0 0 14px" }}>
+            Après votre séjour, un avis Google aide d'autres voyageurs à nous trouver et nous aide à nous améliorer.
+          </p>
+          <a
+            href={reviewUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ ...btnPrimary, textDecoration: "none", background: CORAL, color: "#fff", fontSize: 12, padding: "10px 20px" }}
+          >
+            Laisser un avis Google →
+          </a>
+        </div>
+
+        {/* Partage WhatsApp */}
+        <div style={{ background: "rgba(37,211,102,0.05)", border: "1px solid rgba(37,211,102,0.2)", borderRadius: 12, padding: "16px 24px", marginBottom: 24, textAlign: "left" }}>
+          <div style={{ fontWeight: 700, color: NAVY, fontSize: 14, marginBottom: 4 }}>📲 Partagez avec vos proches</div>
+          <p style={{ color: MUTED, fontSize: 13, margin: "0 0 12px", lineHeight: 1.5 }}>Vous connaissez quelqu'un qui cherche un logement en Martinique ?</p>
+          <a
+            href={waShareUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ ...btnPrimary, textDecoration: "none", background: "#25d366", color: "#fff", fontSize: 12, padding: "10px 20px" }}
+          >
+            Partager sur WhatsApp
+          </a>
+        </div>
+
+        <a href="/" style={{ ...btnPrimary, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 8, background: "transparent", color: MUTED, border: `1px solid var(--c-sand)`, fontSize: 12 }}>← Retour à l'accueil</a>
       </div>
     </div>
   );
