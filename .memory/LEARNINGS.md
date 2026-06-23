@@ -3,6 +3,11 @@
 > Pièges déjà rencontrés + comment les éviter. 1 entrée = 1 leçon actionnable « la prochaine fois ».
 > Le journal d'erreurs exhaustif reste `../docs/ERREURS-LOG.md`.
 
+## 🏷️ Injecter de la meta SEO = RETIRER celle du shell d'abord (sinon double balise) — 2026-06-23
+- **Piège vécu** : `functions/article/[slug].js` ajoutait `og:image/og:title/canonical` sans retirer ceux du shell prérendu → 2 balises og:image, le crawler prend souvent la 1ère (= défaut amaryllis, fausse).
+- **Piège dans le piège** : le 1er regex `<meta\s+property="og:image"` ne matchait pas car le shell a `<meta id="og-image" property="og:image">` (id AVANT property). **Toujours `<meta\b[^>]*\bproperty="..."` (ordre des attributs libre).**
+- **La prochaine fois** : toute injection meta runtime doit STRIP les balises homonymes du shell (title, description, og:*, twitter:*, canonical) avant d'ajouter les siennes. Vérif live : `curl … | grep -c 'property="og:image"'` doit valoir 1.
+
 ## 🗺️ Sitemap d'un contenu D1 : dumper le statut depuis D1, jamais lire le seed SQL — 2026-06-23
 - **Piège vécu** : le sitemap des articles lisait `scripts/seed-articles-30.sql` (32 slugs) alors que D1 avait 42 articles (37 publiés). Résultat : 10 publiés absents du sitemap + risque d'indexer des slugs dépubliés. Double source de vérité (MÉTA-A/ADR-G-001).
 - **La prochaine fois** : pour tout contenu dont le STATUT vit en D1 (publié/draft), générer la liste sitemap depuis D1 (`scripts/dump-articles-published.mjs` → `articles-published.json`), jamais depuis le seed/fixture qui périme dès la 1ère édition admin.
