@@ -255,7 +255,7 @@ export default function BlocAffilie({ slug }) {
                   GetYourGuide →
                 </a>
                 <a
-                  href={`${VIATOR_BASE}${act.viator}?m=69894`}
+                  href={`${VIATOR_BASE}${act.viator}?pid=P00306913&mcid=42383&medium=link`}
                   target="_blank"
                   rel="sponsored noopener noreferrer"
                   style={{ fontSize: 12, fontFamily: "'Jost', sans-serif", fontWeight: 400, color: MUTED, textDecoration: "none", border: `1px solid ${SAND}`, borderRadius: 6, padding: "4px 10px", whiteSpace: "nowrap" }}

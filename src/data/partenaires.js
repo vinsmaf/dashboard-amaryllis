@@ -21,7 +21,7 @@ export const PARTENAIRES = {
   },
   viator: {
     nom: "Viator",
-    url: "https://www.viator.com/Martinique/d4316-ttd?m=69894",
+    url: "https://www.viator.com/Martinique/d4316-ttd?pid=P00306913&mcid=42383&medium=link",
     label: "Voir sur Viator →",
     description: "24 excursions Martinique — catamarans, randonnées, rhum, dauphins",
     actif: true,
