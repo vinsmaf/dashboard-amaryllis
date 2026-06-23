@@ -9,6 +9,13 @@ import * as LModule from "leaflet";
 const L = LModule.default ?? LModule;
 import { DESTINATIONS } from "./data/destinations.js";
 import { ALL_BIENS, isMartinique as isMtq } from "./data/biens.js";
+import BlocAffilie from "./components/BlocAffilie.jsx";
+import EncartActivite from "./components/EncartActivite.jsx";
+import { ACTIVITES } from "./data/activites.js";
+import ReadingProgressBar from "./components/ReadingProgressBar.jsx";
+import BridgeVilla from "./components/BridgeVilla.jsx";
+import GuideHero from "./components/GuideHero.jsx";
+import GuideStickyNav from "./components/GuideStickyNav.jsx";
 
 /* ─── WeatherPill (Sainte-Luce) ─────────────────────────────── */
 const WMO_ICON = { 0:"☀️",1:"🌤️",2:"⛅",3:"☁️",45:"🌫️",48:"🌫️",51:"🌦️",53:"🌦️",55:"🌧️",61:"🌧️",63:"🌧️",65:"🌧️",80:"🌦️",81:"🌧️",82:"⛈️",95:"⛈️",96:"⛈️",99:"⛈️" };
@@ -646,15 +653,31 @@ export default function GuideExplorer() {
 
   return (
     <>
+      <ReadingProgressBar ctaHref="/" />
+      <GuideStickyNav
+        links={[
+          { label: "Découvrir", href: "#spots" },
+          { label: "Activités", href: "#activites" },
+        ]}
+      />
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <SEOMeta
         title="Carte interactive des activités en Martinique — Plages, tortues, rhum | Amaryllis"
         description="Carte interactive des lieux cultes de Martinique : filtrez par zone et par activité (plages, snorkeling, rhum, rando), épinglez vos spots et composez votre séjour."
         canonical="/explorer"
-        image="https://villamaryllis.com/photos/amaryllis/01.webp"
+        image="https://villamaryllis.com/photos/martinique-panorama.jpg"
       />
 
-      <div className="ge-wrap">
+      <GuideHero
+        img="https://villamaryllis.com/photos/martinique-panorama.jpg"
+        alt="Carte interactive des activités en Martinique — plages, snorkeling, rhum"
+        eyebrow="Explorer la Martinique"
+        title="Carte interactive Sud Martinique"
+        subtitle="Filtrez par zone et activité, épinglez vos spots préférés et composez votre séjour idéal depuis nos villas de Sainte-Luce."
+        badges={[]}
+      />
+
+      <div id="spots" className="ge-wrap">
 
         {/* ── Header ── */}
         <header className="ge-header">
@@ -866,7 +889,19 @@ export default function GuideExplorer() {
         </div>
       </div>
 
-      <div style={{ padding: "48px 24px", background: "#f6f1e7" }}>
+              <div id="activites">
+                <EncartActivite activites={[ACTIVITES["fonds-blancs"]]} />
+              </div>
+              <EncartActivite activites={[ACTIVITES.catamaran, ACTIVITES.nord]} />
+              <EncartActivite activites={[{ ...ACTIVITES.rhum, viatorPath: null }]} platform="gyg" />
+              <BridgeVilla
+                villaId="amaryllis"
+                lieu="Martinique"
+                tempsRoute=""
+                copy="Posez votre camp de base à Sainte-Luce, au cœur du Sud : de là, les plages, les sorties bateau et les distilleries sont à portée de journée. Réservez la Villa Amaryllis en direct et organisez chaque excursion depuis votre terrasse."
+              />
+              <BlocAffilie slug="explorer" />
+        <div style={{ padding: "48px 24px", background: "#f6f1e7" }}>
         <NewsletterForm source="explorer" />
       </div>
 

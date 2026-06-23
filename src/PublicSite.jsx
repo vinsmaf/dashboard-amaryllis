@@ -6,6 +6,7 @@ import SEOMeta from "./SEOMeta.jsx";
 import { Reveal } from "./useReveal.jsx";
 import { useLang, LangToggle } from "./i18n.jsx";
 import { Eyebrow, Display, Editorial, Button, RatingBadge, Icon, ThemeToggle, Chip, StateTile, RImg } from "./primitives.jsx";
+import LienAffilie from "./components/LienAffilie.jsx";
 import { Curtain } from "./Curtain.jsx";
 import { getVariant, trackConversion } from "./utils/abTest.js";
 import { depositAmount, balanceAmount, balanceDueDate, isTwoPartEligible } from "./utils/paymentPlan.js";
@@ -24,6 +25,11 @@ const CTA_AB_VARIANT = getVariant("cta_label");
 const CTA_LABEL_FR = CTA_AB_VARIANT === "B" ? "VÉRIFIER LES DISPOS" : "RÉSERVER";
 const PropertyMap = lazy(() => import("./PropertyMap.jsx"));
 const VillaAmaryllisReel = lazy(() => import("./components/reel/VillaAmaryllisReel.jsx"));
+const GekoReel      = lazy(() => import("./components/reel/GekoReel.jsx"));
+const ZandoliReel   = lazy(() => import("./components/reel/ZandoliReel.jsx"));
+const MabouaReel    = lazy(() => import("./components/reel/MabouaReel.jsx"));
+const SchoelcherReel = lazy(() => import("./components/reel/SchoelcherReel.jsx"));
+const NogentReel    = lazy(() => import("./components/reel/NogentReel.jsx"));
 
 // data-049 — niveau tarifaire pour le tracking GA4 ROI (par bien + saison).
 // Saison Martinique : haute nov–avr, moyenne juil–août, basse mai/juin/sept/oct.
@@ -274,7 +280,7 @@ const BIENS = [
         { label: "Capacité", texte: "6 voyageurs inclus dans le tarif de base. Possibilité d'accueillir jusqu'à 8 personnes avec un supplément de 50 € par voyageur supplémentaire par nuit." },
         { label: "Animaux", texte: "Bienvenus, jusqu'à 2 maximum — supplément 40 € par séjour." },
         { label: "Dépôt de garantie", texte: "1 500 € en cas de dommages constatés après le départ." },
-        { label: "Transport", texte: "Une voiture automatique est recommandée pour profiter pleinement de la région." },
+        { label: "Transport", texte: "Une voiture automatique est recommandée pour profiter pleinement de la région.", lien: <LienAffilie partenaire="discoverCars" utmContent="homepage-amaryllis-transport" /> },
         { label: "Ménage", texte: "La villa est nettoyée et désinfectée en profondeur entre chaque séjour." },
         { label: "Support", texte: "Notre équipe est joignable 24h/24 en cas d'urgence ou de besoin particulier." },
       ]},
@@ -4102,7 +4108,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                 background: "#050e10",
               }}>
                 {bien.id === "amaryllis" ? (
-                  /* Reel cinématique plein-hauteur */
+                  /* Reel cinématique plein-hauteur — Villa Amaryllis */
                   <Suspense fallback={
                     <div style={{ width: "100%", height: "100%", background: "radial-gradient(ellipse at top, #0e3b3a 0%, #050608 100%)" }} />
                   }>
@@ -4117,6 +4123,26 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                       onCta={() => onBook(bien)}
                       price={bien.prix ?? "280"}
                     />
+                  </Suspense>
+                ) : bien.id === "geko" ? (
+                  <Suspense fallback={<div style={{ width:"100%", height:"100%", background:"radial-gradient(ellipse at top, #0e3b3a 0%, #050608 100%)" }} />}>
+                    <GekoReel fillHeight={true} onCta={() => onBook(bien)} price={String(bien.prix ?? "110")} />
+                  </Suspense>
+                ) : bien.id === "zandoli" ? (
+                  <Suspense fallback={<div style={{ width:"100%", height:"100%", background:"radial-gradient(ellipse at top, #0e3b3a 0%, #050608 100%)" }} />}>
+                    <ZandoliReel fillHeight={true} onCta={() => onBook(bien)} price={String(bien.prix ?? "110")} />
+                  </Suspense>
+                ) : bien.id === "mabouya" ? (
+                  <Suspense fallback={<div style={{ width:"100%", height:"100%", background:"radial-gradient(ellipse at top, #0e3b3a 0%, #050608 100%)" }} />}>
+                    <MabouaReel fillHeight={true} onCta={() => onBook(bien)} price={String(bien.prix ?? "70")} />
+                  </Suspense>
+                ) : bien.id === "schoelcher" ? (
+                  <Suspense fallback={<div style={{ width:"100%", height:"100%", background:"radial-gradient(ellipse at top, #0e3b3a 0%, #050608 100%)" }} />}>
+                    <SchoelcherReel fillHeight={true} onCta={() => onBook(bien)} price={String(bien.prix ?? "90")} />
+                  </Suspense>
+                ) : bien.id === "nogent" ? (
+                  <Suspense fallback={<div style={{ width:"100%", height:"100%", background:"radial-gradient(ellipse at top, #0e3b3a 0%, #050608 100%)" }} />}>
+                    <NogentReel fillHeight={true} onCta={() => onBook(bien)} price={String(bien.prix ?? "90")} />
                   </Suspense>
                 ) : (
                   /* Hero court : 2 vignettes empilées (lisibles) plutôt qu'une grille 2×2 minuscule */
@@ -4540,6 +4566,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                           <div key={j}>
                             <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: MUTED, marginBottom: 5 }}>{it.label}</div>
                             <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13, color: TEXT, lineHeight: 1.65 }}>{it.texte}</div>
+                            {it.lien && <div style={{ marginTop: 6 }}>{it.lien}</div>}
                           </div>
                         ))}
                       </div>
@@ -7413,6 +7440,7 @@ function FooterSection() {
             ["Activités à Sainte-Luce", "/activites-sainte-luce"],
             ["Plus belles plages du Sud", "/plus-belles-plages-sud-martinique"],
             ["Meilleure saison", "/meilleure-saison-martinique"],
+            ["Location voiture pas cher", "/location-voiture-martinique-pas-cher"],
             ["Tout explorer", "/guide-hub"],
           ]},
           { titre: "Nos villas & studios", liens: [
@@ -7434,6 +7462,15 @@ function FooterSection() {
           </div>
         ))}
       </nav>
+
+      {/* ── Partenaire voiture ── */}
+      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "14px 32px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", borderBottom: "1px solid rgba(250,245,233,0.08)" }}>
+        <span style={{ fontSize: 11, color: "rgba(250,245,233,0.35)", fontFamily: "'Jost', sans-serif", letterSpacing: "0.06em" }}>🚗 Location de voiture en Martinique :</span>
+        <LienAffilie partenaire="discoverCars" utmContent="footer-homepage" showDisclosure={false} style={{ display: "inline" }}>
+          Comparer sur DiscoverCars →
+        </LienAffilie>
+        <span style={{ fontSize: 10, color: "rgba(250,245,233,0.2)", fontFamily: "'Jost', sans-serif" }}>· lien partenaire</span>
+      </div>
 
       {/* ── Bottom bar ── */}
       <FooterBottomBar />
@@ -9247,6 +9284,12 @@ export default function PublicSite() {
                 onMouseLeave={e => e.currentTarget.style.color = "rgba(250,245,233,0.6)"}
               >
                 Bonnes adresses
+              </a>
+              <a href="/location-voiture-martinique-pas-cher" style={{ fontSize: 12, fontFamily: "'Jost', sans-serif", fontWeight: 300, color: "rgba(250,245,233,0.6)", textDecoration: "none", letterSpacing: "0.08em", whiteSpace: "nowrap", display: window.innerWidth < 860 ? "none" : "block", transition: "color 0.2s" }}
+                onMouseEnter={e => e.currentTarget.style.color = "var(--c-ivory)"}
+                onMouseLeave={e => e.currentTarget.style.color = "rgba(250,245,233,0.6)"}
+              >
+                Location voiture
               </a>
               <LangToggle />
               <ThemeToggle inline />

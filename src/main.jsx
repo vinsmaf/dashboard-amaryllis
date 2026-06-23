@@ -116,6 +116,7 @@ const GuideSeminaires          = lazy(() => import('./GuideSeminaires.jsx'))
 const GuideNogent              = lazy(() => import('./GuideNogent.jsx'))
 const GuideVillaPiscine        = lazy(() => import('./GuideVillaPiscine.jsx'))
 const Partenaires              = lazy(() => import('./Partenaires.jsx'))
+const GuideLocationVoiture     = lazy(() => import('./GuideLocationVoiture.jsx')) // eslint-disable-line react-refresh/only-export-components
 const Avis             = lazy(() => import('./Avis.jsx'))
 const Faq              = lazy(() => import('./Faq.jsx'))
 const MentionsLegales          = lazy(() => import('./MentionsLegales.jsx'))
@@ -243,7 +244,7 @@ document.addEventListener("change", (e) => {
 })();
 
 const BIEN_IDS = ["amaryllis", "zandoli", "iguana", "geko", "mabouya", "schoelcher", "nogent"];
-const KNOWN = ["/", "/links", "/merci", "/devis", "/guide", "/guide-hub", "/explorer", "/guide-le-diamant", "/guide-sainte-anne", "/villa-rental-martinique", "/activites-sainte-luce", "/guide-proximite", "/guide-arlet", "/guide-trois-ilets", "/guide-plongee-martinique", "/guide-saint-pierre-martinique", "/guide-francois-martinique", "/guide-distilleries-martinique", "/guide-randonnees-martinique", "/guide-gastronomie-martinique", "/avis", "/faq", "/mentions-legales", "/politique-confidentialite", "/conditions-generales", "/sainte-luce-martinique", "/reservation-directe-martinique", "/meilleure-saison-martinique", "/seminaires", "/guide-nogent-sur-marne", "/location-villa-martinique-piscine", "/location-groupe-sainte-luce", "/location-appartement-vue-mer-schoelcher", "/plus-belles-plages-sud-martinique", "/nos-partenaires"];
+const KNOWN = ["/", "/links", "/merci", "/devis", "/guide", "/guide-hub", "/explorer", "/guide-le-diamant", "/guide-sainte-anne", "/villa-rental-martinique", "/activites-sainte-luce", "/guide-proximite", "/guide-arlet", "/guide-trois-ilets", "/guide-plongee-martinique", "/guide-saint-pierre-martinique", "/guide-francois-martinique", "/guide-distilleries-martinique", "/guide-randonnees-martinique", "/guide-gastronomie-martinique", "/avis", "/faq", "/mentions-legales", "/politique-confidentialite", "/conditions-generales", "/sainte-luce-martinique", "/reservation-directe-martinique", "/meilleure-saison-martinique", "/seminaires", "/guide-nogent-sur-marne", "/location-villa-martinique-piscine", "/location-groupe-sainte-luce", "/location-appartement-vue-mer-schoelcher", "/plus-belles-plages-sud-martinique", "/nos-partenaires", "/location-voiture-martinique-pas-cher"];
 const isKnown = KNOWN.includes(path)
   || GUIDES_POI_SLUGS.includes(path)
   || path.startsWith("/admin")
@@ -312,6 +313,8 @@ if (!isKnown) {
   Component = GuideVillaPiscine;
 } else if (path === "/nos-partenaires") {
   Component = Partenaires;
+} else if (path === "/location-voiture-martinique-pas-cher") {
+  Component = GuideLocationVoiture;
 } else if (path === "/avis") {
   Component = Avis;
 } else if (path === "/faq") {

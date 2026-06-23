@@ -4,6 +4,8 @@
 // ⚠️ Aucune URL externe inventée : les adresses sont présentées en TEXTE (nom + 1 phrase).
 
 import SEOMeta from "./SEOMeta.jsx";
+import LienAffilie from "./components/LienAffilie.jsx";
+import GYGWidget from "./components/GYGWidget.jsx";
 
 const NAVY = "#0e3b3a", CORAL = "#c47254", GOLD = "#c9a673";
 const IVORY = "#faf5e9", CREAM = "#f4ecdc", SAND = "#e0d4bc", MUTED = "#7a6b5a";
@@ -57,11 +59,23 @@ const SECTIONS = [
     ],
   },
   {
+    emoji: "🎯",
+    titre: "Excursions & activités",
+    intro: "Des expériences authentiques pour découvrir la Martinique au-delà de votre logement.",
+    widget: "gyg",
+    items: [
+      { nom: "Excursions en mer & snorkeling", desc: "Catamaran, plongée avec les tortues, fonds blancs du François — les meilleures expériences nautiques de l'île.", lien: <LienAffilie partenaire="getYourGuide" utmContent="partenaires-excursions-mer" /> },
+      { nom: "Visites guidées & culture", desc: "Tours du nord (Saint-Pierre, Pelée), distilleries AOC, Saint-Pierre sous-marin, marchés créoles.", lien: <LienAffilie partenaire="getYourGuide" utmContent="partenaires-excursions-culture" /> },
+      { nom: "Aventure & nature", desc: "Randonnées en forêt tropicale, canyoning, observation des dauphins, fermes biologiques.", lien: <LienAffilie partenaire="getYourGuide" utmContent="partenaires-excursions-nature" /> },
+      { nom: "Comparer sur Viator", desc: "Une 2e plateforme pour comparer les prix et disponibilités : circuits nord, rum, catamarans, dauphins et tortues.", lien: <LienAffilie partenaire="viator" utmContent="partenaires-excursions-viator" /> },
+    ],
+  },
+  {
     emoji: "🚗",
     titre: "Mobilité",
     intro: "Une voiture est indispensable pour explorer la Martinique en toute liberté.",
     items: [
-      { nom: "Loueurs de voiture locaux", desc: "Des agences indépendantes proposent des véhicules adaptés aux routes de l'île, souvent avec livraison à l'aéroport." },
+      { nom: "Location de voiture en Martinique", desc: "Une voiture est indispensable pour explorer l'île librement. Nous recommandons de réserver à l'avance, surtout en haute saison.", lien: <LienAffilie partenaire="discoverCars" utmContent="partenaires-mobilite" /> },
       { nom: "Transferts aéroport", desc: "Pour une arrivée et un départ sans stress, des chauffeurs assurent la liaison avec Aimé Césaire." },
       { nom: "Location de scooter", desc: "Une alternative pratique pour les trajets courts et les balades le long de la côte." },
     ],
@@ -189,8 +203,14 @@ export default function Partenaires() {
                   ) : it.nom}
                 </p>
                 <p className="pt-item-desc">{it.desc}</p>
+                {it.lien && <div style={{ marginTop: 8 }}>{it.lien}</div>}
               </div>
             ))}
+            {sec.widget === "gyg" && (
+              <div style={{ marginTop: 24 }}>
+                <GYGWidget numberOfItems={4} />
+              </div>
+            )}
           </section>
         ))}
 

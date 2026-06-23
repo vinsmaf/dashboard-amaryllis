@@ -7,6 +7,13 @@ import NewsletterForm from "./NewsletterForm.jsx";
 import MaillageCluster from "./components/seo/MaillageCluster.jsx";
 import { GUIDES_POI } from "./data/guidesPoi.js";
 import { GUIDE_PHOTOS } from "./data/guidePhotos.js";
+import BlocAffilie from "./components/BlocAffilie.jsx";
+import EncartActivite from "./components/EncartActivite.jsx";
+import { ACTIVITES } from "./data/activites.js";
+import ReadingProgressBar from "./components/ReadingProgressBar.jsx";
+import BridgeVilla from "./components/BridgeVilla.jsx";
+import GuideHero from "./components/GuideHero.jsx";
+import GuideStickyNav from "./components/GuideStickyNav.jsx";
 
 const BIEN_NAMES = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko", mabouya: "Mabouya", schoelcher: "Bellevue Schœlcher", iguana: "Villa Iguana", nogent: "Appartement Nogent-sur-Marne" };
 
@@ -107,12 +114,19 @@ export default function GuidePOI() {
 
   return (
     <div className="gp">
+      <ReadingProgressBar ctaHref="/" />
+      <GuideStickyNav
+        links={[
+          { label: "Découvrir", href: "#spots" },
+          { label: "Activités", href: "#activites" },
+        ]}
+      />
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <SEOMeta
         title={guide.metaTitle}
         description={guide.metaDescription}
         canonical={guide.slug}
-        image={photo || "https://villamaryllis.com/photos/amaryllis/01.webp"}
+        image={photo || "https://villamaryllis.com/photos/martinique-panorama.jpg"}
         type="article"
       />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
@@ -127,17 +141,17 @@ export default function GuidePOI() {
       </header>
 
       {/* Hero */}
-      <section className="gp-hero">
-        {photo && <img className="gp-hero-img" src={photo} alt={guide.h1} loading="eager" fetchPriority="high" onError={e => { e.currentTarget.style.display = "none"; }} />}
-        <span className="gp-hero-emoji" aria-hidden>{meta.emoji}</span>
-        <div className="gp-hero-inner">
-          {meta.zone && <span className="gp-zone">{meta.zone} · Martinique</span>}
-          <h1 className="gp-h1">{guide.h1}</h1>
-        </div>
-      </section>
+      <GuideHero
+        img={photo || "https://villamaryllis.com/photos/martinique-panorama.jpg"}
+        alt={guide.h1}
+        eyebrow={meta.zone ? `${meta.zone} · Martinique` : "Martinique"}
+        title={guide.h1}
+        subtitle=""
+        badges={[]}
+      />
 
       {/* Contenu */}
-      <main className="gp-main">
+      <main id="spots" className="gp-main">
         <p className="gp-intro">{guide.intro}</p>
 
         {(guide.sections || []).map((s, i) => (
@@ -146,6 +160,11 @@ export default function GuidePOI() {
             <p className="gp-body">{s.body}</p>
           </div>
         ))}
+
+        <div id="activites">
+          <EncartActivite activites={[ACTIVITES.nord, ACTIVITES["nature-panorama"]]} />
+        </div>
+        <EncartActivite activites={[ACTIVITES.catamaran, ACTIVITES["fonds-blancs"]]} />
 
         {guide.depuisNosVillas && (
           <div className="gp-villas">
@@ -198,7 +217,14 @@ export default function GuidePOI() {
         <a href="/guide-hub">Tous les guides Martinique</a>
         <a href="/">Nos villas →</a>
       </nav>
-      <div style={{ padding: "48px 24px", background: "#f6f1e7" }}>
+              <BridgeVilla
+                villaId="amaryllis"
+                lieu="Martinique"
+                tempsRoute=""
+                copy="La plupart de ces journées se rayonnent depuis Sainte-Luce, où nos villas vous servent de camp de base au Sud. Réservez en direct sur villamaryllis.com et organisez chaque excursion à votre rythme."
+              />
+              <BlocAffilie slug="poi" />
+        <div style={{ padding: "48px 24px", background: "#f6f1e7" }}>
         <NewsletterForm source="guide-poi" />
       </div>
       <div className="gp-copy">

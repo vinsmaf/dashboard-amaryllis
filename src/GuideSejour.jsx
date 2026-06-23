@@ -6,6 +6,11 @@ import { useState, useEffect } from "react";
 import NewsletterForm from "./NewsletterForm.jsx";
 import SEOMeta from "./SEOMeta.jsx";
 import { getReviewUrl, isGoogleReview } from "./data/googleReview.js";
+import BlocAffilie from "./components/BlocAffilie.jsx";
+import EncartActivite from "./components/EncartActivite.jsx";
+import { ACTIVITES } from "./data/activites.js";
+import ReadingProgressBar from "./components/ReadingProgressBar.jsx";
+import BridgeVilla from "./components/BridgeVilla.jsx";
 
 const NAVY  = "#1f2a3d";
 const CORAL = "#c47254";
@@ -223,6 +228,7 @@ export default function GuideSejour() {
 
   return (
     <div style={{ minHeight: "100vh", background: IVORY, fontFamily: "'Jost',system-ui,sans-serif", color: TEXT }}>
+      <ReadingProgressBar ctaHref="/" />
       <SEOMeta
         title={`Guide séjour — ${nom}`}
         description={`Toutes les infos pratiques pour votre séjour : accès, wifi, équipements, check-out.`}
@@ -281,13 +287,18 @@ export default function GuideSejour() {
           )}
         </Card>
 
+        <EncartActivite activites={[ACTIVITES.catamaran, ACTIVITES.tortues]} />
+
         {/* Sections du guide */}
+        <EncartActivite activites={[ACTIVITES["diamant-bateau"]]} platform="gyg" />
         {(guide.sections || []).map(section => renderSection(section))}
 
         {/* FAQ */}
+        <EncartActivite activites={[ACTIVITES["fonds-blancs"]]} />
         <FAQ items={guide.faq} />
 
         {/* Contacts */}
+        <EncartActivite activites={[{ ...ACTIVITES.rhum, viatorPath: null }]} platform="gyg" />
         <Contacts items={guide.contacts} waNumber={waNumber} />
 
         {/* Extras/services */}
@@ -329,6 +340,13 @@ export default function GuideSejour() {
           </a>
         </div>
 
+                <BridgeVilla
+                  villaId="amaryllis"
+                  lieu="Sainte-Luce"
+                  tempsRoute="sur place"
+                  copy="Toutes ces journées s'organisent depuis la Villa Amaryllis, votre camp de base à Sainte-Luce. Réservez en direct avec nous et profitez d'un séjour où la mer, le Diamant et les distilleries AOC sont à portée de main."
+                />
+                <BlocAffilie slug="sejour" />
         <div style={{ padding: "48px 24px", background: "#f6f1e7" }}>
           <NewsletterForm source="guide-sejour" />
         </div>
