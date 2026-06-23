@@ -15,6 +15,7 @@ import { mpTrack } from "./lib/metaPixel.js";
 import { ssGet, ssSet } from "./lib/safeStorage.js";
 import MaillageCluster from "./components/seo/MaillageCluster.jsx";
 import { BIENS as CANON, isMartinique as isMartiniqueCanon } from "./data/biens.js";
+import { GUIDES_INDEX } from "./data/guidesIndex.js";
 
 // Noms canoniques des biens pour le maillage interne SEO ("villa" = Amaryllis + Iguana uniquement).
 const BIEN_NAMES = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko", mabouya: "Mabouya", schoelcher: "Bellevue Schœlcher", iguana: "Villa Iguana", nogent: "Appartement Nogent-sur-Marne" };
@@ -5315,6 +5316,11 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
             </p>
           </div>
         )}
+
+      {/* ── À faire depuis cette villa — guides à proximité ── */}
+      {MARTINIQUE_IDS.has(bien.id) && (
+        <GuidesSection bienId={bien.id} bienNom={BIEN_NAMES[bien.id]} isMobile={isMobile} />
+      )}
       </div>
       {showAlerte && <AlerteDispoModal bien={bien} checkin={calCheckin} checkout={calCheckout} onClose={() => setShowAlerte(false)} />}
 
@@ -5342,6 +5348,38 @@ const FAQ_CHATBOT_ITEMS = [
   { tags: ["ménage","nettoyage","propre","linge","serviette"], q: "Le ménage et le linge sont-ils inclus ?", a: "Le linge de lit et les serviettes sont fournis. Un ménage de fin de séjour est inclus. Un service de ménage en cours de séjour peut être arrangé en option." },
   { tags: ["bébé","enfant","lit","chaise","famille"], q: "Avez-vous du matériel bébé ?", a: "Un lit bébé et une chaise haute peuvent être mis à disposition sur demande — mentionnez-le lors de votre réservation ou contactez l'hôte à l'avance." },
 ];
+
+// ── À faire depuis cette villa — maillage guides ─────────────────────────────
+function GuidesSection({ bienId, bienNom, isMobile }) {
+  const nearby = GUIDES_INDEX
+    .flatMap(z => z.items)
+    .filter(g => g.dist?.[bienId] !== undefined)
+    .sort((a, b) => a.dist[bienId] - b.dist[bienId])
+    .slice(0, 6);
+  if (!nearby.length) return null;
+  return (
+    <div style={{ borderTop: `1px solid ${SAND}`, margin: "48px 20px 48px", paddingTop: 40 }}>
+      <Eyebrow color="muted" style={{ marginBottom: 8 }}>À faire depuis {bienNom || "votre villa"}</Eyebrow>
+      <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 15, color: NAVY, margin: "0 0 28px", lineHeight: 1.5 }}>
+        Nos guides rédigés par vos hôtes — expériences et adresses à proximité
+      </p>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(3, 1fr)", gap: 12 }}>
+        {nearby.map(g => (
+          <a key={g.href} href={g.href} style={{ display: "flex", flexDirection: "column", gap: 6, padding: "14px 16px", background: IVORY, border: `1px solid ${SAND}`, borderRadius: 10, textDecoration: "none" }}>
+            <span style={{ fontSize: 20 }}>{g.emoji}</span>
+            <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 13, color: NAVY, lineHeight: 1.3 }}>{g.nom}</span>
+            <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11, color: MUTED }}>à {g.dist[bienId]} min en voiture</span>
+          </a>
+        ))}
+      </div>
+      <div style={{ marginTop: 20, textAlign: "right" }}>
+        <a href="/guide-hub" style={{ fontFamily: "'Jost', sans-serif", fontSize: 13, letterSpacing: "0.12em", textTransform: "uppercase", color: NAVY, textDecoration: "none", borderBottom: `1px solid ${CORAL}`, paddingBottom: 2 }}>
+          Tous nos guides Martinique →
+        </a>
+      </div>
+    </div>
+  );
+}
 
 function FaqChatbot({ bien }) {
   const [open, setOpen] = useState(false);
