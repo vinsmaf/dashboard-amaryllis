@@ -18,7 +18,9 @@ const SITE = "https://villamaryllis.com";
 const SEGMENTS = {
   winback: {
     // dormants + perdus : dernier séjour entre 6 et 36 mois
+    // Iguana exclu (bookable:false, locataire à l'année — RM-19).
     where: "c.nb_sejours >= 1 AND c.email IS NOT NULL AND c.email != '' " +
+           "AND (c.biens IS NULL OR c.biens NOT LIKE '%iguana%') " +
            "AND c.dernier_sejour IS NOT NULL " +
            "AND julianday('now') - julianday(c.dernier_sejour) BETWEEN 180 AND 1095",
     subject: (p) => `${p}, votre villa en Martinique vous attend`,
@@ -30,8 +32,9 @@ const SEGMENTS = {
     cta: "Revoir nos villas",
   },
   fidelite: {
-    // accès prioritaire saisonnier : tous les anciens contactables
-    where: "c.nb_sejours >= 1 AND c.email IS NOT NULL AND c.email != ''",
+    // accès prioritaire saisonnier : tous les anciens contactables (Iguana exclu — RM-19)
+    where: "c.nb_sejours >= 1 AND c.email IS NOT NULL AND c.email != '' " +
+           "AND (c.biens IS NULL OR c.biens NOT LIKE '%iguana%')",
     subject: (p) => `${p}, votre accès prioritaire — Amaryllis Locations`,
     utm: "utm_source=email&utm_medium=crm&utm_campaign=fidelite-saison",
     intro: (p, bien) =>
