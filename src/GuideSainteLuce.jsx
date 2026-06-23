@@ -218,6 +218,13 @@ export default function GuideSainteLuce() {
           navBack={{ href: "/guide-hub", label: "Tous les guides" }}
         />
 
+        {/* ACTIVITÉ EN VEDETTE — immédiatement après le hero */}
+        <div style={{ background: NAVY, padding: "0 24px" }}>
+          <div style={{ maxWidth: 860, margin: "0 auto", paddingTop: 32, paddingBottom: 8 }}>
+            <EncartActivite activites={[ACTIVITES.tortues, ACTIVITES["fonds-blancs"]]} platform="viator" big />
+          </div>
+        </div>
+
         {/* CONTENT */}
         <div id="spots" style={{ maxWidth: 960, margin: "0 auto", padding: "72px 24px 96px" }}>
 

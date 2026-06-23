@@ -280,6 +280,13 @@ export default function GuideFrancois() {
           navBack={{ href: "/guide-hub", label: "Tous les guides" }}
         />
 
+        {/* ACTIVITÉ EN VEDETTE — immédiatement après le hero */}
+        <div style={{ background: NAVY, padding: "0 24px" }}>
+          <div style={{ maxWidth: 860, margin: "0 auto", paddingTop: 32, paddingBottom: 8 }}>
+            <EncartActivite activites={[ACTIVITES["fonds-blancs"], ACTIVITES["ilets-chancel"]]} platform="viator" big />
+          </div>
+        </div>
+
         {/* CONTENU */}
         <div id="spots" style={{ maxWidth: 680, margin: "0 auto", padding: "52px 24px 80px" }}>
 

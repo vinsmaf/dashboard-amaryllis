@@ -134,6 +134,13 @@ export default function GuideSainteAnne() {
           navBack={{ href: "/guide-hub", label: "Tous les guides" }}
         />
 
+        {/* ACTIVITÉ EN VEDETTE — immédiatement après le hero */}
+        <div style={{ background: NAVY, padding: "0 24px" }}>
+          <div style={{ maxWidth: 860, margin: "0 auto", paddingTop: 32, paddingBottom: 8 }}>
+            <EncartActivite activites={[ACTIVITES.catamaran, ACTIVITES.dauphins]} platform="viator" big />
+          </div>
+        </div>
+
         <div id="spots" style={{ maxWidth: 860, margin: "0 auto", padding: "56px 24px 80px" }}>
 
           {/* MUST ABSOLU — LES SALINES */}
