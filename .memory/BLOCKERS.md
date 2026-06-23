@@ -4,6 +4,23 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
+## En cours → ✅ terminé le 2026-06-23 (Session Pubs — campagne Google Ads Canada LIVE, Meta toujours bloqué)
+
+## En cours → ✅ terminé le 2026-06-23 (Session reels tous biens — GekoReel + 5 nouveaux déployés)
+
+## En cours → ✅ terminé le 2026-06-23 (Session immersification guides — 20 guides déployés)
+
+## En cours → ✅ terminé le 2026-06-22 (Session affiliate GYG + nav fixes + widget embed)
+
+## En cours → ✅ terminé le 2026-06-22 (Session git sync + CI fix + spam + gate rewrite)
+
+## 🟡 Email "différence main/prod" — source non confirmée
+- 🟡 Vincent signale un email à chaque deploy "comme quoi il y a une différence entre le main et la prod". Recherche exhaustive (Worker, scripts, fonctions, crons) = **aucun code custom trouvé**.
+- **Hypothèse** : emails GitHub Actions automatiques (failure/recovery sur `deploy.yml`).
+- **Débloque** : Vincent confirme (1) l'expéditeur (notifications@github.com vs mail.villamaryllis.com) et (2) si le mot "différence" apparaît réellement dans l'email ou si c'est son résumé.
+
+---
+
 ## En cours → ✅ terminé le 2026-06-21 (Session organisation société d'agents + crons)
 
 ---
@@ -12,7 +29,7 @@
 
 ---
 
-## En cours → ✅ terminé le 2026-06-21 (Session Reels IG+FB + purge auto-pub + fenêtre 90j)
+## En cours → ✅ terminé le 2026-06-21 (Session calendrier compact + auto-scroll + Leaflet ESM)
 
 ## 🟡 META_PAGE_TOKEN — migration System User token permanent
 - 🟡 **Token actuel ≈ 60j (page token long-lived)** : renouvellement via `meta-token-exchange.js` (D1 `kv_store`). Le seul chemin "jamais expire" = **System User token** (Meta Business Manager → Business Settings → System Users → Create → Admin → Générer token avec toutes les permissions Meta). Disponible seulement après Business Verification complète.
@@ -46,7 +63,8 @@
 - ⚠️ **Workflow d'analyse** (`wf_b3a6734a-492`, 5 analystes) **interrompu avant synthèse** → relançable. ⚠️ Airbnb = brut host ≠ Booking = total guest (~15% d'écart) → CA inter-canal à manier avec prudence. Bails longs termes (Iguana Joël, Zandoli MAUI) gonflent le CA direct.
 
 ## 🔴 Actions humaines (hors dashboard) en attente
-- 🟡 **"Businesss Meta" (ID 111553584645188)** — partenaire frauduleux encore dans Business Manager. Supprimer le **2026-06-20** (AGENDA). Path : Settings → Partners → « ... » → « Remove from business portfolio ».
+- 🔴 **Compte Meta Ads TOUJOURS BLOQUÉ (2026-06-23)** : partenaire frauduleux "Businesss Meta" (ID 111553584645188) + carte Amex hack. Pas de campagne Meta possible avant le 28/06. UTM Meta fix reporté. Campagne Canada uniquement sur Google Ads pour l'instant.
+- 🟡 **"Businesss Meta" (ID 111553584645188)** — partenaire frauduleux encore dans Business Manager. Supprimer le **2026-06-28** (AGENDA). Path : Settings → Partners → « ... » → « Remove from business portfolio ».
 - 🟡 **Carte Amex ···· 1000 à retirer** de Meta après que le solde pending €3.33 soit réglé (~2026-06-21, AGENDA).
 - **C2 MOFU Retargeting** : à recréer de zéro. Vérifier d'abord que `purchase` remonte dans GA4/Meta (AGENDA 2026-06-28).
 - 🟡 **Remboursement dépenses frauduleuses** : Meta Business Support — Meta rembourse parfois. Période hack Jun 15-18 = ~€33. Jun 7-11 = légitime.

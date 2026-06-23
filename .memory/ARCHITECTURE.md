@@ -1,6 +1,6 @@
 # 🗺️ ARCHITECTURE — Locatif (villamaryllis.com)
 
-> **Date :** 2026-06-22 · **Statut :** carte de l'état actuel, à maintenir (pas un historique).
+> **Date :** 2026-06-23 · **Statut :** carte de l'état actuel, à maintenir (pas un historique).
 > But : ne plus jamais re-déduire le système depuis le code. Quand l'archi change, on met à jour ICI.
 > **Pointeurs :** état courant volatil → `.memory/CONTEXT.md` · décisions → `.memory/ADR.md` + `DECISIONS.md` ·
 > leçons → `.memory/LEARNINGS.md` · blocages → `.memory/BLOCKERS.md` · rappel par domaine → `.memory/RECALL.md` ·
@@ -133,7 +133,7 @@ graph TD
 
 - **Routeur client maison** (`src/main.jsx`) : match sur `window.location.pathname` (strip trailing slash), cascade `if/else` sur `KNOWN[] ∪ GUIDES_POI_SLUGS ∪ BIEN_IDS ∪ préfixes`. Chaque navigation = **full reload** (pas de history.pushState). Une nouvelle route DOIT être ajoutée à **3 endroits** : `main.jsx`, `ROUTES[]` de `prerender.mjs`, et le sitemap.
 - **Dispatch** : `/admin*`→`App.jsx` · `/landing*`→`Landing.jsx` · slug POI→`GuidePOI.jsx` · `/guide`|`/guide-hub`→`Guide.jsx` · slug guide dédié→son composant · `/{bienId}` & else→`PublicSite.jsx` (fallback final).
-- **Pages biens** : `PublicSite.jsx` (~9000 lignes, fourre-tout) hydrate les 7 fiches via `canonFacts()` (spread de `src/data/biens.js`).
+- **Pages biens** : `PublicSite.jsx` (~9000 lignes, fourre-tout) hydrate les 7 fiches via `canonFacts()` (spread de `src/data/biens.js`). **Hero 320px droite = reel animé** pour 6 biens bookables (Amaryllis, Géko, Zandoli, Mabouya, Schœlcher, Nogent) — lazy-loaded. Architecture : `ReelPlayer.jsx` (générique, RAF 60fps, IntersectionObserver, 6 scènes paramétrées) + wrappers thin `VillaAmaryllisReel`, `GekoReel`, `ZandoliReel`, `MabouaReel`, `SchoelcherReel`, `NogentReel`. Iguana = 2 vignettes (non bookable). `public/videos/` = 22 MP4 (Ken Burns + vraies vidéos Amaryllis+Géko). Whitelist admin via D1 `editorial_videos` + `functions/api/editorial-videos.js`.
 - **Guides** : `GuidePOI.jsx` (template data-driven unique pour **25 guides POI** via `src/data/guidesPoi.js`) + **21 guides dédiés routés** (`src/Guide*.jsx` hors hub `Guide.jsx`, template `GuidePOI.jsx`, et `GuideEditor.jsx`) — `GuideDiamant`, `GuideEn` /villa-rental-martinique, `GuideExplorer` /explorer carte, `GuideSejour` /guide-sejour/ livret in-stay, etc. + le hub `Guide.jsx`.
 - **Pages publiques routées non-guide** (`src/main.jsx`) : `Avis.jsx` /avis · `Faq.jsx` /faq · `Partenaires.jsx` /nos-partenaires · `Links.jsx` /r/ (linktree) · `Services.jsx` /services/ + `StoriesTemplate.jsx` /stories-template · `GuestGuide.jsx` /bienvenue (livret voyageur) · `MentionsLegales.jsx` · `ConditionsGenerales.jsx` · `PolitiqueConfidentialite.jsx` + la Function `functions/confidentialite.js`.
 - **Écran TV kiosque in-stay** : `/bienvenue?tv=1` → `GuestGuide.jsx` rend `src/TvScreen.jsx` (slides Ken-Burns + QR codes) ; alimenté par `functions/api/tv-context.js` (séjour EN COURS : `direct_bookings` → prénom+dates, sinon iCal OTA → dates sans prénom, sinon accueil générique, fail-safe `{}`). Le flag `tvMode` (`?tv=1`, `main.jsx`) supprime le bandeau cookies.

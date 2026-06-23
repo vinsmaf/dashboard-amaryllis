@@ -3,6 +3,41 @@
 > 1 entrée par décision qui engage la suite. Format 5 lignes : **Choix · Alternatives refusées · Conséquences attendues · Périmètre · Statut**.
 > Décisions d'archi détaillées (specs complets) → `../docs/superpowers/specs/README.md` (ADR-001→010). Ici = log curaté de session.
 
+## ADR-REEL-PLAYER-001 · 2026-06-23 · Composant générique ReelPlayer + wrappers fins par bien
+1. **Choix** : créer `ReelPlayer.jsx` (lecteur générique, toutes scènes paramétrées par props) + 4 wrappers thin `ZandoliReel/MabouaReel/SchoelcherReel/NogentReel.jsx` (~35 lignes chacun, juste SHOTS + config texte). GekoReel et VillaAmaryllisReel existants restent intacts.
+2. **Alternatives refusées** : dupliquer 600 lignes × 5 (fragile, impossible à maintenir) ; refactoriser les 2 existants (risque de casser du prod qui marche).
+3. **Conséquences attendues** : tout nouveau reel = wrapper fin. Fix global = 1 seul fichier ReelPlayer. Timing scènes identique pour tous (42s, fenêtres proportionnelles).
+4. **Périmètre** : `src/components/reel/ReelPlayer.jsx` (nouveau) · `src/components/reel/ZandoliReel.jsx` · `src/components/reel/MabouaReel.jsx` · `src/components/reel/SchoelcherReel.jsx` · `src/components/reel/NogentReel.jsx` · `src/PublicSite.jsx` (4 lazy imports + switch conditionnel).
+5. **Statut** : acté, déployé 2026-06-23.
+
+## ADR-REEL-HERO-001 · 2026-06-23 · Reels sur 6/7 biens (Iguana exclu, pas bookable)
+1. **Choix** : hero 320px droite = reel Ken Burns animé pour Amaryllis + Géko + Zandoli + Mabouya + Schœlcher + Nogent. Iguana = 2 vignettes (bail long terme, `bookable:false`).
+2. **Alternatives refusées** : 2 vignettes pour tous (moins d'impact) ; reel vidéo MP4 (lazy loading + autoplay UX complexe dans une colonne).
+3. **Conséquences attendues** : chaque page bien a une animation différenciante. Lazy-loaded donc zéro impact sur les autres pages. Citations personnalisées et features propres à chaque bien.
+4. **Périmètre** : `src/PublicSite.jsx` · `src/components/reel/*.jsx` (6 composants actifs).
+5. **Statut** : acté, déployé 2026-06-23.
+
+## ADR-AFFIL-GYG-001 · 2026-06-22 · Widget GYG embed natif (pas simple lien) sur /nos-partenaires
+1. **Choix** : intégrer le widget GYG "activities" (`<div data-gyg-widget="activities">` + script `widget.getyourguide.com/v2/widget.js`) dans la section "Excursions" de `/nos-partenaires` via un composant React `GYGWidget.jsx`. Script chargé dynamiquement par useEffect (idempotent).
+2. **Alternatives refusées** : simple lien affilié GYG (même chose que les `LienAffilie` déjà là → pas de valeur ajoutée) ; iframe statique (nécessite URL storefront qu'on n'a pas trouvée).
+3. **Conséquences attendues** : les activités Martinique (catamaran, plongée, randos) s'affichent dynamiquement, traçabilité GYG analytics, 8% commission sur conversions. Dépend de CDN GYG.
+4. **Périmètre** : `src/components/GYGWidget.jsx` (nouveau) · `src/Partenaires.jsx` (section 🎯, prop `widget:"gyg"`) · `public/_headers` (CSP élargi : `script-src widget.getyourguide.com cdn.getyourguide.com`, `frame-src widget.getyourguide.com`, `connect-src *.getyourguide.com`).
+5. **Statut** : acté, déployé 2026-06-22. Partner ID = `DNI7ML3`, location = `169136` (Martinique).
+
+## ADR-AFFIL-NAV-001 · 2026-06-22 · Page /location-voiture-martinique-pas-cher non orpheline
+1. **Choix** : ajouter un lien "Location voiture" dans le header nav + footer SEO nav de `PublicSite.jsx` + ajouter la route dans `scripts/prerender.mjs` (ROUTES array + sitemap priority map).
+2. **Alternatives refusées** : laisser la page orpheline (bon contenu mais invisible pour SEO et pour les visiteurs).
+3. **Conséquences attendues** : PageRank interne distribué vers la page affiliate DiscoverCars, lien prérendu visible pour les crawlers, navigation directe pour les visiteurs.
+4. **Périmètre** : `src/PublicSite.jsx` (header nav + footer SEO nav) · `scripts/prerender.mjs` (ROUTES + sitemap).
+5. **Statut** : acté, déployé 2026-06-22.
+
+## ADR-GATE-REWRITE-001 · 2026-06-22 · Boucle réécriture LLM dans editorial-gate (max 1 tentative)
+1. **Choix** : si un draft est bloqué uniquement par score/verdict (pas doublon/mots_interdits/photo/channels), le gate tente **automatiquement une réécriture** via `/api/ai-summary` + re-score. Si ≥ minScore → approuve (mode live) ou shadow. Flag `reviews.rewrite_attempted` bloque la 2e tentative (CF Pages timeout 50s).
+2. **Alternatives refusées** : validation 100% humaine (crée un backlog) ; boucle illimitée (timeout).
+3. **Conséquences attendues** : moins d'escalades pour score faible, caption amélioré auto. Risque : Haiku peut produire un meilleur score syntaxiquement mais contenu moins factuel.
+4. **Périmètre** : `functions/api/editorial-gate.js` (L128-240) · `functions/api/agent-drafts.js` (reset_gate param).
+5. **Statut** : acté, déployé via git push.
+
 ## ADR-CRON-RG-001 · 2026-06-22 · Réunion générale = Worker cron (pas Claude Code scheduled task)
 1. **Choix** : `runReunioneGenerale(env)` dans le Worker `amaryllis-ical-sync`, cron `0 11 * * 1` (lundi 11h UTC = 7h MTQ). Accès D1 direct (binding `revenue_manager`) + patrimoine via HTTP (`FLEET_SECRET`). Synthèse via `/api/ai-summary`. Résultats en D1 `category=reunion` + ntfy.
 2. **Alternatives refusées** : Claude Code scheduled task (ne tourne que si l'app est ouverte) ; cron-job.org externe (aurait nécessité un endpoint HTTP dédié + séquencement manuel).
@@ -555,6 +590,14 @@
 3. **Conséquences attendues** : aucun draft `approved` ne reste orphelin pour cause de fenêtre trop courte. Entrées de mai 2026 publiables jusqu'en août.
 4. **Périmètre** : `workers/ical-sync/index.js` (L2149). Commit : `484d5b6`.
 5. **Statut** : **acté & déployé**.
+
+## ADR-GADS-CANADA-001 · 2026-06-23 · Campagne Google Ads Search Canada créée et publiée
+
+1. **Choix** : créer une campagne Search dédiée Canada (fr+en) séparée de la campagne France existante. Budget 6€/j, enchères « Maximiser les conversions », AI Max activé (non désactivé volontairement — laissé pour test 7j). 7 mots-clés longue traîne Martinique, annonce vers `/amaryllis`.
+2. **Alternatives refusées** : ajouter Canada à la campagne France existante (biaiserait l'algo + empêcherait le pilotage séparé) ; budget ≥20€ recommandé par Google (trop tôt, test d'abord).
+3. **Conséquences attendues** : phase d'apprentissage 7j (ne pas toucher budget/enchères avant le 30/06). Vérifier le 30/06 : impressions Canada dans GA4 → Acquisition → Pays. Si 0 impression → vérifier que la campagne n'est pas mise en pause (budget sous-minimum).
+4. **Périmètre** : Google Ads `campaignId=281498942522067` · Google Ads account `226-428-3778`.
+5. **Statut** : **acté & LIVE** (publié 2026-06-23). AI Max = ON (à désactiver si on veut contrôle ad copy). Meta toujours bloqué (hack Amex) → UTM fix impossible pour l'instant.
 
 ## ADR-CSP-001 · 2026-06-20 · CSP corrective — météo et carte Leaflet débloqués
 1. **Choix** : ajouter `https://api.open-meteo.com` dans `connect-src` (le widget météo `/explorer` appelait le sous-domaine, pas le domaine racine — silencieusement bloqué) et `https://unpkg.com` dans `style-src` (CSS Leaflet chargé depuis unpkg, silencieusement bloqué sur toutes les cartes).

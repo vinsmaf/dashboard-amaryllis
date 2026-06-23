@@ -3,6 +3,32 @@
 > Pièges déjà rencontrés + comment les éviter. 1 entrée = 1 leçon actionnable « la prochaine fois ».
 > Le journal d'erreurs exhaustif reste `../docs/ERREURS-LOG.md`.
 
+## 🎬 Pattern composant générique + wrappers fins > duplication × N — 2026-06-23
+- Quand N variantes d'un composant partagent la même logique (RAF, IntersectionObserver, hooks) mais des données différentes : **créer 1 générique paramétré + N wrappers fins** (35 lignes chacun). Coût de mise à jour : O(1) au lieu de O(N).
+- **La prochaine fois** : dès qu'on veut créer la 3e variante d'un composant, sortir la logique en générique. Les 2 premiers peuvent rester standalone pour ne pas risquer la régression.
+- Appliqué pour ReelPlayer + 4 wrappers (vs dupliquer 600 lignes × 4).
+
+## 🎬 Citations reels : éviter les claims factuels non vérifiables — 2026-06-23
+- Mabouya : éviter "vue mer" dans les citations (affirmation fragile côté voyageur). Privilégier l'expérience sensorielle (jacuzzi sous les étoiles) plutôt que la localisation/vue.
+- **La prochaine fois** : pour les biens de résidence (Mabouya, Géko, Zandoli) = expérience + rapport qualité-prix. Pour les biens vue mer confirmée (Amaryllis, Iguana) = la vue peut être mentionnée.
+
+## 🌐 GYG partner portal : navigation JS uniquement — 2026-06-22
+- Les URLs directes (`/en-us/tools`, `/en-us/storefront`, `/en-us/solutions/link-builder`) retournent 404. La vraie navigation passe par le bouton "Tools" dans le sidebar JS.
+- **La prochaine fois** : pour explorer un portail partenaire similaire, cliquer sur les boutons nav JS pour révéler le sous-menu avec les vrais hrefs (via JS `.click()` + récupérer `document.querySelectorAll('nav a')`).
+
+## 📦 Widget tiers embed : CSP = 3 directives distinctes — 2026-06-22
+- Un widget embed tiers (ex: GYG `widget.getyourguide.com`) nécessite d'ajouter son domaine dans **3 directives CSP séparées** : `script-src` (le script .js), `frame-src` (l'iframe rendu), `connect-src` (les appels XHR/fetch du widget).
+- Oublier une → le widget charge silencieusement mais ne rend rien (ou erreur console bloquée). 
+- **La prochaine fois** : à chaque nouvelle intégration widget, mettre à jour les 3 directives d'un coup.
+
+## 📦 Git untracked `??` ≠ modified `M` : les nouveaux fichiers doivent être stagés explicitement — 2026-06-22
+- **Piège vécu** : commit des `M` (modifiés) sans les `??` (untracked). `NewsletterForm.jsx` + `NewsletterTab.jsx` importés dans `App.jsx` mais jamais stagés → build local OK (fichiers sur disque), CI GitHub FAIL (`UNRESOLVED_IMPORT`).
+- **La prochaine fois** : `git status --short | grep "^??"` avant tout commit. Stagér explicitement les nouveaux fichiers : `git add src/NouveauFichier.jsx`. `git diff HEAD --name-only` ne montre PAS les untracked.
+
+## 📧 Emails GitHub Actions automated (failure+recovery) = notifications@github.com, pas du code custom — 2026-06-22
+- Tout workflow GitHub (`deploy.yml`) envoie un email auto à l'owner en cas d'échec ET de re-succès. Ce n'est pas du code custom.
+- **Pour les désactiver** : GitHub → Settings → Notifications → Email → ajuster les préférences workflow.
+
 ## ⏰ CF Workers crons : limite 5 = plan gratuit, plan payant = 250 — 2026-06-22
 - La limite de 5 crons par Worker s'applique au **plan gratuit** (Workers Free). Le plan Workers Paid = 250 crons/Worker. Ne pas confondre.
 - Actuellement : 7 crons sur `amaryllis-ical-sync` (`*/10`, `0 9`, `0 11 1`, `0 12`, `0 13`, `0 6 1`, `0 1 1`). Marge confortable.
@@ -463,6 +489,15 @@
 - **Cache `public` sur réponse avec PII = faille** — `Cache-Control: public, s-maxage=300` sur `beds24-bookings` permettait à Cloudflare CDN de mettre en cache email/téléphone d'un voyageur et de le servir à un autre. Toute réponse personnalisée (auth requise, données user) doit être `private`.
 - **Dual-gate serveur-à-serveur** — quand un endpoint a deux appelants légitimes (admin humain via Bearer + script interne via secret), utiliser `secret === env.SECRET || verifyBearer(ok)` plutôt que choisir l'un ou l'autre. Voir `social.js onRequestPost`.
 - **Vérifier avant de proposer un chantier média** — j'ai proposé d'ajouter `fetchPriority="high"` sur les heroes (Chantier C) sans vérifier le code : c'était déjà en place pour tous les biens depuis la session précédente. Toujours `grep -n "fetchPriority"` avant de le mettre au plan.
+
+## 2026-06-23 — Google Ads Angular UI
+
+- **Les descriptions (90c) sont des `<textarea>`, les titres (30c) sont des `<input type="text">`.** Ne pas confondre — si tu mets 90c dans un input title tu as une erreur "90/30" silencieuse.
+- **Display path (chemin d'affichage) = max 15 chars** (pas 20 comme on suppose). "villa-martinique" = 16c → invalide. Utiliser "martinique" (10c) ou "villa-martin" (12c).
+- **`document.execCommand('insertText')` REMPLACE le contenu** (pas d'append). Si le champ est déjà rempli, il faut `inp.select()` avant, sinon le texte s'ajoute à la fin. Côté fiabilité : l'execCommand trigger le change-detection Angular là où le native setter seul ne le fait pas. Règle : setter natif pour initialiser, execCommand si Angular ne réagit pas.
+- **AI Max Google Ads** : sur la page AI Max, les cases "Adaptation du texte" et "Extension d'URL finale" sont pré-cochées. Cliquer Suivant sans les décocher = AI Max activé. Si on veut le désactiver, il faut décocher AVANT de cliquer Suivant.
+- **L'adblocker bloque le POST de publication de campagne Google Ads.** Le draft peut être entièrement configuré (il se sauvegarde partiellement à chaque étape), mais le bouton "Enregistrer" final échoue avec "Échec de l'enregistrement" si un adblocker tourne. → Vincent doit désactiver l'adblocker sur ads.google.com pour publier.
+- **Google Ads Angular = Angular Material web components.** `button[text="Suivant"]` ne fonctionne pas — utiliser `Array.from(document.querySelectorAll('button, [role="button"], material-button')).find(b => b.textContent.trim() === 'Suivant')`.
 
 ## 2026-06-21 — Sync main = prod
 
