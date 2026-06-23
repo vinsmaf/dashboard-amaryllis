@@ -25,6 +25,30 @@ function parseTags(raw) {
   try { return JSON.parse(raw || "[]"); } catch { return []; }
 }
 
+// Segmentation RFM-light (calcul client-side depuis les champs déjà chargés).
+// Récence = dernier_sejour ; un client n'appartient qu'à UN segment (priorité ci-dessous).
+function monthsSince(dateStr) {
+  if (!dateStr) return Infinity;
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return Infinity;
+  return (Date.now() - d.getTime()) / (1000 * 60 * 60 * 24 * 30.44);
+}
+function segmentOf(c) {
+  if (parseTags(c.tags).includes("vip") || (c.ltv_total || 0) >= 3000) return "vip";
+  if (!c.email && !c.mobile) return "sans-contact";
+  const m = monthsSince(c.dernier_sejour);
+  if (m <= 6)  return "recent";
+  if (m <= 24) return "dormant";
+  return "perdu";
+}
+const SEGMENTS = [
+  { id: "recent",       label: "Récents (<6 mois)",     color: "#34d399", hint: "satisfaits → fidéliser" },
+  { id: "dormant",      label: "Dormants (6–24 mois)",  color: "#f59e0b", hint: "à réactiver" },
+  { id: "perdu",        label: "Perdus (>24 mois)",     color: "#f87171", hint: "win-back" },
+  { id: "vip",          label: "VIP / LTV ≥3k€",        color: "#a78bfa", hint: "prioritaire" },
+  { id: "sans-contact", label: "Sans contact",          color: "#64748b", hint: "à enrichir" },
+];
+
 function KpiCard({ label, value, sub, color }) {
   return (
     <div style={{ background: "var(--c-card,#1e293b)", borderRadius: 12, padding: "16px 20px", minWidth: 140 }}>
@@ -223,6 +247,7 @@ export default function CrmTab() {
   const [recOnly, setRecOnly]   = useState(false);
   const [contactOnly, setContactOnly] = useState(false);
   const [bienFilter, setBienFilter]   = useState("");
+  const [segFilter, setSegFilter]     = useState(null);
   const [exporting, setExporting]     = useState(false);
 
   async function load() {
@@ -244,15 +269,28 @@ export default function CrmTab() {
   useEffect(() => { load(); }, [recOnly, contactOnly, bienFilter]);
 
   const filtered = useMemo(() => {
-    if (!clients) return [];
-    if (!search) return clients;
-    const q = search.toLowerCase();
-    return clients.filter(c =>
-      (c.prenom || "").toLowerCase().includes(q) ||
-      (c.nom    || "").toLowerCase().includes(q) ||
-      (c.email  || "").toLowerCase().includes(q)
-    );
-  }, [clients, search]);
+    let list = clients || [];
+    if (segFilter) list = list.filter(c => segmentOf(c) === segFilter);
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter(c =>
+        (c.prenom || "").toLowerCase().includes(q) ||
+        (c.nom    || "").toLowerCase().includes(q) ||
+        (c.email  || "").toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [clients, search, segFilter]);
+
+  // Comptage par segment (sur toute la base chargée)
+  const segCounts = useMemo(() => {
+    const counts = {};
+    for (const c of clients || []) {
+      const s = segmentOf(c);
+      counts[s] = (counts[s] || 0) + 1;
+    }
+    return counts;
+  }, [clients]);
 
   // KPIs
   const kpis = useMemo(() => {
@@ -321,6 +359,40 @@ export default function CrmTab() {
             <KpiCard label="Contactables" value={kpis.contactable} sub="email ou tel" color="#38bdf8" />
             <KpiCard label="VIP (≥3k€)" value={kpis.vip} color="#f59e0b" />
             <KpiCard label="LTV totale" value={fmt(kpis.ltv)} color="#34d399" />
+          </div>
+        )}
+
+        {/* Segments (cliquables) — cible des futures séquences CRM */}
+        {clients && (
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 18 }}>
+            {SEGMENTS.map(s => {
+              const n = segCounts[s.id] || 0;
+              const active = segFilter === s.id;
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => setSegFilter(active ? null : s.id)}
+                  title={s.hint}
+                  style={{
+                    display: "flex", flexDirection: "column", alignItems: "flex-start",
+                    padding: "8px 14px", borderRadius: 10, cursor: "pointer",
+                    background: active ? s.color + "26" : "#1e293b",
+                    border: `1.5px solid ${active ? s.color : "#ffffff12"}`,
+                    color: "#f1f5f9", minWidth: 120, transition: "all .15s",
+                  }}
+                >
+                  <span style={{ fontSize: 18, fontWeight: 800, color: s.color }}>{n}</span>
+                  <span style={{ fontSize: 11, fontWeight: 600 }}>{s.label}</span>
+                  <span style={{ fontSize: 9.5, color: "#94a3b8" }}>{s.hint}</span>
+                </button>
+              );
+            })}
+            {segFilter && (
+              <button onClick={() => setSegFilter(null)}
+                style={{ alignSelf: "center", padding: "6px 12px", borderRadius: 8, background: "transparent", border: "1px solid #ffffff20", color: "#94a3b8", cursor: "pointer", fontSize: 12 }}>
+                ✕ tout
+              </button>
+            )}
           </div>
         )}
 
