@@ -3,6 +3,44 @@
 > 1 entrée par décision qui engage la suite. Format 5 lignes : **Choix · Alternatives refusées · Conséquences attendues · Périmètre · Statut**.
 > Décisions d'archi détaillées (specs complets) → `../docs/superpowers/specs/README.md` (ADR-001→010). Ici = log curaté de session.
 
+## ADR-REVENUSCANAL-001 · 2026-06-23 · REVENUS_CANAL_2025 extrait vers src/data/revenusCanal.js
+
+1. **Choix** : extraire `REVENUS_CANAL_2025` de `App.jsx` vers `src/data/revenusCanal.js` (module pur) ; re-exporter depuis `App.jsx` pour backward compat.
+2. **Alternatives refusées** : garder dans App.jsx → import circulaire (App.jsx ↔ NetRevParTab.jsx → crash React silencieux au démarrage admin).
+3. **Conséquences attendues** : tout tab qui consomme les revenus canaux doit importer `../data/revenusCanal.js`, jamais `App.jsx`. Mettre à jour `revenusCanal.js` chaque janvier.
+4. **Périmètre** : `src/data/revenusCanal.js` (nouveau) · `src/App.jsx` (re-export) · `src/tabs/NetRevParTab.jsx` (consommateur).
+5. **Statut** : **acté & déployé** (commit `4e84f43`).
+
+## ADR-LEADS-PROMO-001 · 2026-06-23 · Endpoint send-leads-promo + code DIRECT10
+
+1. **Choix** : créer `GET /api/send-leads-promo?secret=POSTSTAY_SECRET[&dry=1]` — envoie offre -10% (code `DIRECT10`, valable 30j) à tous les leads D1 `contacts` dont `status='nouveau'` ; marque `répondu` après envoi.
+2. **Alternatives refusées** : broadcast Resend natif (pas de marking D1 auto) ; cron automatique (trop proactif — Vincent déclenche manuellement).
+3. **Conséquences attendues** : `&dry=1` obligatoire avant le vrai envoi (preview liste). Code `DIRECT10` = incitatif ; remise appliquée manuellement par Vincent (pas de mécanisme Stripe auto).
+4. **Périmètre** : `functions/api/send-leads-promo.js` (nouveau). D1 table `contacts`.
+5. **Statut** : **acté & déployé** (commit `725a191`). ⚠️ Toujours `?dry=1` en premier.
+
+## ADR-NETREVPAR-001 · 2026-06-23 · Onglet Net RevPAR admin (Finance)
+
+1. **Choix** : créer `NetRevParTab.jsx` — tableau net RevPAR par bien × canal, commissions réelles (Airbnb par bien depuis `canauxCommissions.js`, Booking 17%, Stripe 1,5%), simulation +20% direct.
+2. **Alternatives refusées** : intégrer dans CockpitTab (trop dense) ; rapport PDF statique (non mis à jour).
+3. **Conséquences attendues** : données 2025 YTD → à rafraîchir dans `src/data/revenusCanal.js` chaque janvier. Si commissions Airbnb changent → `src/config/canauxCommissions.js`.
+4. **Périmètre** : `src/tabs/NetRevParTab.jsx` (nouveau) · `src/App.jsx` (tab "net-revpar" Finance section).
+5. **Statut** : **acté & déployé** (commit `725a191`).
+
+## ADR-GUIDES-STD-001 · 2026-06-23 · Structure canonique obligatoire pour tout guide SEO
+1. **Choix** : tout `Guide*.jsx` DOIT inclure : `ReadingProgressBar` (sticky CTA) + `BridgeVilla` (pont commercial) + Schema.org `Article` (JSON-LD) + `MaillageCluster` avec prop `currentSlug="<slug>"` (jamais `titre`/`intro`/`biens`).
+2. **Alternatives refusées** : guides sans CTA ni schema (pas de conversion, mauvaise indexation) ; props fausses sur MaillageCluster (silently ignored → cluster vide).
+3. **Conséquences attendues** : checklist à respecter à chaque nouvelle création de guide. Toute dérive = invisible (aucune erreur visible).
+4. **Périmètre** : `src/Guide*.jsx` · `src/components/ReadingProgressBar.jsx` · `src/components/BridgeVilla.jsx` · `src/components/MaillageCluster.jsx` · `src/data/guidesIndex.js`.
+5. **Statut** : acté, déployé 2026-06-23. Rétroactivement appliqué sur `GuideLocationVoiture` + `GuideReservationDirecte`.
+
+## ADR-GUIDES-SITEMAP-001 · 2026-06-23 · Slug en sitemap sans JSX + route = 404 indexé (règle des 3 atomiques)
+1. **Choix** : créer un guide = 3 actions atomiques et indissociables : (1) entrée dans `guidesIndex.js` (avec `dist` si visible sur villa fiche), (2) fichier `src/GuideName.jsx`, (3) route dans `main.jsx` (import lazy + `else if` + entrée `KNOWN[]`).
+2. **Alternatives refusées** : ajouter seulement dans `seoClusters.js` ou `guidesIndex.js` → slug dans le sitemap + `Component = NotFound` → 404 indexé (piège vécu : 10 guides en 404 pré-existants).
+3. **Conséquences attendues** : plus jamais de page listée dans le sitemap mais inaccessible. Vérif rapide : `grep -n "<slug>" src/main.jsx` doit retourner 3 lignes.
+4. **Périmètre** : `src/main.jsx` · `src/data/guidesIndex.js` · `src/data/seoClusters.js` · `src/Guide*.jsx`.
+5. **Statut** : acté, déployé 2026-06-23. 11 guides créés pour corriger les 404 (thématiques Martinique + zone Nogent).
+
 ## ADR-REEL-PLAYER-001 · 2026-06-23 · Composant générique ReelPlayer + wrappers fins par bien
 1. **Choix** : créer `ReelPlayer.jsx` (lecteur générique, toutes scènes paramétrées par props) + 4 wrappers thin `ZandoliReel/MabouaReel/SchoelcherReel/NogentReel.jsx` (~35 lignes chacun, juste SHOTS + config texte). GekoReel et VillaAmaryllisReel existants restent intacts.
 2. **Alternatives refusées** : dupliquer 600 lignes × 5 (fragile, impossible à maintenir) ; refactoriser les 2 existants (risque de casser du prod qui marche).

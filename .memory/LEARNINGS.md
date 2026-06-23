@@ -3,6 +3,29 @@
 > Pièges déjà rencontrés + comment les éviter. 1 entrée = 1 leçon actionnable « la prochaine fois ».
 > Le journal d'erreurs exhaustif reste `../docs/ERREURS-LOG.md`.
 
+## 🔄 Import circulaire App.jsx : extraire les données dans src/data/ — 2026-06-23
+- **Piège vécu** : `NetRevParTab.jsx` importait `REVENUS_CANAL_2025` depuis `App.jsx`. App.jsx importe NetRevParTab. Résultat = import circulaire → crash React silencieux au démarrage admin (écran blanc, aucun message clair).
+- **Fix** : extraire la donnée partagée dans `src/data/revenusCanal.js` (module pur, zéro import React). Re-exporter depuis App.jsx pour backward compat.
+- **La prochaine fois** : tout tab d'admin qui partage des données avec d'autres tabs → données dans `src/data/`, jamais dans `App.jsx`. Check : « A importe B qui importe A ? » → import circulaire garanti.
+
+## 🤖 Hallucinations agents backlog : croiser avec biens.js avant d'implémenter — 2026-06-23
+- **Piège vécu** : agent seo-026 avait proposé "Location villa avec piscine à Schœlcher" — Schœlcher est un **appartement sans piscine**. Implémentation directe = mensonge voyageur.
+- **La prochaine fois** : tout item agent qui mentionne un équipement/type/bien → vérifier `src/data/biens.js` avant d'exécuter. Marquer `bloqué` avec note si hallucination détectée.
+
+## 💰 Fichiers sans import biens.js = dette de prix périmés — 2026-06-23
+- **Piège vécu** : `src/GuideEn.jsx` avait des prix hardcodés périmés depuis des mois (Zandoli 220→110, Géko 150→110, Mabouya 110→70, Nogent 85→90) et "Bellevue" au lieu de "Schœlcher".
+- **La prochaine fois** : `grep -r '[0-9]\+€' src/ --include="*.jsx" --include="*.js" | grep -v biens.js | grep -v DEFAULT_PRIX` → tout résultat = suspect à corriger.
+
+## 🗺️ MaillageCluster — seuls currentSlug/bienId/bienNames sont des props valides — 2026-06-23
+- `MaillageCluster` n'accepte PAS `titre`, `intro`, `biens` (props silently ignored → cluster vide, 0 erreur visible).
+- **La prochaine fois** : toujours `currentSlug="<slug>"` pour un guide, ou `bienId="<id>"` pour une villa.
+- Piège vécu : `GuideLocationVoiture` avait `titre="..." intro="..." biens={[...]}` → cluster absent en prod sans alerte.
+
+## 🗺️ Créer un guide = 3 actions atomiques, aucune optionnelle — 2026-06-23
+- Un slug ajouté seulement dans `seoClusters.js` ou `guidesIndex.js` → il apparaît dans le sitemap mais `Component = NotFound` (route absente). Piège vécu : 10 guides en 404 pré-existants.
+- **La prochaine fois** : (1) `guidesIndex.js` + `dist` si villa fiche, (2) `src/GuideName.jsx` (structure ADR-GUIDES-STD-001), (3) `main.jsx` (import lazy + else if + KNOWN[]). Les 3 en une seule commit.
+- Vérif : `grep -n "mon-slug" src/main.jsx` doit retourner **3 lignes** (import + else if + KNOWN).
+
 ## 🎬 Pattern composant générique + wrappers fins > duplication × N — 2026-06-23
 - Quand N variantes d'un composant partagent la même logique (RAF, IntersectionObserver, hooks) mais des données différentes : **créer 1 générique paramétré + N wrappers fins** (35 lignes chacun). Coût de mise à jour : O(1) au lieu de O(N).
 - **La prochaine fois** : dès qu'on veut créer la 3e variante d'un composant, sortir la logique en générique. Les 2 premiers peuvent rester standalone pour ne pas risquer la régression.

@@ -4,6 +4,15 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
+## En cours → ✅ terminé le 2026-06-23 (Session backlog agents 61-76 + data-056/060)
+> Sweep complet du backlog : 76 items traités (✅/👤/🔄/❌), 2 post-backlog (send-leads-promo + Net RevPAR). Déployé en prod.
+
+## En cours → ✅ terminé le 2026-06-23 (Session guides : 4 gaps résolus + 11 guides 404 corrigés + Gmail drafts)
+
+## 🟡 Draft Gmail Sabina DiscoverCars — échec 1er appel create_draft
+- 🟡 Le 1er appel `create_draft` pour Sabina a retourné une erreur tool. Le draft Ilina a réussi (`id: r-7175489248125367124`). Adresse Ilina déduite (`ilina.beskina@discovercars.com`) — non confirmée.
+- **Débloque** : Vincent vérifie dans Gmail Brouillons. Si draft Sabina absent → créer manuellement (To: `sabina.maliseva@discovercars.com`, Sujet: `Re: Special Offer 2 — Amaryllis Locations`, corps : statut Special Offer 2 / 80% commission / prochaine étape). Vérifier aussi l'adresse Ilina avant envoi.
+
 ## En cours → ✅ terminé le 2026-06-23 (Session Pubs — campagne Google Ads Canada LIVE, Meta toujours bloqué)
 
 ## En cours → ✅ terminé le 2026-06-23 (Session reels tous biens — GekoReel + 5 nouveaux déployés)
