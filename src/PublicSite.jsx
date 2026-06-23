@@ -8762,6 +8762,7 @@ export default function PublicSite() {
 
   async function openBien(bien, initialCheckin = null, initialCheckout = null) {
     if (BOOKING_DISABLED.has(bien.id)) return;
+    if (window.gtag) window.gtag("event", "availability_check", { bien_id: bien.id, bien_nom: bien.nom, has_dates: !!(initialCheckin && initialCheckout) });
     saveSession(bien.id, initialCheckin, initialCheckout);
     if (bien.useBeds24) {
       openDetail(null);
