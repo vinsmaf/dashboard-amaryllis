@@ -1,23 +1,38 @@
 {
   "amaryllis": [
-    { "file": "reel-amaryllis.mp4", "label": "Tour Amaryllis (Ken Burns)" }
+    { "file": "reel-amaryllis.mp4",        "label": "Tour Amaryllis #1 (Ken Burns)" },
+    { "file": "reel-amaryllis-02.mp4",     "label": "Tour Amaryllis #2 (Ken Burns)" },
+    { "file": "reel-amaryllis-03.mp4",     "label": "Tour Amaryllis #3 (Ken Burns)" },
+    { "file": "reel-amaryllis-sunset.mp4", "label": "Coucher de soleil piscine (vraie vidéo)" },
+    { "file": "reel-amaryllis-pool.mp4",   "label": "Piscine de jour (vraie vidéo)" },
+    { "file": "reel-amaryllis-night.mp4",  "label": "Piscine de nuit éclairée (vraie vidéo)" }
   ],
   "zandoli": [
-    { "file": "reel-zandoli.mp4", "label": "Tour Zandoli (Ken Burns)" }
+    { "file": "reel-zandoli.mp4",    "label": "Tour Zandoli #1 (Ken Burns)" },
+    { "file": "reel-zandoli-02.mp4", "label": "Tour Zandoli #2 (Ken Burns)" },
+    { "file": "reel-zandoli-03.mp4", "label": "Tour Zandoli #3 (Ken Burns)" }
   ],
   "iguana": [
     { "file": "reel-iguana.mp4", "label": "Tour Iguana (Ken Burns)" }
   ],
   "geko": [
-    { "file": "reel-geko.mp4", "label": "Tour Géko (vraie vidéo 4K)" }
+    { "file": "reel-geko.mp4",    "label": "Tour Géko — vraie vidéo 4K (60s)" },
+    { "file": "reel-geko-02.mp4", "label": "Tour Géko #2 (Ken Burns)" },
+    { "file": "reel-geko-03.mp4", "label": "Tour Géko #3 (Ken Burns)" }
   ],
   "mabouya": [
-    { "file": "reel-mabouya.mp4", "label": "Tour Mabouya (Ken Burns)" }
+    { "file": "reel-mabouya.mp4",    "label": "Tour Mabouya #1 (Ken Burns)" },
+    { "file": "reel-mabouya-02.mp4", "label": "Tour Mabouya #2 (Ken Burns)" },
+    { "file": "reel-mabouya-03.mp4", "label": "Tour Mabouya #3 (Ken Burns)" }
   ],
   "schoelcher": [
-    { "file": "reel-schoelcher.mp4", "label": "Tour Bellevue (Ken Burns)" }
+    { "file": "reel-schoelcher.mp4",    "label": "Tour Bellevue #1 (Ken Burns)" },
+    { "file": "reel-schoelcher-02.mp4", "label": "Tour Bellevue #2 (Ken Burns)" },
+    { "file": "reel-schoelcher-03.mp4", "label": "Tour Bellevue #3 (Ken Burns)" }
   ],
   "nogent": [
-    { "file": "reel-nogent.mp4", "label": "Tour Nogent (Ken Burns)" }
+    { "file": "reel-nogent.mp4",    "label": "Tour Nogent #1 (Ken Burns)" },
+    { "file": "reel-nogent-02.mp4", "label": "Tour Nogent #2 (Ken Burns)" },
+    { "file": "reel-nogent-03.mp4", "label": "Tour Nogent #3 (Ken Burns)" }
   ]
 }
