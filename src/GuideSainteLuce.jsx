@@ -201,15 +201,6 @@ export default function GuideSainteLuce() {
         />
 
         {/* NAV */}
-        <header style={{ background: NAVY, padding: "0 24px" }}>
-          <div style={{ maxWidth: 960, margin: "0 auto", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <a href="/" style={{ color: IVORY, textDecoration: "none", fontWeight: 300, fontSize: 18, letterSpacing: "0.15em", textTransform: "uppercase" }}>Amaryllis</a>
-            <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
-              <a href="/guide-hub" style={{ color: IVORY, textDecoration: "none", fontSize: 12, letterSpacing: "0.08em", opacity: 0.6 }}>Explorer Martinique</a>
-              <a href="/" style={{ color: IVORY, textDecoration: "none", fontSize: 12, letterSpacing: "0.08em", opacity: 0.7 }}>← Voir les villas</a>
-            </div>
-          </div>
-        </header>
 
         <GuideHero
           img={HERO_IMG}
@@ -224,6 +215,7 @@ export default function GuideSainteLuce() {
             { icon: "🦈", label: "Baignade avec les tortues" },
             { icon: "🍹", label: "Ti' Punch & poisson grillé" },
           ]}
+          navBack={{ href: "/guide-hub", label: "Tous les guides" }}
         />
 
         {/* CONTENT */}

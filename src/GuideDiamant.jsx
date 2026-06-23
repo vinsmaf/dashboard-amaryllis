@@ -122,16 +122,6 @@ export default function GuideDiamant() {
           ]}
         />
 
-        <header style={{ background: NAVY, padding: "0 24px" }}>
-          <div style={{ maxWidth: 960, margin: "0 auto", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <a href="/" style={{ color: IVORY, textDecoration: "none", fontWeight: 300, fontSize: 18, letterSpacing: "0.15em", textTransform: "uppercase" }}>Amaryllis</a>
-            <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
-              <a href="/guide-hub" style={{ color: IVORY, textDecoration: "none", fontSize: 12, letterSpacing: "0.08em", opacity: 0.6 }}>Explorer Martinique</a>
-              <a href="/guide-hub" style={{ color: IVORY, textDecoration: "none", fontSize: 12, letterSpacing: "0.08em", opacity: 0.7 }}>← Tous les guides</a>
-            </div>
-          </div>
-        </header>
-
         <GuideHero
           img={HERO_IMG}
           alt="Rocher du Diamant, Martinique"
@@ -139,7 +129,15 @@ export default function GuideDiamant() {
           title="Le Rocher du Diamant"
           subtitle="Le seul rocher jamais enrôlé dans la Royal Navy. Aujourd'hui, le meilleur spot de plongée de la Martinique. À 15 minutes de nos villas."
           badges={badges}
+          navBack={{ href: "/guide-hub", label: "Tous les guides" }}
         />
+
+        {/* ACTIVITÉ EN VEDETTE — immédiatement après le hero, avant le scroll de contenu */}
+        <div style={{ background: NAVY, padding: "0 24px" }}>
+          <div style={{ maxWidth: 860, margin: "0 auto", paddingTop: 32, paddingBottom: 8 }}>
+            <EncartActivite activites={[ACTIVITES.snorkeling, ACTIVITES["diamant-bateau"]]} platform="gyg" big />
+          </div>
+        </div>
 
         <div id="spots" style={{ maxWidth: 860, margin: "0 auto", padding: "56px 24px 80px" }}>
 

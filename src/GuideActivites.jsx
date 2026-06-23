@@ -152,12 +152,6 @@ export default function GuideActivites() {
             { label: "Programme", href: "#programme" },
           ]}
         />
-        <header style={{ background: NAVY, padding: "0 24px" }}>
-          <div style={{ maxWidth: 900, margin: "0 auto", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <a href="/" style={{ color: IVORY, textDecoration: "none", fontWeight: 300, fontSize: 18, letterSpacing: "0.15em", textTransform: "uppercase" }}>Amaryllis</a>
-            <a href="/guide-hub" style={{ color: IVORY, textDecoration: "none", fontSize: 13, letterSpacing: "0.08em", opacity: 0.7 }}>← Guide Sainte-Luce</a>
-          </div>
-        </header>
 
         <GuideHero
           img="/photos/activites-martinique.jpg"
@@ -166,6 +160,7 @@ export default function GuideActivites() {
           title="10 activités à ne pas manquer à Sainte-Luce"
           subtitle="Notre sélection personnelle après des années à accueillir des voyageurs dans la résidence Amaryllis."
           badges={[]}
+          navBack={{ href: "/guide-hub", label: "Tous les guides" }}
         />
 
         <div id="spots" style={{ maxWidth: 860, margin: "0 auto", padding: "48px 24px 80px" }}>

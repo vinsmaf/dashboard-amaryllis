@@ -274,17 +274,6 @@ export default function GuideArlet() {
           ]}
         />
 
-        {/* ── HEADER ── */}
-        <header style={{ background: NAVY, padding: "0 24px" }}>
-          <div style={{ maxWidth: 960, margin: "0 auto", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <a href="/" style={{ color: IVORY, textDecoration: "none", fontWeight: 300, fontSize: 18, letterSpacing: "0.15em", textTransform: "uppercase" }}>Amaryllis</a>
-            <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
-              <a href="/guide-hub" style={{ color: IVORY, textDecoration: "none", fontSize: 12, letterSpacing: "0.08em", opacity: 0.6 }}>Explorer Martinique</a>
-              <a href="/guide-hub" style={{ color: IVORY, textDecoration: "none", fontSize: 12, letterSpacing: "0.08em", opacity: 0.7 }}>← Tous les guides</a>
-            </div>
-          </div>
-        </header>
-
         <GuideHero
           img={HERO_IMG}
           alt="Grande Anse d'Arlet — plage et tortues marines, Martinique"
@@ -292,6 +281,7 @@ export default function GuideArlet() {
           title="Grande Anse d'Arlet"
           subtitle="L'endroit de Martinique où vous nagez avec les tortues marines — à 2 mètres du bord, sans équipement spécial."
           badges={badges}
+          navBack={{ href: "/guide-hub", label: "Tous les guides" }}
         />
 
         {/* ── CONTENU ── */}

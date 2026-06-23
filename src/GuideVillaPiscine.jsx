@@ -2,8 +2,15 @@
 // Page pilier SEO · keyword : "location villa martinique avec piscine"
 
 import SEOMeta from "./SEOMeta.jsx";
-import WikiImg from "./WikiImg.jsx";
 import NewsletterForm from "./NewsletterForm.jsx";
+import BlocAffilie from "./components/BlocAffilie.jsx";
+import EncartActivite from "./components/EncartActivite.jsx";
+import { ACTIVITES } from "./data/activites.js";
+import ReadingProgressBar from "./components/ReadingProgressBar.jsx";
+import BridgeVilla from "./components/BridgeVilla.jsx";
+import ProgrammeSejour from "./components/ProgrammeSejour.jsx";
+import GuideHero from "./components/GuideHero.jsx";
+import GuideStickyNav from "./components/GuideStickyNav.jsx";
 
 const NAVY  = "#0e3b3a";
 const IVORY = "#faf5e9";
@@ -14,7 +21,7 @@ const SAND  = "#e8dcc8";
 const MUTED = "#7a6b5a";
 const BASE  = "https://villamaryllis.com";
 
-const HERO_IMG = `${BASE}/photos/amaryllis/02.webp`;
+const HERO_IMG = "/photos/piscine-vue-mer.jpg";
 
 const FAQ_ITEMS = [
   {
@@ -39,7 +46,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Quelles activités peut-on faire depuis les villas de Sainte-Luce ?",
-    a: "Sainte-Luce est la base idéale pour explorer le Sud : Les Salines (20 min), Anses d'Arlet et les tortues marines (25 min), le Rocher du Diamant pour la plongée (20 min), la distillerie Trois-Rivières (5 min) et la forêt tropicale de Montravail. En excursion, le catamaran aux îlets du Sud part du Marin à 15 minutes.",
+    a: "Sainte-Luce est la base idéale pour explorer le Sud : Les Salines (25-30 min), Anses d'Arlet et les tortues marines (25 min), le Rocher du Diamant pour la plongée (20 min), la distillerie Trois-Rivières (5 min) et la forêt tropicale de Montravail. En excursion, le catamaran aux îlets du Sud part du Marin à 15 minutes.",
   },
 ];
 
@@ -343,62 +350,35 @@ export default function GuideVillaPiscine() {
       />
 
       <div style={{ minHeight: "100vh", background: IVORY, color: TEXT, fontFamily: "'Jost', system-ui, sans-serif" }}>
+        <ReadingProgressBar ctaHref="/" />
+        <GuideStickyNav
+          links={[
+            { label: "Découvrir", href: "#spots" },
+            { label: "Activités", href: "#activites" },
+          ]}
+        />
 
         {/* ── Header ── */}
-        <header style={{ background: NAVY, padding: "0 24px" }}>
-          <div style={{ maxWidth: 960, margin: "0 auto", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <a href="/" style={{ color: IVORY, textDecoration: "none", fontWeight: 300, fontSize: 18, letterSpacing: "0.15em", textTransform: "uppercase" }}>Amaryllis</a>
-            <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
-              <a href="/guide-hub" style={{ color: IVORY, textDecoration: "none", fontSize: 12, letterSpacing: "0.08em", opacity: 0.6 }}>Explorer Martinique</a>
-              <a href="/" style={{ color: IVORY, textDecoration: "none", fontSize: 12, letterSpacing: "0.08em", opacity: 0.7 }}>← Nos villas</a>
-            </div>
-          </div>
-        </header>
 
         {/* ── Hero ── */}
-        <div style={{ position: "relative", height: "min(90vh, 640px)", overflow: "hidden" }}>
-          <WikiImg
-            src={HERO_IMG}
-            alt="Piscine à débordement vue mer — Villa Amaryllis, Sainte-Luce Martinique"
-            loading="eager"
-            fetchPriority="high"
-            style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 55%" }}
-          />
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(14,59,58,0.15) 0%, rgba(14,59,58,0.1) 35%, rgba(14,59,58,0.86) 100%)" }} />
-          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "0 32px 52px" }}>
-            <div style={{ maxWidth: 760, margin: "0 auto", width: "100%" }}>
-              <p style={{ color: CORAL, fontSize: 12, letterSpacing: "0.3em", textTransform: "uppercase", margin: "0 0 14px" }}>Guide · Locations d'exception Martinique</p>
-              <h1 style={{
-                fontFamily: "'Jost', sans-serif", fontWeight: 200,
-                fontSize: "clamp(28px, 5.5vw, 60px)", letterSpacing: "0.04em",
-                color: IVORY, textTransform: "uppercase", margin: "0 0 18px", lineHeight: 1.05,
-              }}>
-                Location villa<br />Martinique avec piscine
-              </h1>
-              <p style={{
-                color: "rgba(250,245,233,0.9)", fontSize: "clamp(16px, 2.5vw, 20px)",
-                maxWidth: 580, margin: "0 0 28px", lineHeight: 1.6,
-                fontFamily: "'Cormorant Garamond', Georgia, serif", fontStyle: "italic",
-              }}>
-                Quatre propriétés d'exception à Sainte-Luce, chacune avec sa piscine privée — de la villa vue mer avec débordement jusqu'au jacuzzi de couple au-dessus des Caraïbes.
-              </p>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-                {[
-                  { label: "Piscine à débordement", highlight: true },
-                  { label: "Vue mer garantie" },
-                  { label: "Réservation directe" },
-                  { label: "Sud Martinique" },
-                  { label: "Sainte-Luce" },
-                ].map(b => (
-                  <span key={b.label} className={`gvp-badge${b.highlight ? " highlight" : ""}`}>{b.label}</span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
+        <GuideHero
+          img={HERO_IMG}
+          alt="Piscine à débordement vue mer — Villa Amaryllis, Sainte-Luce Martinique"
+          eyebrow="Guide · Locations d'exception Martinique"
+          title="Location villa Martinique avec piscine"
+          subtitle="Quatre propriétés d'exception à Sainte-Luce, chacune avec sa piscine privée — de la villa vue mer avec débordement jusqu'au jacuzzi de couple au-dessus des Caraïbes."
+          badges={[
+            { label: "Piscine à débordement" },
+            { label: "Vue mer garantie" },
+            { label: "Réservation directe" },
+            { label: "Sud Martinique" },
+            { label: "Sainte-Luce" },
+          ]}
+          navBack={{ href: "/guide-hub", label: "Tous les guides" }}
+        />
 
         {/* ── Contenu principal ── */}
-        <div style={{ maxWidth: 880, margin: "0 auto", padding: "64px 24px 80px" }}>
+        <div id="spots" style={{ maxWidth: 880, margin: "0 auto", padding: "64px 24px 80px" }}>
 
           {/* ── Intro éditoriale ── */}
           <div className="gvp-section">
@@ -410,7 +390,7 @@ export default function GuideVillaPiscine() {
               La Martinique est une île de contrastes : plages de sable blanc au sud, forêt tropicale au nord, volcans, mangroves et récifs coralliens partout. Mais ce qui fait la différence entre un voyage ordinaire et un séjour inoubliable, c'est souvent <em>ce moment de fin d'après-midi</em>, les pieds dans l'eau de votre piscine privée, quand la lumière dorée du Carbet joue sur la surface et que les alizés font frémir les feuilles des balisiers.
             </p>
             <p className="gvp-body">
-              Nos quatre villas avec piscine privée sont toutes situées à Sainte-Luce, une commune paisible du Sud Martinique, à vingt minutes des Salines, vingt-cinq des tortues d'Arlet, vingt du Rocher du Diamant. Un emplacement stratégique pour explorer le meilleur de l'île — et la sérénité absolue une fois la porte de la villa refermée.
+              Nos quatre villas avec piscine privée sont toutes situées à Sainte-Luce, une commune paisible du Sud Martinique, à vingt-cinq à trente minutes des Salines, vingt-cinq des tortues d'Arlet, vingt du Rocher du Diamant. Un emplacement stratégique pour explorer le meilleur de l'île — et la sérénité absolue une fois la porte de la villa refermée.
             </p>
             <p className="gvp-body">
               Ici, pas d'agence anonyme, pas de gestionnaire injoignable. Vos hôtes — Martiniquais, vivant à Sainte-Luce — vous accueillent en personne, vous transmettent leurs adresses locales et restent disponibles sur WhatsApp pendant tout votre séjour. La réservation directe, en dehors d'Airbnb, vous fait économiser jusqu'à 14 % de frais de service — sans rien perdre en qualité ni en garanties.
@@ -567,6 +547,9 @@ export default function GuideVillaPiscine() {
               ))}
             </div>
           </div>
+          <div id="activites">
+            <EncartActivite activites={[ACTIVITES["fonds-blancs"]]} />
+          </div>
 
           {/* ── Infos pratiques ── */}
           <div className="gvp-section">
@@ -603,12 +586,39 @@ export default function GuideVillaPiscine() {
               Sainte-Luce est une commune du littoral Atlantique Sud, à la frontière entre la côte caraïbe et la côte atlantique. Ce positionnement central lui confère une qualité rare : moins touristique que Sainte-Anne ou Le Diamant, mais à égale distance de toutes les grandes destinations du Sud.
             </p>
             <p className="gvp-body">
-              En vingt minutes vers l'ouest, vous êtes à la plage de Grande Anse des Salines — classée parmi les plus belles des Caraïbes. En vingt-cinq minutes vers le nord-ouest, vous nagez avec les tortues marines de l'anse d'Arlet. La distillerie Trois-Rivières, où le rhum agricole AOC Martinique est produit depuis 1660, est à cinq minutes à pied. La forêt tropicale de Montravail, avec ses sentiers balisés entre fougères arborescentes et balisiers, est à dix minutes.
+              En vingt-cinq à trente minutes vers l'ouest, vous êtes à la plage de Grande Anse des Salines — classée parmi les plus belles des Caraïbes. En vingt-cinq minutes vers le nord-ouest, vous nagez avec les tortues marines de l'anse d'Arlet. La distillerie Trois-Rivières, où le rhum agricole AOC Martinique est produit depuis 1660, est à cinq minutes à pied. La forêt tropicale de Montravail, avec ses sentiers balisés entre fougères arborescentes et balisiers, est à dix minutes.
             </p>
             <p className="gvp-body">
               Depuis votre villa avec piscine à Sainte-Luce, vous explorez l'île entière — et vous rentrez le soir dans votre propre oasis de tranquillité, loin des hôtels animés et des plages bondées.
             </p>
           </div>
+
+          <EncartActivite activites={[ACTIVITES["diamant-bateau"]]} platform="gyg" />
+          <EncartActivite activites={[ACTIVITES.catamaran, ACTIVITES.tortues]} />
+          <EncartActivite activites={[{ ...ACTIVITES.rhum, viatorPath: null }]} platform="gyg" />
+          <ProgrammeSejour
+            jours={[
+              {
+                jour: "Jour 1",
+                titre: "Arrivée et première baignade",
+                matin: "Récupération de la voiture de location à l'aéroport (FDF, 35 min) puis route vers votre villa à Sainte-Luce. Courses au bourg et installation.",
+                apresMidi: "Première baignade dans votre piscine privée, farniente sur la terrasse face à la mer. Petite mise en jambes à la distillerie Trois-Rivières (5 min) pour une dégustation de rhum AOC.",
+                soir: "Dîner les pieds dans l'eau sur la terrasse, coucher de soleil côté Caraïbe.",
+              },
+              {
+                jour: "Jour 2",
+                titre: "Le Sud par la mer",
+                matin: "Cap sur le Rocher du Diamant en bateau : approche du Rocher mythique, snorkeling et arrêt à la plage des Salines.",
+                apresMidi: "Retour à la villa pour une baignade qui efface la fatigue, puis fin de journée tranquille au bord de la piscine.",
+              },
+              {
+                jour: "Jour 3",
+                titre: "Fonds blancs et détente",
+                matin: "Excursion vers le Bain de Joséphine et les fonds blancs du François : eaux turquoise peu profondes, ti-punch les pieds dans l'eau.",
+                apresMidi: "Dernière après-midi à la villa : piscine, lecture à l'ombre des balisiers, récupération avant le départ.",
+              },
+            ]}
+          />
 
           {/* ── FAQ ── */}
           <div className="gvp-section">
@@ -625,6 +635,13 @@ export default function GuideVillaPiscine() {
               ))}
             </div>
           </div>
+
+          <BridgeVilla
+            villaId="amaryllis"
+            lieu="Sainte-Luce"
+            tempsRoute="sur place"
+            copy="Faites de la Villa Amaryllis votre camp de base à Sainte-Luce : excursions le jour, piscine à débordement et vue Caraïbe 180° le soir. Réservez en direct sur villamaryllis.com — sans frais de service, avec vos hôtes joignables sur WhatsApp."
+          />
 
           {/* ── Maillage interne guides ── */}
           <div style={{ marginBottom: 56 }}>
@@ -696,6 +713,7 @@ export default function GuideVillaPiscine() {
 
         </div>
 
+                <BlocAffilie slug="villa-piscine" />
         <div style={{ padding: "48px 24px", background: "#f6f1e7" }}>
           <NewsletterForm source="guide-villa-piscine" />
         </div>

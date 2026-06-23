@@ -3,6 +3,13 @@
 import SEOMeta from "./SEOMeta.jsx";
 import MaillageCluster from "./components/seo/MaillageCluster.jsx";
 import NewsletterForm from "./NewsletterForm.jsx";
+import BlocAffilie from "./components/BlocAffilie.jsx";
+import EncartActivite from "./components/EncartActivite.jsx";
+import { ACTIVITES } from "./data/activites.js";
+import ReadingProgressBar from "./components/ReadingProgressBar.jsx";
+import BridgeVilla from "./components/BridgeVilla.jsx";
+import GuideHero from "./components/GuideHero.jsx";
+import GuideStickyNav from "./components/GuideStickyNav.jsx";
 
 // Noms canoniques des biens pour le maillage interne SEO ("villa" = Amaryllis + Iguana uniquement).
 const BIEN_NAMES = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko", mabouya: "Mabouya", schoelcher: "Bellevue Schœlcher", iguana: "Villa Iguana", nogent: "Appartement Nogent-sur-Marne" };
@@ -16,7 +23,7 @@ const SAND  = "#e8dcc8";
 const MUTED = "#7a6b5a";
 const BASE  = "https://villamaryllis.com";
 
-const HERO_IMG = "https://villamaryllis.com/photos/amaryllis/01.webp";
+const HERO_IMG = "/photos/martinique-panorama.jpg";
 
 // FAQ visible — IDENTIQUE au JSON-LD de functions/[slug].js (slug meilleure-saison-martinique).
 const FAQ = [
@@ -117,43 +124,28 @@ export default function GuideMeilleureSaison() {
       })}} />
 
       <div style={{ minHeight: "100vh", background: IVORY, color: TEXT, fontFamily: "'Jost', system-ui, sans-serif" }}>
+        <ReadingProgressBar ctaHref="/" />
+        <GuideStickyNav
+          links={[
+            { label: "Découvrir", href: "#spots" },
+            { label: "Activités", href: "#activites" },
+          ]}
+        />
 
         {/* NAV */}
-        <header style={{ background: NAVY, padding: "0 24px" }}>
-          <div style={{ maxWidth: 960, margin: "0 auto", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <a href="/" style={{ color: IVORY, textDecoration: "none", fontWeight: 300, fontSize: 18, letterSpacing: "0.15em", textTransform: "uppercase" }}>Amaryllis</a>
-            <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
-              <a href="/guide-hub" style={{ color: IVORY, textDecoration: "none", fontSize: 12, letterSpacing: "0.08em", opacity: 0.6 }}>Explorer</a>
-              <a href="/sainte-luce-martinique" style={{ color: IVORY, textDecoration: "none", fontSize: 12, letterSpacing: "0.08em", opacity: 0.7 }}>← Sainte-Luce</a>
-            </div>
-          </div>
-        </header>
 
-        {/* HERO */}
-        <div style={{ position: "relative", height: "min(80vh, 540px)", overflow: "hidden" }}>
-          <img
-            src={HERO_IMG}
-            alt="Martinique soleil et mer — meilleure saison pour partir"
-            loading="eager"
-            fetchPriority="high"
-            style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 35%" }}
-          />
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(14,59,58,0.1) 0%, rgba(14,59,58,0.88) 100%)" }} />
-          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "0 32px 48px" }}>
-            <div style={{ maxWidth: 760, margin: "0 auto", width: "100%" }}>
-              <p style={{ color: CORAL, fontSize: 12, letterSpacing: "0.3em", textTransform: "uppercase", margin: "0 0 14px" }}>Guide météo · Point de vue hôte local</p>
-              <h1 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: "clamp(30px, 5.5vw, 58px)", letterSpacing: "0.04em", color: IVORY, textTransform: "uppercase", margin: "0 0 16px", lineHeight: 1.05 }}>
-                Quand partir<br /><em style={{ fontStyle: "normal", fontWeight: 400, color: CORAL }}>en Martinique ?</em>
-              </h1>
-              <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 18, lineHeight: 1.7, color: "rgba(250,245,233,0.8)", maxWidth: 560, margin: 0 }}>
-                En 5 ans d'hébergement à Sainte-Luce, voici ce qu'on observe vraiment — mois par mois.
-              </p>
-            </div>
-          </div>
-        </div>
+        <GuideHero
+          img={HERO_IMG}
+          alt="Martinique soleil et mer — meilleure saison pour partir"
+          eyebrow="Guide météo · Point de vue hôte local"
+          title="Quand partir en Martinique ?"
+          subtitle="En 5 ans d'hébergement à Sainte-Luce, voici ce qu'on observe vraiment — mois par mois."
+          badges={[]}
+          navBack={{ href: "/guide-hub", label: "Tous les guides" }}
+        />
 
         {/* CONTENT */}
-        <div style={{ maxWidth: 960, margin: "0 auto", padding: "72px 24px 96px" }}>
+        <div id="spots" style={{ maxWidth: 960, margin: "0 auto", padding: "72px 24px 96px" }}>
 
           {/* RÉPONSE COURTE */}
           <div style={{ background: `linear-gradient(135deg, ${NAVY} 0%, #163f3e 100%)`, borderRadius: 16, padding: "32px 36px", marginBottom: 64 }}>
@@ -250,6 +242,10 @@ export default function GuideMeilleureSaison() {
             </div>
           </div>
 
+          <div id="activites">
+            <EncartActivite activites={[ACTIVITES.tortues]} />
+          </div>
+
           {/* TABLEAU DÉTAILLÉ */}
           <div style={{ marginBottom: 64 }}>
             <p className="ms-section-title">Détail mois par mois</p>
@@ -286,6 +282,8 @@ export default function GuideMeilleureSaison() {
             </p>
           </div>
 
+          <EncartActivite activites={[ACTIVITES["fonds-blancs"]]} />
+
           {/* PAR ACTIVITÉ */}
           <div style={{ marginBottom: 64 }}>
             <p className="ms-section-title">Selon vos envies</p>
@@ -312,6 +310,9 @@ export default function GuideMeilleureSaison() {
               ))}
             </div>
           </div>
+
+          <EncartActivite activites={[ACTIVITES["diamant-bateau"]]} platform="gyg" />
+          <EncartActivite activites={[ACTIVITES.snorkeling, ACTIVITES.catamaran]} />
 
           {/* CONSEIL HÔTE */}
           <div style={{ background: `linear-gradient(135deg, #0a2e2d 0%, ${NAVY} 60%, #163f3e 100%)`, border: `1px solid rgba(196,114,84,0.3)`, borderRadius: 20, padding: "44px 40px", marginBottom: 64 }}>
@@ -364,6 +365,13 @@ export default function GuideMeilleureSaison() {
 
         </div>
 
+        <BridgeVilla
+          villaId="amaryllis"
+          lieu="Martinique"
+          tempsRoute=""
+          copy="Quelle que soit votre saison, faites de la Villa Amaryllis votre camp de base à Sainte-Luce : piscine à débordement face à la mer, plages du Sud à deux pas et excursions au départ de la côte caraïbe à portée de main. Réservez en direct avec nous pour le meilleur tarif et nos conseils d'hôtes locaux."
+        />
+
         {/* FAQ visible (cohérence avec le JSON-LD) */}
         <section style={{ maxWidth: 760, margin: "48px auto", padding: "0 24px" }}>
           <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontWeight: 400, fontSize: 30, color: NAVY, textAlign: "center", margin: "0 0 24px" }}>Questions fréquentes</h2>
@@ -375,6 +383,7 @@ export default function GuideMeilleureSaison() {
           ))}
         </section>
 
+                <BlocAffilie slug="meilleure-saison" />
         <div style={{ padding: "48px 24px", background: "#f6f1e7" }}>
           <NewsletterForm source="guide-meilleure-saison" />
         </div>

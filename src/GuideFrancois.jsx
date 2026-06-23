@@ -269,12 +269,6 @@ export default function GuideFrancois() {
         />
 
         {/* HEADER */}
-        <header style={{ background: NAVY, padding: "0 24px" }}>
-          <div style={{ maxWidth: 760, margin: "0 auto", height: 54, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <a href="/" style={{ color: IVORY, textDecoration: "none", fontWeight: 300, fontSize: 17, letterSpacing: "0.15em", textTransform: "uppercase" }}>Amaryllis</a>
-            <a href="/guide-hub" style={{ color: "rgba(250,245,233,.55)", textDecoration: "none", fontSize: 12, letterSpacing: "0.08em" }}>← Tous les guides</a>
-          </div>
-        </header>
 
         <GuideHero
           img={HERO_IMG}
@@ -283,6 +277,7 @@ export default function GuideFrancois() {
           title="Le François"
           subtitle="Fonds Blancs, piscines naturelles au large, marché de pêcheurs, kayak en mangrove — la Martinique atlantique dans toute son authenticité."
           badges={badges}
+          navBack={{ href: "/guide-hub", label: "Tous les guides" }}
         />
 
         {/* CONTENU */}

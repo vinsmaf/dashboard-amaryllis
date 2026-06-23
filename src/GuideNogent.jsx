@@ -3,6 +3,9 @@
 
 import SEOMeta from "./SEOMeta.jsx";
 import NewsletterForm from "./NewsletterForm.jsx";
+import ReadingProgressBar from "./components/ReadingProgressBar.jsx";
+import GuideHero from "./components/GuideHero.jsx";
+import GuideStickyNav from "./components/GuideStickyNav.jsx";
 
 const NAVY  = "#0e3b3a";
 const IVORY = "#faf5e9";
@@ -137,48 +140,26 @@ export default function GuideNogent() {
         ],
       })}} />
 
+      <ReadingProgressBar ctaHref="/nogent" />
+      <GuideStickyNav
+        links={[
+          { label: "Quartier", href: "#spots" },
+          { label: "Activités", href: "#activites" },
+        ]}
+      />
+
       <div style={{ minHeight: "100vh", background: IVORY, color: TEXT, fontFamily: "'Jost', system-ui, sans-serif" }}>
 
-        {/* ── HEADER ── */}
-        <header style={{ background: NAVY, padding: "0 24px" }}>
-          <div style={{ maxWidth: 960, margin: "0 auto", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <a href="/" style={{ color: IVORY, textDecoration: "none", fontWeight: 300, fontSize: 18, letterSpacing: "0.15em", textTransform: "uppercase" }}>Amaryllis</a>
-            <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
-              <a href="/nogent" style={{ color: IVORY, textDecoration: "none", fontSize: 12, letterSpacing: "0.08em", opacity: 0.7 }}>Notre appartement Nogent</a>
-              <a href="/" style={{ color: IVORY, textDecoration: "none", fontSize: 12, letterSpacing: "0.08em", opacity: 0.7 }}>← Accueil</a>
-            </div>
-          </div>
-        </header>
-
         {/* ── HERO ── */}
-        <div style={{ position: "relative", height: "min(55vw, 480px)", background: NAVY, overflow: "hidden" }}>
-          <img
-            src={HERO_IMG}
-            alt="Appartement Nogent-sur-Marne — bords de Marne"
-            style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.55 }}
-            fetchPriority="high"
-          />
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(10,20,20,0.85) 0%, transparent 60%)" }} />
-          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "32px 28px", maxWidth: 960, margin: "0 auto" }}>
-            <p style={{ color: CORAL, fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11, letterSpacing: "0.45em", textTransform: "uppercase", margin: "0 0 12px" }}>
-              Île-de-France · Val-de-Marne
-            </p>
-            <h1 style={{ color: IVORY, fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: "clamp(28px, 4vw, 52px)", letterSpacing: "0.1em", textTransform: "uppercase", margin: "0 0 16px", lineHeight: 1.05 }}>
-              Nogent-sur-Marne<br />
-              <em style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontStyle: "italic", fontWeight: 400, letterSpacing: 0, textTransform: "none", color: "rgba(250,245,233,0.75)", fontSize: "0.8em" }}>
-                Paris à 20 minutes, la Marne à 5
-              </em>
-            </h1>
-            {/* Badges */}
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {badges.map(b => (
-                <span key={b.label} style={{ background: "rgba(255,255,255,0.12)", backdropFilter: "blur(6px)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 20, padding: "6px 14px", color: IVORY, fontSize: 12, fontFamily: "'Jost', sans-serif", fontWeight: 300, letterSpacing: "0.04em" }}>
-                  {b.icon} {b.label}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
+        <GuideHero
+          img={HERO_IMG}
+          alt="Appartement Nogent-sur-Marne — bords de Marne"
+          eyebrow="Île-de-France · Val-de-Marne"
+          title="Nogent-sur-Marne"
+          subtitle="Paris à 20 minutes, la Marne à 5"
+          badges={badges.map(b => ({ label: `${b.icon} ${b.label}` }))}
+          navBack={{ href: "/guide-hub", label: "Tous les guides" }}
+        />
 
         {/* ── ACCROCHE ── */}
         <div style={{ maxWidth: 760, margin: "0 auto", padding: "48px 28px 36px" }}>
@@ -188,7 +169,7 @@ export default function GuideNogent() {
         </div>
 
         {/* ── SECTIONS ── */}
-        <div style={{ maxWidth: 960, margin: "0 auto", padding: "0 28px 60px" }}>
+        <div id="spots" style={{ maxWidth: 960, margin: "0 auto", padding: "0 28px 60px" }}>
 
           {quartiers.map((q, qi) => (
             <div key={qi} style={{ marginBottom: 56 }}>
@@ -209,6 +190,7 @@ export default function GuideNogent() {
           ))}
 
           {/* ── 3 EXPÉRIENCES INÉDITES (seo-032) ── */}
+          <div id="activites">
           <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 22, letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY, marginBottom: 8 }}>
             ✨ Que faire à Nogent — 3 expériences inédites
           </h2>
@@ -237,6 +219,7 @@ export default function GuideNogent() {
               <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 16, lineHeight: 1.75, color: TEXT, margin: 0 }}>{item.texte}</p>
             </div>
           ))}
+          </div>
 
           {/* ── LOUER À NOGENT — 2 CONSEILS PRATIQUES (seo-033) ── */}
           <div style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 16, padding: "32px 28px", margin: "32px 0" }}>

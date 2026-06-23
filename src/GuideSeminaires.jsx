@@ -4,6 +4,14 @@
 import SEOMeta from "./SEOMeta.jsx";
 import { useState } from "react";
 import NewsletterForm from "./NewsletterForm.jsx";
+import BlocAffilie from "./components/BlocAffilie.jsx";
+import EncartActivite from "./components/EncartActivite.jsx";
+import { ACTIVITES } from "./data/activites.js";
+import ReadingProgressBar from "./components/ReadingProgressBar.jsx";
+import BridgeVilla from "./components/BridgeVilla.jsx";
+import ProgrammeSejour from "./components/ProgrammeSejour.jsx";
+import GuideHero from "./components/GuideHero.jsx";
+import GuideStickyNav from "./components/GuideStickyNav.jsx";
 
 const NAVY  = "#0e3b3a";
 const IVORY = "#faf5e9";
@@ -14,7 +22,7 @@ const SAND  = "#e8dcc8";
 const MUTED = "#7a6b5a";
 const BASE  = "https://villamaryllis.com";
 
-const HERO_IMG = "https://villamaryllis.com/photos/amaryllis/01.webp";
+const HERO_IMG = "/photos/seminaires.jpg";
 
 const css = `
   .sem-badge {
@@ -224,6 +232,13 @@ function DevisForm() {
 export default function GuideSeminaires() {
   return (
     <>
+      <ReadingProgressBar ctaHref="/" />
+      <GuideStickyNav
+        links={[
+          { label: "Découvrir", href: "#spots" },
+          { label: "Activités", href: "#activites" },
+        ]}
+      />
       <style dangerouslySetInnerHTML={{ __html: css }} />
       <SEOMeta
         title="Séminaires Martinique — Villa vue mer | Amaryllis"
@@ -252,48 +267,24 @@ export default function GuideSeminaires() {
       <div style={{ minHeight: "100vh", background: IVORY, color: TEXT, fontFamily: "'Jost', system-ui, sans-serif" }}>
 
         {/* NAV */}
-        <header style={{ background: NAVY, padding: "0 24px" }}>
-          <div style={{ maxWidth: 960, margin: "0 auto", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <a href="/" style={{ color: IVORY, textDecoration: "none", fontWeight: 300, fontSize: 18, letterSpacing: "0.15em", textTransform: "uppercase" }}>Amaryllis</a>
-            <a href="/" style={{ color: IVORY, textDecoration: "none", fontSize: 12, letterSpacing: "0.08em", opacity: 0.7 }}>← Voir les villas</a>
-          </div>
-        </header>
 
-        {/* HERO */}
-        <div style={{ position: "relative", height: "min(82vh, 560px)", overflow: "hidden" }}>
-          <img
-            src={HERO_IMG}
-            alt="Villa Amaryllis — séminaire d'entreprise en Martinique vue mer"
-            loading="eager" fetchPriority="high"
-            style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 30%" }}
-          />
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(14,59,58,0.15) 0%, rgba(14,59,58,0.88) 100%)" }} />
-          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "0 32px 48px" }}>
-            <div style={{ maxWidth: 760, margin: "0 auto", width: "100%" }}>
-              <p style={{ color: CORAL, fontSize: 12, letterSpacing: "0.3em", textTransform: "uppercase", margin: "0 0 14px" }}>Séminaires B2B · Martinique · Villa exclusive</p>
-              <h1 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: "clamp(28px, 5.5vw, 58px)", letterSpacing: "0.04em", color: IVORY, textTransform: "uppercase", margin: "0 0 20px", lineHeight: 1.05 }}>
-                Votre séminaire<br /><em style={{ fontStyle: "normal", fontWeight: 400, color: CORAL }}>face aux Caraïbes</em>
-              </h1>
-              <div className="sem-badges" style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 36 }}>
-                <span className="sem-badge">🏠 Villa exclusive 3 chambres</span>
-                <span className="sem-badge">🏊 Piscine débordement</span>
-                <span className="sem-badge">👥 Jusqu'à 8 participants</span>
-                <span className="sem-badge">🌅 Terrasse 100m² vue mer</span>
-                <span className="sem-badge">📶 Wifi Starlink</span>
-              </div>
-              <a href="#devis" style={{
-                display: "inline-block", padding: "15px 36px",
-                background: CORAL, color: IVORY, borderRadius: 10,
-                textDecoration: "none", fontFamily: "'Jost', sans-serif",
-                fontSize: 13, fontWeight: 500, letterSpacing: "0.12em", textTransform: "uppercase",
-              }}>
-                Demander un devis →
-              </a>
-            </div>
-          </div>
-        </div>
+        <GuideHero
+          img={HERO_IMG}
+          alt="Villa Amaryllis — séminaire d'entreprise en Martinique vue mer"
+          eyebrow="Séminaires B2B · Martinique · Villa exclusive"
+          title="Votre séminaire face aux Caraïbes"
+          subtitle=""
+          badges={[
+            { icon: "🏠", label: "Villa exclusive 3 chambres" },
+            { icon: "🏊", label: "Piscine débordement" },
+            { icon: "👥", label: "Jusqu'à 8 participants" },
+            { icon: "🌅", label: "Terrasse 100m² vue mer" },
+            { icon: "📶", label: "Wifi Starlink" },
+          ]}
+          navBack={{ href: "/guide-hub", label: "Tous les guides" }}
+        />
 
-        <div style={{ maxWidth: 960, margin: "0 auto", padding: "72px 24px 96px" }}>
+        <div id="spots" style={{ maxWidth: 960, margin: "0 auto", padding: "72px 24px 96px" }}>
 
           {/* ARGUMENT CENTRAL */}
           <div style={{ marginBottom: 64, maxWidth: 720 }}>
@@ -371,6 +362,9 @@ export default function GuideSeminaires() {
           </div>
 
           {/* COMMENT ÇA MARCHE */}
+          <div id="activites">
+            <EncartActivite activites={[ACTIVITES["fonds-blancs"]]} />
+          </div>
           <div style={{ marginBottom: 64 }}>
             <p style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, letterSpacing: "0.35em", textTransform: "uppercase", color: CORAL, marginBottom: 10 }}>Organisation</p>
             <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: "clamp(26px, 4vw, 38px)", letterSpacing: "0.06em", textTransform: "uppercase", color: NAVY, margin: "0 0 28px", lineHeight: 1.1 }}>
@@ -421,6 +415,33 @@ export default function GuideSeminaires() {
             </div>
           </div>
 
+          <EncartActivite variant="navy" activites={[ACTIVITES.catamaran, ACTIVITES["tour-prive-groupe"]]} />
+          <EncartActivite activites={[{ ...ACTIVITES.rhum, viatorPath: null }]} platform="gyg" />
+
+          <ProgrammeSejour
+            jours={[
+              {
+                jour: "Jour 1",
+                titre: "Arrivée & lancement",
+                matin: "Check-in autonome à la Villa Amaryllis, installation et brief d'ouverture sur la terrasse 100 m² vue mer.",
+                apresMidi: "Session de travail en exclusivité (paperboard, grand écran, Wifi), puis temps libre piscine à débordement.",
+                soir: "Dîner créole en groupe — restaurants et traiteurs locaux à deux pas, sur réservation.",
+              },
+              {
+                jour: "Jour 2",
+                titre: "Cohésion en mer & ateliers",
+                matin: "Journée catamaran au départ de Sainte-Luce : dauphins, îlets du Sud et snorkeling — le moment fort de team building.",
+                apresMidi: "Retour à la villa, atelier de restitution sur la terrasse et clôture des travaux.",
+              },
+              {
+                jour: "Jour 3",
+                titre: "Incentive & départ",
+                matin: "Visite-dégustation d'une distillerie AOC du Sud (Trois-Rivières, La Mauny) à quelques minutes — séquence incentive conviviale.",
+                apresMidi: "Check-out flexible, remise de la facture HT pour prise en charge entreprise.",
+              },
+            ]}
+          />
+
           {/* FORMULAIRE DEVIS */}
           <div id="devis" style={{ scrollMarginTop: 80 }}>
             <p style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, letterSpacing: "0.35em", textTransform: "uppercase", color: CORAL, marginBottom: 10 }}>Devis gratuit</p>
@@ -440,6 +461,13 @@ export default function GuideSeminaires() {
 
         </div>
 
+                <BridgeVilla
+                  villaId="amaryllis"
+                  lieu="Séminaires en Martinique"
+                  tempsRoute="sur place"
+                  copy="Faites de la Villa Amaryllis votre camp de base : catamaran au départ de Sainte-Luce et distilleries AOC à quelques minutes, le tout depuis une villa privatisée pour vous seuls. Réservez en direct et composons ensemble votre séminaire — devis sous 24h."
+                />
+                <BlocAffilie slug="seminaires" />
         <div style={{ padding: "48px 24px", background: "#f6f1e7" }}>
           <NewsletterForm source="guide-seminaires" />
         </div>

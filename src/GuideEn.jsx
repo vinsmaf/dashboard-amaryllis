@@ -2,6 +2,13 @@
 
 import SEOMeta from "./SEOMeta.jsx";
 import NewsletterForm from "./NewsletterForm.jsx";
+import BlocAffilie from "./components/BlocAffilie.jsx";
+import EncartActivite from "./components/EncartActivite.jsx";
+import { ACTIVITES } from "./data/activites.js";
+import ReadingProgressBar from "./components/ReadingProgressBar.jsx";
+import BridgeVilla from "./components/BridgeVilla.jsx";
+import GuideHero from "./components/GuideHero.jsx";
+import GuideStickyNav from "./components/GuideStickyNav.jsx";
 
 const NAVY  = "#0e3b3a";
 const IVORY = "#faf5e9";
@@ -123,7 +130,7 @@ function VillaCompare() {
 export default function GuideEn() {
   return (
     <>
-      <SEOMeta title="Villa Rental Martinique — Direct booking | Amaryllis" description="Book our Martinique villas directly in Sainte-Luce. Salt water infinity pool, 180° ocean view, private cascade pools, jacuzzi. From €110/night. No Airbnb fees." canonical="/villa-rental-martinique" image="https://villamaryllis.com/photos/amaryllis/01.webp" type="website" />
+      <SEOMeta title="Villa Rental Martinique — Direct booking | Amaryllis" description="Book our Martinique villas directly in Sainte-Luce. Salt water infinity pool, 180° ocean view, private cascade pools, jacuzzi. From €110/night. No Airbnb fees." canonical="/villa-rental-martinique" image="https://villamaryllis.com/photos/martinique-panorama.jpg" type="website" />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         "@context": "https://schema.org",
         "@graph": [
@@ -159,37 +166,33 @@ export default function GuideEn() {
         ],
       })}} />
 
+      <ReadingProgressBar cta="Book a villa" ctaHref="/" />
+      <GuideStickyNav
+        lang="en"
+        links={[
+          { label: "Highlights", href: "#spots" },
+          { label: "Activities", href: "#activites" },
+        ]}
+      />
       <div style={{ minHeight: "100vh", background: IVORY, color: TEXT, fontFamily: "'Jost', system-ui, sans-serif" }}>
-        <header style={{ background: NAVY, padding: "0 24px" }}>
-          <div style={{ maxWidth: 960, margin: "0 auto", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <a href="/" style={{ color: IVORY, textDecoration: "none", fontWeight: 300, fontSize: 18, letterSpacing: "0.15em", textTransform: "uppercase" }}>Amaryllis</a>
-            <a href="/" style={{ color: IVORY, textDecoration: "none", fontSize: 13, letterSpacing: "0.08em", opacity: 0.7 }}>← View all villas</a>
-          </div>
-        </header>
 
         {/* Hero */}
-        <div style={{ background: NAVY, padding: "72px 24px 56px", textAlign: "center" }}>
-          <p style={{ color: CORAL, fontSize: 12, letterSpacing: "0.3em", textTransform: "uppercase", marginBottom: 16 }}>Direct booking · No fees</p>
-          <h1 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: "clamp(28px, 5vw, 54px)", letterSpacing: "0.05em", color: IVORY, textTransform: "uppercase", margin: "0 0 20px", lineHeight: 1.1 }}>
-            Villa Rental<br />Martinique
-          </h1>
-          <p style={{ color: "rgba(250,245,233,0.75)", fontSize: 18, maxWidth: 620, margin: "0 auto 32px", lineHeight: 1.7, fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
-            Luxury villas and apartments in Martinique with private pools, ocean views and private jacuzzis. Book directly — save up to 14% vs. Airbnb.
-          </p>
-          <a href="#properties" style={{ display: "inline-block", background: CORAL, color: "#fff", textDecoration: "none", padding: "16px 40px", borderRadius: 8, fontSize: 13, fontWeight: 400, letterSpacing: "0.15em", textTransform: "uppercase" }}>
-            See availability
-          </a>
-          {/* Social proof */}
-          <div style={{ marginTop: 28, display: "flex", alignItems: "center", justifyContent: "center", gap: 20, flexWrap: "wrap" }}>
-            <span style={{ color: "rgba(250,245,233,0.6)", fontSize: 13, fontFamily: "'Jost', sans-serif" }}>⭐ 4.94 · 200+ stays</span>
-            <span style={{ color: "rgba(250,245,233,0.3)", fontSize: 13 }}>·</span>
-            <span style={{ color: "rgba(250,245,233,0.6)", fontSize: 13, fontFamily: "'Jost', sans-serif" }}>Verified on Airbnb & Booking.com</span>
-            <span style={{ color: "rgba(250,245,233,0.3)", fontSize: 13 }}>·</span>
-            <span style={{ color: "rgba(250,245,233,0.6)", fontSize: 13, fontFamily: "'Jost', sans-serif" }}>Response &lt; 1h</span>
-          </div>
-        </div>
+        <GuideHero
+          img="https://villamaryllis.com/photos/martinique-panorama.jpg"
+          alt="Villa rental Martinique — private pool, ocean view, Sainte-Luce"
+          eyebrow="Direct booking · No fees"
+          title="Villa Rental Martinique"
+          subtitle="Luxury villas and apartments in Martinique with private pools, ocean views and private jacuzzis. Book directly — save up to 14% vs. Airbnb."
+          badges={[
+            { label: "⭐ 4.94 · 200+ stays" },
+            { label: "Verified on Airbnb & Booking.com" },
+            { label: "Response < 1h" },
+          ]}
+          lang="en"
+          navBack={{ href: "/guide-hub", label: "Tous les guides" }}
+        />
 
-        <div style={{ maxWidth: 960, margin: "0 auto", padding: "64px 24px 80px" }}>
+        <div id="spots" style={{ maxWidth: 960, margin: "0 auto", padding: "64px 24px 80px" }}>
 
           {/* Why book direct */}
           <div style={{ textAlign: "center", marginBottom: 64 }}>
@@ -289,7 +292,15 @@ export default function GuideEn() {
             </div>
           </div>
 
+          <div id="activites">
+            <EncartActivite activites={[ACTIVITES.catamaran]} lang="en" />
+          </div>
+
+          <EncartActivite activites={[ACTIVITES.catamaran, ACTIVITES.nord]} lang="en" />
+          <EncartActivite activites={[{ ...ACTIVITES.rhum, viatorPath: null }]} lang="en" platform="gyg" />
+
           {/* FAQ */}
+          <EncartActivite activites={[ACTIVITES["fonds-blancs"]]} lang="en" />
           <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 28, letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY, marginBottom: 28 }}>
             ❓ Frequently asked questions
           </h2>
@@ -317,6 +328,14 @@ export default function GuideEn() {
           </div>
         </div>
 
+                <BridgeVilla
+                  villaId="amaryllis"
+                  lieu="Martinique"
+                  tempsRoute=""
+                  lang="en"
+                  copy="Base yourself in Sainte-Luce: Villa Amaryllis puts the south's beaches, the Caribbean coast and every one of these excursions within an easy day's reach. Book direct with us and save up to 14% vs. Airbnb."
+                />
+                <BlocAffilie slug="en" />
         <div style={{ padding: "48px 24px", background: "#f6f1e7" }}>
           <NewsletterForm source="villa-rental-martinique" />
         </div>
