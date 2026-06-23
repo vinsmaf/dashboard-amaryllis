@@ -1,6 +1,7 @@
 // Guide activités à proximité de la Villa Amaryllis — /guide-proximite
 
 import SEOMeta from "./SEOMeta.jsx";
+import MaillageCluster from "./components/seo/MaillageCluster.jsx";
 import NewsletterForm from "./NewsletterForm.jsx";
 import BlocAffilie from "./components/BlocAffilie.jsx";
 import EncartActivite from "./components/EncartActivite.jsx";
@@ -76,6 +77,8 @@ const infos = [
   { emoji: "📶", titre: "WiFi Starlink", texte: "Connexion haut débit incluse. Parfait pour préparer vos sorties ou travailler depuis la villa." },
   { emoji: "📞", titre: "Contact hôte", texte: "Vos hôtes sont joignables par WhatsApp pour tout conseil ou recommandation personnalisée." },
 ];
+
+const BIEN_NAMES = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko", mabouya: "Mabouya", schoelcher: "Bellevue Schœlcher", iguana: "Villa Iguana", nogent: "Appartement Nogent-sur-Marne" };
 
 export default function GuideProximite() {
   return (
@@ -244,6 +247,7 @@ export default function GuideProximite() {
             <span style={{ fontSize: 11, opacity: 0.7 }}>Photos © Wikimedia Commons (CC BY-SA)</span>
           </p>
         </div>
+        <MaillageCluster currentSlug="guide-proximite" bienNames={BIEN_NAMES} />
       </div>
     </>
   );

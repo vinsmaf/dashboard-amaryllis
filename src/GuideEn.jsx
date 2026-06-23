@@ -1,6 +1,7 @@
 // Villa Rental Martinique — English landing page — /villa-rental-martinique
 
 import SEOMeta from "./SEOMeta.jsx";
+import MaillageCluster from "./components/seo/MaillageCluster.jsx";
 import NewsletterForm from "./NewsletterForm.jsx";
 import BlocAffilie from "./components/BlocAffilie.jsx";
 import EncartActivite from "./components/EncartActivite.jsx";
@@ -126,6 +127,8 @@ function VillaCompare() {
     </div>
   );
 }
+
+const BIEN_NAMES = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko", mabouya: "Mabouya", schoelcher: "Bellevue Schœlcher", iguana: "Villa Iguana", nogent: "Appartement Nogent-sur-Marne" };
 
 export default function GuideEn() {
   return (
@@ -345,6 +348,7 @@ export default function GuideEn() {
             © {new Date().getFullYear()} Amaryllis Locations · <a href="/" style={{ color: "rgba(250,245,233,0.4)", textDecoration: "none" }}>villamaryllis.com</a>
           </p>
         </div>
+        <MaillageCluster currentSlug="villa-rental-martinique" bienNames={BIEN_NAMES} />
       </div>
     </>
   );

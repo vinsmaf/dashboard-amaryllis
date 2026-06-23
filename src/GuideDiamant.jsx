@@ -1,6 +1,7 @@
 // Guide Le Diamant Martinique — /guide-le-diamant — v2 immersif
 
 import SEOMeta from "./SEOMeta.jsx";
+import MaillageCluster from "./components/seo/MaillageCluster.jsx";
 import WikiImg from "./WikiImg.jsx";
 import NewsletterForm from "./NewsletterForm.jsx";
 import BlocAffilie from "./components/BlocAffilie.jsx";
@@ -95,6 +96,8 @@ const css = `
     .gd-badge { font-size: 11px; padding: 7px 12px; }
   }
 `;
+
+const BIEN_NAMES = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko", mabouya: "Mabouya", schoelcher: "Bellevue Schœlcher", iguana: "Villa Iguana", nogent: "Appartement Nogent-sur-Marne" };
 
 export default function GuideDiamant() {
   return (
@@ -313,6 +316,7 @@ export default function GuideDiamant() {
             <span style={{ fontSize: 11, opacity: 0.7 }}>Photos © Wikimedia Commons (CC BY-SA)</span>
           </p>
         </div>
+        <MaillageCluster currentSlug="guide-le-diamant" bienNames={BIEN_NAMES} />
       </div>
     </>
   );

@@ -1,5 +1,6 @@
 // Guide.jsx — /guide-hub — Hub Martinique v3 · filtrable zone/type/distance
 import { useState, useEffect } from "react";
+import MaillageCluster from "./components/seo/MaillageCluster.jsx";
 import SEOMeta from "./SEOMeta.jsx";
 import { FAQAccordion } from "./primitives.jsx";
 import { GUIDES_INDEX } from "./data/guidesIndex.js";
@@ -395,6 +396,8 @@ function NewsletterForm() {
 }
 
 /* ─── Composant principal ────────────────────────────────────── */
+const BIEN_NAMES = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko", mabouya: "Mabouya", schoelcher: "Bellevue Schœlcher", iguana: "Villa Iguana", nogent: "Appartement Nogent-sur-Marne" };
+
 export default function Guide() {
   const [filterZone, setFilterZone] = useState("tous");
   const [filterTypes, setFilterTypes] = useState([]);
@@ -711,6 +714,7 @@ export default function Guide() {
       <footer className="g2-footer">
         <p>© {new Date().getFullYear()} Amaryllis Locations · <a href="/">villamaryllis.com</a></p>
       </footer>
+        <MaillageCluster currentSlug="guide-hub" bienNames={BIEN_NAMES} />
     </>
   );
 }

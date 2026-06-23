@@ -1,6 +1,7 @@
 // Guide Sainte-Luce Martinique — /sainte-luce-martinique — SEO P0
 
 import SEOMeta from "./SEOMeta.jsx";
+import MaillageCluster from "./components/seo/MaillageCluster.jsx";
 import NewsletterForm from "./NewsletterForm.jsx";
 import BlocAffilie from "./components/BlocAffilie.jsx";
 import EncartActivite from "./components/EncartActivite.jsx";
@@ -157,6 +158,8 @@ const villas = [
     photo: "https://villamaryllis.com/photos/schoelcher/01.webp",
   },
 ];
+
+const BIEN_NAMES = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko", mabouya: "Mabouya", schoelcher: "Bellevue Schœlcher", iguana: "Villa Iguana", nogent: "Appartement Nogent-sur-Marne" };
 
 export default function GuideSainteLuce() {
   return (
@@ -536,6 +539,7 @@ export default function GuideSainteLuce() {
           <p style={{ color: "rgba(250,245,233,0.3)", fontFamily: "'Jost', sans-serif", fontSize: 11, margin: 0 }}>© {new Date().getFullYear()} Résidence Amaryllis · Sainte-Luce, Martinique</p>
         </footer>
 
+        <MaillageCluster currentSlug="sainte-luce-martinique" bienNames={BIEN_NAMES} />
       </div>
     </>
   );

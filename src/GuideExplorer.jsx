@@ -1,6 +1,7 @@
 // GuideExplorer.jsx — /explorer — Hub carte interactive Sud Martinique
 
 import { useState, useCallback, useRef, useEffect } from "react";
+import MaillageCluster from "./components/seo/MaillageCluster.jsx";
 import SEOMeta from "./SEOMeta.jsx";
 import NewsletterForm from "./NewsletterForm.jsx";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
@@ -615,6 +616,8 @@ function TripBuilder({ pinned, onUnpin }) {
 }
 
 /* ─── Composant principal ────────────────────────────────────── */
+const BIEN_NAMES = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko", mabouya: "Mabouya", schoelcher: "Bellevue Schœlcher", iguana: "Villa Iguana", nogent: "Appartement Nogent-sur-Marne" };
+
 export default function GuideExplorer() {
   const [activeFilter, setActiveFilter] = useState("Tous");
   const [zone, setZone]                 = useState("Tous");
@@ -934,6 +937,7 @@ export default function GuideExplorer() {
           </a>
         </div>
       </section>
+        <MaillageCluster currentSlug="explorer" bienNames={BIEN_NAMES} />
     </>
   );
 }

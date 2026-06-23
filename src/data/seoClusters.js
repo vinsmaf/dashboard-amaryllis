@@ -22,12 +22,16 @@ export const CLUSTER_GUIDES = {
     "guide-se-deplacer-martinique-sud",
     "guide-martinique-en-couple-sud",
     "guide-snorkeling-tortues-martinique",
+    "guide-proximite",
+    "que-faire-martinique",
+    "explorer",
   ],
   "diamant": [
     "guide-plongee-martinique",
     "guide-randonnees-martinique",
     "guide-sainte-anne",
     "guide-arlet",
+    "guide-le-diamant",
   ],
   "sejour": [
     "meilleure-saison-martinique",
@@ -38,11 +42,16 @@ export const CLUSTER_GUIDES = {
     "guide-ou-loger-martinique-secteur",
     "guide-itineraire-une-semaine-sud-martinique",
     "guide-budget-vacances-martinique",
+    "location-villa-martinique-piscine",
+    "seminaires",
+    "sainte-luce-martinique",
+    "villa-rental-martinique",
   ],
   "nogent": [
     "guide-que-faire-nogent-sur-marne",
     "guide-ou-dormir-est-paris-nogent",
     "guide-nogent-guinguettes-bord-de-marne",
+    "guide-nogent-sur-marne",
   ],
 };
 
@@ -87,4 +96,13 @@ export const GUIDE_LABELS = {
   "guide-snorkeling-tortues-martinique": "Nager avec les tortues",
   "guide-budget-vacances-martinique": "Budget vacances Martinique",
   "guide-nogent-guinguettes-bord-de-marne": "Guinguettes & bords de Marne",
+  "guide-proximite": "Activités à 15 min de la villa",
+  "que-faire-martinique": "Que faire en Martinique",
+  "explorer": "Carte interactive du Sud",
+  "guide-le-diamant": "Le Diamant & le Rocher",
+  "sainte-luce-martinique": "Séjourner à Sainte-Luce",
+  "location-villa-martinique-piscine": "Villas avec piscine",
+  "seminaires": "Séminaires & événements",
+  "guide-nogent-sur-marne": "Guide Nogent-sur-Marne",
+  "villa-rental-martinique": "Villa Rental Martinique",
 };

@@ -2,6 +2,7 @@
 // Page pilier SEO · keyword : "location villa martinique avec piscine"
 
 import SEOMeta from "./SEOMeta.jsx";
+import MaillageCluster from "./components/seo/MaillageCluster.jsx";
 import NewsletterForm from "./NewsletterForm.jsx";
 import BlocAffilie from "./components/BlocAffilie.jsx";
 import EncartActivite from "./components/EncartActivite.jsx";
@@ -332,6 +333,8 @@ const JSONLD_ARTICLE = {
     },
   ],
 };
+
+const BIEN_NAMES = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko", mabouya: "Mabouya", schoelcher: "Bellevue Schœlcher", iguana: "Villa Iguana", nogent: "Appartement Nogent-sur-Marne" };
 
 export default function GuideVillaPiscine() {
   return (
@@ -728,6 +731,7 @@ export default function GuideVillaPiscine() {
           </p>
         </footer>
 
+        <MaillageCluster currentSlug="location-villa-martinique-piscine" bienNames={BIEN_NAMES} />
       </div>
     </>
   );

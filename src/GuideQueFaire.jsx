@@ -2,6 +2,7 @@
 // Hub SEO haute-intention : agrège toutes les expériences + liens affiliés + maillage guides
 
 import SEOMeta from "./SEOMeta.jsx";
+import MaillageCluster from "./components/seo/MaillageCluster.jsx";
 import NewsletterForm from "./NewsletterForm.jsx";
 import EncartActivite from "./components/EncartActivite.jsx";
 import LienAffilie from "./components/LienAffilie.jsx";
@@ -138,6 +139,8 @@ const S = {
     transition: "box-shadow .2s",
   },
 };
+
+const BIEN_NAMES = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko", mabouya: "Mabouya", schoelcher: "Bellevue Schœlcher", iguana: "Villa Iguana", nogent: "Appartement Nogent-sur-Marne" };
 
 export default function GuideQueFaire() {
   return (
@@ -441,6 +444,7 @@ export default function GuideQueFaire() {
       <div style={{ maxWidth: 860, margin: "48px auto 0", padding: "0 24px 80px" }}>
         <NewsletterForm dark={false} />
       </div>
+        <MaillageCluster currentSlug="que-faire-martinique" bienNames={BIEN_NAMES} />
     </div>
   );
 }

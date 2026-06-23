@@ -2,6 +2,7 @@
 // traf-012 : page SEO guide destination + maillage vers appartement Nogent
 
 import SEOMeta from "./SEOMeta.jsx";
+import MaillageCluster from "./components/seo/MaillageCluster.jsx";
 import NewsletterForm from "./NewsletterForm.jsx";
 import ReadingProgressBar from "./components/ReadingProgressBar.jsx";
 import GuideHero from "./components/GuideHero.jsx";
@@ -107,6 +108,8 @@ const cssStyles = `
     .ng-pi-grid { grid-template-columns: 1fr; }
   }
 `;
+
+const BIEN_NAMES = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko", mabouya: "Mabouya", schoelcher: "Bellevue Schœlcher", iguana: "Villa Iguana", nogent: "Appartement Nogent-sur-Marne" };
 
 export default function GuideNogent() {
   return (
@@ -324,6 +327,7 @@ export default function GuideNogent() {
             © {new Date().getFullYear()} Amaryllis Locations · <a href="/" style={{ color: "rgba(250,245,233,0.4)", textDecoration: "none" }}>villamaryllis.com</a>
           </p>
         </div>
+        <MaillageCluster currentSlug="guide-nogent-sur-marne" bienNames={BIEN_NAMES} />
       </div>
     </>
   );

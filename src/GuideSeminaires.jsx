@@ -2,6 +2,7 @@
 // Cible : DRH, dirigeants PME, event planners — Martinique
 
 import SEOMeta from "./SEOMeta.jsx";
+import MaillageCluster from "./components/seo/MaillageCluster.jsx";
 import { useState } from "react";
 import NewsletterForm from "./NewsletterForm.jsx";
 import BlocAffilie from "./components/BlocAffilie.jsx";
@@ -228,6 +229,8 @@ function DevisForm() {
     </form>
   );
 }
+
+const BIEN_NAMES = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko", mabouya: "Mabouya", schoelcher: "Bellevue Schœlcher", iguana: "Villa Iguana", nogent: "Appartement Nogent-sur-Marne" };
 
 export default function GuideSeminaires() {
   return (
@@ -489,6 +492,7 @@ export default function GuideSeminaires() {
           <p style={{ color: "rgba(250,245,233,0.3)", fontFamily: "'Jost', sans-serif", fontSize: 11, margin: 0 }}>© {new Date().getFullYear()} Résidence Amaryllis · Sainte-Luce, Martinique</p>
         </footer>
 
+        <MaillageCluster currentSlug="seminaires" bienNames={BIEN_NAMES} />
       </div>
     </>
   );
