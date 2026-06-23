@@ -1,6 +1,7 @@
 // Villa Rental Martinique — English landing page — /villa-rental-martinique
 
 import SEOMeta from "./SEOMeta.jsx";
+import { getBien } from "./data/biens.js";
 import MaillageCluster from "./components/seo/MaillageCluster.jsx";
 import NewsletterForm from "./NewsletterForm.jsx";
 import BlocAffilie from "./components/BlocAffilie.jsx";
@@ -20,17 +21,17 @@ const SAND  = "#e8dcc8";
 const MUTED = "#7a6b5a";
 const BASE  = "https://villamaryllis.com";
 
+const _p = (id) => getBien(id)?.prix || 0;
 const propertiesMartinique = [
-  { id: "amaryllis", name: "Villa Amaryllis", location: "Sainte-Luce", price: 280, guests: 8, highlight: "Salt water infinity pool · 180° ocean view · 3 bedrooms" },
-  { id: "zandoli",   name: "Zandoli",         location: "Sainte-Luce", price: 220, guests: 5, highlight: "Private cascade pool · Sea view · Mezzanine · Tropical garden" },
-  { id: "iguana",    name: "Villa Iguana",    location: "Sainte-Luce", price: 180, guests: 6, highlight: "Salt water pool (non-chlorinated) · Diamond Rock view" },
-  { id: "geko",      name: "Géko",            location: "Sainte-Luce", price: 150, guests: 4, highlight: "Private cascade pool · Tropical garden · BBQ" },
-  { id: "mabouya",   name: "Mabouya",  location: "Sainte-Luce", price: 110, guests: 2, highlight: "Private jacuzzi · Sea view · Romantic" },
-  { id: "schoelcher",name: "Bellevue",        location: "Schœlcher",   price: 100, guests: 2, highlight: "Panoramic Fort-de-France Bay view" },
+  { id: "amaryllis",  name: "Villa Amaryllis", location: "Sainte-Luce",  price: _p("amaryllis"),  guests: 8, highlight: "Salt water infinity pool · 180° ocean view · 3 bedrooms" },
+  { id: "zandoli",    name: "Zandoli",         location: "Sainte-Luce",  price: _p("zandoli"),    guests: 5, highlight: "Private cascade pool · Sea view · Mezzanine · Tropical garden" },
+  { id: "geko",       name: "Géko",            location: "Sainte-Luce",  price: _p("geko"),       guests: 4, highlight: "Private cascade pool · Tropical garden · BBQ" },
+  { id: "mabouya",    name: "Mabouya",         location: "Sainte-Luce",  price: _p("mabouya"),    guests: 2, highlight: "Private jacuzzi · Sea view · Romantic" },
+  { id: "schoelcher", name: "Schœlcher",       location: "Schœlcher",    price: _p("schoelcher"), guests: 2, highlight: "Panoramic Fort-de-France Bay view" },
 ];
 
 const propertiesIDF = [
-  { id: "nogent", name: "Apt. Paris Gates", location: "Nogent-sur-Marne", price: 85, guests: 4, highlight: "15 min from Paris · RER A · Quiet" },
+  { id: "nogent", name: "Apt. Paris Gates", location: "Nogent-sur-Marne", price: _p("nogent"), guests: 4, highlight: "15 min from Paris · RER A · Quiet" },
 ];
 
 // Combined for schema.org
@@ -47,12 +48,12 @@ const faqs = [
 
 // ── VillaCompare — tableau comparatif côte à côte ────────────────────────────
 const COMPARE_COLS = [
-  { id: "amaryllis", label: "Villa Amaryllis",  photo: "/photos/amaryllis/01.webp",  price: "€280",  guests: 8, pool: "∞ Salt water 4×7m", jacuzzi: false, view: "Ocean 180°", wifi: "Starlink", pets: true,  badge: "⭐ Premium" },
-  { id: "zandoli",   label: "Zandoli",          photo: "/photos/zandoli/01.webp",    price: "€220",  guests: 5, pool: "Cascade private",  jacuzzi: false, view: "Sea + garden", wifi: "Starlink", pets: true,  badge: null },
-  { id: "iguana",    label: "Villa Iguana",     photo: "/photos/iguana/01.webp",     price: "€180",  guests: 6, pool: "Salt water",       jacuzzi: false, view: "Diamond Rock", wifi: "Starlink", pets: true,  badge: null },
-  { id: "geko",      label: "Géko",             photo: "/photos/geko/01.webp",       price: "€150",  guests: 4, pool: "Cascade private",  jacuzzi: false, view: "Garden",     wifi: "Starlink", pets: true,  badge: null },
-  { id: "mabouya",   label: "Mabouya",   photo: "/photos/mabouya/01.webp",    price: "€110",  guests: 2, pool: null,               jacuzzi: true,  view: "Sea",        wifi: "Starlink", pets: false, badge: "💑 Romantic" },
-  { id: "nogent",    label: "Apt. Paris Gates", photo: "/photos/nogent/01.webp",     price: "€85",   guests: 4, pool: null,          jacuzzi: false, view: "Courtyard",  wifi: "Fiber",    pets: true,  badge: "🗼 Near Paris" },
+  { id: "amaryllis",  label: "Villa Amaryllis",  photo: "/photos/amaryllis/01.webp",  price: `€${_p("amaryllis")}`,  guests: 8, pool: "∞ Salt water 4×7m", jacuzzi: false, view: "Ocean 180°",    wifi: "Starlink", pets: true,  badge: "⭐ Premium" },
+  { id: "zandoli",    label: "Zandoli",          photo: "/photos/zandoli/01.webp",    price: `€${_p("zandoli")}`,    guests: 5, pool: "Cascade private",   jacuzzi: false, view: "Sea + garden",  wifi: "Starlink", pets: true,  badge: null },
+  { id: "geko",       label: "Géko",             photo: "/photos/geko/01.webp",       price: `€${_p("geko")}`,       guests: 4, pool: "Cascade private",   jacuzzi: false, view: "Garden",        wifi: "Starlink", pets: true,  badge: null },
+  { id: "mabouya",    label: "Mabouya",          photo: "/photos/mabouya/01.webp",    price: `€${_p("mabouya")}`,    guests: 2, pool: null,                jacuzzi: true,  view: "Sea",           wifi: "Starlink", pets: false, badge: "💑 Romantic" },
+  { id: "schoelcher", label: "Schœlcher",        photo: "/photos/schoelcher/01.webp", price: `€${_p("schoelcher")}`, guests: 2, pool: null,                jacuzzi: false, view: "Fort-de-France", wifi: "Fiber",   pets: true,  badge: null },
+  { id: "nogent",     label: "Apt. Paris Gates", photo: "/photos/nogent/01.webp",     price: `€${_p("nogent")}`,     guests: 4, pool: null,                jacuzzi: false, view: "Courtyard",     wifi: "Fiber",    pets: true,  badge: "🗼 Near Paris" },
 ];
 
 const ROWS = [
