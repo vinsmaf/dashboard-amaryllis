@@ -46,7 +46,7 @@ if [[ "${ALLOW_BRANCH_DEPLOY:-0}" != "1" ]]; then
     echo "   → Ou, en secours conscient : ALLOW_BRANCH_DEPLOY=1 npm run deploy:pages"
     exit 1
   fi
-  if [[ -n "$(git status --porcelain 2>/dev/null)" ]]; then
+  if [[ "${ALLOW_DIRTY:-0}" != "1" ]] && [[ -n "$(git status --porcelain 2>/dev/null)" ]]; then
     echo "🚨 STOP — working tree non propre."
     echo "   Des changements non-committés ne sont PAS dans le build git → écrasement"
     echo "   garanti dès que quelqu'un d'autre déploie depuis son machine (vécu 2026-06-23)."
