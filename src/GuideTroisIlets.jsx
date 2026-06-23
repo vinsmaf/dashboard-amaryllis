@@ -107,6 +107,9 @@ const pratique = [
   { icon: "🕘", label: "Musée de la Pagerie", valeur: "Mar–Dim 9h–17h · ~6€/adulte" },
   { icon: "⛵", label: "Bateau Fort-de-France", valeur: "Vedette depuis la marina · 20 min · ~15€" },
   { icon: "🅿️", label: "Parking", valeur: "Gratuit bourg · Payant Anse Mitan (~2€)" },
+  { icon: "📅", label: "Meilleure période", valeur: "Toute l'année · Éviter carnaval (foule) · Musée fermé lundi" },
+  { icon: "💶", label: "Budget journée", valeur: "~40–60€/pers (musée + déjeuner + parking + bateau option)" },
+  { icon: "🍽️", label: "Restaurant recommandé", valeur: "La Villa Créole (Anse Mitan) · Marine Hôtel (marina, vue baie)" },
 ];
 
 const css = `
@@ -377,8 +380,13 @@ export default function GuideTroisIlets() {
             <a href="/guide-le-diamant" style={{ color: MUTED, textDecoration: "none", fontSize: 13, fontFamily: "'Jost', sans-serif", fontWeight: 300, letterSpacing: "0.04em" }}>
               ← Guide Le Diamant
             </a>
-            <a href="/guide-hub" style={{ color: MUTED, textDecoration: "none", fontSize: 13, fontFamily: "'Jost', sans-serif", fontWeight: 300, letterSpacing: "0.04em" }}>
-              Tous les guides →
+            <a href="/guide-arlet" style={{ color: MUTED, textDecoration: "none", fontSize: 13, fontFamily: "'Jost', sans-serif", fontWeight: 300, letterSpacing: "0.04em" }}>
+              Guide l'Anse d'Arlet →
+            </a>
+          </div>
+          <div style={{ textAlign: "center", marginTop: 12 }}>
+            <a href="/guide-hub" style={{ color: MUTED, textDecoration: "none", fontSize: 12, fontFamily: "'Jost', sans-serif", fontWeight: 300, letterSpacing: "0.04em", opacity: 0.7 }}>
+              Tous les guides de Martinique
             </a>
           </div>
         </div>
