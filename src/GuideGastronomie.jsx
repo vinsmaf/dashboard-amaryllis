@@ -4,6 +4,13 @@
 import SEOMeta from "./SEOMeta.jsx";
 import MaillageCluster from "./components/seo/MaillageCluster.jsx";
 import NewsletterForm from "./NewsletterForm.jsx";
+import BlocAffilie from "./components/BlocAffilie.jsx";
+import EncartActivite from "./components/EncartActivite.jsx";
+import { ACTIVITES } from "./data/activites.js";
+import ReadingProgressBar from "./components/ReadingProgressBar.jsx";
+import BridgeVilla from "./components/BridgeVilla.jsx";
+import GuideHero from "./components/GuideHero.jsx";
+import GuideStickyNav from "./components/GuideStickyNav.jsx";
 
 // Noms canoniques des biens pour le maillage interne SEO ("villa" = Amaryllis + Iguana uniquement).
 const BIEN_NAMES = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko", mabouya: "Mabouya", schoelcher: "Bellevue Schœlcher", iguana: "Villa Iguana", nogent: "Appartement Nogent-sur-Marne" };
@@ -17,7 +24,7 @@ const SAND  = "#e8dcc8";
 const MUTED = "#7a6b5a";
 const BASE  = "https://villamaryllis.com";
 
-const HERO_IMG  = "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Accras_de_morue.jpg/960px-Accras_de_morue.jpg";
+const HERO_IMG  = "/photos/gastronomie.jpg";
 const MARCHE_IMG = "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/Marche_couvert_de_la_Martinique.jpg/960px-Marche_couvert_de_la_Martinique.jpg";
 const FRUITS_IMG = "https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/Tropical_fruits.jpg/960px-Tropical_fruits.jpg";
 
@@ -191,7 +198,7 @@ const css = `
     font-size: clamp(20px, 4vw, 28px);
     letter-spacing: .05em; margin: 0 0 10px; color: ${IVORY};
   }
-  .gt-must-accroche {
+  .gt-must .gt-must-accroche {
     font-family: 'Cormorant Garamond', Georgia, serif;
     font-size: 17px; line-height: 1.7; color: rgba(250,245,233,.8);
     margin: 0 0 24px;
@@ -203,7 +210,7 @@ const css = `
     color: ${CORAL}; text-transform: uppercase; letter-spacing: .1em;
     margin-bottom: 7px;
   }
-  .gt-must-texte {
+  .gt-must .gt-must-texte {
     font-family: 'Cormorant Garamond', Georgia, serif;
     font-size: 16px; line-height: 1.75; color: rgba(250,245,233,.82);
   }
@@ -229,7 +236,7 @@ const css = `
     text-transform: uppercase; letter-spacing: .1em; color: ${CORAL};
     margin-bottom: 6px;
   }
-  .gt-item-texte {
+  .gt-card .gt-item-texte {
     font-family: 'Cormorant Garamond', Georgia, serif;
     font-size: 17px; line-height: 1.75; color: ${TEXT};
   }
@@ -284,6 +291,13 @@ export default function GuideGastronomie() {
       })}} />
 
       <div style={{ minHeight: "100vh", background: IVORY, color: TEXT, fontFamily: "'Jost', system-ui, sans-serif" }}>
+        <ReadingProgressBar ctaHref="/" />
+        <GuideStickyNav
+          links={[
+            { label: "Spots", href: "#spots" },
+            { label: "Activités", href: "#activites" },
+          ]}
+        />
 
         {/* HEADER */}
         <header style={{ background: NAVY, padding: "0 24px" }}>
@@ -293,31 +307,17 @@ export default function GuideGastronomie() {
           </div>
         </header>
 
-        {/* HERO */}
-        <div style={{
-          position: "relative", height: "min(90vh, 620px)", overflow: "hidden",
-          backgroundImage: `url(${HERO_IMG})`,
-          backgroundSize: "cover", backgroundPosition: "center 40%",
-          backgroundColor: "#0a2e2d",
-        }}>
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(14,59,58,.15) 0%, rgba(14,59,58,.82) 100%)" }} />
-          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "0 28px 48px" }}>
-            <div style={{ maxWidth: 680, margin: "0 auto", width: "100%" }}>
-              <p style={{ color: CORAL, fontSize: 11, letterSpacing: "0.28em", textTransform: "uppercase", margin: "0 0 12px", fontFamily: "'Jost', sans-serif" }}>
-                Sainte-Luce · Sud Martinique
-              </p>
-              <h1 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: "clamp(28px, 6vw, 56px)", letterSpacing: "0.06em", color: IVORY, textTransform: "uppercase", margin: "0 0 16px", lineHeight: 1.05 }}>
-                Gastronomie<br />Créole
-              </h1>
-              <p style={{ color: "rgba(250,245,233,.85)", fontSize: "clamp(15px, 2vw, 18px)", maxWidth: 500, margin: 0, lineHeight: 1.65, fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
-                Langouste grillée, blaff de poissons, ti-punch au rhum agricole AOC — la table martiniquaise depuis Sainte-Luce.
-              </p>
-            </div>
-          </div>
-        </div>
+        <GuideHero
+          img={HERO_IMG}
+          alt="Gastronomie créole Martinique — langouste et rhum agricole"
+          eyebrow="Sainte-Luce · Sud Martinique"
+          title="Gastronomie Créole"
+          subtitle="Langouste grillée, blaff de poissons, ti-punch au rhum agricole AOC — la table martiniquaise depuis Sainte-Luce."
+          badges={badges}
+        />
 
         {/* CONTENU */}
-        <div style={{ maxWidth: 680, margin: "0 auto", padding: "52px 24px 80px" }}>
+        <div id="spots" style={{ maxWidth: 680, margin: "0 auto", padding: "52px 24px 80px" }}>
 
           {/* BADGES */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 48 }}>
@@ -329,6 +329,9 @@ export default function GuideGastronomie() {
           </div>
 
           {/* SPOTS */}
+          <div id="activites">
+            <EncartActivite activites={[{ ...ACTIVITES.rhum, viatorPath: null }]} platform="gyg" />
+          </div>
           {spots.map(spot => spot.must ? (
             <div key={spot.titre} className="gt-must">
               <div className="gt-must-label">✦ Must absolu</div>
@@ -360,6 +363,9 @@ export default function GuideGastronomie() {
             </div>
           ))}
 
+          <EncartActivite activites={[ACTIVITES.vanille, ACTIVITES["food-tour"]]} />
+          <EncartActivite activites={[ACTIVITES["food-tour"]]} />
+
           {/* INFOS PRATIQUES */}
           <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 22, letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY, margin: "0 0 20px" }}>
             Infos pratiques
@@ -375,6 +381,7 @@ export default function GuideGastronomie() {
           </div>
 
           {/* CTA LOGEMENT */}
+          <EncartActivite activites={[ACTIVITES["mangrove-kayak"]]} />
           <div style={{ background: NAVY, borderRadius: 16, padding: "36px 28px", textAlign: "center", marginBottom: 48 }}>
             <p style={{ color: CORAL, fontSize: 10, letterSpacing: "0.28em", textTransform: "uppercase", marginBottom: 10, fontFamily: "'Jost', sans-serif" }}>Base idéale</p>
             <h3 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 22, letterSpacing: "0.08em", color: IVORY, textTransform: "uppercase", margin: "0 0 12px" }}>
@@ -388,6 +395,13 @@ export default function GuideGastronomie() {
             </a>
           </div>
 
+          <BridgeVilla
+            villaId="amaryllis"
+            lieu="Gastronomie créole"
+            tempsRoute="sur place"
+            copy="Faites de Sainte-Luce votre camp de base gourmand : marchés du Sud, distilleries AOC et tables créoles sont tous à moins de 20 minutes. Réservez la Villa Amaryllis en direct, sans frais d'intermédiaire, et profitez d'une cuisine équipée et d'un barbecue pour vos retours de marché."
+          />
+
           {/* NAVIGATION */}
           <div style={{ display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
             <a href="/activites-sainte-luce" style={{ color: MUTED, textDecoration: "none", fontSize: 13, fontFamily: "'Jost', sans-serif", fontWeight: 300, letterSpacing: "0.04em" }}>
@@ -399,6 +413,7 @@ export default function GuideGastronomie() {
           </div>
         </div>
 
+                <BlocAffilie slug="gastronomie" />
         <div style={{ padding: "48px 24px", background: "#f6f1e7" }}>
           <NewsletterForm source="guide-gastronomie" />
         </div>

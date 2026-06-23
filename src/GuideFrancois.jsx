@@ -4,6 +4,14 @@
 import SEOMeta from "./SEOMeta.jsx";
 import MaillageCluster from "./components/seo/MaillageCluster.jsx";
 import NewsletterForm from "./NewsletterForm.jsx";
+import BlocAffilie from "./components/BlocAffilie.jsx";
+import ReadingProgressBar from "./components/ReadingProgressBar.jsx";
+import GuideHero from "./components/GuideHero.jsx";
+import GuideStickyNav from "./components/GuideStickyNav.jsx";
+import BridgeVilla from "./components/BridgeVilla.jsx";
+import ProgrammeSejour from "./components/ProgrammeSejour.jsx";
+import EncartActivite from "./components/EncartActivite.jsx";
+import { ACTIVITES } from "./data/activites.js";
 
 // Noms canoniques des biens pour le maillage interne SEO ("villa" = Amaryllis + Iguana uniquement).
 const BIEN_NAMES = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko", mabouya: "Mabouya", schoelcher: "Bellevue Schœlcher", iguana: "Villa Iguana", nogent: "Appartement Nogent-sur-Marne" };
@@ -17,7 +25,7 @@ const SAND  = "#e8dcc8";
 const MUTED = "#7a6b5a";
 const BASE  = "https://villamaryllis.com";
 
-const HERO_IMG  = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Salines_beach.jpg/960px-Salines_beach.jpg";
+const HERO_IMG  = "/photos/fonds-blancs.jpg";
 const MANGROVE_IMG = "https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Rocher_du_Diamant_%28Le_Diamant%2C_Martinique%29_-_03.jpg/960px-Rocher_du_Diamant_%28Le_Diamant%2C_Martinique%29_-_03.jpg";
 
 const badges = [
@@ -158,7 +166,7 @@ const css = `
     font-size: clamp(20px, 4vw, 28px);
     letter-spacing: .05em; margin: 0 0 10px; color: ${IVORY};
   }
-  .gt-must-accroche {
+  .gt-must .gt-must-accroche {
     font-family: 'Cormorant Garamond', Georgia, serif;
     font-size: 17px; line-height: 1.7; color: rgba(250,245,233,.8);
     margin: 0 0 24px;
@@ -170,7 +178,7 @@ const css = `
     color: ${CORAL}; text-transform: uppercase; letter-spacing: .1em;
     margin-bottom: 7px;
   }
-  .gt-must-texte {
+  .gt-must .gt-must-texte {
     font-family: 'Cormorant Garamond', Georgia, serif;
     font-size: 16px; line-height: 1.75; color: rgba(250,245,233,.82);
   }
@@ -196,7 +204,7 @@ const css = `
     text-transform: uppercase; letter-spacing: .1em; color: ${CORAL};
     margin-bottom: 6px;
   }
-  .gt-item-texte {
+  .gt-card .gt-item-texte {
     font-family: 'Cormorant Garamond', Georgia, serif;
     font-size: 17px; line-height: 1.75; color: ${TEXT};
   }
@@ -251,6 +259,14 @@ export default function GuideFrancois() {
       })}} />
 
       <div style={{ minHeight: "100vh", background: IVORY, color: TEXT, fontFamily: "'Jost', system-ui, sans-serif" }}>
+        <ReadingProgressBar ctaHref="/" />
+        <GuideStickyNav
+          links={[
+            { label: "Spots", href: "#spots" },
+            { label: "Activités", href: "#activites" },
+            { label: "Programme", href: "#programme" },
+          ]}
+        />
 
         {/* HEADER */}
         <header style={{ background: NAVY, padding: "0 24px" }}>
@@ -260,31 +276,17 @@ export default function GuideFrancois() {
           </div>
         </header>
 
-        {/* HERO */}
-        <div style={{
-          position: "relative", height: "min(90vh, 620px)", overflow: "hidden",
-          backgroundImage: `url(${HERO_IMG})`,
-          backgroundSize: "cover", backgroundPosition: "center 40%",
-          backgroundColor: "#0a2e2d",
-        }}>
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(14,59,58,.15) 0%, rgba(14,59,58,.82) 100%)" }} />
-          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "0 28px 48px" }}>
-            <div style={{ maxWidth: 680, margin: "0 auto", width: "100%" }}>
-              <p style={{ color: CORAL, fontSize: 11, letterSpacing: "0.28em", textTransform: "uppercase", margin: "0 0 12px", fontFamily: "'Jost', sans-serif" }}>
-                35 min de Sainte-Luce · Côte Atlantique
-              </p>
-              <h1 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: "clamp(28px, 6vw, 56px)", letterSpacing: "0.06em", color: IVORY, textTransform: "uppercase", margin: "0 0 16px", lineHeight: 1.05 }}>
-                Le<br />François
-              </h1>
-              <p style={{ color: "rgba(250,245,233,.85)", fontSize: "clamp(15px, 2vw, 18px)", maxWidth: 500, margin: 0, lineHeight: 1.65, fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
-                Fonds Blancs, piscines naturelles au large, marché de pêcheurs, kayak en mangrove — la Martinique atlantique dans toute son authenticité.
-              </p>
-            </div>
-          </div>
-        </div>
+        <GuideHero
+          img={HERO_IMG}
+          alt="Fonds Blancs du François, Martinique"
+          eyebrow="35 min de Sainte-Luce · Côte Atlantique"
+          title="Le François"
+          subtitle="Fonds Blancs, piscines naturelles au large, marché de pêcheurs, kayak en mangrove — la Martinique atlantique dans toute son authenticité."
+          badges={badges}
+        />
 
         {/* CONTENU */}
-        <div style={{ maxWidth: 680, margin: "0 auto", padding: "52px 24px 80px" }}>
+        <div id="spots" style={{ maxWidth: 680, margin: "0 auto", padding: "52px 24px 80px" }}>
 
           {/* BADGES */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 48 }}>
@@ -294,8 +296,12 @@ export default function GuideFrancois() {
               </span>
             ))}
           </div>
+          <div id="activites">
+            <EncartActivite activites={[ACTIVITES["fonds-blancs"]]} />
+          </div>
 
           {/* SPOTS */}
+          <EncartActivite activites={[ACTIVITES["ilets-chancel"]]} />
           {spots.map(spot => spot.must ? (
             <div key={spot.titre} className="gt-must">
               <div className="gt-must-label">✦ Must absolu</div>
@@ -327,6 +333,9 @@ export default function GuideFrancois() {
             </div>
           ))}
 
+          <EncartActivite activites={[ACTIVITES.catamaran]} />
+          <EncartActivite activites={[ACTIVITES["fonds-blancs"], ACTIVITES["ilets-chancel"]]} />
+
           {/* INFOS PRATIQUES */}
           <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 22, letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY, margin: "0 0 20px" }}>
             Infos pratiques
@@ -339,6 +348,32 @@ export default function GuideFrancois() {
                 <div className="gt-grid-val">{p.valeur}</div>
               </div>
             ))}
+          </div>
+
+          <BridgeVilla
+  villaId="amaryllis"
+  lieu="Le François"
+  tempsRoute="35-40 min"
+  copy="Faites du sud votre camp de base : depuis nos villas de Sainte-Luce, avec piscine privée et vue mer, Le François est à 35-40 min de route. Réservez en direct, sans frais de plateforme, et rentrez chaque soir au calme."
+/>
+          <div id="programme">
+          <ProgrammeSejour
+  jours={[
+    {
+      jour: "Jour 1",
+      titre: "Les Fonds Blancs et le bourg du François",
+      matin: "Départ depuis votre villa de Sainte-Luce (35-40 min) vers le quai du François. Excursion en bateau vers les Fonds Blancs : baignade dans les piscines naturelles, sable blanc immergé et ti-punch servi à bord.",
+      apresMidi: "Retour au bourg pour déjeuner au bord de mer (court-bouillon de poisson, chatrou ou langouste achetée au quai et cuisinée sur place).",
+      soir: "Retour à Sainte-Luce, apéritif au coucher du soleil depuis la terrasse de la villa.",
+    },
+    {
+      jour: "Jour 2",
+      titre: "Îlets sauvages et mangrove",
+      matin: "Sortie vers les îlets du François : iguanes, coraux et fonds transparents, puis exploration en kayak ou paddle dans la mangrove de la baie.",
+      apresMidi: "Marché aux poissons (le samedi de préférence) et flânerie sur le bord de mer atlantique avant de reprendre la route vers le sud.",
+    },
+  ]}
+/>
           </div>
 
           {/* CTA LOGEMENT */}
@@ -366,6 +401,7 @@ export default function GuideFrancois() {
           </div>
         </div>
 
+                <BlocAffilie slug="francois" />
         <div style={{ padding: "48px 24px", background: "#f6f1e7" }}>
           <NewsletterForm source="guide-francois" />
         </div>

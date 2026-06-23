@@ -4,6 +4,14 @@
 import SEOMeta from "./SEOMeta.jsx";
 import MaillageCluster from "./components/seo/MaillageCluster.jsx";
 import NewsletterForm from "./NewsletterForm.jsx";
+import BlocAffilie from "./components/BlocAffilie.jsx";
+import EncartActivite from "./components/EncartActivite.jsx";
+import { ACTIVITES } from "./data/activites.js";
+import ReadingProgressBar from "./components/ReadingProgressBar.jsx";
+import BridgeVilla from "./components/BridgeVilla.jsx";
+import ProgrammeSejour from "./components/ProgrammeSejour.jsx";
+import GuideHero from "./components/GuideHero.jsx";
+import GuideStickyNav from "./components/GuideStickyNav.jsx";
 
 // Noms canoniques des biens pour le maillage interne SEO ("villa" = Amaryllis + Iguana uniquement).
 const BIEN_NAMES = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko", mabouya: "Mabouya", schoelcher: "Bellevue Schœlcher", iguana: "Villa Iguana", nogent: "Appartement Nogent-sur-Marne" };
@@ -17,13 +25,13 @@ const SAND  = "#e8dcc8";
 const MUTED = "#7a6b5a";
 const BASE  = "https://villamaryllis.com";
 
-const HERO_IMG  = "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Saint-Pierre_Martinique_ruins.jpg/960px-Saint-Pierre_Martinique_ruins.jpg";
+const HERO_IMG  = "/photos/saint-pierre.jpg";
 const WRECK_IMG = "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Roraima_wreck_Saint-Pierre_Martinique.jpg/960px-Roraima_wreck_Saint-Pierre_Martinique.jpg";
 const RUINS_IMG = "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Saint-Pierre_theatre_ruins_Martinique.jpg/960px-Saint-Pierre_theatre_ruins_Martinique.jpg";
 
 const badges = [
   { icon: "🌋", label: "Éruption 1902 — 30 000 morts", must: true },
-  { icon: "🤿", label: "18 épaves de plongée", must: true },
+  { icon: "🤿", label: "une dizaine d'épaves de plongée", must: true },
   { icon: "📍", label: "1h de Sainte-Luce" },
   { icon: "🏛️", label: "Musée Frank Perret" },
   { icon: "🚶", label: "Ruines & théâtre" },
@@ -39,7 +47,7 @@ const spots = [
     contenu: [
       {
         nom: "La catastrophe",
-        texte: "Le 8 mai 1902 à 7h52, la Montagne Pelée libère une nuée ardente — un mélange de gaz brûlants, de cendres et de roches en fusion — qui dévale à 700 km/h vers Saint-Pierre. La ville entière est anéantie en moins de deux minutes. Aucune autre catastrophe volcanique moderne n'a tué autant de personnes aussi rapidement. Les flammes atteignent 1 000°C et carbonisent tout sur leur passage.",
+        texte: "Le 8 mai 1902 à 8h02, la Montagne Pelée libère une nuée ardente — un mélange de gaz brûlants, de cendres et de roches en fusion — qui dévale à 700 km/h vers Saint-Pierre. La ville entière est anéantie en moins de deux minutes. Aucune autre catastrophe volcanique moderne n'a tué autant de personnes aussi rapidement. Les flammes atteignent 1 000°C et carbonisent tout sur leur passage.",
       },
       {
         nom: "Le seul survivant de la ville",
@@ -55,7 +63,7 @@ const spots = [
     must: true,
     emoji: "🤿",
     titre: "Les épaves de plongée — un musée sous-marin unique",
-    accroche: "Le 8 mai 1902, dix-huit navires ancrés dans la rade de Saint-Pierre coulèrent en quelques minutes. Cent vingt ans plus tard, ils gisent entre 5 et 55 mètres de fond et constituent l'un des sites de plongée les plus exceptionnels des Caraïbes.",
+    accroche: "Le 8 mai 1902, une dizaine de navires ancrés dans la rade de Saint-Pierre coulèrent en quelques minutes. Cent vingt ans plus tard, ils gisent entre 5 et 55 mètres de fond et constituent l'un des sites de plongée les plus exceptionnels des Caraïbes.",
     img: null,
     contenu: [
       {
@@ -81,7 +89,7 @@ const spots = [
     contenu: [
       {
         nom: "La collection",
-        texte: "Installé dans une demeure du XIXe siècle rescapée des décombres, le musée Frank Perret rassemble les vestiges les plus saisissants de la catastrophe : horloges arrêtées à l'heure exacte de l'éruption (7h52), verres et bouteilles déformés par la chaleur, cloches de cathédrale fondues, objets du quotidien carbonisés. Chaque pièce raconte une vie interrompue net. La collection, constituée par le volcanologue américain Frank Perret dans les années 1930, n'a pas d'équivalent aux Caraïbes.",
+        texte: "Installé dans une demeure du XIXe siècle rescapée des décombres, le musée Frank Perret rassemble les vestiges les plus saisissants de la catastrophe : horloges arrêtées à l'heure exacte de l'éruption (8h02), verres et bouteilles déformés par la chaleur, cloches de cathédrale fondues, objets du quotidien carbonisés. Chaque pièce raconte une vie interrompue net. La collection, constituée par le volcanologue américain Frank Perret dans les années 1930, n'a pas d'équivalent aux Caraïbes.",
       },
       {
         nom: "La visite",
@@ -182,7 +190,7 @@ const css = `
     font-size: clamp(20px, 4vw, 28px);
     letter-spacing: .05em; margin: 0 0 10px; color: ${IVORY};
   }
-  .gt-must-accroche {
+  .gt-must .gt-must-accroche {
     font-family: 'Cormorant Garamond', Georgia, serif;
     font-size: 17px; line-height: 1.7; color: rgba(250,245,233,.8);
     margin: 0 0 24px;
@@ -194,7 +202,7 @@ const css = `
     color: ${CORAL}; text-transform: uppercase; letter-spacing: .1em;
     margin-bottom: 7px;
   }
-  .gt-must-texte {
+  .gt-must .gt-must-texte {
     font-family: 'Cormorant Garamond', Georgia, serif;
     font-size: 16px; line-height: 1.75; color: rgba(250,245,233,.82);
   }
@@ -220,7 +228,7 @@ const css = `
     text-transform: uppercase; letter-spacing: .1em; color: ${CORAL};
     margin-bottom: 6px;
   }
-  .gt-item-texte {
+  .gt-card .gt-item-texte {
     font-family: 'Cormorant Garamond', Georgia, serif;
     font-size: 17px; line-height: 1.75; color: ${TEXT};
   }
@@ -267,7 +275,7 @@ export default function GuideSaintPierre() {
         "@context": "https://schema.org",
         "@type": "Article",
         "headline": "Saint-Pierre Martinique — Pompéi des Caraïbes : éruption 1902, épaves de plongée et ruines",
-        "description": "Guide complet de Saint-Pierre depuis Sainte-Luce : l'éruption de la Montagne Pelée 1902, les 18 épaves de plongée, le musée Frank Perret, les ruines du théâtre et la prison de Cyparis. À 1h de nos villas.",
+        "description": "Guide complet de Saint-Pierre depuis Sainte-Luce : l'éruption de la Montagne Pelée 1902, une dizaine d'épaves de plongée, le musée Frank Perret, les ruines du théâtre et la prison de Cyparis. À 1h de nos villas.",
         "url": `${BASE}/guide-saint-pierre-martinique`,
         "image": HERO_IMG,
         "author": { "@type": "Organization", "name": "Amaryllis Locations", "url": BASE },
@@ -275,6 +283,14 @@ export default function GuideSaintPierre() {
       })}} />
 
       <div style={{ minHeight: "100vh", background: IVORY, color: TEXT, fontFamily: "'Jost', system-ui, sans-serif" }}>
+        <ReadingProgressBar ctaHref="/" />
+        <GuideStickyNav
+          links={[
+            { label: "Spots", href: "#spots" },
+            { label: "Activités", href: "#activites" },
+            { label: "Programme", href: "#programme" },
+          ]}
+        />
 
         {/* HEADER */}
         <header style={{ background: NAVY, padding: "0 24px" }}>
@@ -284,31 +300,17 @@ export default function GuideSaintPierre() {
           </div>
         </header>
 
-        {/* HERO */}
-        <div style={{
-          position: "relative", height: "min(90vh, 620px)", overflow: "hidden",
-          backgroundImage: `url(${HERO_IMG})`,
-          backgroundSize: "cover", backgroundPosition: "center 40%",
-          backgroundColor: "#0a2e2d",
-        }}>
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(14,59,58,.15) 0%, rgba(14,59,58,.82) 100%)" }} />
-          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "0 28px 48px" }}>
-            <div style={{ maxWidth: 680, margin: "0 auto", width: "100%" }}>
-              <p style={{ color: CORAL, fontSize: 11, letterSpacing: "0.28em", textTransform: "uppercase", margin: "0 0 12px", fontFamily: "'Jost', sans-serif" }}>
-                1h de Sainte-Luce · Nord Caraïbe
-              </p>
-              <h1 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: "clamp(28px, 6vw, 56px)", letterSpacing: "0.06em", color: IVORY, textTransform: "uppercase", margin: "0 0 16px", lineHeight: 1.05 }}>
-                Saint-Pierre<br />Martinique
-              </h1>
-              <p style={{ color: "rgba(250,245,233,.85)", fontSize: "clamp(15px, 2vw, 18px)", maxWidth: 500, margin: 0, lineHeight: 1.65, fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
-                La Pompéi des Caraïbes — éruption de 1902, 18 épaves de plongée légendaires, ruines d'une ville engloutie.
-              </p>
-            </div>
-          </div>
-        </div>
+        <GuideHero
+          img={HERO_IMG}
+          alt="Saint-Pierre Martinique — ruines et baie volcanique"
+          eyebrow="1h de Sainte-Luce · Nord Caraïbe"
+          title="Saint-Pierre Martinique"
+          subtitle="La Pompéi des Caraïbes — éruption de 1902, une dizaine d'épaves de plongée légendaires, ruines d'une ville engloutie."
+          badges={badges}
+        />
 
         {/* CONTENU */}
-        <div style={{ maxWidth: 680, margin: "0 auto", padding: "52px 24px 80px" }}>
+        <div id="spots" style={{ maxWidth: 680, margin: "0 auto", padding: "52px 24px 80px" }}>
 
           {/* BADGES */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 48 }}>
@@ -351,6 +353,30 @@ export default function GuideSaintPierre() {
             </div>
           ))}
 
+          <div id="activites">
+            <EncartActivite activites={[ACTIVITES["plongee-cata-prive"], ACTIVITES.nord]} />
+          </div>
+
+          <div id="programme">
+          <ProgrammeSejour
+            jours={[
+              {
+                jour: "Jour 1",
+                titre: "Le musée sous-marin de la rade",
+                matin: "Plongée ou snorkeling sur les épaves de 1902 (Tamaya et Gabrielle accessibles aux débutants, Roraima pour confirmés). Réservation indispensable en haute saison.",
+                apresMidi: "Séchage au soleil sur le front de mer, déjeuner créole au bourg, puis musée Frank Perret (horloges arrêtées à 8h02, cloches fondues) — 1h de visite.",
+                soir: "Retour côté Sud par la N2, coucher de soleil depuis la villa.",
+              },
+              {
+                jour: "Jour 2",
+                titre: "Ruines, volcan et rhum du Nord",
+                matin: "Balade libre dans les ruines : théâtre à l'italienne, prison de Cyparis, cathédrale du Mouillage (carte gratuite à l'Office de tourisme).",
+                apresMidi: "Au choix : montée vers la Montagne Pelée depuis l'Aileron (partir tôt, 3h A/R) ou circuit guidé du Nord volcanique avec arrêt distilleries Depaz, dégustation AOC.",
+              },
+            ]}
+          />
+          </div>
+
           {/* INFOS PRATIQUES */}
           <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 22, letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY, margin: "0 0 20px" }}>
             Infos pratiques
@@ -379,6 +405,14 @@ export default function GuideSaintPierre() {
             </a>
           </div>
 
+          <BridgeVilla
+            villaId="amaryllis"
+            lieu="Saint-Pierre"
+            tempsRoute="1h10"
+            copy="Saint-Pierre se savoure mieux sans se presser : posez vos valises à Sainte-Luce, côté Sud ensoleillé, et rayonnez vers le Nord à votre rythme. Réservez votre villa en direct, sans frais d'intermédiaire."
+          />
+          <EncartActivite activites={[{ ...ACTIVITES.rhum, viatorPath: null }]} platform="gyg" />
+
           {/* NAVIGATION */}
           <div style={{ display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
             <a href="/guide-trois-ilets" style={{ color: MUTED, textDecoration: "none", fontSize: 13, fontFamily: "'Jost', sans-serif", fontWeight: 300, letterSpacing: "0.04em" }}>
@@ -390,6 +424,7 @@ export default function GuideSaintPierre() {
           </div>
         </div>
 
+                <BlocAffilie slug="saint-pierre" />
         <div style={{ padding: "48px 24px", background: "#f6f1e7" }}>
           <NewsletterForm source="guide-saint-pierre" />
         </div>

@@ -4,6 +4,14 @@
 import SEOMeta from "./SEOMeta.jsx";
 import MaillageCluster from "./components/seo/MaillageCluster.jsx";
 import NewsletterForm from "./NewsletterForm.jsx";
+import BlocAffilie from "./components/BlocAffilie.jsx";
+import EncartActivite from "./components/EncartActivite.jsx";
+import { ACTIVITES } from "./data/activites.js";
+import ReadingProgressBar from "./components/ReadingProgressBar.jsx";
+import GuideHero from "./components/GuideHero.jsx";
+import GuideStickyNav from "./components/GuideStickyNav.jsx";
+import BridgeVilla from "./components/BridgeVilla.jsx";
+import ProgrammeSejour from "./components/ProgrammeSejour.jsx";
 
 // Noms canoniques des biens pour le maillage interne SEO ("villa" = Amaryllis + Iguana uniquement).
 const BIEN_NAMES = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko", mabouya: "Mabouya", schoelcher: "Bellevue Schœlcher", iguana: "Villa Iguana", nogent: "Appartement Nogent-sur-Marne" };
@@ -17,7 +25,7 @@ const SAND  = "#e8dcc8";
 const MUTED = "#7a6b5a";
 const BASE  = "https://villamaryllis.com";
 
-const HERO_IMG = "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Rhum_J.M_distillery%2C_Macouba%2C_Martinique.jpg/960px-Rhum_J.M_distillery%2C_Macouba%2C_Martinique.jpg";
+const HERO_IMG = "/photos/distilleries.jpg";
 
 // FAQ visible — IDENTIQUE au JSON-LD de functions/[slug].js (slug guide-distilleries-martinique).
 const FAQ = [
@@ -185,7 +193,7 @@ const css = `
     font-size: clamp(20px, 4vw, 28px);
     letter-spacing: .05em; margin: 0 0 10px; color: ${IVORY};
   }
-  .gt-must-accroche {
+  .gt-must .gt-must-accroche {
     font-family: 'Cormorant Garamond', Georgia, serif;
     font-size: 17px; line-height: 1.7; color: rgba(250,245,233,.8);
     margin: 0 0 24px;
@@ -197,7 +205,7 @@ const css = `
     color: ${CORAL}; text-transform: uppercase; letter-spacing: .1em;
     margin-bottom: 7px;
   }
-  .gt-must-texte {
+  .gt-must .gt-must-texte {
     font-family: 'Cormorant Garamond', Georgia, serif;
     font-size: 16px; line-height: 1.75; color: rgba(250,245,233,.82);
   }
@@ -223,7 +231,7 @@ const css = `
     text-transform: uppercase; letter-spacing: .1em; color: ${CORAL};
     margin-bottom: 6px;
   }
-  .gt-item-texte {
+  .gt-card .gt-item-texte {
     font-family: 'Cormorant Garamond', Georgia, serif;
     font-size: 17px; line-height: 1.75; color: ${TEXT};
   }
@@ -278,6 +286,14 @@ export default function GuideDistilleries() {
       })}} />
 
       <div style={{ minHeight: "100vh", background: IVORY, color: TEXT, fontFamily: "'Jost', system-ui, sans-serif" }}>
+        <ReadingProgressBar ctaHref="/" />
+        <GuideStickyNav
+          links={[
+            { label: "Spots", href: "#spots" },
+            { label: "Activités", href: "#activites" },
+            { label: "Programme", href: "#programme" },
+          ]}
+        />
 
         {/* HEADER */}
         <header style={{ background: NAVY, padding: "0 24px" }}>
@@ -287,31 +303,17 @@ export default function GuideDistilleries() {
           </div>
         </header>
 
-        {/* HERO */}
-        <div style={{
-          position: "relative", height: "min(90vh, 620px)", overflow: "hidden",
-          backgroundImage: `url(${HERO_IMG})`,
-          backgroundSize: "cover", backgroundPosition: "center 40%",
-          backgroundColor: "#0a2e2d",
-        }}>
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(14,59,58,.15) 0%, rgba(14,59,58,.82) 100%)" }} />
-          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "0 28px 48px" }}>
-            <div style={{ maxWidth: 680, margin: "0 auto", width: "100%" }}>
-              <p style={{ color: CORAL, fontSize: 11, letterSpacing: "0.28em", textTransform: "uppercase", margin: "0 0 12px", fontFamily: "'Jost', sans-serif" }}>
-                AOC Martinique · 5 distilleries à visiter
-              </p>
-              <h1 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: "clamp(28px, 6vw, 56px)", letterSpacing: "0.06em", color: IVORY, textTransform: "uppercase", margin: "0 0 16px", lineHeight: 1.05 }}>
-                Distilleries<br />de Rhum
-              </h1>
-              <p style={{ color: "rgba(250,245,233,.85)", fontSize: "clamp(15px, 2vw, 18px)", maxWidth: 500, margin: 0, lineHeight: 1.65, fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
-                JM, Clément, Saint-James, Depaz, Trois-Rivières — le rhum agricole AOC au cœur du voyage en Martinique.
-              </p>
-            </div>
-          </div>
-        </div>
+        <GuideHero
+          img={HERO_IMG}
+          alt="Distilleries de rhum Martinique"
+          eyebrow="AOC Martinique · 5 distilleries à visiter"
+          title="Distilleries de Rhum"
+          subtitle="JM, Clément, Saint-James, Depaz, Trois-Rivières — le rhum agricole AOC au cœur du voyage en Martinique."
+          badges={badges}
+        />
 
         {/* CONTENU */}
-        <div style={{ maxWidth: 680, margin: "0 auto", padding: "52px 24px 80px" }}>
+        <div id="spots" style={{ maxWidth: 680, margin: "0 auto", padding: "52px 24px 80px" }}>
 
           {/* BADGES */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 48 }}>
@@ -354,6 +356,32 @@ export default function GuideDistilleries() {
             </div>
           ))}
 
+          <div id="activites">
+            <EncartActivite activites={[{ ...ACTIVITES.rhum, viatorPath: null }, ACTIVITES.nord]} />
+          </div>
+
+          <div id="programme">
+          <ProgrammeSejour
+            jours={[
+              {
+                jour: "Jour 1",
+                titre: "Le terroir de proximité, côté Sud",
+                matin: "Départ tranquille depuis Sainte-Luce. Visite guidée de la distillerie Trois-Rivières (moins de 5 min), dégustation commentée des gammes blanc, paille, ambré et vieux, achat en exclusivité distillerie à la boutique.",
+                apresMidi: "Cap sur l'Habitation Clément au François (env. 35-40 min) : musée du rhum, chais de vieillissement, parc botanique et art contemporain. Comptez 2h minimum.",
+                soir: "Retour à la villa pour un ti'punch maison avec vos achats du jour, face au coucher de soleil.",
+              },
+              {
+                jour: "Jour 2",
+                titre: "Le Nord volcanique en circuit guidé",
+                matin: "Journée encadrée par un guide-chauffeur (aucune conduite) : montée vers Saint-Pierre, distillerie Depaz au pied de la Montagne Pelée, dégustation avec vue sur le volcan.",
+                apresMidi: "Ruines de l'ancienne capitale, musée vulcanologique, puis distillerie JM ou Saint-James selon l'itinéraire. Retour par la côte caraïbe en fin de journée.",
+              },
+            ]}
+          />
+          </div>
+
+          <EncartActivite activites={[ACTIVITES["food-tour"]]} />
+
           {/* INFOS PRATIQUES */}
           <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 22, letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY, margin: "0 0 20px" }}>
             Infos pratiques
@@ -382,6 +410,13 @@ export default function GuideDistilleries() {
             </a>
           </div>
 
+          <BridgeVilla
+            villaId="amaryllis"
+            lieu="Distilleries de Martinique"
+            tempsRoute="5 min"
+            copy="Trois-Rivières est à cinq minutes de la Villa Amaryllis : faites de Sainte-Luce votre camp de base rhum, repartez chaque soir vers la piscine et réservez en direct pour garder la main sur vos dates."
+          />
+
           {/* NAVIGATION */}
           <div style={{ display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
             <a href="/activites-sainte-luce" style={{ color: MUTED, textDecoration: "none", fontSize: 13, fontFamily: "'Jost', sans-serif", fontWeight: 300, letterSpacing: "0.04em" }}>
@@ -393,6 +428,7 @@ export default function GuideDistilleries() {
           </div>
         </div>
 
+                <BlocAffilie slug="distilleries" />
         <div style={{ padding: "48px 24px", background: "#f6f1e7" }}>
           <NewsletterForm source="guide-distilleries" />
         </div>

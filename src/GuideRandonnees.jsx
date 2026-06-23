@@ -4,6 +4,14 @@
 import SEOMeta from "./SEOMeta.jsx";
 import MaillageCluster from "./components/seo/MaillageCluster.jsx";
 import NewsletterForm from "./NewsletterForm.jsx";
+import BlocAffilie from "./components/BlocAffilie.jsx";
+import EncartActivite from "./components/EncartActivite.jsx";
+import { ACTIVITES } from "./data/activites.js";
+import ReadingProgressBar from "./components/ReadingProgressBar.jsx";
+import BridgeVilla from "./components/BridgeVilla.jsx";
+import ProgrammeSejour from "./components/ProgrammeSejour.jsx";
+import GuideHero from "./components/GuideHero.jsx";
+import GuideStickyNav from "./components/GuideStickyNav.jsx";
 
 // Noms canoniques des biens pour le maillage interne SEO ("villa" = Amaryllis + Iguana uniquement).
 const BIEN_NAMES = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko", mabouya: "Mabouya", schoelcher: "Bellevue Schœlcher", iguana: "Villa Iguana", nogent: "Appartement Nogent-sur-Marne" };
@@ -17,7 +25,7 @@ const SAND  = "#e8dcc8";
 const MUTED = "#7a6b5a";
 const BASE  = "https://villamaryllis.com";
 
-const HERO_IMG  = "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/Montagne_Pel%C3%A9e_Martinique_2.jpg/960px-Montagne_Pel%C3%A9e_Martinique_2.jpg";
+const HERO_IMG  = "/photos/randonnees.jpg";
 const CARAVELLE_IMG = "https://upload.wikimedia.org/wikipedia/commons/thumb/7/70/Presqu%27%C3%AEle_de_la_Caravelle_Martinique.jpg/960px-Presqu%27%C3%AEle_de_la_Caravelle_Martinique.jpg";
 
 const badges = [
@@ -179,7 +187,7 @@ const css = `
     font-size: clamp(20px, 4vw, 28px);
     letter-spacing: .05em; margin: 0 0 10px; color: ${IVORY};
   }
-  .gt-must-accroche {
+  .gt-must .gt-must-accroche {
     font-family: 'Cormorant Garamond', Georgia, serif;
     font-size: 17px; line-height: 1.7; color: rgba(250,245,233,.8);
     margin: 0 0 24px;
@@ -191,7 +199,7 @@ const css = `
     color: ${CORAL}; text-transform: uppercase; letter-spacing: .1em;
     margin-bottom: 7px;
   }
-  .gt-must-texte {
+  .gt-must .gt-must-texte {
     font-family: 'Cormorant Garamond', Georgia, serif;
     font-size: 16px; line-height: 1.75; color: rgba(250,245,233,.82);
   }
@@ -217,7 +225,7 @@ const css = `
     text-transform: uppercase; letter-spacing: .1em; color: ${CORAL};
     margin-bottom: 6px;
   }
-  .gt-item-texte {
+  .gt-card .gt-item-texte {
     font-family: 'Cormorant Garamond', Georgia, serif;
     font-size: 17px; line-height: 1.75; color: ${TEXT};
   }
@@ -272,6 +280,14 @@ export default function GuideRandonnees() {
       })}} />
 
       <div style={{ minHeight: "100vh", background: IVORY, color: TEXT, fontFamily: "'Jost', system-ui, sans-serif" }}>
+        <ReadingProgressBar ctaHref="/" />
+        <GuideStickyNav
+          links={[
+            { label: "Spots", href: "#spots" },
+            { label: "Activités", href: "#activites" },
+            { label: "Programme", href: "#programme" },
+          ]}
+        />
 
         {/* HEADER */}
         <header style={{ background: NAVY, padding: "0 24px" }}>
@@ -281,31 +297,17 @@ export default function GuideRandonnees() {
           </div>
         </header>
 
-        {/* HERO */}
-        <div style={{
-          position: "relative", height: "min(90vh, 620px)", overflow: "hidden",
-          backgroundImage: `url(${HERO_IMG})`,
-          backgroundSize: "cover", backgroundPosition: "center 40%",
-          backgroundColor: "#0a2e2d",
-        }}>
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(14,59,58,.15) 0%, rgba(14,59,58,.82) 100%)" }} />
-          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "0 28px 48px" }}>
-            <div style={{ maxWidth: 680, margin: "0 auto", width: "100%" }}>
-              <p style={{ color: CORAL, fontSize: 11, letterSpacing: "0.28em", textTransform: "uppercase", margin: "0 0 12px", fontFamily: "'Jost', sans-serif" }}>
-                Depuis Sainte-Luce · Tous niveaux
-              </p>
-              <h1 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: "clamp(28px, 6vw, 56px)", letterSpacing: "0.06em", color: IVORY, textTransform: "uppercase", margin: "0 0 16px", lineHeight: 1.05 }}>
-                Randonnées<br />Martinique
-              </h1>
-              <p style={{ color: "rgba(250,245,233,.85)", fontSize: "clamp(15px, 2vw, 18px)", maxWidth: 500, margin: 0, lineHeight: 1.65, fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
-                Montagne Pelée, Presqu'île de la Caravelle, forêt de Montravail — les plus beaux sentiers de l'île, à portée de vos villas.
-              </p>
-            </div>
-          </div>
-        </div>
+        <GuideHero
+          img={HERO_IMG}
+          alt="Randonnées Martinique — sentiers et forêt tropicale"
+          eyebrow="Depuis Sainte-Luce · Tous niveaux"
+          title="Randonnées Martinique"
+          subtitle="Montagne Pelée, Presqu'île de la Caravelle, forêt de Montravail — les plus beaux sentiers de l'île, à portée de vos villas."
+          badges={badges}
+        />
 
         {/* CONTENU */}
-        <div style={{ maxWidth: 680, margin: "0 auto", padding: "52px 24px 80px" }}>
+        <div id="spots" style={{ maxWidth: 680, margin: "0 auto", padding: "52px 24px 80px" }}>
 
           {/* BADGES */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 48 }}>
@@ -348,6 +350,41 @@ export default function GuideRandonnees() {
             </div>
           ))}
 
+          <div id="activites">
+            <EncartActivite activites={[ACTIVITES["nature-panorama"], ACTIVITES.tortues]} />
+          </div>
+
+          <EncartActivite activites={[ACTIVITES["nature-panorama"]]} />
+
+          <div id="programme">
+          <ProgrammeSejour
+            jours={[
+              {
+                jour: "Jour 1",
+                titre: "Mise en jambes au sud — Montravail & détente",
+                matin: "Boucle facile en forêt de Montravail (1h-2h), à 10 min des villas : bambouseraies, fougères arborescentes, fraîcheur sous canopée avant la chaleur.",
+                apresMidi: "Retour villa, piscine et farniente. En option, visite + dégustation à la distillerie Trois-Rivières toute proche (rhum agricole AOC).",
+                soir: "Dîner sur la terrasse, briefing météo pour la Pelée du lendemain.",
+              },
+              {
+                jour: "Jour 2",
+                titre: "Le Nord volcanique — Montagne Pelée & Saint-Pierre",
+                matin: "Départ tôt (avant 7h) vers l'Aileron (Morne-Rouge, 1h15 de route) pour gravir la Pelée à la fraîche, quand la vue porte jusqu'à la Dominique. Pour profiter sans gérer la logistique, un circuit guidé Nord (Saint-Pierre + Pelée) est une alternative confortable.",
+                apresMidi: "Descente puis halte à Saint-Pierre, l'ancienne capitale figée par l'éruption de 1902.",
+                soir: "Retour au sud, soirée calme à la villa.",
+              },
+              {
+                jour: "Jour 3",
+                titre: "Sentier côtier & tortues à l'ouest",
+                matin: "Sentier côtier Anse Dufour - Anse Noire (Anses-d'Arlet, ~40 min) : sable volcanique, cocotiers, eau translucide.",
+                apresMidi: "Snorkeling tortues à l'Anse Noire, masque et tuba suffisent. Pause poisson grillé à Anse Dufour avant le retour.",
+              },
+            ]}
+          />
+          </div>
+
+          <EncartActivite activites={[ACTIVITES.nord]} />
+
           {/* INFOS PRATIQUES */}
           <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 22, letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY, margin: "0 0 20px" }}>
             Infos pratiques
@@ -376,6 +413,13 @@ export default function GuideRandonnees() {
             </a>
           </div>
 
+          <BridgeVilla
+            villaId="amaryllis"
+            lieu="Randonnées en Martinique"
+            tempsRoute="Montravail 10 min · Pelée 1h15 · Anse Noire 40 min"
+            copy="Faites de Sainte-Luce votre camp de base : Montravail à 10 minutes pour les matins randonnée, le grand sud des plages à portée, et le Nord volcanique accessible en excursion à la journée. Réservez votre villa avec piscine en direct, sans frais d'agence."
+          />
+
           {/* NAVIGATION */}
           <div style={{ display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
             <a href="/activites-sainte-luce" style={{ color: MUTED, textDecoration: "none", fontSize: 13, fontFamily: "'Jost', sans-serif", fontWeight: 300, letterSpacing: "0.04em" }}>
@@ -387,6 +431,7 @@ export default function GuideRandonnees() {
           </div>
         </div>
 
+                <BlocAffilie slug="randonnees" />
         <div style={{ padding: "48px 24px", background: "#f6f1e7" }}>
           <NewsletterForm source="guide-randonnees" />
         </div>

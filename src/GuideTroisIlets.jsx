@@ -4,6 +4,14 @@
 import SEOMeta from "./SEOMeta.jsx";
 import MaillageCluster from "./components/seo/MaillageCluster.jsx";
 import NewsletterForm from "./NewsletterForm.jsx";
+import BlocAffilie from "./components/BlocAffilie.jsx";
+import EncartActivite from "./components/EncartActivite.jsx";
+import { ACTIVITES } from "./data/activites.js";
+import ReadingProgressBar from "./components/ReadingProgressBar.jsx";
+import BridgeVilla from "./components/BridgeVilla.jsx";
+import ProgrammeSejour from "./components/ProgrammeSejour.jsx";
+import GuideHero from "./components/GuideHero.jsx";
+import GuideStickyNav from "./components/GuideStickyNav.jsx";
 
 // Noms canoniques des biens pour le maillage interne SEO ("villa" = Amaryllis + Iguana uniquement).
 const BIEN_NAMES = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko", mabouya: "Mabouya", schoelcher: "Bellevue Schœlcher", iguana: "Villa Iguana", nogent: "Appartement Nogent-sur-Marne" };
@@ -17,7 +25,7 @@ const SAND  = "#e8dcc8";
 const MUTED = "#7a6b5a";
 const BASE  = "https://villamaryllis.com";
 
-const HERO_IMG  = "https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Rocher_du_Diamant_%28Le_Diamant%2C_Martinique%29_-_03.jpg/960px-Rocher_du_Diamant_%28Le_Diamant%2C_Martinique%29_-_03.jpg";
+const HERO_IMG  = "/photos/trois-ilets.avif";
 const BEACH_IMG = "https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Salines_beach.jpg/960px-Salines_beach.jpg";
 
 const badges = [
@@ -137,7 +145,7 @@ const css = `
     font-size: clamp(20px, 4vw, 28px);
     letter-spacing: .05em; margin: 0 0 10px; color: ${IVORY};
   }
-  .gt-must-accroche {
+  .gt-must .gt-must-accroche {
     font-family: 'Cormorant Garamond', Georgia, serif;
     font-size: 17px; line-height: 1.7; color: rgba(250,245,233,.8);
     margin: 0 0 24px;
@@ -149,7 +157,7 @@ const css = `
     color: ${CORAL}; text-transform: uppercase; letter-spacing: .1em;
     margin-bottom: 7px;
   }
-  .gt-must-texte {
+  .gt-must .gt-must-texte {
     font-family: 'Cormorant Garamond', Georgia, serif;
     font-size: 16px; line-height: 1.75; color: rgba(250,245,233,.82);
   }
@@ -175,7 +183,7 @@ const css = `
     text-transform: uppercase; letter-spacing: .1em; color: ${CORAL};
     margin-bottom: 6px;
   }
-  .gt-item-texte {
+  .gt-card .gt-item-texte {
     font-family: 'Cormorant Garamond', Georgia, serif;
     font-size: 17px; line-height: 1.75; color: ${TEXT};
   }
@@ -230,6 +238,14 @@ export default function GuideTroisIlets() {
       })}} />
 
       <div style={{ minHeight: "100vh", background: IVORY, color: TEXT, fontFamily: "'Jost', system-ui, sans-serif" }}>
+        <ReadingProgressBar ctaHref="/" />
+        <GuideStickyNav
+          links={[
+            { label: "Spots", href: "#spots" },
+            { label: "Activités", href: "#activites" },
+            { label: "Programme", href: "#programme" },
+          ]}
+        />
 
         {/* HEADER */}
         <header style={{ background: NAVY, padding: "0 24px" }}>
@@ -239,31 +255,17 @@ export default function GuideTroisIlets() {
           </div>
         </header>
 
-        {/* HERO */}
-        <div style={{
-          position: "relative", height: "min(90vh, 620px)", overflow: "hidden",
-          backgroundImage: `url(${HERO_IMG})`,
-          backgroundSize: "cover", backgroundPosition: "center 40%",
-          backgroundColor: "#0a2e2d",
-        }}>
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(14,59,58,.15) 0%, rgba(14,59,58,.82) 100%)" }} />
-          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "0 28px 48px" }}>
-            <div style={{ maxWidth: 680, margin: "0 auto", width: "100%" }}>
-              <p style={{ color: CORAL, fontSize: 11, letterSpacing: "0.28em", textTransform: "uppercase", margin: "0 0 12px", fontFamily: "'Jost', sans-serif" }}>
-                35 min de Sainte-Luce · Presqu'île du Diamant
-              </p>
-              <h1 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: "clamp(28px, 6vw, 56px)", letterSpacing: "0.06em", color: IVORY, textTransform: "uppercase", margin: "0 0 16px", lineHeight: 1.05 }}>
-                Les<br />Trois-Îlets
-              </h1>
-              <p style={{ color: "rgba(250,245,233,.85)", fontSize: "clamp(15px, 2vw, 18px)", maxWidth: 500, margin: 0, lineHeight: 1.65, fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
-                Village créole, Musée de la Pagerie, marina face à Fort-de-France — et la plage d'Anse Mitan.
-              </p>
-            </div>
-          </div>
-        </div>
+        <GuideHero
+          img={HERO_IMG}
+          alt="Les Trois-Îlets Martinique — village créole et marina"
+          eyebrow="35 min de Sainte-Luce · Presqu'île du Diamant"
+          title="Les Trois-Îlets"
+          subtitle="Village créole, Musée de la Pagerie, marina face à Fort-de-France — et la plage d'Anse Mitan."
+          badges={badges}
+        />
 
         {/* CONTENU */}
-        <div style={{ maxWidth: 680, margin: "0 auto", padding: "52px 24px 80px" }}>
+        <div id="spots" style={{ maxWidth: 680, margin: "0 auto", padding: "52px 24px 80px" }}>
 
           {/* BADGES */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 48 }}>
@@ -306,6 +308,33 @@ export default function GuideTroisIlets() {
             </div>
           ))}
 
+          <div id="activites">
+            <EncartActivite activites={[ACTIVITES.catamaran, ACTIVITES.dauphins]} />
+          </div>
+
+          <div id="programme">
+          <ProgrammeSejour
+            jours={[
+              {
+                jour: "Jour 1",
+                titre: "Histoire créole & marina au coucher du soleil",
+                matin: "Visite guidée du Musée de la Pagerie — berceau de Joséphine de Beauharnais — puis flânerie au village des potiers et à l'église Notre-Dame-de-la-Bonne-Délivrance.",
+                apresMidi: "Déjeuner les pieds dans le sable à Anse Mitan, baignade, puis sentier côtier jusqu'à Anse à l'Ane plus sauvage pour un peu de snorkeling.",
+                soir: "Apéro face à la baie de Fort-de-France depuis la marina, illuminée au coucher du soleil, dans un bar à rhum local.",
+              },
+              {
+                jour: "Jour 2",
+                titre: "Journée en mer vers les îlets du Sud",
+                matin: "Embarquement à la marina pour une croisière catamaran : voile vers les îlets, dauphins en liberté et première session snorkeling.",
+                apresMidi: "Mouillage et baignade dans les eaux turquoise, déjeuner antillais à bord, retour en fin d'après-midi.",
+                soir: "Retour tranquille à la villa à Sainte-Luce pour un dîner sur la terrasse.",
+              },
+            ]}
+          />
+          </div>
+
+          <EncartActivite activites={[ACTIVITES["plongee-cata-prive"]]} />
+
           {/* INFOS PRATIQUES */}
           <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 22, letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY, margin: "0 0 20px" }}>
             Infos pratiques
@@ -321,6 +350,13 @@ export default function GuideTroisIlets() {
           </div>
 
           {/* CTA LOGEMENT */}
+          <EncartActivite activites={[{ ...ACTIVITES.rhum, viatorPath: null }]} platform="gyg" />
+          <BridgeVilla
+            villaId="amaryllis"
+            lieu="Les Trois-Îlets"
+            tempsRoute="30 min"
+            copy="Faites de Sainte-Luce votre camp de base : depuis la Villa Amaryllis, Les Trois-Îlets et sa marina sont à 30 min, et vous rentrez chaque soir à votre piscine privée. Réservez en direct, sans frais d'agence."
+          />
           <div style={{ background: NAVY, borderRadius: 16, padding: "36px 28px", textAlign: "center", marginBottom: 48 }}>
             <p style={{ color: CORAL, fontSize: 10, letterSpacing: "0.28em", textTransform: "uppercase", marginBottom: 10, fontFamily: "'Jost', sans-serif" }}>Base idéale</p>
             <h3 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 22, letterSpacing: "0.08em", color: IVORY, textTransform: "uppercase", margin: "0 0 12px" }}>
@@ -345,6 +381,7 @@ export default function GuideTroisIlets() {
           </div>
         </div>
 
+                <BlocAffilie slug="trois-ilets" />
         <div style={{ padding: "48px 24px", background: "#f6f1e7" }}>
           <NewsletterForm source="guide-trois-ilets" />
         </div>
