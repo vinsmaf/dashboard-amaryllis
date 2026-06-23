@@ -673,6 +673,30 @@ export default function Guide() {
         </div>
       </section>
 
+      {/* ── Pont vers les articles conseils (maillage guides → articles) ── */}
+      <section style={{ background: "#faf5e9", padding: "48px 0", borderTop: "1px solid #e8dcc8" }}>
+        <div className="g2-ctn">
+          <a href="/articles" style={{ textDecoration: "none", display: "block" }}>
+            <div style={{ background: "#fff", border: "1px solid #e8e0d0", borderRadius: 18, padding: "32px 36px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 24, flexWrap: "wrap", transition: "transform 0.2s, box-shadow 0.2s" }}
+              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.boxShadow = "0 16px 40px rgba(14,59,58,0.12)"; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; }}>
+              <div>
+                <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 10, fontWeight: 600, letterSpacing: "0.3em", textTransform: "uppercase", color: "#c47254", marginBottom: 10 }}>Conseils &amp; bons plans</div>
+                <h3 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: "clamp(20px, 3vw, 26px)", letterSpacing: "0.04em", color: "#0e3b3a", margin: "0 0 8px", lineHeight: 1.15 }}>
+                  Bien choisir &amp; réserver votre logement
+                </h3>
+                <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 16, lineHeight: 1.6, color: "#7a6b5a", margin: 0, maxWidth: 460 }}>
+                  Villa pour 8, studio jacuzzi, budget, meilleure saison, voyage de noces… nos articles pratiques pour préparer votre séjour au meilleur prix.
+                </p>
+              </div>
+              <span style={{ display: "inline-block", padding: "13px 28px", background: "#0e3b3a", color: "#faf5e9", borderRadius: 10, fontFamily: "'Jost', sans-serif", fontSize: 12, fontWeight: 500, letterSpacing: "0.12em", textTransform: "uppercase" }}>
+                Lire nos conseils →
+              </span>
+            </div>
+          </a>
+        </div>
+      </section>
+
       {/* ── Savoir avant de partir ── */}
       <div style={{ background: "linear-gradient(135deg,#091f1f 0%,#0e3b3a 100%)", padding: "72px 0" }}>
         <div className="g2-ctn">

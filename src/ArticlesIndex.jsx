@@ -13,7 +13,7 @@ const CATS = [
   { id: "itineraires",label: "Itinéraires" },
   { id: "pratique",   label: "Pratique" },
   { id: "nogent",     label: "Nogent" },
-  { id: "general",    label: "Guides" },
+  { id: "general",    label: "Conseils" },
 ];
 
 const CAT_ICONS = {
@@ -56,10 +56,10 @@ export default function ArticlesIndex() {
           ← Accueil Amaryllis Locations
         </a>
         <h1 style={{ fontSize: "clamp(26px, 5vw, 40px)", fontWeight: 900, color: IVORY, margin: "20px auto 14px", maxWidth: 700, lineHeight: 1.2 }}>
-          Guides & Conseils Martinique
+          Conseils & Bons Plans Martinique
         </h1>
         <p style={{ color: "rgba(250,245,233,0.72)", fontSize: 16, maxWidth: 560, margin: "0 auto", lineHeight: 1.6 }}>
-          Tout ce qu'il faut savoir pour préparer votre séjour en Martinique ou à Nogent-sur-Marne.
+          Nos conseils pratiques pour choisir votre logement, organiser votre séjour et réserver au meilleur prix en Martinique.
         </p>
         <p style={{ color: "rgba(250,245,233,0.45)", fontSize: 13, marginTop: 14 }}>
           {articles.length} articles · Amaryllis Locations
@@ -112,9 +112,30 @@ export default function ArticlesIndex() {
         )}
       </div>
 
+      {/* Pont vers les guides d'inspiration (maillage articles → guides) */}
+      <div style={{ maxWidth: 960, margin: "0 auto", padding: "0 20px 50px" }}>
+        <div style={{ background: "#fff", border: `1px solid #e8e0d0`, borderRadius: 16, padding: "26px 24px", textAlign: "center" }}>
+          <p style={{ fontSize: 13, color: CORAL, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px" }}>
+            Envie d'inspiration ?
+          </p>
+          <h2 style={{ fontSize: 19, fontWeight: 800, color: NAVY, margin: "0 0 10px" }}>
+            Découvrez nos guides Martinique
+          </h2>
+          <p style={{ fontSize: 14, color: MUTED, lineHeight: 1.6, maxWidth: 520, margin: "0 auto 18px" }}>
+            Plages, randonnées, distilleries, plongée : nos guides détaillés des plus beaux spots du Sud,
+            rédigés par vos hôtes.
+          </p>
+          <a href="/guide-hub" style={{ display: "inline-block", background: NAVY, color: "#fff", padding: "11px 26px", borderRadius: 10, fontSize: 13, fontWeight: 700, textDecoration: "none", letterSpacing: "0.05em" }}>
+            Voir les guides Martinique →
+          </a>
+        </div>
+      </div>
+
       {/* Footer minimal */}
       <div style={{ borderTop: "1px solid #e0d4bc", padding: "20px", textAlign: "center" }}>
         <a href="/" style={{ color: NAVY, fontSize: 13, textDecoration: "none", fontWeight: 600 }}>villamaryllis.com</a>
+        <span style={{ color: MUTED, fontSize: 13, margin: "0 12px" }}>·</span>
+        <a href="/guide-hub" style={{ color: MUTED, fontSize: 13, textDecoration: "none" }}>Guides Martinique</a>
         <span style={{ color: MUTED, fontSize: 13, margin: "0 12px" }}>·</span>
         <a href="/explorer" style={{ color: MUTED, fontSize: 13, textDecoration: "none" }}>Explorer la Martinique</a>
       </div>

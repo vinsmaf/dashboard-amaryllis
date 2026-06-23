@@ -99,6 +99,12 @@ function showsCarRental(slug, category) {
     || CAR_RENTAL_TERMS.some(term => slug.includes(term));
 }
 
+function track(event, params) {
+  if (typeof window !== "undefined" && typeof window.gtag === "function") {
+    try { window.gtag("event", event, params); } catch { /* */ }
+  }
+}
+
 function BienCards({ slug, category }) {
   const ids = SLUG_TO_BIENS[slug] || CAT_TO_BIENS[category] || ["amaryllis", "zandoli"];
   const list = ids.map(id => BIENS[id]).filter(Boolean).slice(0, 3);
@@ -113,7 +119,8 @@ function BienCards({ slug, category }) {
       </p>
       <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(list.length, 3)}, 1fr)`, gap: 14 }}>
         {list.map(b => (
-          <a key={b.id} href={`/${b.id}`} style={{ textDecoration: "none" }}>
+          <a key={b.id} href={`/${b.id}`} style={{ textDecoration: "none" }}
+            onClick={() => track("article_bien_click", { article_slug: slug, bien_id: b.id })}>
             <div style={{
               background: "#fff", borderRadius: 14, overflow: "hidden",
               border: "1px solid #e8e0d0", transition: "all .18s",
@@ -197,6 +204,9 @@ export default function ArticlePage() {
       .then(data => {
         setArticle(data || null);
         setLoading(false);
+        if (data?.status === "published") {
+          track("article_view", { article_slug: slug, article_category: data.category || "general" });
+        }
         if (data?.category) {
           fetch(`/api/articles?category=${data.category}`)
             .then(r => r.json())

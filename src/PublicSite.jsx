@@ -5321,6 +5321,8 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
       {MARTINIQUE_IDS.has(bien.id) && (
         <GuidesSection bienId={bien.id} bienNom={BIEN_NAMES[bien.id]} isMobile={isMobile} />
       )}
+      {/* ── Nos conseils — articles SEO pertinents (tous biens, Nogent inclus) ── */}
+      <ArticlesSection bienId={bien.id} bienNom={BIEN_NAMES[bien.id]} isMobile={isMobile} />
       </div>
       {showAlerte && <AlerteDispoModal bien={bien} checkin={calCheckin} checkout={calCheckout} onClose={() => setShowAlerte(false)} />}
 
@@ -5375,6 +5377,66 @@ function GuidesSection({ bienId, bienNom, isMobile }) {
       <div style={{ marginTop: 20, textAlign: "right" }}>
         <a href="/guide-hub" style={{ fontFamily: "'Jost', sans-serif", fontSize: 13, letterSpacing: "0.12em", textTransform: "uppercase", color: NAVY, textDecoration: "none", borderBottom: `1px solid ${CORAL}`, paddingBottom: 2 }}>
           Tous nos guides Martinique →
+        </a>
+      </div>
+    </div>
+  );
+}
+
+// Articles SEO pertinents par bien (intention commerciale / recherche logement).
+// Slugs réels de la table D1 seo_articles. Fallback "logement" si bien non mappé.
+const BIEN_TO_ARTICLES = {
+  amaryllis:  ["villa-martinique-8-personnes", "villa-martinique-piscine-debordement", "location-villa-luxe-martinique", "location-villa-sainte-luce"],
+  zandoli:    ["villa-martinique-vue-mer", "location-villa-sainte-luce", "villa-sainte-luce-piscine", "location-vacances-martinique"],
+  geko:       ["villa-sainte-luce-piscine", "location-villa-piscine-martinique", "location-villa-sainte-luce", "location-vacances-martinique"],
+  mabouya:    ["studio-jacuzzi-martinique", "martinique-voyage-noces", "martinique-en-couple-romantique", "ou-loger-martinique-pas-cher"],
+  schoelcher: ["villa-martinique-vue-mer", "location-vacances-martinique", "ou-loger-martinique-pas-cher", "location-villa-martinique"],
+  iguana:     ["location-villa-martinique", "villa-martinique-8-personnes", "location-vacances-martinique"],
+  nogent:     ["location-appartement-nogent-sur-marne", "appartement-bord-de-marne", "que-faire-nogent-sur-marne-week-end"],
+};
+
+function ArticlesSection({ bienId, bienNom, isMobile }) {
+  const [articles, setArticles] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/articles")
+      .then(r => r.ok ? r.json() : { articles: [] })
+      .then(d => { if (alive) setArticles(d.articles || []); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
+  const wanted = BIEN_TO_ARTICLES[bienId] || [];
+  const bySlug = new Map(articles.map(a => [a.slug, a]));
+  let list = wanted.map(s => bySlug.get(s)).filter(Boolean);
+  // Complément si certains slugs manquent : articles "logement" non déjà listés.
+  if (list.length < 3) {
+    const extra = articles.filter(a => a.category === "logement" && !wanted.includes(a.slug));
+    list = [...list, ...extra].slice(0, 4);
+  } else {
+    list = list.slice(0, 4);
+  }
+  if (!list.length) return null;
+
+  return (
+    <div style={{ borderTop: `1px solid ${SAND}`, margin: "0 20px 48px", paddingTop: 40 }}>
+      <Eyebrow color="muted" style={{ marginBottom: 8 }}>Nos conseils pour {bienNom || "votre séjour"}</Eyebrow>
+      <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 15, color: NAVY, margin: "0 0 28px", lineHeight: 1.5 }}>
+        Bien choisir, organiser et réserver votre séjour — nos articles pratiques
+      </p>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(2, 1fr)", gap: 12 }}>
+        {list.map(a => (
+          <a key={a.slug} href={`/article/${a.slug}`} style={{ display: "flex", flexDirection: "column", gap: 6, padding: "16px 18px", background: IVORY, border: `1px solid ${SAND}`, borderRadius: 10, textDecoration: "none" }}>
+            <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 14, color: NAVY, lineHeight: 1.35 }}>{a.title}</span>
+            {a.meta_desc && (
+              <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 12, color: MUTED, lineHeight: 1.45, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{a.meta_desc}</span>
+            )}
+          </a>
+        ))}
+      </div>
+      <div style={{ marginTop: 20, textAlign: "right" }}>
+        <a href="/articles" style={{ fontFamily: "'Jost', sans-serif", fontSize: 13, letterSpacing: "0.12em", textTransform: "uppercase", color: NAVY, textDecoration: "none", borderBottom: `1px solid ${CORAL}`, paddingBottom: 2 }}>
+          Tous nos conseils →
         </a>
       </div>
     </div>
@@ -7502,6 +7564,14 @@ function FooterSection() {
             ["Mabouya (2 pers.)", "/mabouya"],
             ["Tous nos avis", "/avis"],
           ]},
+          { titre: "Conseils & bons plans", liens: [
+            ["Studio jacuzzi Martinique", "/article/studio-jacuzzi-martinique"],
+            ["Villa pour 8 personnes", "/article/villa-martinique-8-personnes"],
+            ["Villa animaux acceptés", "/article/villa-martinique-animaux-acceptes"],
+            ["Budget vacances Martinique", "/article/budget-voyage-martinique"],
+            ["Voyage de noces", "/article/martinique-voyage-noces"],
+            ["Tous nos conseils", "/articles"],
+          ]},
         ].map(col => (
           <div key={col.titre}>
             <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 10, letterSpacing: "0.25em", textTransform: "uppercase", color: "rgba(250,245,233,0.35)", marginBottom: 14 }}>{col.titre}</div>
@@ -7602,6 +7672,7 @@ function LogoDropdown() {
     { label: "🏡  Nos propriétés",     href: "/#properties" },
     { label: "⭐  Nos avis",           href: "/avis" },
     { label: "🗺️  Guide Martinique",   href: "/guide-hub" },
+    { label: "📝  Conseils & bons plans", href: "/articles" },
     { label: "📍  Carte interactive",  href: "/explorer" },
     { label: "❓  FAQ",                href: "/faq" },
     { label: "💬  Contactez-nous",     href: "/#contact" },

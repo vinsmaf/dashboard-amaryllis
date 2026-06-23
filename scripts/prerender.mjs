@@ -280,8 +280,8 @@ const ROUTES = [
   /* ── Articles SEO (index) ── */
   {
     path: "/articles",
-    title: "Guides & Conseils Martinique — Amaryllis Locations",
-    desc:  "Tous nos guides pratiques pour préparer votre séjour en Martinique : activités, plages, itinéraires, logement, meilleure saison et bons plans du Sud.",
+    title: "Conseils & Bons Plans Martinique — Amaryllis Locations",
+    desc:  "Nos conseils pratiques pour choisir votre logement, organiser votre séjour et réserver au meilleur prix en Martinique : villas, budget, saison, itinéraires.",
     image: `${BASE}/photos/amaryllis/01.webp`,
   },
 

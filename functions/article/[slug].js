@@ -16,16 +16,27 @@ function injectMeta(html, { title, desc, url, image }) {
   <meta name="twitter:title" content="${title}">
   <meta name="twitter:description" content="${desc}">
   <link rel="canonical" href="${url}">`;
-  const ld = JSON.stringify({
-    "@context": "https://schema.org",
-    "@type": "Article",
-    "headline": title,
-    "description": desc,
-    "url": url,
-    "image": image,
-    "author": { "@type": "Organization", "name": "Amaryllis Locations" },
-    "publisher": { "@type": "Organization", "name": "Amaryllis Locations", "url": BASE },
-  });
+  const ld = JSON.stringify([
+    {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": title,
+      "description": desc,
+      "url": url,
+      "image": image,
+      "author": { "@type": "Organization", "name": "Amaryllis Locations" },
+      "publisher": { "@type": "Organization", "name": "Amaryllis Locations", "url": BASE },
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Accueil", "item": `${BASE}/` },
+        { "@type": "ListItem", "position": 2, "name": "Conseils & bons plans", "item": `${BASE}/articles` },
+        { "@type": "ListItem", "position": 3, "name": title, "item": url },
+      ],
+    },
+  ]);
   return html
     .replace(/<title>[^<]*<\/title>/, "")
     .replace(/<meta name="description"[^>]*>/, "")
