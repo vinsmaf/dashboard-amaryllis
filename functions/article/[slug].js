@@ -37,9 +37,14 @@ function injectMeta(html, { title, desc, url, image }) {
       ],
     },
   ]);
+  // Retirer les balises du shell prérendu (sinon DOUBLE og:image/title/canonical —
+  // le crawler prend souvent la 1ère = celle du shell, périmée). Notre injection fait foi.
   return html
-    .replace(/<title>[^<]*<\/title>/, "")
-    .replace(/<meta name="description"[^>]*>/, "")
+    .replace(/<title>[^<]*<\/title>/i, "")
+    .replace(/<meta\s+name="description"[^>]*>/gi, "")
+    .replace(/<meta\s+property="og:(title|description|url|image|type)"[^>]*>/gi, "")
+    .replace(/<meta\s+name="twitter:(card|title|description|image)"[^>]*>/gi, "")
+    .replace(/<link\s+rel="canonical"[^>]*>/gi, "")
     .replace("</head>", `${og}\n<script type="application/ld+json">${ld}</script>\n</head>`);
 }
 

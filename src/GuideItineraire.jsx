@@ -7,6 +7,9 @@ import ReadingProgressBar from "./components/ReadingProgressBar.jsx";
 import BridgeVilla from "./components/BridgeVilla.jsx";
 import GuideHero from "./components/GuideHero.jsx";
 import GuideStickyNav from "./components/GuideStickyNav.jsx";
+import EncartActivite from "./components/EncartActivite.jsx";
+import LienAffilie from "./components/LienAffilie.jsx";
+import { ACTIVITES } from "./data/activites.js";
 
 const BIEN_NAMES = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko", mabouya: "Mabouya", schoelcher: "Bellevue Schœlcher", iguana: "Villa Iguana", nogent: "Appartement Nogent-sur-Marne" };
 
@@ -403,6 +406,15 @@ export default function GuideItineraire() {
             </a>
           </div>
 
+        </div>
+
+        {/* Réserver les excursions de l'itinéraire (affilié) */}
+        <div style={{ maxWidth: 760, margin: "48px auto", padding: "0 24px" }}>
+          <EncartActivite activites={[ACTIVITES.catamaran, ACTIVITES["diamant-bateau"]]} platform="viator" variant="navy" />
+          <p style={{ fontFamily: "'Jost', sans-serif", fontSize: 14, lineHeight: 1.7, color: "#3a2e22", marginTop: 24 }}>
+            🚗 Cet itinéraire suppose une voiture de location — indispensable pour relier les plages et villages du Sud.
+            Comparez les loueurs de l'aéroport avec <LienAffilie partenaire="discoverCars" utmContent="guide-itineraire-voiture" showDisclosure={false} style={{ display: "inline" }}>DiscoverCars</LienAffilie> (20–30 % moins cher en réservant à l'avance).
+          </p>
         </div>
 
         <BridgeVilla

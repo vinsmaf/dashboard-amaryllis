@@ -5,6 +5,8 @@ import BridgeVilla from "./components/BridgeVilla.jsx";
 import ReadingProgressBar from "./components/ReadingProgressBar.jsx";
 import MaillageCluster from "./components/seo/MaillageCluster.jsx";
 import NewsletterForm from "./NewsletterForm.jsx";
+import EncartActivite from "./components/EncartActivite.jsx";
+import { ACTIVITES } from "./data/activites.js";
 
 const NAVY  = "#0e3b3a";
 const IVORY = "#faf5e9";
@@ -358,6 +360,11 @@ export default function GuideOuLoger() {
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Excursions à réserver depuis votre secteur (affilié) */}
+          <div style={{ maxWidth: 760, margin: "48px auto", padding: "0 24px" }}>
+            <EncartActivite activites={[ACTIVITES.snorkeling, ACTIVITES.catamaran]} platform="viator" variant="navy" />
           </div>
 
           <BridgeVilla

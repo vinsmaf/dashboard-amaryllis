@@ -105,6 +105,41 @@ function track(event, params) {
   }
 }
 
+// Maillage contextuel : lie la 1ʳᵉ occurrence de mots-clés dans le corps de l'article
+// vers la page cible (biens, landings, guides). Sûr : ne transforme que le texte HORS
+// balises, saute le texte déjà dans un <a>, et chaque cible n'est liée qu'une fois.
+const CONTEXT_LINKS = [
+  [/\bvilla amaryllis\b/i, "/amaryllis"],
+  [/\bzandoli\b/i, "/zandoli"],
+  [/\bgéko\b/i, "/geko"],
+  [/\bmabouya\b/i, "/mabouya"],
+  [/\bschœlcher\b/i, "/schoelcher"],
+  [/\bréservation directe\b/i, "/reservation-directe-martinique"],
+  [/\blouer une voiture\b/i, "/location-voiture-martinique-pas-cher"],
+  [/\bsainte-luce\b/i, "/sainte-luce-martinique"],
+];
+function autolink(html) {
+  if (!html) return "";
+  const used = new Set();
+  let insideA = 0;
+  return html.split(/(<[^>]+>)/).map(part => {
+    if (part.startsWith("<")) {
+      if (/^<a\b/i.test(part)) insideA++;
+      else if (/^<\/a>/i.test(part)) insideA = Math.max(0, insideA - 1);
+      return part;
+    }
+    if (insideA > 0) return part;
+    let text = part;
+    for (const [re, href] of CONTEXT_LINKS) {
+      if (used.has(href)) continue;
+      if (re.test(text)) {
+        text = text.replace(re, m => { used.add(href); return `<a href="${href}">${m}</a>`; });
+      }
+    }
+    return text;
+  }).join("");
+}
+
 function BienCards({ slug, category }) {
   const ids = SLUG_TO_BIENS[slug] || CAT_TO_BIENS[category] || ["amaryllis", "zandoli"];
   const list = ids.map(id => BIENS[id]).filter(Boolean).slice(0, 3);
@@ -295,7 +330,7 @@ export default function ArticlePage() {
       <div style={{ maxWidth: 780, margin: "0 auto", padding: "40px 20px 20px" }}>
         <div
           className="article-content"
-          dangerouslySetInnerHTML={{ __html: article.content_html }}
+          dangerouslySetInnerHTML={{ __html: autolink(article.content_html) }}
         />
       </div>
 

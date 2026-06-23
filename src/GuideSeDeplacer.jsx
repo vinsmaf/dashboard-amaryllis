@@ -5,6 +5,7 @@ import BridgeVilla from "./components/BridgeVilla.jsx";
 import ReadingProgressBar from "./components/ReadingProgressBar.jsx";
 import MaillageCluster from "./components/seo/MaillageCluster.jsx";
 import NewsletterForm from "./NewsletterForm.jsx";
+import LienAffilie from "./components/LienAffilie.jsx";
 
 const NAVY  = "#0e3b3a";
 const IVORY = "#faf5e9";
@@ -242,7 +243,7 @@ export default function GuideSeDeplacer() {
               </div>
               <div className="sdp-hl-item">
                 <h4>Où réserver</h4>
-                <p>Comparateurs recommandés : <strong style={{ color: IVORY }}>DiscoverCars</strong>, <strong style={{ color: IVORY }}>RentalCars</strong>, ou directement sur les sites Europcar, Avis, Hertz présents à l'aéroport Aimé Césaire. Louer directement sur place coûte 20–30 % plus cher.</p>
+                <p>Comparez tous les loueurs de l'aéroport Aimé Césaire (Europcar, Avis, Hertz…) en une recherche avec <LienAffilie partenaire="discoverCars" utmContent="guide-sedeplacer-ou-reserver" showDisclosure={false} style={{ display: "inline" }}>DiscoverCars</LienAffilie>. Réserver à l'avance coûte 20–30 % moins cher que sur place.</p>
                 <a href="/location-voiture-martinique-pas-cher" style={{ display: "inline-block", marginTop: 12, color: CORAL, textDecoration: "none", fontFamily: "'Jost', sans-serif", fontSize: 12, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" }}>
                   Guide complet → location voiture Martinique pas cher
                 </a>
