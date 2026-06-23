@@ -3,6 +3,17 @@
 > Pièges déjà rencontrés + comment les éviter. 1 entrée = 1 leçon actionnable « la prochaine fois ».
 > Le journal d'erreurs exhaustif reste `../docs/ERREURS-LOG.md`.
 
+## 🗺️ Sitemap d'un contenu D1 : dumper le statut depuis D1, jamais lire le seed SQL — 2026-06-23
+- **Piège vécu** : le sitemap des articles lisait `scripts/seed-articles-30.sql` (32 slugs) alors que D1 avait 42 articles (37 publiés). Résultat : 10 publiés absents du sitemap + risque d'indexer des slugs dépubliés. Double source de vérité (MÉTA-A/ADR-G-001).
+- **La prochaine fois** : pour tout contenu dont le STATUT vit en D1 (publié/draft), générer la liste sitemap depuis D1 (`scripts/dump-articles-published.mjs` → `articles-published.json`), jamais depuis le seed/fixture qui périme dès la 1ère édition admin.
+- **Après toute (dé)publication d'article via l'admin** : relancer `node scripts/dump-articles-published.mjs` puis redéployer, sinon le sitemap ment.
+
+## 🎯 Articles vs Guides : 2 systèmes, intentions distinctes (anti-cannibalisation) — 2026-06-23
+- **Guides** (fichiers JSX, ~57) = inspiration/lieux/expériences. **Articles** (D1, 37) = conseils pratiques + recherche logement commerciale. Ne PAS créer un article sur le même mot-clé qu'un guide/landing existant → Google divise les signaux, les 2 rankent moins bien.
+- **Vécu** : 5 articles dupliquaient à 100% une page établie (ex. `meilleure-saison-martinique` article ↔ landing) → dépubliés (`status=draft`), la page forte garde le jus.
+- **Avant de publier un article** : `grep` le mot-clé cible dans les slugs guides (`main.jsx` KNOWN) + landings. Chevauchement ≥60% = cannibalisation, différencier l'angle ou ne pas créer.
+- **Maillage interne entrant = priorité n°1** : un contenu SEO sans lien depuis les pages à autorité (home/footer/fiches) est orphelin → ne ranke pas. Toujours lier depuis footer + pages fortes.
+
 ## 🚀 RÈGLE ABSOLUE DÉPLOIEMENT — Claude ne fait JAMAIS `npm run deploy:pages` — 2026-06-23
 - **Piège vécu** : 2 instances Claude déployaient depuis des états locaux différents (sans pusher sur git) → drift prod≠main répété (vécu 3 fois en 24h le 2026-06-23).
 - **La règle** : Claude fait **toujours** `git push origin main` → le CI deploy.yml s'occupe du reste.
