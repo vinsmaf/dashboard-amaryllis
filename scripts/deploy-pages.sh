@@ -47,10 +47,26 @@ if [[ "${ALLOW_BRANCH_DEPLOY:-0}" != "1" ]]; then
     exit 1
   fi
   if [[ -n "$(git status --porcelain 2>/dev/null)" ]]; then
-    echo "⚠️  Working tree non propre : des changements non-committés vont partir en prod"
-    echo "   mais ne seront PAS sur origin/main → drift garanti au prochain push."
-    echo "   Committe d'abord (recommandé), ou patiente 5s…"
-    sleep 5
+    echo "🚨 STOP — working tree non propre."
+    echo "   Des changements non-committés ne sont PAS dans le build git → écrasement"
+    echo "   garanti dès que quelqu'un d'autre déploie depuis son machine (vécu 2026-06-23)."
+    echo "   → Committe d'abord : git add <fichiers> && git commit -m '…'"
+    echo "   → Secours conscient : ALLOW_DIRTY=1 npm run deploy:pages"
+    exit 1
+  fi
+fi
+
+# ── 0b. SYNC REMOTE — évite d'écraser les commits de l'autre machine ──────────────
+# Si quelqu'un d'autre a committé+pushé sur origin/main (ex: Claude a committé,
+# Vincent déploie depuis sa machine sans avoir fait git pull), on l'incorpore.
+# --ff-only : si les historiques ont divergé → fail fast (résoudre avant de déployer).
+if [[ "${SKIP_SYNC:-0}" != "1" ]]; then
+  echo "🔄 Sync origin/main avant build (git pull --ff-only)…"
+  if ! git pull --ff-only origin main 2>&1; then
+    echo "🚨 STOP — origin/main a divergé du HEAD local."
+    echo "   Résous le conflit (git pull --rebase ou merge), puis redéploie."
+    echo "   → Secours sans sync : SKIP_SYNC=1 npm run deploy:pages"
+    exit 1
   fi
 fi
 
