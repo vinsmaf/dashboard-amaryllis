@@ -4,6 +4,9 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
+## En cours → ✅ terminé le 2026-06-23 (Session articles SEO : portage + maillage + optimisations)
+> Système articles SEO longue traîne (37 publiés) porté de la branche orpheline `claude/sad-bartik-02a3c2` (supprimée), déployé. Maillage interne entrant (footer/menu/fiches biens/guides), 5 doublons dépubliés (cannibalisation), images hero, schema BreadcrumbList, GA4, affiliés guides manquants comblés, liens contextuels. Fix bug deploy (smoke race condition) + ADR-DEPLOY-001 (Claude=git push only). Revue SEO programmée 15/07. Tout en prod, CI verte.
+
 ## En cours → ✅ terminé le 2026-06-23 (Session backlog agents 61-76 + data-056/060)
 > Sweep complet du backlog : 76 items traités (✅/👤/🔄/❌), 2 post-backlog (send-leads-promo + Net RevPAR). Déployé en prod.
 
