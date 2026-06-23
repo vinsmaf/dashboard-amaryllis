@@ -2,7 +2,7 @@
 // Source commissions : src/config/canauxCommissions.js
 // Source revenus     : REVENUS_CANAL_2025 (App.jsx)
 
-import { REVENUS_CANAL_2025 } from "../App.jsx";
+import { REVENUS_CANAL_2025 } from "../data/revenusCanal.js";
 import { AIRBNB_COMM_PAR_BIEN, BOOKING_COMM, FRAIS_STRIPE } from "../config/canauxCommissions.js";
 
 const NUITS_AN = 365;
