@@ -922,13 +922,13 @@ const today = new Date().toISOString().slice(0, 10);
    On lit les slugs « published » depuis scripts/seed-articles-30.sql pour qu'ils
    soient indexés. Un article ajouté via l'admin après coup n'y sera pas tant qu'il
    n'est pas reflété ici (refinement possible : sitemap dynamique lisant D1). */
+// Articles SEO au sitemap = liste des slugs PUBLIÉS, exportée depuis D1 (source de
+// vérité du statut) vers scripts/articles-published.json. Évite le double-source :
+// le seed SQL peut diverger de D1 (articles ajoutés/dépubliés via l'admin). Régénérer
+// ce JSON après tout changement de statut : voir scripts/dump-articles-published.mjs.
 const ARTICLE_ROUTES = (() => {
   try {
-    const sql = fs.readFileSync(path.resolve("scripts/seed-articles-30.sql"), "utf8");
-    const slugs = [];
-    const re = /INSERT[^(]*\(slug,[^)]*\)\s*VALUES\s*\('([^']+)'/gi;
-    let m;
-    while ((m = re.exec(sql)) !== null) slugs.push(m[1]);
+    const slugs = JSON.parse(fs.readFileSync(path.resolve("scripts/articles-published.json"), "utf8"));
     return [...new Set(slugs)].map(s => ({ path: `/article/${s}`, priority: "0.8", changefreq: "monthly" }));
   } catch {
     return [];
