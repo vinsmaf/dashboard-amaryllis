@@ -3,6 +3,14 @@
 import SEOMeta from "./SEOMeta.jsx";
 import MaillageCluster from "./components/seo/MaillageCluster.jsx";
 import NewsletterForm from "./NewsletterForm.jsx";
+import BlocAffilie from "./components/BlocAffilie.jsx";
+import EncartActivite from "./components/EncartActivite.jsx";
+import { ACTIVITES } from "./data/activites.js";
+import ReadingProgressBar from "./components/ReadingProgressBar.jsx";
+import BridgeVilla from "./components/BridgeVilla.jsx";
+import ProgrammeSejour from "./components/ProgrammeSejour.jsx";
+import GuideHero from "./components/GuideHero.jsx";
+import GuideStickyNav from "./components/GuideStickyNav.jsx";
 
 // Noms canoniques des biens pour le maillage interne SEO ("villa" = Amaryllis + Iguana uniquement).
 const BIEN_NAMES = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko", mabouya: "Mabouya", schoelcher: "Bellevue Schœlcher", iguana: "Villa Iguana", nogent: "Appartement Nogent-sur-Marne" };
@@ -108,7 +116,7 @@ const conseils = [
 export default function GuideActivites() {
   return (
     <>
-      <SEOMeta title="Activités Sainte-Luce Martinique — Guide 2026 | Amaryllis" description="Les 10 meilleures activités depuis nos villas : snorkeling avec les tortues, randonnée Montravail, rhum Trois-Rivières, catamaran, cuisine créole. Sélection testée par vos hôtes." canonical="/activites-sainte-luce" image="https://villamaryllis.com/photos/amaryllis/01.webp" type="article" />
+      <SEOMeta title="Activités Sainte-Luce Martinique — Guide 2026 | Amaryllis" description="Les 10 meilleures activités depuis nos villas : snorkeling avec les tortues, randonnée Montravail, rhum Trois-Rivières, catamaran, cuisine créole. Sélection testée par vos hôtes." canonical="/activites-sainte-luce" image="https://villamaryllis.com/photos/activites-martinique.jpg" type="article" />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         "@context": "https://schema.org",
         "@graph": [
@@ -117,7 +125,7 @@ export default function GuideActivites() {
             "headline": "10 activités incontournables à Sainte-Luce, Martinique",
             "description": "Notre sélection des 10 meilleures activités à ne pas manquer à Sainte-Luce : plage, mangrove, excursion en bateau, plongée au Rocher du Diamant, musée de la Canne, Fort-de-France. Guide rédigé par vos hôtes.",
             "url": `${BASE}/activites-sainte-luce`,
-            "image": `${BASE}/photos/amaryllis/01.webp`,
+            "image": `${BASE}/photos/activites-martinique.jpg`,
             "author": { "@id": `${BASE}/#organization` },
             "publisher": { "@id": `${BASE}/#organization` },
           },
@@ -136,6 +144,14 @@ export default function GuideActivites() {
       })}} />
 
       <div style={{ minHeight: "100vh", background: IVORY, color: TEXT, fontFamily: "'Jost', system-ui, sans-serif" }}>
+        <ReadingProgressBar ctaHref="/" />
+        <GuideStickyNav
+          links={[
+            { label: "Spots", href: "#spots" },
+            { label: "Activités", href: "#activites" },
+            { label: "Programme", href: "#programme" },
+          ]}
+        />
         <header style={{ background: NAVY, padding: "0 24px" }}>
           <div style={{ maxWidth: 900, margin: "0 auto", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <a href="/" style={{ color: IVORY, textDecoration: "none", fontWeight: 300, fontSize: 18, letterSpacing: "0.15em", textTransform: "uppercase" }}>Amaryllis</a>
@@ -143,26 +159,16 @@ export default function GuideActivites() {
           </div>
         </header>
 
-        {/* Hero avec photo */}
-        <div style={{ position: "relative", height: 320, overflow: "hidden" }}>
-          <img
-            src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/Anse_Corps_de_Garde_-_Le_D%C3%A9sert.jpg/960px-Anse_Corps_de_Garde_-_Le_D%C3%A9sert.jpg"
-            alt="Anse Corps de Garde, Sainte-Luce, Martinique"
-            style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }}
-          />
-          <div style={{ position: "absolute", inset: 0, background: "rgba(14,59,58,0.65)" }} />
-          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 24px", textAlign: "center" }}>
-            <p style={{ color: CORAL, fontSize: 12, letterSpacing: "0.3em", textTransform: "uppercase", marginBottom: 14 }}>Guide de voyage · Sélection de vos hôtes</p>
-            <h1 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: "clamp(24px, 5vw, 50px)", letterSpacing: "0.05em", color: IVORY, textTransform: "uppercase", margin: "0 0 14px", lineHeight: 1.15 }}>
-              10 activités à ne pas manquer<br />à Sainte-Luce
-            </h1>
-            <p style={{ color: "rgba(250,245,233,0.8)", fontSize: 15, maxWidth: 560, margin: 0, lineHeight: 1.65, fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
-              Notre sélection personnelle après des années à accueillir des voyageurs dans la résidence Amaryllis.
-            </p>
-          </div>
-        </div>
+        <GuideHero
+          img="/photos/activites-martinique.jpg"
+          alt="Anse Corps de Garde, Sainte-Luce, Martinique"
+          eyebrow="Guide de voyage · Sélection de vos hôtes"
+          title="10 activités à ne pas manquer à Sainte-Luce"
+          subtitle="Notre sélection personnelle après des années à accueillir des voyageurs dans la résidence Amaryllis."
+          badges={[]}
+        />
 
-        <div style={{ maxWidth: 860, margin: "0 auto", padding: "48px 24px 80px" }}>
+        <div id="spots" style={{ maxWidth: 860, margin: "0 auto", padding: "48px 24px 80px" }}>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 20, marginBottom: 64 }}>
             {activites.map((a) => (
@@ -194,6 +200,38 @@ export default function GuideActivites() {
             ))}
           </div>
 
+          <div id="activites">
+            <EncartActivite activites={[ACTIVITES.catamaran, ACTIVITES.tortues]} />
+          </div>
+          <EncartActivite activites={[ACTIVITES.snorkeling]} />
+          <div id="programme">
+          <ProgrammeSejour
+            jours={[
+              {
+                jour: "Jour 1",
+                titre: "Mer et fonds turquoise du Sud",
+                matin: "Snorkeling guidé parmi les coraux et poissons tropicaux (départ côte Sud), ou matinée snorkeling libre depuis l'Anse Corps de Garde, à 7 minutes de la résidence.",
+                apresMidi: "Détente piscine et plage de Sainte-Luce, fin de journée dans la mangrove en kayak quand la lumière est dorée.",
+                soir: "Dîner de poisson du jour sur le front de mer, ambiance créole le week-end.",
+              },
+              {
+                jour: "Jour 2",
+                titre: "Catamaran et tortues",
+                matin: "Sortie catamaran à la journée vers les îlets du Sud (Cabrit, Hardy) : dauphins en liberté, snorkeling et déjeuner à bord. Départ marina du Marin, 15 min.",
+                apresMidi: "Baignade et farniente sur les îlets, retour en voile au coucher du soleil.",
+              },
+              {
+                jour: "Jour 3",
+                titre: "Diamant, Salines et rhum AOC",
+                matin: "Sortie bateau vers le Rocher du Diamant et la plage des Salines, l'une des plus belles de l'île (25-30 min en voiture côté terre).",
+                apresMidi: "Visite d'une distillerie AOC toute proche (Trois-Rivières, La Mauny) : découverte du site et dégustation.",
+              },
+            ]}
+          />
+          </div>
+
+          <EncartActivite activites={[ACTIVITES["diamant-bateau"]]} platform="gyg" />
+
           {/* Conseils pratiques */}
           <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 22, letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY, marginBottom: 20 }}>
             Conseils pratiques
@@ -207,6 +245,8 @@ export default function GuideActivites() {
             ))}
           </div>
 
+          <EncartActivite activites={[{ ...ACTIVITES.rhum, viatorPath: null }]} platform="gyg" />
+
           {/* Maillage interne — villas à proximité des activités */}
           <div style={{ marginBottom: 32 }}>
             <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 11, letterSpacing: "0.25em", textTransform: "uppercase", color: CORAL, margin: "0 0 16px" }}>Nos villas — base idéale pour tout explorer</p>
@@ -214,7 +254,6 @@ export default function GuideActivites() {
               {[
                 { id: "amaryllis", name: "Villa Amaryllis", desc: "8 pers. · Piscine à débordement · Vue mer · À partir de 280€/nuit" },
                 { id: "zandoli",   name: "Zandoli",         desc: "5 pers. · Piscine privée · Vue mer · À partir de 110€/nuit" },
-                { id: "iguana",    name: "Villa Iguana",    desc: "Piscine eau salée · Vue Diamant · Location longue durée" },
                 { id: "geko",      name: "Géko",            desc: "4 pers. · Piscine · Jardin · À partir de 110€/nuit" },
                 { id: "mabouya",   name: "Mabouya",         desc: "2 pers. · Jacuzzi privatif · À partir de 70€/nuit" },
                 { id: "schoelcher",name: "Bellevue",        desc: "4 pers. · Vue baie Fort-de-France · À partir de 90€/nuit" },
@@ -263,6 +302,13 @@ export default function GuideActivites() {
           </div>
         </div>
 
+        <BridgeVilla
+          villaId="amaryllis"
+          lieu="Activités à Sainte-Luce"
+          tempsRoute="sur place"
+          copy="Faites de la Villa Amaryllis votre camp de base à Sainte-Luce : piscine à débordement, vue mer, et toutes ces sorties à moins de 40 minutes. Réservez en direct, sans frais de plateforme, et organisez vos journées à votre rythme."
+        />
+                <BlocAffilie slug="activites" />
         <div style={{ padding: "48px 24px", background: "#f6f1e7" }}>
           <NewsletterForm source="activites-sainte-luce" />
         </div>

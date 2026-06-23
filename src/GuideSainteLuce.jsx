@@ -2,6 +2,14 @@
 
 import SEOMeta from "./SEOMeta.jsx";
 import NewsletterForm from "./NewsletterForm.jsx";
+import BlocAffilie from "./components/BlocAffilie.jsx";
+import EncartActivite from "./components/EncartActivite.jsx";
+import { ACTIVITES } from "./data/activites.js";
+import ReadingProgressBar from "./components/ReadingProgressBar.jsx";
+import BridgeVilla from "./components/BridgeVilla.jsx";
+import ProgrammeSejour from "./components/ProgrammeSejour.jsx";
+import GuideHero from "./components/GuideHero.jsx";
+import GuideStickyNav from "./components/GuideStickyNav.jsx";
 
 const NAVY  = "#0e3b3a";
 const IVORY = "#faf5e9";
@@ -12,7 +20,7 @@ const SAND  = "#e8dcc8";
 const MUTED = "#7a6b5a";
 const BASE  = "https://villamaryllis.com";
 
-const HERO_IMG = "https://villamaryllis.com/photos/iguana/01.webp";
+const HERO_IMG = "/photos/sainte-luce.jpg";
 
 const css = `
   .sl-hero-overlay {
@@ -125,12 +133,6 @@ const villas = [
     photo: "https://villamaryllis.com/photos/amaryllis/01.webp",
   },
   {
-    id: "iguana",
-    nom: "Villa Iguana",
-    desc: "Piscine d'eau salée, vue Rocher du Diamant, 3 chambres",
-    photo: "https://villamaryllis.com/photos/iguana/01.webp",
-  },
-  {
     id: "zandoli",
     nom: "Zandoli",
     desc: "Piscine partagée, jardin tropical, 2 chambres",
@@ -189,6 +191,14 @@ export default function GuideSainteLuce() {
       })}} />
 
       <div style={{ minHeight: "100vh", background: IVORY, color: TEXT, fontFamily: "'Jost', system-ui, sans-serif" }}>
+        <ReadingProgressBar ctaHref="/" />
+        <GuideStickyNav
+          links={[
+            { label: "Spots", href: "#spots" },
+            { label: "Activités", href: "#activites" },
+            { label: "Programme", href: "#programme" },
+          ]}
+        />
 
         {/* NAV */}
         <header style={{ background: NAVY, padding: "0 24px" }}>
@@ -201,39 +211,23 @@ export default function GuideSainteLuce() {
           </div>
         </header>
 
-        {/* HERO */}
-        <div style={{ position: "relative", height: "min(90vh, 620px)", overflow: "hidden" }}>
-          <img
-            src={HERO_IMG}
-            alt="Vue mer depuis les villas Amaryllis à Sainte-Luce, Martinique"
-            loading="eager"
-            fetchPriority="high"
-            style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 40%" }}
-          />
-          <div className="sl-hero-overlay" />
-          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "0 32px 48px" }}>
-            <div style={{ maxWidth: 760, margin: "0 auto", width: "100%" }}>
-              <p style={{ color: CORAL, fontSize: 12, letterSpacing: "0.3em", textTransform: "uppercase", margin: "0 0 14px" }}>Location de villas · Sud Martinique</p>
-              <h1 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: "clamp(32px, 6vw, 64px)", letterSpacing: "0.04em", color: IVORY, textTransform: "uppercase", margin: "0 0 20px", lineHeight: 1.05 }}>
-                Sainte-Luce<br /><em style={{ fontStyle: "normal", fontWeight: 400, color: CORAL }}>Martinique</em>
-              </h1>
-              <div className="sl-badges" style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 32 }}>
-                {[
-                  { icon: "🏖️", label: "Plages de sable blanc" },
-                  { icon: "🤿", label: "Snorkeling & fonds marins" },
-                  { icon: "🌊", label: "Spot surf & kitesurf" },
-                  { icon: "🦈", label: "Baignade avec les tortues" },
-                  { icon: "🍹", label: "Ti' Punch & poisson grillé" },
-                ].map(b => (
-                  <span key={b.label} className="sl-badge">{b.icon} {b.label}</span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
+        <GuideHero
+          img={HERO_IMG}
+          alt="Vue mer depuis les villas Amaryllis à Sainte-Luce, Martinique"
+          eyebrow="Location de villas · Sud Martinique"
+          title="Sainte-Luce Martinique"
+          subtitle=""
+          badges={[
+            { icon: "🏖️", label: "Plages de sable blanc" },
+            { icon: "🤿", label: "Snorkeling & fonds marins" },
+            { icon: "🌊", label: "Spot surf & kitesurf" },
+            { icon: "🦈", label: "Baignade avec les tortues" },
+            { icon: "🍹", label: "Ti' Punch & poisson grillé" },
+          ]}
+        />
 
         {/* CONTENT */}
-        <div style={{ maxWidth: 960, margin: "0 auto", padding: "72px 24px 96px" }}>
+        <div id="spots" style={{ maxWidth: 960, margin: "0 auto", padding: "72px 24px 96px" }}>
 
           {/* INTRO */}
           <div className="sl-section">
@@ -325,6 +319,12 @@ export default function GuideSainteLuce() {
             </div>
           </div>
 
+          <div id="activites">
+            <EncartActivite activites={[ACTIVITES.tortues, ACTIVITES.snorkeling]} />
+          </div>
+
+          <EncartActivite activites={[ACTIVITES["fonds-blancs"]]} />
+
           {/* ACTIVITÉS */}
           <div className="sl-section">
             <p className="sl-section-title">À faire</p>
@@ -349,7 +349,10 @@ export default function GuideSainteLuce() {
             </div>
           </div>
 
+          <EncartActivite activites={[ACTIVITES.catamaran]} />
+
           {/* JOURNÉE IDÉALE */}
+          <EncartActivite activites={[ACTIVITES["diamant-bateau"]]} platform="gyg" />
           <div className="sl-day">
             <p style={{ color: CORAL, fontSize: 11, letterSpacing: "0.3em", textTransform: "uppercase", margin: "0 0 8px" }}>Itinéraire</p>
             <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: "clamp(20px, 3vw, 28px)", letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY, margin: "0 0 6px" }}>
@@ -373,6 +376,7 @@ export default function GuideSainteLuce() {
           </div>
 
           {/* RESTAURANTS */}
+          <EncartActivite activites={[{ ...ACTIVITES.rhum, viatorPath: null }]} platform="gyg" />
           <div className="sl-section">
             <p className="sl-section-title">Gastronomie</p>
             <h2>Où manger<br />à Sainte-Luce</h2>
@@ -451,6 +455,41 @@ export default function GuideSainteLuce() {
             </div>
           </div>
 
+          <div id="programme">
+          <ProgrammeSejour
+            jours={[
+              {
+                jour: "Jour 1",
+                titre: "Sainte-Luce, mer et fonds marins",
+                matin: "Petit-déjeuner sur la terrasse de la villa, puis snorkeling à l'Anse Chaudière avant l'affluence : tortues vertes au-dessus des herbiers.",
+                apresMidi: "Plage du Gros Raisins pour la baignade en famille, retour piscine à la villa aux heures chaudes.",
+                soir: "Dîner les pieds dans le sable à Mano Beach, poisson grillé au bois et ti-punch face à la mer.",
+              },
+              {
+                jour: "Jour 2",
+                titre: "Cap sur le Rocher du Diamant",
+                matin: "Sortie en bateau vers le Rocher du Diamant et la côte sud, baignade et points de vue sur l'îlot mythique.",
+                apresMidi: "Escale aux Salines (25-30 min de route) ou retour vers Sainte-Anne pour le sable blanc, marché artisanal en fin de journée.",
+                soir: "Cuisine créole authentique au village de Sainte-Luce.",
+              },
+              {
+                jour: "Jour 3",
+                titre: "Terroir et fonds blancs",
+                matin: "Visite du site Trois-Rivières à Sainte-Luce : moulin emblématique, boutique et dégustation de rhum agricole AOC.",
+                apresMidi: "Excursion fonds blancs et Bain de Joséphine côté François (35-40 min), piscines naturelles turquoise.",
+                soir: "Apéro coucher de soleil sur la terrasse de la villa.",
+              },
+            ]}
+          />
+          </div>
+
+          <BridgeVilla
+            villaId="amaryllis"
+            lieu="Sainte-Luce"
+            tempsRoute="sur place"
+            copy="Faites de la Villa Amaryllis votre camp de base à Sainte-Luce : plages, snorkeling et distilleries sont à vos pieds, et le Rocher du Diamant comme les Salines à moins de 30 minutes. Réservez en direct, sans frais d'intermédiaire, auprès de vos hôtes sur place."
+          />
+
           {/* CTA FINAL */}
           <div style={{
             background: `linear-gradient(135deg, ${NAVY} 0%, #163f3e 100%)`,
@@ -475,6 +514,7 @@ export default function GuideSainteLuce() {
 
         </div>
 
+                <BlocAffilie slug="sainte-luce" />
         <div style={{ padding: "48px 24px", background: "#f6f1e7" }}>
           <NewsletterForm source="guide-sainte-luce" />
         </div>

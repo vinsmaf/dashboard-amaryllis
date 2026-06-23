@@ -4,10 +4,18 @@
 import SEOMeta from "./SEOMeta.jsx";
 import MaillageCluster from "./components/seo/MaillageCluster.jsx";
 import NewsletterForm from "./NewsletterForm.jsx";
+import ReadingProgressBar from "./components/ReadingProgressBar.jsx";
+import GuideHero from "./components/GuideHero.jsx";
+import GuideStickyNav from "./components/GuideStickyNav.jsx";
+import BridgeVilla from "./components/BridgeVilla.jsx";
+import ProgrammeSejour from "./components/ProgrammeSejour.jsx";
 
 // Noms canoniques des biens pour le maillage interne SEO ("villa" = Amaryllis + Iguana uniquement).
 const BIEN_NAMES = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko", mabouya: "Mabouya", schoelcher: "Bellevue Schœlcher", iguana: "Villa Iguana", nogent: "Appartement Nogent-sur-Marne" };
 import WikiImg from "./WikiImg.jsx";
+import BlocAffilie from "./components/BlocAffilie.jsx";
+import EncartActivite from "./components/EncartActivite.jsx";
+import { ACTIVITES } from "./data/activites.js";
 
 const NAVY  = "#0e3b3a";
 const IVORY = "#faf5e9";
@@ -22,7 +30,7 @@ const HERO_IMG = "https://villamaryllis.com/photos/arlet-tortue.webp";
 
 const badges = [
   { icon: "🐢", label: "Tortues garanties" },
-  { icon: "📍", label: "25 min de Sainte-Luce" },
+  { icon: "📍", label: "35-40 min de Sainte-Luce" },
   { icon: "🤿", label: "Snorkeling facile" },
   { icon: "👨‍👩‍👧", label: "Idéal en famille" },
   { icon: "🎣", label: "Village de pêcheurs" },
@@ -197,12 +205,12 @@ export default function GuideArlet() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: cssStyles }} />
-<SEOMeta title="Anses d'Arlet Martinique — Tortues marines | Amaryllis" description="Les Anses d'Arlet (25 min de Sainte-Luce) : le seul spot de Martinique où nager avec des tortues marines garanties tôt le matin. Village de pêcheurs, snorkeling, restaurants." canonical="/guide-arlet" image="https://villamaryllis.com/photos/arlet-tortue.webp" type="article" />
+<SEOMeta title="Anses d'Arlet Martinique — Tortues marines | Amaryllis" description="Les Anses d'Arlet (35-40 min de Sainte-Luce) : le seul spot de Martinique où nager avec des tortues marines garanties tôt le matin. Village de pêcheurs, snorkeling, restaurants." canonical="/guide-arlet" image="https://villamaryllis.com/photos/arlet-tortue.webp" type="article" />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         "@context": "https://schema.org",
         "@type": "Article",
         "headline": "Grande Anse d'Arlet Martinique : nager avec les tortues marines",
-        "description": "Le guide complet de Grande Anse d'Arlet : comment voir les tortues marines garanties, snorkeling, village de pêcheurs et restaurants créoles. À 25 min de Sainte-Luce.",
+        "description": "Le guide complet de Grande Anse d'Arlet : comment voir les tortues marines garanties, snorkeling, village de pêcheurs et restaurants créoles. À 35-40 min de Sainte-Luce.",
         "url": `${BASE}/guide-arlet`,
         "image": HERO_IMG,
         "author": { "@id": `${BASE}/#organization` },
@@ -234,7 +242,7 @@ export default function GuideArlet() {
             "name": "C'est loin d'Arlet depuis Sainte-Luce ?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Non, seulement 25 minutes en voiture via la N6 vers Le Diamant puis la côte caraïbe. Nos villas à Sainte-Luce sont donc une base idéale pour visiter Arlet, Le Diamant (15 min) ou Les Salines (20 min)."
+              "text": "Non, seulement 35 à 40 minutes en voiture via la N6 vers Le Diamant puis la côte caraïbe. Nos villas à Sainte-Luce sont donc une base idéale pour visiter Arlet, Le Diamant (15 min) ou Les Salines (25-30 min)."
             }
           },
           {
@@ -257,6 +265,14 @@ export default function GuideArlet() {
       })}} />
 
       <div style={{ minHeight: "100vh", background: IVORY, color: TEXT, fontFamily: "'Jost', system-ui, sans-serif" }}>
+        <ReadingProgressBar ctaHref="/" />
+        <GuideStickyNav
+          links={[
+            { label: "Spots", href: "#spots" },
+            { label: "Activités", href: "#activites" },
+            { label: "Programme", href: "#programme" },
+          ]}
+        />
 
         {/* ── HEADER ── */}
         <header style={{ background: NAVY, padding: "0 24px" }}>
@@ -269,44 +285,17 @@ export default function GuideArlet() {
           </div>
         </header>
 
-        {/* ── HERO PLEIN ÉCRAN ── */}
-        <div style={{ position: "relative", height: "min(90vh, 620px)", overflow: "hidden" }}>
-          <img
-            src={HERO_IMG}
-            alt="Grande Anse d'Arlet — plage et tortues marines, Martinique"
-            style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 55%" }}
-          />
-          {/* Gradient bas */}
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(14,59,58,0.35) 0%, rgba(14,59,58,0.2) 40%, rgba(14,59,58,0.85) 100%)" }} />
-
-          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "0 32px 48px" }}>
-            <div style={{ maxWidth: 760, margin: "0 auto", width: "100%" }}>
-              {/* Surtitre */}
-              <p style={{ color: CORAL, fontSize: 12, letterSpacing: "0.3em", textTransform: "uppercase", marginBottom: 14, margin: "0 0 14px" }}>
-                Guide de voyage · Résidence Amaryllis
-              </p>
-              {/* H1 */}
-              <h1 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: "clamp(32px, 6vw, 64px)", letterSpacing: "0.04em", color: IVORY, textTransform: "uppercase", margin: "0 0 20px", lineHeight: 1.05 }}>
-                Grande Anse<br />d'Arlet
-              </h1>
-              {/* Accroche tortues */}
-              <p style={{ color: "rgba(250,245,233,0.9)", fontSize: "clamp(16px, 2.5vw, 20px)", maxWidth: 580, margin: "0 0 28px", lineHeight: 1.6, fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
-                L'endroit de Martinique où vous nagez avec les tortues marines — à 2 mètres du bord, sans équipement spécial.
-              </p>
-              {/* Badges */}
-              <div className="badges-row" style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-                {badges.map(b => (
-                  <span key={b.label} className={`guide-arlet-badge${b.icon === "🐢" ? " must" : ""}`}>
-                    <span>{b.icon}</span>{b.label}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
+        <GuideHero
+          img={HERO_IMG}
+          alt="Grande Anse d'Arlet — plage et tortues marines, Martinique"
+          eyebrow="Guide de voyage · Résidence Amaryllis"
+          title="Grande Anse d'Arlet"
+          subtitle="L'endroit de Martinique où vous nagez avec les tortues marines — à 2 mètres du bord, sans équipement spécial."
+          badges={badges}
+        />
 
         {/* ── CONTENU ── */}
-        <div style={{ maxWidth: 860, margin: "0 auto", padding: "56px 24px 80px" }}>
+        <div id="spots" style={{ maxWidth: 860, margin: "0 auto", padding: "56px 24px 80px" }}>
 
           {spots.map((spot, si) => {
             if (spot.must) {
@@ -356,13 +345,18 @@ export default function GuideArlet() {
             );
           })}
 
+          <div id="activites">
+            <EncartActivite activites={[ACTIVITES.catamaran, ACTIVITES.dauphins]} />
+          </div>
+          <EncartActivite activites={[ACTIVITES.tortues, ACTIVITES.snorkeling]} />
+
           {/* ── INFOS PRATIQUES ── */}
           <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 22, letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY, marginBottom: 20 }}>
             🗓️ Infos pratiques
           </h2>
           <div className="practical-grid">
             {[
-              { label: "Depuis Sainte-Luce", value: "25 minutes — N6 vers Le Diamant puis côte caraïbe" },
+              { label: "Depuis Sainte-Luce", value: "35-40 minutes — N6 vers Le Diamant puis côte caraïbe" },
               { label: "Meilleur moment", value: "7h–9h du matin pour les tortues · Coucher de soleil pour les photos" },
               { label: "Parking", value: "Entrée du village, payant en haute saison (2–3€)" },
               { label: "Snorkeling", value: "Location masque + tuba sur la plage · 5–8€/pers." },
@@ -374,13 +368,38 @@ export default function GuideArlet() {
             ))}
           </div>
 
+          <BridgeVilla
+  villaId="amaryllis"
+  lieu="Grande Anse d'Arlet"
+  tempsRoute="35-40 min"
+  copy="Organisez ces journées à Arlet depuis la Villa Amaryllis : à 35-40 min par la côte caraïbe, piscine à débordement et vue mer au retour, réservation en direct sans commission."
+/>
+          <div id="programme">
+          <ProgrammeSejour
+  jours={[
+    {
+      jour: "Jour 1",
+      titre: "Tortues au lever du jour & village de pêcheurs",
+      matin: "Départ tôt de Sainte-Luce pour être à Grande Anse d'Arlet entre 7h et 9h. Snorkeling au-dessus des herbiers côté gauche de la plage, vers la pointe rocheuse, pour nager avec les tortues vertes (masque + tuba loués sur place, 5-8€).",
+      apresMidi: "Déjeuner de poisson frais les pieds dans le sable (Le Ti Sable ou Chez Nana), puis baignade familiale sur l'arc de sable et balade dans le village de pêcheurs ; 15 min à pied vers Petite Anse d'Arlet pour un second spot de snorkeling plus sauvage.",
+      soir: "Retour vers la villa pour le coucher de soleil sur la côte caraïbe.",
+    },
+    {
+      jour: "Jour 2",
+      titre: "Journée en mer — dauphins, voile & îlets",
+      matin: "Embarquement pour une sortie catamaran à la journée sur la côte caraïbe : observation des dauphins en liberté, navigation à la voile et arrêts snorkeling au-dessus des coraux.",
+      apresMidi: "Suite de la croisière vers les îlets du Sud, déjeuner à bord et baignade dans les eaux peu profondes avant le retour au port.",
+    },
+  ]}
+/>
+          </div>
+
           {/* ── MAILLAGE VILLAS ── */}
           <div style={{ marginBottom: 32 }}>
-            <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 11, letterSpacing: "0.25em", textTransform: "uppercase", color: CORAL, margin: "0 0 16px" }}>Nos villas à 25 min d'Arlet</p>
+            <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 11, letterSpacing: "0.25em", textTransform: "uppercase", color: CORAL, margin: "0 0 16px" }}>Nos villas à 35-40 min d'Arlet</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {[
                 { id: "amaryllis", name: "Villa Amaryllis", desc: "Piscine à débordement · Vue mer · Jacuzzi · 8 personnes · À partir de 280€/nuit" },
-                { id: "iguana",    name: "Villa Iguana",    desc: "Piscine eau salée · Vue Diamant · Location longue durée" },
                 { id: "zandoli",   name: "Zandoli",         desc: "Piscine privée · Vue mer · Jardin tropical · 5 personnes · À partir de 110€/nuit" },
                 { id: "geko",      name: "Géko",            desc: "Piscine privée · Jardin tropical · 4 personnes · À partir de 110€/nuit" },
                 { id: "mabouya",   name: "Mabouya",         desc: "Jacuzzi privatif · Vue mer · Romantique · 2 personnes · À partir de 70€/nuit" },
@@ -401,7 +420,7 @@ export default function GuideArlet() {
             <p style={{ color: CORAL, fontSize: 11, letterSpacing: "0.3em", textTransform: "uppercase", marginBottom: 12 }}>Base idéale pour le sud</p>
             <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 28, letterSpacing: "0.08em", color: IVORY, textTransform: "uppercase", margin: "0 0 16px" }}>Nos villas à Sainte-Luce</h2>
             <p style={{ color: "rgba(250,245,233,0.65)", fontSize: 15, maxWidth: 480, margin: "0 auto 28px", lineHeight: 1.7, fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
-              Arlet à 25 min, Le Diamant à 15 min, Les Salines à 20 min. Piscine privée, vue mer, réservation directe.
+              Arlet à 35-40 min, Le Diamant à 15 min, Les Salines à 25-30 min. Piscine privée, vue mer, réservation directe.
             </p>
             <a href="/" style={{ display: "inline-block", background: CORAL, color: "#fff", textDecoration: "none", padding: "15px 36px", borderRadius: 8, fontSize: 13, fontWeight: 400, letterSpacing: "0.12em", textTransform: "uppercase" }}>Voir toutes nos villas</a>
           </div>
@@ -414,6 +433,7 @@ export default function GuideArlet() {
           </div>
         </div>
 
+                <BlocAffilie slug="arlet" />
         <div style={{ padding: "48px 24px", background: "#f6f1e7" }}>
           <NewsletterForm source="guide-arlet" />
         </div>

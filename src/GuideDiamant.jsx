@@ -3,6 +3,14 @@
 import SEOMeta from "./SEOMeta.jsx";
 import WikiImg from "./WikiImg.jsx";
 import NewsletterForm from "./NewsletterForm.jsx";
+import BlocAffilie from "./components/BlocAffilie.jsx";
+import ReadingProgressBar from "./components/ReadingProgressBar.jsx";
+import GuideHero from "./components/GuideHero.jsx";
+import GuideStickyNav from "./components/GuideStickyNav.jsx";
+import BridgeVilla from "./components/BridgeVilla.jsx";
+import ProgrammeSejour from "./components/ProgrammeSejour.jsx";
+import EncartActivite from "./components/EncartActivite.jsx";
+import { ACTIVITES } from "./data/activites.js";
 
 const NAVY  = "#0e3b3a";
 const IVORY = "#faf5e9";
@@ -13,7 +21,7 @@ const SAND  = "#e8dcc8";
 const MUTED = "#7a6b5a";
 const BASE  = "https://villamaryllis.com";
 
-const HERO_IMG  = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/Diamond_Rock.jpg/960px-Diamond_Rock.jpg";
+const HERO_IMG  = "/photos/diamond-rock.jpg";
 const BEACH_IMG = "https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Rocher_du_Diamant_%28Le_Diamant%2C_Martinique%29_-_03.jpg/960px-Rocher_du_Diamant_%28Le_Diamant%2C_Martinique%29_-_03.jpg";
 const ROCK_IMG  = "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Rocher_du_Diamant_%28Le_Diamant%2C_Martinique%29_-_01.jpg/960px-Rocher_du_Diamant_%28Le_Diamant%2C_Martinique%29_-_01.jpg";
 
@@ -105,6 +113,14 @@ export default function GuideDiamant() {
       })}} />
 
       <div style={{ minHeight: "100vh", background: IVORY, color: TEXT, fontFamily: "'Jost', system-ui, sans-serif" }}>
+        <ReadingProgressBar ctaHref="/" />
+        <GuideStickyNav
+          links={[
+            { label: "Spots", href: "#spots" },
+            { label: "Activités", href: "#activites" },
+            { label: "Programme", href: "#programme" },
+          ]}
+        />
 
         <header style={{ background: NAVY, padding: "0 24px" }}>
           <div style={{ maxWidth: 960, margin: "0 auto", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -116,33 +132,16 @@ export default function GuideDiamant() {
           </div>
         </header>
 
-        {/* HERO */}
-        <div style={{ position: "relative", height: "min(90vh, 620px)", overflow: "hidden" }}>
-          <WikiImg src={HERO_IMG} alt="Rocher du Diamant, Martinique"
-            loading="eager" fetchPriority="high"
-            style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 45%" }} />
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(14,59,58,0.25) 0%, rgba(14,59,58,0.1) 35%, rgba(14,59,58,0.9) 100%)" }} />
-          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "0 32px 48px" }}>
-            <div style={{ maxWidth: 760, margin: "0 auto", width: "100%" }}>
-              <p style={{ color: CORAL, fontSize: 12, letterSpacing: "0.3em", textTransform: "uppercase", margin: "0 0 14px" }}>Guide de voyage · Résidence Amaryllis</p>
-              <h1 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: "clamp(32px, 6vw, 64px)", letterSpacing: "0.04em", color: IVORY, textTransform: "uppercase", margin: "0 0 20px", lineHeight: 1.05 }}>
-                Le Rocher<br />du Diamant
-              </h1>
-              <p style={{ color: "rgba(250,245,233,0.9)", fontSize: "clamp(16px, 2.5vw, 20px)", maxWidth: 580, margin: "0 0 28px", lineHeight: 1.6, fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
-                Le seul rocher jamais enrôlé dans la Royal Navy. Aujourd'hui, le meilleur spot de plongée de la Martinique. À 15 minutes de nos villas.
-              </p>
-              <div className="gd-badges" style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-                {badges.map(b => (
-                  <span key={b.label} className={`gd-badge${b.icon === "🗿" ? " must" : ""}`}>
-                    <span>{b.icon}</span>{b.label}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
+        <GuideHero
+          img={HERO_IMG}
+          alt="Rocher du Diamant, Martinique"
+          eyebrow="Guide de voyage · Résidence Amaryllis"
+          title="Le Rocher du Diamant"
+          subtitle="Le seul rocher jamais enrôlé dans la Royal Navy. Aujourd'hui, le meilleur spot de plongée de la Martinique. À 15 minutes de nos villas."
+          badges={badges}
+        />
 
-        <div style={{ maxWidth: 860, margin: "0 auto", padding: "56px 24px 80px" }}>
+        <div id="spots" style={{ maxWidth: 860, margin: "0 auto", padding: "56px 24px 80px" }}>
 
           {/* MUST ABSOLU */}
           <div className="gd-must">
@@ -172,13 +171,20 @@ export default function GuideDiamant() {
             </div>
           </div>
 
+          <div id="activites">
+            <EncartActivite activites={[ACTIVITES.snorkeling, ACTIVITES.tortues]} />
+          </div>
+
           {/* HISTOIRE */}
           <div className="gd-history">
             <div className="gd-history-icon">⚓</div>
             <p>En <strong>1804</strong>, les Britanniques s'emparent de ce rocher volcanique de 175 m et le baptisent <strong>HMS Diamond Rock</strong> — seul rocher jamais enrôlé officiellement comme navire de guerre dans la Royal Navy. Ils y installent des canons pour contrôler le détroit et harcèlent la flotte française pendant 17 mois. <strong>Villeneuve</strong>, commandant de la flotte napoléonienne, met 3 jours et 2 000 hommes pour le reprendre en 1805 — quelques mois avant Trafalgar.</p>
           </div>
 
+          <EncartActivite activites={[ACTIVITES["diamant-bateau"]]} platform="gyg" />
+
           {/* PLAGES */}
+          <EncartActivite activites={[ACTIVITES.catamaran]} />
           <div className="gd-section">
             <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 22, letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY, marginBottom: 24, display: "flex", alignItems: "center", gap: 12 }}>
               <span>🏖️</span><span>Les plages du Diamant</span>
@@ -199,6 +205,7 @@ export default function GuideDiamant() {
           </div>
 
           {/* OÙ MANGER */}
+          <EncartActivite activites={[ACTIVITES.dauphins]} />
           <div className="gd-section">
             <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 22, letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY, marginBottom: 24, display: "flex", alignItems: "center", gap: 12 }}>
               <span>🍽️</span><span>Où manger</span>
@@ -234,12 +241,37 @@ export default function GuideDiamant() {
             ))}
           </div>
 
+          <BridgeVilla
+  villaId="amaryllis"
+  lieu="Le Diamant"
+  tempsRoute="15-20 min"
+  copy="Faites de la Villa Amaryllis votre camp de base pour explorer Le Diamant et son Rocher mythique : à 15-20 min par la côte caraïbe, piscine à débordement et vue mer au retour, réservation en direct sans commission."
+/>
+          <div id="programme">
+          <ProgrammeSejour
+  jours={[
+    {
+      jour: "Jour 1",
+      titre: "Le Rocher, de la plongée au coucher de soleil",
+      matin: "Plongée ou snorkeling encadré autour du Rocher du Diamant (baptême possible dès 8 ans) — tombants, gorgones et tortues sur la face nord.",
+      apresMidi: "Détente sur la grande plage de 3 km, puis recueillement à l'Anse Cafard devant le Mémorial de l'esclavage.",
+      soir: "Ti-punch et poisson du jour au Belem, les pieds dans le sable, pour le coucher de soleil derrière le Rocher.",
+    },
+    {
+      jour: "Jour 2",
+      titre: "Cap sur la côte caraïbe",
+      matin: "Sortie catamaran à la journée vers les îlets du Sud : dauphins en liberté et snorkeling dans des eaux turquoise.",
+      apresMidi: "Retour tranquille à la villa, baignade dans la piscine privée et fin de journée au calme.",
+    },
+  ]}
+/>
+          </div>
+
           {/* MAILLAGE VILLAS */}
           <div style={{ marginBottom: 32 }}>
             <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 11, letterSpacing: "0.25em", textTransform: "uppercase", color: CORAL, margin: "0 0 16px" }}>Villas idéalement situées</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {[
-                { id: "iguana",    name: "Villa Iguana",    desc: "Vue directe sur le Rocher du Diamant · Piscine eau salée · Location longue durée" },
                 { id: "amaryllis", name: "Villa Amaryllis", desc: "Piscine à débordement · Vue océan · Jacuzzi · À partir de 280€/nuit" },
                 { id: "mabouya",   name: "Mabouya",         desc: "Vue mer panoramique · Jacuzzi privatif · À partir de 70€/nuit" },
                 { id: "zandoli",   name: "Zandoli",         desc: "Piscine privée · Vue mer · 5 personnes · À partir de 110€/nuit" },
@@ -271,6 +303,7 @@ export default function GuideDiamant() {
           </div>
         </div>
 
+                <BlocAffilie slug="diamant" />
         <div style={{ padding: "48px 24px", background: "#f6f1e7" }}>
           <NewsletterForm source="guide-le-diamant" />
         </div>

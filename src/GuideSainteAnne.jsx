@@ -3,10 +3,18 @@
 import SEOMeta from "./SEOMeta.jsx";
 import MaillageCluster from "./components/seo/MaillageCluster.jsx";
 import NewsletterForm from "./NewsletterForm.jsx";
+import ReadingProgressBar from "./components/ReadingProgressBar.jsx";
+import GuideHero from "./components/GuideHero.jsx";
+import GuideStickyNav from "./components/GuideStickyNav.jsx";
+import BridgeVilla from "./components/BridgeVilla.jsx";
+import ProgrammeSejour from "./components/ProgrammeSejour.jsx";
 
 // Noms canoniques des biens pour le maillage interne SEO ("villa" = Amaryllis + Iguana uniquement).
 const BIEN_NAMES = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko", mabouya: "Mabouya", schoelcher: "Bellevue Schœlcher", iguana: "Villa Iguana", nogent: "Appartement Nogent-sur-Marne" };
 import WikiImg from "./WikiImg.jsx";
+import BlocAffilie from "./components/BlocAffilie.jsx";
+import EncartActivite from "./components/EncartActivite.jsx";
+import { ACTIVITES } from "./data/activites.js";
 
 const NAVY  = "#0e3b3a";
 const IVORY = "#faf5e9";
@@ -17,7 +25,7 @@ const SAND  = "#e8dcc8";
 const MUTED = "#7a6b5a";
 const BASE  = "https://villamaryllis.com";
 
-const HERO_IMG = "https://villamaryllis.com/photos/amaryllis/01.webp";
+const HERO_IMG = "/photos/sainte-anne.jpg";
 
 const badges = [
   { icon: "🏖️", label: "Plus belle plage des Caraïbes" },
@@ -107,6 +115,14 @@ export default function GuideSainteAnne() {
       })}} />
 
       <div style={{ minHeight: "100vh", background: IVORY, color: TEXT, fontFamily: "'Jost', system-ui, sans-serif" }}>
+        <ReadingProgressBar ctaHref="/" />
+        <GuideStickyNav
+          links={[
+            { label: "Spots", href: "#spots" },
+            { label: "Activités", href: "#activites" },
+            { label: "Programme", href: "#programme" },
+          ]}
+        />
 
         <header style={{ background: NAVY, padding: "0 24px" }}>
           <div style={{ maxWidth: 960, margin: "0 auto", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -118,36 +134,16 @@ export default function GuideSainteAnne() {
           </div>
         </header>
 
-        {/* HERO */}
-        <div style={{ position: "relative", height: "min(90vh, 620px)", overflow: "hidden" }}>
-          <WikiImg
-            src={HERO_IMG}
-            alt="Grande Anse des Salines, Sainte-Anne, Martinique"
-            loading="eager" fetchPriority="high"
-            style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 40%" }}
-          />
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(14,59,58,0.2) 0%, rgba(14,59,58,0.15) 40%, rgba(14,59,58,0.88) 100%)" }} />
-          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: "0 32px 48px" }}>
-            <div style={{ maxWidth: 760, margin: "0 auto", width: "100%" }}>
-              <p style={{ color: CORAL, fontSize: 12, letterSpacing: "0.3em", textTransform: "uppercase", margin: "0 0 14px" }}>Guide de voyage · Résidence Amaryllis</p>
-              <h1 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: "clamp(32px, 6vw, 64px)", letterSpacing: "0.04em", color: IVORY, textTransform: "uppercase", margin: "0 0 20px", lineHeight: 1.05 }}>
-                Sainte-Anne<br />&amp; Les Salines
-              </h1>
-              <p style={{ color: "rgba(250,245,233,0.9)", fontSize: "clamp(16px, 2.5vw, 20px)", maxWidth: 580, margin: "0 0 28px", lineHeight: 1.6, fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
-                La plus belle plage des Caraïbes. Les îlets turquoise. Le meilleur kitesurf des Antilles. À 20 minutes de nos villas.
-              </p>
-              <div className="gs-badges" style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-                {badges.map(b => (
-                  <span key={b.label} className={`gs-badge${b.icon === "🏖️" ? " must" : ""}`}>
-                    <span>{b.icon}</span>{b.label}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
+        <GuideHero
+          img={HERO_IMG}
+          alt="Grande Anse des Salines, Sainte-Anne, Martinique"
+          eyebrow="Guide de voyage · Résidence Amaryllis"
+          title="Sainte-Anne & Les Salines"
+          subtitle="La plus belle plage des Caraïbes. Les îlets turquoise. Le meilleur kitesurf des Antilles. À 20 minutes de nos villas."
+          badges={badges}
+        />
 
-        <div style={{ maxWidth: 860, margin: "0 auto", padding: "56px 24px 80px" }}>
+        <div id="spots" style={{ maxWidth: 860, margin: "0 auto", padding: "56px 24px 80px" }}>
 
           {/* MUST ABSOLU — LES SALINES */}
           <div className="gs-must">
@@ -177,6 +173,10 @@ export default function GuideSainteAnne() {
             </div>
           </div>
 
+          <div id="activites">
+            <EncartActivite activites={[ACTIVITES.tortues]} />
+          </div>
+
           {/* JOURNÉE IDÉALE */}
           <div className="gs-day">
             <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 11, letterSpacing: "0.25em", textTransform: "uppercase", color: CORAL, margin: "0 0 6px" }}>Programme</p>
@@ -199,6 +199,7 @@ export default function GuideSainteAnne() {
           </div>
 
           {/* AUTRES PLAGES */}
+          <EncartActivite activites={[ACTIVITES.snorkeling]} />
           <div className="gs-section">
             <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 22, letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY, marginBottom: 24, display: "flex", alignItems: "center", gap: 12 }}>
               <span>🌊</span><span>Les autres plages</span>
@@ -235,7 +236,10 @@ export default function GuideSainteAnne() {
             ))}
           </div>
 
+          <EncartActivite activites={[ACTIVITES.catamaran, ACTIVITES.dauphins]} />
+
           {/* OÙ MANGER */}
+          <EncartActivite activites={[ACTIVITES["diamant-bateau"]]} platform="gyg" />
           <div className="gs-section">
             <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 22, letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY, marginBottom: 24, display: "flex", alignItems: "center", gap: 12 }}>
               <span>🍽️</span><span>Où manger</span>
@@ -272,6 +276,33 @@ export default function GuideSainteAnne() {
             ))}
           </div>
 
+          <BridgeVilla
+  villaId="amaryllis"
+  lieu="Sainte-Anne / Les Salines"
+  tempsRoute="25-30 min"
+  copy="Organisez ces journées depuis la Villa Amaryllis, à Sainte-Luce : 25 à 30 minutes des Salines, piscine à débordement face à la mer pour rentrer se rafraîchir après la plage. Réservez en direct, sans frais d'intermédiaire."
+/>
+          <div id="programme">
+          <ProgrammeSejour
+  jours={[
+    {
+      jour: "Jour 1",
+      titre: "Les Salines au lever du jour",
+      matin: "Départ de Sainte-Luce vers 7h (25 à 30 min par la N6). Arrivée aux Salines avant la foule : plage déserte, lumière dorée, baignade et photos. Snorkeling dans le lagon côté Îlet Cabrit (poissons tropicaux, raies, parfois tortues).",
+      apresMidi: "Déjeuner au bourg de Sainte-Anne (poisson grillé au Bakoua) puis sortie snorkeling encadrée pour explorer les plus beaux fonds en toute sécurité.",
+      soir: "Retour par Le Diamant pour le coucher de soleil face au Rocher, cocktail à la villa.",
+    },
+    {
+      jour: "Jour 2",
+      titre: "Le Sud vu de la mer",
+      matin: "Embarquement pour une sortie bateau Rocher du Diamant & Salines : approche du Rocher mythique, baignade et snorkeling dans des criques inaccessibles par la route.",
+      apresMidi: "Retour à la pointe des Salines pour une initiation kitesurf (alizés réguliers de décembre à mai) ou détente à l'Anse Meunier, la plage secrète à 15 min à pied des Salines.",
+      soir: "Dîner créole aux Tamariniers, terrasse vue mer.",
+    },
+  ]}
+/>
+          </div>
+
           {/* MAILLAGE VILLAS */}
           <div style={{ marginBottom: 32 }}>
             <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 11, letterSpacing: "0.25em", textTransform: "uppercase", color: CORAL, margin: "0 0 16px" }}>Nos villas à 20 min de Sainte-Anne</p>
@@ -279,7 +310,6 @@ export default function GuideSainteAnne() {
               {[
                 { id: "amaryllis", name: "Villa Amaryllis", desc: "Piscine à débordement · Vue mer · Jacuzzi · 8 personnes · À partir de 280€/nuit" },
                 { id: "zandoli",   name: "Zandoli",         desc: "Piscine privée · Vue mer · Jardin tropical · 5 personnes · À partir de 110€/nuit" },
-                { id: "iguana",    name: "Villa Iguana",    desc: "Piscine eau salée · Vue Diamant · Location longue durée" },
                 { id: "geko",      name: "Géko",            desc: "Piscine privée · Jardin tropical · 4 personnes · À partir de 110€/nuit" },
                 { id: "mabouya",   name: "Mabouya",         desc: "Jacuzzi privatif · Vue mer · Romantique · 2 personnes · À partir de 70€/nuit" },
               ].map(v => (
@@ -311,6 +341,7 @@ export default function GuideSainteAnne() {
           </div>
         </div>
 
+                <BlocAffilie slug="sainte-anne" />
         <div style={{ padding: "48px 24px", background: "#f6f1e7" }}>
           <NewsletterForm source="guide-sainte-anne" />
         </div>

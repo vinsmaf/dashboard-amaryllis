@@ -2,6 +2,14 @@
 
 import SEOMeta from "./SEOMeta.jsx";
 import NewsletterForm from "./NewsletterForm.jsx";
+import BlocAffilie from "./components/BlocAffilie.jsx";
+import EncartActivite from "./components/EncartActivite.jsx";
+import { ACTIVITES } from "./data/activites.js";
+import ReadingProgressBar from "./components/ReadingProgressBar.jsx";
+import BridgeVilla from "./components/BridgeVilla.jsx";
+import ProgrammeSejour from "./components/ProgrammeSejour.jsx";
+import GuideHero from "./components/GuideHero.jsx";
+import GuideStickyNav from "./components/GuideStickyNav.jsx";
 
 const NAVY  = "#0e3b3a";
 const IVORY = "#faf5e9";
@@ -72,18 +80,26 @@ const infos = [
 export default function GuideProximite() {
   return (
     <>
-      <SEOMeta title="Activités proches Sainte-Luce Martinique | Amaryllis" description="Les meilleures adresses à moins de 15 minutes de la résidence Amaryllis : Anse Corps de Garde, Forêt de Montravail, Distillerie Trois-Rivières, snorkeling avec les tortues." canonical="/guide-proximite" image="https://villamaryllis.com/photos/amaryllis/01.webp" type="article" />
+      <SEOMeta title="Activités proches Sainte-Luce Martinique | Amaryllis" description="Les meilleures adresses à moins de 15 minutes de la résidence Amaryllis : Anse Corps de Garde, Forêt de Montravail, Distillerie Trois-Rivières, snorkeling avec les tortues." canonical="/guide-proximite" image="https://villamaryllis.com/photos/sainte-luce.jpg" type="article" />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         "@context": "https://schema.org",
         "@type": "Article",
         "headline": "Guide des activités à proximité de la Villa Amaryllis — Sainte-Luce, Martinique",
         "description": "Les meilleures adresses à moins de 15 minutes de la résidence Amaryllis : Anse Corps de Garde, Anse Mabouya, Forêt de Montravail, distillerie Trois-Rivières, nager avec les tortues. Guide rédigé par vos hôtes.",
         "url": `${BASE}/guide-proximite`,
-        "image": `${BASE}/photos/amaryllis/01.webp`,
+        "image": `${BASE}/photos/sainte-luce.jpg`,
         "author": { "@id": `${BASE}/#organization` },
         "publisher": { "@id": `${BASE}/#organization` },
       })}} />
 
+      <ReadingProgressBar ctaHref="/" />
+      <GuideStickyNav
+        links={[
+          { label: "Spots", href: "#spots" },
+          { label: "Activités", href: "#activites" },
+          { label: "Programme", href: "#programme" },
+        ]}
+      />
       <div style={{ minHeight: "100vh", background: IVORY, color: TEXT, fontFamily: "'Jost', system-ui, sans-serif" }}>
         <header style={{ background: NAVY, padding: "0 24px" }}>
           <div style={{ maxWidth: 900, margin: "0 auto", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -92,26 +108,16 @@ export default function GuideProximite() {
           </div>
         </header>
 
-        {/* Hero avec photo */}
-        <div style={{ position: "relative", height: 300, overflow: "hidden" }}>
-          <img
-            src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/Sainte-Luce.jpg/960px-Sainte-Luce.jpg"
-            alt="Sainte-Luce, Martinique"
-            style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }}
-          />
-          <div style={{ position: "absolute", inset: 0, background: "rgba(14,59,58,0.65)" }} />
-          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 24px", textAlign: "center" }}>
-            <p style={{ color: CORAL, fontSize: 12, letterSpacing: "0.3em", textTransform: "uppercase", marginBottom: 14 }}>Guide des hôtes · Résidence Amaryllis</p>
-            <h1 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: "clamp(24px, 5vw, 50px)", letterSpacing: "0.05em", color: IVORY, textTransform: "uppercase", margin: "0 0 14px", lineHeight: 1.15 }}>
-              À proximité<br />de la résidence
-            </h1>
-            <p style={{ color: "rgba(250,245,233,0.8)", fontSize: 15, maxWidth: 520, margin: 0, lineHeight: 1.65, fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
-              Plages, forêt tropicale, distillerie — tout en moins de 15 minutes autour de la Villa Amaryllis.
-            </p>
-          </div>
-        </div>
+        <GuideHero
+          img="/photos/sainte-luce.jpg"
+          alt="Sainte-Luce, Martinique"
+          eyebrow="Guide des hôtes · Résidence Amaryllis"
+          title="À proximité de la résidence"
+          subtitle="Plages, forêt tropicale, distillerie — tout en moins de 15 minutes autour de la Villa Amaryllis."
+          badges={[]}
+        />
 
-        <div style={{ maxWidth: 860, margin: "0 auto", padding: "48px 24px 80px" }}>
+        <div id="spots" style={{ maxWidth: 860, margin: "0 auto", padding: "48px 24px 80px" }}>
 
           {/* Infos pratiques */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginBottom: 56 }}>
@@ -151,14 +157,48 @@ export default function GuideProximite() {
             ))}
           </div>
 
+          <div id="activites">
+            <EncartActivite activites={[ACTIVITES.tortues, ACTIVITES.snorkeling]} />
+          </div>
+          <EncartActivite activites={[ACTIVITES["diamant-bateau"]]} platform="gyg" />
+          <EncartActivite activites={[ACTIVITES.catamaran]} />
+
+          <div id="programme">
+          <ProgrammeSejour
+            jours={[
+              {
+                jour: "Jour 1",
+                titre: "Sainte-Luce à pied : plages, snorkeling & rhum",
+                matin: "Petit-déjeuner à la villa, puis Anse Corps de Garde (7 min) pour la baignade en eau calme, ou snorkeling à l'Anse Mabouya au milieu des poissons tropicaux.",
+                apresMidi: "Visite et dégustation à la distillerie Trois-Rivières (8 min), rhum agricole AOC. Courses de produits locaux au centre commercial de Corps de Garde sur le retour.",
+                soir: "Dîner et coucher de soleil depuis la terrasse de la villa.",
+              },
+              {
+                jour: "Jour 2",
+                titre: "Journée en mer côté Sud",
+                matin: "Départ pour une sortie bateau vers le Rocher du Diamant, ou journée catamaran à la rencontre des dauphins et des tortues vertes (snorkeling inclus).",
+                apresMidi: "Baignade et détente sur la plage des Salines, l'une des plus belles du Sud (25-30 min), avant le retour à la villa.",
+                soir: "Soirée libre, dîner sur place.",
+              },
+              {
+                jour: "Jour 3",
+                titre: "Nature & fonds blancs",
+                matin: "Randonnée fraîche dans la forêt domaniale de Montravail (sentiers balisés) avant la chaleur.",
+                apresMidi: "Cap sur Le François pour la baignoire de Joséphine et les fonds blancs : piscines naturelles turquoise en plein lagon (35-40 min de route).",
+              },
+            ]}
+          />
+          </div>
+
           {/* Maillage interne */}
+          <EncartActivite activites={[ACTIVITES["fonds-blancs"]]} />
+          <EncartActivite activites={[{ ...ACTIVITES.rhum, viatorPath: null }]} platform="gyg" />
           <div style={{ marginBottom: 48 }}>
             <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 11, letterSpacing: "0.25em", textTransform: "uppercase", color: CORAL, margin: "0 0 16px" }}>Nos villas à Sainte-Luce</p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 12 }}>
               {[
                 { id: "amaryllis", name: "Villa Amaryllis", desc: "Piscine à débordement · Vue mer · Jacuzzi · 8 personnes · À partir de 280€/nuit" },
                 { id: "zandoli",   name: "Zandoli",         desc: "Piscine privée · Vue mer · Jardin tropical · 5 personnes · À partir de 110€/nuit" },
-                { id: "iguana",    name: "Villa Iguana",    desc: "Piscine eau salée · Vue Diamant · Location longue durée" },
                 { id: "geko",      name: "Géko",            desc: "Piscine privée · Jardin tropical · 4 personnes · À partir de 110€/nuit" },
                 { id: "mabouya",   name: "Mabouya",         desc: "Jacuzzi privatif · Vue mer · Romantique · 2 personnes · À partir de 70€/nuit" },
                 { id: "schoelcher",name: "Bellevue",        desc: "Vue panoramique baie de Fort-de-France · 4 personnes · À partir de 90€/nuit" },
@@ -191,6 +231,13 @@ export default function GuideProximite() {
           </div>
         </div>
 
+                <BridgeVilla
+                  villaId="amaryllis"
+                  lieu="Sainte-Luce"
+                  tempsRoute="sur place"
+                  copy="Toutes ces journées rayonnent depuis Sainte-Luce : faites de la Villa Amaryllis votre camp de base, piscine à débordement et vue mer au retour. Réservez en direct, sans frais de service."
+                />
+                <BlocAffilie slug="proximite" />
         <div style={{ padding: "48px 24px", background: "#f6f1e7" }}>
           <NewsletterForm source="guide-proximite" />
         </div>

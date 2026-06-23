@@ -28,12 +28,12 @@ const FILTER_TYPES = [
   { key: "Gastronomie", emoji: "🍽️" },
 ];
 
+// ⚠️ Iguana exclu : bookable:false (locataire longue durée Joël Bailleul)
 const VILLA_OPTS = [
   { id: "amaryllis",  nom: "Villa Amaryllis" },
   { id: "zandoli",    nom: "Zandoli" },
   { id: "geko",       nom: "Géko" },
   { id: "mabouya",    nom: "Mabouya" },
-  { id: "iguana",     nom: "Villa Iguana" },
   { id: "schoelcher", nom: "Apt Bellevue" },
 ];
 

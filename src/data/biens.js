@@ -25,6 +25,8 @@ export const BIENS = {
     seoTitle: "Zandoli Sainte-Luce — logement piscine cascade Martinique",
     seoDesc: "Zandoli à Sainte-Luce : piscine privative à cascade, mezzanine, jardin tropical. 5 personnes. Dès 110€/nuit en réservation directe.",
   },
+  // ⚠️ IGUANA bookable:false — locataire longue durée (Joël Bailleul, bail Rentila oct 2024).
+  // NE JAMAIS lister Iguana dans les guides, suggestions de villas, ou filtres de recherche publics.
   iguana: {
     id: "iguana", nom: "Villa Iguana", type: "villa",
     prix: 180, capacite: 6, chambres: 2, lieu: "Sainte-Luce", postal: "97228",
