@@ -5,6 +5,8 @@
 import SEOMeta from "./SEOMeta.jsx";
 import LienAffilie from "./components/LienAffilie.jsx";
 import MaillageCluster from "./components/seo/MaillageCluster.jsx";
+import BridgeVilla from "./components/BridgeVilla.jsx";
+import ReadingProgressBar from "./components/ReadingProgressBar.jsx";
 import NewsletterForm from "./NewsletterForm.jsx";
 
 const NAVY  = "#0e3b3a";
@@ -94,12 +96,24 @@ const faqs = [
 export default function GuideLocationVoiture() {
   return (
     <>
+      <ReadingProgressBar ctaHref="/" />
       <SEOMeta
         title="Location de voiture en Martinique : économiser en 2026 — Guide complet"
         description="Comment louer une voiture en Martinique au meilleur prix en 2026 : nos 8 conseils pour payer moins, quelle assurance choisir, où comparer les loueurs. Guide des hôtes locaux."
         canonical="https://villamaryllis.com/location-voiture-martinique-pas-cher"
         ogImage="https://villamaryllis.com/og/guide-voiture.jpg"
       />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": "Location de voiture en Martinique : économiser en 2026 — Guide complet",
+        "description": "Comment louer une voiture en Martinique au meilleur prix en 2026 : nos 8 conseils pour payer moins, quelle assurance choisir, où comparer les loueurs.",
+        "author": { "@type": "Organization", "name": "Amaryllis Locations", "url": "https://villamaryllis.com" },
+        "publisher": { "@type": "Organization", "name": "Amaryllis Locations", "url": "https://villamaryllis.com" },
+        "url": "https://villamaryllis.com/location-voiture-martinique-pas-cher",
+        "inLanguage": "fr",
+        "about": { "@type": "Place", "name": "Martinique", "addressCountry": "MQ" },
+      }) }} />
 
       {/* ── Hero ── */}
       <div style={{ background: NAVY, minHeight: "44vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "72px 24px 56px", position: "relative", overflow: "hidden" }}>
@@ -244,12 +258,16 @@ export default function GuideLocationVoiture() {
         </div>
       </div>
 
-      {/* ── Nos logements ── */}
-      <MaillageCluster
-        titre="Vos villas à Sainte-Luce"
-        intro="Location de voiture réservée — maintenant choisissez votre logement. Nos 6 biens en Martinique, à partir de 70 €/nuit."
-        biens={["amaryllis", "zandoli", "geko", "mabouya"]}
+      {/* ── Camp de base ── */}
+      <BridgeVilla
+        villaId="amaryllis"
+        lieu="la Martinique"
+        tempsRoute=""
+        copy="Voiture réservée — maintenant choisissez votre base de séjour. Depuis nos villas à Sainte-Luce, l'ensemble du Sud est à portée."
       />
+
+      {/* ── Maillage interne ── */}
+      <MaillageCluster currentSlug="location-voiture-martinique-pas-cher" />
 
       {/* ── Newsletter ── */}
       <NewsletterForm context="guide-voiture" />

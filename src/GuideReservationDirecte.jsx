@@ -2,6 +2,7 @@
 
 import SEOMeta from "./SEOMeta.jsx";
 import MaillageCluster from "./components/seo/MaillageCluster.jsx";
+import ReadingProgressBar from "./components/ReadingProgressBar.jsx";
 import NewsletterForm from "./NewsletterForm.jsx";
 
 // Noms canoniques des biens pour le maillage interne SEO ("villa" = Amaryllis + Iguana uniquement).
@@ -346,6 +347,7 @@ function FAQ() {
 export default function GuideReservationDirecte() {
   return (
     <>
+      <ReadingProgressBar ctaHref="/" />
       <style dangerouslySetInnerHTML={{ __html: css }} />
       <SEOMeta
         title="Réservation directe Martinique — Sans frais Airbnb | Amaryllis"
