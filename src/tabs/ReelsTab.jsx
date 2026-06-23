@@ -122,6 +122,7 @@ function ReelCard({ draft, onAction, onVideoUrlSet }) {
         <video
           src={videoUrl}
           controls
+          preload="none"
           style={{ width: "100%", maxWidth: 180, height: 320, objectFit: "cover", borderRadius: 8, background: "#000", alignSelf: "center" }}
         />
       )}
