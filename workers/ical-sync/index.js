@@ -2068,7 +2068,16 @@ Retourne UNIQUEMENT le caption brut (pas de JSON, pas de balises).`;
     audio: null, // À compléter manuellement ou par le Container
   };
 
-  // 3. Créer le draft reel_post en D1 ───────────────────────────────────────
+  // 3. Choisir la vidéo depuis la whitelist D1 (editorial_videos), fallback reel-{bien}.mp4
+  let videoUrl = `${siteUrl}/videos/reel-${bienId}.mp4`;
+  try {
+    const vidsRes = await fetch(`${siteUrl}/api/editorial-videos?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`);
+    const vidsData = await vidsRes.json().catch(() => ({}));
+    const vids = (vidsData.videos || {})[bienId] || [];
+    if (vids.length > 0) videoUrl = `${siteUrl}/videos/${vids[Math.floor(Math.random() * vids.length)]}`;
+  } catch { /* fallback reel-{bien}.mp4 */ }
+
+  // Créer le draft reel_post en D1 ───────────────────────────────────────
   const draftRes  = await fetch(
     `${siteUrl}/api/agent-drafts?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`,
     {
@@ -2081,8 +2090,8 @@ Retourne UNIQUEMENT le caption brut (pas de JSON, pas de balises).`;
         type: "reel_post",
         payload: {
           caption,
-          videoUrl: null,    // Rempli après render Container
-          coverUrl: null,    // Rempli après render Container
+          videoUrl,          // Vidéo whitelistée ou fallback reel-{bien}.mp4
+          coverUrl: null,
           channels: ["ig", "fb"],
           plan,              // Contrat JSON pour render.mjs
           calendarId: entry.id,
@@ -2142,7 +2151,7 @@ Retourne UNIQUEMENT : {"score":0-100,"verdict":"approve"|"reject","reason":"1 ph
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         payload: {
-          caption, videoUrl: null, coverUrl: null, channels: ["ig", "fb"], plan,
+          caption, videoUrl, coverUrl: null, channels: ["ig", "fb"], plan,
           calendarId: entry.id, bienId, scheduledAt: entry.scheduled_at,
           reviews: { score, verdict: judge.verdict, reason: judge.reason || "" },
         },
