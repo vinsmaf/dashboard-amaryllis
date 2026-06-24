@@ -83,7 +83,7 @@ const PROVIDERS = {
 export const MODELS = {
   groq: {
     fast:    "llama-3.1-8b-instant",
-    medium:  "meta-llama/llama-4-scout-17b-16e-instruct",
+    medium:  "llama-3.3-70b-versatile",
     smart:   "llama-3.3-70b-versatile",
   },
   cloudflare: {
@@ -114,7 +114,7 @@ export const MODELS = {
 // Coûts réels en $/M tokens (input / output). Source : tarifs publics juin 2026.
 const COST_RATES = {
   "llama-3.1-8b-instant":                     { in: 0.05,  out: 0.08  },
-  "meta-llama/llama-4-scout-17b-16e-instruct": { in: 0.11,  out: 0.34  },
+  // "meta-llama/llama-4-scout-17b-16e-instruct" deprecated 2026-06-24, décommissionné 2026-07-17
   "llama-3.3-70b-versatile":                  { in: 0.59,  out: 0.79  },
   "mistral-small-2506":                        { in: 0.10,  out: 0.30  },
   "mistral-medium-2505":                       { in: 0.40,  out: 2.00  },

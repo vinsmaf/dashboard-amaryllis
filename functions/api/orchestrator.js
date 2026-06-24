@@ -169,7 +169,7 @@ Retourne un JSON strict (aucun texte avant ou après) :
     // llama3-70b-8192 = bucket différent de llama-3.3-70b-versatile utilisé par juriste/revenue-manager
     const ORCH_MODELS = [
       "llama3-70b-8192",                           // bucket propre à l'orchestrateur
-      "meta-llama/llama-4-scout-17b-16e-instruct", // fallback Llama 4
+      "llama-3.3-70b-versatile",                    // fallback Groq confirmé actif
       "llama3-8b-8192",                            // fallback rapide
     ];
 

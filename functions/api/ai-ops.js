@@ -38,7 +38,7 @@ const STATIC_CF = {
 const RANK = {
   // Ordre : meilleur en tête. Substring match → le plus spécifique d'abord.
   fast:   ["llama-3.1-8b-instant", "gemini-2.0-flash-lite", "llama-3.1-8b", "gpt-oss-20b", "ministral-8b-2512", "ministral-8b-latest", "mistral-small-2506", "mistral-small-latest", "llama-3.2-3b", "qwen3-32b"],
-  medium: ["llama-4-scout", "gemini-2.0-flash", "mistral-medium-2604", "mistral-medium-3.5", "mistral-medium-latest", "qwen3-32b", "gpt-oss-20b", "llama-3.3-70b", "gpt-oss-120b", "mistral-small-2506", "mistral-small-latest"],
+  medium: ["llama-3.3-70b-versatile", "gemini-2.0-flash", "mistral-medium-2604", "mistral-medium-3.5", "mistral-medium-latest", "qwen3-32b", "gpt-oss-20b", "llama-3.3-70b", "gpt-oss-120b", "mistral-small-2506", "mistral-small-latest"],
   smart:  ["gpt-oss-120b", "gemini-2.5-flash", "qwen3-32b", "llama-3.3-70b-versatile", "llama-3.3-70b", "mistral-large-2512", "mistral-large-latest", "magistral-medium-2509", "magistral-medium-latest", "zai-glm-4.7"],
 };
 

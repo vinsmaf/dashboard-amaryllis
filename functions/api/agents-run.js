@@ -365,7 +365,7 @@ export const AGENTS = [
 const GROQ_MODELS = [
   { model: "llama-3.3-70b-versatile",                   tier: "high"   }, // ✅ confirmé actif
   { model: "llama-3.1-8b-instant",                      tier: "fast"   }, // ✅ confirmé actif
-  { model: "meta-llama/llama-4-scout-17b-16e-instruct", tier: "high"   }, // ✅ confirmé actif
+  // meta-llama/llama-4-scout-17b-16e-instruct deprecated 2026-06-24
   { model: "llama3-70b-8192",                           tier: "high"   }, // llama3 classic 70b
   { model: "llama3-8b-8192",                            tier: "mid"    }, // llama3 classic 8b
   { model: "llama-3.2-11b-vision-preview",              tier: "mid"    }, // vision + text
