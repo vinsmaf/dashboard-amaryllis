@@ -63,6 +63,34 @@ const PROVIDERS = {
     parseResponse: (data) => data.choices?.[0]?.message?.content || "",
   },
 
+  // DeepSeek — très bon rapport qualité/prix, modèles chinois open-source
+  deepseek: {
+    endpoint: "https://api.deepseek.com/v1/chat/completions",
+    needsKey: "DEEPSEEK_API_KEY",
+    headers: (key) => ({ "Content-Type": "application/json", "Authorization": `Bearer ${key}` }),
+    body: (model, messages, opts) => JSON.stringify({
+      model, messages,
+      max_tokens: opts.max_tokens || 2048,
+      temperature: opts.temperature ?? 0.3,
+      ...(opts.responseFormat ? { response_format: opts.responseFormat } : {}),
+    }),
+    parseResponse: (data) => data.choices?.[0]?.message?.content || "",
+  },
+
+  // OpenRouter — agrégateur : accès à 50+ modèles gratuits via une seule clé
+  openrouter: {
+    endpoint: "https://openrouter.ai/api/v1/chat/completions",
+    needsKey: "OPENROUTER_API_KEY",
+    headers: (key) => ({ "Content-Type": "application/json", "Authorization": `Bearer ${key}`, "HTTP-Referer": "https://villamaryllis.com" }),
+    body: (model, messages, opts) => JSON.stringify({
+      model, messages,
+      max_tokens: opts.max_tokens || 2048,
+      temperature: opts.temperature ?? 0.3,
+      ...(opts.responseFormat ? { response_format: opts.responseFormat } : {}),
+    }),
+    parseResponse: (data) => data.choices?.[0]?.message?.content || "",
+  },
+
   // Google Gemini — endpoint OpenAI-compatible. Prêt-à-activer : poser GEMINI_API_KEY.
   // (clé gratuite via Google AI Studio — quota généreux, contexte ~1M, multimodal)
   gemini: {
@@ -109,12 +137,26 @@ export const MODELS = {
     medium:  "gemini-2.0-flash",
     smart:   "gemini-2.5-flash",
   },
+  deepseek: {
+    fast:    "deepseek-v4-flash",
+    medium:  "deepseek-v4-flash",
+    smart:   "deepseek-v4-pro",
+  },
+  openrouter: {
+    fast:    "meta-llama/llama-3.1-8b-instruct:free",
+    medium:  "meta-llama/llama-3.3-70b-instruct:free",
+    smart:   "meta-llama/llama-4-maverick:free",
+  },
 };
 
 // Coûts réels en $/M tokens (input / output). Source : tarifs publics juin 2026.
 const COST_RATES = {
   "llama-3.1-8b-instant":                     { in: 0.05,  out: 0.08  },
   // "meta-llama/llama-4-scout-17b-16e-instruct" deprecated 2026-06-24, décommissionné 2026-07-17
+  "deepseek-v4-flash":                         { in: 0.07,  out: 0.28  },
+  "deepseek-v4-pro":                           { in: 0.27,  out: 1.10  },
+  "meta-llama/llama-3.3-70b-instruct:free":    { in: 0,     out: 0     },
+  "meta-llama/llama-4-maverick:free":          { in: 0,     out: 0     },
   "llama-3.3-70b-versatile":                  { in: 0.59,  out: 0.79  },
   "mistral-small-2506":                        { in: 0.10,  out: 0.30  },
   "mistral-medium-2505":                       { in: 0.40,  out: 2.00  },
@@ -130,7 +172,7 @@ function estimateCost(model, inTok, outTok) {
 }
 
 // Cascade par défaut : groq → cloudflare → mistral → cerebras → gemini(si clé)
-const DEFAULT_CASCADE = ["groq", "cloudflare", "mistral", "cerebras", "gemini"];
+const DEFAULT_CASCADE = ["groq", "cloudflare", "mistral", "deepseek", "cerebras", "openrouter", "gemini"];
 
 // ── Override dynamique piloté par l'agent AI-Ops (table D1 ai_ops, clé 'plan') ──
 // Permet de BASCULER de modèle / désactiver un provider défaillant SANS redéploiement.
