@@ -81,10 +81,13 @@ export async function onRequestPatch(context) {
     const fields = [];
     const vals   = [];
 
-    if (body.notes !== undefined) { fields.push("notes=?"); vals.push(body.notes); }
-    if (body.tags  !== undefined) { fields.push("tags=?");  vals.push(JSON.stringify(body.tags)); }
-    if (body.email !== undefined) { fields.push("email=?"); vals.push(body.email); }
-    if (body.mobile !== undefined){ fields.push("mobile=?");vals.push(body.mobile); }
+    if (body.notes  !== undefined) { fields.push("notes=?");  vals.push(body.notes); }
+    if (body.tags   !== undefined) { fields.push("tags=?");   vals.push(JSON.stringify(body.tags)); }
+    if (body.email  !== undefined) { fields.push("email=?");  vals.push(body.email); }
+    if (body.mobile !== undefined) { fields.push("mobile=?"); vals.push(body.mobile); }
+    if (body.statut !== undefined) { fields.push("statut=?"); vals.push(body.statut); }
+    if (body.prenom !== undefined) { fields.push("prenom=?"); vals.push(body.prenom); }
+    if (body.nom    !== undefined) { fields.push("nom=?");    vals.push(body.nom); }
 
     if (!fields.length) return json({ error: "Aucun champ à modifier" }, 400);
     fields.push("updated_at=datetime('now')");
