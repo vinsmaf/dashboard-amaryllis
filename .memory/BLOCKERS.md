@@ -4,6 +4,9 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
+## En cours → ✅ terminé le 2026-06-23 (Session CRM : Phase 0/1 + 1ère campagne réelle)
+> Moteur réactivation `crm-lifecycle.js` (winback+fidelite, batch Resend, anti-doublon `crm_campaigns`, Iguana exclu) déployé. **winback envoyé 26/26 dormants.** fidelite programmé 08/09 (assisté). Vue segments CRM. Roadmap `docs/crm-roadmap.md`. 🟡 Suivi humain : réponses des 26 + résas directes = KPI repeat (pas de mécanisme auto de tracking de la conversion réactivation→résa pour l'instant).
+
 ## En cours → ✅ terminé le 2026-06-23 (Session articles SEO : portage + maillage + optimisations)
 > Système articles SEO longue traîne (37 publiés) porté de la branche orpheline `claude/sad-bartik-02a3c2` (supprimée), déployé. Maillage interne entrant (footer/menu/fiches biens/guides), 5 doublons dépubliés (cannibalisation), images hero, schema BreadcrumbList, GA4, affiliés guides manquants comblés, liens contextuels. Fix bug deploy (smoke race condition) + ADR-DEPLOY-001 (Claude=git push only). Revue SEO programmée 15/07. Tout en prod, CI verte.
 

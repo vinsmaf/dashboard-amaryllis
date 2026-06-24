@@ -19,6 +19,15 @@
 - **Avant de publier un article** : `grep` le mot-clé cible dans les slugs guides (`main.jsx` KNOWN) + landings. Chevauchement ≥60% = cannibalisation, différencier l'angle ou ne pas créer.
 - **Maillage interne entrant = priorité n°1** : un contenu SEO sans lien depuis les pages à autorité (home/footer/fiches) est orphelin → ne ranke pas. Toujours lier depuis footer + pages fortes.
 
+## 📧 Envoi email de masse = API batch Resend, jamais une boucle de fetch — 2026-06-23
+- **Piège vécu** : `crm-lifecycle` envoyait en boucle `POST /emails` → **6/26 en 429 rate_limit_exceeded** (Resend ~2 req/s). Les destinataires en fin de liste sautent silencieusement.
+- **La prochaine fois** : utiliser `POST https://api.resend.com/emails/batch` (tableau de 100 max, personnalisation par message conservée) = 1 appel, zéro rate-limit, pas de timeout Worker. Marquer l'anti-doublon par chunk réussi.
+- Corollaire : un envoi partiel ne doit JAMAIS marquer les non-envoyés → re-run ne cible que les ratés (clé `client_id+campaign`).
+
+## 🧪 Toujours un dry run avant un envoi réel à des clients — 2026-06-23
+- **Vécu** : le dry run `?dry=1` de la campagne winback a révélé **Joel BAILLEUL (locataire à l'année d'Iguana, 3400€/mois)** dans la cible "votre villa vous attend, re-réservez" — envoi gênant évité. Fix : exclure Iguana (`biens NOT LIKE '%iguana%'`, RM-19).
+- **La prochaine fois** : tout endpoint d'envoi de masse expose `?dry=1` (liste sans envoi) ; le lancer + relire la cible AVANT le vrai envoi. Les exclusions métier (Iguana bookable:false, locataires longue durée) doivent être dans le WHERE, pas supposées.
+
 ## 🚀 RÈGLE ABSOLUE DÉPLOIEMENT — Claude ne fait JAMAIS `npm run deploy:pages` — 2026-06-23
 - **Piège vécu** : 2 instances Claude déployaient depuis des états locaux différents (sans pusher sur git) → drift prod≠main répété (vécu 3 fois en 24h le 2026-06-23).
 - **La règle** : Claude fait **toujours** `git push origin main` → le CI deploy.yml s'occupe du reste.

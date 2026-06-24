@@ -3,6 +3,14 @@
 > 1 entrée par décision qui engage la suite. Format 5 lignes : **Choix · Alternatives refusées · Conséquences attendues · Périmètre · Statut**.
 > Décisions d'archi détaillées (specs complets) → `../docs/superpowers/specs/README.md` (ADR-001→010). Ici = log curaté de session.
 
+## ADR-CRM-REACTIVATION-001 · 2026-06-23 · Moteur de réactivation CRM (winback + fidélité)
+
+1. **Choix** : endpoint unique `functions/api/crm-lifecycle.js` (`?secret&segment=winback|fidelite[&dry=1]`) qui segmente `crm_clients` par récence et envoie via **API batch Resend**, avec anti-doublon table D1 `crm_campaigns`. Déclenchement manuel/assisté (pas de cron auto pour l'instant).
+2. **Alternatives refusées** : envoi en boucle Resend (→ rate-limit 429, vécu : 6/26 échouées) ; remise chiffrée dans l'email (RM advisory → jamais de barème non validé par Vincent) ; cron auto (la campagne fidelite est saisonnière sept., pas continue).
+3. **Conséquences attendues** : toute nouvelle campagne = ajouter un segment dans `SEGMENTS` + (si besoin) un template inline ; toujours `dry=1` avant envoi réel ; un client n'est jamais recontacté 2× par campagne (clé `client_id+campaign`). Iguana exclu de toute mécanique (RM-19).
+4. **Périmètre** : `functions/api/crm-lifecycle.js` · table D1 `crm_campaigns` · `src/tabs/CrmTab.jsx` (vue segments) · `docs/crm-roadmap.md`.
+5. **Statut** : **acté & déployé**. winback envoyé 26/26 (2026-06-23). fidelite programmé 08/09 (mode assisté). Commits `718d1d3`/`7369fb3`/`82caac3`.
+
 ## ADR-DEPLOY-001 · 2026-06-23 · CI = seul chemin de déploiement pour les instances Claude
 
 1. **Choix** : toute instance Claude doit faire `git push origin main` uniquement. Le CI auto-deploy (`.github/workflows/deploy.yml`) prend le relais → tests → build → wrangler → smoke.
