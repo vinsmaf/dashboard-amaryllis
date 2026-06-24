@@ -1578,7 +1578,7 @@ export default function App() {
             {tab === "charges" && <Charges />}
             {tab === "pilotage" && <Pilotage />}
             {tab === "cpa-canal"  && <CpaCanalTab />}
-            {tab === "net-revpar" && <NetRevParTab hist={hist} />}
+            {tab === "net-revpar" && <NetRevParTab hist={hist} biens={biens} />}
             {tab === "historique" && <Historique />}
             {tab === "revenue"  && <RevenueManagerPro />}
             {tab === "tarifs" && <Tarifs />}
