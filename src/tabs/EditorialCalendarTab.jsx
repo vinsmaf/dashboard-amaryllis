@@ -13,6 +13,7 @@ export default function EditorialCalendarTab() {
   const [seeding, setSeeding]     = useState(false);
   const [generating, setGenerating] = useState(null);
   const [toast, setToast]         = useState(null);
+  const [insights, setInsights]   = useState({});  // { [entryId]: { loading, data, err } }
   const [filterBien, setFilterBien] = useState("");
   const [view, setView]           = useState("grid"); // "list" | "grid"
   const [monthOffset, setMonthOffset] = useState(0); // navigation mois (0 = mois courant)
@@ -108,6 +109,28 @@ export default function EditorialCalendarTab() {
   const filtered = filterBien
     ? entries.filter(e => e.bien_id === filterBien)
     : entries;
+
+  async function loadInsights(e) {
+    if (insights[e.id]?.data || insights[e.id]?.loading) return;
+    setInsights(prev => ({ ...prev, [e.id]: { loading: true } }));
+    try {
+      const result = e.result ? (typeof e.result === "string" ? JSON.parse(e.result) : e.result) : {};
+      const igId = result?.result?.results?.ig?.id || result?.results?.ig?.id || null;
+      const fbId = result?.result?.results?.fb?.id || result?.results?.fb?.id || null;
+      if (!igId && !fbId) {
+        setInsights(prev => ({ ...prev, [e.id]: { err: "Pas d'ID post dans le résultat" } }));
+        return;
+      }
+      const params = new URLSearchParams({ action: "insights" });
+      if (igId) params.set("ig_id", igId);
+      if (fbId) params.set("fb_id", fbId);
+      const r = await adminFetch(`/api/social?${params}`);
+      const d = await r.json();
+      setInsights(prev => ({ ...prev, [e.id]: { data: d.insights || {} } }));
+    } catch (err) {
+      setInsights(prev => ({ ...prev, [e.id]: { err: err.message } }));
+    }
+  }
 
   // Stats de répartition
   const bienCounts = entries.reduce((acc, e) => ({ ...acc, [e.bien_id]: (acc[e.bien_id]||0) + 1 }), {});
@@ -350,7 +373,48 @@ export default function EditorialCalendarTab() {
                       {generating === e.id ? "..." : (e.status === "failed" ? "🔄 Régénérer" : "✏️ Générer")}
                     </button>
                   )}
+                  {e.status === "published" && (
+                    <button
+                      onClick={() => loadInsights(e)}
+                      style={{
+                        padding: "4px 10px", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer",
+                        border: "1px solid #22c55e33", background: "transparent", color: "#22c55e",
+                        opacity: insights[e.id]?.loading ? 0.5 : 1,
+                      }}
+                    >
+                      {insights[e.id]?.loading ? "..." : "📊 Stats"}
+                    </button>
+                  )}
                 </div>
+                {/* Insights inline — span toutes les colonnes du grid */}
+                {e.status === "published" && insights[e.id] && !insights[e.id].loading && (
+                  <div style={{ gridColumn: "1 / -1", padding: "5px 8px", background: "#0f172a", borderRadius: 6, fontSize: 11, color: "#94a3b8" }}>
+                    {insights[e.id].err && <span style={{ color: "#fca5a5" }}>⚠️ {insights[e.id].err}</span>}
+                    {insights[e.id].data && (
+                      <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                        {insights[e.id].data.ig && !insights[e.id].data.ig.error && (
+                          <span>
+                            <span style={{ color: "#818cf8", marginRight: 4 }}>IG</span>
+                            {insights[e.id].data.ig.reach != null && <span>👁 {insights[e.id].data.ig.reach} </span>}
+                            {insights[e.id].data.ig.likes != null && <span>❤️ {insights[e.id].data.ig.likes} </span>}
+                            {insights[e.id].data.ig.comments != null && <span>💬 {insights[e.id].data.ig.comments} </span>}
+                            {insights[e.id].data.ig.saved != null && <span>🔖 {insights[e.id].data.ig.saved}</span>}
+                          </span>
+                        )}
+                        {insights[e.id].data.ig?.error && <span style={{ color: "#fca5a5" }}>IG: {insights[e.id].data.ig.error}</span>}
+                        {insights[e.id].data.fb && !insights[e.id].data.fb.error && (
+                          <span>
+                            <span style={{ color: "#60a5fa", marginRight: 4 }}>FB</span>
+                            {insights[e.id].data.fb.views != null && <span>👁 {insights[e.id].data.fb.views} </span>}
+                            {insights[e.id].data.fb.reactions != null && <span>❤️ {insights[e.id].data.fb.reactions} </span>}
+                            {insights[e.id].data.fb.comments != null && <span>💬 {insights[e.id].data.fb.comments}</span>}
+                          </span>
+                        )}
+                        {insights[e.id].data.fb?.error && <span style={{ color: "#fca5a5" }}>FB: {insights[e.id].data.fb.error}</span>}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
