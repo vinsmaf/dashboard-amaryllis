@@ -19,45 +19,45 @@ export default function Charges() {
   const { biens, n, mob } = useAppData();
   const [sub, setSub] = useState("reel");
 
-  // ── Données réelles (revenus - cashflow) ────────────────────────────────
+  // ── Données réelles YTD ─────────────────────────────────────────────────
+  // Charges = budget CHARGES_2025 proratisé (seule source fiable — rev-cashflow est trop volatile)
   const chargesByBien = biens.map(b => {
-    const monthlyCharges = b.revenus.map((rev, i) => Math.max(rev - (b.cashflow[i] || 0), 0));
-    const chargesYTD = monthlyCharges.slice(0, n).reduce((s, v) => s + v, 0);
-    const chargesFixesAnnuel = b.charges * 12;
-    const chargesFixesYTD = b.charges * n;
-    const revenusYTD = sumN(b.revenus, n);
-    const cashflowYTD = sumN(b.cashflow, n);
-    const ratio = revenusYTD > 0 ? (chargesYTD / revenusYTD) * 100 : (chargesYTD > 0 ? 100 : 0);
-    return { ...b, monthlyCharges, chargesYTD, chargesFixesAnnuel, chargesFixesYTD, revenusYTD, cashflowYTD, ratio };
+    const budgetAnnuel = Object.values(CHARGES_2025[b.id] || {}).reduce((s, v) => s + v, 0);
+    const chargesYTD   = Math.round(budgetAnnuel / 12 * n);
+    const revenusYTD   = sumN(b.revenus, n);
+    const cashflowYTD  = sumN(b.cashflow, n);
+    const ratio        = revenusYTD > 0 ? (chargesYTD / revenusYTD) * 100 : (chargesYTD > 0 ? 100 : 0);
+    return { ...b, budgetAnnuel, chargesYTD, revenusYTD, cashflowYTD, ratio };
   });
 
-  const chargesYTDTotal = chargesByBien.reduce((s, b) => s + b.chargesYTD, 0);
-  const revenusYTDTotal = chargesByBien.reduce((s, b) => s + b.revenusYTD, 0);
-  const chargesFixesAnnuelTotal = chargesByBien.reduce((s, b) => s + b.chargesFixesAnnuel, 0);
-  const cashflowYTDTotal = chargesByBien.reduce((s, b) => s + b.cashflowYTD, 0);
-  const ratioGlobal = revenusYTDTotal > 0 ? (chargesYTDTotal / revenusYTDTotal) * 100 : 0;
+  const chargesYTDTotal    = chargesByBien.reduce((s, b) => s + b.chargesYTD, 0);
+  const revenusYTDTotal    = chargesByBien.reduce((s, b) => s + b.revenusYTD, 0);
+  const cashflowYTDTotal   = chargesByBien.reduce((s, b) => s + b.cashflowYTD, 0);
+  const budgetAnnuelTotal  = chargesByBien.reduce((s, b) => s + b.budgetAnnuel, 0);
+  const ratioGlobal        = revenusYTDTotal > 0 ? (chargesYTDTotal / revenusYTDTotal) * 100 : 0;
+  const budgetMensuel      = Math.round(budgetAnnuelTotal / 12);
 
   const PIE_COLORS = ["#0ea5e9", "#FF5A5F", "#10b981", "#f59e0b", "#a855f7", "#ec4899", "#06b6d4"];
   const pieData = chargesByBien
-    .map(b => ({ name: b.nom.replace("Villa ", "").replace("T2 ", ""), value: Math.round(b.chargesYTD), emoji: b.emoji }))
+    .map(b => ({ name: b.nom.replace("Villa ", "").replace("T2 ", ""), value: b.chargesYTD, emoji: b.emoji }))
     .filter(d => d.value > 0)
     .sort((a, b) => b.value - a.value);
 
-  const totalFixeMensuel = chargesByBien.reduce((s, b) => s + b.charges, 0);
+  // Graphe mensuel : cashflow réel par mois + ligne budget charges
   const monthlyData = MOIS.map((mois, i) => {
-    const real = chargesByBien.reduce((s, b) => s + (b.monthlyCharges[i] || 0), 0);
-    return { mois, reel: i < n ? Math.round(real) : null, fixe: totalFixeMensuel };
+    const cf = chargesByBien.reduce((s, b) => s + (b.cashflow[i] || 0), 0);
+    return { mois, cashflow: i < n ? Math.round(cf) : null, budget: budgetMensuel };
   });
 
   const alerts = [];
   chargesByBien.forEach(b => {
-    const monthsOver = b.monthlyCharges.slice(0, n).filter((c, i) => c > (b.revenus[i] || 0) && (b.revenus[i] || 0) > 0).length;
-    if (monthsOver >= 3) alerts.push({ sev: "danger", emoji: b.emoji, bien: b.nom, msg: `Charges supérieures aux revenus ${monthsOver} mois sur ${n}` });
-    if (b.ratio > 90 && b.revenusYTD > 1000) alerts.push({ sev: "warning", emoji: b.emoji, bien: b.nom, msg: `Taux de charges ${b.ratio.toFixed(0)}% — marge très faible` });
-    b.monthlyCharges.slice(0, n).forEach((c, i) => {
-      if (c > b.charges * 1.5 && c > 500) alerts.push({ sev: "info", emoji: b.emoji, bien: b.nom, msg: `Pic de charges en ${MOIS[i]} : ${Math.round(c)}€ (théorique ${b.charges}€)` });
-    });
+    const monthsDeficit = b.cashflow.slice(0, n).filter(v => v < 0).length;
+    if (monthsDeficit >= 3) alerts.push({ sev: "danger", emoji: b.emoji, bien: b.nom, msg: `Cashflow négatif ${monthsDeficit} mois sur ${n}` });
+    if (b.ratio > 90 && b.revenusYTD > 1000) alerts.push({ sev: "warning", emoji: b.emoji, bien: b.nom, msg: `Taux de charges budget ${b.ratio.toFixed(0)}% — marge très faible` });
+    if (cashflowYTDTotal < 0) alerts.push({ sev: "danger", emoji: "⚠️", bien: "Global", msg: `Cashflow global négatif YTD : ${fmt(cashflowYTDTotal)}` });
   });
+  const seen = new Set();
+  const alertsUniq = alerts.filter(a => { const k = a.bien + a.msg; return seen.has(k) ? false : (seen.add(k), true); });
   const sevColors = { danger: "#ef4444", warning: "#f59e0b", info: "#0ea5e9" };
   const sevBg    = { danger: "rgba(239,68,68,0.07)", warning: "rgba(245,158,11,0.07)", info: "rgba(14,165,233,0.07)" };
 
@@ -89,14 +89,14 @@ export default function Charges() {
           {/* KPIs */}
           <div style={{ display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap" }}>
             <div style={{ flex: 1, minWidth: 130, background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 11, padding: "12px 14px" }}>
-              <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>Charges YTD réelles</div>
+              <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>Budget charges YTD</div>
               <div style={{ fontSize: 19, fontWeight: 700, color: "#ef4444", fontFamily: "var(--font-mono)" }}>{fmt(chargesYTDTotal)}</div>
               <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{ratioGlobal.toFixed(1)}% des revenus</div>
             </div>
             <div style={{ flex: 1, minWidth: 130, background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 11, padding: "12px 14px" }}>
-              <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>Charges fixes annuelles</div>
-              <div style={{ fontSize: 19, fontWeight: 700, color: "#f59e0b", fontFamily: "var(--font-mono)" }}>{fmt(chargesFixesAnnuelTotal)}</div>
-              <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{fmt(totalFixeMensuel)}/mois théorique</div>
+              <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>Budget charges annuel</div>
+              <div style={{ fontSize: 19, fontWeight: 700, color: "#f59e0b", fontFamily: "var(--font-mono)" }}>{fmt(budgetAnnuelTotal)}</div>
+              <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{fmt(budgetMensuel)}/mois</div>
             </div>
             <div style={{ flex: 1, minWidth: 130, background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 11, padding: "12px 14px" }}>
               <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>Cashflow YTD</div>
@@ -113,7 +113,7 @@ export default function Charges() {
           {/* Charts */}
           <div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "2fr 1fr", gap: 14, marginBottom: 14 }}>
             <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 13, padding: 16 }}>
-              <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 10, fontWeight: 600 }}>Charges mensuelles réelles vs théoriques fixes</div>
+              <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 10, fontWeight: 600 }}>Cashflow mensuel vs budget charges</div>
               <ResponsiveContainer width="100%" height={mob ? 160 : 200}>
                 <ComposedChart data={monthlyData} barGap={3}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
@@ -121,8 +121,10 @@ export default function Charges() {
                   <YAxis tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={fmtK} />
                   <Tooltip contentStyle={TT} formatter={(v) => v != null ? [fmt(v)] : ["—"]} />
                   <Legend wrapperStyle={{ fontSize: 10, color: "#94a3b8" }} />
-                  <Bar dataKey="reel" name="Charges réelles" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                  <Line type="monotone" dataKey="fixe" name="Charges fixes théoriques" stroke="#f59e0b" strokeWidth={2} strokeDasharray="4 3" dot={false} />
+                  <Bar dataKey="cashflow" name="Cashflow mensuel" radius={[4, 4, 0, 0]}>
+                    {monthlyData.map((d, i) => <Cell key={i} fill={d.cashflow == null ? "#1e293b" : d.cashflow >= 0 ? "#10b981" : "#ef4444"} />)}
+                  </Bar>
+                  <Line type="monotone" dataKey="budget" name="Budget charges/mois" stroke="#f59e0b" strokeWidth={2} strokeDasharray="4 3" dot={false} />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
@@ -194,13 +196,13 @@ export default function Charges() {
 
           {/* Alertes */}
           <div style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600, marginBottom: 9 }}>🚨 Alertes ({alerts.length})</div>
-          {alerts.length === 0 ? (
+          {alertsUniq.length === 0 ? (
             <div style={{ padding: 18, background: "rgba(16,185,129,0.07)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 11, textAlign: "center", fontSize: 13, color: "#10b981" }}>
               ✓ Aucune anomalie détectée
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-              {alerts.slice(0, 8).map((a, i) => (
+              {alertsUniq.slice(0, 8).map((a, i) => (
                 <div key={i} style={{
                   display: "flex", alignItems: "center", gap: 10, padding: "10px 14px",
                   background: sevBg[a.sev], border: `1px solid ${sevColors[a.sev]}33`,
@@ -216,7 +218,7 @@ export default function Charges() {
                   </span>
                 </div>
               ))}
-              {alerts.length > 8 && <div style={{ fontSize: 11, color: "#64748b", textAlign: "center", padding: 6 }}>+ {alerts.length - 8} autres alertes</div>}
+              {alertsUniq.length > 8 && <div style={{ fontSize: 11, color: "#64748b", textAlign: "center", padding: 6 }}>+ {alertsUniq.length - 8} autres alertes</div>}
             </div>
           )}
         </div>
