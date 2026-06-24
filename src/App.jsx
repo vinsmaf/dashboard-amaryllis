@@ -1321,7 +1321,6 @@ export default function App() {
       id: "analyses", label: "Analyses",
       items: [
         { id: "previsionnel",icon: "🔮", label: "Prévisionnel" },
-        { id: "historique",  icon: "📈", label: "Historique" },
         { id: "analytics",   icon: "📊", label: "Analytics" },
         { id: "funnel",      icon: "🔭", label: "Funnel" },
         { id: "conversion",  icon: "💳", label: "Conversion" },
@@ -1336,6 +1335,7 @@ export default function App() {
     {
       id: "finance", label: "Finance",
       items: [
+        { id: "historique",  icon: "📈", label: "Historique" },
         { id: "charges",     icon: "💰", label: "Charges" },
         { id: "pilotage",    icon: "💼", label: "Pilotage" },
         { id: "net-revpar",  icon: "📉", label: "Net RevPAR" },
