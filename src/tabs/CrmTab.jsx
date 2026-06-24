@@ -9,6 +9,8 @@ import { fetchJSON } from "../lib/apiFetch.js";
 const BIENS = ["amaryllis","iguana","zandoli","geko","mabouya","schoelcher","nogent"];
 const CANAL_LABEL = { airbnb: "Airbnb", booking: "Booking", direct: "Direct", inconnu: "Inconnu" };
 const CANAL_COLOR = { airbnb: "#ff5a5f", booking: "#003580", direct: "#16a34a", inconnu: "#6b7280" };
+const STATUT_LABEL = { locataire: "locataire", prospect: "prospect", longue_duree: "longue durée", a_confirmer: "à confirmer", archive: "archivé" };
+const STATUT_COLOR = { locataire: "#38bdf8", prospect: "#f59e0b", longue_duree: "#a78bfa", a_confirmer: "#fb923c", archive: "#64748b" };
 
 function fmt(n) {
   return Number(n || 0).toLocaleString("fr-FR") + "€";
@@ -19,7 +21,9 @@ function fmtDate(d) {
   return `${day}/${m}/${y}`;
 }
 function parseBiens(raw) {
-  try { return JSON.parse(raw || "[]"); } catch { return []; }
+  if (!raw) return [];
+  try { const p = JSON.parse(raw); return Array.isArray(p) ? p : [String(p)]; }
+  catch { return raw.split(/[,;]/).map(s => s.trim()).filter(Boolean); }
 }
 function parseTags(raw) {
   try { return JSON.parse(raw || "[]"); } catch { return []; }
@@ -109,6 +113,14 @@ function ClientCard({ client, onSelect, selected }) {
           color: CANAL_COLOR[client.canal_principal] || "#9ca3af",
           border: `1px solid ${CANAL_COLOR[client.canal_principal] || "#6b7280"}55`,
         }}>{CANAL_LABEL[client.canal_principal] || client.canal_principal}</span>
+        {client.statut && client.statut !== "locataire" && (
+          <span style={{
+            fontSize: 10, padding: "1px 6px", borderRadius: 99,
+            background: (STATUT_COLOR[client.statut] || "#6b7280") + "22",
+            color: STATUT_COLOR[client.statut] || "#94a3b8",
+            border: `1px solid ${STATUT_COLOR[client.statut] || "#6b7280"}44`,
+          }}>{STATUT_LABEL[client.statut] || client.statut}</span>
+        )}
         <span style={{ fontSize: 12, color: "var(--c-muted,#94a3b8)" }}>{client.nb_sejours} séjour{client.nb_sejours > 1 ? "s" : ""}</span>
         {biens.map(b => (
           <span key={b} style={{ fontSize: 11, color: "var(--c-muted,#94a3b8)", background: "#ffffff11", padding: "1px 6px", borderRadius: 6 }}>{b}</span>
@@ -248,6 +260,7 @@ export default function CrmTab() {
   const [contactOnly, setContactOnly] = useState(false);
   const [bienFilter, setBienFilter]   = useState("");
   const [segFilter, setSegFilter]     = useState(null);
+  const [statutFilter, setStatutFilter] = useState("");
   const [exporting, setExporting]     = useState(false);
 
   async function load() {
@@ -271,16 +284,18 @@ export default function CrmTab() {
   const filtered = useMemo(() => {
     let list = clients || [];
     if (segFilter) list = list.filter(c => segmentOf(c) === segFilter);
+    if (statutFilter) list = list.filter(c => (c.statut || "locataire") === statutFilter);
     if (search) {
       const q = search.toLowerCase();
       list = list.filter(c =>
-        (c.prenom || "").toLowerCase().includes(q) ||
-        (c.nom    || "").toLowerCase().includes(q) ||
-        (c.email  || "").toLowerCase().includes(q)
+        (c.prenom  || "").toLowerCase().includes(q) ||
+        (c.nom     || "").toLowerCase().includes(q) ||
+        (c.email   || "").toLowerCase().includes(q) ||
+        (c.mobile  || "").replace(/\s/g,"").includes(q.replace(/\s/g,""))
       );
     }
     return list;
-  }, [clients, search, segFilter]);
+  }, [clients, search, segFilter, statutFilter]);
 
   // Comptage par segment (sur toute la base chargée)
   const segCounts = useMemo(() => {
@@ -414,6 +429,14 @@ export default function CrmTab() {
           >
             <option value="">Tous les biens</option>
             {BIENS.map(b => <option key={b} value={b}>{b}</option>)}
+          </select>
+          <select
+            value={statutFilter}
+            onChange={e => setStatutFilter(e.target.value)}
+            style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #ffffff15", background: "#1e293b", color: "#f1f5f9", fontSize: 13 }}
+          >
+            <option value="">Tous les statuts</option>
+            {Object.entries(STATUT_LABEL).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
           </select>
           <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#94a3b8", cursor: "pointer" }}>
             <input type="checkbox" checked={recOnly} onChange={e => setRecOnly(e.target.checked)} />
