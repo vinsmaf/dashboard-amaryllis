@@ -226,7 +226,7 @@ async function handlePublishContainer(env, { containerId, igAccountId }) {
   return json({ ok: true, id: publish.id, container_id: containerId });
 }
 
-async function handlePublishReel(env, { caption, videoUrl, coverUrl, channels = ["ig"], dryRun }) {
+async function handlePublishReel(env, { caption, videoUrl, coverUrl, channels = ["ig"], dryRun, igContainerId }) {
   const token = env.META_PAGE_TOKEN;
   const igId  = env.META_IG_ACCOUNT_ID;
 
@@ -240,26 +240,32 @@ async function handlePublishReel(env, { caption, videoUrl, coverUrl, channels = 
       results.ig = { error: "META_IG_ACCOUNT_ID non configuré" };
     } else {
       try {
-        // Étape 1 : créer le container REELS
-        const containerBody = { media_type: "REELS", video_url: videoUrl, caption: caption || "", share_to_feed: "true" };
-        if (coverUrl) containerBody.cover_url = coverUrl;
-        const container = await graphPost(`${igId}/media`, token, containerBody);
+        let containerId = igContainerId || null;
 
-        if (container.error) {
-          results.ig = { error: container.error.message };
-        } else {
+        if (!containerId) {
+          // Étape 1 : créer le container REELS
+          const containerBody = { media_type: "REELS", video_url: videoUrl, caption: caption || "", share_to_feed: "true" };
+          if (coverUrl) containerBody.cover_url = coverUrl;
+          const container = await graphPost(`${igId}/media`, token, containerBody);
+          if (container.error) { results.ig = { error: container.error.message }; }
+          else { containerId = container.id; }
+        }
+
+        if (containerId) {
           // Étape 2 : attendre la fin de l'encodage Meta (asynchrone côté Meta)
-          const poll = await pollContainer(container.id, token);
+          const poll = await pollContainer(containerId, token);
           if (!poll.ready) {
+            // Encodage pas encore terminé : renvoyer le container_id pour reprise au prochain cron
             results.ig = {
-              error: poll.timeout ? "Encodage Meta non terminé (timeout)" : `Encodage échoué : ${poll.error}`,
-              container_id: container.id,
+              error: poll.timeout ? "Encodage Meta non terminé — reprise auto au prochain cron" : `Encodage échoué : ${poll.error}`,
+              container_id: containerId,
+              retry: !!poll.timeout,
             };
           } else if (dryRun) {
-            results.ig = { ok: true, dryRun: true, container_id: container.id, status: "FINISHED", note: "Container prêt — media_publish NON exécuté (dry-run)" };
+            results.ig = { ok: true, dryRun: true, container_id: containerId, status: "FINISHED", note: "Container prêt — media_publish NON exécuté (dry-run)" };
           } else {
             // Étape 3 : publier le container encodé
-            const publish = await graphPost(`${igId}/media_publish`, token, { creation_id: container.id });
+            const publish = await graphPost(`${igId}/media_publish`, token, { creation_id: containerId });
             results.ig = publish.error ? { error: publish.error.message } : { id: publish.id, ok: true };
           }
         }
@@ -329,13 +335,40 @@ async function handlePublishReel(env, { caption, videoUrl, coverUrl, channels = 
   return json({ results, ok: hasSuccess }, hasSuccess ? 200 : 422);
 }
 
+// Insights d'un post publié — IG media + FB video
+async function handleInsights(env, { igId: igMediaId, fbId: fbVideoId }) {
+  const token = env.META_PAGE_TOKEN;
+  if (!token) return json({ error: "META_PAGE_TOKEN non configuré" }, 500);
+  const out = {};
+  if (igMediaId) {
+    try {
+      const r = await graphGet(`${igMediaId}/insights?metric=reach,impressions,likes,comments,shares,saved`, token);
+      if (r.error) { out.ig = { error: r.error.message }; }
+      else {
+        const m = {};
+        (r.data || []).forEach(({ name, values }) => { m[name] = values?.[0]?.value ?? values ?? 0; });
+        out.ig = m;
+      }
+    } catch (e) { out.ig = { error: e.message }; }
+  }
+  if (fbVideoId) {
+    try {
+      const r = await graphGet(`${fbVideoId}?fields=reactions.summary(true),comments.summary(true),views`, token);
+      if (r.error) { out.fb = { error: r.error.message }; }
+      else { out.fb = { reactions: r.reactions?.summary?.total_count ?? 0, comments: r.comments?.summary?.total_count ?? 0, views: r.views ?? 0 }; }
+    } catch (e) { out.fb = { error: e.message }; }
+  }
+  return json({ ok: true, insights: out });
+}
+
 export async function onRequestGet({ request, env }) {
   const url    = new URL(request.url);
   const action = url.searchParams.get("action") || "status";
   const limit  = parseInt(url.searchParams.get("limit") || "12");
 
-  if (action === "status") return handleStatus(env);
-  if (action === "posts")  return handlePosts(env, limit);
+  if (action === "status")   return handleStatus(env);
+  if (action === "posts")    return handlePosts(env, limit);
+  if (action === "insights") return handleInsights(env, { igId: url.searchParams.get("ig_id"), fbId: url.searchParams.get("fb_id") });
   return json({ error: "action inconnue" }, 400);
 }
 

@@ -117,7 +117,7 @@ async function executeDraft(env, draft) {
   }
 
   if (draft.type === "reel_post") {
-    // payload: { caption, videoUrl, coverUrl, channels }
+    // payload: { caption, videoUrl, coverUrl, channels, igContainerId? }
     if (!payload.videoUrl) return { ok: false, error: "videoUrl manquant — rendre la vidéo d'abord" };
     const channels = Array.isArray(payload.channels) && payload.channels.length
       ? payload.channels
@@ -132,10 +132,13 @@ async function executeDraft(env, draft) {
         videoUrl: payload.videoUrl,
         coverUrl: payload.coverUrl || null,
         channels,
+        igContainerId: payload.igContainerId || null,
       }),
     });
     const data = await r.json();
     const hasSuccess = data.ok || Object.values(data.results || {}).some(r => r.ok);
+    // Si IG a renvoyé un container_id (encodage en cours), le propager pour persistence
+    if (data.results?.ig?.container_id) return { ok: hasSuccess, results: data.results, igContainerId: data.results.ig.container_id };
     return hasSuccess ? { ok: true, results: data.results } : { ok: false, error: data.error || "Aucune publication reel réussie", results: data.results };
   }
 
@@ -228,17 +231,32 @@ export async function onRequest(context) {
     }
 
     if (action === "publish") {
+      // Guard anti-doublon : un draft déjà publié ne peut pas être republié
+      if (draft.published_at) {
+        return json({ ok: false, error: "Déjà publié", published_at: draft.published_at });
+      }
       // Exécute la publication réelle
       const result = await executeDraft(env, draft);
+
+      // IG async : si un container_id est renvoyé (encodage en cours), sauvegarder dans le payload
+      // et garder le draft en 'approved' pour que le prochain cron reprenne automatiquement
+      if (result.igContainerId && !result.ok) {
+        const updatedPayload = { ...JSON.parse(draft.payload), igContainerId: result.igContainerId };
+        await db.prepare("UPDATE agent_drafts SET payload=?, result=?, updated_at=? WHERE id=?")
+          .bind(JSON.stringify(updatedPayload), JSON.stringify(result), now, id).run();
+        await db.prepare("UPDATE editorial_calendar SET result=?, updated_at=? WHERE draft_id=?")
+          .bind(JSON.stringify(result), now, id).run().catch(() => {});
+        return json({ ok: false, status: "approved", retry: true, igContainerId: result.igContainerId });
+      }
+
       const newStatus = result.ok ? "published" : "failed";
       await db.prepare(`
         UPDATE agent_drafts SET status=?, result=?, published_at=?, updated_at=?
         WHERE id=?
       `).bind(newStatus, JSON.stringify(result), result.ok ? now : null, now, id).run();
       // Propage au calendrier
-      const calStatus = result.ok ? "published" : "failed";
       await db.prepare("UPDATE editorial_calendar SET status=?, published_at=?, result=?, updated_at=? WHERE draft_id=?")
-        .bind(calStatus, result.ok ? now : null, JSON.stringify(result), now, id).run().catch(() => {});
+        .bind(newStatus, result.ok ? now : null, JSON.stringify(result), now, id).run().catch(() => {});
       return json({ ok: result.ok, status: newStatus, result });
     }
 

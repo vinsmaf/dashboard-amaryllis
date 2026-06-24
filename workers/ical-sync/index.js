@@ -2321,6 +2321,47 @@ async function runGuideWrite(env) {
   }
 }
 
+// ── Editorial Calendar : retry des posts échoués (< 24h, max 3 tentatives) ────
+// Réinitialise les entrées récemment failed en 'approved' pour que le cron
+// de publication les reprenne. Ignore les échecs > 24h (contenu périmé).
+async function runEditorialRetry(env) {
+  const db = env.revenue_manager;
+  if (!db) return;
+  const now = Math.floor(Date.now() / 1000);
+  const cutoff = now - 24 * 3600;
+  try {
+    // Entrées failed dans les 24 dernières heures avec draft ayant < 3 tentatives
+    const { results } = await db.prepare(`
+      SELECT ec.id, ec.draft_id, ec.bien_id, ec.updated_at,
+             CAST(json_extract(ad.result, '$.retry_count') AS INTEGER) as retry_count
+      FROM editorial_calendar ec
+      LEFT JOIN agent_drafts ad ON ad.id = ec.draft_id
+      WHERE ec.status = 'failed' AND ec.updated_at > ? AND ec.draft_id IS NOT NULL
+      ORDER BY ec.updated_at DESC LIMIT 10
+    `).bind(cutoff).all();
+
+    let retried = 0;
+    for (const e of (results || [])) {
+      const retryCount = (e.retry_count || 0);
+      if (retryCount >= 3) { console.log(`[editorial-retry] entry ${e.id} — max tentatives atteint (${retryCount}), skip`); continue; }
+      // Incrémenter retry_count dans le result du draft
+      const newCount = retryCount + 1;
+      await db.prepare("UPDATE editorial_calendar SET status='approved', updated_at=? WHERE id=?").bind(now, e.id).run();
+      await db.prepare("UPDATE agent_drafts SET status='approved', result=json_set(COALESCE(result,'{}'),'$.retry_count',?), published_at=NULL, updated_at=? WHERE id=?")
+        .bind(newCount, now, e.draft_id).run().catch(() => {});
+      console.log(`[editorial-retry] entry ${e.id} (${e.bien_id}) — tentative ${newCount}/3 reprogrammée`);
+      retried++;
+    }
+    if (retried > 0) console.log(`[editorial-retry] ${retried} entrée(s) reprogrammée(s)`);
+
+    // Nettoyage des entrées failed > 7 jours (contenu périmé — archivées en 'archived')
+    await db.prepare("UPDATE editorial_calendar SET status='archived', updated_at=? WHERE status='failed' AND updated_at < ?")
+      .bind(now, now - 7 * 24 * 3600).run().catch(() => {});
+  } catch (e) {
+    console.error("[editorial-retry] error:", e.message);
+  }
+}
+
 // ── Editorial Calendar : publication auto des drafts approuvés (cron horaire)
 async function runEditorialAutoPublish(env) {
   const siteUrl = env.SITE_URL || "https://villamaryllis.com";
@@ -2351,6 +2392,7 @@ async function runEditorialAutoPublish(env) {
     if (dueEntries.length === 0) { console.log("[editorial-publish] Aucun draft à publier"); return; }
 
     console.log(`[editorial-publish] ${dueEntries.length} draft(s) à publier`);
+    const ntfyTopic = env.NTFY_TOPIC || "amaryllis-alertes-7r4k9";
     for (const e of dueEntries) {
       if (!e.draft_id) {
         console.warn(`[editorial-publish] entry ${e.id} sans draft_id`);
@@ -2361,13 +2403,21 @@ async function runEditorialAutoPublish(env) {
           method: "PATCH",
         });
         const pubData = await pubRes.json();
-        const newStatus = pubData.ok ? "published" : "failed";
+        const newStatus = pubData.ok ? "published" : (pubData.retry ? "approved" : "failed");
         await fetch(`${siteUrl}/api/editorial-calendar?id=${e.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ status: newStatus, result: JSON.stringify(pubData) }),
         }).catch(() => {});
         console.log(`[editorial-publish] entry ${e.id} → ${newStatus}`);
+        // Ntfy sur échec définitif (pas sur retry IG en cours)
+        if (!pubData.ok && !pubData.retry) {
+          await fetch(`https://ntfy.sh/${ntfyTopic}`, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain", "Title": `❌ Post échoué — ${e.bien_id || "?"}`, "Priority": "high", "Tags": "x,rotating_light" },
+            body: `Entry #${e.id} draft #${e.draft_id} → ${JSON.stringify(pubData.result?.error || pubData.error || "?").slice(0, 120)}`,
+          }).catch(() => {});
+        }
       } catch (err) {
         console.error(`[editorial-publish] erreur entry ${e.id}:`, err.message);
       }
@@ -3122,6 +3172,7 @@ export default {
       ctx.waitUntil((async () => {
         await runSync(env);
         await runCancelUnpaidBeds24Bookings(env);
+        await runEditorialRetry(env);
         await runEditorialAutoPublish(env);
         // ── Relance panier abandonné (horaire — D1 de-dup dans l'endpoint) ────────────────────────
         try {
