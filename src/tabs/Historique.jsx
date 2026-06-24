@@ -1,12 +1,14 @@
 /**
- * Historique — analyse historique 2022→courant : annuel, mensuel, cumul, heatmap.
+ * Historique — analyse historique 2022→courant : annuel, mensuel, cumul, heatmap, canal, rentabilité.
  * Extrait de src/App.jsx (refactor 2026, batch B/3).
  */
 import { useState } from "react";
-import { ResponsiveContainer, BarChart, LineChart, Bar, Line, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
-import { MOIS, SAISONNALITE, TT, ANNEE_COLORS, HIST_SEED, ComparatifContent, fmt, fmtK } from "../App.jsx";
+import { ResponsiveContainer, BarChart, LineChart, ComposedChart, Bar, Line, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie } from "recharts";
+import { MOIS, SAISONNALITE, TT, ANNEE_COLORS, HIST_SEED, REVENUS_CANAL_2025, ComparatifContent, fmt, fmtK } from "../App.jsx";
 import { sumN } from "../utils/calculations.js";
 import { useAppData } from "../AppDataContext.jsx";
+
+const CC = { airbnb: "#FF5A5F", booking: "#0ea5e9", direct: "#10b981", parking: "#a855f7" };
 
 export default function Historique() {
   const { biens, n, mob, hist = HIST_SEED } = useAppData();
@@ -57,9 +59,11 @@ export default function Historique() {
     cumulHistorique.push({ annee: String(y) + (y === cy2 ? " YTD" : ""), annuel: totalParAnnee[y] || 0, cumul: running });
   });
   const moyenneAnnuelle = histYearsAll.length > 0 ? histYearsAll.reduce((s, y) => s + (totalParAnnee[y] || 0), 0) / histYearsAll.length : ytd26;
+  const proj2026Rev = n > 0 ? Math.round(ytd26 / n * 12) : 0;
 
   // Cashflow cumulé depuis 2022 — données réelles extraites du Google Sheets (revenus locatif YYYY)
   const cf26 = biens.reduce((s, b) => s + sumN(b.cashflow, n), 0);
+  const proj2026Cf = n > 0 ? Math.round(cf26 / n * 12) : 0;
   const cashflowParAnnee = {
     2022: 38427,
     2023: 49076,
@@ -90,6 +94,9 @@ export default function Historique() {
             </div>
             <div style={{ fontSize: 11, color: "#64748b", marginTop: 3 }}>
               Sur {Math.round((4 * 12 + n) / 12 * 10) / 10} années · Moyenne annuelle {fmt(Math.round(moyenneAnnuelle))}
+            </div>
+            <div style={{ fontSize: 11, color: "#f59e0b", marginTop: 4, fontWeight: 600 }}>
+              ≈ {fmt(proj2026Rev)} projeté fin 2026 <span style={{ fontWeight: 400, color: "#64748b" }}>({n}m × 12)</span>
             </div>
           </div>
           <div style={{ flex: mob ? "1 1 100%" : 1, maxWidth: mob ? "100%" : 480, minWidth: 240 }}>
@@ -129,6 +136,9 @@ export default function Historique() {
             </div>
             <div style={{ fontSize: 11, color: "#64748b", marginTop: 3 }}>
               Moyenne annuelle {fmt(Math.round(cfMoyenAnnuel))} · {((cashflowDepuis2022 / totalDepuis2022) * 100).toFixed(0)}% des revenus
+            </div>
+            <div style={{ fontSize: 11, color: "#f59e0b", marginTop: 4, fontWeight: 600 }}>
+              ≈ {fmt(proj2026Cf)} projeté fin 2026 <span style={{ fontWeight: 400, color: "#64748b" }}>({n}m × 12)</span>
             </div>
           </div>
           <div style={{ flex: mob ? "1 1 100%" : 1, maxWidth: mob ? "100%" : 480, minWidth: 240 }}>
@@ -170,7 +180,7 @@ export default function Historique() {
       </div>
 
       <div style={{ display: "flex", gap: 7, marginBottom: 14, flexWrap: "wrap" }}>
-        {[{ id: "annuel", l: "Annuel" }, { id: "mensuel", l: "Mensuel" }, { id: "cumul", l: `Cumul ${String(prevYear3).slice(-2)}/${String(cy2).slice(-2)}` }, { id: "heatmap", l: "🌡 Saisonnalité" }, { id: "semaine", l: "📅 Jour de semaine" }, { id: "vs2025", l: `📊 vs ${prevYear3}` }].map(v => (
+        {[{ id: "annuel", l: "Annuel" }, { id: "mensuel", l: "Mensuel" }, { id: "cumul", l: `Cumul ${String(prevYear3).slice(-2)}/${String(cy2).slice(-2)}` }, { id: "heatmap", l: "🌡 Saisonnalité" }, { id: "canal", l: "🏷 Canal 2025" }, { id: "rentabilite", l: "💼 Rentabilité" }, { id: "vs2025", l: `📊 vs ${prevYear3}` }].map(v => (
           <button key={v.id} onClick={() => setSelView(v.id)} style={{ padding: "6px 13px", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 11, fontWeight: 600, background: selView === v.id ? "#0ea5e9" : "rgba(255,255,255,0.06)", color: selView === v.id ? "#fff" : "#94a3b8" }}>{v.l}</button>
         ))}
         {selView === "mensuel" && (
@@ -398,6 +408,168 @@ export default function Historique() {
             <div style={{ marginTop: 14, padding: "10px 14px", background: "rgba(14,165,233,0.06)", border: "1px solid rgba(14,165,233,0.15)", borderRadius: 9, fontSize: 11, color: "#cbd5e1" }}>
               💡 <strong>Vendredi-samedi-dimanche</strong> représentent typiquement 60-70% du volume hebdomadaire en location saisonnière.
               Pour optimiser, baisser les prix lundi-jeudi (-15 à -25%) peut remplir des nuits qui sinon resteraient vides.
+            </div>
+          </div>
+        );
+      })()}
+
+      {selView === "canal" && (() => {
+        const canaux = ["airbnb", "booking", "direct", "parking"];
+        const canalLabels = { airbnb: "Airbnb", booking: "Booking.com", direct: "Direct", parking: "Parking" };
+        const totals = canaux.reduce((acc, c) => {
+          acc[c] = Object.values(REVENUS_CANAL_2025).reduce((s, b) => s + (b[c] || 0), 0);
+          return acc;
+        }, {});
+        const total2025 = Object.values(totals).reduce((s, v) => s + v, 0);
+        const pieData = canaux.filter(c => totals[c] > 0).map(c => ({ name: canalLabels[c], value: totals[c], c: CC[c] }));
+        const bienData = biens.map(b => {
+          const d = REVENUS_CANAL_2025[b.id] || {};
+          return { nom: b.nom.replace("Villa ", "").replace("T2 ", ""), emoji: b.emoji, ...Object.fromEntries(canaux.map(c => [canalLabels[c], d[c] || 0])) };
+        });
+        return (
+          <div>
+            {/* KPIs canal */}
+            <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
+              {pieData.map(d => (
+                <div key={d.name} style={{ flex: 1, minWidth: 110, background: `${d.c}11`, border: `1px solid ${d.c}44`, borderTop: `3px solid ${d.c}`, borderRadius: 11, padding: "11px 13px" }}>
+                  <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 3 }}>{d.name}</div>
+                  <div style={{ fontSize: 17, fontWeight: 700, color: "#f1f5f9", fontFamily: "var(--font-mono)" }}>{fmtK(d.value)}</div>
+                  <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>{((d.value / total2025) * 100).toFixed(0)}% du total</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "1fr 1fr", gap: 14, marginBottom: 14 }}>
+              {/* Pie canal */}
+              <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 13, padding: 16 }}>
+                <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 10, fontWeight: 600 }}>Répartition canal 2025</div>
+                <ResponsiveContainer width="100%" height={mob ? 180 : 220}>
+                  <PieChart>
+                    <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={mob ? 40 : 55} outerRadius={mob ? 75 : 95} paddingAngle={2}>
+                      {pieData.map((d, i) => <Cell key={i} fill={d.c} />)}
+                    </Pie>
+                    <Tooltip contentStyle={TT} formatter={(v) => [fmt(v)]} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 6 }}>
+                  {pieData.map(d => (
+                    <div key={d.name} style={{ display: "flex", justifyContent: "space-between", fontSize: 11 }}>
+                      <span style={{ display: "flex", alignItems: "center", gap: 5, color: "#94a3b8" }}>
+                        <span style={{ width: 9, height: 9, borderRadius: 2, background: d.c, display: "inline-block" }} />
+                        {d.name}
+                      </span>
+                      <span style={{ fontFamily: "var(--font-mono)", color: "#e2e8f0" }}>{fmt(d.value)} <span style={{ color: "#64748b" }}>({((d.value / total2025) * 100).toFixed(0)}%)</span></span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* Stacked bar par bien */}
+              <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 13, padding: 16 }}>
+                <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 10, fontWeight: 600 }}>Canal par bien 2025</div>
+                <ResponsiveContainer width="100%" height={mob ? 200 : 260}>
+                  <BarChart data={bienData} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={false} />
+                    <XAxis type="number" tick={{ fill: "#64748b", fontSize: 9 }} axisLine={false} tickLine={false} tickFormatter={fmtK} />
+                    <YAxis type="category" dataKey="nom" tick={{ fill: "#94a3b8", fontSize: 10 }} axisLine={false} tickLine={false} width={65} />
+                    <Tooltip contentStyle={TT} formatter={(v) => [fmt(v)]} />
+                    {canaux.filter(c => totals[c] > 0).map(c => <Bar key={c} dataKey={canalLabels[c]} stackId="a" fill={CC[c]} />)}
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+            <div style={{ padding: "9px 13px", background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.15)", borderRadius: 8, fontSize: 11, color: "#cbd5e1" }}>
+              ⚡ Données 2025 réelles (source Google Sheets). La décomposition canal n'est pas disponible pour les années antérieures.
+            </div>
+          </div>
+        );
+      })()}
+
+      {selView === "rentabilite" && (() => {
+        const years = [...histYearsAll, cy2];
+        const rentData = years.map(y => {
+          const rev = totalParAnnee[y] || 0;
+          const cf  = cashflowParAnnee[y] || 0;
+          const ch  = Math.max(rev - cf, 0);
+          return { annee: String(y) + (y === cy2 ? " YTD" : ""), revenus: rev, charges: ch, cashflow: cf, ytd: y === cy2 };
+        });
+        const rentTrend = years.map(y => {
+          const rev = totalParAnnee[y] || 0;
+          const cf  = cashflowParAnnee[y] || 0;
+          return { annee: String(y) + (y === cy2 ? " YTD" : ""), marge: rev > 0 ? Math.round((cf / rev) * 100) : 0 };
+        });
+        return (
+          <div>
+            {/* KPIs rentabilité */}
+            <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
+              {[
+                { l: "Revenus cumulés", v: totalDepuis2022, c: "#0ea5e9" },
+                { l: "Charges cumulées", v: totalDepuis2022 - cashflowDepuis2022, c: "#ef4444" },
+                { l: "Cashflow cumulé", v: cashflowDepuis2022, c: "#10b981" },
+                { l: "Marge nette moy.", v: null, pct: ((cashflowDepuis2022 / totalDepuis2022) * 100).toFixed(0) + "%", c: "#f59e0b" },
+              ].map((k, i) => (
+                <div key={i} style={{ flex: 1, minWidth: 110, background: `${k.c}11`, border: `1px solid ${k.c}33`, borderRadius: 11, padding: "11px 13px" }}>
+                  <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 3 }}>{k.l}</div>
+                  <div style={{ fontSize: 17, fontWeight: 700, color: k.c, fontFamily: "var(--font-mono)" }}>{k.v != null ? fmtK(k.v) : k.pct}</div>
+                </div>
+              ))}
+            </div>
+            {/* Barres empilées revenus / charges / cashflow */}
+            <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 13, padding: 16, marginBottom: 14 }}>
+              <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 10, fontWeight: 600 }}>Revenus / Charges / Cashflow par année</div>
+              <ResponsiveContainer width="100%" height={mob ? 180 : 240}>
+                <ComposedChart data={rentData} barGap={3}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                  <XAxis dataKey="annee" tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={fmtK} />
+                  <Tooltip contentStyle={TT} formatter={(v) => [fmt(v)]} />
+                  <Legend wrapperStyle={{ fontSize: 10, color: "#94a3b8" }} />
+                  <Bar dataKey="charges"  name="Charges"  fill="#ef4444" stackId="a" />
+                  <Bar dataKey="cashflow" name="Cashflow" fill="#10b981" stackId="a" radius={[4, 4, 0, 0]} />
+                  <Line type="monotone" dataKey="revenus" name="Revenus totaux" stroke="#0ea5e9" strokeWidth={2.5} dot={{ fill: "#0ea5e9", r: 4 }} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+            {/* Taux de marge par année */}
+            <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 13, padding: 16, marginBottom: 14 }}>
+              <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 10, fontWeight: 600 }}>Taux de marge nette (cashflow / revenus)</div>
+              <ResponsiveContainer width="100%" height={mob ? 120 : 150}>
+                <BarChart data={rentTrend} barSize={40}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                  <XAxis dataKey="annee" tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => v + "%"} domain={[0, 70]} />
+                  <Tooltip contentStyle={TT} formatter={(v) => [v + " %", "Marge nette"]} />
+                  <Bar dataKey="marge" radius={[5, 5, 0, 0]}>
+                    {rentTrend.map((d, i) => <Cell key={i} fill={d.marge >= 50 ? "#10b981" : d.marge >= 40 ? "#f59e0b" : "#ef4444"} />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            {/* Tableau récap */}
+            <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 13, overflow: "hidden" }}>
+              <div style={{ padding: "10px 14px", borderBottom: "1px solid rgba(255,255,255,0.06)", fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>Synthèse par année</div>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ background: "rgba(255,255,255,0.03)" }}>
+                    {["Année", "Revenus", "Charges", "Cashflow", "Marge"].map(h => (
+                      <th key={h} style={{ padding: "8px 12px", textAlign: h === "Année" ? "left" : "right", fontSize: 9, color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rentData.map((r, i) => {
+                    const marge = r.revenus > 0 ? ((r.cashflow / r.revenus) * 100).toFixed(0) : 0;
+                    const margeColor = marge >= 50 ? "#10b981" : marge >= 40 ? "#f59e0b" : "#ef4444";
+                    return (
+                      <tr key={i} style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                        <td style={{ padding: "9px 12px", fontWeight: 600, color: r.ytd ? "#f59e0b" : "#e2e8f0", fontSize: 11 }}>{r.annee}</td>
+                        <td style={{ padding: "9px 12px", textAlign: "right", fontFamily: "var(--font-mono)", fontSize: 11, color: "#0ea5e9" }}>{fmt(r.revenus)}</td>
+                        <td style={{ padding: "9px 12px", textAlign: "right", fontFamily: "var(--font-mono)", fontSize: 11, color: "#ef4444" }}>{fmt(r.charges)}</td>
+                        <td style={{ padding: "9px 12px", textAlign: "right", fontFamily: "var(--font-mono)", fontSize: 11, color: "#10b981", fontWeight: 600 }}>{fmt(r.cashflow)}</td>
+                        <td style={{ padding: "9px 12px", textAlign: "right", fontFamily: "var(--font-mono)", fontSize: 12, color: margeColor, fontWeight: 700 }}>{marge}%</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
         );
