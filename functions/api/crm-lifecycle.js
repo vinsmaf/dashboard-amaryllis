@@ -130,23 +130,36 @@ export async function onRequestGet(context) {
 
   if (!env.RESEND_API_KEY) return json({ error: "RESEND_API_KEY absent" }, 503);
 
+  // Envoi via l'API BATCH Resend (1 appel / 100 max) → pas de rate-limit 429
+  // (l'envoi en boucle saturait la limite Resend ~2 req/s). Personnalisation conservée
+  // (chaque message a son to/subject/html). Marquage crm_campaigns par chunk réussi.
+  const from = resendFrom(env);
+  const messages = cibles.map(c => {
+    const prenom = (c.prenom || (c.nom || "").split(" ")[0] || "cher voyageur").trim();
+    return { _id: c.id, _email: c.email, from, to: [c.email], subject: seg.subject(prenom), html: buildHtml(c, seg) };
+  });
+
   const sent = [], failed = [];
-  for (const c of cibles) {
+  for (let i = 0; i < messages.length; i += 100) {
+    const chunk = messages.slice(i, i + 100);
+    const payload = chunk.map(({ _id, _email, ...m }) => m); // strip champs internes
     try {
-      const prenom = (c.prenom || (c.nom || "").split(" ")[0] || "cher voyageur").trim();
-      const res = await fetch("https://api.resend.com/emails", {
+      const res = await fetch("https://api.resend.com/emails/batch", {
         method: "POST",
         headers: { "Authorization": `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ from: resendFrom(env), to: [c.email], subject: seg.subject(prenom), html: buildHtml(c, seg) }),
+        body: JSON.stringify(payload),
       });
       if (res.ok) {
-        await db.prepare(`INSERT OR IGNORE INTO crm_campaigns (client_id, campaign) VALUES (?, ?)`).bind(c.id, segKey).run();
-        sent.push({ id: c.id, email: c.email });
+        for (const m of chunk) {
+          await db.prepare(`INSERT OR IGNORE INTO crm_campaigns (client_id, campaign) VALUES (?, ?)`).bind(m._id, segKey).run();
+          sent.push({ id: m._id, email: m._email });
+        }
       } else {
-        failed.push({ id: c.id, email: c.email, error: (await res.text()).slice(0, 100) });
+        const err = (await res.text()).slice(0, 120);
+        for (const m of chunk) failed.push({ id: m._id, email: m._email, error: err });
       }
     } catch (e) {
-      failed.push({ id: c.id, email: c.email, error: e.message });
+      for (const m of chunk) failed.push({ id: m._id, email: m._email, error: e.message });
     }
   }
 
