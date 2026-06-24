@@ -17,7 +17,7 @@
 2. **Alternatives refusées** : `npm run deploy:pages` depuis une instance Claude → drift prod≠main garanti si 2 instances travaillent en parallèle (vécu 3× en 24h le 2026-06-23). Prod s'écrase avec l'état local d'une seule machine.
 3. **Conséquences attendues** : `deploy-pages.sh` reste mais usage = Vincent seul en urgence CI cassée. CI a `concurrency: cancel-in-progress: true` → 2 pushes simultanés = le dernier gagne, proprement. Fix smoke test (sleep 20 + retry ×3) élimine les faux-négatifs de propagation CF Pages.
 4. **Périmètre** : `.github/workflows/deploy.yml` · `scripts/deploy-pages.sh` (non modifié, accès restreint).
-5. **Statut** : **acté** (2026-06-23). Fix smoke test : commit `1107f31`.
+5. **Statut** : **acté** (2026-06-23). Fix smoke test : commit `1107f31`. **Renforcé 2026-06-24** (`5cc47a7`) : un agent a redéployé en direct hors-git (`cbb50f6`) → drift prod≠origin. Garde ajoutée dans `deploy-pages.sh` : déploiement non-interactif (pas de TTY stdin = agent) bloqué sauf `I_DEPLOY_CONSCIOUSLY=1`. N'affecte ni la CI (wrangler direct) ni l'humain en terminal. Réconciliation = `git push` du commit live (jamais re-déployer origin par-dessus sans vérifier que prod n'est pas en avance).
 
 ## ADR-REVENUSCANAL-001 · 2026-06-23 · REVENUS_CANAL_2025 extrait vers src/data/revenusCanal.js
 
