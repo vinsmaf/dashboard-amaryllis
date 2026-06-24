@@ -4,6 +4,14 @@
 > **Règle** : à chaque erreur commise, ajouter une entrée ici (symptôme → cause → solution → garde-fou).
 > Lire ce fichier **au début de chaque session** (en plus de `PROJECT_MEMORY.md` + `CLAUDE.md`).
 
+## 🚀 DEPLOY — Agent déploie en direct hors-git (drift prod≠origin)
+
+**DEPLOY-001 (2026-06-24)** — Une 2e session Claude (agent locatif) a committé une feature en local puis lancé `npm run deploy:pages` directement (×2) **sans `git push`**.
+- **Symptôme** : prod en avance sur `origin/main` (commit `cbb50f6` déployé mais absent du remote). Au prochain deploy depuis `origin` (CI ou autre machine), la prod serait revenue en arrière → feature perdue.
+- **Cause** : double chemin de déploiement. Les gardes existantes de `deploy-pages.sh` (branche=main, working-tree propre) ne bloquaient pas un agent qui a committé proprement.
+- **Solution** : réconciliation par `git push` du commit live (vérifier d'abord qu'il est sain : tests + descendance de notre dernier commit). **Jamais** re-déployer `origin` par-dessus une prod en avance sans vérifier.
+- **Garde-fou** : `deploy-pages.sh` refuse tout déploiement **non-interactif** (pas de TTY sur stdin = agent/automatisation) sauf `I_DEPLOY_CONSCIOUSLY=1` (`5cc47a7`). + Règle de division : agent→locatif, instance→patrimoine (VINCENT.md). Chemin unique de prod = `git push` → CI (ADR-DEPLOY-001).
+
 ## 🤖 AGENTS — Hallucination biens inexistants
 
 **AGENT-001 (2026-06-23)** — Les agents backlog proposent parfois des actions sur des biens/outils qui n'existent pas : "Domaine des Châteaux", "ImagXpert", "Bellevue" (inexistant), "Chalet des Alpes".

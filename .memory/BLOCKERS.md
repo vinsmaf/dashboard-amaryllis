@@ -4,6 +4,9 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
+## En cours → ✅ terminé le 2026-06-24 (Incident deploy agent : drift réparé + garde anti-agent + division instances)
+> Agent locatif avait déployé `cbb50f6` hors-git (drift prod≠origin). Réconcilié (`git push`, rien perdu), garde TTY dans `deploy-pages.sh` (`5cc47a7`), division actée (agent=locatif / instance=patrimoine). Prod = origin = `03ba65e`. Vérif finale OK (37 articles + winback 26 + 88 guest_contacts vivants).
+
 ## En cours → ✅ terminé le 2026-06-23 (Session CRM : Phase 0/1 + 1ère campagne réelle)
 > Moteur réactivation `crm-lifecycle.js` (winback+fidelite, batch Resend, anti-doublon `crm_campaigns`, Iguana exclu) déployé. **winback envoyé 26/26 dormants.** fidelite programmé 08/09 (assisté). Vue segments CRM. Roadmap `docs/crm-roadmap.md`. 🟡 Suivi humain : réponses des 26 + résas directes = KPI repeat (pas de mécanisme auto de tracking de la conversion réactivation→résa pour l'instant).
 
