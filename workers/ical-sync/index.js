@@ -2160,9 +2160,13 @@ Retourne UNIQUEMENT : {"score":0-100,"verdict":"approve"|"reject","reason":"1 ph
 
     // Approuver automatiquement si score suffisant
     if (autoOK) {
-      await fetch(`${siteUrl}/api/agent-drafts?id=${draftData.id}&action=approve&secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
+      const approveRes = await fetch(`${siteUrl}/api/agent-drafts?id=${draftData.id}&action=approve&secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
         method: "PATCH",
-      }).catch(() => {});
+      }).catch((e) => { console.error(`[editorial-J-2] approve #${draftData.id} fetch error:`, e.message); return null; });
+      if (approveRes && !approveRes.ok) {
+        const errBody = await approveRes.text().catch(() => "");
+        console.error(`[editorial-J-2] approve #${draftData.id} HTTP ${approveRes.status}:`, errBody);
+      }
       console.log(`[editorial-J-2] ✅ reel_post #${draftData.id} AUTO-APPROUVÉ (${score}/100)`);
     } else {
       console.log(`[editorial-J-2] ⚠️ reel_post #${draftData.id} — score ${score}/100 < seuil → révision manuelle`);
@@ -2267,8 +2271,10 @@ async function runEditorialDraftGen(env) {
     }
 
     // Gate de qualité : juge les drafts générés → auto-approuve (live) ou escalade en ntfy (shadow/fail).
+    // mode=live : les drafts qui passent les 4 filtres sont auto-approuvés (status → 'approved') pour la publi horaire.
     try {
-      const gr = await fetch(`${siteUrl}/api/editorial-gate?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, { method: "POST" });
+      const gateMode = env.EDITORIAL_GATE_MODE || "live";
+      const gr = await fetch(`${siteUrl}/api/editorial-gate?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}&mode=${gateMode}`, { method: "POST" });
       const gd = await gr.json();
       console.log(`[editorial-gate] mode=${gd.mode} évalués=${gd.evaluated} auto-publiés=${gd.queued_for_publish} shadow=${gd.would_publish} escaladés=${gd.escalated}`);
     } catch (err) { console.error("[editorial-gate] error:", err.message); }

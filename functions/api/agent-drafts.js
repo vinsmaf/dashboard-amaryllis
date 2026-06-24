@@ -116,6 +116,29 @@ async function executeDraft(env, draft) {
     return r.ok ? { ok: true, id: data.id } : { ok: false, error: data.message };
   }
 
+  if (draft.type === "reel_post") {
+    // payload: { caption, videoUrl, coverUrl, channels }
+    if (!payload.videoUrl) return { ok: false, error: "videoUrl manquant — rendre la vidéo d'abord" };
+    const channels = Array.isArray(payload.channels) && payload.channels.length
+      ? payload.channels
+      : ["ig", "fb"];
+    const origin = new URL(env.PAGES_URL || "https://dashboard-amaryllis.pages.dev").origin;
+    const r = await fetch(`${origin}/api/social?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "publish_reel",
+        caption: payload.caption,
+        videoUrl: payload.videoUrl,
+        coverUrl: payload.coverUrl || null,
+        channels,
+      }),
+    });
+    const data = await r.json();
+    const hasSuccess = data.ok || Object.values(data.results || {}).some(r => r.ok);
+    return hasSuccess ? { ok: true, results: data.results } : { ok: false, error: data.error || "Aucune publication reel réussie", results: data.results };
+  }
+
   return { ok: false, error: `Type "${draft.type}" non supporté` };
 }
 
