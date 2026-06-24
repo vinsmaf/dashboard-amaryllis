@@ -5,10 +5,11 @@
  */
 import { useState } from "react";
 import { ResponsiveContainer, BarChart, LineChart, ComposedChart, PieChart, Pie, Bar, Line, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
-import { MOIS, TT, REVENUS_CANAL_2025, fmt, fmtK } from "../App.jsx";
+import { MOIS, TT, fmt, fmtK } from "../App.jsx";
 import { sumN, avgN } from "../utils/calculations.js";
 import { useAppData } from "../AppDataContext.jsx";
-import { commissionTaux, airbnbComm, BOOKING_COMM } from "../config/canauxCommissions.js";
+import { commissionTaux } from "../config/canauxCommissions.js";
+import CpaCanalTab from "./CpaCanalTab.jsx";
 
 // ── CanalLivePerf — uniquement utilisé par Pilotage ──────────────────────────
 function CanalLivePerf({ biens, reservations, mob }) {
@@ -123,53 +124,6 @@ function CanalLivePerf({ biens, reservations, mob }) {
 export default function Pilotage() {
   const { biens, n, mob, reservations = [] } = useAppData();
   const [view, setView] = useState("canal-live");
-  const PIE_COLORS = ["#0ea5e9", "#FF5A5F", "#10b981", "#f59e0b", "#a855f7", "#ec4899", "#06b6d4"];
-
-  // ===== CANAUX =====
-  const canalTotaux = { airbnb: 0, booking: 0, direct: 0, parking: 0 };
-  let airbnbCommission2025 = 0; // Airbnb : taux PAR BIEN (3% vs 15%)
-  Object.entries(REVENUS_CANAL_2025).forEach(([bienId, b]) => {
-    canalTotaux.airbnb += b.airbnb;
-    canalTotaux.booking += b.booking;
-    canalTotaux.direct += b.direct;
-    canalTotaux.parking += b.parking || 0;
-    airbnbCommission2025 += (b.airbnb || 0) * airbnbComm(bienId);
-  });
-  const totalCanal = canalTotaux.airbnb + canalTotaux.booking + canalTotaux.direct + canalTotaux.parking;
-
-  // Commissions estimées — Airbnb per-bien (3%/15%), Booking 17% partout
-  const commissionParCanal = {
-    airbnb: airbnbCommission2025,
-    booking: canalTotaux.booking * BOOKING_COMM,
-    direct: 0,
-    parking: 0,
-  };
-  const totalCommissions = Object.values(commissionParCanal).reduce((s, v) => s + v, 0);
-  const netParCanal = {
-    airbnb: canalTotaux.airbnb - commissionParCanal.airbnb,
-    booking: canalTotaux.booking - commissionParCanal.booking,
-    direct: canalTotaux.direct,
-    parking: canalTotaux.parking,
-  };
-
-  const canalData = [
-    { name: "Airbnb",  brut: canalTotaux.airbnb,  net: netParCanal.airbnb,  commission: commissionParCanal.airbnb,  color: "#FF5A5F" },
-    { name: "Booking", brut: canalTotaux.booking, net: netParCanal.booking, commission: commissionParCanal.booking, color: "#0ea5e9" },
-    { name: "Direct",  brut: canalTotaux.direct,  net: netParCanal.direct,  commission: 0,                          color: "#10b981" },
-  ];
-  if (canalTotaux.parking > 0) canalData.push({ name: "Parking", brut: canalTotaux.parking, net: canalTotaux.parking, commission: 0, color: "#a855f7" });
-
-  const bienCanalData = biens.map(b => {
-    const d = REVENUS_CANAL_2025[b.id] || { airbnb: 0, booking: 0, direct: 0 };
-    return {
-      nom: b.nom.replace("Villa ", "").replace("T2 ", ""),
-      emoji: b.emoji,
-      Airbnb: d.airbnb,
-      Booking: d.booking,
-      Direct: d.direct,
-    };
-  });
-
   // ===== FISCAL =====
   const ytd = biens.reduce((s, b) => s + sumN(b.revenus, n), 0);
   const projAnnuelle = n > 0 ? Math.round(ytd * 12 / n) : 0;
@@ -199,7 +153,7 @@ export default function Pilotage() {
       <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
         {[
           { id: "canal-live", l: "⚡ Canaux live" },
-          { id: "canaux",     l: "💼 Canaux 2025" },
+          { id: "cpa",        l: "💸 CPA" },
           { id: "marche",     l: "🎯 Marché" },
           { id: "fiscal",     l: "📋 Fiscal" },
           { id: "conseil",    l: "🎓 Conseil" },
@@ -217,68 +171,7 @@ export default function Pilotage() {
         <CanalLivePerf biens={biens} reservations={reservations} mob={mob} />
       )}
 
-      {view === "canaux" && (
-        <div>
-          {/* KPIs canaux */}
-          <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
-            {canalData.map(c => (
-              <div key={c.name} style={{ flex: 1, minWidth: 120, background: c.color + "11", border: `1px solid ${c.color}44`, borderRadius: 11, padding: "12px 14px" }}>
-                <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>{c.name}</div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: c.color, fontFamily: "var(--font-mono)" }}>{fmtK(c.brut)}</div>
-                <div style={{ fontSize: 10, color: "#64748b", marginTop: 2 }}>
-                  {((c.brut / totalCanal) * 100).toFixed(0)}% du total
-                  {c.commission > 0 && <span> · -{fmtK(c.commission)} commission</span>}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Pie répartition + bar par bien */}
-          <div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "1fr 2fr", gap: 14, marginBottom: 14 }}>
-            <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 13, padding: 16 }}>
-              <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 10, fontWeight: 600 }}>Répartition par canal (brut)</div>
-              <ResponsiveContainer width="100%" height={mob ? 160 : 200}>
-                <PieChart>
-                  <Pie data={canalData} dataKey="brut" nameKey="name" cx="50%" cy="50%" innerRadius={mob ? 35 : 45} outerRadius={mob ? 65 : 80} paddingAngle={2}>
-                    {canalData.map((d, i) => <Cell key={i} fill={d.color} />)}
-                  </Pie>
-                  <Tooltip contentStyle={TT} formatter={(v) => [fmt(v)]} />
-                </PieChart>
-              </ResponsiveContainer>
-              <div style={{ fontSize: 11, color: "#10b981", marginTop: 8, padding: "6px 10px", background: "rgba(16,185,129,0.08)", borderRadius: 7 }}>
-                💡 Direct = {((canalTotaux.direct / totalCanal) * 100).toFixed(0)}% — pas de commission
-              </div>
-            </div>
-            <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 13, padding: 16 }}>
-              <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 10, fontWeight: 600 }}>Mix par bien</div>
-              <ResponsiveContainer width="100%" height={mob ? 200 : 240}>
-                <BarChart data={bienCanalData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={false} />
-                  <XAxis type="number" tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={fmtK} />
-                  <YAxis type="category" dataKey="nom" tick={{ fill: "#94a3b8", fontSize: 10 }} axisLine={false} tickLine={false} width={70} />
-                  <Tooltip contentStyle={TT} formatter={(v) => [fmt(v)]} />
-                  <Legend wrapperStyle={{ fontSize: 10, color: "#94a3b8" }} />
-                  <Bar dataKey="Airbnb" stackId="a" fill="#FF5A5F" />
-                  <Bar dataKey="Booking" stackId="a" fill="#0ea5e9" />
-                  <Bar dataKey="Direct" stackId="a" fill="#10b981" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Insight commissions */}
-          <div style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 11, padding: "12px 16px", marginBottom: 12 }}>
-            <div style={{ fontSize: 11, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Commissions plateformes estimées 2025</div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: "#ef4444", fontFamily: "var(--font-mono)" }}>{fmt(Math.round(totalCommissions))}</div>
-            <div style={{ fontSize: 11, color: "#64748b", marginTop: 3 }}>
-              Airbnb ~15% sur {fmtK(canalTotaux.airbnb)} + Booking ~17% sur {fmtK(canalTotaux.booking)}
-            </div>
-            <div style={{ fontSize: 11, color: "#10b981", marginTop: 6 }}>
-              💡 Si tu basculais 30% de l'Airbnb/Booking en direct → ~{fmt(Math.round(totalCommissions * 0.3))} économisés/an
-            </div>
-          </div>
-        </div>
-      )}
+      {view === "cpa" && <CpaCanalTab />}
 
       {view === "marche" && (() => {
         // Benchmark précis par bien — comparables réels avec attributs IDENTIQUES
