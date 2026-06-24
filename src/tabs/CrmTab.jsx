@@ -135,10 +135,19 @@ function ClientCard({ client, onSelect, selected }) {
   );
 }
 
+const INPUT_STYLE = {
+  width: "100%", background: "#ffffff08", border: "1px solid #ffffff15",
+  borderRadius: 7, padding: "7px 10px", color: "#f1f5f9", fontSize: 13,
+  boxSizing: "border-box",
+};
+
 function DetailPanel({ client, onClose, onSave }) {
-  const [notes, setNotes] = useState(client.notes || "");
+  const [email,  setEmail]  = useState(client.email  || "");
+  const [mobile, setMobile] = useState(client.mobile || "");
+  const [statut, setStatut] = useState(client.statut || "locataire");
+  const [notes,  setNotes]  = useState(client.notes  || "");
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [saved,  setSaved]  = useState(false);
   const biens = parseBiens(client.biens);
   const tags  = parseTags(client.tags);
 
@@ -148,9 +157,9 @@ function DetailPanel({ client, onClose, onSave }) {
       await fetchJSON(`/api/crm-clients?id=${client.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ notes }),
+        body: JSON.stringify({ email: email || null, mobile: mobile || null, statut, notes }),
       });
-      onSave({ ...client, notes });
+      onSave({ ...client, email: email || null, mobile: mobile || null, statut, notes });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (e) {
@@ -172,26 +181,30 @@ function DetailPanel({ client, onClose, onSave }) {
         {tags.map(t => <TagBadge key={t} tag={t} />)}
       </div>
 
-      {/* Contact */}
+      {/* Contact éditable */}
       <section style={{ marginBottom: 20 }}>
         <h3 style={{ fontSize: 12, textTransform: "uppercase", color: "var(--c-muted,#94a3b8)", letterSpacing: 1, marginBottom: 8 }}>Contact</h3>
-        {client.email && (
-          <div style={{ marginBottom: 6 }}>
-            <span style={{ fontSize: 13, color: "#94a3b8" }}>Email : </span>
-            <a href={`mailto:${client.email}`} style={{ color: "#38bdf8", fontSize: 13 }}>{client.email}</a>
-          </div>
-        )}
-        {client.mobile && (
-          <div style={{ marginBottom: 6 }}>
-            <span style={{ fontSize: 13, color: "#94a3b8" }}>Tél : </span>
-            <a href={`tel:${client.mobile}`} style={{ color: "#34d399", fontSize: 13 }}>{client.mobile}</a>
-          </div>
-        )}
-        {client.adresse && <div style={{ fontSize: 12, color: "#64748b" }}>{client.adresse}, {client.ville} {client.pays}</div>}
-        {!client.email && !client.mobile && <div style={{ fontSize: 13, color: "#475569" }}>Pas de contact disponible</div>}
+        <div style={{ marginBottom: 8 }}>
+          <label style={{ fontSize: 11, color: "#64748b", display: "block", marginBottom: 3 }}>Email</label>
+          <input value={email} onChange={e => setEmail(e.target.value)} placeholder="email@exemple.com" style={INPUT_STYLE} />
+        </div>
+        <div style={{ marginBottom: 8 }}>
+          <label style={{ fontSize: 11, color: "#64748b", display: "block", marginBottom: 3 }}>Téléphone</label>
+          <input value={mobile} onChange={e => setMobile(e.target.value)} placeholder="+596 696 00 00 00" style={INPUT_STYLE} />
+        </div>
+        {client.adresse && <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>{client.adresse}, {client.ville} {client.pays}</div>}
       </section>
 
-      {/* Stats */}
+      {/* Statut éditable */}
+      <section style={{ marginBottom: 20 }}>
+        <h3 style={{ fontSize: 12, textTransform: "uppercase", color: "var(--c-muted,#94a3b8)", letterSpacing: 1, marginBottom: 8 }}>Statut</h3>
+        <select value={statut} onChange={e => setStatut(e.target.value)}
+          style={{ ...INPUT_STYLE, cursor: "pointer" }}>
+          {Object.entries(STATUT_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+        </select>
+      </section>
+
+      {/* Stats (lecture seule) */}
       <section style={{ marginBottom: 20 }}>
         <h3 style={{ fontSize: 12, textTransform: "uppercase", color: "var(--c-muted,#94a3b8)", letterSpacing: 1, marginBottom: 8 }}>Séjours</h3>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -205,16 +218,17 @@ function DetailPanel({ client, onClose, onSave }) {
           </div>
         </div>
         <div style={{ marginTop: 10, fontSize: 12, color: "#64748b" }}>
-          Premier séjour : <span style={{ color: "#94a3b8" }}>{fmtDate(client.premier_sejour)}</span>
+          Premier : <span style={{ color: "#94a3b8" }}>{fmtDate(client.premier_sejour)}</span>
           {" · "}
           Dernier : <span style={{ color: "#94a3b8" }}>{fmtDate(client.dernier_sejour)}</span>
         </div>
-        <div style={{ marginTop: 6, fontSize: 12, color: "#64748b" }}>
+        <div style={{ marginTop: 4, fontSize: 12, color: "#64748b" }}>
           Biens : {biens.map(b => <span key={b} style={{ marginRight: 6, color: "#94a3b8" }}>{b}</span>)}
+          {!biens.length && <span style={{ color: "#475569" }}>—</span>}
         </div>
         <div style={{ marginTop: 4, fontSize: 12, color: "#64748b" }}>
           Canal : <span style={{ color: CANAL_COLOR[client.canal_principal] || "#94a3b8" }}>
-            {CANAL_LABEL[client.canal_principal] || client.canal_principal}
+            {CANAL_LABEL[client.canal_principal] || client.canal_principal || "—"}
           </span>
         </div>
       </section>
@@ -226,23 +240,92 @@ function DetailPanel({ client, onClose, onSave }) {
           value={notes}
           onChange={e => setNotes(e.target.value)}
           placeholder="Notes privées sur ce client…"
-          style={{
-            width: "100%", minHeight: 100, background: "#ffffff08", border: "1px solid #ffffff15",
-            borderRadius: 8, padding: 10, color: "#f1f5f9", fontSize: 13, resize: "vertical",
-            boxSizing: "border-box",
-          }}
+          style={{ ...INPUT_STYLE, minHeight: 90, resize: "vertical" }}
         />
         <button
           onClick={save}
           disabled={saving}
           style={{
             marginTop: 8, padding: "8px 16px", background: "var(--c-coral,#e76f51)",
-            color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600,
+            color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600, width: "100%",
           }}
         >
           {saving ? "Sauvegarde…" : saved ? "✓ Sauvegardé" : "Sauvegarder"}
         </button>
       </section>
+    </div>
+  );
+}
+
+function NewContactModal({ onClose, onCreated }) {
+  const [form, setForm] = useState({ prenom: "", nom: "", email: "", mobile: "", statut: "locataire", notes: "" });
+  const [saving, setSaving] = useState(false);
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  async function create() {
+    if (!form.prenom && !form.nom) return;
+    setSaving(true);
+    try {
+      const d = await fetchJSON("/api/crm-clients", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      onCreated(d.id);
+    } catch (e) {
+      alert("Erreur : " + e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const field = (label, key, placeholder, type = "text") => (
+    <div style={{ marginBottom: 12 }}>
+      <label style={{ fontSize: 11, color: "#64748b", display: "block", marginBottom: 3 }}>{label}</label>
+      <input type={type} value={form[key]} onChange={e => set(key, e.target.value)}
+        placeholder={placeholder} style={INPUT_STYLE} />
+    </div>
+  );
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, background: "#00000080", zIndex: 200,
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: "var(--c-navy,#0f172a)", borderRadius: 14, padding: 28,
+        width: 400, maxWidth: "90vw", boxShadow: "0 8px 40px #00000060",
+        border: "1px solid #ffffff15",
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <h2 style={{ margin: 0, fontSize: 17, color: "#f1f5f9" }}>Nouveau contact</h2>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "#64748b", fontSize: 18, cursor: "pointer" }}>✕</button>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 12px" }}>
+          {field("Prénom", "prenom", "Prénom")}
+          {field("Nom", "nom", "Nom")}
+        </div>
+        {field("Email", "email", "email@exemple.com", "email")}
+        {field("Téléphone", "mobile", "+596 696 00 00 00", "tel")}
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ fontSize: 11, color: "#64748b", display: "block", marginBottom: 3 }}>Statut</label>
+          <select value={form.statut} onChange={e => set("statut", e.target.value)} style={{ ...INPUT_STYLE, cursor: "pointer" }}>
+            {Object.entries(STATUT_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </select>
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ fontSize: 11, color: "#64748b", display: "block", marginBottom: 3 }}>Notes</label>
+          <textarea value={form.notes} onChange={e => set("notes", e.target.value)}
+            placeholder="Optionnel…" style={{ ...INPUT_STYLE, minHeight: 60, resize: "vertical" }} />
+        </div>
+        <button onClick={create} disabled={saving || (!form.prenom && !form.nom)} style={{
+          width: "100%", padding: "10px 0", background: "var(--c-coral,#e76f51)",
+          color: "#fff", border: "none", borderRadius: 8, cursor: "pointer",
+          fontSize: 14, fontWeight: 700, opacity: (!form.prenom && !form.nom) ? 0.5 : 1,
+        }}>
+          {saving ? "Création…" : "Créer le contact"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -262,6 +345,7 @@ export default function CrmTab() {
   const [segFilter, setSegFilter]     = useState(null);
   const [statutFilter, setStatutFilter] = useState("");
   const [exporting, setExporting]     = useState(false);
+  const [showNewModal, setShowNewModal] = useState(false);
 
   async function load() {
     setErr(null);
@@ -357,13 +441,19 @@ export default function CrmTab() {
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: "var(--c-text,#f1f5f9)" }}>
             👥 CRM Clients
           </h1>
-          <button
-            onClick={exportCsv}
-            disabled={exporting || !clients?.length}
-            style={{ padding: "8px 16px", background: "#334155", color: "#f1f5f9", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13 }}
-          >
-            {exporting ? "Export…" : "⬇ Export CSV"}
-          </button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              onClick={() => setShowNewModal(true)}
+              style={{ padding: "8px 14px", background: "var(--c-coral,#e76f51)", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 700 }}
+            >+ Contact</button>
+            <button
+              onClick={exportCsv}
+              disabled={exporting || !clients?.length}
+              style={{ padding: "8px 16px", background: "#334155", color: "#f1f5f9", border: "none", borderRadius: 8, cursor: "pointer", fontSize: 13 }}
+            >
+              {exporting ? "Export…" : "⬇ CSV"}
+            </button>
+          </div>
         </div>
 
         {/* KPIs */}
@@ -482,6 +572,14 @@ export default function CrmTab() {
           client={selected}
           onClose={() => setSelected(null)}
           onSave={onSave}
+        />
+      )}
+
+      {/* Nouveau contact */}
+      {showNewModal && (
+        <NewContactModal
+          onClose={() => setShowNewModal(false)}
+          onCreated={() => { setShowNewModal(false); load(); }}
         />
       )}
     </div>
