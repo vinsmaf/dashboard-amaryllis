@@ -354,16 +354,19 @@ async function handleInsights(env, { igId: igMediaId, fbId: fbVideoId }) {
   }
   if (fbVideoId) {
     try {
-      // Pour les reels FB : les champs supportés sont limités
-      const r = await graphGet(`${fbVideoId}?fields=likes.summary(true),comments.summary(true),description`, token);
+      // reactions.summary(true) = bon nom FB (pas likes.summary)
+      const r = await graphGet(`${fbVideoId}?fields=reactions.summary(true),comments.summary(true),views`, token);
       if (r.error) {
-        // Fallback : tenter sans champs complexes
-        const r2 = await graphGet(`${fbVideoId}`, token);
-        out.fb = r2.error ? { error: r2.error.message } : { id: r2.id, ok: true };
+        // Fallback minimal — au moins confirmer que le post existe
+        const r2 = await graphGet(`${fbVideoId}?fields=id,created_time`, token);
+        out.fb = r2.error
+          ? { error: r2.error.message }
+          : { reactions: null, comments: null, views: null, published: true };
       } else {
         out.fb = {
-          reactions: r.likes?.summary?.total_count ?? 0,
-          comments: r.comments?.summary?.total_count ?? 0,
+          reactions: r.reactions?.summary?.total_count ?? null,
+          comments: r.comments?.summary?.total_count ?? null,
+          views: r.views ?? null,
         };
       }
     } catch (e) { out.fb = { error: e.message }; }
