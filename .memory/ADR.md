@@ -3,6 +3,14 @@
 > 1 entrée par décision qui engage la suite. Format 5 lignes : **Choix · Alternatives refusées · Conséquences attendues · Périmètre · Statut**.
 > Décisions d'archi détaillées (specs complets) → `../docs/superpowers/specs/README.md` (ADR-001→010). Ici = log curaté de session.
 
+## ADR-CONTACTS-001 · 2026-06-24 · Base contacts `guest_contacts` (WhatsApp + Sheet) + recoupement par téléphone
+
+1. **Choix** : table D1 `guest_contacts` alimentée en 2 temps — scan WhatsApp (53, `source='whatsapp'`) puis recoupement avec l'onglet « Toutes les Réservations » du Sheet (+35 locataires directs/Beds24 avec coordonnées, `source='sheet'`) = **88 contacts**. Endpoint admin `guest-contacts.js` (CRUD + `?action=merge`) + onglet `GuestContactsTab.jsx` (📇 Contacts) avec fusion manuelle des doublons.
+2. **Alternatives refusées** : **recoupement / dédoublonnage par NOM** (testé → beaucoup de faux positifs : « Ary Augustin »→« Gird**ary** Élodie », « lemaya »→« **Jean** François », prénom partagé = même clé) → **clé fiable = téléphone normalisé (9 derniers chiffres) + email uniquement** ; fusion automatique en masse (risque d'écraser 2 personnes distinctes) → fusion **manuelle validée par Vincent** dans l'onglet.
+3. **Conséquences attendues** : la base n'a **aucun vrai doublon auto-fusionnable** (contacts WhatsApp = « Prénom + Bien » sans nom de famille → non appariables aux noms complets du Sheet). Tout enrichissement futur passe par tél/email, jamais par nom seul. Index UNIQUE sur `telephone` (NULL multiples OK). Re-seed idempotent (`INSERT OR IGNORE`).
+4. **Périmètre** : `migrations/0003_guest_contacts.sql` · `scripts/seed-guest-contacts.sql` · `scripts/seed-guest-contacts-sheet.sql` · `functions/api/guest-contacts.js` · `src/tabs/GuestContactsTab.jsx` · `.memory/whatsapp-contacts-collecte.md`.
+5. **Statut** : **acté & déployé** (CI, `git push`). Commits `cbb50f6`/`6df3c99`/`03ba65e`. Reste à la main de Vincent : 13 contacts WhatsApp sans résa Sheet + doublons WhatsApp↔Sheet 2-numéros (non auto-fusionnables).
+
 ## ADR-CRM-REACTIVATION-001 · 2026-06-23 · Moteur de réactivation CRM (winback + fidélité)
 
 1. **Choix** : endpoint unique `functions/api/crm-lifecycle.js` (`?secret&segment=winback|fidelite[&dry=1]`) qui segmente `crm_clients` par récence et envoie via **API batch Resend**, avec anti-doublon table D1 `crm_campaigns`. Déclenchement manuel/assisté (pas de cron auto pour l'instant).

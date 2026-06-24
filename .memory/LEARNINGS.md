@@ -3,6 +3,15 @@
 > Pièges déjà rencontrés + comment les éviter. 1 entrée = 1 leçon actionnable « la prochaine fois ».
 > Le journal d'erreurs exhaustif reste `../docs/ERREURS-LOG.md`.
 
+## 📇 Recouper des contacts : clé = téléphone normalisé, JAMAIS le nom — 2026-06-24
+- **Piège vécu** : recouper guest_contacts × Sheet par nom voyageur → faux positifs en cascade (« Ary »→« Gird**ary** Élodie », « lemaya »→« **Jean** François », « Laure »→« **Laure**nt Billon »). Un token de prénom commun suffit à matcher 2 personnes différentes.
+- **La prochaine fois** : recoupement/dédoublonnage = **téléphone normalisé (9 derniers chiffres significatifs : retire indicatif +33/+596/+590 et le 0 local → mobiles FR/MQ/GP convergent)** + email exact. Le nom = signal d'appoint à confirmer humainement, jamais clé d'écriture automatique. Surtout ici : contacts WhatsApp nommés « Prénom + Bien » (pas de nom de famille) = inappariables aux noms complets du Sheet.
+- **Corollaire fusion** : ne jamais fusionner 2 contacts en masse sur match de nom → fusion manuelle validée (l'onglet montre les candidats, l'humain tranche).
+
+## 🟢 WhatsApp Web : `get_page_text` du panneau infos > screenshots — 2026-06-24
+- Pour extraire en masse depuis WhatsApp Web (Chrome MCP) : ouvrir la conversation, cliquer l'en-tête (panneau « Infos du contact »), puis **`get_page_text`** → renvoie le **numéro de téléphone** + tout l'historique texte en 1 appel, fiable et bien plus rapide que des screenshots à lire.
+- Pièges : (1) recherche par nom complet imprécise → taper le nom + **attendre 2 s** avant de cliquer le 1er résultat (sinon clic sur la liste pas encore filtrée → mauvais contact) ; (2) si le panneau infos reste ouvert, un re-clic sur le résultat peut être nécessaire (décalage) — `get_page_text` révèle toujours QUI est ouvert, donc vérifier le nom avant de noter. (3) Historique ancien non chargé (« récupérer les anciens messages du téléphone ») → la **période est souvent dans le NOM du contact** (« Locataire Zandoli Juillet »), pas dans la conversation.
+
 ## 🏷️ Injecter de la meta SEO = RETIRER celle du shell d'abord (sinon double balise) — 2026-06-23
 - **Piège vécu** : `functions/article/[slug].js` ajoutait `og:image/og:title/canonical` sans retirer ceux du shell prérendu → 2 balises og:image, le crawler prend souvent la 1ère (= défaut amaryllis, fausse).
 - **Piège dans le piège** : le 1er regex `<meta\s+property="og:image"` ne matchait pas car le shell a `<meta id="og-image" property="og:image">` (id AVANT property). **Toujours `<meta\b[^>]*\bproperty="..."` (ordre des attributs libre).**

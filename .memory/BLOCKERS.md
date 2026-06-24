@@ -4,6 +4,10 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
+## En cours → ✅ terminé le 2026-06-24 (Feature contacts : base guest_contacts WhatsApp+Sheet + onglet)
+> Table D1 `guest_contacts` = 88 contacts (53 WhatsApp + 35 Sheet), endpoint CRUD+merge, onglet 📇 Contacts. Tout en prod (CI). ADR-CONTACTS-001.
+> 🟡 **Reste à la main de Vincent** (non bloquant) : (1) 13 contacts WhatsApp **sans résa au Sheet** = prospects ou résas jamais saisies — à vérifier au cas par cas. (2) **Doublons WhatsApp↔Sheet même personne / 2 numéros** (ex. Pascal/4REAZONS vs Pascal Guilbaud) **non auto-fusionnables** (nom WhatsApp = prénom+bien) → fusion manuelle dans l'onglet si repérés. (3) Heuristique `pays` imparfaite sur quelques numéros étrangers (Dominique LOUIS skynet.be taggé FR au lieu de BE) — cosmétique, corrigeable en 1 clic.
+
 ## En cours → ✅ terminé le 2026-06-24 (Incident deploy agent : drift réparé + garde anti-agent + division instances)
 > Agent locatif avait déployé `cbb50f6` hors-git (drift prod≠origin). Réconcilié (`git push`, rien perdu), garde TTY dans `deploy-pages.sh` (`5cc47a7`), division actée (agent=locatif / instance=patrimoine). Prod = origin = `03ba65e`. Vérif finale OK (37 articles + winback 26 + 88 guest_contacts vivants).
 
