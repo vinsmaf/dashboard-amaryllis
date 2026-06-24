@@ -20,7 +20,8 @@ function json(data, status = 200) {
 }
 
 async function graphGet(path, token) {
-  const r = await fetch(`https://graph.facebook.com/${GV}/${path}&access_token=${token}`);
+  const sep = path.includes("?") ? "&" : "?";
+  const r = await fetch(`https://graph.facebook.com/${GV}/${path}${sep}access_token=${token}`);
   return r.json();
 }
 
