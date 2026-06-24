@@ -59,8 +59,44 @@ export async function onRequestPost(context) {
   const db = context.env.revenue_manager;
   if (!db) return json({ error: "D1 non configuré" }, 503);
 
+  const action = new URL(context.request.url).searchParams.get("action");
   let body;
   try { body = await context.request.json(); } catch { return json({ error: "JSON invalide" }, 400); }
+
+  // ── Fusion de 2 contacts (dédoublonnage) : garde keepId, comble ses champs vides
+  //    avec ceux de dropId, concatène les notes, puis supprime dropId. ──
+  if (action === "merge") {
+    const { keepId, dropId } = body;
+    if (!keepId || !dropId || keepId === dropId)
+      return json({ error: "keepId et dropId distincts requis" }, 400);
+    try {
+      const keep = await db.prepare("SELECT * FROM guest_contacts WHERE id = ?").bind(keepId).first();
+      const drop = await db.prepare("SELECT * FROM guest_contacts WHERE id = ?").bind(dropId).first();
+      if (!keep || !drop) return json({ error: "Contact introuvable" }, 404);
+
+      const merged = {};
+      for (const f of FIELDS) {
+        // garde la valeur de keep si présente, sinon prend celle de drop
+        merged[f] = (keep[f] !== null && keep[f] !== "" && keep[f] !== undefined) ? keep[f] : drop[f];
+      }
+      // notes : concatène les deux si différentes
+      const n1 = (keep.notes || "").trim(), n2 = (drop.notes || "").trim();
+      merged.notes = n1 && n2 && n1 !== n2 ? `${n1} | (fusion) ${n2}` : (n1 || n2);
+      // source : marque la fusion
+      merged.source = keep.source === drop.source ? keep.source : `${keep.source}+${drop.source}`;
+
+      const sets = FIELDS.map((f) => `${f} = ?`).join(", ");
+      const vals = FIELDS.map((f) => merged[f] ?? null);
+      // drop d'abord pour libérer son téléphone (index unique) avant l'update
+      await db.prepare("DELETE FROM guest_contacts WHERE id = ?").bind(dropId).run();
+      await db.prepare(`UPDATE guest_contacts SET ${sets} WHERE id = ?`).bind(...vals, keepId).run();
+      return json({ ok: true, kept: keepId, dropped: dropId });
+    } catch (err) {
+      console.error("[guest-contacts] merge error:", err);
+      return json({ error: err.message }, 500);
+    }
+  }
+
   if (!body.nom) return json({ error: "nom requis" }, 400);
 
   const cols = ["nom"], vals = [body.nom];

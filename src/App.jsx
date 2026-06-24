@@ -50,6 +50,7 @@ import ProjetsCerveauTab from "./tabs/ProjetsCerveauTab.jsx";
 import DevStatusTab from "./tabs/DevStatusTab.jsx";
 import NewsletterTab from "./tabs/NewsletterTab.jsx";
 import ArticlesTab from "./tabs/ArticlesTab.jsx";
+import GuestContactsTab from "./tabs/GuestContactsTab.jsx";
 import { AppDataProvider } from "./AppDataContext.jsx";
 import { SEED_DAILY_PRICES, loadDailyPrices, saveDailyPrices, loadPriceOverrides, applyServerPriceOverrides } from "./seedPrices.js";
 import {
@@ -1328,6 +1329,7 @@ export default function App() {
         { id: "ventes",      icon: "🛎️", label: "Ventes" },
         { id: "avis",        icon: "⭐", label: "Avis" },
         { id: "crm",         icon: "👥", label: "CRM Clients" },
+        { id: "contacts",    icon: "📇", label: "Contacts" },
         { id: "whatsapp",    icon: "💬", label: "WhatsApp" },
         { id: "newsletter",  icon: "📨", label: "Newsletter" },
       ],
@@ -1613,6 +1615,7 @@ export default function App() {
             {tab === "whatsapp"      && <WhatsAppTab />}
             {tab === "newsletter"    && <NewsletterTab />}
             {tab === "articles"      && <ArticlesTab token={sessionStorage.getItem("ldb_tok") || ""} />}
+            {tab === "contacts"      && <GuestContactsTab token={sessionStorage.getItem("ldb_tok") || ""} />}
             </LocalErrorBoundary>
           </div>
           </AppDataProvider>
