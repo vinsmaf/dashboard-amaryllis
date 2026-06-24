@@ -335,27 +335,36 @@ async function handlePublishReel(env, { caption, videoUrl, coverUrl, channels = 
   return json({ results, ok: hasSuccess }, hasSuccess ? 200 : 422);
 }
 
-// Insights d'un post publié — IG media + FB video
+// Insights d'un post publié — IG media + FB reel
+// IG : like_count + comments_count (permission instagram_basic — pas d'App Review requis)
+//      reach/impressions nécessitent instagram_manage_insights (App Review pending)
+// FB : video_reels insights via /{video_id}?fields=description,likes.summary,comments.summary
 async function handleInsights(env, { igId: igMediaId, fbId: fbVideoId }) {
   const token = env.META_PAGE_TOKEN;
   if (!token) return json({ error: "META_PAGE_TOKEN non configuré" }, 500);
   const out = {};
   if (igMediaId) {
     try {
-      const r = await graphGet(`${igMediaId}/insights?metric=reach,impressions,likes,comments,shares,saved`, token);
+      // Utilise les champs basiques (instagram_basic) — pas besoin d'App Review
+      const r = await graphGet(`${igMediaId}?fields=like_count,comments_count,media_type,timestamp`, token);
       if (r.error) { out.ig = { error: r.error.message }; }
-      else {
-        const m = {};
-        (r.data || []).forEach(({ name, values }) => { m[name] = values?.[0]?.value ?? values ?? 0; });
-        out.ig = m;
-      }
+      else { out.ig = { likes: r.like_count ?? 0, comments: r.comments_count ?? 0, media_type: r.media_type }; }
     } catch (e) { out.ig = { error: e.message }; }
   }
   if (fbVideoId) {
     try {
-      const r = await graphGet(`${fbVideoId}?fields=reactions.summary(true),comments.summary(true),views`, token);
-      if (r.error) { out.fb = { error: r.error.message }; }
-      else { out.fb = { reactions: r.reactions?.summary?.total_count ?? 0, comments: r.comments?.summary?.total_count ?? 0, views: r.views ?? 0 }; }
+      // Pour les reels FB : les champs supportés sont limités
+      const r = await graphGet(`${fbVideoId}?fields=likes.summary(true),comments.summary(true),description`, token);
+      if (r.error) {
+        // Fallback : tenter sans champs complexes
+        const r2 = await graphGet(`${fbVideoId}`, token);
+        out.fb = r2.error ? { error: r2.error.message } : { id: r2.id, ok: true };
+      } else {
+        out.fb = {
+          reactions: r.likes?.summary?.total_count ?? 0,
+          comments: r.comments?.summary?.total_count ?? 0,
+        };
+      }
     } catch (e) { out.fb = { error: e.message }; }
   }
   return json({ ok: true, insights: out });
