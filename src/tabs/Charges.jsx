@@ -71,6 +71,13 @@ export default function Charges() {
     const taux    = rev > 0 ? (charges / rev) * 100 : 0;
     return { annee: String(y), revenus: rev, charges, cashflow: cf, taux };
   });
+  const proj2026Rev      = n > 0 ? Math.round(revenusYTDTotal / n * 12) : 0;
+  const proj2026Charges  = budgetAnnuelTotal;
+  const proj2026Cf       = n > 0 ? Math.round(cashflowYTDTotal / n * 12) : 0;
+  const histDataFull = [
+    ...histData,
+    { annee: "2026 YTD", revenus: revenusYTDTotal, charges: chargesYTDTotal, cashflow: cashflowYTDTotal, taux: ratioGlobal, ytd: true },
+  ];
   const chargesTotal4ans = histData.reduce((s, d) => s + d.charges, 0);
   const revenusTotal4ans = histData.reduce((s, d) => s + d.revenus, 0);
   const tauxMoyen4ans    = revenusTotal4ans > 0 ? (chargesTotal4ans / revenusTotal4ans) * 100 : 0;
@@ -94,7 +101,7 @@ export default function Charges() {
     <div>
       {/* Sous-onglets */}
       <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-        <button style={SUB_TAB_STYLE(sub === "reel")}   onClick={() => setSub("reel")}>📈 Réel YTD</button>
+        <button style={SUB_TAB_STYLE(sub === "reel")}   onClick={() => setSub("reel")}>📈 Budget YTD</button>
         <button style={SUB_TAB_STYLE(sub === "budget")} onClick={() => setSub("budget")}>📋 Budget par poste</button>
         <button style={SUB_TAB_STYLE(sub === "evol")}  onClick={() => setSub("evol")}>📊 Évolution</button>
       </div>
@@ -369,9 +376,12 @@ export default function Charges() {
 
           {/* Graphe revenus/charges/cashflow par année */}
           <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 13, padding: 16, marginBottom: 14 }}>
-            <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 10, fontWeight: 600 }}>Revenus · Charges · Cashflow par année</div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <div style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>Revenus · Charges · Cashflow par année</div>
+              {n > 0 && <div style={{ fontSize: 11, color: "#f59e0b" }}>≈ {fmtK(proj2026Rev)} rev · {fmtK(proj2026Charges)} charges projeté fin 2026</div>}
+            </div>
             <ResponsiveContainer width="100%" height={mob ? 200 : 260}>
-              <ComposedChart data={histData} barGap={4}>
+              <ComposedChart data={histDataFull} barGap={4}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                 <XAxis dataKey="annee" tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={fmtK} />
@@ -388,7 +398,7 @@ export default function Charges() {
           <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 13, padding: 16, marginBottom: 14 }}>
             <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 10, fontWeight: 600 }}>Taux de charges (%) — objectif &lt; 55%</div>
             <ResponsiveContainer width="100%" height={mob ? 130 : 160}>
-              <BarChart data={histData}>
+              <BarChart data={histDataFull}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                 <XAxis dataKey="annee" tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}%`} domain={[0, 80]} />
@@ -415,11 +425,12 @@ export default function Charges() {
                   </tr>
                 </thead>
                 <tbody>
-                  {histData.map((d, i) => {
+                  {histDataFull.map((d, i) => {
                     const tauxColor = d.taux < 55 ? "#10b981" : d.taux < 70 ? "#f59e0b" : "#ef4444";
+                    const yr = Number(d.annee.replace(" YTD", ""));
                     return (
-                      <tr key={i} style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-                        <td style={{ padding: "9px 12px", textAlign: "right", fontWeight: 700, color: ANNEE_COLORS[Number(d.annee)] || "#e2e8f0", fontSize: 12 }}>{d.annee}</td>
+                      <tr key={i} style={{ borderTop: "1px solid rgba(255,255,255,0.04)", opacity: d.ytd ? 0.85 : 1 }}>
+                        <td style={{ padding: "9px 12px", textAlign: "right", fontWeight: 700, color: ANNEE_COLORS[yr] || "#e2e8f0", fontSize: 12 }}>{d.annee}</td>
                         <td style={{ padding: "9px 12px", textAlign: "right", color: "#0ea5e9", fontFamily: "var(--font-mono)", fontSize: 11 }}>{fmt(d.revenus)}</td>
                         <td style={{ padding: "9px 12px", textAlign: "right", color: "#ef4444", fontFamily: "var(--font-mono)", fontSize: 11 }}>{fmt(d.charges)}</td>
                         <td style={{ padding: "9px 12px", textAlign: "right", color: "#10b981", fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 600 }}>+{fmt(d.cashflow)}</td>
