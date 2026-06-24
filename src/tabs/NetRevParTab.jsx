@@ -25,8 +25,9 @@ const BIENS_HIST = [
 const BIEN_LABEL = Object.fromEntries([...BIENS_HIST].map(b => [b.id, b.label]));
 const BIEN_PRIX  = Object.fromEntries([...BIENS_HIST].map(b => [b.id, b.prix]));
 
-const YEARS = [2025, 2024, 2023, 2022];
-const ANNEE_COLORS = { 2022: "#475569", 2023: "#0284c7", 2024: "#7c3aed", 2025: "#059669" };
+const YEARS = [2026, 2025, 2024, 2023, 2022];
+const ANNEE_COLORS = { 2022: "#475569", 2023: "#0284c7", 2024: "#7c3aed", 2025: "#059669", 2026: "#f59e0b" };
+const CY = new Date().getFullYear();
 
 const fmt = (v) => new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(Math.round(v)) + " €";
 const pct = (v) => (v * 100).toFixed(1) + " %";
@@ -233,7 +234,10 @@ function ViewHist({ year, hist }) {
       {/* Notice estimation */}
       <div style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 8, padding: "10px 14px", marginBottom: 20, fontSize: 12, color: "#fbbf24", display: "flex", alignItems: "center", gap: 8 }}>
         <span>⚠</span>
-        <span>Ventilation canal non disponible pour {year}. Commission estimée à <strong>~15%</strong> (blended OTA — quasi pas de réservation directe cette année-là).</span>
+        <span>
+          Ventilation canal non disponible pour {year}{year === CY ? " (YTD)" : ""}. Commission estimée à <strong>~15%</strong>
+          {year <= 2024 ? " (blended OTA — quasi pas de réservation directe cette année-là)" : " (blended — remplacer par données réelles si disponibles)"}.
+        </span>
       </div>
 
       {/* Tableau simplifié */}
@@ -322,6 +326,8 @@ export default function NetRevParTab({ hist = {} }) {
       <p style={{ color: "#64748b", fontSize: 13, marginBottom: 24 }}>
         {year === 2025
           ? "Source : REVENUS_CANAL_2025 · Airbnb par bien · Booking 17% · Direct Stripe 1,5%"
+          : year === CY
+          ? `Source : sync Sheets ${year} YTD · Commission estimée ~15% blended (ventilation canal indisponible)`
           : `Source : données mensuelles ${year} · Commission estimée ~15% blended (ventilation canal indisponible)`}
       </p>
 
@@ -332,7 +338,9 @@ export default function NetRevParTab({ hist = {} }) {
 
       <p style={{ color: "#475569", fontSize: 11, marginTop: 16 }}>
         {year === 2025
-          ? "Données 2025 YTD · Iguana exclu (bail long 3 400€/mois) · Parking inclus dans le brut mais hors commission"
+          ? "Données 2025 · Iguana exclu (bail long 3 400€/mois) · Parking inclus dans le brut mais hors commission"
+          : year === CY
+          ? `Données ${year} YTD · Iguana exclu (bail long) · Sync depuis Google Sheets`
           : `Revenus ${year} depuis Google Sheets · Iguana inclus (court terme avant bail oct 2024)`}
       </p>
     </div>
