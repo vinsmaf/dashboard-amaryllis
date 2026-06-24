@@ -24,12 +24,12 @@ const KEY_OF = {
   openrouter: "OPENROUTER_API_KEY", gemini: "GEMINI_API_KEY",
 };
 const MODELS_URL = {
-  groq:      "https://api.groq.com/openai/v1/models",
-  cerebras:  "https://api.cerebras.ai/v1/models",
-  mistral:   "https://api.mistral.ai/v1/models",
-  deepseek:  "https://api.deepseek.com/v1/models",
-  gemini:    "https://generativelanguage.googleapis.com/v1beta/openai/models",
-  // openrouter : 500+ modèles → statique (pas de discovery auto)
+  groq:       "https://api.groq.com/openai/v1/models",
+  cerebras:   "https://api.cerebras.ai/v1/models",
+  mistral:    "https://api.mistral.ai/v1/models",
+  deepseek:   "https://api.deepseek.com/v1/models",
+  gemini:     "https://generativelanguage.googleapis.com/v1beta/openai/models",
+  openrouter: "https://openrouter.ai/api/v1/models",
 };
 // Cloudflare AI : pas de liste OpenAI-compatible simple → modèles curés (stables).
 const STATIC_CF = {
@@ -40,13 +40,15 @@ const STATIC_CF = {
 // Classement de préférence par tier (sous-chaînes, meilleur → moins bon).
 const RANK = {
   // Ordre : meilleur en tête. Substring match → le plus spécifique d'abord.
-  fast:   ["llama-3.1-8b-instant", "gemini-2.0-flash-lite", "llama-3.1-8b", "deepseek-v4-flash", "gpt-oss-20b", "llama-3.1-8b-instruct:free", "ministral-8b-2512", "ministral-8b-latest", "mistral-small-2506", "mistral-small-latest", "llama-3.2-3b", "qwen3-32b"],
-  medium: ["llama-3.3-70b-versatile", "gemini-2.0-flash", "deepseek-v4-flash", "mistral-medium-2604", "mistral-medium-3.5", "mistral-medium-latest", "qwen3-32b", "llama-3.3-70b-instruct:free", "gpt-oss-20b", "llama-3.3-70b", "gpt-oss-120b", "mistral-small-2506", "mistral-small-latest"],
-  smart:  ["gpt-oss-120b", "gemini-2.5-flash", "llama-4-maverick:free", "deepseek-v4-pro", "qwen3-32b", "llama-3.3-70b-versatile", "llama-3.3-70b", "mistral-large-2512", "mistral-large-latest", "magistral-medium-2509", "magistral-medium-latest", "zai-glm-4.7"],
+  fast:   ["llama-3.1-8b-instant", "gemini-2.0-flash-lite", "llama-3.1-8b", "deepseek-v4-flash", "gpt-oss-20b", "llama-3.3-70b-instruct:free", "gemma-4-31b", "ministral-8b-2512", "ministral-8b-latest", "mistral-small-2506", "mistral-small-latest", "llama-3.2-3b", "qwen3-32b"],
+  medium: ["llama-3.3-70b-versatile", "gemini-2.0-flash", "deepseek-v4-flash", "hermes-3-llama-3.1-405b:free", "nemotron-3-super-120b:free", "mistral-medium-2604", "mistral-medium-3.5", "mistral-medium-latest", "qwen3-32b", "llama-3.3-70b", "gpt-oss-120b", "mistral-small-2506", "mistral-small-latest"],
+  smart:  ["nemotron-3-ultra-550b:free", "gpt-oss-120b", "gemini-2.5-flash", "hermes-3-llama-3.1-405b:free", "deepseek-v4-pro", "qwen3-32b", "llama-3.3-70b-versatile", "llama-3.3-70b", "mistral-large-2512", "mistral-large-latest", "magistral-medium-2509", "magistral-medium-latest", "zai-glm-4.7"],
 };
 
 // Exclut les modèles non conversationnels (embeddings, audio, ocr, modération, garde…)
 const isChat = (id) => !/embed|ocr|tts|whisper|voxtral|moderation|guard|transcribe|realtime|rerank|prompt-guard|vision-preview/i.test(id);
+// OpenRouter : 500+ modèles — garder uniquement les :free pour éviter les coûts accidentels
+const FILTER = { openrouter: (ids) => ids.filter(id => id.endsWith(":free")) };
 
 function chooseModel(avail, tier) {
   const chat = (avail || []).filter(isChat);
@@ -79,7 +81,8 @@ async function discover(env) {
     try {
       const r = await fetch(url, { headers: { Authorization: `Bearer ${key}` } });
       const d = await r.json();
-      out[p] = (d.data || []).map(m => m.id).sort();
+      const ids = (d.data || []).map(m => m.id);
+      out[p] = (FILTER[p] ? FILTER[p](ids) : ids).sort();
     } catch (e) { out[p] = { error: e.message }; }
   }
   out.cloudflare = Object.values(STATIC_CF);

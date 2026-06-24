@@ -143,9 +143,9 @@ export const MODELS = {
     smart:   "deepseek-v4-pro",
   },
   openrouter: {
-    fast:    "meta-llama/llama-3.1-8b-instruct:free",
-    medium:  "meta-llama/llama-3.3-70b-instruct:free",
-    smart:   "meta-llama/llama-4-maverick:free",
+    fast:    "meta-llama/llama-3.3-70b-instruct:free",
+    medium:  "nousresearch/hermes-3-llama-3.1-405b:free",
+    smart:   "nvidia/nemotron-3-ultra-550b-a55b:free",
   },
 };
 
