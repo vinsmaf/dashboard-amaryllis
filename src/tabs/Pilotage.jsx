@@ -5,7 +5,7 @@
  */
 import { useState } from "react";
 import { ResponsiveContainer, BarChart, LineChart, ComposedChart, PieChart, Pie, Bar, Line, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
-import { MOIS, TT, REVENUS_CANAL_2025, CHARGES_2025, POSTES_CHARGES, fmt, fmtK } from "../App.jsx";
+import { MOIS, TT, REVENUS_CANAL_2025, fmt, fmtK } from "../App.jsx";
 import { sumN, avgN } from "../utils/calculations.js";
 import { useAppData } from "../AppDataContext.jsx";
 import { commissionTaux, airbnbComm, BOOKING_COMM } from "../config/canauxCommissions.js";
@@ -192,22 +192,6 @@ export default function Pilotage() {
   ];
   const revenusImposables = Math.round(projCourt * (1 - ABATTEMENT_MICRO_BIC_CLASSE) + projLong * (1 - ABATTEMENT_MICRO_BIC_CLASSIQUE));
 
-  // ===== DÉTAIL CHARGES PAR POSTE =====
-  const chargeTotals = {};
-  POSTES_CHARGES.forEach(p => {
-    chargeTotals[p.k] = biens.reduce((s, b) => s + ((CHARGES_2025[b.id] || {})[p.k] || 0), 0);
-  });
-  const totalCharges2025 = Object.values(chargeTotals).reduce((s, v) => s + v, 0);
-  const chargeBreakdown = POSTES_CHARGES
-    .map(p => ({ ...p, value: chargeTotals[p.k] }))
-    .filter(p => p.value > 0)
-    .sort((a, b) => b.value - a.value);
-  const bienChargeStack = biens.map(b => {
-    const c = CHARGES_2025[b.id] || {};
-    const row = { nom: b.nom.replace("Villa ", "").replace("T2 ", ""), emoji: b.emoji };
-    POSTES_CHARGES.forEach(p => { row[p.l] = c[p.k] || 0; });
-    return row;
-  });
 
   return (
     <div>
@@ -219,7 +203,6 @@ export default function Pilotage() {
           { id: "marche",     l: "🎯 Marché" },
           { id: "fiscal",     l: "📋 Fiscal" },
           { id: "conseil",    l: "🎓 Conseil" },
-          { id: "detail",     l: "📊 Charges" },
         ].map(v => (
           <button key={v.id} onClick={() => setView(v.id)} style={{
             padding: "7px 14px", borderRadius: 20, border: "none", cursor: "pointer",
@@ -914,102 +897,6 @@ export default function Pilotage() {
         );
       })()}
 
-      {view === "detail" && (
-        <div>
-          {/* KPI total charges */}
-          <div style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
-            <div style={{ fontSize: 11, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 4 }}>Total charges 2025 (annuel)</div>
-            <div style={{ fontSize: 24, fontWeight: 800, color: "#ef4444", fontFamily: "var(--font-mono)" }}>{fmt(totalCharges2025)}</div>
-            <div style={{ fontSize: 11, color: "#64748b", marginTop: 3 }}>Soit {fmt(Math.round(totalCharges2025 / 12))}/mois</div>
-          </div>
-
-          {/* Camembert détail postes + stacked bar par bien */}
-          <div style={{ display: "grid", gridTemplateColumns: mob ? "1fr" : "1fr 1fr", gap: 14, marginBottom: 14 }}>
-            <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 13, padding: 16 }}>
-              <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 10, fontWeight: 600 }}>Répartition par poste</div>
-              <ResponsiveContainer width="100%" height={mob ? 180 : 220}>
-                <PieChart>
-                  <Pie data={chargeBreakdown} dataKey="value" nameKey="l" cx="50%" cy="50%" innerRadius={mob ? 35 : 50} outerRadius={mob ? 70 : 90} paddingAngle={1}>
-                    {chargeBreakdown.map((d, i) => <Cell key={i} fill={d.c} />)}
-                  </Pie>
-                  <Tooltip contentStyle={TT} formatter={(v) => [fmt(v)]} />
-                </PieChart>
-              </ResponsiveContainer>
-              <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 4, maxHeight: 110, overflowY: "auto" }}>
-                {chargeBreakdown.map((d, i) => (
-                  <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 10 }}>
-                    <span style={{ display: "flex", alignItems: "center", gap: 4, color: "#94a3b8" }}>
-                      <span style={{ width: 8, height: 8, borderRadius: 2, background: d.c, display: "inline-block" }} />
-                      {d.l}
-                    </span>
-                    <span style={{ color: "#64748b", fontFamily: "var(--font-mono)" }}>{fmtK(d.value)} ({((d.value / totalCharges2025) * 100).toFixed(0)}%)</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 13, padding: 16 }}>
-              <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 10, fontWeight: 600 }}>Charges empilées par bien</div>
-              <ResponsiveContainer width="100%" height={mob ? 200 : 280}>
-                <BarChart data={bienChargeStack} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={false} />
-                  <XAxis type="number" tick={{ fill: "#64748b", fontSize: 9 }} axisLine={false} tickLine={false} tickFormatter={fmtK} />
-                  <YAxis type="category" dataKey="nom" tick={{ fill: "#94a3b8", fontSize: 10 }} axisLine={false} tickLine={false} width={70} />
-                  <Tooltip contentStyle={TT} formatter={(v) => [fmt(v)]} />
-                  {POSTES_CHARGES.map(p => (
-                    <Bar key={p.k} dataKey={p.l} stackId="a" fill={p.c} />
-                  ))}
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Tableau matriciel */}
-          <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 13, overflow: "hidden" }}>
-            <div style={{ padding: "11px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)", fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>
-              Détail matriciel par bien et poste (annuel 2025)
-            </div>
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 720 }}>
-                <thead>
-                  <tr style={{ background: "rgba(255,255,255,0.03)" }}>
-                    <th style={{ padding: "8px 10px", textAlign: "left", fontSize: 9, color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>Bien</th>
-                    {POSTES_CHARGES.map(p => (
-                      <th key={p.k} style={{ padding: "8px 6px", textAlign: "right", fontSize: 9, color: p.c, fontWeight: 600 }}>{p.l}</th>
-                    ))}
-                    <th style={{ padding: "8px 10px", textAlign: "right", fontSize: 9, color: "#e2e8f0", fontWeight: 600 }}>Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {biens.map(b => {
-                    const c = CHARGES_2025[b.id] || {};
-                    const tot = POSTES_CHARGES.reduce((s, p) => s + (c[p.k] || 0), 0);
-                    return (
-                      <tr key={b.id} style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-                        <td style={{ padding: "9px 10px", fontWeight: 600, color: "#e2e8f0", fontSize: 11 }}>{b.emoji} {b.nom.replace("Villa ", "").replace("T2 ", "")}</td>
-                        {POSTES_CHARGES.map(p => (
-                          <td key={p.k} style={{ padding: "9px 6px", textAlign: "right", fontFamily: "var(--font-mono)", fontSize: 10, color: (c[p.k] || 0) > 0 ? "#94a3b8" : "#334155" }}>
-                            {c[p.k] > 0 ? fmtK(c[p.k]) : "—"}
-                          </td>
-                        ))}
-                        <td style={{ padding: "9px 10px", textAlign: "right", fontFamily: "var(--font-mono)", fontSize: 11, color: "#ef4444", fontWeight: 700 }}>{fmtK(tot)}</td>
-                      </tr>
-                    );
-                  })}
-                  <tr style={{ borderTop: "2px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.03)" }}>
-                    <td style={{ padding: "10px 10px", fontWeight: 700, color: "#e2e8f0", fontSize: 11 }}>TOTAL</td>
-                    {POSTES_CHARGES.map(p => (
-                      <td key={p.k} style={{ padding: "10px 6px", textAlign: "right", fontFamily: "var(--font-mono)", fontSize: 11, color: p.c, fontWeight: 700 }}>
-                        {chargeTotals[p.k] > 0 ? fmtK(chargeTotals[p.k]) : "—"}
-                      </td>
-                    ))}
-                    <td style={{ padding: "10px 10px", textAlign: "right", fontFamily: "var(--font-mono)", fontSize: 12, color: "#ef4444", fontWeight: 800 }}>{fmtK(totalCharges2025)}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
