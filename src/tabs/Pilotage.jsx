@@ -5,7 +5,7 @@
  */
 import { useState } from "react";
 import { ResponsiveContainer, BarChart, LineChart, ComposedChart, PieChart, Pie, Bar, Line, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
-import { MOIS, TT, fmt, fmtK } from "../App.jsx";
+import { MOIS, TT, REVENUS_CANAL_2025, fmt, fmtK } from "../App.jsx";
 import { sumN, avgN } from "../utils/calculations.js";
 import { useAppData } from "../AppDataContext.jsx";
 import { commissionTaux } from "../config/canauxCommissions.js";
@@ -13,13 +13,11 @@ import CpaCanalTab from "./CpaCanalTab.jsx";
 
 // ── CanalLivePerf — uniquement utilisé par Pilotage ──────────────────────────
 function CanalLivePerf({ biens, reservations, mob }) {
-  // Commission calculée PAR réservation (taux Airbnb variable selon le bien :
-  // 3% Géko/Zandoli/Mabouya/Bellevue, 15% Villa ; Booking 17% ; Direct 0%).
   const CANAL_CONF = {
-    airbnb:       { label: "Airbnb",       color: "#FF5A5F" },
-    booking:      { label: "Booking.com",  color: "#0ea5e9" },
-    direct:       { label: "Direct",       color: "#10b981" },
-    beds24:       { label: "Beds24",       color: "#a855f7" },
+    airbnb:  { label: "Airbnb",      color: "#FF5A5F" },
+    booking: { label: "Booking.com", color: "#0ea5e9" },
+    direct:  { label: "Direct",      color: "#10b981" },
+    beds24:  { label: "Beds24",      color: "#a855f7" },
   };
   const normalize = c => {
     if (!c) return "autre";
@@ -31,17 +29,30 @@ function CanalLivePerf({ biens, reservations, mob }) {
     return "autre";
   };
 
+  const [tf, setTf] = useState("ytd");
+  const now = new Date();
+  const CY = now.getFullYear();
+  const cutoff = tf === "30j"
+    ? new Date(now - 30 * 86400000).toISOString().slice(0, 10)
+    : tf === "90j"
+    ? new Date(now - 90 * 86400000).toISOString().slice(0, 10)
+    : `${CY}-01-01`;
+
+  const filtered = reservations.filter(r =>
+    r.montant > 0 && r.checkin && r.checkout && r.checkin >= cutoff
+  );
+
   const stats = {};
-  reservations.forEach(r => {
-    if (!r.montant || r.montant <= 0 || !r.checkin || !r.checkout) return;
+  filtered.forEach(r => {
     const canal = normalize(r.canal);
     if (!stats[canal]) stats[canal] = { count: 0, brut: 0, nights: 0, commission: 0 };
-    const ci = new Date(r.checkin + "T12:00:00Z"), co = new Date(r.checkout + "T12:00:00Z");
-    const nights = Math.max(1, Math.round((co - ci) / 86400000));
+    const nights = Math.max(1, Math.round(
+      (new Date(r.checkout + "T12:00:00Z") - new Date(r.checkin + "T12:00:00Z")) / 86400000
+    ));
     stats[canal].count++;
     stats[canal].brut += r.montant;
     stats[canal].nights += nights;
-    stats[canal].commission += r.montant * commissionTaux(canal, r.bienId); // per-bien Airbnb
+    stats[canal].commission += r.montant * commissionTaux(canal, r.bienId);
   });
 
   const rows = Object.entries(stats)
@@ -50,7 +61,7 @@ function CanalLivePerf({ biens, reservations, mob }) {
       const commission = Math.round(s.commission);
       const net = s.brut - commission;
       const adr = s.nights > 0 ? Math.round(s.brut / s.nights) : 0;
-      const comm = s.brut > 0 ? commission / s.brut : 0; // taux effectif (Airbnb = mix 3%/15%)
+      const comm = s.brut > 0 ? commission / s.brut : 0;
       return { canal, ...conf, ...s, commission, net, adr, comm };
     })
     .sort((a, b) => b.brut - a.brut);
@@ -59,19 +70,60 @@ function CanalLivePerf({ biens, reservations, mob }) {
   const totalComm = rows.reduce((s, r) => s + r.commission, 0);
   const totalNet  = rows.reduce((s, r) => s + r.net, 0);
 
+  // % direct : actuel vs 2025 vs objectif
+  const directBrut   = rows.find(r => r.canal === "direct")?.brut || 0;
+  const directPct    = totalBrut > 0 ? Math.round(directBrut / totalBrut * 100) : 0;
+  const total2025    = Object.values(REVENUS_CANAL_2025).reduce((s, b) => s + b.total, 0);
+  const direct2025   = Object.values(REVENUS_CANAL_2025).reduce((s, b) => s + b.direct, 0);
+  const directPct25  = total2025 > 0 ? Math.round(direct2025 / total2025 * 100) : 0;
+  const TARGET       = 40;
+
+  // Graphe mix canal par mois (année en cours, toutes résas)
+  const monthlyMix = MOIS.map((mois, mi) => {
+    const row = { mois };
+    let hasData = false;
+    ["airbnb", "booking", "direct"].forEach(canal => {
+      const v = reservations
+        .filter(r => r.montant > 0 && r.checkin && (() => {
+          const d = new Date(r.checkin + "T12:00:00Z");
+          return d.getFullYear() === CY && d.getMonth() === mi;
+        })())
+        .filter(r => normalize(r.canal) === canal)
+        .reduce((s, r) => s + r.montant, 0);
+      row[canal] = Math.round(v);
+      if (v > 0) hasData = true;
+    });
+    return hasData ? row : null;
+  }).filter(Boolean);
+
   if (rows.length === 0) return (
-    <div style={{ color: "#475569", fontSize: 12, padding: 16 }}>Aucune donnée de réservation disponible. Synchronisez l'iCal ou Beds24.</div>
+    <div style={{ color: "#475569", fontSize: 12, padding: 16 }}>
+      Aucune donnée. Synchronisez l'iCal ou Beds24.
+    </div>
   );
 
   return (
     <div>
+      {/* Filtre temporel */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 14, alignItems: "center" }}>
+        {[{ id: "ytd", l: "YTD" }, { id: "90j", l: "90 j" }, { id: "30j", l: "30 j" }].map(b => (
+          <button key={b.id} onClick={() => setTf(b.id)} style={{
+            padding: "5px 13px", borderRadius: 16, border: "none", cursor: "pointer",
+            fontSize: 11, fontWeight: 600,
+            background: tf === b.id ? "#0ea5e9" : "rgba(255,255,255,0.06)",
+            color: tf === b.id ? "#fff" : "#64748b",
+          }}>{b.l}</button>
+        ))}
+        <span style={{ fontSize: 10, color: "#334155", marginLeft: 2 }}>depuis {cutoff}</span>
+      </div>
+
       {/* KPI cards */}
-      <div style={{ display: "grid", gridTemplateColumns: mob ? "repeat(2,1fr)" : "repeat(4,1fr)", gap: 10, marginBottom: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: mob ? "repeat(2,1fr)" : "repeat(4,1fr)", gap: 10, marginBottom: 14 }}>
         {[
-          { label: "CA brut total",   value: `${(totalBrut/1000).toFixed(1)}k€`, color: "#0ea5e9" },
-          { label: "Commissions",     value: `${(totalComm/1000).toFixed(1)}k€`, color: "#ef4444" },
-          { label: "Net perçu",       value: `${(totalNet/1000).toFixed(1)}k€`,  color: "#10b981" },
-          { label: "Taux comm. moy.", value: totalBrut > 0 ? `${Math.round(totalComm/totalBrut*100)}%` : "—", color: "#f59e0b" },
+          { label: "CA brut",        value: `${(totalBrut/1000).toFixed(1)}k€`, color: "#0ea5e9" },
+          { label: "Commissions",    value: `${(totalComm/1000).toFixed(1)}k€`, color: "#ef4444" },
+          { label: "Net perçu",      value: `${(totalNet/1000).toFixed(1)}k€`,  color: "#10b981" },
+          { label: "Taux comm. moy.",value: totalBrut > 0 ? `${Math.round(totalComm/totalBrut*100)}%` : "—", color: "#f59e0b" },
         ].map(k => (
           <div key={k.label} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: "12px 14px" }}>
             <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{k.label}</div>
@@ -80,8 +132,28 @@ function CanalLivePerf({ biens, reservations, mob }) {
         ))}
       </div>
 
+      {/* Désintermédiation */}
+      <div style={{ background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 11, padding: "12px 16px", marginBottom: 14 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7, flexWrap: "wrap", gap: 6 }}>
+          <span style={{ fontSize: 12, color: "#10b981", fontWeight: 700 }}>🎯 Désintermédiation — part du direct</span>
+          <span style={{ fontSize: 10, color: "#64748b" }}>
+            2025 : <strong style={{ color: "#94a3b8" }}>{directPct25}%</strong>
+            &nbsp;→&nbsp;objectif : <strong style={{ color: "#f59e0b" }}>{TARGET}%</strong>
+          </span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#94a3b8", marginBottom: 5 }}>
+          <span>Actuel : <strong style={{ color: directPct >= TARGET ? "#10b981" : "#f59e0b", fontSize: 15 }}>{directPct}%</strong></span>
+          <span style={{ color: directPct >= TARGET ? "#10b981" : "#64748b" }}>
+            {directPct >= TARGET ? "✓ objectif atteint" : `encore ${TARGET - directPct} pts`}
+          </span>
+        </div>
+        <div style={{ height: 6, background: "rgba(255,255,255,0.06)", borderRadius: 3, overflow: "hidden" }}>
+          <div style={{ height: "100%", width: `${Math.min(directPct / TARGET * 100, 100)}%`, background: directPct >= TARGET ? "#10b981" : "#f59e0b", borderRadius: 3, transition: "width .3s" }} />
+        </div>
+      </div>
+
       {/* Par canal */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
         {rows.map(r => (
           <div key={r.canal} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: "12px 14px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
@@ -91,10 +163,10 @@ function CanalLivePerf({ biens, reservations, mob }) {
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8 }}>
               {[
-                { l: "CA brut",    v: `${r.brut.toLocaleString("fr-FR")}€`,       c: "#e2e8f0" },
+                { l: "CA brut",    v: `${r.brut.toLocaleString("fr-FR")}€`, c: "#e2e8f0" },
                 { l: "Commission", v: r.comm > 0 ? `-${r.commission.toLocaleString("fr-FR")}€ (${Math.round(r.comm*100)}%)` : "0€", c: r.comm > 0 ? "#f87171" : "#64748b" },
-                { l: "Net",        v: `${r.net.toLocaleString("fr-FR")}€`,         c: "#10b981" },
-                { l: "ADR/nuit",   v: `${r.adr}€`,                                 c: "#f59e0b" },
+                { l: "Net",        v: `${r.net.toLocaleString("fr-FR")}€`, c: "#10b981" },
+                { l: "ADR/nuit",   v: `${r.adr}€`, c: "#f59e0b" },
               ].map(k => (
                 <div key={k.l}>
                   <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>{k.l}</div>
@@ -102,7 +174,6 @@ function CanalLivePerf({ biens, reservations, mob }) {
                 </div>
               ))}
             </div>
-            {/* Barre progression */}
             <div style={{ marginTop: 10, height: 3, background: "rgba(255,255,255,0.06)", borderRadius: 2 }}>
               <div style={{ height: 3, width: `${totalBrut > 0 ? Math.round(r.brut/totalBrut*100) : 0}%`, background: r.color, borderRadius: 2 }} />
             </div>
@@ -113,8 +184,27 @@ function CanalLivePerf({ biens, reservations, mob }) {
         ))}
       </div>
 
-      <div style={{ fontSize: 9, color: "#334155", marginTop: 10 }}>
-        Commissions estimées : Airbnb 3% (frais hôte) · Booking 15% · Direct 0%. Basé sur les données iCal + Beds24 synchronisées.
+      {/* Mix canal par mois */}
+      {monthlyMix.length > 0 && (
+        <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 13, padding: 16, marginBottom: 10 }}>
+          <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 10, fontWeight: 600 }}>Mix canal par mois {CY}</div>
+          <ResponsiveContainer width="100%" height={mob ? 160 : 200}>
+            <BarChart data={monthlyMix} barGap={2}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+              <XAxis dataKey="mois" tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={fmtK} />
+              <Tooltip contentStyle={TT} formatter={(v) => [fmt(v)]} />
+              <Legend wrapperStyle={{ fontSize: 10, color: "#94a3b8" }} />
+              <Bar dataKey="airbnb"  name="Airbnb"  stackId="a" fill="#FF5A5F" />
+              <Bar dataKey="booking" name="Booking" stackId="a" fill="#0ea5e9" />
+              <Bar dataKey="direct"  name="Direct"  stackId="a" fill="#10b981" radius={[3,3,0,0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      <div style={{ fontSize: 9, color: "#334155", marginTop: 4 }}>
+        Airbnb 3% (frais hôte) · Booking 15% · Direct 0% · iCal + Beds24.
       </div>
     </div>
   );

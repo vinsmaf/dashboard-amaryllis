@@ -126,6 +126,10 @@ export default function CpaCanalTab() {
     : 0;
   const seuilAds = panierDirect ? Math.round(panierDirect * airbnbTaux) : 0;
 
+  // ROI pub direct : commission Airbnb économisée vs budget marketing dépensé
+  const roiSavings = directRow ? seuilAds * directRow.count : 0;
+  const roiPct = mkt.direct > 0 ? Math.round((roiSavings - mkt.direct) / mkt.direct * 100) : null;
+
   if (rows.length === 0) {
     return (
       <div style={{ color: "#475569", fontSize: 12, padding: 16 }}>
@@ -137,12 +141,19 @@ export default function CpaCanalTab() {
   return (
     <div>
       {/* En-tête KPI */}
-      <div style={{ display: "grid", gridTemplateColumns: mob ? "repeat(2,1fr)" : "repeat(4,1fr)", gap: 10, marginBottom: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: mob ? "repeat(2,1fr)" : "repeat(5,1fr)", gap: 10, marginBottom: 16 }}>
         {[
           { label: "CPA moyen pondéré", value: `${cpaMoyen}€`, color: "#f59e0b" },
           { label: "Coût marketing", value: `${(tMkt / 1000).toFixed(1)}k€`, color: "#ef4444" },
           { label: "% CA en commissions", value: tBrut ? `${Math.round((tComm / tBrut) * 100)}%` : "—", color: "#a855f7" },
           { label: "Net global", value: `${(tNet / 1000).toFixed(1)}k€`, color: "#10b981" },
+          {
+            label: "ROI pub direct",
+            value: roiPct !== null
+              ? `${roiPct >= 0 ? "+" : ""}${roiPct}%`
+              : mkt.direct === 0 ? "budget = 0" : "—",
+            color: roiPct === null ? "#64748b" : roiPct >= 0 ? "#10b981" : "#ef4444",
+          },
         ].map((k) => (
           <div key={k.label} style={card}>
             <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{k.label}</div>
@@ -214,18 +225,39 @@ export default function CpaCanalTab() {
         ))}
       </div>
 
-      {/* Encart seuil de rentabilité Ads */}
+      {/* Encart seuil de rentabilité + ROI */}
       <div style={{ ...card, marginTop: 14, borderColor: "rgba(16,185,129,0.3)" }}>
-        <div style={{ fontSize: 11, color: "#10b981", fontWeight: 700, marginBottom: 4 }}>🎯 Seuil de rentabilité Ads (canal direct)</div>
-        <div style={{ fontSize: 12, color: "#cbd5e1", lineHeight: 1.5 }}>
+        <div style={{ fontSize: 11, color: "#10b981", fontWeight: 700, marginBottom: 6 }}>🎯 Seuil de rentabilité Ads · ROI pub direct</div>
+        <div style={{ fontSize: 12, color: "#cbd5e1", lineHeight: 1.6, marginBottom: mkt.direct > 0 ? 10 : 0 }}>
           Tant que le CPA d'une campagne Google/Meta reste sous{" "}
           <strong style={{ color: "#10b981" }}>{seuilAds}€</strong> par réservation directe, la pub est rentable :
-          elle coûte moins que la commission Airbnb évitée ({Math.round(airbnbTaux * 100)}% du panier direct moyen
-          de {panierDirect.toLocaleString("fr-FR")}€).
-          {adrRef > 0 && (
-            <> ADR direct moyen : {adrRef}€/nuit.</>
-          )}
+          elle coûte moins que la commission Airbnb évitée ({Math.round(airbnbTaux * 100)}% × panier moyen{" "}
+          {panierDirect.toLocaleString("fr-FR")}€).{adrRef > 0 && <> ADR direct : {adrRef}€/nuit.</>}
         </div>
+        {mkt.direct > 0 && directRow && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+            {[
+              { l: "Commissions économisées", v: `${roiSavings.toLocaleString("fr-FR")}€`, c: "#10b981",
+                sub: `${directRow.count} résas × ${seuilAds}€` },
+              { l: "Budget marketing dépensé", v: `−${mkt.direct.toLocaleString("fr-FR")}€`, c: "#ef4444",
+                sub: "saisi manuellement" },
+              { l: "ROI pub direct", v: roiPct !== null ? `${roiPct >= 0 ? "+" : ""}${roiPct}%` : "—",
+                c: roiPct !== null && roiPct >= 0 ? "#10b981" : "#ef4444",
+                sub: roiPct !== null && roiPct >= 0 ? "rentable" : "déficitaire" },
+            ].map(k => (
+              <div key={k.l}>
+                <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>{k.l}</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: k.c, fontFamily: "var(--font-mono)" }}>{k.v}</div>
+                <div style={{ fontSize: 9, color: "#475569" }}>{k.sub}</div>
+              </div>
+            ))}
+          </div>
+        )}
+        {mkt.direct === 0 && (
+          <div style={{ fontSize: 10, color: "#475569", marginTop: 4 }}>
+            Saisir un budget marketing « Direct » ci-dessus pour calculer le ROI.
+          </div>
+        )}
       </div>
 
       <div style={{ fontSize: 9, color: "#334155", marginTop: 10 }}>
