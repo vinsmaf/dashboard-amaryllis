@@ -141,13 +141,16 @@ const INPUT_STYLE = {
   boxSizing: "border-box",
 };
 
-function DetailPanel({ client, onClose, onSave }) {
+function DetailPanel({ client, onClose, onSave, onDelete, allClients }) {
   const [email,  setEmail]  = useState(client.email  || "");
   const [mobile, setMobile] = useState(client.mobile || "");
   const [statut, setStatut] = useState(client.statut || "locataire");
   const [notes,  setNotes]  = useState(client.notes  || "");
   const [saving, setSaving] = useState(false);
   const [saved,  setSaved]  = useState(false);
+  const [merging, setMerging] = useState(false);
+  const [mergeQ,  setMergeQ]  = useState("");
+  const [mergeTarget, setMergeTarget] = useState(null);
   const biens = parseBiens(client.biens);
   const tags  = parseTags(client.tags);
 
@@ -168,6 +171,36 @@ function DetailPanel({ client, onClose, onSave }) {
       setSaving(false);
     }
   }
+
+  async function doDelete() {
+    if (!confirm(`Supprimer ${client.prenom} ${client.nom} ? Cette action est irréversible.`)) return;
+    try {
+      await fetchJSON(`/api/crm-clients?id=${client.id}`, { method: "DELETE" });
+      onDelete(client.id);
+    } catch (e) { alert("Erreur suppression: " + e.message); }
+  }
+
+  async function doMerge() {
+    if (!mergeTarget) return;
+    if (!confirm(`Fusionner "${mergeTarget.prenom} ${mergeTarget.nom}" INTO "${client.prenom} ${client.nom}" ? Le doublon sera supprimé.`)) return;
+    try {
+      await fetchJSON(`/api/guest-contacts?action=merge`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ keepId: client.id, dropId: mergeTarget.id }),
+      });
+      onDelete(mergeTarget.id);
+      setMerging(false); setMergeQ(""); setMergeTarget(null);
+    } catch (e) { alert("Erreur fusion: " + e.message); }
+  }
+
+  const mergeResults = mergeQ.length >= 2
+    ? (allClients || []).filter(c => c.id !== client.id && (
+        `${c.prenom} ${c.nom}`.toLowerCase().includes(mergeQ.toLowerCase()) ||
+        (c.email || "").toLowerCase().includes(mergeQ.toLowerCase()) ||
+        (c.mobile || "").includes(mergeQ)
+      )).slice(0, 5)
+    : [];
 
   return (
     <div style={{
@@ -234,7 +267,7 @@ function DetailPanel({ client, onClose, onSave }) {
       </section>
 
       {/* Notes */}
-      <section>
+      <section style={{ marginBottom: 20 }}>
         <h3 style={{ fontSize: 12, textTransform: "uppercase", color: "var(--c-muted,#94a3b8)", letterSpacing: 1, marginBottom: 8 }}>Notes</h3>
         <textarea
           value={notes}
@@ -252,6 +285,62 @@ function DetailPanel({ client, onClose, onSave }) {
         >
           {saving ? "Sauvegarde…" : saved ? "✓ Sauvegardé" : "Sauvegarder"}
         </button>
+      </section>
+
+      {/* Fusionner */}
+      <section style={{ marginBottom: 20, borderTop: "1px solid #ffffff0f", paddingTop: 16 }}>
+        <h3 style={{ fontSize: 12, textTransform: "uppercase", color: "var(--c-muted,#94a3b8)", letterSpacing: 1, marginBottom: 8 }}>Fusionner avec un doublon</h3>
+        {!merging ? (
+          <button onClick={() => setMerging(true)} style={{
+            padding: "6px 12px", background: "#1e293b", color: "#94a3b8",
+            border: "1px solid #ffffff15", borderRadius: 7, cursor: "pointer", fontSize: 12,
+          }}>Fusionner…</button>
+        ) : (
+          <div>
+            <input
+              value={mergeQ}
+              onChange={e => { setMergeQ(e.target.value); setMergeTarget(null); }}
+              placeholder="Nom, email ou tél du doublon…"
+              style={{ ...INPUT_STYLE, marginBottom: 6 }}
+              autoFocus
+            />
+            {mergeResults.map(c => (
+              <div key={c.id} onClick={() => setMergeTarget(c)} style={{
+                padding: "7px 10px", borderRadius: 7, marginBottom: 4, cursor: "pointer",
+                background: mergeTarget?.id === c.id ? "#7c3aed22" : "#ffffff08",
+                border: `1px solid ${mergeTarget?.id === c.id ? "#7c3aed" : "transparent"}`,
+                fontSize: 13,
+              }}>
+                <span style={{ color: "#f1f5f9", fontWeight: 600 }}>{c.prenom} {c.nom}</span>
+                {c.email && <span style={{ color: "#64748b", marginLeft: 8, fontSize: 11 }}>{c.email}</span>}
+                {c.mobile && <span style={{ color: "#64748b", marginLeft: 8, fontSize: 11 }}>{c.mobile}</span>}
+              </div>
+            ))}
+            {mergeQ.length >= 2 && mergeResults.length === 0 && (
+              <div style={{ fontSize: 12, color: "#475569" }}>Aucun résultat</div>
+            )}
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              <button onClick={doMerge} disabled={!mergeTarget} style={{
+                flex: 1, padding: "7px 0", background: mergeTarget ? "#7c3aed" : "#334155",
+                color: "#fff", border: "none", borderRadius: 7, cursor: mergeTarget ? "pointer" : "default",
+                fontSize: 12, fontWeight: 600,
+              }}>Confirmer la fusion</button>
+              <button onClick={() => { setMerging(false); setMergeQ(""); setMergeTarget(null); }} style={{
+                padding: "7px 12px", background: "transparent", color: "#64748b",
+                border: "1px solid #ffffff15", borderRadius: 7, cursor: "pointer", fontSize: 12,
+              }}>Annuler</button>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* Supprimer */}
+      <section style={{ borderTop: "1px solid #ffffff0f", paddingTop: 16 }}>
+        <button onClick={doDelete} style={{
+          width: "100%", padding: "8px 0", background: "transparent",
+          color: "#f87171", border: "1px solid #f8717133", borderRadius: 7,
+          cursor: "pointer", fontSize: 12, fontWeight: 600,
+        }}>Supprimer ce contact</button>
       </section>
     </div>
   );
@@ -430,6 +519,11 @@ export default function CrmTab() {
     setSelected(updated);
   }
 
+  function onDelete(id) {
+    setClients(cs => cs.filter(c => c.id !== id));
+    if (selected?.id === id) setSelected(null);
+  }
+
   const hasDetail = !!selected;
 
   return (
@@ -572,6 +666,8 @@ export default function CrmTab() {
           client={selected}
           onClose={() => setSelected(null)}
           onSave={onSave}
+          onDelete={onDelete}
+          allClients={clients}
         />
       )}
 

@@ -132,3 +132,17 @@ export async function onRequestPost(context) {
     return json({ error: err.message }, 500);
   }
 }
+
+export async function onRequestDelete(context) {
+  if (!(await checkAuth(context))) return json({ error: "Non autorisé" }, 401);
+  const db = context.env.revenue_manager;
+  if (!db) return json({ error: "D1 non configuré" }, 503);
+  const id = new URL(context.request.url).searchParams.get("id");
+  if (!id) return json({ error: "id requis" }, 400);
+  try {
+    await db.prepare("DELETE FROM crm_clients WHERE id=?").bind(id).run();
+    return json({ ok: true });
+  } catch (err) {
+    return json({ error: err.message }, 500);
+  }
+}
