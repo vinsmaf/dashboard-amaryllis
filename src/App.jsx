@@ -187,7 +187,7 @@ const addDays = (dateStr, n) => {
 };
 const diffDays = (a, b) => Math.round((new Date(b + "T12:00:00") - new Date(a + "T12:00:00")) / 86400000);
 
-export const TT = { background: "#1e293b", border: "1px solid #334155", borderRadius: 8, fontSize: 12, color: "#cbd5e1" };
+export const TT = { background: "#0a0f1e", border: "1px solid #1e293b", borderRadius: 9, fontSize: 11, color: "#e2e8f0", padding: "8px 12px" };
 
 const statutBien = (b) => {
   const cf = sumN(b.cashflow);
@@ -414,9 +414,10 @@ function TodayBanner({ biens, n, reservations, onTab, mob }) {
 
         <div style={{
           flex: 1, minWidth: mob ? 160 : 220, padding: "8px 14px",
-          background: actions.length ? "rgba(239,68,68,0.06)" : "rgba(16,185,129,0.06)",
+          background: actions.length ? "rgba(239,68,68,0.07)" : "rgba(16,185,129,0.07)",
           borderRadius: 10,
-          border: `1px solid ${actions.length ? "rgba(239,68,68,0.15)" : "rgba(16,185,129,0.15)"}`
+          border: `1px solid ${actions.length ? "rgba(239,68,68,0.3)" : "rgba(16,185,129,0.3)"}`,
+          boxShadow: actions.length > 0 ? "0 0 18px rgba(239,68,68,0.1)" : "0 0 18px rgba(16,185,129,0.08)",
         }}>
           <div style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>
             Actions aujourd'hui
@@ -1491,15 +1492,18 @@ export default function App() {
                 {group.items.map(item => {
                   const active = tab === item.id;
                   const navStyle = {
-                    width: "100%", display: "flex", alignItems: "center", gap: 10,
-                    padding: "7px 16px",
-                    background: active ? "rgba(14,165,233,0.1)" : "none",
-                    border: "none", borderLeft: `3px solid ${active ? "#0ea5e9" : "transparent"}`,
+                    display: "flex", alignItems: "center", gap: 10,
+                    margin: "1px 8px",
+                    padding: "7px 10px",
+                    borderRadius: 8,
+                    background: active ? "rgba(14,165,233,0.13)" : "transparent",
+                    border: "none",
                     cursor: "pointer", textAlign: "left",
                     color: active ? "#e0f2fe" : item.badgeColor && item.badge ? item.badgeColor : "#64748b",
                     fontSize: 13, fontWeight: active ? 600 : 400,
-                    transition: "background .1s, color .1s",
+                    transition: "background .15s, color .15s",
                     textDecoration: "none",
+                    width: "calc(100% - 16px)",
                   };
                   const navContent = (
                     <>

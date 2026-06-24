@@ -455,3 +455,30 @@ export function FAQAccordion({ q, a, defaultOpen = false }) {
     </div>
   );
 }
+
+// ── <SubTabBar> — barre de sous-onglets admin réutilisable ───────────────────
+export function SubTabBar({ tabs, active, onChange, accent = "#0ea5e9", style }) {
+  return (
+    <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap", ...style }}>
+      {tabs.map(t => (
+        <button
+          key={t.id}
+          onClick={() => onChange(t.id)}
+          style={{
+            padding: "6px 14px",
+            borderRadius: 20,
+            border: "none",
+            cursor: "pointer",
+            fontSize: 12,
+            fontWeight: 600,
+            background: active === t.id ? accent : "rgba(255,255,255,0.06)",
+            color: active === t.id ? "#fff" : "#94a3b8",
+            transition: "background .15s, color .15s",
+          }}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  );
+}

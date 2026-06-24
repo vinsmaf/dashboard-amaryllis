@@ -176,16 +176,16 @@ function NogentCashflowAlert({ biens, mob }) {
         🏙️ Alerte Nogent — {consecutiveNeg >= 2 ? `Cashflow négatif ${consecutiveNeg} mois consécutifs` : `${totalNegMonths} mois en cashflow négatif YTD`}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: mob ? "repeat(2,1fr)" : "repeat(4,1fr)", gap: 8, marginBottom: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: mob ? "repeat(2,1fr)" : "repeat(4,1fr)", gap: 10, marginBottom: 14 }}>
         {[
           { l: "CF YTD",          v: `${cfYTD >= 0 ? "+" : ""}${cfYTD.toLocaleString("fr-FR")} €`,               c: cfYTD >= 0 ? "#10b981" : "#ef4444" },
           { l: "Revenus YTD",     v: `${revYTD.toLocaleString("fr-FR")} €`,                                        c: "#0ea5e9" },
           { l: "Charges YTD",     v: `−${chargesYTD.toLocaleString("fr-FR")} €`,                                   c: "#f59e0b" },
           { l: "Conciergerie est.",v: `−${conciergerieYTD.toLocaleString("fr-FR")} €`,                              c: "#f87171" },
         ].map(k => (
-          <div key={k.l} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 8, padding: "8px 10px" }}>
-            <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 3 }}>{k.l}</div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: k.c, fontFamily: "var(--font-mono)" }}>{k.v}</div>
+          <div key={k.l} style={{ background: "rgba(255,255,255,0.04)", borderRadius: 9, padding: "10px 13px", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 5 }}>{k.l}</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: k.c, fontFamily: "var(--font-mono)" }}>{k.v}</div>
           </div>
         ))}
       </div>

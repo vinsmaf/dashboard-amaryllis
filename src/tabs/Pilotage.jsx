@@ -6,6 +6,7 @@
 import { useState } from "react";
 import { ResponsiveContainer, BarChart, LineChart, ComposedChart, PieChart, Pie, Bar, Line, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
 import { MOIS, TT, REVENUS_CANAL_2025, fmt, fmtK } from "../App.jsx";
+import { SubTabBar } from "../primitives.jsx";
 import { sumN, avgN } from "../utils/calculations.js";
 import { useAppData } from "../AppDataContext.jsx";
 import { commissionTaux } from "../config/canauxCommissions.js";
@@ -239,23 +240,17 @@ export default function Pilotage() {
 
   return (
     <div>
-      {/* Sub-tabs */}
-      <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
-        {[
-          { id: "canal-live", l: "⚡ Canaux live" },
-          { id: "cpa",        l: "💸 CPA" },
-          { id: "marche",     l: "🎯 Marché" },
-          { id: "fiscal",     l: "📋 Fiscal" },
-          { id: "conseil",    l: "🎓 Conseil" },
-        ].map(v => (
-          <button key={v.id} onClick={() => setView(v.id)} style={{
-            padding: "7px 14px", borderRadius: 20, border: "none", cursor: "pointer",
-            fontSize: 12, fontWeight: 600,
-            background: view === v.id ? "#0ea5e9" : "rgba(255,255,255,0.06)",
-            color: view === v.id ? "#fff" : "#94a3b8",
-          }}>{v.l}</button>
-        ))}
-      </div>
+      <SubTabBar
+        tabs={[
+          { id: "canal-live", label: "⚡ Canaux live" },
+          { id: "cpa",        label: "💸 CPA" },
+          { id: "marche",     label: "🎯 Marché" },
+          { id: "fiscal",     label: "📋 Fiscal" },
+          { id: "conseil",    label: "🎓 Conseil" },
+        ]}
+        active={view}
+        onChange={setView}
+      />
 
       {view === "canal-live" && (
         <CanalLivePerf biens={biens} reservations={reservations} mob={mob} />

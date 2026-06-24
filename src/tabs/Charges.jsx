@@ -7,13 +7,7 @@ import { ResponsiveContainer, ComposedChart, BarChart, Bar, Line, PieChart, Pie,
 import { MOIS, TT, CHARGES_2025, POSTES_CHARGES, HIST_SEED, ANNEE_COLORS, fmt, fmtK } from "../App.jsx";
 import { sumN } from "../utils/calculations.js";
 import { useAppData } from "../AppDataContext.jsx";
-
-const SUB_TAB_STYLE = (active) => ({
-  padding: "7px 16px", borderRadius: 20, border: "none", cursor: "pointer",
-  fontSize: 12, fontWeight: 600,
-  background: active ? "#ef4444" : "rgba(255,255,255,0.06)",
-  color: active ? "#fff" : "#94a3b8",
-});
+import { SubTabBar } from "../primitives.jsx";
 
 export default function Charges() {
   const { biens, n, mob } = useAppData();
@@ -99,12 +93,17 @@ export default function Charges() {
 
   return (
     <div>
-      {/* Sous-onglets */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-        <button style={SUB_TAB_STYLE(sub === "reel")}   onClick={() => setSub("reel")}>📈 Budget YTD</button>
-        <button style={SUB_TAB_STYLE(sub === "budget")} onClick={() => setSub("budget")}>📋 Budget par poste</button>
-        <button style={SUB_TAB_STYLE(sub === "evol")}  onClick={() => setSub("evol")}>📊 Évolution</button>
-      </div>
+      <SubTabBar
+        tabs={[
+          { id: "reel",   label: "📈 Budget YTD" },
+          { id: "budget", label: "📋 Budget par poste" },
+          { id: "evol",   label: "📊 Évolution" },
+        ]}
+        active={sub}
+        onChange={setSub}
+        accent="#ef4444"
+        style={{ marginBottom: 20 }}
+      />
 
       {/* ── Vue 1 : Réel YTD ──────────────────────────────────────────────── */}
       {sub === "reel" && (
