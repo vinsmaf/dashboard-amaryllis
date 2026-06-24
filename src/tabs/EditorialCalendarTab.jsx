@@ -315,6 +315,29 @@ export default function EditorialCalendarTab() {
                               }}
                             >📥 Voir draft</a>
                           )}
+                          {/* Stats pour les publiés */}
+                          {e.status === "published" && (
+                            <button
+                              onClick={(ev) => { ev.stopPropagation(); loadInsights(e); }}
+                              style={{
+                                marginTop: "auto", padding: "3px 6px", borderRadius: 5, fontSize: 9, fontWeight: 700,
+                                border: "1px solid #22c55e44", background: "rgba(34,197,94,0.1)", color: "#22c55e",
+                                cursor: insights[e.id]?.loading ? "wait" : "pointer", width: "100%",
+                              }}
+                            >{insights[e.id]?.loading ? "..." : "📊"}</button>
+                          )}
+                          {/* Affichage stats inline sous le bouton */}
+                          {e.status === "published" && insights[e.id] && !insights[e.id].loading && (
+                            <div style={{ fontSize: 8, color: "#64748b", marginTop: 3, lineHeight: 1.4 }}>
+                              {insights[e.id].err && <span style={{ color: "#fca5a5" }}>⚠️</span>}
+                              {insights[e.id].data?.ig && !insights[e.id].data.ig.error && (
+                                <div>IG {insights[e.id].data.ig.reach != null ? `👁${insights[e.id].data.ig.reach}` : ""} {insights[e.id].data.ig.likes != null ? `❤️${insights[e.id].data.ig.likes}` : ""}</div>
+                              )}
+                              {insights[e.id].data?.fb && !insights[e.id].data.fb.error && (
+                                <div>FB {insights[e.id].data.fb.views != null ? `👁${insights[e.id].data.fb.views}` : ""} {insights[e.id].data.fb.reactions != null ? `❤️${insights[e.id].data.fb.reactions}` : ""}</div>
+                              )}
+                            </div>
+                          )}
                         </>
                       )}
                     </div>
