@@ -275,18 +275,40 @@ async function handlePublishReel(env, { caption, videoUrl, coverUrl, channels = 
       results.fb = { error: "META_PAGE_ID non configuré" };
     } else {
       try {
-        // Facebook Reels : upload par URL publique → publication directe
-        const fbBody = {
-          video_url: videoUrl,
-          description: caption || "",
-          title: caption ? caption.split("\n")[0].slice(0, 100) : "Reel",
-          published: dryRun ? "false" : "true",
-        };
-        const fbResp = await graphPost(`${fbPageId}/video_reels`, token, fbBody);
-        if (fbResp.error) {
-          results.fb = { error: fbResp.error.message || JSON.stringify(fbResp.error) };
+        // Facebook Reels — upload en 3 phases (API Graph exige upload_phase)
+        // Phase 1 : initialiser → obtenir video_id + upload_url
+        const initResp = await graphPost(`${fbPageId}/video_reels`, token, { upload_phase: "start" });
+        if (initResp.error) {
+          results.fb = { error: `Phase start: ${initResp.error.message || JSON.stringify(initResp.error)}` };
         } else {
-          results.fb = { ok: true, id: fbResp.video_id || fbResp.id, dryRun: !!dryRun };
+          const { video_id: fbVideoId, upload_url: uploadUrl } = initResp;
+          if (!fbVideoId || !uploadUrl) {
+            results.fb = { error: "Phase start : video_id ou upload_url manquant" };
+          } else {
+            // Phase 2 : transfert URL → FB télécharge la vidéo depuis notre URL publique
+            const transferResp = await fetch(uploadUrl, {
+              method: "POST",
+              headers: { "Authorization": `OAuth ${token}`, "file_url": videoUrl },
+            });
+            const transferData = await transferResp.json().catch(() => ({}));
+            if (!transferResp.ok || transferData.error) {
+              results.fb = { error: `Phase transfer: ${transferData.error?.message || transferResp.status}` };
+            } else {
+              // Phase 3 : finish → publier (ou passer en DRAFT pour dry-run)
+              const finishResp = await graphPost(`${fbPageId}/video_reels`, token, {
+                upload_phase: "finish",
+                video_id: fbVideoId,
+                video_state: dryRun ? "DRAFT" : "PUBLISHED",
+                description: caption || "",
+                title: caption ? caption.split("\n")[0].slice(0, 100) : "Reel",
+              });
+              if (finishResp.error) {
+                results.fb = { error: `Phase finish: ${finishResp.error.message || JSON.stringify(finishResp.error)}` };
+              } else {
+                results.fb = { ok: !dryRun, id: fbVideoId, dryRun: !!dryRun };
+              }
+            }
+          }
         }
       } catch (e) {
         results.fb = { error: e.message };
