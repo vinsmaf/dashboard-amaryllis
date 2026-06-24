@@ -4,7 +4,7 @@
  */
 import { useState } from "react";
 import { ResponsiveContainer, ComposedChart, BarChart, Bar, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
-import { MOIS, TT, CHARGES_2025, POSTES_CHARGES, fmt, fmtK } from "../App.jsx";
+import { MOIS, TT, CHARGES_2025, POSTES_CHARGES, HIST_SEED, ANNEE_COLORS, fmt, fmtK } from "../App.jsx";
 import { sumN } from "../utils/calculations.js";
 import { useAppData } from "../AppDataContext.jsx";
 
@@ -61,6 +61,21 @@ export default function Charges() {
   const sevColors = { danger: "#ef4444", warning: "#f59e0b", info: "#0ea5e9" };
   const sevBg    = { danger: "rgba(239,68,68,0.07)", warning: "rgba(245,158,11,0.07)", info: "rgba(14,165,233,0.07)" };
 
+  // ── Données historiques 2022-2025 ──────────────────────────────────────────
+  const CF_HIST = { 2022: 38427, 2023: 49076, 2024: 61956, 2025: 71814 };
+  const HIST_YEARS = [2022, 2023, 2024, 2025];
+  const histData = HIST_YEARS.map(y => {
+    const rev     = (HIST_SEED[y]?.total || []).reduce((s, v) => s + v, 0);
+    const cf      = CF_HIST[y] || 0;
+    const charges = Math.max(rev - cf, 0);
+    const taux    = rev > 0 ? (charges / rev) * 100 : 0;
+    return { annee: String(y), revenus: rev, charges, cashflow: cf, taux };
+  });
+  const chargesTotal4ans = histData.reduce((s, d) => s + d.charges, 0);
+  const revenusTotal4ans = histData.reduce((s, d) => s + d.revenus, 0);
+  const tauxMoyen4ans    = revenusTotal4ans > 0 ? (chargesTotal4ans / revenusTotal4ans) * 100 : 0;
+  const chargesMoyen     = Math.round(chargesTotal4ans / HIST_YEARS.length);
+
   // ── Données budget par poste (CHARGES_2025 statiques) ───────────────────
   const chargeTotals = {};
   POSTES_CHARGES.forEach(p => {
@@ -81,6 +96,7 @@ export default function Charges() {
       <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
         <button style={SUB_TAB_STYLE(sub === "reel")}   onClick={() => setSub("reel")}>📈 Réel YTD</button>
         <button style={SUB_TAB_STYLE(sub === "budget")} onClick={() => setSub("budget")}>📋 Budget par poste</button>
+        <button style={SUB_TAB_STYLE(sub === "evol")}  onClick={() => setSub("evol")}>📊 Évolution</button>
       </div>
 
       {/* ── Vue 1 : Réel YTD ──────────────────────────────────────────────── */}
@@ -314,6 +330,103 @@ export default function Charges() {
                     ))}
                     <td style={{ padding: "10px 10px", textAlign: "right", fontFamily: "var(--font-mono)", fontSize: 12, color: "#ef4444", fontWeight: 800 }}>{fmtK(totalCharges2025)}</td>
                   </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Vue 3 : Évolution historique ──────────────────────────────────── */}
+      {sub === "evol" && (
+        <div>
+          {/* KPIs */}
+          <div style={{ display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap" }}>
+            <div style={{ flex: 1, minWidth: 130, background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 11, padding: "12px 14px" }}>
+              <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>Charges cumulées 2022-2025</div>
+              <div style={{ fontSize: 19, fontWeight: 700, color: "#ef4444", fontFamily: "var(--font-mono)" }}>{fmt(chargesTotal4ans)}</div>
+              <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>Moy. {fmt(chargesMoyen)}/an</div>
+            </div>
+            <div style={{ flex: 1, minWidth: 130, background: "rgba(14,165,233,0.06)", border: "1px solid rgba(14,165,233,0.2)", borderRadius: 11, padding: "12px 14px" }}>
+              <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>Revenus cumulés</div>
+              <div style={{ fontSize: 19, fontWeight: 700, color: "#0ea5e9", fontFamily: "var(--font-mono)" }}>{fmt(revenusTotal4ans)}</div>
+              <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>Taux de charges moy. {tauxMoyen4ans.toFixed(1)}%</div>
+            </div>
+            <div style={{ flex: 1, minWidth: 130, background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 11, padding: "12px 14px" }}>
+              <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>Cashflow cumulé</div>
+              <div style={{ fontSize: 19, fontWeight: 700, color: "#10b981", fontFamily: "var(--font-mono)" }}>{fmt(histData.reduce((s, d) => s + d.cashflow, 0))}</div>
+              <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>Net après toutes charges</div>
+            </div>
+            <div style={{ flex: 1, minWidth: 130, background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 11, padding: "12px 14px" }}>
+              <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 5 }}>Tendance charges</div>
+              <div style={{ fontSize: 19, fontWeight: 700, color: "#f59e0b", fontFamily: "var(--font-mono)" }}>
+                {histData.length >= 2 ? (histData[histData.length - 1].charges > histData[0].charges ? "↗" : "↘") : "—"}
+                {histData.length >= 2 ? ` ${(((histData[histData.length - 1].charges / histData[0].charges) - 1) * 100).toFixed(0)}%` : ""}
+              </div>
+              <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>2022 → 2025</div>
+            </div>
+          </div>
+
+          {/* Graphe revenus/charges/cashflow par année */}
+          <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 13, padding: 16, marginBottom: 14 }}>
+            <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 10, fontWeight: 600 }}>Revenus · Charges · Cashflow par année</div>
+            <ResponsiveContainer width="100%" height={mob ? 200 : 260}>
+              <ComposedChart data={histData} barGap={4}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <XAxis dataKey="annee" tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={fmtK} />
+                <Tooltip contentStyle={TT} formatter={(v, name) => [fmt(v), name]} />
+                <Legend wrapperStyle={{ fontSize: 10, color: "#94a3b8" }} />
+                <Bar dataKey="charges"  name="Charges"  stackId="a" fill="#ef4444" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="cashflow" name="Cashflow" stackId="a" fill="#10b981" radius={[4, 4, 0, 0]} />
+                <Line type="monotone" dataKey="revenus" name="Revenus" stroke="#0ea5e9" strokeWidth={2} dot={{ fill: "#0ea5e9", r: 4 }} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Graphe taux de charges */}
+          <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 13, padding: 16, marginBottom: 14 }}>
+            <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 10, fontWeight: 600 }}>Taux de charges (%) — objectif &lt; 55%</div>
+            <ResponsiveContainer width="100%" height={mob ? 130 : 160}>
+              <BarChart data={histData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <XAxis dataKey="annee" tick={{ fill: "#64748b", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "#64748b", fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}%`} domain={[0, 80]} />
+                <Tooltip contentStyle={TT} formatter={(v) => [`${v.toFixed(1)}%`, "Taux charges"]} />
+                <Bar dataKey="taux" name="Taux charges" radius={[4, 4, 0, 0]}>
+                  {histData.map((d, i) => <Cell key={i} fill={d.taux < 55 ? "#10b981" : d.taux < 70 ? "#f59e0b" : "#ef4444"} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Tableau récap */}
+          <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 13, overflow: "hidden" }}>
+            <div style={{ padding: "11px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)", fontSize: 12, color: "#94a3b8", fontWeight: 600 }}>
+              Récapitulatif annuel
+            </div>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 480 }}>
+                <thead>
+                  <tr style={{ background: "rgba(255,255,255,0.03)" }}>
+                    {["Année", "Revenus", "Charges", "Cashflow", "Taux charges"].map(h => (
+                      <th key={h} style={{ padding: "8px 12px", textAlign: "right", fontSize: 9, color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {histData.map((d, i) => {
+                    const tauxColor = d.taux < 55 ? "#10b981" : d.taux < 70 ? "#f59e0b" : "#ef4444";
+                    return (
+                      <tr key={i} style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                        <td style={{ padding: "9px 12px", textAlign: "right", fontWeight: 700, color: ANNEE_COLORS[Number(d.annee)] || "#e2e8f0", fontSize: 12 }}>{d.annee}</td>
+                        <td style={{ padding: "9px 12px", textAlign: "right", color: "#0ea5e9", fontFamily: "var(--font-mono)", fontSize: 11 }}>{fmt(d.revenus)}</td>
+                        <td style={{ padding: "9px 12px", textAlign: "right", color: "#ef4444", fontFamily: "var(--font-mono)", fontSize: 11 }}>{fmt(d.charges)}</td>
+                        <td style={{ padding: "9px 12px", textAlign: "right", color: "#10b981", fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 600 }}>+{fmt(d.cashflow)}</td>
+                        <td style={{ padding: "9px 12px", textAlign: "right", color: tauxColor, fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 700 }}>{d.taux.toFixed(1)}%</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
