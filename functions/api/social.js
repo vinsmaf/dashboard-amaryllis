@@ -285,10 +285,19 @@ async function handlePublishReel(env, { caption, videoUrl, coverUrl, channels = 
           if (!fbVideoId || !uploadUrl) {
             results.fb = { error: "Phase start : video_id ou upload_url manquant" };
           } else {
-            // Phase 2 : transfert URL → FB télécharge la vidéo depuis notre URL publique
+            // Phase 2 : stream la vidéo depuis notre CDN → upload_url FB (binaire)
+            const videoResp = await fetch(videoUrl);
+            if (!videoResp.ok) throw new Error(`Fetch vidéo: HTTP ${videoResp.status}`);
+            const fileSize = videoResp.headers.get("content-length") || "0";
             const transferResp = await fetch(uploadUrl, {
               method: "POST",
-              headers: { "Authorization": `OAuth ${token}`, "file_url": videoUrl },
+              headers: {
+                "Authorization": `OAuth ${token}`,
+                "Content-Type": "video/mp4",
+                "offset": "0",
+                "file_size": fileSize,
+              },
+              body: videoResp.body,
             });
             const transferData = await transferResp.json().catch(() => ({}));
             if (!transferResp.ok || transferData.error) {
