@@ -31,6 +31,22 @@ if [[ "$(basename "$(pwd)")" != "locatif-dashboard" ]]; then
   sleep 5
 fi
 
+# ── 00. GARDE ANTI-AGENT — le déploiement direct est réservé à un HUMAIN ──────────
+# ADR-DEPLOY-001 : les instances Claude / agents déploient via `git push` (→ CI), JAMAIS
+# par ce script (un agent a déployé cbb50f6 hors-git le 2026-06-24 → drift prod≠origin).
+# Détection : un humain en terminal a un STDIN interactif (TTY) ; un agent/automatisation
+# n'en a pas. Sans TTY et sans override conscient → STOP. N'affecte PAS la CI (elle appelle
+# `wrangler pages deploy` directement, pas ce script).
+# Override humain explicite (ex. lancer depuis un pipe) : I_DEPLOY_CONSCIOUSLY=1 npm run deploy:pages
+if [[ "${I_DEPLOY_CONSCIOUSLY:-0}" != "1" ]] && [[ ! -t 0 ]]; then
+  echo "🚨 STOP — déploiement direct non-interactif détecté (agent / automatisation ?)."
+  echo "   Le chemin de prod = 'git push origin main' → la CI déploie (ADR-DEPLOY-001)."
+  echo "   Déployer en direct hors-git crée un drift prod≠origin (vécu 2026-06-24)."
+  echo "   → Agent/Claude : fais 'git push origin main' à la place."
+  echo "   → Humain en pipe/CI maison : I_DEPLOY_CONSCIOUSLY=1 npm run deploy:pages"
+  exit 1
+fi
+
 # ── 0a. GARDE DE BRANCHE — main = source unique de la prod ──────────────────────
 # Le drift prod≠main du 2026-06-21 venait d'un deploy manuel depuis une branche
 # worktree (claude/*) jamais mergée dans main. Désormais : on ne déploie QUE main.
