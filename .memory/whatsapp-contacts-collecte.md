@@ -92,9 +92,19 @@
 
 ---
 
-## ✅ COLLECTE TERMINÉE — Total ~40 contacts
-Prochaine étape (en attente validation Vincent) : créer table D1 `guest_contacts` + alimenter.
-Champs proposés : id, nom, telephone, email, bien, date_arrivee, date_depart, montant, canal, pays, statut, notes, source='whatsapp'.
+## ✅ TERMINÉ — Table D1 `guest_contacts` créée + alimentée (prod)
+- **53 contacts WhatsApp** (`source='whatsapp'`) — migration `0003_guest_contacts.sql` + `seed-guest-contacts.sql`
+- Endpoint admin `functions/api/guest-contacts.js` (CRUD, auth Bearer) déployé
+
+## ✅ RECOUPEMENT avec Sheet "Toutes les Réservations" (713 résas)
+- Clé fiable = **téléphone normalisé** (9 derniers chiffres) + email. Match par NOM = bcp de faux positifs → NON écrits.
+- **35 locataires confirmés du Sheet** (résas directes/Beds24 avec tél+email) absents de WhatsApp → ajoutés (`source='sheet'`, `scripts/seed-guest-contacts-sheet.sql`). Dont **Joel Bailleul** (Iguana à l'année → longue_duree).
+- **Base finale : 88 contacts** (82 tél / 41 email) · 83 locataire · 2 longue_duree · 2 prospect · 1 a_confirmer.
+
+### ⚠️ À traiter manuellement (non automatisé — risque faux positifs)
+- 33 "matchs par nom" WhatsApp↔Sheet non fusionnés (ex: "Libos"=Jordan Hommand via tél OK, mais "Ary"→"Girdary" FAUX).
+- Doublons possibles (même personne, 2 numéros) : ex Pascal Guilbaud (Sheet) vs Pascal/4REAZONS (WhatsApp).
+- 13 contacts WhatsApp sans résa Sheet = prospects ou résas non enregistrées.
 
 > ⚠️ Beaucoup de ces contacts = "code de sécurité WhatsApp" uniquement = peu de texte.
 > Info la + précieuse pour eux = NUMÉRO DE TÉL (panneau infos du contact) + bien/période (déduits du nom).
