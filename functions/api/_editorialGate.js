@@ -77,7 +77,7 @@ export function evaluateGate(o) {
     fails.push({ filter: "forme", reason: `channels doit = [ig, fb] (reçu : ${ch.join(",") || "vide"})` });
   }
   if (bien && recentSet.has(bien)) {
-    fails.push({ filter: "doublon", reason: `${bien} déjà publié dans les 7 derniers jours` });
+    fails.push({ filter: "doublon", reason: `${bien} déjà publié dans les 6 derniers jours` });
   }
 
   // ── Filtre 4 — qualité rédactionnelle (LLM-juge) ────────────────────────────

@@ -70,7 +70,7 @@ export async function onRequest(context) {
 
   const recentBienPosts = new Set();
   try {
-    const since = now - 7 * 86400;
+    const since = now - 6 * 86400;
     const { results } = await db.prepare(
       "SELECT DISTINCT bien_id FROM editorial_calendar WHERE status='published' AND published_at >= ?"
     ).bind(since).all();

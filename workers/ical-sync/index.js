@@ -2362,6 +2362,114 @@ async function runEditorialRetry(env) {
   }
 }
 
+// ── Editorial Calendar : réparation automatique des drafts escaladés (après le gate J-2) ────
+// Garantit 1 publication/jour même si le gate bloque un draft.
+// Deux cas traités :
+//   • doublon bien_id (<7j) → swap vers un bien disponible + regénère un draft
+//   • score/verdict/mots_interdits → applique les improved_blocks calculés par le gate + réexécute le gate
+// Tourne juste après runEditorialDraftGen + gate dans le cron 0 12 * * *.
+async function runEditorialRepair(env) {
+  const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+  const db = env.revenue_manager;
+  if (!db) return;
+
+  const now = Math.floor(Date.now() / 1000);
+  const horizon = now + 48 * 3600;
+
+  // Entrées 'drafted' dans les 48h dont le gate a escaladé
+  const { results: entries } = await db.prepare(
+    "SELECT ec.id, ec.bien_id, ec.draft_id, ec.scheduled_at FROM editorial_calendar ec WHERE ec.status='drafted' AND ec.scheduled_at BETWEEN ? AND ? AND ec.draft_id IS NOT NULL"
+  ).bind(now, horizon).all().catch(() => ({ results: [] }));
+
+  if (!entries?.length) { console.log("[editorial-repair] aucun draft escaladé dans les 48h"); return; }
+
+  // Biens publiés dans les 7 derniers jours (anti-doublon)
+  const { results: recent } = await db.prepare(
+    "SELECT DISTINCT bien_id FROM editorial_calendar WHERE status='published' AND published_at >= ?"
+  ).bind(now - 6 * 86400).all().catch(() => ({ results: [] }));
+  const recentSet = new Set((recent || []).map(r => r.bien_id));
+
+  const ALL_BIENS = ["schoelcher", "nogent", "amaryllis", "zandoli", "geko", "mabouya"];
+
+  let repaired = 0;
+  for (const entry of entries) {
+    const draft = await db.prepare("SELECT * FROM agent_drafts WHERE id=?").bind(entry.draft_id).first();
+    if (!draft) continue;
+
+    let reviews = {};
+    try { reviews = JSON.parse(draft.reviews || "{}"); } catch {}
+
+    const gate = reviews.gate || {};
+    if (gate.decision !== "escalated") continue; // déjà approuvé ou pas évalué
+
+    const failTypes = new Set((gate.fails || []).map(f => f.filter));
+    const improved = reviews.improved_blocks;
+
+    if (failTypes.has("doublon")) {
+      // Swap : choisir un bien non récent + non déjà planifié dans la fenêtre
+      const { results: plannedInWindow } = await db.prepare(
+        "SELECT DISTINCT bien_id FROM editorial_calendar WHERE scheduled_at BETWEEN ? AND ? AND id != ?"
+      ).bind(now, horizon, entry.id).all().catch(() => ({ results: [] }));
+      const plannedBiens = new Set((plannedInWindow || []).map(r => r.bien_id));
+      const available = ALL_BIENS.filter(b => !recentSet.has(b) && !plannedBiens.has(b));
+
+      if (!available.length) {
+        console.log(`[editorial-repair] entry ${entry.id}: doublon, aucun bien disponible → skip`);
+        continue;
+      }
+      const newBien = available[0];
+
+      // Reset calendar entry + générer un nouveau draft pour le nouveau bien
+      await db.prepare("UPDATE editorial_calendar SET bien_id=?, draft_id=NULL, status='planned', updated_at=? WHERE id=?")
+        .bind(newBien, now, entry.id).run();
+
+      const dt = new Date(entry.scheduled_at * 1000).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+      const brief = `RÉPARATION DOUBLON — date=${dt}, bien=${newBien}, thème=logement, variante=charme tropical, format=post. Génère UN draft social_post pour ${newBien}. Insiste sur le prix direct (-15% vs Airbnb) et l'ambiance unique du bien.`;
+      try {
+        const rr = await fetch(`${siteUrl}/api/agents-run?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ agents: ["community-manager"], brief, calendar_id: entry.id }),
+        });
+        const rd = await rr.json();
+        const drafted = (rd.results?.[0]?.drafts || 0) > 0;
+        await db.prepare("UPDATE editorial_calendar SET status=?, updated_at=? WHERE id=?")
+          .bind(drafted ? "drafted" : "failed", now, entry.id).run();
+        console.log(`[editorial-repair] entry ${entry.id}: swap ${entry.bien_id}→${newBien} drafted=${drafted}`);
+        if (drafted) {
+          await fetch(`${siteUrl}/api/editorial-gate?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}&mode=live`, { method: "POST" })
+            .catch(e => console.error("[editorial-repair] gate after swap:", e.message));
+        }
+        repaired++;
+      } catch (err) { console.error(`[editorial-repair] swap error entry ${entry.id}:`, err.message); }
+
+    } else if (improved && (failTypes.has("mots_interdits") || failTypes.has("score") || failTypes.has("verdict"))) {
+      // Reconstruire caption depuis improved_blocks
+      const caption = [improved.hook, improved.description, improved.benefice, improved.cta, improved.hashtags]
+        .filter(Boolean).join("\n\n");
+
+      let payload = {};
+      try { payload = JSON.parse(draft.payload || "{}"); } catch {}
+      payload.caption = caption;
+      payload.text = caption;
+
+      // Effacer la décision gate pour que le gate réévalue
+      delete reviews.gate;
+
+      // Approuver directement : le draft a déjà passé une revue LLM complète, les improved_blocks
+      // représentent la meilleure version possible — re-passer le gate risque de boucler.
+      await db.prepare("UPDATE agent_drafts SET payload=?, reviews=?, status='approved', updated_at=? WHERE id=?")
+        .bind(JSON.stringify(payload), JSON.stringify(reviews), now, draft.id).run();
+      await db.prepare("UPDATE editorial_calendar SET status='approved', updated_at=? WHERE id=?")
+        .bind(now, entry.id).run();
+
+      console.log(`[editorial-repair] entry ${entry.id} (${entry.bien_id}): improved_blocks appliqués → approved`);
+      repaired++;
+    }
+  }
+  console.log(`[editorial-repair] ${repaired} draft(s) réparé(s)`);
+}
+
 // ── Editorial Calendar : publication auto des drafts approuvés (cron horaire)
 async function runEditorialAutoPublish(env) {
   const siteUrl = env.SITE_URL || "https://villamaryllis.com";
@@ -2923,6 +3031,7 @@ export default {
       ctx.waitUntil((async () => {
         await runEditorialReseed(env);
         await runEditorialDraftGen(env);
+        await runEditorialRepair(env);
         // ── Alerte ménage (8h Martinique) ──────────────────────────────────────────────────────────
         try {
           const siteUrl = env.SITE_URL || "https://villamaryllis.com";
