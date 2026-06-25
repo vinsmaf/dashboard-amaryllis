@@ -4,9 +4,11 @@
 import { useState, useEffect, useCallback } from "react";
 
 const STATUTS = [
-  { id: "nouveau",  label: "Nouveau",  color: "#f59e0b", bg: "#2a1f00" },
-  { id: "répondu",  label: "Répondu",  color: "#10b981", bg: "#0a1f16" },
-  { id: "archivé",  label: "Archivé",  color: "#475569", bg: "#151a24" },
+  { id: "nouveau",      label: "Nouveau",      color: "#f59e0b", bg: "#2a1f00" },
+  { id: "répondu",      label: "Répondu",      color: "#10b981", bg: "#0a1f16" },
+  { id: "réclamation",  label: "Réclamation",  color: "#ef4444", bg: "#2a0e0e" },
+  { id: "résolu",       label: "Résolu ✓",     color: "#34d399", bg: "#061a12" },
+  { id: "archivé",      label: "Archivé",      color: "#475569", bg: "#151a24" },
 ];
 const sm = (s) => STATUTS.find((x) => x.id === s) || { label: s, color: "#94a3b8", bg: "#151a24" };
 
@@ -73,7 +75,13 @@ export default function LeadsTab({ token }) {
       <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
         <h2 style={{ margin: 0, fontSize: 20 }}>📬 Leads</h2>
         <span style={{ fontSize: 13, color: "#64748b" }}>{leads.length} messages</span>
-        {STATUTS.map((s) => counts[s.id] ? (
+        {counts["réclamation"] > 0 && (
+          <span style={{ fontSize: 12, fontWeight: 700, color: "#ef4444", background: "#2a0e0e",
+            border: "1px solid #ef444455", borderRadius: 6, padding: "2px 8px" }}>
+            🚨 {counts["réclamation"]} réclamation{counts["réclamation"] > 1 ? "s" : ""} ouverte{counts["réclamation"] > 1 ? "s" : ""}
+          </span>
+        )}
+        {STATUTS.filter((s) => s.id !== "réclamation").map((s) => counts[s.id] ? (
           <span key={s.id} style={{ fontSize: 11, fontWeight: 700, color: s.color }}>
             {counts[s.id]} {s.label.toLowerCase()}
           </span>
@@ -108,7 +116,7 @@ export default function LeadsTab({ token }) {
               {filtered.map((l) => {
                 const s = sm(l.status);
                 return (
-                  <tr key={l.id} style={{ background: l.status === "nouveau" ? "rgba(245,158,11,0.04)" : "transparent" }}>
+                  <tr key={l.id} style={{ background: l.status === "réclamation" ? "rgba(239,68,68,0.07)" : l.status === "nouveau" ? "rgba(245,158,11,0.04)" : "transparent" }}>
                     <td style={{ ...td, whiteSpace: "nowrap", fontSize: 11, color: "#64748b" }}>{fmtDate(l.created_at)}</td>
                     <td style={{ ...td, fontWeight: 600, color: "#f1f5f9" }}>{l.nom}</td>
                     <td style={td}>
@@ -132,12 +140,23 @@ export default function LeadsTab({ token }) {
                         </span>
                       )}
                     </td>
-                    <td style={td}>
+                    <td style={{ ...td, whiteSpace: "nowrap" }}>
                       <select value={l.status} disabled={busy} onChange={(e) => patch(l.id, { status: e.target.value })}
                         style={{ ...inp, padding: "3px 6px", fontSize: 11, color: s.color, background: s.bg, borderColor: s.color + "44" }}>
                         {STATUTS.map((sx) => <option key={sx.id} value={sx.id}
                           style={{ color: "#e2e8f0", background: "#0f1420" }}>{sx.label}</option>)}
                       </select>
+                      {l.status === "réclamation" && (
+                        <button disabled={busy} onClick={() => {
+                          const res = prompt("Résolution (obligatoire) :");
+                          if (!res?.trim()) return;
+                          patch(l.id, { status: "résolu", notes: `[RÉSOLU] ${res.trim()}` });
+                        }} style={{ ...inp, marginTop: 4, display: "block", padding: "3px 8px",
+                          fontSize: 11, cursor: "pointer", color: "#34d399", borderColor: "#34d39944",
+                          background: "#061a12", width: "100%" }}>
+                          ✓ Clore
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );
