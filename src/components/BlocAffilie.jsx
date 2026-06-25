@@ -9,7 +9,7 @@ const MUTED  = "#8a8070";
 
 const GYG_BASE    = "https://www.getyourguide.com/martinique-l169136/?partner_id=DNI7ML3&q=";
 const VIATOR_BASE = "https://www.viator.com";
-const DC_URL      = "https://www.discovercars.com/france/martinique?a_aid=vinsmaf";
+const DC_URL      = "https://www.discovercars.com/fr/martinique?a_aid=vinsmaf";
 
 const CONFIGS = {
   arlet: {

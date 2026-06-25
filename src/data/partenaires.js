@@ -7,7 +7,7 @@
 export const PARTENAIRES = {
   discoverCars: {
     nom: "DiscoverCars",
-    url: "https://www.discovercars.com/france/martinique?a_aid=vinsmaf",
+    url: "https://www.discovercars.com/fr/martinique?a_aid=vinsmaf",
     label: "Comparer et réserver →",
     description: "Comparez tous les loueurs, meilleurs prix garantis",
     actif: true,
