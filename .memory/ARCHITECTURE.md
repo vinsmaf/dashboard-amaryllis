@@ -1,6 +1,6 @@
 # 🗺️ ARCHITECTURE — Locatif (villamaryllis.com)
 
-> **Date :** 2026-06-23 · **Statut :** carte de l'état actuel, à maintenir (pas un historique).
+> **Date :** 2026-06-25 · **Statut :** carte de l'état actuel, à maintenir (pas un historique).
 > But : ne plus jamais re-déduire le système depuis le code. Quand l'archi change, on met à jour ICI.
 > **Pointeurs :** état courant volatil → `.memory/CONTEXT.md` · décisions → `.memory/ADR.md` + `DECISIONS.md` ·
 > leçons → `.memory/LEARNINGS.md` · blocages → `.memory/BLOCKERS.md` · rappel par domaine → `.memory/RECALL.md` ·
@@ -199,7 +199,7 @@ flowchart TD
 ## 6. Dashboard admin
 
 - **SPA mono-fichier** `src/App.jsx` (~2007 lignes) servie sur `/admin`, lazy-loadée par `main.jsx`. 39 onglets extraits dans `src/tabs/` consommant `AppDataContext.jsx` (contexte unique, anti prop-drilling).
-- **8 groupes de nav** (`NAV_GROUPS`) / ~38 items. **RBAC** : rôle `menage` → seulement `{planning, menage}` (`MENAGE_TABS`) ; `admin` → tout.
+- **6 groupes de nav** (`NAV_GROUPS`) / ~46 items (2026-06-25, commit `eeeac4e`). **⚡ Quotidien** = Cockpit · Planning · Ménage · Revenue Mgr · Tarifs. **🔧 Opérations** = logistique+outils+comms (Interventions/Travaux/Inventaire/Prestataires/Devis/Messagerie/Messages/Emails/QR-Livrets/Guides/Cartographie). **💰 Finance** = Historique · Charges · Pilotage · Net RevPAR · Cautions. **📊 Analyses** = Prévisionnel · Analytics · Funnel · Conversion · Ventes · Avis · CRM · Leads · WhatsApp · Newsletter. **📣 Marketing** = réseaux sociaux, articles SEO, growth. **⚙️ Admin** = IA · Équipe. **Design system admin** : sous-onglets = `<SubTabBar>` depuis `src/primitives.jsx` (accentColor paramétrable). **RBAC** : rôle `menage` → seulement `{planning, menage}` (`MENAGE_TABS`) ; `admin` → tout.
 - **Auth** : `PasswordGate` → `POST /api/admin-auth` (rate-limit D1) → `_adminauth.signSession` (token HMAC-SHA256, TTL **7 j**, stateless) → sessionStorage `ldb_tok`. Toute requête `/api/*` passe par `src/lib/apiFetch.js` (`withAuth` injecte le Bearer ; sur 401 → event `admin-unauthorized` → re-PasswordGate).
 - **Composants majeurs** :
   - **`RevenueManagerPro.jsx`** (onglet `revenue`) — 4 sous-onglets (dashboard / calendar+overrides / competitors+signaux / rules), ~15 endpoints `rm-*`. Advisory only, AUCUN bouton "publier le prix".

@@ -3,6 +3,19 @@
 > Pièges déjà rencontrés + comment les éviter. 1 entrée = 1 leçon actionnable « la prochaine fois ».
 > Le journal d'erreurs exhaustif reste `../docs/ERREURS-LOG.md`.
 
+## 🎨 SubTabBar dans primitives.jsx, jamais inline — 2026-06-25
+- **Piège** : Charges et Pilotage avaient chacun leur propre pill de sous-onglets avec des styles légèrement différents (accent `#ef4444` vs `#0ea5e9`, padding divergent).
+- **La prochaine fois** : tout sous-onglet admin = `import { SubTabBar } from "../primitives.jsx"`. Props : `tabs=[{id, label}]`, `active`, `onChange`, `accent` (optionnel, défaut `#0ea5e9`). Jamais recoder les boutons pills inline.
+
+## 🧭 Nav admin : tout nouvel onglet → ranger dans les 6 groupes existants — 2026-06-25
+- Structure actée : **Quotidien** (usage quotidien Cockpit+Planning+Ménage+RevMgr+Tarifs) · **Opérations** (logistique+outils+comms) · **Finance** · **Analyses** · **Marketing** · **Admin** (IA+Équipe).
+- **La prochaine fois** : avant d'ajouter un onglet, identifier d'abord le groupe. Si aucun ne convient → soulever la question, pas créer un 7ème groupe de suite.
+
+## 🗂️ Déduplication d'onglets admin : vérifier la donnée avant de créer un onglet — 2026-06-24
+- **Piège** : "CPA canal" et "Canaux 2025" dans Pilotage étaient des doublons (Historique > Canal 2025 avait déjà les mêmes données REVENUS_CANAL_2025 ; CPA canal réutilisait les mêmes résas live que Canaux live).
+- **La prochaine fois** : avant d'ajouter un onglet ou un sous-onglet avec des données, vérifier si (1) ces données n'existent pas déjà dans un autre onglet/groupe et (2) si la différence de contexte (filtering, métrique) justifie vraiment la coexistence. Si la seule différence est cosmétique → intégrer comme sous-tab.
+- **Règle** : 1 source = 1 endroit d'affichage principal. Les autres vues = sous-tabs du même onglet parent, pas des onglets frères.
+
 ## 📇 Recouper des contacts : clé = téléphone normalisé, JAMAIS le nom — 2026-06-24
 - **Piège vécu** : recouper guest_contacts × Sheet par nom voyageur → faux positifs en cascade (« Ary »→« Gird**ary** Élodie », « lemaya »→« **Jean** François », « Laure »→« **Laure**nt Billon »). Un token de prénom commun suffit à matcher 2 personnes différentes.
 - **La prochaine fois** : recoupement/dédoublonnage = **téléphone normalisé (9 derniers chiffres significatifs : retire indicatif +33/+596/+590 et le 0 local → mobiles FR/MQ/GP convergent)** + email exact. Le nom = signal d'appoint à confirmer humainement, jamais clé d'écriture automatique. Surtout ici : contacts WhatsApp nommés « Prénom + Bien » (pas de nom de famille) = inappariables aux noms complets du Sheet.

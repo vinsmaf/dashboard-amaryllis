@@ -4,6 +4,12 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
+## En cours → ✅ terminé le 2026-06-25 (Session UI visuelle — nav 8→6 groupes + 5 améliorations visuelles admin)
+> (1) `NAV_GROUPS` App.jsx : 8 groupes → 6 (Quotidien/Opérations/Finance/Analyses/Marketing/Admin). ADR-NAV-GROUPS-001. Commit `eeeac4e`. (2) `SubTabBar` ajouté à `src/primitives.jsx` ; Charges.jsx + Pilotage.jsx migrés. (3) Nav pill active (borderLeft → rounded pill 8px margin). (4) TodayBanner "Actions aujourd'hui" : border plus marquée + boxShadow coloré vert/rouge. (5) KPI cards Cockpit : padding 8→10px, gap 8→10, border subtile. (6) Tooltip recharts `TT` : fond `#0a0f1e`, padding propre. ADR-SUBTABBAR-001. Commit `7580510`.
+
+## En cours → ✅ terminé le 2026-06-24 (Session dashboard UX — Charges Évolution + Pilotage consolidation + ROI pub)
+> (1) Charges.jsx : sub-tab "📊 Évolution" (historique charges/cashflow/revenus 2022-2025 + 2026 YTD, graphes ComposedChart + BarChart taux + table). Renommé "Budget YTD". (2) Pilotage consolidation : CPA canal intégré comme sous-tab "💸 CPA", doublon "Canaux 2025" supprimé (ADR-PILOTAGE-CONSOLIDATION-001). (3) CanalLivePerf enrichi : filtre YTD/90j/30j, encart désintermédiation % direct vs 2025/objectif 40%, graphe mix canal par mois. (4) CpaCanalTab enrichi : ROI pub direct + encart seuil Ads détaillé. (5) Historique déplacé Analyses → Finance (ADR-NAV-HISTORIQUE-001). Commits `a28906a`/`88b16bb`/`0899e90`.
+
 ## En cours → ✅ terminé le 2026-06-24 (Feature contacts : base guest_contacts WhatsApp+Sheet + onglet)
 > Table D1 `guest_contacts` = 88 contacts (53 WhatsApp + 35 Sheet), endpoint CRUD+merge, onglet 📇 Contacts. Tout en prod (CI). ADR-CONTACTS-001.
 > 🟡 **Reste à la main de Vincent** (non bloquant) : (1) 13 contacts WhatsApp **sans résa au Sheet** = prospects ou résas jamais saisies — à vérifier au cas par cas. (2) **Doublons WhatsApp↔Sheet même personne / 2 numéros** (ex. Pascal/4REAZONS vs Pascal Guilbaud) **non auto-fusionnables** (nom WhatsApp = prénom+bien) → fusion manuelle dans l'onglet si repérés. (3) Heuristique `pays` imparfaite sur quelques numéros étrangers (Dominique LOUIS skynet.be taggé FR au lieu de BE) — cosmétique, corrigeable en 1 clic.

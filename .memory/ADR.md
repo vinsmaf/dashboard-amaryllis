@@ -3,6 +3,38 @@
 > 1 entrée par décision qui engage la suite. Format 5 lignes : **Choix · Alternatives refusées · Conséquences attendues · Périmètre · Statut**.
 > Décisions d'archi détaillées (specs complets) → `../docs/superpowers/specs/README.md` (ADR-001→010). Ici = log curaté de session.
 
+## ADR-SUBTABBAR-001 · 2026-06-25 · SubTabBar centralisé dans primitives.jsx
+
+1. **Choix** : Composant `<SubTabBar tabs active onChange accent>` ajouté dans `src/primitives.jsx`. Remplace les boutons pills inline qui existaient dans Charges.jsx (`SUB_TAB_STYLE` function) et Pilotage.jsx (map inline). Tout futur sous-onglet admin doit importer `SubTabBar` depuis primitives.
+2. **Alternatives refusées** : laisser chaque tab gérer ses boutons inline (→ styles divergents entre Charges/Pilotage déjà constatés : accent `#ef4444` vs `#0ea5e9`, padding 7px vs 6px). Créer un fichier `src/components/SubTabBar.jsx` séparé (→ surcharge dossier, primitives.jsx est déjà le bon endroit pour les briques admin réutilisables).
+3. **Conséquences attendues** : toute incohérence visuelle entre sous-onglets disparaît. Prop `accent` permet de conserver la couleur spécifique (rouge pour Charges, bleu pour Pilotage). Nouvelles features avec sous-onglets = importer SubTabBar, jamais recoder.
+4. **Périmètre** : `src/primitives.jsx` (nouveau export) · `src/tabs/Charges.jsx` · `src/tabs/Pilotage.jsx`.
+5. **Statut** : acté & déployé (commit `7580510`).
+
+## ADR-NAV-GROUPS-001 · 2026-06-25 · Menu admin 8 groupes → 6 groupes
+
+1. **Choix** : `NAV_GROUPS` dans `src/App.jsx` restructuré de 8 groupes (~38 items) à 6 groupes (~46 items). **Quotidien** (Cockpit/Planning/Ménage/RevMgr/Tarifs) · **Opérations** (Interventions+Travaux+Inventaire+Prestataires+Devis+Messagerie+Messages+Emails+QR/Livrets+Guides+Cartographie) · **Finance** · **Analyses** · **Marketing** · **Admin** (IA+Équipe fusionnés).
+2. **Alternatives refusées** : garder 8 groupes (trop de scroll, groupe "Tableau de bord" 4 items flottait seul) ; regrouper en 4 (trop dense par groupe) ; ajouter un onglet "Favoris" (complexité supplémentaire sans valeur claire).
+3. **Conséquences attendues** : "Quotidien" = premier groupe visible dès ouverture du sidebar = Cockpit/Planning/Ménage directement accessibles sans scroll. Opérations absorbe tout l'outillage logistique. Admin fusionne IA + Équipe (rare usage). Tout nouvel onglet = à ranger dans l'un des 6 groupes existants.
+4. **Périmètre** : `src/App.jsx` (constante `NAV_GROUPS`).
+5. **Statut** : acté & déployé (commit `eeeac4e`).
+
+## ADR-NAV-HISTORIQUE-001 · 2026-06-24 · Onglet Historique déplacé de "Analyses" → "Finance"
+
+1. **Choix** : `{ id: "historique" }` déplacé du groupe `analyses` vers le groupe `finance` dans `NAV_GROUPS` de `App.jsx` (1ère position du groupe Finance).
+2. **Alternatives refusées** : le garder en Analyses (mais Historique = revenus annuels / rentabilité / canal 2025 = contenu financier, pas analytique comportemental comme Analytics/Funnel/CRM).
+3. **Conséquences attendues** : Finance contient désormais Historique · Charges · Pilotage · Net RevPAR · Cautions — cohérence thématique. Analyses = Analytics/Funnel/Conversion/Ventes/Avis/CRM/Leads/WhatsApp/Newsletter.
+4. **Périmètre** : `src/App.jsx` (constante `NAV_GROUPS`).
+5. **Statut** : acté & déployé (commit `0899e90`).
+
+## ADR-PILOTAGE-CONSOLIDATION-001 · 2026-06-24 · CPA canal intégré comme sous-tab Pilotage + suppression standalone
+
+1. **Choix** : `CpaCanalTab` (onglet standalone "💸 CPA canal" dans le menu principal) supprimé ; il devient le sous-onglet "💸 CPA" à l'intérieur de `Pilotage.jsx`. "💼 Canaux 2025" supprimé de Pilotage (était un doublon de Historique > "🏷 Canal 2025"). Résultat Pilotage : ⚡ Canaux live · 💸 CPA · 🎯 Marché · 📋 Fiscal · 🎓 Conseil.
+2. **Alternatives refusées** : garder CPA canal en standalone (→ doublon de données live des canaux). Conserver "Canaux 2025" dans Pilotage (→ doublon exact de Historique "Canal 2025"). Fusionner CPA + Canaux live (→ contextes différents : live=volume, CPA=coût d'acquisition).
+3. **Conséquences attendues** : -1 onglet dans le menu principal (→ ~37 items). Pilotage = point d'entrée unique pour l'analyse canal (live + coût + marché + fiscal). REVENUS_CANAL_2025 réimporté dans Pilotage.jsx pour la comparaison 2025.
+4. **Périmètre** : `src/App.jsx` · `src/tabs/Pilotage.jsx` · `src/tabs/CpaCanalTab.jsx` · `src/tabs/Charges.jsx` (sub-tabs Évolution ajoutés dans la même session).
+5. **Statut** : acté & déployé (commits `a28906a`/`88b16bb`/`0899e90`).
+
 ## ADR-CONTACTS-001 · 2026-06-24 · Base contacts `guest_contacts` (WhatsApp + Sheet) + recoupement par téléphone
 
 1. **Choix** : table D1 `guest_contacts` alimentée en 2 temps — scan WhatsApp (53, `source='whatsapp'`) puis recoupement avec l'onglet « Toutes les Réservations » du Sheet (+35 locataires directs/Beds24 avec coordonnées, `source='sheet'`) = **88 contacts**. Endpoint admin `guest-contacts.js` (CRUD + `?action=merge`) + onglet `GuestContactsTab.jsx` (📇 Contacts) avec fusion manuelle des doublons.
