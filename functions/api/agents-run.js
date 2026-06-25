@@ -727,14 +727,16 @@ ${bienId === "iguana"     ? "  Villa Iguana, Sainte-Luce — 6 pers · 2 chambre
 ${bienId === "geko"       ? "  Géko, Sainte-Luce (résidence Amaryllis hauteurs) — 4 pers · 1 chambre · 4,83★ · jardin tropical, PISCINE PRIVATIVE AVEC CASCADE (chaque logement de la résidence a sa propre piscine)" : ""}
 ${bienId === "mabouya"    ? "  Mabouya (résidence Amaryllis hauteurs) — 2 pers · 1 chambre · 4,55★ · JACUZZI privatif terrasse avec VUE mer (pas de piscine, pas pieds dans l'eau)" : ""}
 ${bienId === "schoelcher" ? "  Bellevue, Schœlcher (hauteurs) — 2 pers · 1 chambre · 4,8★ · vue baie Fort-de-France + Trois-Îlets (pas de piscine)" : ""}
-${bienId === "nogent"     ? "  Appt Nogent-sur-Marne — 2 pers · 1 chambre · jardin + terrasse · bord de Marne, RER A 20min Paris" : ""}
+${bienId === "nogent"     ? "  Appt Nogent-sur-Marne — 2 pers · 1 chambre · jardin privatif + terrasse bois · RER A 20min Paris. À évoquer : jardin fleuri (glycines), hirondelles le matin, balade vélo, marché local, Paris à portée, échappée verdure IDF. NE PAS évoquer l'eau/rivière/Marne." : ""}
 
-🚫 GÉOGRAPHIE — INTERDIT :
+🚫 GÉOGRAPHIE — INTERDIT (fact-check automatique + règles apprises) :
+  - "clapotis" (seul ou combiné) → banni globalement, MÊME pour Nogent/Marne
+  - "chant des vagues", "bruit/son/murmure/rugissement/écume des vagues"
   - "mer entre dans la chambre", "pieds dans l'eau", "à Xm de la plage"
-  - "clapotis des vagues", "bruit/chant/murmure/rugissement/écume des vagues"
   - "vagues qui chantent/caressent/bercent/murmurent"
   - "sable chaud sous les pieds", "réveillé par les vagues", "lagon devant"
   - "plage privée", "crique privée", "ponton devant"
+  - Pour Nogent : éviter toute référence à l'eau (rivière, Marne, berge mouillée)
 
 🚫 ÉQUIPEMENTS — INTERDIT (mensonge factuel) :
   - "piscine à débordement" UNIQUEMENT pour Villa Amaryllis (PAS pour les autres)
@@ -773,8 +775,12 @@ ${bienId === "nogent"     ? "  Appt Nogent-sur-Marne — 2 pers · 1 chambre · 
   Bien=schoelcher :
     "Bellevue à Schœlcher, sa vue panoramique sur la baie de Fort-de-France et les Trois-Îlets."
 
-  Bien=nogent :
-    "Appt Nogent-sur-Marne, son jardin et sa terrasse à 20 min de Paris en RER A."
+  Bien=nogent (EXEMPLE COMPLET 5 blocs) :
+    HOOK:        "Vingt minutes. C'est tout ce qui sépare Paris de ce jardin."
+    DESCRIPTION: "Appartement Nogent-sur-Marne : une terrasse en bois, des glycines qui grimpent, le chant des mésanges le matin. L'après-midi, le vélo, le marché, les berges verdoyantes. Le soir, Paris — si vous en avez encore envie."
+    BÉNÉFICE:    "Pour un week-end en amoureux ou une semaine sans agenda."
+    CTA:         "Réservez en direct → https://villamaryllis.com/nogent ⤴️"
+    HASHTAGS:    "#AmaryllisLocations #NogentSurMarne #ÉchappéeParis #WeekendNature #JardinPrivatif #SlowTravel #ProcheDeParis #LocationDirecte"
 
 ❌ EXEMPLES À NE PAS PRODUIRE (raisons précises) :
 
@@ -883,11 +889,12 @@ ${agent.id === "community-manager" ? `
 ═══════════════════════════════════════════════════════════════
 📐 STRUCTURE OBLIGATOIRE D'UNE CAPTION (5 blocs, lignes vides entre)
 ═══════════════════════════════════════════════════════════════
-Bloc 1 — HOOK accrocheur (≤ 12 mots, image sensorielle ou chiffre)
-        Ex: "Six heures du matin. La mer entre dans la chambre."
+Bloc 1 — HOOK accrocheur (≤ 12 mots, image sensorielle ou chiffre — PAS de clichés interdits)
+        Ex Martinique: "Six heures du matin. L'horizon remplace l'alarme."
+        Ex IDF: "Vingt minutes. C'est tout ce qui sépare Paris de ce jardin."
 
-Bloc 2 — DESCRIPTION (3-5 lignes, sensoriel : vue/son/ambiance, max 150 mots)
-        Ex: "À la Villa Amaryllis, les rideaux ne servent presque à rien. On les laisse ouverts. Et c'est l'horizon qui vous réveille — pas une alarme."
+Bloc 2 — DESCRIPTION (3-5 lignes, sensoriel : vue/lumière/sons naturels/ambiance, max 150 mots)
+        Ex: "Perchée sur les hauteurs de Sainte-Luce, la Villa Amaryllis capte les alizés dès l'aube. La piscine à débordement eau salée attrape le coucher de soleil. Pas d'alarme. Juste l'horizon."
 
 Bloc 3 — BÉNÉFICE clair (1 ligne, ce que le voyageur gagne)
         Ex: "Pour des vacances où le temps s'arrête vraiment."
@@ -898,21 +905,28 @@ Bloc 4 — CTA explicite avec URL COMPLÈTE
 Bloc 5 — HASHTAGS (5-9 stratégiques, mix marque + lieu + audience)
         Ex: "#AmaryllisLocations #Martinique #SainteLuce #VillaPiscine #SlowTravel #Caraïbes #Honeymoon"
 
-🚨 INTERDIT : cascade emojis, "opportunité unique", "n'hésitez pas", "découvrez sans plus attendre"
+🎯 CRITÈRES DE SCORE (le gate note de 0 à 100 — seuil d'auto-publication : 85/100) :
+  Hook stop-scroll sensoriel (première ligne accroche sans cliché)        : 20 pts
+  Immersion sensorielle (vue, lumière, alizés, sons naturels, ambiance)   : 25 pts
+  CTA clair avec URL villamaryllis.com                                      : 15 pts
+  Hashtags stratégiques (6-9 : marque + lieu + cible + usage)             : 20 pts
+  Voix formelle "vous" (jamais "tu")                                        : 10 pts
+  Aucune erreur factuelle (équipements, nomenclature, géographie)          : 10 pts
+→ Un seul mot interdit = score 0 (rejet immédiat avant notation).
 
-EXEMPLE DE CAPTION PARFAITE (à imiter, pas copier) :
+🚨 INTERDIT ABSOLU : cascade emojis, "opportunité unique", "n'hésitez pas", "découvrez sans plus attendre", tout terme de la liste GÉOGRAPHIE ci-dessus.
+
+EXEMPLE DE CAPTION PARFAITE (à imiter, pas copier) — Amaryllis :
 """
-Six heures du matin. La mer entre dans la chambre.
+Six heures du matin. L'horizon remplace l'alarme.
 
-À la Villa Amaryllis, les rideaux ne servent presque à rien. On les laisse ouverts. Et c'est l'horizon qui vous réveille — pas une alarme.
-
-Quatre chambres, une piscine privée, et le silence d'une crique de Sainte-Luce. C'est tout. C'est beaucoup.
+Perchée sur les hauteurs de Sainte-Luce, la Villa Amaryllis vous réveille avant le soleil. La piscine à débordement eau salée (4×7 m, eau non chlorée) capte les premières lueurs. Trois chambres, huit voyageurs, et les alizés en fond sonore.
 
 Pour des vacances où le temps s'arrête vraiment.
 
 Réservez sur https://villamaryllis.com/amaryllis ⤴️
 
-#AmaryllisLocations #Martinique #SainteLuce #VillaPiscine #SlowTravel #Caraïbes #Honeymoon
+#AmaryllisLocations #Martinique #SainteLuce #VillaPiscine #PiscineEauSalée #SlowTravel #Caraïbes #Honeymoon
 """
 ═══════════════════════════════════════════════════════════════
 ` : ""}
@@ -1441,17 +1455,15 @@ VOICE Amaryllis : "vous" formel, ton chaleureux, JAMAIS publicitaire, jamais "op
 
 EXEMPLE DE PERFECTION (caption Villa Amaryllis 9/10) :
 """
-Six heures du matin. La mer entre dans la chambre.
+Six heures du matin. L'horizon remplace l'alarme.
 
-À la Villa Amaryllis, les rideaux ne servent presque à rien. On les laisse ouverts. Et c'est l'horizon qui vous réveille — pas une alarme.
-
-Quatre chambres, une piscine privée, et le silence d'une crique de Sainte-Luce. C'est tout. C'est beaucoup.
+Perchée sur les hauteurs de Sainte-Luce, la Villa Amaryllis capte les alizés dès l'aube. La piscine à débordement eau salée (4×7 m, non chlorée) attrape le coucher de soleil. Trois chambres, huit voyageurs, et le bruissement des palmiers en fond sonore.
 
 Pour des vacances où le temps s'arrête vraiment.
 
 Réservez sur https://villamaryllis.com/amaryllis ⤴️
 
-#AmaryllisLocations #Martinique #SainteLuce #VillaPiscine #SlowTravel #Caraïbes #Honeymoon
+#AmaryllisLocations #Martinique #SainteLuce #VillaPiscine #PiscineEauSalée #SlowTravel #Caraïbes #Honeymoon
 """
 
 🚨 RÈGLE ABSOLUE : Tu DOIS TOUJOURS fournir improved_blocks (sauf si verdict=reject).
