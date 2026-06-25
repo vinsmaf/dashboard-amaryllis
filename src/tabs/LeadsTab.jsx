@@ -59,6 +59,14 @@ export default function LeadsTab({ token }) {
       setLeads((prev) => prev.map((x) => x.id === id ? { ...x, ...payload } : x));
     } finally { setBusy(false); }
   }
+  async function remove(l) {
+    if (!confirm(`Supprimer le message de "${l.nom}" ?`)) return;
+    setBusy(true);
+    try {
+      await fetch(`/api/contacts?id=${l.id}`, { method: "DELETE", headers: auth });
+      setLeads((prev) => prev.filter((x) => x.id !== l.id));
+    } finally { setBusy(false); }
+  }
 
   const inp = { background: "#0f1420", border: "1px solid #2a3344", color: "#e2e8f0",
     borderRadius: 6, padding: "6px 10px", fontSize: 13, fontFamily: "inherit" };
@@ -157,6 +165,11 @@ export default function LeadsTab({ token }) {
                           ✓ Clore
                         </button>
                       )}
+                      <button disabled={busy} onClick={() => remove(l)} title="Supprimer"
+                        style={{ ...inp, marginTop: 4, display: "block", padding: "2px 7px",
+                          fontSize: 11, cursor: "pointer", color: "#94a3b8", width: "100%" }}>
+                        🗑
+                      </button>
                     </td>
                   </tr>
                 );

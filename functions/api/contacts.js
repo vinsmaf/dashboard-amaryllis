@@ -79,12 +79,31 @@ export async function onRequestPatch(context) {
   }
 }
 
+export async function onRequestDelete(context) {
+  if (!(await checkAuth(context))) return json({ error: "Non autorisé" }, 401);
+
+  const db = context.env.revenue_manager;
+  if (!db) return json({ error: "D1 non configuré" }, 503);
+
+  const url = new URL(context.request.url);
+  const id  = url.searchParams.get("id");
+  if (!id) return json({ error: "id requis" }, 400);
+
+  try {
+    await db.prepare("DELETE FROM contacts WHERE id = ?").bind(id).run();
+    return json({ ok: true });
+  } catch (err) {
+    console.error("[contacts] DELETE error:", err);
+    return json({ error: err.message }, 500);
+  }
+}
+
 export async function onRequestOptions() {
   return new Response(null, {
     status: 204,
     headers: {
       "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, PATCH, OPTIONS",
+      "Access-Control-Allow-Methods": "GET, PATCH, DELETE, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type, Authorization",
     },
   });
