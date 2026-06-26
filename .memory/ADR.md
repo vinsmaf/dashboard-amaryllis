@@ -5,11 +5,11 @@
 
 ## ADR-RM-PLANCHER-001 · 2026-06-26 · Plancher CalendrierTarifs dans les recos RM (UI-side)
 
-1. **Choix** : Le plancher des recos RM = `max(rm_reco, prix_calendrier_tarifs_du_jour)` appliqué côté UI dans `RevenueManagerPro.jsx`. Import de `loadDailyPrices` → `effectiveCents(reco)` + `isCalFloor(reco)`. Indicateur 📅 + tooltip quand le plancher joue.
-2. **Alternatives refusées** : (A) Alimenter D1 `rm_properties.base_price_mid/low/high` — nécessite saisie manuelle de la grille (option 1 de Vincent, repoussée). (B) Passer les prix CalendrierTarifs au `/calculate` server-side — plus propre en D1 mais inutile pour usage advisory ; peut être fait plus tard sans ADR.
-3. **Conséquences attendues** : les recos affichées ne descendent jamais sous les prix du CalendrierTarifs réels. Les valeurs stockées en D1 (`recommended_price_cents`) restent les valeurs RM brutes — l'UI les corrige à la volée. Si on ajoute un calcul server-side plus tard, l'UI-floor devient redondant mais inoffensif.
-4. **Périmètre** : `src/RevenueManagerPro.jsx` (import + helpers + 4 zones d'affichage). Commit `f47482b`.
-5. **Statut** : acté & déployé.
+1. **Choix** : Le plancher CalendrierTarifs est intégré à 2 niveaux : (A) **server-side** dans `calcDateReco` via `calFloorCents` (5ème couche du `hardFloor`) — `handleCalculate` lit `daily_floors` du body et les passe date par date ; (B) **UI-side** dans `RevenueManagerPro.jsx` via `effectiveCents(reco)` = filet de sécurité pour les vieilles recos en D1.
+2. **Alternatives refusées** : (A) Alimenter D1 `rm_properties.base_price_mid/low/high` manuellement — grille à double saisie, diverge des vrai prix CalendrierTarifs. (B) UI-side seulement — D1 stocke des valeurs fausses.
+3. **Conséquences attendues** : quand Vincent clique "Recalculer" (bien seul ou ♻️ Tous), les prix CalendrierTarifs du jour sont passés au backend → D1 stocke des `recommended_price_cents` qui ne descendent jamais sous ces prix. L'UI-floor reste actif pour les dates non recalculées. Vincent a confirmé les prix corrects.
+4. **Périmètre** : `functions/api/rm-recommendations/[[path]].js` (calcDateReco + handleCalculate, commits `f47482b`/`2801542`) · `src/RevenueManagerPro.jsx` (UI-floor + handleCalculate + handleRecalcAllBiens).
+5. **Statut** : acté & déployé. Validé par Vincent ("c'est bon les prix sont correct").
 
 ## ADR-REVENUS-DIVISION-001 · 2026-06-26 · Division égale par mois pour longs séjours Apps Script
 

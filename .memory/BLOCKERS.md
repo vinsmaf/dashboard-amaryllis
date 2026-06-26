@@ -4,6 +4,8 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
+## En cours → ✅ terminé le 2026-06-26 (Session RM plancher CalendrierTarifs — fix complet server+UI)
+
 ## En cours → ✅ terminé le 2026-06-26 (Session revenus — corrections chirurgicales Sheet « revenus locatifs 2026 »)
 > Corrections 2026-06-26 via `revenus2026ManualPatch_` (@71) :
 > - Schœlcher direct juin : 1285.71€ → **1300€** (Morgane POMPADOU, division égale 3900€/3 mois) ✅

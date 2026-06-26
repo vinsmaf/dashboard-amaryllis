@@ -3,6 +3,11 @@
 > Pièges déjà rencontrés + comment les éviter. 1 entrée = 1 leçon actionnable « la prochaine fois ».
 > Le journal d'erreurs exhaustif reste `../docs/ERREURS-LOG.md`.
 
+## 🏷️ RM : passer `daily_floors` au `/calculate` = pattern correct pour respecter les prix réels — 2026-06-26
+- **Pattern validé** : passer `{ daily_floors: { "2026-07-01": 280, ... } }` dans le body du POST `/api/rm-recommendations/calculate` → `calcDateReco` reçoit `calFloorCents` comme 5ème couche du `hardFloor`. D1 stocke les vraies valeurs.
+- **La prochaine fois** : tout recalcul RM depuis le frontend doit inclure `daily_floors: calendrierPrices` (bien seul) ou `allPrices[bienId]` (bulk). Si un cron côté Worker doit recalculer, il devra charger les prix depuis une autre source (seedPrices.js n'est pas disponible server-side) → à prévoir si besoin.
+- **Ne pas confondre avec l'UI-floor** (`effectiveCents()`) qui reste utile pour les recos pré-existantes en D1 avant ce fix.
+
 ## 🏷️ RM D1 `rm_properties` : base_price_* = NULL par défaut — plancher = siteMinCents seulement — 2026-06-26
 - **Découverte** : tous les champs `base_price_low/mid/high`, `price_min`, `price_max` = NULL dans `rm_properties` (jamais configurés). Le moteur `calcDateReco` remplace les NULL par 0 → `hardFloor = max(0, 0, siteMinCents, 0) = siteMinCents` (prix biens.js uniquement). Le fix `basePrice` dans `hardFloor` (session précédente) était sans effet car `base_price_mid = NULL → 0`.
 - **La prochaine fois** : pour que les recos RM respectent les saisons, 2 options — (A) Alimenter `rm_properties` avec la grille via `/api/rm-properties` (Bearer auth + JSON) ; (B) Plancher UI-side via `loadDailyPrices` (option choisie 26/06). Option B = 0 D1 touch, toujours à jour avec le CalendrierTarifs réel.
