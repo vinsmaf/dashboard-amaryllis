@@ -657,7 +657,12 @@ function sendNtfyPush_(title, body) {
 function normDate_(v) {
   if (v == null) return "";
   if (v instanceof Date && !isNaN(v)) {
-    return v.getUTCFullYear() + "-" + String(v.getUTCMonth() + 1).padStart(2, "0") + "-" + String(v.getUTCDate()).padStart(2, "0");
+    // La feuille stocke les dates à MINUIT heure locale (Europe/Paris). getUTC*
+    // reculait d'un jour (Paris = UTC+1/+2) → clés-contenu décalées vs les dates
+    // entrantes en string → dédup par contenu CASSÉE (placeholders iCal jamais
+    // fusionnés avec la ligne enrichie, enrichReservation_ ne matchait jamais).
+    // On lit donc les composantes LOCALES (fuseau du script), cohérent avec fmtDate.
+    return v.getFullYear() + "-" + String(v.getMonth() + 1).padStart(2, "0") + "-" + String(v.getDate()).padStart(2, "0");
   }
   return String(v).slice(0, 10);
 }
