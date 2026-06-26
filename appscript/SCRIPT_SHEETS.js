@@ -802,6 +802,24 @@ function importAllReservations_(input) {
     }
 
     if (existingRow) {
+      // PRÉSERVATION des champs saisis à la main : les iCal OTA (Booking surtout,
+      // mais aussi Airbnb) ne transmettent NI nom NI montant → la résa arrive en
+      // "Voyageur"/0 à chaque sync. Sans ça, le sync horaire écraserait la saisie
+      // manuelle. Règle : un placeholder entrant ne remplace JAMAIS une vraie
+      // valeur existante ; une vraie valeur entrante (ex. montant Airbnb) gagne.
+      var cur = sheet.getRange(existingRow, 1, 1, NCOLS).getValues()[0];
+      var PLACEHOLDER_VOY = { "":1, "—":1, "-":1, "voyageur":1, "voyageur (booking)":1,
+        "reserved":1, "réservé":1, "not available":1, "blocked":1, "closed":1, "closed - not available":1 };
+      function keepText_(inc, old) {
+        var s = String(inc == null ? "" : inc).trim();
+        return (!s || PLACEHOLDER_VOY[s.toLowerCase()]) ? old : inc;
+      }
+      row[2]  = keepText_(row[2],  cur[2]);                              // Voyageur
+      row[7]  = (Number(row[7]) > 0) ? row[7] : cur[7];                  // Montant
+      row[9]  = (Number(row[9]) > 1) ? row[9] : (Number(cur[9]) > 0 ? cur[9] : row[9]); // Voyageurs
+      row[10] = keepText_(row[10], cur[10]);                            // Notes
+      row[13] = keepText_(row[13], cur[13]);                            // Téléphone
+      row[14] = keepText_(row[14], cur[14]);                            // Email
       sheet.getRange(existingRow, 1, 1, NCOLS).setValues([row]);
       existingIds[id] = existingRow;
       if (contentK && contentK !== "||") existingByContent[contentK] = existingRow;
