@@ -4610,7 +4610,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
             <div style={{ marginBottom: 32 }}>
               <Eyebrow color="muted" style={{ marginBottom: 14 }}>{lang === "fr" ? "Équipements" : "Amenities"}</Eyebrow>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {(lang === "fr" ? bien.amenities : (bien.amenitiesEn || bien.amenities)).map(a => (
+                {(lang === "fr" ? (bien.amenities || []) : (bien.amenitiesEn || bien.amenities || [])).map(a => (
                   <Chip key={a}>{a}</Chip>
                 ))}
               </div>
@@ -7133,7 +7133,7 @@ function TestimonialsSection({ onDetail }) {
                 }}
                 onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 8px 28px rgba(14,59,58,0.1)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
                 onMouseLeave={e => { e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.transform = "translateY(0)"; }}
-                onClick={() => onDetail && onDetail({ id: r.villaId })}
+                onClick={() => onDetail && onDetail(BIENS.find(b => b.id === r.villaId))}
               >
                 {/* Author row */}
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -8716,7 +8716,7 @@ export default function PublicSite() {
       const title = isMartinique
         ? `${bien.nom} — Location villa ${keyFeatures ? `(${keyFeatures}) ` : ""}à ${bien.lieu.split(",")[0]} | ${priceStr}`
         : `${bien.nom} — ${bien.lieu} | Amaryllis — ${priceStr}`;
-      const desc = bien.desc.slice(0, 155) + (bien.desc.length > 155 ? "…" : "");
+      const desc = (bien.desc || "").slice(0, 155) + ((bien.desc || "").length > 155 ? "…" : "");
 
       window.history.pushState({}, "", "/" + bien.id);
       window.scrollTo({ top: 0, behavior: "instant" });
@@ -8746,7 +8746,7 @@ export default function PublicSite() {
               "name": bien.nom,
               "url": url,
               "identifier": bien.id,
-              "description": bien.desc.slice(0, 300),
+              "description": (bien.desc || "").slice(0, 300),
               "image": (bien.photos || []).slice(0, 8).map(p => ({
                 "@type": "ImageObject",
                 "url": `https://villamaryllis.com${p}`,
