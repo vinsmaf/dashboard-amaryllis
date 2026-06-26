@@ -278,11 +278,11 @@ export function calcDateReco({
   const effectiveMinStay = overrideMinStay !== null ? overrideMinStay : minStay;
 
   // Clamp to [price_min, price_max]
-  // Plancher à 5 couches : price_min D1 / base_price_low D1 / prix biens.js / basePrice saisonnier / CalendrierTarifs du jour.
-  // La 4e couche garantit que le RM ne recommande jamais SOUS le prix de base de la saison courante —
-  // les règles de discount (lead_time, occupation) peuvent monter mais jamais descendre sous ce plancher.
+  // Plancher = prix CalendrierTarifs du jour (semaine/weekend définis par Vincent).
+  // Fallback si calFloorCents non fourni : prix biens.js (plancher absolu). Le basePrice saisonnier
+  // n'est PAS un plancher — les remises last-minute/occupation peuvent descendre sous la base saison.
   const siteMinCents = (BIENS[property.id]?.prix || 0) * 100;
-  const hardFloor = Math.max(property.price_min || 0, property.base_price_low || 0, siteMinCents, basePrice, calFloorCents);
+  const hardFloor = Math.max(property.price_min || 0, property.base_price_low || 0, calFloorCents > 0 ? calFloorCents : siteMinCents);
   const isFloorClamped = effectivePrice < hardFloor;
   const clampedPrice = Math.max(hardFloor, Math.min(property.price_max || Infinity, effectivePrice));
 
