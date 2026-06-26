@@ -282,7 +282,7 @@ function RevenueManagerPro() {
   const handleCalculate = useCallback(async () => {
     setCalcStatus('loading');
     addLog(`Calcul des prix pour ${selProp}…`);
-    const res = await apiCall('/api/rm-recommendations/calculate', { method: 'POST', body: JSON.stringify({ property_id: selProp }) });
+    const res = await apiCall('/api/rm-recommendations/calculate', { method: 'POST', body: JSON.stringify({ property_id: selProp, daily_floors: calendrierPrices }) });
     if (res?.ok) {
       setCalcStatus('ok');
       addLog(`✓ ${res.count || '?'} prix calculés`, 'success');
@@ -370,9 +370,11 @@ function RevenueManagerPro() {
 
   const handleRecalcAllBiens = useCallback(async () => {
     addLog(`Recalcul pour ${shortTermBiens.length} biens…`);
+    const allPrices = loadDailyPrices() || {};
     for (const b of shortTermBiens) {
-      const res = await apiCall('/api/rm-recommendations/calculate', { method: 'POST', body: JSON.stringify({ property_id: b.id || b.slug || b.nom || b.name }) });
-      addLog(res?.ok ? `✓ ${b.nom || b.name || b.id}` : `✗ ${b.nom || b.name || b.id}`, res?.ok ? 'success' : 'error');
+      const bienId = b.id || b.slug || b.nom || b.name;
+      const res = await apiCall('/api/rm-recommendations/calculate', { method: 'POST', body: JSON.stringify({ property_id: bienId, daily_floors: allPrices[bienId] || {} }) });
+      addLog(res?.ok ? `✓ ${b.nom || b.name || bienId}` : `✗ ${b.nom || b.name || bienId}`, res?.ok ? 'success' : 'error');
     }
     addLog('Recalcul global terminé', 'success');
   }, [shortTermBiens, apiCall, addLog]);

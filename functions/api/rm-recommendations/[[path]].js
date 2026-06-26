@@ -80,6 +80,7 @@ export function calcDateReco({
   today,
   ownOccupancy = null,
   bookedDates = null,
+  calFloorCents = 0,
 }) {
   const dateObj = new Date(dateStr + "T00:00:00Z");
   const dow = dateObj.getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
@@ -277,11 +278,11 @@ export function calcDateReco({
   const effectiveMinStay = overrideMinStay !== null ? overrideMinStay : minStay;
 
   // Clamp to [price_min, price_max]
-  // Plancher à 4 couches : price_min D1 / base_price_low D1 / prix biens.js / basePrice saisonnier.
+  // Plancher à 5 couches : price_min D1 / base_price_low D1 / prix biens.js / basePrice saisonnier / CalendrierTarifs du jour.
   // La 4e couche garantit que le RM ne recommande jamais SOUS le prix de base de la saison courante —
   // les règles de discount (lead_time, occupation) peuvent monter mais jamais descendre sous ce plancher.
   const siteMinCents = (BIENS[property.id]?.prix || 0) * 100;
-  const hardFloor = Math.max(property.price_min || 0, property.base_price_low || 0, siteMinCents, basePrice);
+  const hardFloor = Math.max(property.price_min || 0, property.base_price_low || 0, siteMinCents, basePrice, calFloorCents);
   const isFloorClamped = effectivePrice < hardFloor;
   const clampedPrice = Math.max(hardFloor, Math.min(property.price_max || Infinity, effectivePrice));
 
@@ -414,7 +415,7 @@ async function handleGet(request, db) {
 }
 
 async function handleCalculate(db, body) {
-  const { property_id } = body;
+  const { property_id, daily_floors } = body;
   if (!property_id) return json({ error: "property_id required" }, 400);
 
   const today = new Date().toISOString().slice(0, 10);
@@ -499,6 +500,7 @@ async function handleCalculate(db, body) {
       today,
       ownOccupancy,
       bookedDates,
+      calFloorCents: daily_floors && daily_floors[dateStr] ? daily_floors[dateStr] * 100 : 0,
     })
   );
 
