@@ -140,7 +140,11 @@ function formatDate(dateStr) {
 }
 
 // ── Parser ICS ────────────────────────────────────────────────────────────────
-function parseICS(text, bienId) {
+// canal : "airbnb" | "booking". Booking.com N'EXPOSE PAS le nom du voyageur → TOUTE
+// réservation y est "CLOSED - Not available". On ne peut donc PAS skipper ces
+// événements pour Booking (sinon 0 résa captée — cause de l'incident 26/06). Pour
+// Airbnb au contraire, "Not available" = blocage manuel de l'hôte → à ignorer.
+function parseICS(text, bienId, canal) {
   const events = [];
   const blocks = text.split("BEGIN:VEVENT").slice(1);
   for (const block of blocks) {
@@ -157,7 +161,15 @@ function parseICS(text, bienId) {
     const uid = get("UID");
     const sum = get("SUMMARY");
     if (!ci || !co || !uid) continue;
-    if (/not available|blocked/i.test(sum)) continue;
+    const isBlocked = /not available|blocked|closed/i.test(sum);
+    // Airbnb : blocage manuel → ignorer. Booking : c'est une vraie résa → garder.
+    if (isBlocked && canal !== "booking") continue;
+    // Booking : un bloc multi-mois = fermeture manuelle de l'hôte, pas un séjour.
+    // Filtre les ranges aberrants (ex: 6 mois) sans risquer un vrai séjour (<90 nuits).
+    if (canal === "booking" && isBlocked) {
+      const nights = diffDays(ci, co);
+      if (nights > 90) { console.log(`[parseICS] ${bienId}/booking: bloc ${nights} nuits (${ci}→${co}) = fermeture, ignoré`); continue; }
+    }
     const desc = get("DESCRIPTION").replace(/\\n/g, "\n");
     const descGet = (patterns) => {
       for (const p of patterns) {
@@ -169,7 +181,9 @@ function parseICS(text, bienId) {
     const montantRaw = descGet(["Montant total","Total","Amount","Payout"]);
     const montantParsed = montantRaw ? parseFloat(montantRaw.replace(/[^0-9.,]/g, "").replace(",", ".")) || 0 : 0;
     const montant = (montantParsed > 0 && montantParsed <= 50000) ? montantParsed : 0;
-    let voyageur = sum.replace(/^(Réservé|Reserved|Booking)\s*[-–]?\s*/i, "").replace(/\(.*\)/g, "").trim() || "Voyageur";
+    let voyageur = sum.replace(/^(Réservé|Reserved|Booking)\s*[-–]?\s*/i, "").replace(/\(.*\)/g, "").trim();
+    // Booking ne donne pas le nom ("CLOSED - Not available") → placeholder à compléter dans l'admin.
+    if (!voyageur || /closed|not available|blocked/i.test(voyageur)) voyageur = "Voyageur";
     events.push({ uid, bienId, nom: NOMS[bienId] || bienId, voyageur, checkin: ci, checkout: co, montant });
   }
   return events;
@@ -1489,7 +1503,7 @@ async function pushToSheets(env, allEvents) {
 async function syncFeed(env, bienId, url, canal, allEvents, nouvelles, annulations) {
   try {
     const text = await fetchICS(url);
-    const events = parseICS(text, bienId).map(e => ({ ...e, canal }));
+    const events = parseICS(text, bienId, canal).map(e => ({ ...e, canal }));
     const kvKey = `uids:${bienId}:${canal}`;
     // raw === null ⇒ feed JAMAIS synchronisé. On distingue du feed déjà vu mais vide ("[]").
     const raw = await env.ICAL_STORE.get(kvKey, "json");
