@@ -52,14 +52,43 @@ function getAirbnbUrls(env) {
   return map;
 }
 
-function getBookingUrls(env) {
-  const map = {};
-  const keys = { amaryllis: "ICAL_BOOKING_AMARYLLIS", geko: "ICAL_BOOKING_GEKO",
-                 mabouya: "ICAL_BOOKING_MABOUYA", schoelcher: "ICAL_BOOKING_SCHOELCHER",
-                 zandoli: "ICAL_BOOKING_ZANDOLI" };
-  for (const [bienId, envKey] of Object.entries(keys)) {
-    if (env[envKey]) map[bienId] = env[envKey];
+// URLs iCal Booking.com — SOURCE UNIQUE = projet Pages (secrets ICAL_BOOKING_*),
+// lue au runtime via /api/ical-config (auth POSTSTAY_SECRET). Le Worker a son PROPRE
+// store de secrets : dupliquer les URLs ici avait créé une divergence silencieuse
+// (Worker sans aucun secret Booking → TOUTES les résas Booking invisibles au
+// pipeline notif/Sheet/dashboard, alors que le calendrier site restait bloqué car
+// Pages, lui, les avait). Fallback sur les secrets env du Worker si la lecture
+// Pages échoue (ou s'ils y sont ajoutés un jour). Async : seul appelant = runSync.
+const BOOKING_KEYS = { amaryllis: "ICAL_BOOKING_AMARYLLIS", geko: "ICAL_BOOKING_GEKO",
+                       mabouya: "ICAL_BOOKING_MABOUYA", schoelcher: "ICAL_BOOKING_SCHOELCHER",
+                       zandoli: "ICAL_BOOKING_ZANDOLI" };
+async function getBookingUrls(env) {
+  // 1) Source unique : projet Pages
+  try {
+    const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+    const secret  = env.POSTSTAY_SECRET || env.WORKER_SECRET || "";
+    if (secret) {
+      const ctrl = new AbortController();
+      const tid  = setTimeout(() => ctrl.abort(), 8000);
+      const r = await fetch(`${siteUrl}/api/ical-config?secret=${encodeURIComponent(secret)}`, { signal: ctrl.signal });
+      clearTimeout(tid);
+      if (r.ok) {
+        const d = await r.json().catch(() => ({}));
+        const booking = (d && d.booking) || {};
+        const map = {};
+        for (const bienId of Object.keys(BOOKING_KEYS)) if (booking[bienId]) map[bienId] = booking[bienId];
+        if (Object.keys(map).length > 0) return map;
+        console.warn("[booking-urls] ical-config OK mais 0 URL Booking — fallback env");
+      } else {
+        console.warn(`[booking-urls] ical-config HTTP ${r.status} — fallback env`);
+      }
+    }
+  } catch (e) {
+    console.warn("[booking-urls] lecture Pages échouée — fallback env:", e.message);
   }
+  // 2) Fallback : secrets env du Worker
+  const map = {};
+  for (const [bienId, envKey] of Object.entries(BOOKING_KEYS)) if (env[envKey]) map[bienId] = env[envKey];
   return map;
 }
 
@@ -1457,15 +1486,30 @@ async function pushToSheets(env, allEvents) {
 }
 
 // ── Sync iCal ────────────────────────────────────────────────────────────────
-async function syncFeed(env, bienId, url, canal, allEvents, nouvelles) {
+async function syncFeed(env, bienId, url, canal, allEvents, nouvelles, annulations) {
   try {
     const text = await fetchICS(url);
     const events = parseICS(text, bienId).map(e => ({ ...e, canal }));
     const kvKey = `uids:${bienId}:${canal}`;
-    const stored = await env.ICAL_STORE.get(kvKey, "json") || [];
+    // raw === null ⇒ feed JAMAIS synchronisé. On distingue du feed déjà vu mais vide ("[]").
+    const raw = await env.ICAL_STORE.get(kvKey, "json");
+    const isFirstRun = raw === null;
+    const stored = raw || [];
     const knownUids = new Set(stored);
+    const currentUids = new Set(events.map(e => e.uid));
     const newForFeed = events.filter(e => !knownUids.has(e.uid));
-    if (newForFeed.length > 0) nouvelles.push(...newForFeed);
+    // Premier run d'un feed → SEED silencieux : on pousse quand même au Sheet
+    // (allEvents ci-dessous) mais sans notifier ni créer de liens caution, sinon
+    // des résas préexistantes seraient flaggées "nouvelles" en masse (vécu à
+    // l'activation du sync Booking). Les vraies nouveautés suivantes notifient.
+    if (newForFeed.length > 0 && !isFirstRun) nouvelles.push(...newForFeed);
+    if (isFirstRun && events.length > 0) console.log(`[sync] ${bienId}/${canal}: SEED initial ${events.length} résa(s) (silencieux, push Sheet sans notif)`);
+    // Annulations : UIDs connus qui ont disparu de l'iCal (jamais au premier run)
+    const cancelledUids = isFirstRun ? [] : stored.filter(uid => !currentUids.has(uid));
+    if (cancelledUids.length > 0) {
+      cancelledUids.forEach(uid => annulations.push({ uid, bienId, canal }));
+      console.log(`[sync] ${bienId}/${canal}: ${cancelledUids.length} annulation(s) détectée(s)`);
+    }
     await env.ICAL_STORE.put(kvKey, JSON.stringify(events.map(e => e.uid)), { expirationTtl: 60 * 60 * 24 * 90 });
     allEvents.push(...events);
     console.log(`[sync] ${bienId}/${canal}: ${events.length} evt, ${newForFeed.length} nouveau(x)`);
@@ -1474,15 +1518,51 @@ async function syncFeed(env, bienId, url, canal, allEvents, nouvelles) {
   }
 }
 
+async function sendCancellations(env, annulations) {
+  const BIEN_LABELS = { amaryllis: "Villa Amaryllis", iguana: "Villa Iguana", zandoli: "Zandoli",
+    geko: "Géko", mabouya: "Mabouya", schoelcher: "T2 Schœlcher", nogent: "T2 Nogent" };
+
+  // 1. Push à Apps Script pour retirer du Sheet + recalcul revenus
+  try {
+    const r = await fetch(env.APPS_SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "cancelReservations", annulations }),
+    });
+    const data = await r.json().catch(() => ({}));
+    console.log(`[annulation] Apps Script: cancelled=${data.cancelled}, ids=${JSON.stringify(data.ids)}`);
+  } catch (e) {
+    console.error("[annulation] Apps Script erreur:", e.message);
+  }
+
+  // 2. Notif email + ntfy par annulation
+  for (const ann of annulations) {
+    const bienLabel = BIEN_LABELS[ann.bienId] || ann.bienId;
+    const canal = ann.canal.charAt(0).toUpperCase() + ann.canal.slice(1);
+    const subject = `🚨 Annulation ${bienLabel} (${canal})`;
+    const html = `<p>Une réservation a été annulée sur <strong>${bienLabel}</strong> via <strong>${canal}</strong>.</p>
+<p>UID iCal : <code>${ann.uid}</code></p>
+<p>La réservation a été supprimée du Sheet et les revenus ont été mis à jour.</p>`;
+    await sendEmail(env, { to: "vinsmaf@gmail.com", subject, html }).catch(() => {});
+    if (env.NTFY_TOPIC) {
+      await fetch(`https://ntfy.sh/${env.NTFY_TOPIC}`, {
+        method: "POST",
+        headers: { "Title": subject, "Priority": "high", "Content-Type": "text/plain" },
+        body: `Annulation ${bienLabel} (${canal}) — vérifier Planning + Revenus`,
+      }).catch(() => {});
+    }
+  }
+}
+
 async function runSync(env) {
   console.log(`[amaryllis-sync] Démarrage — ${new Date().toISOString()}`);
-  const allEvents = [], nouvelles = [];
+  const allEvents = [], nouvelles = [], annulations = [];
 
   // Fetch tous les feeds en parallèle (5× plus rapide qu'en série)
-  const bookingUrls = getBookingUrls(env);
+  const bookingUrls = await getBookingUrls(env);
   const airbnbUrls  = getAirbnbUrls(env);
-  const airbnbFeeds   = Object.entries(airbnbUrls).map(([id, url]) => syncFeed(env, id, url, "airbnb", allEvents, nouvelles));
-  const bookingFeeds  = Object.entries(bookingUrls).map(([id, url]) => syncFeed(env, id, url, "booking", allEvents, nouvelles));
+  const airbnbFeeds   = Object.entries(airbnbUrls).map(([id, url]) => syncFeed(env, id, url, "airbnb", allEvents, nouvelles, annulations));
+  const bookingFeeds  = Object.entries(bookingUrls).map(([id, url]) => syncFeed(env, id, url, "booking", allEvents, nouvelles, annulations));
   await Promise.all([...airbnbFeeds, ...bookingFeeds]);
 
   // ── Ajouter les résas DIRECTES Stripe (D1) à allEvents avant push Sheets ──
@@ -1494,11 +1574,12 @@ async function runSync(env) {
     console.log(`[direct-bookings] ${directs.length} résa(s) directe(s) ajoutée(s) au push Sheets`);
   }
 
+  if (annulations.length > 0) await sendCancellations(env, annulations);
   if (nouvelles.length > 0) await sendNouvellesResas(env, nouvelles);
   if (allEvents.length > 0) await pushToSheets(env, allEvents);
 
-  console.log(`[amaryllis-sync] Terminé — ${allEvents.length} evt (dont ${directs.length} direct), ${nouvelles.length} nouveaux`);
-  return { allEvents, total: allEvents.length, nouvelles: nouvelles.length };
+  console.log(`[amaryllis-sync] Terminé — ${allEvents.length} evt (dont ${directs.length} direct), ${nouvelles.length} nouveaux, ${annulations.length} annulations`);
+  return { allEvents, total: allEvents.length, nouvelles: nouvelles.length, annulations: annulations.length };
 }
 
 // ── Monitoring quotidien ─────────────────────────────────────────────────────
@@ -1535,6 +1616,17 @@ async function runMonitor(env) {
       }
     } catch (err) { errors.push(`❌ Beds24 — ${err.message}`); }
   }
+
+  // ── Garde-fou : les feeds Booking.com sont-ils bien câblés ? ─────────────────
+  // Régression vécue (juin 2026) : le Worker n'avait AUCUNE URL Booking → toutes les
+  // résas Booking invisibles au pipeline pendant des mois, le calendrier site restant
+  // bloqué (Pages avait les URLs). On rend ce silence bruyant.
+  try {
+    const bk = await getBookingUrls(env);
+    if (Object.keys(bk).length === 0) {
+      errors.push("❌ Aucun feed Booking.com configuré — résas Booking NON synchronisées (vérifier ICAL_BOOKING_* côté Pages + /api/ical-config + POSTSTAY_SECRET du Worker)");
+    }
+  } catch (err) { errors.push(`❌ Feeds Booking — ${err.message}`); }
 
   if (errors.length > 0) {
     await sendEmail(env, {

@@ -225,6 +225,7 @@ function doPost(e) {
 
   var action = body.action || "";
   if (action === "importAllReservations") return importAllReservations_(body.reservations || [], !!body.skipRevenueSync);
+  if (action === "cancelReservations")    return json_(cancelReservations_(body.annulations || []));
   if (action === "fixMontantsAberrants") return json_(fixMontantsAberrants_(parseInt(body.cap || 50000, 10)));
   if (action === "cleanSlate2026")       return json_(cleanSlate2026_()); // eslint-disable-line no-undef
   if (action === "setConfig")             return setConfig_(body);
@@ -984,6 +985,49 @@ function importFromAirbnbSheet_() {
   result.skipped_no_match = skipped;
   result.total_rows = reservations.length;
   return result;
+}
+
+// ── Annulations automatiques iCal ────────────────────────────────────────────
+// Appelé par le Worker quand un UID disparaît de l'iCal Airbnb/Booking.
+// Supprime la ligne du Sheet + retire l'ID du memo revenus + re-synchro.
+function cancelReservations_(annulations) {
+  if (!Array.isArray(annulations) || annulations.length === 0) return { ok: true, cancelled: 0, ids: [] };
+
+  var ss = SpreadsheetApp.openById("1xuhU0KraEMxF9NAWO5MKEt23JI_V8mnNnWktzHy6q2U");
+  var sheet = ss.getSheetByName("Toutes les Réservations");
+  if (!sheet) return { ok: false, error: "Sheet 'Toutes les Réservations' introuvable" };
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return { ok: true, cancelled: 0, ids: [] };
+
+  var ids = annulations.map(function(a) { return String(a.uid || ""); }).filter(Boolean);
+  var idSet = {};
+  ids.forEach(function(id) { idSet[id] = true; });
+
+  // Lecture col A (ID) pour identifier les lignes à supprimer
+  var colA = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+  var rowsToDelete = [];
+  var foundIds = [];
+  colA.forEach(function(r, i) {
+    var cellId = String(r[0] || "");
+    if (idSet[cellId]) {
+      rowsToDelete.push(i + 2); // +2 car header en ligne 1
+      foundIds.push(cellId);
+    }
+  });
+
+  // Supprimer de bas en haut pour éviter le décalage d'indices
+  rowsToDelete.sort(function(a, b) { return b - a; });
+  rowsToDelete.forEach(function(rowNum) { sheet.deleteRow(rowNum); });
+
+  // Retirer du memo revenus et re-synchro (2026 et 2027)
+  if (foundIds.length > 0) {
+    var idsCsv = foundIds.join(",");
+    try { revenus2026Forget_(idsCsv); syncRevenus2026(); } catch(e) {}  // eslint-disable-line no-undef
+    try { revenus2027Forget_(idsCsv); syncRevenus2027(); } catch(e) {}  // eslint-disable-line no-undef
+  }
+
+  return { ok: true, cancelled: rowsToDelete.length, ids: foundIds, notFound: ids.filter(function(id) { return foundIds.indexOf(id) < 0; }) };
 }
 
 function importFromBookingSheet_() {
