@@ -1109,19 +1109,33 @@ export default function App() {
         try { localStorage.setItem("hist_v2", JSON.stringify(next)); } catch {}
         return next;
       });
-      // ── Restaurer les réservations manquantes depuis Sheets ──────
-      // Si le localStorage a été vidé (autre appareil, cache effacé…),
-      // les réservations sauvegardées dans l'onglet "réservations" du Sheets
-      // sont fusionnées dans l'état local. Les réservations déjà présentes
-      // ne sont jamais écrasées (on ne rajoute que celles qui manquent).
+      // ── Sync réservations depuis Sheets (Sheet = source autoritaire) ──────
+      // Le Sheet fait foi : les suppressions y sont honorées. On garde en local
+      // seulement les entrées absentes du Sheet (résas très récentes pas encore
+      // poussées par le Worker). Un dedup par contenu (bienId|checkin|checkout)
+      // nettoie les doublons persistants dans le localStorage.
       if (f.reservations?.length > 0) {
         setReservations(current => {
-          const currentIds = new Set(current.map(r => String(r.id)));
-          const toRestore = f.reservations.filter(r => r.checkin && r.checkout && !currentIds.has(String(r.id)));
-          if (toRestore.length === 0) return current;
-          const merged = [...current, ...toRestore];
-          try { localStorage.setItem("reservations_v2", JSON.stringify(merged)); } catch {}
-          return merged;
+          const sheetIds = new Set(f.reservations.map(r => String(r.id)));
+          // Entrées locales dont l'ID n'est pas encore dans le Sheet (créées <15 min)
+          const localOnly = current.filter(r => !sheetIds.has(String(r.id)));
+          // Sheet en premier (autoritaire), local-only en complément
+          const PLACEHOLDER = new Set(["voyageur", "voyageur (booking)", "voyageur airbnb", ""]);
+          const all = [...f.reservations.filter(r => r.checkin && r.checkout), ...localOnly];
+          // Dedup par contenu : bienId|checkin|checkout — prefer entry with real name
+          const byKey = new Map();
+          for (const r of all) {
+            const ck = `${r.bienId}|${(r.checkin || "").slice(0, 10)}|${(r.checkout || "").slice(0, 10)}`;
+            if (!byKey.has(ck)) { byKey.set(ck, r); continue; }
+            const prev = byKey.get(ck);
+            const prevIsPlaceholder = PLACEHOLDER.has((prev.voyageur || "").toLowerCase().trim());
+            const rIsPlaceholder = PLACEHOLDER.has((r.voyageur || "").toLowerCase().trim());
+            if (prevIsPlaceholder && !rIsPlaceholder) byKey.set(ck, r);
+          }
+          const deduped = Array.from(byKey.values());
+          if (deduped.length === current.length && deduped.every((r, i) => r.id === current[i]?.id)) return current;
+          try { localStorage.setItem("reservations_v2", JSON.stringify(deduped)); } catch {}
+          return deduped;
         });
       }
       // ── Fusionner les résas directes Stripe (D1 direct_bookings) ──
