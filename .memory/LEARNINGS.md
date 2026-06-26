@@ -3,6 +3,28 @@
 > Pièges déjà rencontrés + comment les éviter. 1 entrée = 1 leçon actionnable « la prochaine fois ».
 > Le journal d'erreurs exhaustif reste `../docs/ERREURS-LOG.md`.
 
+## 🏷️ RM D1 `rm_properties` : base_price_* = NULL par défaut — plancher = siteMinCents seulement — 2026-06-26
+- **Découverte** : tous les champs `base_price_low/mid/high`, `price_min`, `price_max` = NULL dans `rm_properties` (jamais configurés). Le moteur `calcDateReco` remplace les NULL par 0 → `hardFloor = max(0, 0, siteMinCents, 0) = siteMinCents` (prix biens.js uniquement). Le fix `basePrice` dans `hardFloor` (session précédente) était sans effet car `base_price_mid = NULL → 0`.
+- **La prochaine fois** : pour que les recos RM respectent les saisons, 2 options — (A) Alimenter `rm_properties` avec la grille via `/api/rm-properties` (Bearer auth + JSON) ; (B) Plancher UI-side via `loadDailyPrices` (option choisie 26/06). Option B = 0 D1 touch, toujours à jour avec le CalendrierTarifs réel.
+
+## 🏷️ RM `/api/rm-properties` : auth = Bearer token (session) pas `?secret=` — 2026-06-26
+- L'endpoint `/api/rm-properties` utilise `verifyBearer` (token de session `ldb_tok`) et non `?secret=POSTSTAY_SECRET`. Pour l'appeler en curl → extraire le `ldb_tok` depuis sessionStorage admin après login.
+
+## 💰 Revenus Apps Script : toujours lire la cellule AVANT de patcher — 2026-06-26
+- **Piège vécu** : Géko airbnb juin avait Rabia (378.3€) déjà en cellule. Appel `manualPatch add 378.3€` → doublon à 756.6€. Seule Esméralda (320€) manquait réellement. Fix : set à 698.3€ = 320 + 378.3.
+- **La prochaine fois** : avant tout `mode=add`, appeler `mode=add&value=0` pour lire le "before". Confirmer que la valeur en cellule = ce qu'on pense, PUIS faire le vrai add.
+
+## 💰 Revenus Apps Script : division égale par mois pour longs séjours — 2026-06-26
+- **Piège** : implémentation initiale utilisait prorata par nuits → résultats non entiers (985.71€ au lieu de 975€). Vincent a explicitement rejeté.
+- **La prochaine fois** : séjour long (>30 nuits) = `equalShare = Math.round(montant / nMonths * 100) / 100` sur chaque mois touché. Logique identique dans les deux GS (`applyOne_` 2026 et `applyOne27_` 2027) — si on modifie l'un, modifier l'autre.
+
+## 💰 Revenus Apps Script : MIN_AUTO_MONTH=6 — les arrivées avant juin jamais auto-traitées — 2026-06-26
+- `syncRevenus2026_()` ignore les arrivées < juin même après `PurgeZero`. Pour corriger une résa avec arrivalMonth < 6 : soit `revenus2026ManualPatch_` (cellule unique), soit `rebuildRevenus2026_(apply, fromMonth, bienFilter)` (rebuild chirurgical par bien).
+
+## 💰 Revenus Apps Script : le memo empêche le re-sync des résas supprimées — 2026-06-26
+- Supprimer une résa du Sheet via `deleteReservation` NE retire PAS son ID du memo → le sync ne la retraitera jamais. C'est voulu pour les annulations (ex: Amaryllis Booking déc annulée → reste à 0€ même si l'iCal la repousse).
+- Si on veut forcer le re-traitement d'une résa → purger son ID du memo (`revenus2026PurgeZero_` ou DELETE D1 direct).
+
 ## 🎨 SubTabBar dans primitives.jsx, jamais inline — 2026-06-25
 - **Piège** : Charges et Pilotage avaient chacun leur propre pill de sous-onglets avec des styles légèrement différents (accent `#ef4444` vs `#0ea5e9`, padding divergent).
 - **La prochaine fois** : tout sous-onglet admin = `import { SubTabBar } from "../primitives.jsx"`. Props : `tabs=[{id, label}]`, `active`, `onChange`, `accent` (optionnel, défaut `#0ea5e9`). Jamais recoder les boutons pills inline.
@@ -581,3 +603,7 @@
 - **CI smoke test : ne jamais tester un endpoint qui dépend d'un secret externe** (OpenWeatherMap) sur l'alias preview CF Pages. Les secrets CF Pages ne s'appliquent qu'à l'env `production`. Tester uniquement les routes statiques React (/ et /amaryllis) dans la CI ; les APIs avec clés externes = test depuis prod directement (curl post-deploy manuel si nécessaire).
 - **Token API Cloudflare pour CI** : doit avoir les 2 permissions `Cloudflare Pages: Edit` + `Workers Scripts: Edit`. Le token existant `amaryllis` (Workers AI + Account Settings) est insuffisant pour déployer.
 - **Git push origin main déclenche la CI** — mais origin/main était ~100 commits en retard depuis des mois. Penser à pusher régulièrement pour ne pas accumuler ce delta.
+
+## 🤖 Recos agents ignorées : toujours envoyer le "pourquoi" à l'agent — 2026-06-25
+- **Règle** : quand on ignore une reco d'agent, relancer cet agent avec un `brief` expliquant pourquoi → il apprend et affine ses prochaines recos.
+- **Format brief** : "RECO IGNORÉE [id] : [action]. RAISON : [pourquoi ignorée]. CONTEXTE ACTUEL : [ce qui existe déjà ou pourquoi c'est inadapté]. Génère une reco plus précise/pertinente ou confirme qu'il n'y a rien à faire."

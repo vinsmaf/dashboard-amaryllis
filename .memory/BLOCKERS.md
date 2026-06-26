@@ -4,6 +4,20 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
+## En cours → ✅ terminé le 2026-06-26 (Session revenus — corrections chirurgicales Sheet « revenus locatifs 2026 »)
+> Corrections 2026-06-26 via `revenus2026ManualPatch_` (@71) :
+> - Schœlcher direct juin : 1285.71€ → **1300€** (Morgane POMPADOU, division égale 3900€/3 mois) ✅
+> - Géko airbnb juin : 378.3€ → **698.3€** (Esméralda 320€ + Rabia 378.3€) ✅
+> - Zandoli booking août : 0€ → **820.78€** (Booking iCal sans montant, saisi manuellement) ✅
+> - Amaryllis booking déc : 2805.08€ → **0€** (résa annulée + supprimée du Sheet, memo empêche re-sync) ✅
+> 🟡 **Schœlcher direct juillet = 2585.71€ → PENDING** : valeur actuelle incohérente (Morgane prorata-by-nights rejeté). Vincent doit trancher :
+>   - Option A : **1600€** (Éléonore BEVON uniquement, juillet = hors de la période Morgane divisée sur 3 mois)
+>   - Option B : **2575€** (1600€ Éléonore + 975€ Morgane si division sur 4 mois avr/mai/juin/juil)
+>   Commande : `POST /api/sheets-proxy {"action":"revenus2026ManualPatch","bien":"schoelcher","canal":"direct","month":7,"value":1600,"mode":"set"}` (ou 2575 selon choix)
+> Aucun commit repo (changements uniquement Apps Script via clasp, déploiement @71).
+
+## ✅ Schœlcher direct juillet — 2585.71€ → 1600€ (Éléonore BEVON uniquement, 2026-06-26)
+
 ## En cours → ✅ terminé le 2026-06-25 (Session UI visuelle — nav 8→6 groupes + 5 améliorations visuelles admin)
 > (1) `NAV_GROUPS` App.jsx : 8 groupes → 6 (Quotidien/Opérations/Finance/Analyses/Marketing/Admin). ADR-NAV-GROUPS-001. Commit `eeeac4e`. (2) `SubTabBar` ajouté à `src/primitives.jsx` ; Charges.jsx + Pilotage.jsx migrés. (3) Nav pill active (borderLeft → rounded pill 8px margin). (4) TodayBanner "Actions aujourd'hui" : border plus marquée + boxShadow coloré vert/rouge. (5) KPI cards Cockpit : padding 8→10px, gap 8→10, border subtile. (6) Tooltip recharts `TT` : fond `#0a0f1e`, padding propre. ADR-SUBTABBAR-001. Commit `7580510`.
 

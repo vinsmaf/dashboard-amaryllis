@@ -3,6 +3,30 @@
 > 1 entrée par décision qui engage la suite. Format 5 lignes : **Choix · Alternatives refusées · Conséquences attendues · Périmètre · Statut**.
 > Décisions d'archi détaillées (specs complets) → `../docs/superpowers/specs/README.md` (ADR-001→010). Ici = log curaté de session.
 
+## ADR-RM-PLANCHER-001 · 2026-06-26 · Plancher CalendrierTarifs dans les recos RM (UI-side)
+
+1. **Choix** : Le plancher des recos RM = `max(rm_reco, prix_calendrier_tarifs_du_jour)` appliqué côté UI dans `RevenueManagerPro.jsx`. Import de `loadDailyPrices` → `effectiveCents(reco)` + `isCalFloor(reco)`. Indicateur 📅 + tooltip quand le plancher joue.
+2. **Alternatives refusées** : (A) Alimenter D1 `rm_properties.base_price_mid/low/high` — nécessite saisie manuelle de la grille (option 1 de Vincent, repoussée). (B) Passer les prix CalendrierTarifs au `/calculate` server-side — plus propre en D1 mais inutile pour usage advisory ; peut être fait plus tard sans ADR.
+3. **Conséquences attendues** : les recos affichées ne descendent jamais sous les prix du CalendrierTarifs réels. Les valeurs stockées en D1 (`recommended_price_cents`) restent les valeurs RM brutes — l'UI les corrige à la volée. Si on ajoute un calcul server-side plus tard, l'UI-floor devient redondant mais inoffensif.
+4. **Périmètre** : `src/RevenueManagerPro.jsx` (import + helpers + 4 zones d'affichage). Commit `f47482b`.
+5. **Statut** : acté & déployé.
+
+## ADR-REVENUS-DIVISION-001 · 2026-06-26 · Division égale par mois pour longs séjours Apps Script
+
+1. **Choix** : Dans `applyOne_()` (REVENUS_AUTO_2026.gs & 2027.gs), les séjours >30 nuits utilisent une **division égale** (montant / nbre de mois) et non un prorata par nuits.
+2. **Alternatives refusées** : prorata par nuits (nuits_dans_le_mois / total_nuits × montant) — rejeté explicitement par Vincent : "tu as mis des dates au prorata je ne t'ai pas demander ca il faut juste remplir 1300€ pour les 3 mois".
+3. **Conséquences attendues** : un séjour Morgane POMPADOU 3900€/3 mois = 1300€/mois exactement. Les deux fichiers GS (2026 et 2027) doivent rester identiques sur cette logique — modifier l'un = modifier l'autre.
+4. **Périmètre** : `appscript/REVENUS_AUTO_2026.gs` + `appscript/REVENUS_AUTO_2027.gs` (fonction `applyOne_` section montant). Déployé @71.
+5. **Statut** : acté & déployé.
+
+## ADR-REVENUS-PATCH-001 · 2026-06-26 · revenus2026ManualPatch_ pour corrections chirurgicales
+
+1. **Choix** : Nouvelle action Apps Script `revenus2026ManualPatch_(params)` — écrit directement dans une cellule (bien × canal × mois) sans déclencher de rebuild. Modes : `set` (écrase) ou `add` (delta cumulatif).
+2. **Alternatives refusées** : rebuild complet par bien (`revenus2026RebuildBienApply`) — trop large, zeroise tous les mois même ceux déjà bons. Édition directe en Sheet — non traçable, non idempotent.
+3. **Conséquences attendues** : correction chirurgicale d'une cellule en 1 POST. Pattern diagnostic : `mode=add&value=0` lit le "before" sans modifier. `mode=set` écrase, `mode=add` accumule.
+4. **Périmètre** : `appscript/REVENUS_AUTO_2026.gs` (nouvelle fonction) + `appscript/SCRIPT_SHEETS.js` (dispatch GET+POST `revenus2026ManualPatch`). Déployé @71.
+5. **Statut** : acté & déployé.
+
 ## ADR-SUBTABBAR-001 · 2026-06-25 · SubTabBar centralisé dans primitives.jsx
 
 1. **Choix** : Composant `<SubTabBar tabs active onChange accent>` ajouté dans `src/primitives.jsx`. Remplace les boutons pills inline qui existaient dans Charges.jsx (`SUB_TAB_STYLE` function) et Pilotage.jsx (map inline). Tout futur sous-onglet admin doit importer `SubTabBar` depuis primitives.
