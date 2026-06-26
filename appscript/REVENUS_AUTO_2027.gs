@@ -108,6 +108,7 @@ function applyOne27_(row, C, dstSheet, dryRun) {
   var changes = [];
   var bienId = BIEN_BY_LABEL_27[String(row[C.prop] || "").toLowerCase().trim()];
   if (!bienId || !REV_ROWS_27[bienId]) return changes;
+  if (bienId === "iguana") return changes; // bail long manuel — jamais automatisé
   var statut = (C.statut >= 0) ? row[C.statut] : "";
   var notes  = (C.notes  >= 0) ? row[C.notes]  : "";
   if (isBlocage27_(row[C.voy], statut, notes)) return changes;
@@ -388,9 +389,9 @@ function rebuildRevenus2027_(apply, fromMonth) {
   var dst = ss.getSheetByName(DST_SHEET_27); if (!dst) return { ok:false, error:"dst 2027 introuvable" };
   var startCol = fromMonth + 2, nCols = 14 - startCol + 1;
   var dataRows = [];
-  for (var b in REV_ROWS_27)    { dataRows.push(REV_ROWS_27[b].airbnb, REV_ROWS_27[b].booking, REV_ROWS_27[b].direct); }
-  for (var b2 in CNT_ROWS_27)   { dataRows.push(CNT_ROWS_27[b2].airbnb, CNT_ROWS_27[b2].booking, CNT_ROWS_27[b2].direct); }
-  for (var b3 in NIGHTS_ROW_27) { dataRows.push(NIGHTS_ROW_27[b3]); }
+  for (var b in REV_ROWS_27)    { if (b === "iguana") continue; dataRows.push(REV_ROWS_27[b].airbnb, REV_ROWS_27[b].booking, REV_ROWS_27[b].direct); }
+  for (var b2 in CNT_ROWS_27)   { if (b2 === "iguana") continue; dataRows.push(CNT_ROWS_27[b2].airbnb, CNT_ROWS_27[b2].booking, CNT_ROWS_27[b2].direct); }
+  for (var b3 in NIGHTS_ROW_27) { if (b3 === "iguana") continue; dataRows.push(NIGHTS_ROW_27[b3]); }
   if (!apply) {
     return { ok:true, mode:"dry", fromMonth:fromMonth, startCol:startCol, nCols:nCols,
              rowsToRecompute:dataRows.length, note:"mois < " + fromMonth + " preserves" };

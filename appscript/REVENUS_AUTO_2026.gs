@@ -30,6 +30,12 @@ var MEMO_SHEET = "rev2026_traites";          // memoire des IDs deja appliques (
 // Seules revenus2026FromMonth_ et rebuildRevenus2026_ peuvent opérer sur les mois antérieurs.
 var MIN_AUTO_MONTH = 6;
 
+// Biens EXCLUS de toute automatisation revenus (saisie 100% manuelle par Vincent).
+// iguana = bail long Joël Bailleul (bookable:false) → ses lignes ne sont NI appliquées
+// depuis les résas, NI zérotées par le rebuild. Régression vécue 2026-06-26 (rebuild
+// a effacé 1800€ iguana). Ajouter ici tout bien à revenu manuel.
+var EXCLUDED_BIENS = { iguana: true };
+
 // Mapping colonnes par onglet (index 0-based) ; statut:-1 = colonne absente
 // "Toutes les R\u00e9servations" : A=ID B=Propriete C=Voyageur D=Canal E=Arrivee F=Depart G=Nuits H=Montant I=Statut K=Notes
 var COL_TOUTES = { id:0, prop:1, voy:2, canal:3, arrivee:4, depart:5, montant:7, statut:8, notes:10, ncols:11 };
@@ -111,9 +117,17 @@ function applyOne_(row, C, dstSheet, dryRun) {
   var changes = [];
   var bienId = BIEN_BY_LABEL[String(row[C.prop] || "").toLowerCase().trim()];
   if (!bienId || !REV_ROWS[bienId]) return changes;
+  // Iguana = bail long (Joël Bailleul), revenus saisis À LA MAIN par Vincent →
+  // JAMAIS touché par l'automatisation (ni appliqué, ni zéroté au rebuild).
+  if (EXCLUDED_BIENS[bienId]) return changes;
   var statut = (C.statut >= 0) ? row[C.statut] : "";
   var notes  = (C.notes  >= 0) ? row[C.notes]  : "";
   if (isBlocage_(row[C.voy], statut, notes)) return changes;
+  // Résa non chiffrée (OTA iCal pas encore renseignée : montant 0) → on n'applique
+  // RIEN (ni compteur, ni nuits, ni revenu). Couplé à scanSheet_ qui ne la mémoïse
+  // pas, elle sera appliquée EN UNE FOIS dès que Vincent saisit le montant — sinon
+  // le revenu Booking n'est jamais ajouté (résa figée "traitée" à 0€).
+  if ((parseFloat(row[C.montant]) || 0) <= 0) return changes;
   var nbm = nightsByMonth2026_(row[C.arrivee], row[C.depart]);
   var totalN = 0; for (var k in nbm) totalN += nbm[k];
   if (totalN === 0) return changes;
@@ -206,10 +220,18 @@ function scanSheet_(ss, name, C, dst, processed, newIds, dryRun, preview, minMon
     var ck = contentKeyRow_(row, C);
     if ((!id && !ck) || processed[id] || processed[ck]) return; // dedup par id OU clé-contenu
     var ch = applyOne_(row, C, dst, dryRun);
-    processed[id] = true;
-    if (ck) processed[ck] = true;     // idempotence par contenu (même séjour, id différent)
-    if (!dryRun) { if (id) newIds.push(id); if (ck) newIds.push(ck); }
-    else if (ch.length) preview.push({ id:id, src:name, prop:row[C.prop], canal:row[C.canal], arrivee:String(row[C.arrivee]).slice(0,10), changements:ch });
+    // Ne PAS mémoïser une résa non-blocage encore à 0€ (OTA iCal pas renseignée) :
+    // elle doit être re-scannée quand Vincent saisit le montant, sinon le revenu
+    // n'est jamais ajouté. Miroir du guard de applyOne_.
+    var statut_ = (C.statut >= 0) ? row[C.statut] : "";
+    var notes_  = (C.notes  >= 0) ? row[C.notes]  : "";
+    var skipMemo = ((parseFloat(row[C.montant]) || 0) <= 0) && !isBlocage_(row[C.voy], statut_, notes_);
+    if (!skipMemo) {
+      processed[id] = true;
+      if (ck) processed[ck] = true;   // idempotence par contenu (même séjour, id différent)
+      if (!dryRun) { if (id) newIds.push(id); if (ck) newIds.push(ck); }
+    }
+    if (dryRun && ch.length) preview.push({ id:id, src:name, prop:row[C.prop], canal:row[C.canal], arrivee:String(row[C.arrivee]).slice(0,10), changements:ch });
   });
 }
 
@@ -415,9 +437,10 @@ function rebuildRevenus2026_(apply, fromMonth) {
   var startCol = fromMonth + 2;        // mois fromMonth -> colonne (janv=3)
   var nCols = 14 - startCol + 1;        // fromMonth..decembre
   var dataRows = [];
-  for (var b in REV_ROWS)    { dataRows.push(REV_ROWS[b].airbnb, REV_ROWS[b].booking, REV_ROWS[b].direct); }
-  for (var b2 in CNT_ROWS)   { dataRows.push(CNT_ROWS[b2].airbnb, CNT_ROWS[b2].booking, CNT_ROWS[b2].direct); }
-  for (var b3 in NIGHTS_ROW) { dataRows.push(NIGHTS_ROW[b3]); }
+  // Iguana exclu : ses lignes (revenu manuel) ne doivent JAMAIS être zérotées.
+  for (var b in REV_ROWS)    { if (EXCLUDED_BIENS[b]) continue; dataRows.push(REV_ROWS[b].airbnb, REV_ROWS[b].booking, REV_ROWS[b].direct); }
+  for (var b2 in CNT_ROWS)   { if (EXCLUDED_BIENS[b2]) continue; dataRows.push(CNT_ROWS[b2].airbnb, CNT_ROWS[b2].booking, CNT_ROWS[b2].direct); }
+  for (var b3 in NIGHTS_ROW) { if (EXCLUDED_BIENS[b3]) continue; dataRows.push(NIGHTS_ROW[b3]); }
   if (!apply) {
     return { ok:true, mode:"dry", fromMonth:fromMonth, startCol:startCol, nCols:nCols,
              rowsToRecompute:dataRows.length, note:"mois < " + fromMonth + " preserves" };
@@ -446,6 +469,33 @@ function rebuildRevenus2026_(apply, fromMonth) {
   var after = dst.getRange(6, startCol, 1, nCols).getValues()[0];
   return { ok:true, mode:"applied", fromMonth:fromMonth, rowsZeroed:dataRows.length,
            appliedBookings:applied, nogentTotalBefore:before, nogentTotalAfter:after };
+}
+
+// ── PURGE du memo des résas non chiffrées (montant 0) ───────────────────────
+// Les résas OTA captées par l'iCal arrivent à 0€ ; avant le fix elles étaient
+// mémoïsées "traitées" → leur montant saisi ensuite n'était jamais appliqué.
+// Cette purge les retire du memo (id + clé-contenu) pour qu'elles soient
+// ré-appliquées EN UNE FOIS dès que le montant est renseigné. Idempotent.
+function revenus2026PurgeZero_() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var toForget = [];
+  [[SRC_SHEET, COL_TOUTES], [RESA_SHEET, COL_RESA]].forEach(function (pair) {
+    var sh = ss.getSheetByName(pair[0]); if (!sh || sh.getLastRow() < 2) return;
+    var C = pair[1];
+    var rows = sh.getRange(2, 1, sh.getLastRow() - 1, C.ncols).getValues();
+    rows.forEach(function (row) {
+      var montant = parseFloat(row[C.montant]) || 0;
+      var statut  = (C.statut >= 0) ? row[C.statut] : "";
+      var notes   = (C.notes  >= 0) ? row[C.notes]  : "";
+      if (montant <= 0 && !isBlocage_(row[C.voy], statut, notes)) {
+        var id = String(row[C.id] || ""); var ck = contentKeyRow_(row, C);
+        if (id) toForget.push(id);
+        if (ck) toForget.push(ck);
+      }
+    });
+  });
+  if (toForget.length) revenus2026Forget_(toForget.join(","));
+  return { ok: true, purged: toForget.length };
 }
 
 // ── RESET MEMO + RE-BASELINE (à appeler après une restauration manuelle des cellules) ──
