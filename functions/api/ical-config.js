@@ -20,8 +20,17 @@ export async function onRequest(context) {
 
   const { request, env } = context;
 
-  const { ok: authOk } = await verifyBearer(request, env);
-  if (!authOk) return json({ error: "Non autorisé" }, 401);
+  // Source unique des URLs Booking.com : ce projet Pages. Le Worker
+  // amaryllis-ical-sync (store de secrets séparé, sans mot de passe admin) les lit
+  // ici au runtime → auth alternative par secret partagé qu'il possède déjà.
+  // Évite la divergence vécue : Worker sans secret Booking = résas Booking
+  // invisibles au pipeline alors que le calendrier site restait bloqué.
+  const secret = new URL(request.url).searchParams.get("secret");
+  const secretOk = !!secret && (secret === env.POSTSTAY_SECRET || secret === env.WORKER_SECRET);
+  if (!secretOk) {
+    const { ok: authOk } = await verifyBearer(request, env);
+    if (!authOk) return json({ error: "Non autorisé" }, 401);
+  }
 
   return json({
     ok: true,
