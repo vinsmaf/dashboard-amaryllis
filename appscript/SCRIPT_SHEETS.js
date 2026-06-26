@@ -246,6 +246,7 @@ function doPost(e) {
   if (action === "revenus2026Forget")     return json_(revenus2026Forget_(body.ids || ""));
   if (action === "revenus2026FromMonth")  return json_(revenus2026FromMonth_(body.month || 7, !!body.apply, !!body.ignoreMemo));
   if (action === "revenus2026Undo")       return json_(revenus2026Undo_(body.ids || ""));
+  if (action === "updateRevenu")            return updateRevenu_(body);
   if (action === "revenus2026PurgeZero")    return json_(revenus2026PurgeZero_());
   if (action === "revenus2026RebuildDry")   return json_(rebuildRevenus2026_(false, parseInt(body.fromMonth, 10) || 6));
   if (action === "revenus2026RebuildApply") return json_(rebuildRevenus2026_(true,  parseInt(body.fromMonth, 10) || 6));
