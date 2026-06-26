@@ -247,6 +247,8 @@ function doPost(e) {
   if (action === "revenus2026FromMonth")  return json_(revenus2026FromMonth_(body.month || 7, !!body.apply, !!body.ignoreMemo));
   if (action === "revenus2026Undo")       return json_(revenus2026Undo_(body.ids || ""));
   if (action === "updateRevenu")            return updateRevenu_(body);
+  if (action === "addReservation")          return addReservation_(body);
+  if (action === "deleteReservation")       return deleteReservation_(body);
   if (action === "revenus2026PurgeZero")    return json_(revenus2026PurgeZero_());
   if (action === "revenus2026RebuildDry")   return json_(rebuildRevenus2026_(false, parseInt(body.fromMonth, 10) || 6));
   if (action === "revenus2026RebuildApply") return json_(rebuildRevenus2026_(true,  parseInt(body.fromMonth, 10) || 6));
@@ -494,11 +496,26 @@ function addReservation_(p) {
 
   const lastRow = sheet.getLastRow();
   if (lastRow > 1) {
-    const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat().map(String);
-    const idx = ids.indexOf(id);
-    if (idx >= 0) {
-      sheet.getRange(idx + 2, 1, 1, row.length).setValues([row]);
-      return json_({ ok: true, action: "updated" });
+    const grid = sheet.getRange(2, 1, lastRow - 1, 15).getValues();
+    const LBL2ID = { "T2 Nogent":"nogent","Villa Amaryllis":"amaryllis","Villa Iguana":"iguana","Geko":"geko","Zandoli":"zandoli","Mabouya":"mabouya","T2 Schoelcher":"schoelcher" };
+    const wantCk = dedupKey_(p.bienId, p.checkin, p.checkout);
+    for (let i = 0; i < grid.length; i++) {
+      const er = grid[i];
+      // 1) même id → update direct
+      if (String(er[0]) === id) {
+        sheet.getRange(i + 2, 1, 1, row.length).setValues([row]);
+        return json_({ ok: true, action: "updated" });
+      }
+      // 2) même contenu (bien|checkin|checkout) → update SANS créer de doublon.
+      //    Anti-doublon des résas déjà présentes via un autre id (ex: direct_bookings
+      //    'direct-*' synchronisé). On garde l'id existant pour ne pas casser le lien.
+      const erBien = LBL2ID[er[1]] || String(er[1] || "").toLowerCase();
+      const erCk = dedupKey_(erBien, er[4], er[5]);
+      if (wantCk && wantCk !== "||" && erCk === wantCk) {
+        row[0] = er[0];
+        sheet.getRange(i + 2, 1, 1, row.length).setValues([row]);
+        return json_({ ok: true, action: "updated", merged: true });
+      }
     }
   }
   sheet.appendRow(row);
