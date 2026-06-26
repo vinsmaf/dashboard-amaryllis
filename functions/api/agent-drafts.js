@@ -66,6 +66,12 @@ async function executeDraft(env, draft) {
       : ["fb", "ig"];
 
     const origin = new URL(env.PAGES_URL || "https://dashboard-amaryllis.pages.dev").origin;
+    const siteOrigin = "https://villamaryllis.com";
+    // Normalise imageUrl : chemin relatif → URL absolue villamaryllis.com
+    const rawImageUrl = payload.imageUrl || null;
+    const imageUrl = rawImageUrl
+      ? (rawImageUrl.startsWith("http") ? rawImageUrl : `${siteOrigin}${rawImageUrl.startsWith("/") ? "" : "/"}${rawImageUrl}`)
+      : null;
     // /api/social POST est gaté (verifyBearer OU ?secret=) → appel interne signé par le secret partagé
     const r = await fetch(`${origin}/api/social?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
       method: "POST",
@@ -73,7 +79,7 @@ async function executeDraft(env, draft) {
       body: JSON.stringify({
         action: "publish",
         caption: payload.caption,
-        imageUrl: payload.imageUrl,
+        imageUrl,
         channels,
         firstComment: payload.firstComment,
       }),
