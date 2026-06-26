@@ -277,10 +277,12 @@ export function calcDateReco({
   const effectiveMinStay = overrideMinStay !== null ? overrideMinStay : minStay;
 
   // Clamp to [price_min, price_max]
-  // Plancher à 3 couches : price_min D1 ≥ base_price_low D1 ≥ prix affiché sur le site (biens.js).
-  // Garantit que le RM ne recommande jamais sous le "dès X€/nuit" affiché aux clients.
+  // Plancher à 4 couches : price_min D1 / base_price_low D1 / prix biens.js / basePrice saisonnier.
+  // La 4e couche garantit que le RM ne recommande jamais SOUS le prix de base de la saison courante —
+  // les règles de discount (lead_time, occupation) peuvent monter mais jamais descendre sous ce plancher.
   const siteMinCents = (BIENS[property.id]?.prix || 0) * 100;
-  const hardFloor = Math.max(property.price_min || 0, property.base_price_low || 0, siteMinCents);
+  const hardFloor = Math.max(property.price_min || 0, property.base_price_low || 0, siteMinCents, basePrice);
+  const isFloorClamped = effectivePrice < hardFloor;
   const clampedPrice = Math.max(hardFloor, Math.min(property.price_max || Infinity, effectivePrice));
 
   // 10. Confidence score
@@ -326,6 +328,7 @@ export function calcDateReco({
   if (occInfo && occInfo.label) alertFlags.push("own_" + occInfo.label);
   if (isHoliday) alertFlags.push(`holiday:${holidayName}`);
   if (isEvent) alertFlags.push(`event:${eventName}`);
+  if (isFloorClamped) alertFlags.push("floor_clamped");
 
   // 14. Summary FR
   const priceFmt = (clampedPrice / 100).toFixed(0);
@@ -338,6 +341,7 @@ export function calcDateReco({
   if (isBooked) summary += " 🔒 déjà réservé";
   if (vacancyRisk > 70) summary += " ⚠️ risque vacance";
   if (premiumOpportunity > 70) summary += " ✨ opportunité premium";
+  if (isFloorClamped) summary += " 🔒 plancher saisonnier";
   if (occInfo && occInfo.label) summary += ` · occupation ${Math.round((occInfo.rate || 0) * 100)}% → ${occInfo.pct > 0 ? "+" : ""}${Math.round(occInfo.pct * 100)}%${occInfo.suggestMinStay ? " (min-stay réduit conseillé)" : ""}`;
 
   const now = Date.now();
