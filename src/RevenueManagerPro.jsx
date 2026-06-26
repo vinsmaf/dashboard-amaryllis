@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef, Component } from 'react';
 import { useAppData } from './AppDataContext.jsx';
+import { loadDailyPrices } from './seedPrices.js';
 
 // ─── Error Boundary ──────────────────────────────────────────────────────────
 class RMErrorBoundary extends Component {
@@ -150,6 +151,27 @@ function RevenueManagerPro() {
 
   const shortTermBiens = useMemo(() =>
     biens.filter(b => b.type !== 'long'), [biens]);
+
+  // Prix CalendrierTarifs pour le bien sélectionné — plancher des recos RM
+  const calendrierPrices = useMemo(() => {
+    const all = loadDailyPrices();
+    return (all && all[selProp]) || {};
+  }, [selProp]);
+
+  // Prix effectif = max(reco RM, prix CalendrierTarifs)
+  const effectiveCents = useCallback((reco) => {
+    if (!reco) return 0;
+    const rmCents = reco.recommended_price_cents || 0;
+    const calFloor = (calendrierPrices[reco.date] || 0) * 100;
+    return Math.max(rmCents, calFloor);
+  }, [calendrierPrices]);
+
+  const isCalFloor = useCallback((reco) => {
+    if (!reco) return false;
+    const rmCents = reco.recommended_price_cents || 0;
+    const calFloor = (calendrierPrices[reco.date] || 0) * 100;
+    return calFloor > 0 && calFloor > rmCents;
+  }, [calendrierPrices]);
 
   const addLog = useCallback((msg, type = 'info') => {
     setLogs(prev => [{ ts: new Date().toISOString(), msg, type }, ...prev].slice(0, 30));
@@ -528,7 +550,9 @@ function RevenueManagerPro() {
                       <div style={{ fontSize: 10, color: '#64748b' }}>{r.season_type || '—'}</div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: '#10b981', fontFamily: 'monospace' }}>{fmt(r.recommended_price_cents)}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#10b981', fontFamily: 'monospace' }}>
+                        {fmt(effectiveCents(r))}{isCalFloor(r) && <span title="Plancher CalendrierTarifs" style={{ fontSize: 9, marginLeft: 3 }}>📅</span>}
+                      </div>
                       <Badge color="#10b981">+{Math.round(r.premium_opportunity)}%</Badge>
                     </div>
                   </div>
@@ -547,7 +571,9 @@ function RevenueManagerPro() {
                       <div style={{ fontSize: 10, color: '#64748b' }}>{r.season_type || '—'}</div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: '#ef4444', fontFamily: 'monospace' }}>{fmt(r.recommended_price_cents)}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#ef4444', fontFamily: 'monospace' }}>
+                        {fmt(effectiveCents(r))}{isCalFloor(r) && <span title="Plancher CalendrierTarifs" style={{ fontSize: 9, marginLeft: 3 }}>📅</span>}
+                      </div>
                       <Badge color="#ef4444">Risque {Math.round(r.vacancy_risk_score)}%</Badge>
                     </div>
                   </div>
@@ -600,7 +626,9 @@ function RevenueManagerPro() {
                       <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8' }}>{day}</div>
                       {reco && (
                         <>
-                          <div style={{ fontSize: mob ? 9 : 11, fontWeight: 700, color: '#e2e8f0', fontFamily: 'monospace' }}>{fmt(reco.recommended_price_cents)}</div>
+                          <div style={{ fontSize: mob ? 9 : 11, fontWeight: 700, color: '#e2e8f0', fontFamily: 'monospace' }}>
+                            {fmt(effectiveCents(reco))}{isCalFloor(reco) && <span title="Plancher CalendrierTarifs" style={{ fontSize: 8 }}>📅</span>}
+                          </div>
                           <div style={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
                             <span style={{ width: 6, height: 6, borderRadius: '50%', background: statusColor(reco.status), display: 'inline-block' }} title={statusLabel(reco.status)} />
                             {flags.map(f => <span key={f} style={{ fontSize: 9 }} title={f}>{alertIcon(f)}</span>)}
@@ -642,7 +670,15 @@ function RevenueManagerPro() {
               {/* Price */}
               <div style={{ marginBottom: 14 }}>
                 <div style={{ fontSize: 10, color: '#64748b', marginBottom: 4 }}>Prix recommandé</div>
-                <div style={{ fontSize: 30, fontWeight: 700, color: '#0ea5e9', fontFamily: 'monospace' }}>{fmt(selectedReco.recommended_price_cents)}</div>
+                <div style={{ fontSize: 30, fontWeight: 700, color: '#0ea5e9', fontFamily: 'monospace' }}>
+                  {fmt(effectiveCents(selectedReco))}
+                  {isCalFloor(selectedReco) && <span title="Plancher CalendrierTarifs" style={{ fontSize: 14, marginLeft: 6 }}>📅</span>}
+                </div>
+                {isCalFloor(selectedReco) && (
+                  <div style={{ fontSize: 10, color: '#f59e0b', marginTop: 3 }}>
+                    Plancher CalendrierTarifs ({calendrierPrices[selectedDate]}€) — RM proposait {fmt(selectedReco.recommended_price_cents)}
+                  </div>
+                )}
                 {selectedReco.base_price_cents && <div style={{ fontSize: 11, color: '#64748b' }}>Base : {fmt(selectedReco.base_price_cents)}</div>}
                 <div style={{ marginTop: 6 }}>
                   <Badge color={statusColor(selectedReco.status)}>{statusLabel(selectedReco.status)}</Badge>
