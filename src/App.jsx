@@ -28,6 +28,7 @@ import AdminChatTab from "./tabs/AdminChatTab.jsx";
 import DevisEditor from "./tabs/DevisEditor.jsx";
 import InterventionsTab from "./tabs/InterventionsTab.jsx";
 import InventaireTab from "./tabs/InventaireTab.jsx";
+import MaintenanceTab from "./tabs/MaintenanceTab.jsx";
 import ConversionTab from "./tabs/ConversionTab.jsx";
 import FunnelTab from "./tabs/FunnelTab.jsx";
 import ServiceOrdersTab from "./tabs/ServiceOrdersTab.jsx";
@@ -1310,6 +1311,7 @@ export default function App() {
     {
       id: "ops", label: "🔧 Opérations",
       items: [
+        { id: "maintenance",   icon: "🛠️", label: "Maintenance" },
         { id: "interventions", icon: "🔨", label: "Interventions" },
         { id: "travaux",      icon: "🛠️", label: "Travaux",       badge: (() => { try { const n = JSON.parse(localStorage.getItem(TRAVAUX_KEY)||"[]").filter(t => t.status !== "done" && t.priorite === "urgent").length; return n > 0 ? n : null; } catch { return null; } })(), badgeColor: "#ef4444" },
         { id: "inventaire",   icon: "📦", label: "Inventaire" },
@@ -1596,6 +1598,7 @@ export default function App() {
             {tab === "orchestrateur" && <OrchestratorTab />}
             {tab === "projets-cerveau" && <ProjetsCerveauTab />}
             {tab === "deploy-status" && <DevStatusTab />}
+            {tab === "maintenance"   && <MaintenanceTab />}
             {tab === "interventions" && <InterventionsTab />}
             {tab === "inventaire"    && <InventaireTab />}
             {tab === "funnel"        && <FunnelTab />}
