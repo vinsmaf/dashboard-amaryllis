@@ -137,7 +137,6 @@ function RevenueManagerPro() {
   const [dbInitStatus, setDbInitStatus] = useState('unknown');
   const [approveAllStatus, setApproveAllStatus] = useState('idle');
   const [initLoading, setInitLoading] = useState(false);
-  const [scrapeLoading, setScrapeLoading] = useState(false);
   const [signalsLoading, setSignalsLoading] = useState(false);
   // Sub-tab for competitors
   const [compSubTab, setCompSubTab] = useState('list');
@@ -368,25 +367,6 @@ function RevenueManagerPro() {
     setInitLoading(false);
   }, [apiCall, addLog]);
 
-  const handleScrape = useCallback(async () => {
-    if (!selProp) { addLog('Sélectionnez un bien', 'error'); return; }
-    setScrapeLoading(true);
-    addLog('Lancement du scraping Apify…');
-    try {
-      const _tok = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('ldb_tok') : null;
-      const raw = await fetch('/api/rm-scrape', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(_tok ? { Authorization: 'Bearer ' + _tok } : {}) }, body: JSON.stringify({ property_id: selProp }) });
-      const res = await raw.json().catch(() => ({}));
-      if (raw.ok && res?.ok) {
-        addLog(`✓ Scraping lancé (${res.configs_triggered || 0} concurrents)`, 'success');
-      } else {
-        const msg = res?.error || res?.message || `HTTP ${raw.status}`;
-        if (msg.includes('APIFY_TOKEN')) addLog('APIFY_TOKEN non configuré dans Cloudflare', 'error');
-        else if (msg.includes('No active scraping')) addLog('Importez d\'abord les concurrents via CSV', 'error');
-        else addLog(`Erreur : ${msg}`, 'error');
-      }
-    } catch (e) { addLog(`Erreur : ${e.message}`, 'error'); }
-    setScrapeLoading(false);
-  }, [selProp, addLog]);
 
   const handleRecalcSignals = useCallback(async () => {
     addLog('Recalcul des signaux marché…');
@@ -815,9 +795,6 @@ function RevenueManagerPro() {
                   {csvLoading ? '⏳ Chargement…' : '📋 Éditer les concurrents'}
                 </Btn>
                 <BtnSec onClick={handleDownloadCSV} title="Télécharger en CSV">⬇️ Exporter CSV</BtnSec>
-                <BtnSec onClick={handleScrape} disabled={scrapeLoading} title="Lance Apify pour récupérer les prix actuels sur Airbnb">
-                  {scrapeLoading ? '⏳ En cours…' : '🕷️ Rafraîchir les prix'}
-                </BtnSec>
               </div>
 
               {/* CSV Editor */}

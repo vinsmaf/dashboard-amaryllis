@@ -119,20 +119,18 @@ async function handleSnapshot(db, body) {
 }
 
 async function handleRecalculateSignals(db, body) {
-  const { property_id, horizon_days = 180 } = body;
+  const { property_id, horizon_days = 90 } = body;
   if (!property_id) return json({ error: "property_id required" }, 400);
 
   const today = new Date().toISOString().slice(0, 10);
   const endDate = new Date(Date.now() + horizon_days * 86400000).toISOString().slice(0, 10);
   const now = Date.now();
 
-  // Get all active listings in the default set for this property
+  // Get all active listings for this property (no default-set requirement)
   const { results: listings } = await db
     .prepare(
-      `SELECT cl.id, cl.similarity_score
-       FROM rm_competitor_listings cl
-       JOIN rm_competitor_sets cs ON cs.id = cl.set_id
-       WHERE cl.property_id = ? AND cl.is_active = 1 AND cs.is_default = 1`
+      `SELECT id, similarity_score FROM rm_competitor_listings
+       WHERE property_id = ? AND is_active = 1`
     )
     .bind(property_id)
     .all();
@@ -145,8 +143,9 @@ async function handleRecalculateSignals(db, body) {
   const listingMap = {};
   for (const l of listings) listingMap[l.id] = l;
 
-  // Get all snapshots in range for these listings
   const placeholders = listingIds.map(() => "?").join(",");
+
+  // Snapshots in range
   const { results: snapshots } = await db
     .prepare(
       `SELECT listing_id, snapshot_date, price_cents, is_available, confidence
@@ -157,11 +156,41 @@ async function handleRecalculateSignals(db, body) {
     .bind(...listingIds, today, endDate)
     .all();
 
-  // Group snapshots by date
+  // Latest known price per listing (for carry-forward on dates without real snapshots)
+  const { results: latestSnaps } = await db
+    .prepare(
+      `SELECT s.listing_id, s.price_cents, s.is_available, s.snapshot_date
+       FROM rm_competitor_snapshots s
+       WHERE s.listing_id IN (${placeholders})
+         AND s.price_cents IS NOT NULL AND s.price_cents > 0
+         AND s.snapshot_date = (
+           SELECT MAX(s2.snapshot_date) FROM rm_competitor_snapshots s2
+           WHERE s2.listing_id = s.listing_id AND s2.price_cents > 0
+         )`
+    )
+    .bind(...listingIds)
+    .all();
+
+  const latestByListing = {};
+  for (const s of (latestSnaps || [])) latestByListing[s.listing_id] = s;
+
+  // Group real snapshots by date
   const byDate = {};
   for (const s of snapshots) {
     if (!byDate[s.snapshot_date]) byDate[s.snapshot_date] = [];
     byDate[s.snapshot_date].push(s);
+  }
+
+  // Pre-fill dates without real snapshots using carry-forward prices (confidence = low)
+  const carrySnaps = Object.values(latestByListing).filter(s => s.price_cents > 0);
+  if (carrySnaps.length > 0) {
+    const cur2 = new Date(today + "T00:00:00Z");
+    const end2 = new Date(endDate + "T00:00:00Z");
+    while (cur2 <= end2) {
+      const d = cur2.toISOString().slice(0, 10);
+      if (!byDate[d]) byDate[d] = carrySnaps.map(s => ({ ...s, confidence: 'low', _carry: true }));
+      cur2.setUTCDate(cur2.getUTCDate() + 1);
+    }
   }
 
   // Generate all dates
@@ -209,8 +238,9 @@ async function handleRecalculateSignals(db, body) {
 
   for (const dateStr of dates) {
     const daySnaps = byDate[dateStr] || [];
+    const isCarryForward = daySnaps.length > 0 && daySnaps.every(s => s._carry);
     const total = listingIds.length;
-    const withData = daySnaps.length;
+    const withData = isCarryForward ? 0 : daySnaps.length;
     const available = daySnaps.filter((s) => s.is_available === 1).length;
     const unavailable = daySnaps.filter((s) => s.is_available === 0).length;
 
@@ -259,7 +289,10 @@ async function handleRecalculateSignals(db, body) {
       else if (pressure < 40) marketLabel = "weak";
     }
 
-    const dataConfidence = total > 0 ? Math.min(100, Math.round((withData / total) * 100)) : 0;
+    // Carry-forward = confiance basse (30) pour signaler que c'est extrapolé
+    const dataConfidence = isCarryForward
+      ? 30
+      : (total > 0 ? Math.min(100, Math.round((withData / total) * 100)) : 0);
 
     const alertFlags = [];
     if (pressure !== null && pressure > 80) alertFlags.push("high_demand");
