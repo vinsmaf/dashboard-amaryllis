@@ -3210,6 +3210,15 @@ export default {
         runBugTriage(env), // 🐞 triage hebdo des bugs captés en prod → backlog + digest
         runMemoryDistill(env), // 🧠 B2 — distille l'expérience du réseau en apprentissages durables
         runGuideWrite(env), // 📝 réécriture prose d'accueil guides D1 (welcome_message + tagline)
+        (async () => {
+          try {
+            const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+            const res = await fetch(`${siteUrl}/api/rm-auto-update?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}&scan=1`);
+            const data = await res.json().catch(() => ({}));
+            const scanned = (data.scan || []).reduce((s, r) => s + (r.scanned ?? 0), 0);
+            console.log(`[rm-auto-update lundi] ${(data.recalc || []).filter(r => r.ok).length}/${6} biens · ${scanned} concurrents scannés`);
+          } catch (e) { console.error("[rm-auto-update lundi] Cron error:", e.message); }
+        })(),
       ]));
 
     } else if (cron === "0 1 1 * *") {
@@ -3468,6 +3477,14 @@ export default {
         }
         // ── Newsletter séquence J+7 (offre abonné) ───────────────────────────────
         try { await runNewsletterSequence(env); } catch (e) { console.error("[newsletter-seq] Cron error:", e.message); }
+        // ── RM recalcul automatique (recos 30j pour tous les biens) ──────────────
+        try {
+          const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+          const res = await fetch(`${siteUrl}/api/rm-auto-update?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`);
+          const data = await res.json().catch(() => ({}));
+          const okCount = (data.recalc || []).filter(r => r.ok).length;
+          console.log(`[rm-auto-update] ${okCount}/6 biens · ${data.totalDates ?? 0} dates recalculées`);
+        } catch (e) { console.error("[rm-auto-update] Cron error:", e.message); }
       })());
 
     } else if (cron === "0 13 * * *") {

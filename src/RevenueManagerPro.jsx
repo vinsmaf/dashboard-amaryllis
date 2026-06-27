@@ -151,6 +151,10 @@ function RevenueManagerPro() {
   // Logs panel
   const [logsExpanded, setLogsExpanded] = useState(false);
 
+  const [globalRecos, setGlobalRecos] = useState({});
+  const [globalLoading, setGlobalLoading] = useState(false);
+  const [globalApproving, setGlobalApproving] = useState({});
+
   const shortTermBiens = useMemo(() =>
     biens.filter(b => b.type !== 'long'), [biens]);
 
@@ -226,6 +230,62 @@ function RevenueManagerPro() {
     if (data?.competitors) setCompetitors(data.competitors);
   }, [selProp, apiCall]);
 
+  const BIENS_GLOBAL = ['amaryllis', 'zandoli', 'geko', 'mabouya', 'schoelcher', 'nogent'];
+  const BIENS_NOMS = { amaryllis: 'Amaryllis', zandoli: 'Zandoli', geko: 'Géko', mabouya: 'Mabouya', schoelcher: 'Schœlcher', nogent: 'Nogent' };
+
+  const loadGlobalRecos = useCallback(async () => {
+    setGlobalLoading(true);
+    const today = new Date().toISOString().slice(0, 10);
+    const to = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+    const results = {};
+    await Promise.all(BIENS_GLOBAL.map(async bienId => {
+      try {
+        const data = await adminFetch(`/api/rm-recommendations?property_id=${bienId}&from=${today}&to=${to}`);
+        results[bienId] = data;
+      } catch { results[bienId] = { recommendations: [], count: 0 }; }
+    }));
+    setGlobalRecos(results);
+    setGlobalLoading(false);
+  }, [adminFetch]);
+
+  const approveAllBien = useCallback(async (bienId) => {
+    setGlobalApproving(prev => ({ ...prev, [bienId]: true }));
+    const today = new Date().toISOString().slice(0, 10);
+    const to = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+    try {
+      await adminFetch('/api/rm-recommendations/approve-all', {
+        method: 'PATCH',
+        body: JSON.stringify({ property_id: bienId, from: today, to }),
+      });
+      await loadGlobalRecos();
+    } catch (e) { addLog(`Erreur approve-all ${bienId}: ${e.message}`, 'error'); }
+    setGlobalApproving(prev => ({ ...prev, [bienId]: false }));
+  }, [adminFetch, loadGlobalRecos, addLog]);
+
+  const recalcAllBiens = useCallback(async () => {
+    setGlobalLoading(true);
+    addLog('Recalcul de tous les biens...');
+    const today = new Date().toISOString().slice(0, 10);
+    const to = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+    for (const bienId of BIENS_GLOBAL) {
+      try {
+        await adminFetch('/api/rm-recommendations/calculate', {
+          method: 'POST',
+          body: JSON.stringify({ property_id: bienId, from: today, to }),
+        });
+        addLog(`✓ ${BIENS_NOMS[bienId]} recalculé`);
+      } catch (e) { addLog(`✗ ${bienId}: ${e.message}`, 'error'); }
+    }
+    await loadGlobalRecos();
+  }, [adminFetch, loadGlobalRecos, addLog]);
+
+  const approveAllBiens = useCallback(async () => {
+    for (const bienId of BIENS_GLOBAL) {
+      const recs = globalRecos[bienId]?.recommendations || [];
+      if (recs.some(r => r.status === 'pending')) await approveAllBien(bienId);
+    }
+  }, [globalRecos, approveAllBien]);
+
   const loadScanState = useCallback(async () => {
     const data = await apiCall(`/api/fc-competitors-scan?property_id=${selProp}`);
     if (data) setScanState(data);
@@ -268,6 +328,7 @@ function RevenueManagerPro() {
     if (tab === 'competitors') { loadCompetitors(); if (compSubTab === 'market') loadSignals(); if (compSubTab === 'scan') loadScanState(); }
     if (tab === 'rules') loadRules();
     if (tab === 'calendar') loadOverrides();
+    if (tab === 'global') loadGlobalRecos();
   }, [selProp, tab, calMonth, calYear]);
 
   useEffect(() => {
@@ -429,6 +490,7 @@ function RevenueManagerPro() {
   };
 
   const tabs = [
+    { id: 'global',    label: mob ? '🗺️' : '🗺️ Tous les biens' },
     { id: 'dashboard', label: mob ? '📊' : '📊 Tableau de bord' },
     { id: 'calendar',  label: mob ? '📅' : '📅 Calendrier' },
     { id: 'competitors', label: mob ? '🏢' : '🏢 Concurrents' },
@@ -469,6 +531,88 @@ function RevenueManagerPro() {
           }}>{t.label}</button>
         ))}
       </div>
+
+      {/* ── VUE GLOBALE — tous les biens ───────────────────────────────────── */}
+      {tab === 'global' && (
+        <div>
+          {/* Actions globales */}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20, alignItems: 'center' }}>
+            <button onClick={recalcAllBiens} disabled={globalLoading} style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', background: 'rgba(14,165,233,0.15)', color: '#0ea5e9', border: '1px solid rgba(14,165,233,0.3)' }}>
+              {globalLoading ? '⏳ En cours…' : '🔄 Recalculer tous les biens'}
+            </button>
+            {(() => {
+              const totalPending = BIENS_GLOBAL.reduce((s, b) => s + (globalRecos[b]?.recommendations || []).filter(r => r.status === 'pending').length, 0);
+              return totalPending > 0 ? (
+                <button onClick={approveAllBiens} style={{ padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', background: '#10b981', color: '#fff', border: 'none' }}>
+                  ✅ Tout approuver ({totalPending} dates)
+                </button>
+              ) : null;
+            })()}
+            {globalLoading && <span style={{ color: '#64748b', fontSize: 12 }}>Chargement des 6 biens…</span>}
+          </div>
+
+          {/* Une carte par bien */}
+          {BIENS_GLOBAL.map(bienId => {
+            const data = globalRecos[bienId];
+            const recs = data?.recommendations || [];
+            const pending = recs.filter(r => r.status === 'pending');
+            const avgCents = recs.length > 0 ? Math.round(recs.reduce((s, r) => s + (r.recommended_price_cents || 0), 0) / recs.length) : 0;
+            const avgPrice = avgCents > 0 ? Math.round(avgCents / 100) : null;
+            const isLoading = !data && globalLoading;
+
+            return (
+              <div key={bienId} style={{ marginBottom: 10, background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: '14px 16px', border: '1px solid rgba(255,255,255,0.07)' }}>
+                {/* Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                    <span style={{ fontWeight: 700, fontSize: 14 }}>{BIENS_NOMS[bienId] || bienId}</span>
+                    {avgPrice && <span style={{ color: '#64748b', fontSize: 12 }}>{avgPrice}€/nuit moy.</span>}
+                    {isLoading
+                      ? <span style={{ color: '#64748b', fontSize: 11 }}>chargement…</span>
+                      : pending.length > 0
+                        ? <span style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>{pending.length} en attente</span>
+                        : recs.length > 0
+                          ? <span style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981', borderRadius: 6, padding: '2px 8px', fontSize: 11 }}>✓ Tout approuvé</span>
+                          : <span style={{ color: '#475569', fontSize: 11 }}>aucune reco</span>
+                    }
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button onClick={() => { setSelProp(bienId); setTab('calendar'); }} style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, background: 'transparent', color: '#64748b', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }}>
+                      📅 Détail
+                    </button>
+                    {pending.length > 0 && (
+                      <button onClick={() => approveAllBien(bienId)} disabled={!!globalApproving[bienId]} style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: '#10b981', color: '#fff', border: 'none', cursor: 'pointer', opacity: globalApproving[bienId] ? 0.6 : 1 }}>
+                        {globalApproving[bienId] ? '…' : `✅ Approuver ${pending.length}`}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Mini-grille des 14 prochains jours (seulement si des pending existent) */}
+                {pending.length > 0 && (
+                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 10 }}>
+                    {recs.slice(0, 14).map(r => {
+                      const isPending = r.status === 'pending';
+                      const price = r.recommended_price_cents ? Math.round(r.recommended_price_cents / 100) : null;
+                      const dateStr = r.date ? r.date.slice(5) : '';
+                      return (
+                        <div key={r.date} onClick={() => { setSelProp(bienId); setSelectedDate(r.date); setTab('calendar'); }} title={`${r.date} — cliquer pour éditer`} style={{
+                          padding: '4px 7px', borderRadius: 6, fontSize: 10, cursor: 'pointer', minWidth: 44, textAlign: 'center',
+                          background: isPending ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.08)',
+                          border: `1px solid ${isPending ? 'rgba(245,158,11,0.25)' : 'rgba(16,185,129,0.15)'}`,
+                        }}>
+                          <div style={{ color: '#64748b', marginBottom: 1 }}>{dateStr}</div>
+                          <div style={{ fontWeight: 700, color: isPending ? '#f59e0b' : '#10b981' }}>{price ? `${price}€` : '—'}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* ── DASHBOARD ──────────────────────────────────────────────────────── */}
       {tab === 'dashboard' && (

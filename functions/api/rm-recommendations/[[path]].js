@@ -620,6 +620,21 @@ async function handleReject(db, body) {
   return json({ ok: true });
 }
 
+async function handleApproveAll(db, body) {
+  const { property_id, from, to } = body;
+  if (!property_id) return json({ error: "property_id required" }, 400);
+  const now = Date.now();
+  const fromDate = from || new Date().toISOString().slice(0, 10);
+  const toDate = to || new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+
+  const result = await db.prepare(
+    `UPDATE rm_recommendations SET status = 'approved', reviewed_at = ?, updated_at = ?
+     WHERE property_id = ? AND date BETWEEN ? AND ? AND status = 'pending'`
+  ).bind(now, now, property_id, fromDate, toDate).run();
+
+  return json({ ok: true, property_id, approved: result.meta?.changes ?? 0 });
+}
+
 async function handleDeleteOverride(db, url) {
   const property_id = url.searchParams.get("property_id");
   const date = url.searchParams.get("date");
@@ -666,6 +681,12 @@ export async function onRequest(context) {
       if (path.endsWith("/reject"))    return handleReject(db, body);
 
       return json({ error: "Unknown POST action. Use /calculate, /approve, or /reject" }, 400);
+    }
+
+    if (request.method === "PATCH") {
+      const body = await request.json().catch(() => ({}));
+      if (path.endsWith("/approve-all")) return handleApproveAll(db, body);
+      return json({ error: "Unknown PATCH action" }, 400);
     }
 
     if (request.method === "DELETE") {
