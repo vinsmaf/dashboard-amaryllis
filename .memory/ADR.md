@@ -3,6 +3,38 @@
 > 1 entrée par décision qui engage la suite. Format 5 lignes : **Choix · Alternatives refusées · Conséquences attendues · Périmètre · Statut**.
 > Décisions d'archi détaillées (specs complets) → `../docs/superpowers/specs/README.md` (ADR-001→010). Ici = log curaté de session.
 
+## ADR-TRIPADVISOR-001 · 2026-06-27 · TripAdvisor listings — workflow split Claude+Vincent
+
+1. **Choix** : 6 fiches TripAdvisor créées sur `tripadvisor.fr/GetListedNew` (Amaryllis, Zandoli, Géko, Mabouya, Schœlcher, Nogent — Iguana exclu, bail long terme). Workflow : Claude remplit nom/catégorie/type via `javascript_tool` (boutons React non-cliquables via CSS), Vincent remplit le champ adresse (autocomplete nécessitant interaction humaine) + Claude fait checkbox+submit.
+2. **Alternatives refusées** : tout faire par Claude seul (adresse = champ autocomplete Google, `form_input` sur le mauvais champ). Tout faire par Vincent (trop long, 6 fiches).
+3. **Conséquences attendues** : TripAdvisor envoie des emails de confirmation avec les URLs des fiches → mettre à jour `TRIPADVISOR_REVIEW` dans `functions/api/send-poststay.js` dès réception. Les URLs placeholder actuelles ne fonctionnent pas encore.
+4. **Périmètre** : `functions/api/send-poststay.js` (`TRIPADVISOR_REVIEW` map) · `public/email-templates/post-sejour.html` (bloc bouton TripAdvisor). Commit `b7d8817`.
+5. **Statut** : listings soumis ✅. **Action Vincent** : dès réception emails TA → me donner les URLs → redéploiement 5min.
+
+## ADR-ICAL-UID-ROT-001 · 2026-06-27 · iCal syncFeed — stocker {uid, checkout} + détection rotation
+
+1. **Choix** : `syncFeed()` dans `workers/ical-sync/index.js` stocke désormais des objets `{uid, checkout}` dans KV au lieu de simples chaînes. Deux filtres anti-faux-positif : (A) rotation UID Airbnb = même préfixe (avant le `-`) → ignorée ; (B) séjour terminé = checkout < aujourd'hui → ignoré comme annulation.
+2. **Alternatives refusées** : garder les UIDs en chaînes simples (pas de date checkout → impossible de distinguer résa terminée de vraie annulation). Notification post-hoc avec TTL (manque de fiabilité).
+3. **Conséquences attendues** : les faux positifs d'annulation (comme Géko 27/06) sont éliminés. Les vraies annulations (checkout futur, nouveau UID sans rotation) restent détectées. Backward-compatible (anciens strings KV traités comme `{uid, checkout: null}`).
+4. **Périmètre** : `workers/ical-sync/index.js` (fonction `syncFeed`, lignes ~1503-1533). Worker version `09f2e5df-1ebf-41dd-a418-6e78c1a18494`.
+5. **Statut** : acté & déployé.
+
+## ADR-EDITORIAL-FACTCHECK-001 · 2026-06-27 · Fact-check publication — strip URLs + word boundaries
+
+1. **Choix** : (A) `factCheckCaption()` dans `_factcheck.js` strip maintenant les URLs (`https?://\S+`) comme les hashtags avant d'appliquer les règles — évite que `villamaryllis.com` déclenche la règle `\bvilla\b` pour les biens non-villa. (B) Pattern `villa` dans D1 `agent_lessons` corrigé en `\bvilla\b` pour le bien `schoelcher`. (C) `runEditorialRetry()` dans le Worker détecte les entrées `failed` avec `draft_id IS NULL` (orphelins) et relance la génération via `agents-run`. (D) Brief `community-manager` impose désormais l'imageUrl EXACTE obligatoire + post-processing corrige l'imageUrl en D1 après génération.
+2. **Alternatives refusées** : ne pas stiper les URLs (cause de 3j d'échecs). Patterns DB sans word boundaries (trop large). Retry manuel des orphelins (chronophage).
+3. **Conséquences attendues** : les publications quotidiennes ne devraient plus échouer sur des faux positifs fact-check. Le LLM ne peut plus halluciner d'URL photo. Les orphelins sans draft se récupèrent automatiquement toutes les 10min.
+4. **Périmètre** : `functions/api/_factcheck.js` · `workers/ical-sync/index.js` (runEditorialRetry, runEditorialDraftGen brief). D1 `agent_lessons` id=18. Commits `3a990e5` + `c602b97`.
+5. **Statut** : acté & déployé. Deux posts ce soir publiés après fix (Zandoli + Schœlcher FB+IG).
+
+## ADR-APPLE-MAPS-001 · 2026-06-26 · Apple Business Connect — structure org + fiches biens
+
+1. **Choix** : 1 organisation "Amaryllis Locations" (org `1488626440217508864`) + 1 emplacement par bien physique (7 total à terme). L'emplacement "résidence Amaryllis" (`1554112016602367005`) = le complexe Sainte-Luce (Zandoli, Géko, Mabouya, Schœlcher). Villa Amaryllis = emplacement distinct à créer post-validation.
+2. **Alternatives refusées** : 1 emplacement global pour tout le portefeuille — Apple Maps = 1 fiche = 1 lieu physique précis. 1 org par bien — l'org = l'entité commerciale.
+3. **Conséquences attendues** : validation org Apple (≤5j ouvrés depuis le 26/06) → déblocage création des 6 autres emplacements. Fuseau Martinique absent de Apple → utiliser "Amérique/Porto Rico (GMT -04:00)" = UTC-4 sans DST. Photo de couverture résidence = complexe (géko/16-23), JAMAIS villa Amaryllis.
+4. **Périmètre** : hors codebase — `business.apple.com`, org `1488626440217508864`, emplacement résidence `1554112016602367005`. Photo `~/Downloads/residence-amaryllis-cover.jpg` (2000×1125, géko/16).
+5. **Statut** : en cours — org soumise 26/06. Résidence configurée (description ✅, timezone ✅, site web ✅). ⚠️ **Actions Vincent** : (1) uploader logo correct · (2) uploader `residence-amaryllis-cover.jpg` depuis Downloads · (3) après validation org → créer 6 emplacements manquants.
+
 ## ADR-RM-PLANCHER-001 · 2026-06-26 · Plancher CalendrierTarifs dans les recos RM (UI-side)
 
 1. **Choix** : Le plancher CalendrierTarifs est intégré à 2 niveaux : (A) **server-side** dans `calcDateReco` via `calFloorCents` (5ème couche du `hardFloor`) — `handleCalculate` lit `daily_floors` du body et les passe date par date ; (B) **UI-side** dans `RevenueManagerPro.jsx` via `effectiveCents(reco)` = filet de sécurité pour les vieilles recos en D1.

@@ -1,7 +1,7 @@
 // Source unique des partenaires affiliés.
-// ⚠️ Mettre à jour les URL une fois les comptes affiliés créés :
-//   DiscoverCars : discovercars.com/affiliates → remplacer l'URL par la version avec a_aid=<ID>
-//   GetYourGuide : partners.getyourguide.com  → même chose avec partner_id=<ID>
+// DiscoverCars : a_aid=vinsmaf · commission 80% (Ilina Beskina, confirmé 2026-06-25, contest Q2)
+// GetYourGuide : partner_id=DNI7ML3
+// Viator : pid=P00306913
 // Tout lien affilié doit porter rel="sponsored" (obligation Google).
 
 export const PARTENAIRES = {

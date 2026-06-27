@@ -262,37 +262,6 @@ CREATE INDEX IF NOT EXISTS idx_reco_property_date ON rm_recommendations(property
 CREATE INDEX IF NOT EXISTS idx_reco_status ON rm_recommendations(status, property_id);
 CREATE INDEX IF NOT EXISTS idx_reco_vacancy ON rm_recommendations(vacancy_risk_score DESC);
 
-CREATE TABLE IF NOT EXISTS rm_published_rates (
-  id TEXT PRIMARY KEY,
-  property_id TEXT NOT NULL,
-  date TEXT NOT NULL,
-  price_cents INTEGER NOT NULL,
-  min_stay INTEGER NOT NULL,
-  published_at INTEGER NOT NULL,
-  published_by TEXT NOT NULL DEFAULT 'admin',
-  recommendation_id TEXT,
-  UNIQUE(property_id, date)
-);
-CREATE INDEX IF NOT EXISTS idx_published_property_date ON rm_published_rates(property_id, date);
-
-CREATE TABLE IF NOT EXISTS rm_scraping_configs (
-  id TEXT PRIMARY KEY,
-  listing_id TEXT NOT NULL REFERENCES rm_competitor_listings(id) ON DELETE CASCADE,
-  platform TEXT NOT NULL,
-  platform_listing_id TEXT NOT NULL,
-  scrape_url TEXT NOT NULL,
-  scraping_service TEXT NOT NULL DEFAULT 'apify',
-  apify_actor_id TEXT DEFAULT 'dtrungtin/airbnb-scraper',
-  scrape_frequency TEXT NOT NULL DEFAULT 'weekly',
-  scrape_horizon_days INTEGER NOT NULL DEFAULT 180,
-  last_scraped_at INTEGER,
-  last_error TEXT,
-  consecutive_errors INTEGER DEFAULT 0,
-  is_active INTEGER NOT NULL DEFAULT 1,
-  created_at INTEGER NOT NULL,
-  updated_at INTEGER NOT NULL,
-  UNIQUE(listing_id)
-);
 
 CREATE TABLE IF NOT EXISTS rm_kpi_snapshots (
   id TEXT PRIMARY KEY,

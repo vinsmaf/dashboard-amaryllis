@@ -4,6 +4,26 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
+## En cours → ✅ terminé le 2026-06-27 (Session publications réseaux — 3 bugs editorial calendar corrigés + Zandoli+Schœlcher publiés)
+
+## 🟡 TripAdvisor — URLs des 6 fiches à mettre à jour dans send-poststay.js
+- **Statut** : 6 fiches TA soumises (27/06). TripAdvisor envoie des emails de confirmation avec les URLs des fiches dans les jours suivants.
+- **Action Vincent** : dès réception des emails TA → transmettre les 6 URLs à Claude → mise à jour `TRIPADVISOR_REVIEW` dans `functions/api/send-poststay.js` → redéploiement.
+- **En attendant** : le bloc TripAdvisor est dans les emails post-séjour mais les liens sont des placeholders (ne fonctionnent pas). Les emails partent quand même (bloc non-critique).
+
+## En cours → ✅ terminé le 2026-06-26 (Session Apple Business Connect — résidence Amaryllis configurée)
+> Tâche : configuration Apple Business Connect (org + fiche résidence Amaryllis). ADR-APPLE-MAPS-001.
+> Résidence Amaryllis configurée : description ✅, fuseau horaire ✅ (Porto Rico = UTC-4), site web ✅.
+> 🟡 **Actions Vincent pendantes (non bloquantes)** :
+>   - Uploader **logo** correct pour résidence Amaryllis (mauvais logo sélectionné pendant la session → Vincent refait)
+>   - Uploader **photo de couverture** : `~/Downloads/residence-amaryllis-cover.jpg` (2000×1125 JPG, photo géko/16)
+>   - Après validation org Apple (≤5j ouvrés depuis 26/06) → créer les 6 emplacements manquants (Villa Amaryllis, Iguana, Zandoli, Géko, Mabouya, Nogent)
+
+## 🟡 Apple Business Connect — validation org en attente (soumise 26/06/2026)
+- **Statut** : dossier soumis avec justificatifs (Kbis + enregistrement DNS TXT). Délai ≤5j ouvrés.
+- **Ce qui débloque** : email de confirmation Apple → création des 6 emplacements restants.
+- **Date limite estimée** : ~2026-07-03 (5j ouvrés).
+
 ## En cours → ✅ terminé le 2026-06-26 (Session RM plancher CalendrierTarifs — fix complet server+UI)
 
 ## En cours → ✅ terminé le 2026-06-26 (Session revenus — corrections chirurgicales Sheet « revenus locatifs 2026 »)

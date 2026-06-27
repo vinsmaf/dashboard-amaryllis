@@ -1,0 +1,7 @@
+- generic [ref=e4]:
+  - generic [ref=e5]: 🔒
+  - generic [ref=e6]: Locatif Dashboard
+  - generic [ref=e7]: Accès sécurisé
+  - textbox "Mot de passe" [active] [ref=e8]
+  - button "Entrer" [ref=e9] [cursor=pointer]
+  - generic [ref=e10]: villamaryllis.com/admin

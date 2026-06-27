@@ -3,6 +3,29 @@
 > Pièges déjà rencontrés + comment les éviter. 1 entrée = 1 leçon actionnable « la prochaine fois ».
 > Le journal d'erreurs exhaustif reste `../docs/ERREURS-LOG.md`.
 
+## 🚫 CF Workers : `cache: "no-store"` + `cf: { cacheTtl: 0 }` = incompatibles — 2026-06-28
+- **Piège** : combiner les 2 dans un `fetch()` CF Workers lance une exception silencieuse → l'email ne part jamais, aucun log D1 (le crash est avant `sendEmail`).
+- **La prochaine fois** : pour bypass cache CF dans un Worker, utiliser SOIT `cache: "no-store"` SOIT `cf: { cacheTtl: 0, cacheEverything: false }`, jamais les deux ensemble. Le `?cb=Date.now()` dans l'URL suffit pour un cache-bust léger.
+
+## 📸 Editorial : le brief LLM DOIT imposer l'imageUrl EXACTE, pas un hint — 2026-06-27
+- **Piège vécu (3j)** : les briefs disaient "utilise une vraie photo de ce bien" → le LLM inventait des URLs plausibles mais inexistantes (`/images/schoelcher-vue-panoramique.jpg` au lieu de `/photos/schoelcher/01.webp`) → Meta rejetait avec "image not found".
+- **La prochaine fois** : dans tout brief générant un draft social_post, inclure `RÈGLE ABSOLUE : imageUrl DOIT être EXACTEMENT "https://villamaryllis.com/photos/{bien}/01.webp"` — le LLM doit copier-coller, pas interpréter. En plus, post-processing : après génération, vérifier/corriger l'imageUrl en D1 avant d'approuver.
+
+## 🔍 Fact-check : les patterns D1 `agent_lessons` doivent avoir des word boundaries \b — 2026-06-27
+- **Piège vécu** : pattern `villa` (sans `\b`) stocké dans `agent_lessons` pour `schoelcher` bloquait aussi `villamaryllis.com` dans les URLs des captions. Le domaine contient "villa" mais ce n'est pas l'intention de la règle.
+- **La prochaine fois** : tout pattern d'interdiction de mot isolé = `\bvilla\b`, `\bapartement\b`, etc. (word boundaries). Vérifier via un test regex avant d'insérer dans `agent_lessons`. Et : `factCheckCaption()` strip maintenant les URLs avant de checker (même protection côté code).
+
+## 📅 iCal Worker : stocker {uid, checkout}, pas juste uid — 2026-06-27
+- **Piège vécu** : Géko a reçu une fausse alerte d'annulation (UID dont le préfixe était le même qu'une résa terminée). Root cause : KV stockait des UIDs sans date → impossible de savoir si la résa était terminée ou si Airbnb avait juste roté l'UID.
+- **La prochaine fois** : `ICAL_STORE` key `uids:{bienId}:{canal}` = array de `{uid, checkout}`. Deux filtres à appliquer avant de marquer une annulation : (1) même préfixe (avant `-`) dans les résas actuelles = rotation UID ignorée ; (2) checkout < today = séjour terminé ignoré. Backward-compatible : old strings → `{uid, checkout: null}`.
+
+## 🗺️ Apple Business Connect : fuseaux + photo de couverture + 2 validations séparées — 2026-06-26
+- **Martinique (America/Martinique) absente** de la liste Apple. Utiliser "Amérique/Porto Rico (GMT -04:00)" = UTC-4 sans DST, identique en pratique.
+- **2 validations séparées** : (1) validation org (business entity, SIRET/Kbis + DNS TXT) — peut prendre ≤5j ouvrés. (2) validation emplacement (Apple vérifie l'existence physique) — soumis en avril pour résidence Amaryllis, peut prendre plus longtemps. Les 2 avancent indépendamment.
+- **Photo de couverture** : minimum 1600×1040 px, formats PNG/JPG/HEIF. Convertir avec `sips /path/in.webp --out /path/out.jpg -s format jpeg -s formatOptions 90`. Photos géko 16-23 (`public/photos/geko/`) = 2000×1125, idéales.
+- **Ne jamais confondre résidence Amaryllis et Villa Amaryllis** : la fiche "résidence Amaryllis" = le complexe (Zandoli, Géko, Mabouya, Schœlcher). Photo de couverture = complex, PAS la piscine villa.
+- **La prochaine fois** : avant d'uploader un logo ou une photo via Apple Business, vérifier que c'est bien le bon bien — l'UI Apple ne prévient pas des erreurs de contexte.
+
 ## 🏷️ RM : passer `daily_floors` au `/calculate` = pattern correct pour respecter les prix réels — 2026-06-26
 - **Pattern validé** : passer `{ daily_floors: { "2026-07-01": 280, ... } }` dans le body du POST `/api/rm-recommendations/calculate` → `calcDateReco` reçoit `calFloorCents` comme 5ème couche du `hardFloor`. D1 stocke les vraies valeurs.
 - **La prochaine fois** : tout recalcul RM depuis le frontend doit inclure `daily_floors: calendrierPrices` (bien seul) ou `allPrices[bienId]` (bulk). Si un cron côté Worker doit recalculer, il devra charger les prix depuis une autre source (seedPrices.js n'est pas disponible server-side) → à prévoir si besoin.

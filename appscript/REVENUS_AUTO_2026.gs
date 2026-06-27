@@ -145,24 +145,28 @@ function applyOne_(row, C, dstSheet, dryRun) {
     if (!dryRun) appendCell_(dstSheet, cRow, cCol, 1);
   }
 
-  // Montant : 100% sur le mois d'ARRIVEE — PAS de prorata (regle Vincent 2026-06-13).
-  //   Une resa a cheval (ex. arrivee 25 mai -> depart 8 juin) compte son montant
-  //   ENTIER en mai ; juin n'en recoit RIEN. Seules les NUITS sont reparties.
-  //   Cas limite : arrivee hors 2026 (sejour a cheval sur l'annee) -> on prorate
-  //   uniquement la part des nuits 2026 (ne pas injecter d'argent 2025 dans 2026).
+  // Montant : 100% sur le mois d'ARRIVEE. Division égale par mois pour les longs séjours (>30 nuits).
+  //   Court séjour (≤30 nuits) : mois d'arrivée reçoit le montant entier.
+  //   Long séjour (>30 nuits, ex. bail mensuel) : montant / nb_mois_touchés → part égale par mois.
+  //   Cas limite : arrivée hors 2026 → même division égale (part des mois 2026 uniquement).
   if (montant > 0) {
-    var revRow = REV_ROWS[bienId][ck]; // ligne du canal reel (airbnb/booking/direct)
-    if (aDate && aDate.getUTCFullYear() === 2026) {
+    var revRow = REV_ROWS[bienId][ck];
+    var longStay = totalN > 30;
+    if (aDate && aDate.getUTCFullYear() === 2026 && !longStay) {
+      // Court séjour : 100% sur le mois d'arrivée
       var aCol = arrivalMonth + 2;
       changes.push({ bloc:"revenus", row:revRow, col:aCol, delta:montant });
       if (!dryRun) appendCell_(dstSheet, revRow, aCol, montant);
     } else {
-      for (var mm2 in nbm) {
-        var pcol = parseInt(mm2, 10) + 2;
-        var part = Math.round(montant * nbm[mm2] / totalN * 100) / 100;
-        changes.push({ bloc:"revenus", row:revRow, col:pcol, delta:part });
-        if (!dryRun) appendCell_(dstSheet, revRow, pcol, part);
-      }
+      // Long séjour : division ÉGALE par nombre de mois touchés (ex. 3900€ / 3 mois = 1300€/mois)
+      var monthKeys2 = Object.keys(nbm).map(Number).sort(function(a,b){return a-b;});
+      var nMonths = monthKeys2.length;
+      var equalShare = Math.round(montant / nMonths * 100) / 100;
+      monthKeys2.forEach(function(mm2) {
+        var pcol = mm2 + 2;
+        changes.push({ bloc:"revenus", row:revRow, col:pcol, delta:equalShare });
+        if (!dryRun) appendCell_(dstSheet, revRow, pcol, equalShare);
+      });
     }
   }
 
@@ -430,26 +434,25 @@ function revenusInspect2026_() {
 //   puis re-application des resas 2026 dont l'ARRIVEE est au mois >= fromMonth (regle 100%).
 //   Les lignes TOTAL/OCC/ADR (formules =SUM/ratio) se recalculent seules.
 //   apply=false -> dry-run. fromMonth defaut 4 (avril : 1ere arrivee presente en source).
-function rebuildRevenus2026_(apply, fromMonth) {
+// bienFilter optionnel : si fourni (ex. "schoelcher"), ne recompute QUE ce bien.
+// Permet un rebuild chirurgical sans toucher les autres lignes du Sheet.
+function rebuildRevenus2026_(apply, fromMonth, bienFilter) {
   fromMonth = parseInt(fromMonth, 10); if (!fromMonth || fromMonth < 1 || fromMonth > 12) fromMonth = 4;
   var ss = SpreadsheetApp.openById(SHEET_ID);
   var dst = ss.getSheetByName(DST_SHEET); if (!dst) return { ok:false, error:"dst introuvable" };
-  var startCol = fromMonth + 2;        // mois fromMonth -> colonne (janv=3)
-  var nCols = 14 - startCol + 1;        // fromMonth..decembre
+  var startCol = fromMonth + 2;
+  var nCols = 14 - startCol + 1;
   var dataRows = [];
-  // Iguana exclu : ses lignes (revenu manuel) ne doivent JAMAIS être zérotées.
-  for (var b in REV_ROWS)    { if (EXCLUDED_BIENS[b]) continue; dataRows.push(REV_ROWS[b].airbnb, REV_ROWS[b].booking, REV_ROWS[b].direct); }
-  for (var b2 in CNT_ROWS)   { if (EXCLUDED_BIENS[b2]) continue; dataRows.push(CNT_ROWS[b2].airbnb, CNT_ROWS[b2].booking, CNT_ROWS[b2].direct); }
-  for (var b3 in NIGHTS_ROW) { if (EXCLUDED_BIENS[b3]) continue; dataRows.push(NIGHTS_ROW[b3]); }
+  for (var b in REV_ROWS)    { if (EXCLUDED_BIENS[b]) continue; if (bienFilter && b !== bienFilter) continue; dataRows.push(REV_ROWS[b].airbnb, REV_ROWS[b].booking, REV_ROWS[b].direct); }
+  for (var b2 in CNT_ROWS)   { if (EXCLUDED_BIENS[b2]) continue; if (bienFilter && b2 !== bienFilter) continue; dataRows.push(CNT_ROWS[b2].airbnb, CNT_ROWS[b2].booking, CNT_ROWS[b2].direct); }
+  for (var b3 in NIGHTS_ROW) { if (EXCLUDED_BIENS[b3]) continue; if (bienFilter && b3 !== bienFilter) continue; dataRows.push(NIGHTS_ROW[b3]); }
   if (!apply) {
-    return { ok:true, mode:"dry", fromMonth:fromMonth, startCol:startCol, nCols:nCols,
+    return { ok:true, mode:"dry", fromMonth:fromMonth, bienFilter:bienFilter||"all", startCol:startCol, nCols:nCols,
              rowsToRecompute:dataRows.length, note:"mois < " + fromMonth + " preserves" };
   }
-  var before = dst.getRange(6, startCol, 1, nCols).getValues()[0]; // total Nogent (row 6) avant
-  // Zero des cols fromMonth..dec sur toutes les lignes data (remplace formules accumulees)
+  var before = dst.getRange(6, startCol, 1, nCols).getValues()[0];
   var zeros = []; for (var z=0; z<nCols; z++) zeros.push(0);
   dataRows.forEach(function(r){ dst.getRange(r, startCol, 1, nCols).setValues([zeros.slice()]); });
-  // Re-application : resas 2026 arrivant au mois >= fromMonth, dedup par id/contenu.
   var seen = {}, applied = 0;
   [[SRC_SHEET, COL_TOUTES], [RESA_SHEET, COL_RESA]].forEach(function(pair){
     var sh = ss.getSheetByName(pair[0]); if (!sh || sh.getLastRow() < 2) return;
@@ -458,6 +461,7 @@ function rebuildRevenus2026_(apply, fromMonth) {
     rows.forEach(function(row){
       var a = toNoonUTC_(row[C.arrivee]);
       if (!a || a.getUTCFullYear() !== 2026 || (a.getUTCMonth() + 1) < fromMonth) return;
+      if (bienFilter && BIEN_BY_LABEL[String(row[C.prop] || "").toLowerCase().trim()] !== bienFilter) return;
       var id = String(row[C.id] || ""), ck = contentKeyRow_(row, C);
       if ((id && seen[id]) || (ck && seen[ck])) return;
       var ch = applyOne_(row, C, dst, false);
@@ -467,8 +471,34 @@ function rebuildRevenus2026_(apply, fromMonth) {
   });
   SpreadsheetApp.flush();
   var after = dst.getRange(6, startCol, 1, nCols).getValues()[0];
-  return { ok:true, mode:"applied", fromMonth:fromMonth, rowsZeroed:dataRows.length,
-           appliedBookings:applied, nogentTotalBefore:before, nogentTotalAfter:after };
+  return { ok:true, mode:"applied", fromMonth:fromMonth, bienFilter:bienFilter||"all",
+           rowsZeroed:dataRows.length, appliedBookings:applied,
+           nogentTotalBefore:before, nogentTotalAfter:after };
+}
+
+// ── PATCH MANUEL d'une cellule revenus ──────────────────────────────────────
+// Usage : {bien:"schoelcher", canal:"direct", month:6, value:1300, mode:"set"|"add"}
+// mode "set" = écrase ; mode "add" = ajoute (appendCell_). Défaut : "set".
+function revenus2026ManualPatch_(params) {
+  var bien  = String(params.bien  || "").toLowerCase();
+  var canal = String(params.canal || "direct").toLowerCase();
+  var month = parseInt(params.month, 10);
+  var value = parseFloat(params.value);
+  var mode  = String(params.mode  || "set");
+  if (!REV_ROWS[bien])       return { ok:false, error:"bien inconnu: " + bien };
+  if (!REV_ROWS[bien][canal]) return { ok:false, error:"canal inconnu: " + canal };
+  if (!month || month < 1 || month > 12) return { ok:false, error:"month invalide: " + month };
+  if (isNaN(value)) return { ok:false, error:"value invalide" };
+  var ss  = SpreadsheetApp.openById(SHEET_ID);
+  var dst = ss.getSheetByName(DST_SHEET); if (!dst) return { ok:false, error:"dst introuvable" };
+  var row = REV_ROWS[bien][canal];
+  var col = month + 2;
+  var before = dst.getRange(row, col).getValue();
+  if (mode === "add") { appendCell_(dst, row, col, value); }
+  else                { dst.getRange(row, col).setValue(value); }
+  SpreadsheetApp.flush();
+  var after = dst.getRange(row, col).getValue();
+  return { ok:true, bien:bien, canal:canal, month:month, mode:mode, row:row, col:col, before:before, after:after };
 }
 
 // ── PURGE du memo des résas non chiffrées (montant 0) ───────────────────────

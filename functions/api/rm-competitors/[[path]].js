@@ -451,28 +451,6 @@ async function handleImportListings(db, body) {
         .prepare(`SELECT id FROM rm_competitor_listings WHERE property_id = ? AND platform_listing_id = ?`)
         .bind(property_id, row.listing_id)
         .first();
-      const savedListingId = savedListing?.id || listingId;
-
-      // Auto-create scraping config if none exists (needed for Apify scraper)
-      const existingCfg = await db
-        .prepare(`SELECT id FROM rm_scraping_configs WHERE listing_id = ?`)
-        .bind(savedListingId)
-        .first();
-      if (!existingCfg) {
-        await db
-          .prepare(`INSERT OR IGNORE INTO rm_scraping_configs
-                      (id, listing_id, platform, platform_listing_id, scrape_url,
-                       apify_actor_id, scrape_horizon_days,
-                       is_active, consecutive_errors, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, 365, 1, 0, ?, ?)`)
-          .bind(
-            crypto.randomUUID(), savedListingId,
-            row.platform, row.listing_id, listingUrl,
-            "dtrungtin~airbnb-scraper", now, now
-          )
-          .run();
-      }
-
       imported++;
     } catch (e) {
       errors.push(`${row.listing_id}: ${e.message}`);

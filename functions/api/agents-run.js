@@ -295,7 +295,7 @@ export const AGENTS = [
     emoji: "🔭",
     prefix: "veille",
     focus: "scraping concurrents Airbnb/Booking, prix médian marché, dispos, photos hero, avis, signaux forts (variations prix, nouveaux listings, photos changées)",
-    files_hint: "functions/api/rm-competitors.js, functions/api/rm-scrape.js, D1 rm_competitors / rm_competitors_snapshots",
+    files_hint: "functions/api/rm-competitors/[[path]].js, functions/api/fc-competitors-scan.js, D1 rm_competitor_listings / rm_competitor_snapshots / rm_market_signals",
   },
   {
     id: "prompt-engineer",

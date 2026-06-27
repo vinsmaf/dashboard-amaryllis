@@ -129,22 +129,26 @@ function applyOne27_(row, C, dstSheet, dryRun) {
     if (!dryRun) appendCell27_(dstSheet, cRow, cCol, 1);
   }
 
-  // Montant : 100% sur le mois d'ARRIVEE — PAS de prorata (regle Vincent 2026-06-13).
-  //   Resa a cheval = montant ENTIER sur le mois d'arrivee ; seules les NUITS reparties.
-  //   Cas limite : arrivee hors 2027 -> prorata des nuits 2027 uniquement.
+  // Montant : 100% sur le mois d'ARRIVEE. Division égale par mois pour les longs séjours (>30 nuits).
+  //   Court séjour (≤30 nuits) : mois d'arrivée reçoit le montant entier.
+  //   Long séjour (>30 nuits) : montant / nb_mois_touchés → part égale par mois.
+  //   Cas limite : arrivée hors 2027 → même division égale.
   if (montant > 0) {
     var revRow = REV_ROWS_27[bienId][ck];
-    if (aDate && aDate.getUTCFullYear() === 2027) {
+    var longStay = totalN > 30;
+    if (aDate && aDate.getUTCFullYear() === 2027 && !longStay) {
       var aCol = arrivalMonth + 2;
       changes.push({ bloc:"revenus", row:revRow, col:aCol, delta:montant });
       if (!dryRun) appendCell27_(dstSheet, revRow, aCol, montant);
     } else {
-      for (var mm2 in nbm) {
-        var pcol = parseInt(mm2, 10) + 2;
-        var part = Math.round(montant * nbm[mm2] / totalN * 100) / 100;
-        changes.push({ bloc:"revenus", row:revRow, col:pcol, delta:part });
-        if (!dryRun) appendCell27_(dstSheet, revRow, pcol, part);
-      }
+      var monthKeys2 = Object.keys(nbm).map(Number).sort(function(a,b){return a-b;});
+      var nMonths = monthKeys2.length;
+      var equalShare = Math.round(montant / nMonths * 100) / 100;
+      monthKeys2.forEach(function(mm2) {
+        var pcol = mm2 + 2;
+        changes.push({ bloc:"revenus", row:revRow, col:pcol, delta:equalShare });
+        if (!dryRun) appendCell27_(dstSheet, revRow, pcol, equalShare);
+      });
     }
   }
 
