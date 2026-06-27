@@ -14,6 +14,26 @@
 
 **Règle proxy vs Worker :** `cancelReservations_` (delete + rebuild en 1 appel GAS) **timeout via /api/sheets-proxy** (CF Pages Function). Le Worker l'appelle directement via `APPS_SCRIPT_URL` → pas de timeout. `deleteReservation_` = 1 seul appel suffisant (rebuild intégré depuis 2026-06-27 @74). Pour les appels manuels Claude via curl : séparer en `deleteReservation` + `revenus2026RebuildBienApply` uniquement si `deleteReservation` timeout (rare).
 
+## Trigger sync manuel (CLAUDE_SECRET requis)
+
+```bash
+SECRET="0e091781cd00c38efa118d36f46e6bccbb0d713a6918e23e"
+
+# Force re-sync D1 direct_bookings → GAS Sheet (sans attendre le cron 15min)
+curl -s -X POST "https://villamaryllis.com/api/trigger-sync" \
+  -H "Authorization: Bearer $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"type":"direct"}'
+# → { ok: true, type:"direct", results:{ direct:{ ok:true, synced:N, gas:{...} } } }
+
+# Full sync (direct + iCal Worker) si WORKER_SYNC_URL configuré dans Cloudflare Pages
+curl -s -X POST "https://villamaryllis.com/api/trigger-sync" \
+  -H "Authorization: Bearer $SECRET" \
+  -d '{"type":"full"}'
+```
+
+**Quand utiliser :** après une résa Stripe pour vérifier qu'elle est bien dans le Sheet sans attendre 15min. L'iCal Airbnb/Booking = Worker-only (cron 10min, pas de trigger manuel sans WORKER_SYNC_URL).
+
 ## Commandes de vérification rapide (CLAUDE_SECRET requis)
 
 ```bash
