@@ -263,6 +263,7 @@ function doPost(e) {
   if (action === "revenus2026ManualPatch")      return json_(revenus2026ManualPatch_(body)); // eslint-disable-line no-undef
   if (action === "revenus2026Inspect")    return json_(revenusInspect2026_());            // eslint-disable-line no-undef
   if (action === "revenus2026Rebuild")    return json_(rebuildRevenus2026_(!!body.apply, body.fromMonth)); // eslint-disable-line no-undef
+  if (action === "revenus2027RebuildBienApply") return json_(rebuildRevenus2027_(true, parseInt(body.fromMonth, 10) || 1));
   if (action === "revenus2027DryRun")     return json_({ ok: true, preview: testRevenus2027_dryRun() });
   if (action === "revenus2027Setup")      return json_(setupRevenus2027());
   if (action === "revenus2027Sync")       return json_(syncRevenus2027());

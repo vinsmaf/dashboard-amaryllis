@@ -157,8 +157,8 @@ export async function onRequestPost(context) {
   //   (fetch repasse en GET) → Apps Script reçoit un postData vide → RIEN n'est écrit.
   //   On passe par /api/sheets-proxy (même origine) qui envoie en GET paginé
   //   (forwardChunked), exactement comme le Worker iCal et le bouton 📊 admin.
+  const origin = new URL(request.url).origin;
   try {
-    const origin = new URL(request.url).origin;
     const r = await fetch(`${origin}/api/sheets-proxy`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -167,6 +167,45 @@ export async function onRequestPost(context) {
     const txt = await r.text();
     console.log("[beds24-webhook] sheets-proxy response:", txt.slice(0, 300));
     clog('beds24-webhook', 'info', { synced: normalized.length, ms: t() });
+
+    // Rebuild revenus pour les résas annulées — importAllReservations est additif,
+    // il ne soustrait jamais : sans rebuild, les revenus Nogent restent gonflés.
+    const cancelledMonths2026 = [...new Set(
+      reservations
+        .filter(res => res.status === "Annulé" && res.checkin && res.checkin.startsWith("2026"))
+        .map(res => parseInt(res.checkin.slice(5, 7), 10))
+        .filter(Boolean)
+    )];
+    const cancelledMonths2027 = [...new Set(
+      reservations
+        .filter(res => res.status === "Annulé" && res.checkin && res.checkin.startsWith("2027"))
+        .map(res => parseInt(res.checkin.slice(5, 7), 10))
+        .filter(Boolean)
+    )];
+
+    if (cancelledMonths2026.length > 0 || cancelledMonths2027.length > 0) {
+      const rebuildJobs = [];
+      if (cancelledMonths2026.length > 0) {
+        rebuildJobs.push(fetch(`${origin}/api/sheets-proxy`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "revenus2026RebuildBienApply", fromMonth: Math.min(...cancelledMonths2026), bien: "nogent" }),
+        }).then(r2 => r2.text()).then(t2 => console.log("[beds24-webhook] rebuild 2026 Nogent:", t2.slice(0, 200)))
+          .catch(e => console.error("[beds24-webhook] rebuild 2026 error:", e.message)));
+      }
+      if (cancelledMonths2027.length > 0) {
+        rebuildJobs.push(fetch(`${origin}/api/sheets-proxy`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "revenus2027RebuildBienApply", fromMonth: Math.min(...cancelledMonths2027), bien: "nogent" }),
+        }).then(r2 => r2.text()).then(t2 => console.log("[beds24-webhook] rebuild 2027 Nogent:", t2.slice(0, 200)))
+          .catch(e => console.error("[beds24-webhook] rebuild 2027 error:", e.message)));
+      }
+      // waitUntil : répondre à Beds24 immédiatement, rebuild en arrière-plan
+      context.waitUntil(Promise.all(rebuildJobs));
+      console.log("[beds24-webhook] rebuild revenus planifié pour mois:", { 2026: cancelledMonths2026, 2027: cancelledMonths2027 });
+    }
+
     return json({ ok: true, synced: normalized.length, script: txt.slice(0, 500) });
   } catch (err) {
     clog('beds24-webhook', 'error', { err: err.message, ms: t() });
