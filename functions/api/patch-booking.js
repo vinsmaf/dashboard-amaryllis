@@ -43,18 +43,19 @@ export async function onRequestPost(context) {
   });
   const addData = await addRes.json().catch(() => ({}));
 
-  // Étape 2 : rebuild revenus du mois du checkin (ignoreMemo = re-traite même si déjà vu)
+  // Étape 2 : rebuild idempotent — zero + recalcul depuis "Toutes les Réservations"
+  // ⚠️ NE PAS utiliser revenus2026FromMonth(ignoreMemo:true) : additif, cause des doublons
   const checkinMonth = new Date(checkin + "T12:00:00Z").getMonth() + 1;
   const revRes = await fetch(`${base}/api/sheets-proxy`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "revenus2026FromMonth", month: checkinMonth, apply: true, ignoreMemo: true }),
+    body: JSON.stringify({ action: "revenus2026RebuildBienApply", fromMonth: checkinMonth, bien: bienId }),
   });
   const revData = await revRes.json().catch(() => ({}));
 
   return json({
     ok: addData.ok ?? false,
     resa: addData,
-    revenus: { month: checkinMonth, count: revData.count ?? 0, ok: revData.ok ?? false },
+    revenus: { month: checkinMonth, bien: bienId, ok: revData.ok ?? false },
   });
 }
