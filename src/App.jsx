@@ -46,6 +46,7 @@ import CrmTab from "./tabs/CrmTab.jsx";
 import WhatsAppTab from "./tabs/WhatsAppTab.jsx";
 import BugReporter from "./components/BugReporter.jsx";
 import BugsTab from "./tabs/BugsTab.jsx";
+import ReclamationsTab from "./tabs/ReclamationsTab.jsx";
 import ProjetsCerveauTab from "./tabs/ProjetsCerveauTab.jsx";
 import DevStatusTab from "./tabs/DevStatusTab.jsx";
 import NewsletterTab from "./tabs/NewsletterTab.jsx";
@@ -1360,6 +1361,7 @@ export default function App() {
         { id: "avis",         icon: "⭐", label: "Avis" },
         { id: "crm",          icon: "👥", label: "CRM Clients" },
         { id: "leads",        icon: "📬", label: "Leads" },
+        { id: "reclamations", icon: "😤", label: "Réclamations" },
         { id: "whatsapp",     icon: "💬", label: "WhatsApp" },
         { id: "newsletter",   icon: "📨", label: "Newsletter" },
       ],
@@ -1600,6 +1602,7 @@ export default function App() {
             {tab === "guides" && <GuideEditor mob={mob} />}
             {tab === "agents" && <AgentsKanban mob={mob} />}
             {tab === "bugs" && <BugsTab />}
+            {tab === "reclamations" && <ReclamationsTab />}
             {tab === "social"        && <SocialTab />}
             {tab === "reels"         && <ReelsTab />}
             {tab === "approbations"  && <ApprobationsTab />}
