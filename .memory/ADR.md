@@ -3,6 +3,14 @@
 > 1 entrée par décision qui engage la suite. Format 5 lignes : **Choix · Alternatives refusées · Conséquences attendues · Périmètre · Statut**.
 > Décisions d'archi détaillées (specs complets) → `../docs/superpowers/specs/README.md` (ADR-001→010). Ici = log curaté de session.
 
+## ADR-PIPELINE-SECURITE-001 · 2026-06-27 · Sécurisation pipeline réservations — 4 gaps comblés
+
+1. **Choix** : (A) `deleteReservation_` GAS lit bien+mois AVANT suppression puis appelle `rebuildRevenus2026/2027_` automatiquement (`Utilities.formatDate` pour les cellules Date GAS) ; (B) `beds24-webhook.js` déclenche `revenus2026/2027RebuildBienApply` en background (`context.waitUntil`) après chaque annulation Beds24 ; (C) nouvel endpoint `/api/trigger-sync` (auth CLAUDE_SECRET) force re-sync D1→GAS sans attendre le cron ; (D) `syncFeed` retourne `{ok, error}` → `runSync` détecte les failures et envoie 1 ntfy consolidé throttlé 2h (KV `ical_failure_alert`).
+2. **Alternatives refusées** : rebuild manuel à chaque annulation ; appeler `syncRevenus2026` (additif = double-compte) ; timeout proxy CF Pages pour les opérations GAS lourdes (résolu via `context.waitUntil`) ; alerte ntfy non throttlée (spam au prochain cron).
+3. **Conséquences attendues** : suppression admin ou annulation Beds24 → revenus Sheet cohérents automatiquement. Feed iCal mort → alerte ntfy dans les 10min (cron Worker). Trigger sync = outil de debug rapide pour Claude.
+4. **Périmètre** : `appscript/SCRIPT_SHEETS.js` (deleteReservation_/revenus2027RebuildBienApply @74-@75) · `functions/api/beds24-webhook.js` (commit `3c667e2`) · `functions/api/trigger-sync.js` (commit `a6ebe52`, nouveau) · `workers/ical-sync/index.js` (commit `59e8cd4`).
+5. **Statut** : acté & déployé. Test end-to-end 2026-06-27 ✅ (`deleteReservation` → rebuilt:{bienId,year,month} ; trigger-sync → synced:3/updated:3).
+
 ## ADR-TRIPADVISOR-001 · 2026-06-27 · TripAdvisor listings — workflow split Claude+Vincent
 
 1. **Choix** : 6 fiches TripAdvisor créées sur `tripadvisor.fr/GetListedNew` (Amaryllis, Zandoli, Géko, Mabouya, Schœlcher, Nogent — Iguana exclu, bail long terme). Workflow : Claude remplit nom/catégorie/type via `javascript_tool` (boutons React non-cliquables via CSS), Vincent remplit le champ adresse (autocomplete nécessitant interaction humaine) + Claude fait checkbox+submit.

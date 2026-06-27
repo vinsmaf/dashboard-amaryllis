@@ -235,7 +235,7 @@ flowchart TD
 
 ## 8. Sync canaux & messagerie
 
-- **Sync résas** : Worker `runSync` (cron `*/10`) aspire iCal Airbnb+Booking + résas directes Stripe (D1 `direct_bookings`) → dédup UIDs via KV `ICAL_STORE` → `/api/sheets-proxy` → Google Sheet « Toutes les Réservations ». **iCal export sortant** (`ical-export.js`) souscrit par Airbnb/Booking pour bloquer les dates directes.
+- **Sync résas** : Worker `runSync` (cron `*/10`) aspire iCal Airbnb+Booking + résas directes Stripe (D1 `direct_bookings`) → dédup UIDs via KV `ICAL_STORE` → `/api/sheets-proxy` → Google Sheet « Toutes les Réservations ». **iCal export sortant** (`ical-export.js`) souscrit par Airbnb/Booking pour bloquer les dates directes. **Trigger manuel** (`functions/api/trigger-sync.js`, auth CLAUDE_SECRET Bearer, 2026-06-27) : force re-sync D1→GAS sans attendre le cron. **Alerte iCal failure** : `syncFeed` retourne `{ok,error}` → `runSync` envoie 1 ntfy si ≥1 feed échoue, throttle 2h KV `ical_failure_alert`.
 - **Beds24 = NOGENT UNIQUEMENT** (propId 158192, roomId 348880). Le webhook `beds24-webhook.js` + le bouton 📊 manuel sont les SEULS chemins d'écriture Sheet pour Nogent (Nogent exclu du Worker iCal). Token rotatif D1 `beds24_tokens` (`beds24-refresh.js`, `getActiveBeds24Token`).
 - **WhatsApp** (`whatsapp.js`) : bot voyageur Meta Cloud API v21.0 → detectBien → guide D1 → LLM Groq → réponse, transcription vocale Voxtral, log D1 `whatsapp_conversations`, escalade/irritation → ntfy hôte (RM-18).
 - **Social** : `social-webhook.js` (live/shadow, dédup `social_bot_log`), `social-poll.js` (sans webhook, shadow), `social-draft.js` (veille groupes FB), `social.js` (publication FB+IG des drafts éditoriaux). Mode **shadow par défaut**.

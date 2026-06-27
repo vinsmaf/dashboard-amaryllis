@@ -3,6 +3,14 @@
 > Pièges déjà rencontrés + comment les éviter. 1 entrée = 1 leçon actionnable « la prochaine fois ».
 > Le journal d'erreurs exhaustif reste `../docs/ERREURS-LOG.md`.
 
+## 📅 GAS : les cellules Date sont des objets JS, pas des strings — 2026-06-27
+- **Piège** : `r[4]` (colonne checkin) dans GAS retourne un objet `Date` JS, pas une chaîne. `String(dateObject)` → "Sat Aug 15 2026 00:00:00 GMT+0000 (UTC)" → `parseInt` sur les 4 premiers chars = NaN.
+- **La prochaine fois** : toujours tester `if (raw instanceof Date)` et utiliser `Utilities.formatDate(raw, "UTC", "yyyy-MM-dd")`. Sinon `String(raw || "")` pour les autres types. Affecte toutes les fonctions GAS qui lisent des colonnes de dates (`deleteReservation_`, `cancelReservations_`, etc.).
+
+## ⚡ CF Pages Function : `context.waitUntil` pour GAS en background après webhook — 2026-06-27
+- **Pattern** : webhook Beds24 doit répondre vite (timeout 10s). GAS `rebuildRevenus` prend >5s → répondre 200 immédiatement, puis pousser le rebuild en background avec `context.waitUntil(Promise.all(jobs))`.
+- **La prochaine fois** : chaque fois qu'une Pages Function reçoit un webhook et doit déclencher une opération lente (GAS, sync longue), utiliser `context.waitUntil` avec `fetch(sheetsProxy, ...)` → le CF runtime maintient la Function vivante jusqu'à la fin du rebuild, sans bloquer la réponse.
+
 ## ⏱ GAS via proxy CF = timeout sur opérations lourdes — 2026-06-27
 - **Piège** : `cancelReservations_` (delete + rebuild en 1 appel GAS) appelé via `/api/sheets-proxy` → 502 timeout. Pages Functions ont un timeout court.
 - **La prochaine fois** : pour les appels manuels Claude, TOUJOURS séparer en 2 : `deleteReservation` puis `revenus2026RebuildBienApply`. Le Worker appelle GAS directement (pas via proxy) → pas de timeout pour les vraies annulations auto.

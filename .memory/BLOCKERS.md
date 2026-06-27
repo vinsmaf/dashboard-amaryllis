@@ -4,7 +4,7 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
-## En cours → ✅ terminé le 2026-06-27 (Session sécurisation revenus + schéma flux resas)
+## En cours → ✅ terminé le 2026-06-27 (Session pipeline sécurité réservations — 4 gaps comblés)
 
 ## 🟡 Annulation directe Stripe = toujours manuelle
 - **Statut** : pas de détection auto possible (pas d'iCal pour les résas Stripe)
