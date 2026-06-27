@@ -15,6 +15,7 @@
 | **[BLOCKERS.md](./BLOCKERS.md)** | Frictions / dettes / points bloquants + statut | Pour savoir ce qui attend quoi/qui |
 | **[RECALL.md](./RECALL.md)** | Rappel contextuel : quoi se rappeler avant de toucher un domaine (niv.2) | **Avant d'agir sur un domaine** |
 | **[DECISIONS.md](./DECISIONS.md)** | Moteur de décision : critères déterministes par type de décision (niv.3) | Avant de trancher |
+| **[FLUX-RESAS.md](./FLUX-RESAS.md)** | 📡 Pipeline complet des 4 canaux (Airbnb/Booking/Direct/Beds24) + annulations + garde-fous | Avant de toucher aux réservations ou revenus |
 | **[ITERATIONS_LOG.md](./ITERATIONS_LOG.md)** | Journal des sessions (rolling) | Pour retracer l'historique récent |
 
 ## Archives profondes (référence, pas à relire intégralement)

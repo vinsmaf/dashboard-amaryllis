@@ -3,6 +3,18 @@
 > Pièges déjà rencontrés + comment les éviter. 1 entrée = 1 leçon actionnable « la prochaine fois ».
 > Le journal d'erreurs exhaustif reste `../docs/ERREURS-LOG.md`.
 
+## 🔴 GAS revenus : revenus2026FromMonth(ignoreMemo:true) = INTERDIT — 2026-06-27
+- **Piège vécu (grave)** : appeler `revenus2026FromMonth` avec `ignoreMemo:true` quand des cellules ont déjà des valeurs → double-compte TOUT (18 IDs, juin-déc, tous biens). Symptôme : "5 résas alors qu'il y en a qu'une, 12 jours au lieu de 2".
+- **La prochaine fois** : utiliser UNIQUEMENT `revenus2026RebuildBienApply` (zero + recalcul idempotent). La fonction `ignoreMemo` est maintenant BLOQUÉE côté GAS (retourne une erreur 400). `patch-booking.js` utilise désormais `RebuildBienApply`.
+
+## 🔴 GAS cancelReservations : syncRevenus2026 ne soustrait pas — 2026-06-27
+- **Piège** : l'ancien `cancelReservations_` appelait `revenus2026Forget + syncRevenus2026` après suppression. `syncRevenus2026` est additif (ajoute des deltas), ne soustrait jamais → revenus restaient au niveau pré-annulation.
+- **La prochaine fois** : après suppression d'une résa, toujours appeler `rebuildRevenus2026_(true, month, bienId)` pour le bien+mois affecté. `cancelReservations_` fait maintenant ça automatiquement (capture cols A+B+E avant delete, rebuild par bien/mois).
+
+## 🔑 Accès admin Claude : CLAUDE_SECRET Bearer — 2026-06-27
+- Toute session peut maintenant appeler les endpoints admin directement : `Authorization: Bearer <valeur dans .memory/claude_secret.md>`.
+- Créé en Cloudflare Pages prod+preview + .dev.vars. Code dans `functions/api/_adminauth.js` (verifyBearer priorité 2).
+
 ## 🚫 CF Workers : `cache: "no-store"` + `cf: { cacheTtl: 0 }` = incompatibles — 2026-06-28
 - **Piège** : combiner les 2 dans un `fetch()` CF Workers lance une exception silencieuse → l'email ne part jamais, aucun log D1 (le crash est avant `sendEmail`).
 - **La prochaine fois** : pour bypass cache CF dans un Worker, utiliser SOIT `cache: "no-store"` SOIT `cf: { cacheTtl: 0, cacheEverything: false }`, jamais les deux ensemble. Le `?cb=Date.now()` dans l'URL suffit pour un cache-bust léger.

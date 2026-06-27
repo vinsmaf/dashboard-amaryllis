@@ -4,7 +4,12 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
-## En cours → ✅ terminé le 2026-06-27 (Session publications réseaux — 3 bugs editorial calendar corrigés + Zandoli+Schœlcher publiés)
+## En cours → ✅ terminé le 2026-06-27 (Session sécurisation revenus + schéma flux resas)
+
+## 🟡 Annulation directe Stripe = toujours manuelle
+- **Statut** : pas de détection auto possible (pas d'iCal pour les résas Stripe)
+- **Action** : Vincent doit cliquer ✕ dans admin Planning + rembourser dans Stripe Dashboard
+- **Ce qui débloque** : rien — c'est une contrainte de l'architecture directe
 
 ## 🟡 TripAdvisor — URLs des 6 fiches à mettre à jour dans send-poststay.js
 - **Statut** : 6 fiches TA soumises (27/06). TripAdvisor envoie des emails de confirmation avec les URLs des fiches dans les jours suivants.

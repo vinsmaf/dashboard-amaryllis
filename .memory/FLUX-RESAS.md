@@ -1,0 +1,85 @@
+# FLUX RÉSERVATIONS & ANNULATIONS — Amaryllis Locations
+> Référence technique du pipeline complet. MAJ : 2026-06-27.
+
+## 4 canaux d'entrée
+
+### 1. Airbnb (Martinique, 6 biens)
+- **Source** : iCal URL secret `AIRBNB_URL_<bienId>` (Worker)
+- **Détection** : Worker cron horaire → `syncFeed()` → KV `ICAL_STORE` `{uid, checkout}`
+- **Nouveau** : nouvel UID détecté → `sendNouvellesResas()` (email+ntfy) → `pushToSheets()` → GAS `addReservation_` → Sheet "Toutes les Réservations"
+- **⚠️ LIMITE** : iCal Airbnb = **pas de nom, pas de prix** → row créée avec voyageur="Airbnb Guest"
+- **Action requise** : bouton ✎ admin Planning → `PATCH /api/patch-booking` → `addReservation_` (update) + `rebuildRevenus2026_`
+- **Annulation** : UID disparu de l'iCal + checkout futur → `sendCancellations()` → GAS `cancelReservations_` → delete row + `rebuildRevenus2026_(true, month, bienId)` → email+ntfy
+
+### 2. Booking.com (Martinique, 6 biens)
+- **Source** : iCal URL secret `BOOKING_URL_<bienId>` (Worker)
+- **Flux** : identique Airbnb
+- **⚠️ LIMITE** : iCal Booking = "CLOSED - Not available" ou "RESERVED" → même patch manuel ✎ requis
+- **Annulation** : identique Airbnb
+
+### 3. Direct Stripe (Martinique, tous biens sauf Iguana)
+- **Source** : `villamaryllis.com` BookingModal → `/api/create-payment-intent` → Stripe
+- **Paiement confirmé** : `/api/stripe-webhook` → `/api/notify-booking` → D1 `direct_bookings` + GAS `addReservation_` → Sheet + email/ntfy
+- **Auto-sync Worker** : toutes les heures `fetchDirectBookingsAsEvents()` → `pushToSheets()` (idempotent, dedup par id)
+- **✅ Complet** : nom, montant, email voyageur disponibles dès la résa
+- **Annulation** : **MANUELLE UNIQUEMENT** — bouton ✕ admin Planning → GAS `deleteReservation_` → rebuild revenus. Remboursement Stripe = séparé (Manuel ou Stripe Dashboard)
+- **Pas d'iCal** pour les résas directes → pas de détection automatique d'annulation
+
+### 4. Beds24 (Nogent UNIQUEMENT — propId 158192)
+- **Source** : webhook Beds24 temps réel → `/api/beds24-webhook`
+- **Flux** : webhook reçu → purge cache dispo KV Nogent → fetch Beds24 API (résas modifiées 48h) → normalize → GAS `addReservation_` (id=`beds24-<bookingId>`) → Sheet
+- **Annulation** : webhook status=`cancelled` → `addReservation_` avec statut "Annulé" (pas de delete, marqué annulé) + rebuild
+- **Cron Worker** (toutes les 10 min) : `runCancelUnpaidBeds24Bookings()` → annule les résas non payées restées trop longtemps
+
+## Pipeline GAS (Apps Script)
+
+```
+POST /api/sheets-proxy → APPS_SCRIPT_URL
+  addReservation_({id, bienId, voyageur, canal, checkin, checkout, montant, statut})
+    → upsert sur Sheet "Toutes les Réservations" (dedup par id String)
+    → syncRevenus2026() si nouveau (mémo-based)
+
+  cancelReservations_([{uid, bienId, canal}])
+    → lit cols A+B+E pour capturer bien+mois AVANT suppression
+    → delete row(s)
+    → rebuildRevenus2026_(true, month, bienId) par bien/mois affecté ✅
+
+  revenus2026RebuildBienApply({fromMonth, bien})
+    → zero + recalcul idempotent depuis "Toutes les Réservations"
+    → SEULE fonction sûre pour recalculer les revenus
+```
+
+## Garde-fous
+
+| Garde-fou | Statut | Détail |
+|---|---|---|
+| `revenus2026FromMonth(ignoreMemo:true)` | 🔴 BLOQUÉ GAS | Retourne erreur 400 — additif = double-compte |
+| `cancelReservations_` utilise rebuild | ✅ ACTIF | Capture bien+mois avant delete, rebuild après |
+| `patch-booking.js` utilise rebuild | ✅ ACTIF | `revenus2026RebuildBienApply`, jamais `ignoreMemo` |
+| KV `{uid, checkout}` anti-faux-positifs | ✅ ACTIF | Filtre rotation UID (même préfixe) + checkout passé |
+| Dedup iCal par id String | ✅ ACTIF | `beds24-<id>` stable, conversion String() côté GAS |
+| `CLAUDE_SECRET` accès admin | ✅ ACTIF | Bearer token machine Claude, `_adminauth.js` prio 2 |
+
+## Anti-patterns à ne jamais faire
+
+- ❌ `revenus2026FromMonth(ignoreMemo:true)` = double-compte (BLOQUÉ mais ne jamais contourner)
+- ❌ `syncRevenus2026()` après une annulation = additif, ne soustrait jamais
+- ❌ Créer une résa Beds24 pour un bien autre que Nogent
+- ❌ Modifier les revenus via `revenus2026ManualPatch_` sans avoir vérifié le Sheet d'abord
+- ❌ Forcer une suppression iCal sans vérifier si c'est une rotation d'UID
+
+## Vérification rapide (Claude peut appeler)
+
+```bash
+# Vérifier les résas D1 direct_bookings
+curl -s "https://villamaryllis.com/api/sheets-proxy" \
+  -H "Authorization: Bearer <CLAUDE_SECRET>" \
+  -H "Content-Type: application/json" \
+  -d '{"action":"getReservations","limit":20}'
+
+# Rebuild revenus un bien / un mois
+curl -s "https://villamaryllis.com/api/sheets-proxy" \
+  -H "Authorization: Bearer <CLAUDE_SECRET>" \
+  -H "Content-Type: application/json" \
+  -d '{"action":"revenus2026RebuildBienApply","fromMonth":6,"bien":"geko"}'
+```
