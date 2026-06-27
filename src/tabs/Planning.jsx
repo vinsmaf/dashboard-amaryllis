@@ -162,6 +162,10 @@ export default function Planning() {
   const [listSortKey, setListSortKey] = useState("checkin");
   const [listSortDir, setListSortDir] = useState("asc");
   const [listYear, setListYear] = useState(String(new Date().getFullYear()));
+  const [patchResa, setPatchResa] = useState(null); // résa iCal à patcher
+  const [patchForm, setPatchForm] = useState({ voyageur: "", montant: "" });
+  const [patchLoading, setPatchLoading] = useState(false);
+  const [patchResult, setPatchResult] = useState(null);
   const [dailyPrices, setDailyPrices] = useState(loadDailyPrices);
 
   useEffect(() => {
@@ -342,6 +346,49 @@ export default function Planning() {
     const interval = setInterval(() => syncBeds24InPlanning(reservationsRef.current), 60 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
+
+  const openPatch = (r) => {
+    setPatchResa(r);
+    setPatchForm({ voyageur: isPlaceholderName(r.voyageur) ? "" : r.voyageur, montant: r.montant ? String(r.montant) : "" });
+    setPatchResult(null);
+  };
+
+  const submitPatch = async () => {
+    if (!patchResa || !patchForm.voyageur || !patchForm.montant) return;
+    setPatchLoading(true);
+    setPatchResult(null);
+    try {
+      const tok = sessionStorage.getItem("ldb_tok") || "";
+      const res = await fetch("/api/patch-booking", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + tok },
+        body: JSON.stringify({
+          bienId: patchResa.bienId,
+          checkin: patchResa.checkin,
+          checkout: patchResa.checkout,
+          voyageur: patchForm.voyageur.trim(),
+          montant: parseFloat(patchForm.montant),
+          canal: patchResa.canal || "booking",
+          nb_guests: patchResa.nb_guests || 1,
+        }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        // Mise à jour locale immédiate
+        saveRes(reservations.map(r =>
+          r.id === patchResa.id ? { ...r, voyageur: patchForm.voyageur.trim(), montant: parseFloat(patchForm.montant) } : r
+        ));
+        setPatchResult({ ok: true, revenus_month: data.revenus?.month, count: data.revenus?.count });
+        setTimeout(() => { setPatchResa(null); setPatchResult(null); }, 2000);
+      } else {
+        setPatchResult({ ok: false, error: data.error || "Erreur" });
+      }
+    } catch (e) {
+      setPatchResult({ ok: false, error: e.message });
+    } finally {
+      setPatchLoading(false);
+    }
+  };
 
   const openEdit = (r) => {
     setForm({ bienId: r.bienId, voyageur: r.voyageur, canal: r.canal, checkin: r.checkin, checkout: r.checkout, checkin_time: r.checkin_time || "", checkout_time: r.checkout_time || "", nb_guests: r.nb_guests || "", montant: r.montant || "", notes: r.notes || "", menage: r.menage || "", reservation_code: r.reservation_code || "", phone: r.phone || "", email: r.email || "", assigne: r.assigne || "" });
@@ -941,6 +988,7 @@ export default function Planning() {
                           <button onClick={() => togRes(r.id, "menage_done")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 13, opacity: r.menage_done ? 1 : 0.2 }}>🧹</button>
                         </td>
                         <td style={{ padding: "7px 10px", whiteSpace: "nowrap" }}>
+                          {needsManualFill(r) && <button onClick={() => openPatch(r)} title="Patch rapide : saisir nom + prix" style={{ background: "rgba(245,158,11,0.15)", border: "none", cursor: "pointer", color: "#f59e0b", fontSize: 11, marginRight: 4, borderRadius: 4, padding: "2px 5px", fontWeight: 700 }}>⚡</button>}
                           <button onClick={() => openEdit(r)} style={{ background: "none", border: "none", cursor: "pointer", color: "#0ea5e9", fontSize: 11, marginRight: 4 }}>✎</button>
                           <button onClick={() => delRes(r.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#475569", fontSize: 11 }}>✕</button>
                         </td>
@@ -952,6 +1000,57 @@ export default function Planning() {
             </div>
             );
           })()}
+        </div>
+      )}
+
+      {patchResa && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 110 }} onClick={() => { setPatchResa(null); setPatchResult(null); }}>
+          <div style={{ background: "#1e293b", border: "1px solid rgba(245,158,11,0.4)", borderRadius: 16, padding: 22, width: "100%", maxWidth: 320 }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#f59e0b", marginBottom: 4 }}>⚡ Patch résa iCal</div>
+            <div style={{ fontSize: 10, color: "#64748b", marginBottom: 14 }}>
+              {patchResa.bienId} · {patchResa.checkin} → {patchResa.checkout} · {patchResa.canal}
+            </div>
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 4, fontWeight: 600 }}>NOM COMPLET VOYAGEUR</div>
+              <input
+                autoFocus
+                type="text"
+                placeholder="Prénom Nom"
+                value={patchForm.voyageur}
+                onChange={e => setPatchForm(x => ({ ...x, voyageur: e.target.value }))}
+                onKeyDown={e => { if (e.key === "Enter") submitPatch(); if (e.key === "Escape") setPatchResa(null); }}
+                style={{ width: "100%", padding: "8px 10px", background: "#0f172a", border: "1px solid #334155", borderRadius: 8, color: "#e2e8f0", fontSize: 13, boxSizing: "border-box" }}
+              />
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 4, fontWeight: 600 }}>MONTANT NET (€)</div>
+              <input
+                type="number"
+                placeholder="298.35"
+                value={patchForm.montant}
+                onChange={e => setPatchForm(x => ({ ...x, montant: e.target.value }))}
+                onKeyDown={e => { if (e.key === "Enter") submitPatch(); if (e.key === "Escape") setPatchResa(null); }}
+                style={{ width: "100%", padding: "8px 10px", background: "#0f172a", border: "1px solid #334155", borderRadius: 8, color: "#e2e8f0", fontSize: 13, boxSizing: "border-box" }}
+              />
+            </div>
+            {patchResult && (
+              <div style={{ marginBottom: 12, padding: "8px 10px", borderRadius: 8, background: patchResult.ok ? "rgba(16,185,129,0.12)" : "rgba(239,68,68,0.12)", color: patchResult.ok ? "#10b981" : "#ef4444", fontSize: 11, fontWeight: 600 }}>
+                {patchResult.ok ? `✅ Mis à jour — revenus mois ${patchResult.revenus_month} recalculés (${patchResult.count} résas)` : `❌ ${patchResult.error}`}
+              </div>
+            )}
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={submitPatch}
+                disabled={patchLoading || !patchForm.voyageur || !patchForm.montant}
+                style={{ flex: 1, padding: "9px 0", background: "#f59e0b", border: "none", borderRadius: 8, color: "#0f172a", fontSize: 12, fontWeight: 700, cursor: "pointer", opacity: (patchLoading || !patchForm.voyageur || !patchForm.montant) ? 0.5 : 1 }}
+              >
+                {patchLoading ? "⏳ En cours…" : "⚡ Mettre à jour"}
+              </button>
+              <button onClick={() => { setPatchResa(null); setPatchResult(null); }} style={{ padding: "9px 14px", background: "transparent", border: "1px solid #334155", borderRadius: 8, color: "#64748b", fontSize: 12, cursor: "pointer" }}>
+                Annuler
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
