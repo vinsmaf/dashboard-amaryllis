@@ -141,6 +141,9 @@ function RevenueManagerPro() {
   const [signalsLoading, setSignalsLoading] = useState(false);
   // Sub-tab for competitors
   const [compSubTab, setCompSubTab] = useState('list');
+  // Firecrawl scan state
+  const [scanState, setScanState] = useState(null);
+  const [scanLoading, setScanLoading] = useState(false);
   // CSV editor
   const [csvContent, setCsvContent] = useState('');
   const [csvEditMode, setCsvEditMode] = useState(false);
@@ -224,6 +227,29 @@ function RevenueManagerPro() {
     if (data?.competitors) setCompetitors(data.competitors);
   }, [selProp, apiCall]);
 
+  const loadScanState = useCallback(async () => {
+    const data = await apiCall(`/api/fc-competitors-scan?property_id=${selProp}`);
+    if (data) setScanState(data);
+  }, [selProp, apiCall]);
+
+  const launchScan = useCallback(async (dry = false) => {
+    setScanLoading(true);
+    addLog(dry ? '🔍 Dry-run Firecrawl…' : '🔍 Scan Firecrawl en cours…');
+    const data = await apiCall('/api/fc-competitors-scan', {
+      method: 'POST',
+      body: JSON.stringify({ property_id: selProp, dry }),
+    });
+    if (data?.ok) {
+      addLog(dry
+        ? `✓ Dry-run : ${data.would_scan?.length || 0} URL(s) seraient scrapées`
+        : `✓ Scan terminé — ${data.scanned} OK · ${data.errors} erreurs`,
+        'success');
+      if (!dry) loadScanState();
+    }
+    setScanLoading(false);
+    return data;
+  }, [selProp, apiCall, addLog, loadScanState]);
+
   const loadOverrides = useCallback(async () => {
     const from = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-01`;
     const lastDay = new Date(calYear, calMonth + 1, 0).getDate();
@@ -240,7 +266,7 @@ function RevenueManagerPro() {
   useEffect(() => {
     if (tab === 'calendar' || tab === 'dashboard') loadRecommendations();
     if (tab === 'dashboard') loadOccupancy();
-    if (tab === 'competitors') { loadCompetitors(); if (compSubTab === 'market') loadSignals(); }
+    if (tab === 'competitors') { loadCompetitors(); if (compSubTab === 'market') loadSignals(); if (compSubTab === 'scan') loadScanState(); }
     if (tab === 'rules') loadRules();
     if (tab === 'calendar') loadOverrides();
   }, [selProp, tab, calMonth, calYear]);
@@ -772,7 +798,7 @@ function RevenueManagerPro() {
         <div>
           {/* Sub-tab toggle */}
           <div style={{ display: 'flex', gap: 4, marginBottom: 16, background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: 4, width: 'fit-content' }}>
-            {[['list', '🏢 Mes concurrents'], ['market', '📈 Signaux marché']].map(([id, label]) => (
+            {[['list', '🏢 Mes concurrents'], ['market', '📈 Signaux marché'], ['scan', '🔍 Scan Firecrawl']].map(([id, label]) => (
               <button key={id} onClick={() => setCompSubTab(id)} style={{
                 padding: '6px 14px', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer',
                 background: compSubTab === id ? '#0ea5e9' : 'transparent',
@@ -948,6 +974,70 @@ function RevenueManagerPro() {
                   </>
                 )
               }
+            </div>
+          )}
+          {/* ── Sub: Firecrawl scan ── */}
+          {compSubTab === 'scan' && (
+            <div>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+                <Btn onClick={() => launchScan(false)} disabled={scanLoading}>
+                  {scanLoading ? '⏳ Scan en cours…' : '🔍 Lancer le scan'}
+                </Btn>
+                <BtnSec onClick={() => launchScan(true)} disabled={scanLoading}>Dry-run</BtnSec>
+                <BtnSec onClick={loadScanState} disabled={scanLoading}>↺ Rafraîchir</BtnSec>
+              </div>
+
+              {!scanState ? (
+                <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: 12, padding: 32, textAlign: 'center', color: '#64748b' }}>
+                  <div style={{ fontSize: 28, marginBottom: 8 }}>🔍</div>
+                  Cliquez sur "Lancer le scan" pour démarrer la veille Firecrawl.
+                </div>
+              ) : (
+                <div>
+                  <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+                    {[
+                      { label: 'Concurrents', value: scanState.total_competitors, color: '#64748b' },
+                      { label: 'Scannés aujourd\'hui', value: scanState.scanned_today, color: '#10b981' },
+                      { label: 'En attente', value: (scanState.total_competitors || 0) - (scanState.scanned_today || 0), color: '#f59e0b' },
+                    ].map(({ label, value, color }) => (
+                      <div key={label} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10, padding: '10px 16px', minWidth: 100 }}>
+                        <div style={{ fontSize: 11, color: '#64748b', marginBottom: 2 }}>{label}</div>
+                        <div style={{ fontSize: 22, fontWeight: 800, color, fontFamily: 'monospace' }}>{value ?? '—'}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: mob ? '1fr' : 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10 }}>
+                    {(scanState.listings || []).map(l => (
+                      <div key={l.id} style={{
+                        background: 'rgba(255,255,255,0.03)',
+                        border: `1px solid ${l.scanned_today ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.07)'}`,
+                        borderRadius: 10, padding: 14,
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                          <div style={{ fontWeight: 700, fontSize: 12, color: '#e2e8f0', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 8 }}>{l.name}</div>
+                          <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: l.scanned_today ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.06)', color: l.scanned_today ? '#10b981' : '#64748b', whiteSpace: 'nowrap' }}>
+                            {l.scanned_today ? '✓ scanné' : '⏳ en attente'}
+                          </span>
+                        </div>
+                        {l.last_price != null && (
+                          <div style={{ fontSize: 13, fontWeight: 700, color: '#f59e0b', fontFamily: 'monospace', marginBottom: 4 }}>
+                            {Math.round(l.last_price)}€/nuit
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', fontSize: 10, color: '#475569' }}>
+                          {l.platform && <span>{l.platform}</span>}
+                          {l.review_score && <span>⭐ {l.review_score}</span>}
+                          {l.review_count && <span>({l.review_count} avis)</span>}
+                        </div>
+                        {l.url && (
+                          <a href={l.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, color: '#0ea5e9', textDecoration: 'none', display: 'block', marginTop: 6 }}>Voir l'annonce →</a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
