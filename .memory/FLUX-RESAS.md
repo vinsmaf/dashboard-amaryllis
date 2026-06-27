@@ -7,12 +7,12 @@
 |---|---|---|---|---|---|
 | **Airbnb** | ✅ via Worker hourly | ✅ | ✅ rebuild | ✅ (cancelReservations_) | ✅ Worker direct |
 | **Booking.com** | ✅ via Worker hourly | ✅ | ✅ rebuild | ✅ (cancelReservations_) | ✅ Worker direct |
-| **Direct Stripe** | ✅ stripe-webhook+auto-sync | ✅ | ✅ rebuild | ❌ **MANUELLE** (✕ admin) | ✅ notify-booking |
+| **Direct Stripe** | ✅ stripe-webhook+auto-sync | ✅ | ✅ rebuild | ✅ **`deleteReservation` (1 appel)** | ✅ notify-booking |
 | **Beds24 Nogent** | ✅ webhook temps réel | ✅ | ✅ rebuild | ✅ (status=cancelled) | — |
 
 **Preuve test :** résa fictive `airbnb-TEST-20260627` Zandoli Août 330€ → ajoutée (+330€), supprimée (−330€), revenus 2144→1814€ exactement.
 
-**Règle proxy vs Worker :** `cancelReservations_` (delete + rebuild en 1 appel GAS) **timeout via /api/sheets-proxy** (CF Pages Function). Le Worker l'appelle directement via `APPS_SCRIPT_URL` → pas de timeout. Pour les appels manuels Claude via curl : séparer en `deleteReservation` + `revenus2026RebuildBienApply`.
+**Règle proxy vs Worker :** `cancelReservations_` (delete + rebuild en 1 appel GAS) **timeout via /api/sheets-proxy** (CF Pages Function). Le Worker l'appelle directement via `APPS_SCRIPT_URL` → pas de timeout. `deleteReservation_` = 1 seul appel suffisant (rebuild intégré depuis 2026-06-27 @74). Pour les appels manuels Claude via curl : séparer en `deleteReservation` + `revenus2026RebuildBienApply` uniquement si `deleteReservation` timeout (rare).
 
 ## Commandes de vérification rapide (CLAUDE_SECRET requis)
 
