@@ -8,7 +8,7 @@
 | **Airbnb** | ✅ via Worker hourly | ✅ | ✅ rebuild | ✅ (cancelReservations_) | ✅ Worker direct |
 | **Booking.com** | ✅ via Worker hourly | ✅ | ✅ rebuild | ✅ (cancelReservations_) | ✅ Worker direct |
 | **Direct Stripe** | ✅ stripe-webhook+auto-sync | ✅ | ✅ rebuild | ✅ **`deleteReservation` (1 appel)** | ✅ notify-booking |
-| **Beds24 Nogent** | ✅ webhook temps réel | ✅ | ✅ rebuild | ✅ (status=cancelled) | — |
+| **Beds24 Nogent** | ✅ webhook temps réel | ✅ | ✅ rebuild | ✅ (status=Annulé → rebuild auto) | — |
 
 **Preuve test :** résa fictive `airbnb-TEST-20260627` Zandoli Août 330€ → ajoutée (+330€), supprimée (−330€), revenus 2144→1814€ exactement.
 
@@ -88,9 +88,18 @@ POST /api/sheets-proxy → APPS_SCRIPT_URL
     → delete row(s)
     → rebuildRevenus2026_(true, month, bienId) par bien/mois affecté ✅
 
+  deleteReservation_({id})
+    → lit cols A+B+E AVANT suppression (bienId + mois)
+    → delete row
+    → rebuildRevenus2026_(true, month, bienId) automatiquement ✅ (depuis @74, 2026-06-27)
+    → retourne { ok, action, rebuilt:{bienId,year,month} }
+
   revenus2026RebuildBienApply({fromMonth, bien})
     → zero + recalcul idempotent depuis "Toutes les Réservations"
     → SEULE fonction sûre pour recalculer les revenus
+
+  revenus2027RebuildBienApply({fromMonth})
+    → zero + recalcul idempotent 2027 (sans filtre bienId — tous biens)
 ```
 
 ## Garde-fous
