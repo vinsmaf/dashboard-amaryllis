@@ -63,7 +63,8 @@ export function factCheckCaption(caption, extraRules = [], bienId = null) {
   // Les hashtags (#AmaryllisLocations, #Martinique…) sont du marketing, pas des affirmations
   // factuelles. On les retire AVANT d'appliquer les règles, sinon le nom de marque « Amaryllis »
   // présent dans tous les hashtags déclenche en boucle les règles « équipement.*amaryllis » (faux positifs).
-  const body = caption.replace(/#[^\s#]+/g, " ");
+  // Strip hashtags ET URLs (villamaryllis.com contient "villa" → faux positif sur les règles villa)
+  const body = caption.replace(/#[^\s#]+/g, " ").replace(/https?:\/\/\S+/g, " ");
   const errors = [];
   for (const rule of [...FACT_CHECK_RULES, ...extraRules]) {
     if (bienId && Array.isArray(rule.okFor) && rule.okFor.includes(bienId)) continue;
