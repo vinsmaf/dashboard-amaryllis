@@ -3,6 +3,10 @@
 > Pièges déjà rencontrés + comment les éviter. 1 entrée = 1 leçon actionnable « la prochaine fois ».
 > Le journal d'erreurs exhaustif reste `../docs/ERREURS-LOG.md`.
 
+## ⏱ GAS via proxy CF = timeout sur opérations lourdes — 2026-06-27
+- **Piège** : `cancelReservations_` (delete + rebuild en 1 appel GAS) appelé via `/api/sheets-proxy` → 502 timeout. Pages Functions ont un timeout court.
+- **La prochaine fois** : pour les appels manuels Claude, TOUJOURS séparer en 2 : `deleteReservation` puis `revenus2026RebuildBienApply`. Le Worker appelle GAS directement (pas via proxy) → pas de timeout pour les vraies annulations auto.
+
 ## 🔴 GAS revenus : revenus2026FromMonth(ignoreMemo:true) = INTERDIT — 2026-06-27
 - **Piège vécu (grave)** : appeler `revenus2026FromMonth` avec `ignoreMemo:true` quand des cellules ont déjà des valeurs → double-compte TOUT (18 IDs, juin-déc, tous biens). Symptôme : "5 résas alors qu'il y en a qu'une, 12 jours au lieu de 2".
 - **La prochaine fois** : utiliser UNIQUEMENT `revenus2026RebuildBienApply` (zero + recalcul idempotent). La fonction `ignoreMemo` est maintenant BLOQUÉE côté GAS (retourne une erreur 400). `patch-booking.js` utilise désormais `RebuildBienApply`.

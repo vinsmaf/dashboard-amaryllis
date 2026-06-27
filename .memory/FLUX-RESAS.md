@@ -1,5 +1,49 @@
 # FLUX RÉSERVATIONS & ANNULATIONS — Amaryllis Locations
-> Référence technique du pipeline complet. MAJ : 2026-06-27.
+> Référence technique du pipeline complet. MAJ : 2026-06-27. **Testé et validé le 2026-06-27.**
+
+## ✅ Statut validé (test bout-en-bout 2026-06-27)
+
+| Canal | Ajout Sheet | Dashboard | Revenus | Annulation auto | Notif email+ntfy |
+|---|---|---|---|---|---|
+| **Airbnb** | ✅ via Worker hourly | ✅ | ✅ rebuild | ✅ (cancelReservations_) | ✅ Worker direct |
+| **Booking.com** | ✅ via Worker hourly | ✅ | ✅ rebuild | ✅ (cancelReservations_) | ✅ Worker direct |
+| **Direct Stripe** | ✅ stripe-webhook+auto-sync | ✅ | ✅ rebuild | ❌ **MANUELLE** (✕ admin) | ✅ notify-booking |
+| **Beds24 Nogent** | ✅ webhook temps réel | ✅ | ✅ rebuild | ✅ (status=cancelled) | — |
+
+**Preuve test :** résa fictive `airbnb-TEST-20260627` Zandoli Août 330€ → ajoutée (+330€), supprimée (−330€), revenus 2144→1814€ exactement.
+
+**Règle proxy vs Worker :** `cancelReservations_` (delete + rebuild en 1 appel GAS) **timeout via /api/sheets-proxy** (CF Pages Function). Le Worker l'appelle directement via `APPS_SCRIPT_URL` → pas de timeout. Pour les appels manuels Claude via curl : séparer en `deleteReservation` + `revenus2026RebuildBienApply`.
+
+## Commandes de vérification rapide (CLAUDE_SECRET requis)
+
+```bash
+SECRET="0e091781cd00c38efa118d36f46e6bccbb0d713a6918e23e"
+
+# Vérifier une résa précise + revenus d'un bien
+curl -s -X POST "https://villamaryllis.com/api/sheets-proxy" \
+  -H "Authorization: Bearer $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"action":"read"}' | python3 -c "
+import json,sys; d=json.load(sys.stdin)
+resas=d.get('reservations',[])
+print(f'{len(resas)} résas totales')
+# Chercher une résa spécifique :
+# next((r for r in resas if 'NOM' in str(r.get('voyageur',''))), None)
+z=next((b for b in d.get('biens',[]) if b.get('id')=='zandoli'),None)
+if z: print('Zandoli rev jan-déc:',[round(v) for v in z.get('revenus',[])[:12]])
+"
+
+# Supprimer une ligne + rebuild revenus (2 appels séparés)
+curl -s -X POST "https://villamaryllis.com/api/sheets-proxy" \
+  -H "Authorization: Bearer $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"action":"deleteReservation","id":"<ID-SHEET>"}'
+
+curl -s -X POST "https://villamaryllis.com/api/sheets-proxy" \
+  -H "Authorization: Bearer $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"action":"revenus2026RebuildBienApply","fromMonth":<MOIS>,"bien":"<bienId>"}'
+```
 
 ## 4 canaux d'entrée
 
