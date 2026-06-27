@@ -90,7 +90,10 @@ export async function verifyBearer(request, env) {
     return { ok: true, role: payload.r === "menage" ? "menage" : "admin" };
   }
 
-  // 2. Rétro-compat : mot de passe brut en Bearer
+  // 2. CLAUDE_SECRET : accès machine Claude (lecture + admin, sans expiration)
+  if (env.CLAUDE_SECRET && safeEqual(token, env.CLAUDE_SECRET)) return { ok: true, role: "admin" };
+
+  // 3. Rétro-compat : mot de passe brut en Bearer
   if (env.ADMIN_PASSWORD && safeEqual(token, env.ADMIN_PASSWORD)) return { ok: true, role: "admin" };
   if (env.ADMIN_PWD && safeEqual(token, env.ADMIN_PWD)) return { ok: true, role: "admin" };
   if (env.ADMIN_PWD_MENAGE && safeEqual(token, env.ADMIN_PWD_MENAGE)) return { ok: true, role: "menage" };
