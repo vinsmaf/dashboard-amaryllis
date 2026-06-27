@@ -535,17 +535,48 @@ function addReservation_(p) {
 
 // ?action=deleteReservation&id=xxx  (suppression dans "Toutes les Réservations", id comparé en String)
 function deleteReservation_(p) {
-  const sheet = getSheet_("Toutes les Réservations");
+  var sheet = getSheet_("Toutes les Réservations");
   if (!sheet || !p.id) return json_({ ok: true, action: "noop" });
 
-  const lastRow = sheet.getLastRow();
+  var lastRow = sheet.getLastRow();
   if (lastRow < 2) return json_({ ok: true, action: "noop" });
 
-  const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat().map(String);
-  const idx = ids.indexOf(String(p.id));
-  if (idx >= 0) { sheet.deleteRow(idx + 2); return json_({ ok: true, action: "deleted" }); }
+  // Lire cols A(id) + B(bienLabel) + E(checkin) AVANT suppression pour rebuild revenus
+  var LBL2ID = { "T2 Nogent":"nogent","Villa Amaryllis":"amaryllis","Villa Iguana":"iguana","Geko":"geko","Zandoli":"zandoli","Mabouya":"mabouya","T2 Schoelcher":"schoelcher" };
+  var rows = sheet.getRange(2, 1, lastRow - 1, 5).getValues();
+  var idx = -1;
+  var rowMeta = null;
+  rows.forEach(function(r, i) {
+    if (idx >= 0) return;
+    if (String(r[0] || "") !== String(p.id)) return;
+    idx = i;
+    var bienLabel  = String(r[1] || "");
+    var checkinRaw = r[4];
+    // GAS renvoie les cellules date comme objets Date — on normalise en string "yyyy-MM-dd"
+    var checkin = (checkinRaw instanceof Date)
+      ? Utilities.formatDate(checkinRaw, "UTC", "yyyy-MM-dd")
+      : String(checkinRaw || "");
+    var bienId = LBL2ID[bienLabel] || bienLabel.toLowerCase().replace(/\s+/g, "");
+    var year   = checkin ? parseInt(checkin.slice(0, 4), 10) : 0;
+    var month  = checkin ? parseInt(checkin.slice(5, 7), 10) : 0;
+    if (bienId && month && year >= 2026) rowMeta = { bienId: bienId, year: year, month: month };
+  });
 
-  return json_({ ok: true, action: "not_found" });
+  if (idx < 0) return json_({ ok: true, action: "not_found" });
+
+  sheet.deleteRow(idx + 2);
+
+  // Rebuild revenus (revenus + nuits + occ) pour le bien/mois affecté
+  var rebuilt = null;
+  if (rowMeta) {
+    try {
+      if (rowMeta.year === 2026) rebuildRevenus2026_(true, rowMeta.month, rowMeta.bienId);
+      if (rowMeta.year === 2027) rebuildRevenus2027_(true, rowMeta.month);
+      rebuilt = rowMeta;
+    } catch(e) { console.log("[deleteReservation] rebuild err:", e.message); }
+  }
+
+  return json_({ ok: true, action: "deleted", rebuilt: rebuilt });
 }
 
 // ?action=fetchIcal&url=https%3A%2F%2F...
@@ -1070,10 +1101,13 @@ function cancelReservations_(annulations) {
     if (!idSet[cellId]) return;
     rowsToDelete.push(i + 2);
     foundIds.push(cellId);
-    var checkin = String(r[4] || ""); // col E
-    var bienLabel = String(r[1] || ""); // col B
+    var bienLabel  = String(r[1] || ""); // col B
+    var checkinRaw = r[4]; // col E — peut être un objet Date (GAS) ou string
+    var checkin = (checkinRaw instanceof Date)
+      ? Utilities.formatDate(checkinRaw, "UTC", "yyyy-MM-dd")
+      : String(checkinRaw || "");
     var bienId = LBL2ID[bienLabel] || bienLabel.toLowerCase().replace(/\s+/g, "");
-    var year = checkin ? parseInt(checkin.slice(0, 4), 10) : 0;
+    var year  = checkin ? parseInt(checkin.slice(0, 4), 10) : 0;
     var month = checkin ? parseInt(checkin.slice(5, 7), 10) : 0;
     if (bienId && month && year >= 2026) rowMeta.push({ bienId: bienId, month: month, year: year });
   });
