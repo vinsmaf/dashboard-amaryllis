@@ -36,6 +36,17 @@ const GOOGLE_REVIEW = {
   default:    "https://search.google.com/local/writereview?placeid=ChIJWbeKdLghQIwRCppz2lJ39Jk",
 };
 
+// TripAdvisor Review links — placeholders à remplacer après création des fiches TA
+const TRIPADVISOR_REVIEW = {
+  amaryllis:  "https://www.tripadvisor.fr/Review-gXXXXX-dXXXXXX", // ← à remplacer après création fiche TA
+  zandoli:    "https://www.tripadvisor.fr/Review-gXXXXX-dXXXXXX",
+  geko:       "https://www.tripadvisor.fr/Review-gXXXXX-dXXXXXX",
+  mabouya:    "https://www.tripadvisor.fr/Review-gXXXXX-dXXXXXX",
+  schoelcher: "https://www.tripadvisor.fr/Review-gXXXXX-dXXXXXX",
+  nogent:     "https://www.tripadvisor.fr/Review-gXXXXX-dXXXXXX",
+  default:    "https://www.tripadvisor.fr/Review-gXXXXX-dXXXXXX",
+};
+
 // NPS — lien de réponse directe (peut pointer vers un Typeform, Tally, ou Google Form)
 // À personnaliser avec l'URL de votre formulaire NPS
 const NPS_BASE_URL = "https://villamaryllis.com/avis";
@@ -58,7 +69,7 @@ function targetDate(offsetDays) {
 }
 
 // ── Email HTML post-séjour ───────────────────────────────────────────────────
-function buildHtml({ firstName, bienNom, bienId, arrival, departure, reviewUrl, npsUrl }) {
+function buildHtml({ firstName, bienNom, bienId, arrival, departure, reviewUrl, taUrl, npsUrl }) {
   const prenom = firstName || "cher(e) voyageur(se)";
 
   return `<!DOCTYPE html>
@@ -100,6 +111,24 @@ function buildHtml({ firstName, bienNom, bienId, arrival, departure, reviewUrl, 
         <a href="${reviewUrl}" target="_blank" rel="noopener"
           style="display:inline-block;background:#0e3b3a;color:#faf5e9;text-decoration:none;padding:11px 24px;border-radius:8px;font-size:13px;font-weight:600;letter-spacing:0.04em;">
           ✍️ Écrire un avis →
+        </a>
+      </div>
+
+      <!-- TripAdvisor -->
+      <div style="background:#fff;border:1px solid #e8dcc8;border-radius:12px;padding:22px 24px;margin-bottom:20px;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+          <div style="width:36px;height:36px;background:#00af87;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🦉</div>
+          <div>
+            <p style="margin:0;font-size:14px;font-weight:700;color:#0e3b3a;">Laissez un avis TripAdvisor</p>
+            <p style="margin:2px 0 0;font-size:12px;color:#7a6b5a;">2 minutes · Lu par des millions de voyageurs</p>
+          </div>
+        </div>
+        <p style="margin:0 0 16px;font-size:13px;color:#555;line-height:1.6;">
+          TripAdvisor est la référence mondiale des voyageurs. Votre avis booste notre visibilité internationale.
+        </p>
+        <a href="${taUrl}" target="_blank" rel="noopener"
+          style="display:inline-block;background:#00af87;color:#fff;text-decoration:none;padding:11px 24px;border-radius:8px;font-size:13px;font-weight:600;letter-spacing:0.04em;">
+          🦉 Écrire un avis TripAdvisor →
         </a>
       </div>
 
@@ -170,6 +199,7 @@ async function sendDirectPostStay(env, origin) {
           prenom: b.prenom || "", bien_nom: b.bien_nom || "votre logement",
           checkin: b.checkin || "", checkout: b.checkout || "",
           lien_avis_google: GOOGLE_REVIEW[b.bien_id] || GOOGLE_REVIEW.default,
+          lien_avis_tripadvisor: TRIPADVISOR_REVIEW[b.bien_id] || TRIPADVISOR_REVIEW.default,
           lien_avis_airbnb: "https://villamaryllis.com/avis",
         },
       });
@@ -250,9 +280,10 @@ export async function onRequestGet(context) {
   for (const b of departures) {
     const bienNom   = "Appartement Nogent-sur-Marne";
     const reviewUrl = GOOGLE_REVIEW[b.bienId] || GOOGLE_REVIEW.default;
+    const taUrl     = TRIPADVISOR_REVIEW[b.bienId] || TRIPADVISOR_REVIEW.default;
     const npsUrl    = `${NPS_BASE_URL}`;
 
-    const html    = buildHtml({ firstName: b.firstName, bienNom, bienId: b.bienId, arrival: b.arrival, departure: b.departure, reviewUrl, npsUrl });
+    const html    = buildHtml({ firstName: b.firstName, bienNom, bienId: b.bienId, arrival: b.arrival, departure: b.departure, reviewUrl, taUrl, npsUrl });
     const subject = `Merci pour votre séjour à ${bienNom} ${b.firstName ? ", " + b.firstName : ""} 🌴`;
 
     if (dryRun) {

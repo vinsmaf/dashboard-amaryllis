@@ -1970,6 +1970,14 @@ async function runYieldPricing(env, allEvents) {
     }
   }
 
+  // Juillet-août : pas de yield pricing (CalendrierTarifs = référence unique)
+  for (const bienId of Object.keys(yieldPrices)) {
+    for (const date of Object.keys(yieldPrices[bienId])) {
+      if (date >= "2026-07-01" && date <= "2026-08-31") delete yieldPrices[bienId][date];
+    }
+    if (Object.keys(yieldPrices[bienId]).length === 0) delete yieldPrices[bienId];
+  }
+
   // Merge dans gap_prices (prend le max entre gap et yield)
   const gapRaw = await env.ICAL_STORE.get("gap_prices").catch(() => null);
   const gapPrices = gapRaw ? JSON.parse(gapRaw) : {};
