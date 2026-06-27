@@ -36,7 +36,6 @@ export async function sendGuestEmail(env, origin, { template, to, subject, vars 
   const tplRes = await fetch(`${origin}/email-templates/${template}?cb=${Date.now()}`, {
     redirect: "follow",
     cache: "no-store",
-    cf: { cacheTtl: 0, cacheEverything: false },
   });
   if (!tplRes.ok) return { ok: false, error: `template introuvable (${tplRes.status})` };
   const raw = await tplRes.text();
