@@ -1505,26 +1505,49 @@ async function syncFeed(env, bienId, url, canal, allEvents, nouvelles, annulatio
     const text = await fetchICS(url);
     const events = parseICS(text, bienId, canal).map(e => ({ ...e, canal }));
     const kvKey = `uids:${bienId}:${canal}`;
+    const todayStr = new Date().toISOString().slice(0, 10);
     // raw === null ⇒ feed JAMAIS synchronisé. On distingue du feed déjà vu mais vide ("[]").
     const raw = await env.ICAL_STORE.get(kvKey, "json");
     const isFirstRun = raw === null;
-    const stored = raw || [];
-    const knownUids = new Set(stored);
+    // Support ancien format (tableau de strings) et nouveau ({uid, checkout})
+    const stored = (raw || []).map(e => typeof e === "string" ? { uid: e, checkout: null } : e);
+    const storedByUid = new Map(stored.map(e => [e.uid, e]));
     const currentUids = new Set(events.map(e => e.uid));
-    const newForFeed = events.filter(e => !knownUids.has(e.uid));
-    // Premier run d'un feed → SEED silencieux : on pousse quand même au Sheet
-    // (allEvents ci-dessous) mais sans notifier ni créer de liens caution, sinon
-    // des résas préexistantes seraient flaggées "nouvelles" en masse (vécu à
-    // l'activation du sync Booking). Les vraies nouveautés suivantes notifient.
+    // Détecter les rotations d'UID Airbnb (même préfixe avant le 1er "-", hash différent)
+    const currentPrefixes = new Map(events.map(e => [e.uid.split("-")[0], e.uid]));
+    const newForFeed = events.filter(e => {
+      if (storedByUid.has(e.uid)) return false;
+      // Même préfixe qu'un UID stocké → rotation Airbnb, pas une vraie nouveauté
+      const prefix = e.uid.split("-")[0];
+      return !stored.some(s => s.uid.split("-")[0] === prefix);
+    });
+    // Premier run d'un feed → SEED silencieux
     if (newForFeed.length > 0 && !isFirstRun) nouvelles.push(...newForFeed);
     if (isFirstRun && events.length > 0) console.log(`[sync] ${bienId}/${canal}: SEED initial ${events.length} résa(s) (silencieux, push Sheet sans notif)`);
     // Annulations : UIDs connus qui ont disparu de l'iCal (jamais au premier run)
-    const cancelledUids = isFirstRun ? [] : stored.filter(uid => !currentUids.has(uid));
+    // — Filtrer les faux positifs : checkout passé = séjour terminé normalement, pas une annulation
+    // — Filtrer les rotations UID : même préfixe encore présent = Airbnb a juste changé le hash
+    const cancelledUids = isFirstRun ? [] : stored.filter(e => {
+      if (currentUids.has(e.uid)) return false;
+      // Rotation UID : même préfixe toujours dans le feed actuel → pas une vraie annulation
+      const prefix = e.uid.split("-")[0];
+      if (currentPrefixes.has(prefix)) {
+        console.log(`[sync] ${bienId}/${canal}: rotation UID ignorée (${e.uid} → ${currentPrefixes.get(prefix)})`);
+        return false;
+      }
+      // Checkout passé → séjour terminé normalement, faux positif "annulation"
+      if (e.checkout && e.checkout < todayStr) {
+        console.log(`[sync] ${bienId}/${canal}: séjour terminé ignoré (checkout ${e.checkout} < aujourd'hui)`);
+        return false;
+      }
+      return true;
+    });
     if (cancelledUids.length > 0) {
-      cancelledUids.forEach(uid => annulations.push({ uid, bienId, canal }));
+      cancelledUids.forEach(e => annulations.push({ uid: e.uid, bienId, canal }));
       console.log(`[sync] ${bienId}/${canal}: ${cancelledUids.length} annulation(s) détectée(s)`);
     }
-    await env.ICAL_STORE.put(kvKey, JSON.stringify(events.map(e => e.uid)), { expirationTtl: 60 * 60 * 24 * 90 });
+    // Stocker {uid, checkout} pour filtrer les faux positifs futurs
+    await env.ICAL_STORE.put(kvKey, JSON.stringify(events.map(e => ({ uid: e.uid, checkout: e.checkout }))), { expirationTtl: 60 * 60 * 24 * 90 });
     allEvents.push(...events);
     console.log(`[sync] ${bienId}/${canal}: ${events.length} evt, ${newForFeed.length} nouveau(x)`);
   } catch (err) {
@@ -2356,10 +2379,15 @@ async function runEditorialDraftGen(env) {
 
       // Photo = une photo autorisée du bien (rotation déterministe). Si rien de coché → photo du calendrier (le gate escaladera).
       const wl = allowedPhotos[e.bien_id] || [];
-      const photoUrl = wl.length ? `/photos/${e.bien_id}/${wl[Math.abs(e.id) % wl.length]}.webp` : e.photo_url;
+      const relPhotoUrl = wl.length ? `/photos/${e.bien_id}/${wl[Math.abs(e.id) % wl.length]}.webp` : (e.photo_url || `/photos/${e.bien_id}/01.webp`);
+      // URL absolue obligatoire pour l'API Meta (Instagram/Facebook)
+      const absPhotoUrl = relPhotoUrl.startsWith("http") ? relPhotoUrl : `https://villamaryllis.com${relPhotoUrl}`;
 
-      // Brief enrichi → community-manager
-      const brief = `BRIEF CALENDRIER ÉDITORIAL — date=${new Date(e.scheduled_at*1000).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})}, bien=${e.bien_id}, thème=${e.theme}, variante=${e.variante}, format=${e.format}, photo=${photoUrl}, CTA="${e.cta}". Génère UN draft social_post selon ce brief précis.`;
+      // Brief enrichi → community-manager — imageUrl OBLIGATOIRE et EXACTE (pas d'invention)
+      const brief = `BRIEF CALENDRIER ÉDITORIAL — date=${new Date(e.scheduled_at*1000).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})}, bien=${e.bien_id}, thème=${e.theme}, variante=${e.variante}, format=${e.format}, CTA="${e.cta}".
+RÈGLE ABSOLUE : le champ imageUrl du draft DOIT être EXACTEMENT "${absPhotoUrl}". Ne pas inventer d'autre URL. Ne pas modifier ce chemin. Utiliser cette URL telle quelle.
+Génère UN draft social_post avec cette imageUrl exacte.`;
+      const beforeGen = Math.floor(Date.now() / 1000);
       try {
         const runRes = await fetch(`${siteUrl}/api/agents-run?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
           method: "POST",
@@ -2374,6 +2402,25 @@ async function runEditorialDraftGen(env) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ status: newStatus }),
         }).catch(() => {});
+
+        // Post-processing : corriger l'imageUrl si le LLM a halluciné une URL différente
+        if (drafts > 0 && env.revenue_manager) {
+          try {
+            const { results: recentDrafts } = await env.revenue_manager.prepare(
+              "SELECT id, payload FROM agent_drafts WHERE type='social_post' AND created_at >= ? ORDER BY id DESC LIMIT 3"
+            ).bind(beforeGen - 30).all();
+            for (const dr of (recentDrafts || [])) {
+              const p = JSON.parse(dr.payload || "{}");
+              const imgUrl = p.imageUrl || p.image_url || p.photo_url || "";
+              if (!imgUrl.includes(`/photos/${e.bien_id}/`)) {
+                p.imageUrl = absPhotoUrl;
+                await env.revenue_manager.prepare("UPDATE agent_drafts SET payload=?, updated_at=unixepoch() WHERE id=?")
+                  .bind(JSON.stringify(p), dr.id).run();
+                console.log(`[editorial-J-2] imageUrl corrigée draft ${dr.id}: "${imgUrl}" → "${absPhotoUrl}"`);
+              }
+            }
+          } catch (fixErr) { console.warn("[editorial-J-2] post-fix imageUrl:", fixErr.message); }
+        }
       } catch (err) {
         console.error(`[editorial-J-2] erreur entry ${e.id}:`, err.message);
         await fetch(`${siteUrl}/api/editorial-calendar?id=${e.id}`, {
@@ -2467,6 +2514,52 @@ async function runEditorialRetry(env) {
       retried++;
     }
     if (retried > 0) console.log(`[editorial-retry] ${retried} entrée(s) reprogrammée(s)`);
+
+    // Cas spécial : entrées failed sans draft (draft_id IS NULL) → relancer la génération du draft
+    const { results: orphans } = await db.prepare(`
+      SELECT id, bien_id, theme, variante, format, cta, photo_url, scheduled_at
+      FROM editorial_calendar
+      WHERE status = 'failed' AND draft_id IS NULL AND updated_at > ?
+      ORDER BY updated_at DESC LIMIT 5
+    `).bind(cutoff).all();
+    let regenerated = 0;
+    for (const e of (orphans || [])) {
+      const relPhoto = e.photo_url || `/photos/${e.bien_id}/01.webp`;
+      const absPhoto = relPhoto.startsWith("http") ? relPhoto : `https://villamaryllis.com${relPhoto}`;
+      const brief = `BRIEF CALENDRIER ÉDITORIAL — date=${new Date(e.scheduled_at*1000).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})}, bien=${e.bien_id}, thème=${e.theme}, variante=${e.variante}, format=${e.format}, CTA="${e.cta}".
+RÈGLE ABSOLUE : le champ imageUrl du draft DOIT être EXACTEMENT "${absPhoto}". Ne pas inventer d'autre URL. Utiliser cette URL telle quelle.
+Génère UN draft social_post avec cette imageUrl exacte.`;
+      try {
+        const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+        const beforeGen = Math.floor(Date.now() / 1000);
+        const runRes = await fetch(`${siteUrl}/api/agents-run?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ agents: ["community-manager"], brief, calendar_id: e.id }),
+        });
+        const runData = await runRes.json();
+        const drafts = runData.results?.[0]?.drafts || 0;
+        if (drafts > 0) {
+          // Post-processing imageUrl
+          const { results: recentDrafts } = await db.prepare(
+            "SELECT id, payload FROM agent_drafts WHERE type='social_post' AND created_at >= ? ORDER BY id DESC LIMIT 3"
+          ).bind(beforeGen - 30).all();
+          for (const dr of (recentDrafts || [])) {
+            const p = JSON.parse(dr.payload || "{}");
+            const imgUrl = p.imageUrl || p.image_url || p.photo_url || "";
+            if (!imgUrl.includes(`/photos/${e.bien_id}/`)) {
+              p.imageUrl = absPhoto;
+              await db.prepare("UPDATE agent_drafts SET payload=?, updated_at=unixepoch() WHERE id=?")
+                .bind(JSON.stringify(p), dr.id).run();
+            }
+          }
+          await db.prepare("UPDATE editorial_calendar SET status='drafted', updated_at=? WHERE id=?").bind(now, e.id).run();
+          console.log(`[editorial-retry] entry ${e.id} (${e.bien_id}) — draft regénéré (orphelin sans draft_id)`);
+          regenerated++;
+        }
+      } catch (rErr) { console.warn(`[editorial-retry] regen entry ${e.id}:`, rErr.message); }
+    }
+    if (regenerated > 0) console.log(`[editorial-retry] ${regenerated} draft(s) orphelin(s) regénéré(s)`);
 
     // Nettoyage des entrées failed > 7 jours (contenu périmé — archivées en 'archived')
     await db.prepare("UPDATE editorial_calendar SET status='archived', updated_at=? WHERE status='failed' AND updated_at < ?")
