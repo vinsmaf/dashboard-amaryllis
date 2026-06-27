@@ -1550,8 +1550,10 @@ async function syncFeed(env, bienId, url, canal, allEvents, nouvelles, annulatio
     await env.ICAL_STORE.put(kvKey, JSON.stringify(events.map(e => ({ uid: e.uid, checkout: e.checkout }))), { expirationTtl: 60 * 60 * 24 * 90 });
     allEvents.push(...events);
     console.log(`[sync] ${bienId}/${canal}: ${events.length} evt, ${newForFeed.length} nouveau(x)`);
+    return { ok: true };
   } catch (err) {
     console.error(`[sync] ${bienId}/${canal} erreur:`, err.message);
+    return { ok: false, bienId, canal, error: err.message };
   }
 }
 
@@ -1600,7 +1602,31 @@ async function runSync(env) {
   const airbnbUrls  = getAirbnbUrls(env);
   const airbnbFeeds   = Object.entries(airbnbUrls).map(([id, url]) => syncFeed(env, id, url, "airbnb", allEvents, nouvelles, annulations));
   const bookingFeeds  = Object.entries(bookingUrls).map(([id, url]) => syncFeed(env, id, url, "booking", allEvents, nouvelles, annulations));
-  await Promise.all([...airbnbFeeds, ...bookingFeeds]);
+  const feedResults   = await Promise.all([...airbnbFeeds, ...bookingFeeds]);
+
+  // Alerte ntfy si un ou plusieurs feeds iCal échouent (throttle 2h via KV)
+  const failedFeeds = feedResults.filter(r => r && !r.ok);
+  if (failedFeeds.length > 0) {
+    const alertKey  = "ical_failure_alert";
+    const lastAlert = await env.ICAL_STORE.get(alertKey).catch(() => null);
+    if (!lastAlert) {
+      const body = failedFeeds.map(f => `• ${f.bienId}/${f.canal}: ${f.error}`).join("\n");
+      await fetch(`https://ntfy.sh/${env.NTFY_TOPIC || "amaryllis-alertes-7r4k9"}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Title": `⚠️ iCal sync échoué (${failedFeeds.length} feed${failedFeeds.length > 1 ? "s" : ""})`,
+          "Priority": "high",
+          "Tags": "warning,calendar",
+        },
+        body,
+      }).catch(e => console.error("[sync-alert] ntfy:", e.message));
+      await env.ICAL_STORE.put(alertKey, "1", { expirationTtl: 7200 }).catch(() => {});
+      console.warn(`[sync] ⚠️ ${failedFeeds.length} feed(s) en erreur — alerte ntfy envoyée`);
+    } else {
+      console.warn(`[sync] ⚠️ ${failedFeeds.length} feed(s) en erreur — alerte déjà envoyée (throttle 2h)`);
+    }
+  }
 
   // ── Ajouter les résas DIRECTES Stripe (D1) à allEvents avant push Sheets ──
   // Auto-sync : toutes les 15 min, les direct_bookings remontent dans
