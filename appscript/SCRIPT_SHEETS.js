@@ -246,6 +246,10 @@ function doPost(e) {
   if (action === "revenus2026Status")     return json_(revenus2026Status_());
   if (action === "revenus2026Recent")     return json_(revenus2026Recent_(body.n || 10));
   if (action === "revenus2026Forget")     return json_(revenus2026Forget_(body.ids || ""));
+  // ⚠️ GARDE-FOU : ignoreMemo=true est additif → double-compte si les cellules ont déjà des valeurs (vécu 2026-06-27)
+  if (action === "revenus2026FromMonth" && !!body.ignoreMemo) {
+    return json_({ ok: false, blocked: true, error: "BLOQUÉ: revenus2026FromMonth(ignoreMemo:true) interdit — utiliser revenus2026RebuildBienApply (idempotent)." });
+  }
   if (action === "revenus2026FromMonth")  return json_(revenus2026FromMonth_(body.month || 7, !!body.apply, !!body.ignoreMemo));
   if (action === "revenus2026Undo")       return json_(revenus2026Undo_(body.ids || ""));
   if (action === "updateRevenu")            return updateRevenu_(body);
@@ -1056,30 +1060,44 @@ function cancelReservations_(annulations) {
   var idSet = {};
   ids.forEach(function(id) { idSet[id] = true; });
 
-  // Lecture col A (ID) pour identifier les lignes à supprimer
-  var colA = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+  // Lecture cols A(id) + B(bienLabel) + E(checkin) pour identifier les lignes et capturer le bien/mois
+  var allData = sheet.getRange(2, 1, lastRow - 1, 5).getValues(); // A..E
   var rowsToDelete = [];
   var foundIds = [];
-  colA.forEach(function(r, i) {
+  var rowMeta = []; // [{bienId, month, year}] pour le rebuild post-suppression
+  allData.forEach(function(r, i) {
     var cellId = String(r[0] || "");
-    if (idSet[cellId]) {
-      rowsToDelete.push(i + 2); // +2 car header en ligne 1
-      foundIds.push(cellId);
-    }
+    if (!idSet[cellId]) return;
+    rowsToDelete.push(i + 2);
+    foundIds.push(cellId);
+    var checkin = String(r[4] || ""); // col E
+    var bienLabel = String(r[1] || ""); // col B
+    var bienId = LBL2ID[bienLabel] || bienLabel.toLowerCase().replace(/\s+/g, "");
+    var year = checkin ? parseInt(checkin.slice(0, 4), 10) : 0;
+    var month = checkin ? parseInt(checkin.slice(5, 7), 10) : 0;
+    if (bienId && month && year >= 2026) rowMeta.push({ bienId: bienId, month: month, year: year });
   });
 
   // Supprimer de bas en haut pour éviter le décalage d'indices
   rowsToDelete.sort(function(a, b) { return b - a; });
   rowsToDelete.forEach(function(rowNum) { sheet.deleteRow(rowNum); });
 
-  // Retirer du memo revenus et re-synchro (2026 et 2027)
-  if (foundIds.length > 0) {
-    var idsCsv = foundIds.join(",");
-    try { revenus2026Forget_(idsCsv); syncRevenus2026(); } catch(e) {}  // eslint-disable-line no-undef
-    try { revenus2027Forget_(idsCsv); syncRevenus2027(); } catch(e) {}  // eslint-disable-line no-undef
-  }
+  // Rebuild revenus idempotent (zero + recalcul depuis Sheet résiduel)
+  // ⚠️ NE PAS utiliser revenus2026Forget+syncRevenus2026 : additif, ne soustrait pas
+  var rebuilt = [];
+  var rebuildDone = {};
+  rowMeta.forEach(function(m) {
+    var rebuildKey = m.bienId + "|" + m.month;
+    if (rebuildDone[rebuildKey]) return;
+    rebuildDone[rebuildKey] = true;
+    try {
+      if (m.year === 2026) rebuildRevenus2026_(true, m.month, m.bienId); // eslint-disable-line no-undef
+      if (m.year === 2027) rebuildRevenus2027_(true, m.month, m.bienId); // eslint-disable-line no-undef
+      rebuilt.push(rebuildKey);
+    } catch(e) { console.log("rebuild err " + rebuildKey + ": " + e.message); }
+  });
 
-  return { ok: true, cancelled: rowsToDelete.length, ids: foundIds, notFound: ids.filter(function(id) { return foundIds.indexOf(id) < 0; }) };
+  return { ok: true, cancelled: rowsToDelete.length, ids: foundIds, rebuilt: rebuilt, notFound: ids.filter(function(id) { return foundIds.indexOf(id) < 0; }) };
 }
 
 function importFromBookingSheet_() {
