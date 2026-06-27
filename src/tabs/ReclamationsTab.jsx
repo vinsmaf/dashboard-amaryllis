@@ -2,7 +2,7 @@
 // Source : /api/reclamations. PATCH pour mettre à jour statut/geste/notes.
 
 import { useState, useEffect, useCallback } from "react";
-import { fetchJSON, adminFetch } from "../lib/apiFetch.js";
+import { adminFetch } from "../lib/apiFetch.js";
 
 const STATUT = {
   ouvert:    { emoji: "🔴", label: "Ouvert",    color: "#ef4444" },
@@ -47,7 +47,8 @@ export default function ReclamationsTab() {
     const qs = new URLSearchParams();
     if (fStatut) qs.set("statut", fStatut);
     if (fBien)   qs.set("bien", fBien);
-    fetchJSON(`/api/reclamations?${qs}`, { timeout: 10000 })
+    adminFetch(`/api/reclamations?${qs}`, { timeout: 10000 })
+      .then(r => r.json())
       .then(d => { setItems(d?.items || []); setErr(null); })
       .catch(e => { setItems([]); if (e?.status !== 401) setErr(e?.message || "Erreur de chargement"); })
       .finally(() => setLoading(false));

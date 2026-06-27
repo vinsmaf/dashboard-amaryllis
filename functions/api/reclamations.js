@@ -36,7 +36,7 @@ function uid() {
 }
 
 async function ensureTable(db) {
-  await db.exec(DDL);
+  await db.prepare(DDL).run();
 }
 
 export async function onRequestOptions() {
