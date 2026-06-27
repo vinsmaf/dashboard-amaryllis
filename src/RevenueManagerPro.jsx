@@ -240,27 +240,27 @@ function RevenueManagerPro() {
     const results = {};
     await Promise.all(BIENS_GLOBAL.map(async bienId => {
       try {
-        const data = await adminFetch(`/api/rm-recommendations?property_id=${bienId}&from=${today}&to=${to}`);
+        const data = await apiCall(`/api/rm-recommendations?property_id=${bienId}&from=${today}&to=${to}`);
         results[bienId] = data;
       } catch { results[bienId] = { recommendations: [], count: 0 }; }
     }));
     setGlobalRecos(results);
     setGlobalLoading(false);
-  }, [adminFetch]);
+  }, [apiCall]);
 
   const approveAllBien = useCallback(async (bienId) => {
     setGlobalApproving(prev => ({ ...prev, [bienId]: true }));
     const today = new Date().toISOString().slice(0, 10);
     const to = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
     try {
-      await adminFetch('/api/rm-recommendations/approve-all', {
+      await apiCall('/api/rm-recommendations/approve-all', {
         method: 'PATCH',
         body: JSON.stringify({ property_id: bienId, from: today, to }),
       });
       await loadGlobalRecos();
     } catch (e) { addLog(`Erreur approve-all ${bienId}: ${e.message}`, 'error'); }
     setGlobalApproving(prev => ({ ...prev, [bienId]: false }));
-  }, [adminFetch, loadGlobalRecos, addLog]);
+  }, [apiCall, loadGlobalRecos, addLog]);
 
   const recalcAllBiens = useCallback(async () => {
     setGlobalLoading(true);
@@ -269,7 +269,7 @@ function RevenueManagerPro() {
     const to = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
     for (const bienId of BIENS_GLOBAL) {
       try {
-        await adminFetch('/api/rm-recommendations/calculate', {
+        await apiCall('/api/rm-recommendations/calculate', {
           method: 'POST',
           body: JSON.stringify({ property_id: bienId, from: today, to }),
         });
@@ -277,7 +277,7 @@ function RevenueManagerPro() {
       } catch (e) { addLog(`✗ ${bienId}: ${e.message}`, 'error'); }
     }
     await loadGlobalRecos();
-  }, [adminFetch, loadGlobalRecos, addLog]);
+  }, [apiCall, loadGlobalRecos, addLog]);
 
   const approveAllBiens = useCallback(async () => {
     for (const bienId of BIENS_GLOBAL) {
