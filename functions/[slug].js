@@ -279,15 +279,10 @@ function buildMeta(title, desc, url, image) {
 }
 
 // Génère le tag <link rel="preload"> pour l'image hero LCP du bien.
-// Utilise Cloudflare Image Resizing (cdn-cgi) → format auto (AVIF/WebP selon browser),
-// qualité adaptée par breakpoint, srcset responsive. Réduit le LCP de ~4.5s à <2s.
+// Photos déjà en WebP → preload direct sans cdn-cgi (Image Resizing = plan Pro uniquement).
 function heroPreloadTag(slug) {
   const heroPhoto = CANON[slug]?.photos?.[0] || `/photos/${slug}/01.webp`;
-  const cdni = (w, q) => `/cdn-cgi/image/width=${w},format=auto,quality=${q}${heroPhoto}`;
-  return `<link rel="preload" as="image" fetchpriority="high" ` +
-    `href="${cdni(1200, 85)}" ` +
-    `imagesrcset="${cdni(480, 75)} 480w, ${cdni(800, 80)} 800w, ${cdni(1200, 85)} 1200w, ${cdni(1600, 90)} 1600w" ` +
-    `imagesizes="(max-width: 768px) 100vw, (max-width: 1200px) 72vw, 900px" />`;
+  return `<link rel="preload" as="image" fetchpriority="high" href="${heroPhoto}" />`;
 }
 
 function injectMeta(html, { title, desc, url, image, imageAlt, slug, hreflang }, ldJson) {
