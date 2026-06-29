@@ -2701,6 +2701,13 @@ async function runEditorialRepair(env) {
     }
   }
   console.log(`[editorial-repair] ${repaired} draft(s) réparé(s)`);
+
+  // Archiver les entrées 'drafted' en retard de >3j (contenu périmé, gate ne les approuvera pas)
+  const staleTs = now - 3 * 86400;
+  const { meta: archiveMeta } = await db.prepare(
+    "UPDATE editorial_calendar SET status='archived', updated_at=? WHERE status='drafted' AND scheduled_at < ?"
+  ).bind(now, staleTs).run().catch(() => ({ meta: { changes: 0 } }));
+  if (archiveMeta?.changes > 0) console.log(`[editorial-repair] ${archiveMeta.changes} entrée(s) périmée(s) archivée(s)`);
 }
 
 // ── Editorial Calendar : publication auto des drafts approuvés (cron horaire)

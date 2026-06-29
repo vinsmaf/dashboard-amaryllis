@@ -55,7 +55,7 @@ export async function onRequest(context) {
 
   const dry = url.searchParams.get("dry") === "1";
   const mode = (url.searchParams.get("mode") || env.EDITORIAL_GATE_MODE || "shadow").toLowerCase();
-  const minScore = parseInt(env.EDITORIAL_GATE_MIN_SCORE || "85", 10) || 85;
+  const minScore = parseInt(env.EDITORIAL_GATE_MIN_SCORE || "75", 10) || 75;
   const limit = Math.min(parseInt(url.searchParams.get("limit") || "20", 10) || 20, 50);
   const now = Math.floor(Date.now() / 1000);
 
@@ -96,8 +96,10 @@ export async function onRequest(context) {
     try { payload = JSON.parse(draft.payload || "{}"); } catch (e1) { console.error("[gate-payload]", e1.message); }
     try { reviews = JSON.parse(draft.reviews || "{}"); } catch (e2) { console.error("[gate-reviews]", e2.message); }
 
-    // Idempotence : déjà jugé par le gate → on ne re-notifie pas (sauf dry)
-    if (reviews.gate && !dry) { out.skipped++; continue; }
+    // Idempotence : ne re-notifie pas si évalué il y a moins de 4h (sauf dry)
+    // TTL court (4h) pour permettre la réévaluation quand les règles changent ou qu'un draft stagne.
+    const GATE_TTL = 4 * 3600;
+    if (reviews.gate && !dry && reviews.gate.at && (now - reviews.gate.at) < GATE_TTL) { out.skipped++; continue; }
 
     // Pour les reels (reel_post) : pas d'imageUrl unique → dériver de la 1ère clip du plan
     const reelImageUrl = draft.type === "reel_post" && payload.plan?.bienId && payload.plan?.clips?.[0]?.src
@@ -131,15 +133,19 @@ export async function onRequest(context) {
     // Max 1 tentative (budget CPU CF Pages Function).
     if (!verdict.pass) {
       const blockingFilters = new Set(verdict.fails.map(f => f.filter));
-      const onlyScoreIssue = !["doublon", "mots_interdits", "missing_photo", "channels"].some(f => blockingFilters.has(f));
+      // Réécriture si blocage = score/verdict/mots_interdits (pas doublon/photo manquante/canaux)
+      const hardBlock = ["doublon", "missing_photo", "channels"].some(f => blockingFilters.has(f));
 
-      if (onlyScoreIssue && !reviews.rewrite_attempted) {
+      if (!hardBlock && !reviews.rewrite_attempted) {
         const failReasons = verdict.fails.map(f => `• ${f.reason}`).join("\n");
         const currentScore = reviews.score ?? 0;
+        const forbiddenHints = verdict.fails
+          .filter(f => f.filter === "mots_interdits")
+          .map(f => f.reason).join("; ");
 
         const rewritePrompt = `Tu es un expert Instagram & Facebook pour une conciergerie de location saisonnière en Martinique.
 
-Ce caption a obtenu un score de ${currentScore}/100 (seuil requis : ${minScore}/100).
+Ce caption a obtenu un score de ${currentScore}/100 (seuil requis : ${minScore}/100).${forbiddenHints ? `\n\n⚠️ PHRASES INTERDITES à éliminer absolument : ${forbiddenHints}` : ""}
 
 Caption actuel :
 """
