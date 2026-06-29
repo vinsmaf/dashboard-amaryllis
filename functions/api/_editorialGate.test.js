@@ -141,8 +141,14 @@ describe("evaluateGate — chaque filtre qui bloque", () => {
     expect(r.fails.some((f) => f.filter === "score")).toBe(true);
   });
 
-  it("FAIL verdict needs_edits malgré bon score", () => {
+  it("PASS verdict needs_edits avec bon score (seul reject bloque)", () => {
     const r = evaluateGate({ ...BASE, verdict: "needs_edits" });
+    expect(r.pass).toBe(true);
+    expect(r.fails.some((f) => f.filter === "verdict")).toBe(false);
+  });
+
+  it("FAIL verdict reject", () => {
+    const r = evaluateGate({ ...BASE, verdict: "reject" });
     expect(r.pass).toBe(false);
     expect(r.fails.some((f) => f.filter === "verdict")).toBe(true);
   });
