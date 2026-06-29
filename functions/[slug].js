@@ -438,6 +438,11 @@ export async function onRequest(context) {
       }
     }
 
+    // Iguana = bail long, non bookable → noindex runtime (survit au remplacement injectMeta)
+    if (slug === "iguana") {
+      modified = modified.replace("</head>", `<meta name="robots" content="noindex, nofollow" />\n</head>`);
+    }
+
     return new Response(modified, {
       status: 200,
       headers: { "Content-Type": "text/html;charset=UTF-8", "Cache-Control": "no-cache" },

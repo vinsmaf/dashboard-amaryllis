@@ -85,7 +85,31 @@ function rentalNode(id) {
 }
 
 function buildRentalsGraph() {
-  const graph = { "@context": "https://schema.org", "@graph": Object.keys(CANON).filter(id => CANON[id].bookable !== false).map(rentalNode) };
+  const bookableIds = Object.keys(CANON).filter(id => CANON[id].bookable !== false);
+  // aggregateRating global LodgingBusiness = moyenne pondérée des biens avec note
+  const ratedBiens = bookableIds.map(id => CANON[id]).filter(b => b.rating && b.reviews);
+  const totalReviews = ratedBiens.reduce((s, b) => s + (b.reviews || 0), 0);
+  const weightedRating = totalReviews > 0
+    ? (ratedBiens.reduce((s, b) => s + (parseFloat(b.rating) * (b.reviews || 0)), 0) / totalReviews).toFixed(2)
+    : null;
+  const orgNode = {
+    "@type": ["Organization", "LodgingBusiness"],
+    "@id": `${BASE}/#organization`,
+    "name": "Amaryllis Locations",
+    "url": BASE,
+    "telephone": "+33610880772",
+    "email": "contact@villamaryllis.com",
+    ...(weightedRating && totalReviews ? {
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": weightedRating,
+        "reviewCount": totalReviews,
+        "bestRating": "5",
+        "worstRating": "1",
+      }
+    } : {}),
+  };
+  const graph = { "@context": "https://schema.org", "@graph": [...bookableIds.map(rentalNode), orgNode] };
   return `<script type="application/ld+json">\n${JSON.stringify(graph)}\n    </script>`;
 }
 const RENTALS_GRAPH = buildRentalsGraph();
@@ -315,6 +339,7 @@ const ROUTES = [
     lcpPreload: true,
     jsonld: bienJsonLd("iguana"),
     faqld: buildFAQLd(FAQS_PAR_BIEN.iguana),
+    noindex: true, // bail long Joël Bailleul — non bookable en courte durée → hors index
   },
   {
     path: "/geko",
