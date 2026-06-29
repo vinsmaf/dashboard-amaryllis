@@ -46,7 +46,7 @@ export async function onRequestGet(context) {
     try {
       const piRes = await fetch("https://api.stripe.com/v1/payment_intents", {
         method: "POST",
-        headers: { Authorization: `Bearer ${sk}`, "Content-Type": "application/x-www-form-urlencoded" },
+        headers: { Authorization: `Bearer ${sk}`, "Content-Type": "application/x-www-form-urlencoded", "Idempotency-Key": `solde-2x-${r.deposit_pi_id}` },
         body: new URLSearchParams({
           amount: String(Math.round(r.balance_amount * 100)),
           currency: r.currency || "eur",

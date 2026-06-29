@@ -42,7 +42,7 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes("node_modules/recharts") || id.includes("node_modules/victory")) return "recharts";
-          if (id.includes("node_modules/leaflet") || id.includes("node_modules/react-leaflet")) return "leaflet";
+          // leaflet intentionnellement hors manualChunks — doit suivre le chunk lazy (PropertyMap/GuideExplorer) pour ne pas polluer l'entry critique
           if (id.includes("node_modules/react/") || id.includes("node_modules/react-dom/")) return "vendor";
         }
       }

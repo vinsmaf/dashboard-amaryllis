@@ -4,6 +4,7 @@ import SEOMeta from "./SEOMeta.jsx";
 import MaillageCluster from "./components/seo/MaillageCluster.jsx";
 import ReadingProgressBar from "./components/ReadingProgressBar.jsx";
 import NewsletterForm from "./NewsletterForm.jsx";
+import { ALL_BIENS } from "./data/biens.js";
 
 // Noms canoniques des biens pour le maillage interne SEO ("villa" = Amaryllis + Iguana uniquement).
 const BIEN_NAMES = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko", mabouya: "Mabouya", schoelcher: "Bellevue Schœlcher", iguana: "Villa Iguana", nogent: "Appartement Nogent-sur-Marne" };
@@ -133,14 +134,24 @@ const css = `
   }
 `;
 
-const villas = [
-  { id: "amaryllis", nom: "Villa Amaryllis", desc: "Piscine débordement, 3 ch., vue mer panoramique", prix: "dès 280€/nuit", photo: "/photos/amaryllis/01.webp" },
-  { id: "iguana",    nom: "Villa Iguana",    desc: "Piscine eau salée, vue Rocher du Diamant, 3 ch.", prix: "dès 220€/nuit", photo: "/photos/iguana/01.webp" },
-  { id: "mabouya",   nom: "Villa Mabouya",   desc: "Jacuzzi privatif vue mer, jardin, 2 ch.",         prix: "dès 140€/nuit", photo: "/photos/mabouya/01.webp" },
-  { id: "zandoli",   nom: "Zandoli",   desc: "Piscine partagée, jardin tropical, 2 ch.",         prix: "dès 110€/nuit", photo: "/photos/zandoli/01.webp" },
-  { id: "geko",      nom: "Géko",      desc: "Piscine partagée, cadre naturel, 2 ch.",           prix: "dès 120€/nuit", photo: "/photos/geko/01.webp" },
-  { id: "schoelcher", nom: "Villa Schœlcher", desc: "Terrasse vue mer, piscine partagée, 2 ch.",       prix: "dès 110€/nuit", photo: "/photos/schoelcher/01.webp" },
-];
+// Descriptions marketing courtes propres à cette page (le prix vient de biens.js — source unique).
+const VILLA_DESCS = {
+  amaryllis:  "Piscine débordement, 3 ch., vue mer panoramique",
+  mabouya:    "Jacuzzi privatif vue mer, jardin, 2 ch.",
+  zandoli:    "Piscine partagée, jardin tropical, 2 ch.",
+  geko:       "Piscine partagée, cadre naturel, 2 ch.",
+  schoelcher: "Terrasse vue mer, piscine partagée, 2 ch.",
+};
+// Exclut Iguana (bookable:false — bail long) et Nogent (hors Martinique).
+const villas = ALL_BIENS
+  .filter(b => b.bookable !== false && b.id !== "nogent")
+  .map(b => ({
+    id:    b.id,
+    nom:   b.nom,
+    desc:  VILLA_DESCS[b.id] || "",
+    prix:  `dès ${b.prix}€/nuit`,
+    photo: `/photos/${b.id}/01.webp`,
+  }));
 
 const faqs = [
   {
