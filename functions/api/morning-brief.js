@@ -111,6 +111,19 @@ export async function onRequestGet({ request, env }) {
     `SELECT bien_id, theme, platform, status FROM editorial_calendar WHERE scheduled_at >= ? AND scheduled_at < ? ORDER BY bien_id`
   ).bind(todayUnix, tomorrowUnix).all().then(r => r.results ?? []).catch(e => { clog('morning-brief', 'warn', { step: 'todayPosts', err: e?.message }); errors.push('editorial'); dbErrors++; return [] })
 
+  // ── Agents fleet — alertes ouvertes (48h) ────────────────────────────────
+  const agentAlerts = await db.prepare(
+    `SELECT priority, COUNT(*) as cnt FROM agent_actions WHERE status != 'fait' AND last_analyzed > ? GROUP BY priority`
+  ).bind(Math.floor(Date.now() / 1000) - 48 * 3600).all()
+    .then(r => r.results ?? [])
+    .catch(e => { clog('morning-brief', 'warn', { step: 'agentAlerts', err: e?.message }); errors.push('agents'); dbErrors++; return [] })
+
+  const agentByPrio = {}
+  for (const row of agentAlerts) agentByPrio[row.priority] = row.cnt
+  const agentCritique = agentByPrio['critique'] ?? 0
+  const agentHaute = agentByPrio['haute'] ?? 0
+  const agentOpen = agentAlerts.reduce((s, r) => s + r.cnt, 0)
+
   // ── Action du jour ────────────────────────────────────────────────────────
   if (cautionsPending.some(c => c.status === 'failed')) {
     priority = 5
@@ -173,13 +186,24 @@ export async function onRequestGet({ request, env }) {
     lines.push(`📱 Réseaux sociaux : ${parts.join(' · ')} — ${todayPosts.map(p => nomBien(p.bien_id)).join(', ')}`)
   }
 
+  // ── Agents fleet (alertes ouvertes 48h) ──────────────────────────────────
+  if (agentOpen > 0) {
+    const parts = []
+    if (agentCritique > 0) parts.push(`🔴 ${agentCritique} critique${agentCritique > 1 ? 's' : ''}`)
+    if (agentHaute > 0) parts.push(`🟡 ${agentHaute} haute${agentHaute > 1 ? 's' : ''}`)
+    const restOpen = agentOpen - agentCritique - agentHaute
+    if (restOpen > 0) parts.push(`${restOpen} autre${restOpen > 1 ? 's' : ''}`)
+    lines.push(`🤖 Agents (28) : ${parts.join(' · ')} — ${agentOpen} open`)
+    if (agentCritique > 0 && priority < 4) priority = 4
+  }
+
   if (errors.length) lines.push('⚠️ Données manquantes : ' + errors.join(', '))
   lines.push('→ https://villamaryllis.com/admin')
 
   const body = lines.join('\n\n')
   const title = `🏠 Locatif — ${jourFr(today)}`
 
-  clog('morning-brief', dbErrors > 0 ? 'warn' : 'info', { arrivals: arrivals.length, departures: departures.length, cautions: cautionsPending.length, occupied, pct, revenusEuros: Math.round(monthRevenue?.total ?? 0), posts: todayPosts.length, priority, dbErrors, ms: t() })
+  clog('morning-brief', dbErrors > 0 ? 'warn' : 'info', { arrivals: arrivals.length, departures: departures.length, cautions: cautionsPending.length, occupied, pct, revenusEuros: Math.round(monthRevenue?.total ?? 0), posts: todayPosts.length, agentOpen, agentCritique, agentHaute, priority, dbErrors, ms: t() })
 
   if (dry) {
     return new Response(JSON.stringify({

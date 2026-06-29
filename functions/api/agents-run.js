@@ -95,6 +95,26 @@ Reste factuel : ne cite pas un chiffre que tu n'as pas ici ; pointe vers la piè
 ═══════════════════════════════════════════════════════════════
 `;
 
+// ── Profil humain de Vincent (TOUS les agents) ──────────────────────────────
+// Miroir condensé de ~/patrimoine-dashboard/src/data/profilVincent.js + VINCENT.md (2026-06-29).
+// Une CF Function ne lit pas les fichiers locaux au runtime → miroir embarqué (même pattern que PLAYBOOK/FISCAL).
+// ⚠️ MIROIR : si VINCENT.md change matériellement, mettre à jour ce bloc + redéployer les 2 projets.
+const VINCENT_PROFILE_DIGEST = `
+═══════════════════════════════════════════════════════════════
+👤 QUI EST VINCENT (contexte humain — personnalise tes recos, ADVISORY)
+═══════════════════════════════════════════════════════════════
+• IDENTITÉ : Entrepreneur martiniquais, né 1983 (~42 ans). Ingénieur info (Supinfo), ~17 ans télécom (PDV 2022). Créole/français/anglais. Self-made, a coaché ~60 personnes en immo/finance → ne pas vulgariser à l'excès.
+• LIBRE : Indépendance financière DÉJÀ ATTEINTE. Revenus passifs > cible de vie. N'optimise plus pour le cashflow de survie.
+• CAP STRATÉGIQUE : SÉCURISER (pas accumuler) — robustesse, transmission, éviter l'IRRÉVERSIBLE avant le rendement. ⚠️ Enjeux transverses (concentration Martinique · LMP réel · custody crypto) ont chacun leur agent-référent → ne les ré-émet pas en générique ; aborde-les uniquement sous ton angle métier exclusif.
+• VISION LOCATIF (horizon) : (1) Marketplace conciergerie B2B — accueillir des biens tiers sur villamaryllis.com, modèle OTA locale, Vincent = distribution/service. (2) Résidence hôtelière/para-hôtelière — Résidence Amaryllis classée (agrément préfectoral + ≥3 services = TVA déductible + image établissement). Toute décision produit/tech doit être compatible avec ces 2 horizons.
+• MOTEUR DE VIE : Délégation TOTALE d'ici 2028. Aujourd'hui seul pilote par nécessité, pas par choix. Test ultime : « ça tourne sans lui ? » + « ça libère du temps pour sa famille et voyager ? ». Liberté de temps > rendement.
+• FAMILLE : Concubinage avec Céline (même métier). PACS/mariage en projet. Enfants en projet (INTIME — ne jamais l'évoquer). Succession : concubinage → 60% droits = levier fiscal PACS prioritaire.
+• FISCAL : TMI 30%. NON IFI. Micro-BIC → réel LMP deadline déc. 2026. Déclarations meublé tourisme 🔴 URGENT (jusqu'à 12 500 €).
+• RISQUE : Refuse perte définitive du socle, levier, opacité. Tolère la volatilité sur ce qu'il maîtrise. Ligne rouge = l'IRRÉVERSIBLE, pas les variations.
+⚠️ GARDE-FOUS : ADVISORY ONLY (tu analyses, Vincent décide/exécute). Projet d'enfant = INTIME. Ne redemande pas ce qui est déjà ci-dessus : raisonne avec.
+═══════════════════════════════════════════════════════════════
+`;
+
 // ── Inventaire des capacités DÉJÀ LIVRÉES (anti-doublon transverse) ──────────
 // Injecté dans CHAQUE prompt agent : ne JAMAIS reproposer la CRÉATION d'une de ces
 // briques (elles existent en prod). Seulement une AMÉLIORATION précise, en nommant
@@ -680,6 +700,9 @@ MÉMOIRE DE TES RUNS PRÉCÉDENTS :
   (première analyse)
 `)}`;
 
+  // ── Profil humain Vincent (tous les agents — contexte qui personnalise les recos) ──
+  const vincentSection = VINCENT_PROFILE_DIGEST;
+
   // ── Contexte fiscal unifié (spécialistes fiscaux — ADR-BRAIN-003) ───────────
   const fiscalSection = FISCAL_AGENTS.has(agent.id) ? FISCAL_CONTEXT : "";
 
@@ -837,7 +860,7 @@ Retourne UN SEUL JSON :
 TON DOMAINE D'EXPERTISE : ${agent.focus}
 
 FICHIERS CLÉS à analyser : ${agent.files_hint}
-${fiscalSection}${playbookSection}${skillSection}${liveSection}${sharedSection}${ragSection}${bannedSection}${memorySection}${feedbackSection}${outcomesSection}${historySection}
+${vincentSection}${fiscalSection}${playbookSection}${skillSection}${liveSection}${sharedSection}${ragSection}${bannedSection}${memorySection}${feedbackSection}${outcomesSection}${historySection}
 ${DEJA_EN_PLACE}
 MISSION : Identifie les actions concrètes NOUVELLES à réaliser dans ton domaine. Tiens compte de ce qui a déjà été fait ou identifié pour approfondir ton analyse et aller plus loin. Si une idée recoupe une capacité « DÉJÀ EN PLACE », ne la propose PAS — sauf amélioration précise et chiffrée (dis ce qui manque concrètement).
 
