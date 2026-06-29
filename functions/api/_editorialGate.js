@@ -6,7 +6,7 @@
 //   1. mots interdits / faits faux  → fact-check déterministe = 0 erreur (BLOQUANT, exigence Vincent)
 //   2. photo autorisée              → l'image doit être dans la whitelist que Vincent a cochée
 //   3. forme                        → image présente + channels = [ig, fb] + pas de doublon du bien < 7j
-//   4. qualité rédactionnelle       → score LLM-juge ≥ minScore (def. 85) ET verdict "approve"
+//   4. qualité rédactionnelle       → score LLM-juge ≥ minScore (def. 75) ET verdict ≠ "reject"
 //
 // Le module ne touche JAMAIS la base : toutes les données (whitelist, posts récents, règles
 // apprises) sont passées en argument → 100% testable. L'orchestration D1/ntfy est dans
@@ -85,8 +85,9 @@ export function evaluateGate(o) {
   if (!Number.isFinite(sc) || sc < minScore) {
     fails.push({ filter: "score", reason: `score ${Number.isFinite(sc) ? sc : "?"}/100 < ${minScore}` });
   }
-  if (verdict && verdict !== "approve") {
-    fails.push({ filter: "verdict", reason: `verdict « ${verdict} » ≠ approve` });
+  // "needs_edits" est acceptable si le score passe — seul "reject" bloque.
+  if (verdict && verdict === "reject") {
+    fails.push({ filter: "verdict", reason: `verdict « ${verdict} » — contenu rejeté par le juge LLM` });
   }
 
   return { pass: fails.length === 0, fails, bien, photoBase: photo?.base || null, factErrors };
