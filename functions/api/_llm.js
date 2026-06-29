@@ -127,9 +127,10 @@ export const MODELS = {
   cerebras: {
     // ⚠️ Compte Cerebras : seuls gpt-oss-120b et zai-glm-4.7 sont accessibles
     // (anciens IDs llama-3.x supprimés → 404). Vérifié via /api/llm-ping?list=1 le 2026-05-30.
+    // zai-glm-4.7 retiré du tier smart (modèle ZhipuAI sans benchmark FR documenté).
     fast:    "gpt-oss-120b",
     medium:  "gpt-oss-120b",
-    smart:   "zai-glm-4.7",
+    smart:   "gpt-oss-120b",
   },
   gemini: {
     // Activés seulement si GEMINI_API_KEY posée ; l'agent AI-Ops ajuste les IDs réels.
@@ -138,9 +139,10 @@ export const MODELS = {
     smart:   "gemini-2.5-flash",
   },
   deepseek: {
-    fast:    "deepseek-v4-flash",
-    medium:  "deepseek-v4-flash",
-    smart:   "deepseek-v4-pro",
+    // IDs réels api.deepseek.com — v4-flash/pro n'existent pas (retournaient 404).
+    fast:    "deepseek-chat",
+    medium:  "deepseek-chat",
+    smart:   "deepseek-reasoner",
   },
   openrouter: {
     fast:    "meta-llama/llama-3.3-70b-instruct:free",

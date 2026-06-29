@@ -12,7 +12,7 @@ const json = (d, s = 200) => new Response(JSON.stringify(d, null, 2), {
   status: s, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
 });
 
-const PROVIDERS = ["groq", "cloudflare", "mistral", "cerebras"];
+const PROVIDERS = ["groq", "cloudflare", "mistral", "cerebras", "deepseek", "openrouter"];
 const TIERS = ["fast", "medium", "smart"];
 
 export async function onRequestGet({ request, env }) {
@@ -23,9 +23,11 @@ export async function onRequestGet({ request, env }) {
   // Mode liste : ?list=1 → renvoie les modèles réellement disponibles par provider (OpenAI-compatible /v1/models)
   if (url.searchParams.get("list")) {
     const sources = {
-      groq:     { url: "https://api.groq.com/openai/v1/models", key: env.GROQ_API_KEY },
-      cerebras: { url: "https://api.cerebras.ai/v1/models",     key: env.CEREBRAS_API_KEY },
-      mistral:  { url: "https://api.mistral.ai/v1/models",      key: env.MISTRAL_API_KEY },
+      groq:       { url: "https://api.groq.com/openai/v1/models",      key: env.GROQ_API_KEY },
+      cerebras:   { url: "https://api.cerebras.ai/v1/models",          key: env.CEREBRAS_API_KEY },
+      mistral:    { url: "https://api.mistral.ai/v1/models",           key: env.MISTRAL_API_KEY },
+      deepseek:   { url: "https://api.deepseek.com/v1/models",         key: env.DEEPSEEK_API_KEY },
+      openrouter: { url: "https://openrouter.ai/api/v1/models",        key: env.OPENROUTER_API_KEY },
     };
     const out = {};
     for (const [name, s] of Object.entries(sources)) {
