@@ -69,11 +69,13 @@ Ne rapporter QUE ce qui est cassé, dégradé ou à risque.`;
 
     const topic = env.NTFY_TOPIC;
     if (topic) {
-      fetch(`https://ntfy.sh/${topic}`, {
-        method: "POST",
-        headers: { Title: `🔍 QA ${label} manuelle`, Priority: "default", Tags: "mag" },
-        body: `${dateStr}\n${okCount}/${agents.length} agents OK → Admin > Agents`,
-      }).catch(() => {});
+      context.waitUntil(
+        fetch(`https://ntfy.sh/${topic}`, {
+          method: "POST",
+          headers: { Title: `🔍 QA ${label} manuelle`, Priority: "default", Tags: "mag" },
+          body: `${dateStr}\n${okCount}/${agents.length} agents OK → Admin > Agents`,
+        }).catch(() => {})
+      );
     }
 
     results.push({ label, agents: agents.length, ok_count: okCount, error_count: errorCount });
