@@ -2916,24 +2916,58 @@ async function runReviewRefresh(env) {
 // expiration < 7j — comble le trou entre les rappels trimestriels.
 async function runTokenHealthCheck(env) {
   const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+  const alerts = [];
+
+  // 1. META_PAGE_TOKEN (expire ~60j — le plus critique)
   try {
     const r = await fetch(`${siteUrl}/api/social?action=status`);
     const j = await r.json().catch(() => ({}));
     const valid = j?.token?.isValid;
     const expiresIn = j?.token?.expiresIn;
     const soon = typeof expiresIn === "number" && expiresIn > 0 && expiresIn < 7 * 86400;
-    if (valid === false || soon) {
-      await sendEmail(env, {
-        to: env.NOTIFICATION_EMAIL || "contact@villamaryllis.com",
-        subject: valid === false ? "🚨 Token Meta INVALIDE — publication réseaux cassée" : "⚠️ Token Meta expire sous 7 jours",
-        html: `<p>Le token Meta (<code>META_PAGE_TOKEN</code>) ${valid === false ? "est <b>invalide</b> — Facebook/Instagram ne publient plus." : `expire dans ~${Math.round((expiresIn || 0) / 86400)} jours.`}</p>
-        <p>Régénérer : Graph API Explorer → token Page longue durée → mettre à jour <code>META_PAGE_TOKEN</code> (Cloudflare Pages <i>et</i> Worker). Détails : <code>docs/runbook-rotation-tokens.md</code>.</p>`,
+    if (valid === false) alerts.push({ key: "META_PAGE_TOKEN", msg: "INVALIDE — Facebook/Instagram ne publient plus", runbook: "Graph API Explorer → token Page longue durée → mettre à jour Cloudflare Pages + Worker" });
+    else if (soon) alerts.push({ key: "META_PAGE_TOKEN", msg: `expire dans ~${Math.round((expiresIn || 0) / 86400)} jours`, runbook: "Graph API Explorer → token Page longue durée → mettre à jour Cloudflare Pages + Worker" });
+  } catch (e) { console.error("[token-health] Meta check error:", e.message); }
+
+  // 2. APIFY_TOKEN — scraping concurrents
+  if (env.APIFY_TOKEN) {
+    try {
+      const r = await fetch("https://api.apify.com/v2/users/me", {
+        headers: { Authorization: `Bearer ${env.APIFY_TOKEN}` },
       });
-      console.log(`[token-health] ALERTE envoyée (valid=${valid}, expiresIn=${expiresIn})`);
-    } else {
-      console.log(`[token-health] OK (valid=${valid})`);
-    }
-  } catch (e) { console.error("[token-health] erreur:", e.message); }
+      if (r.status === 401 || r.status === 403) alerts.push({ key: "APIFY_TOKEN", msg: "invalide (401/403) — scraping concurrents cassé", runbook: "Console Apify → API & Integrations → regénérer le token" });
+    } catch (e) { console.error("[token-health] Apify check error:", e.message); }
+  }
+
+  // 3. OPENWEATHER_API_KEY — météo admin
+  if (env.OPENWEATHER_API_KEY) {
+    try {
+      const r = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=Martinique,MQ&appid=${env.OPENWEATHER_API_KEY}`);
+      if (r.status === 401) alerts.push({ key: "OPENWEATHER_API_KEY", msg: "invalide (401) — widget météo cassé", runbook: "openweathermap.org → My API Keys → regénérer" });
+    } catch (e) { console.error("[token-health] OpenWeather check error:", e.message); }
+  }
+
+  if (alerts.length === 0) {
+    console.log("[token-health] OK — Meta + Apify + OpenWeather valides");
+    return;
+  }
+
+  const lines = alerts.map(a => `<li><strong>${a.key}</strong> : ${a.msg}<br><small>👉 ${a.runbook}</small></li>`).join("");
+  const ntfyLines = alerts.map(a => `• ${a.key} : ${a.msg}`).join("\n");
+
+  await Promise.allSettled([
+    sendEmail(env, {
+      to: env.NOTIFICATION_EMAIL || "contact@villamaryllis.com",
+      subject: `🔐 Token(s) critique(s) — ${alerts.length} alerte(s) détectées`,
+      html: `<h2>🔐 Alerte token(s) — runTokenHealthCheck</h2><ul>${lines}</ul><p style="color:#888;font-size:12px">Voir <code>docs/runbook-rotation-tokens.md</code> pour le détail complet.</p>`,
+    }),
+    env.NTFY_TOPIC ? fetch(`https://ntfy.sh/${env.NTFY_TOPIC}`, {
+      method: "POST",
+      headers: { Title: "🔐 Token(s) critique(s) à renouveler", Priority: "urgent", Tags: "key" },
+      body: ntfyLines,
+    }).catch(() => {}) : Promise.resolve(),
+  ]);
+  console.log(`[token-health] ${alerts.length} alerte(s) envoyées : ${alerts.map(a => a.key).join(", ")}`);
 }
 
 // Rapport SEO hebdomadaire (Search Console) → email. Suit les impressions
