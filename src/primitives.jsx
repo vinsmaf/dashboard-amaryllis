@@ -161,8 +161,10 @@ export function Icon({ name, size = 20, color, style }) {
 export function ThemeToggle({ inline = false }) {
   const [theme, setTheme] = useState(() => {
     if (typeof window === "undefined") return "light";
+    let stored = null;
+    try { stored = localStorage.getItem("amaryllis-theme"); } catch {}
     return document.body.dataset.theme
-      || localStorage.getItem("amaryllis-theme")
+      || stored
       || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
   });
 
