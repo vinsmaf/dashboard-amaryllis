@@ -74,13 +74,6 @@ function rentalNode(id) {
       "occupancy": { "@type": "QuantitativeValue", "maxValue": b.capacite },
       "amenityFeature": amenityFeature,
     },
-    "aggregateRating": {
-      "@type": "AggregateRating",
-      "ratingValue": String(b.rating).replace(",", "."),
-      "reviewCount": String(b.reviews),
-      "bestRating": "5",
-      "worstRating": "1",
-    },
     "address": {
       "@type": "PostalAddress",
       "addressLocality": b.lieu,
@@ -722,8 +715,10 @@ function patchHtml(tmpl, { path: routePath, title, desc, image, h1 = null, intro
   const url = `${BASE}${routePath}`;
   let html = tmpl;
 
-  // Bloc @graph des 7 VacationRental (généré depuis le canonique) — remplace le marqueur statique.
-  html = html.replace("<!--SEO_RENTALS_GRAPH-->", RENTALS_GRAPH);
+  // @graph des VacationRental uniquement sur home + fiches biens — pas sur les guides/articles (schema.org non conforme)
+  const BIEN_SLUGS = new Set(Object.keys(CANON));
+  const isProductPage = routePath === "/" || BIEN_SLUGS.has(routePath.replace(/^\//, ""));
+  html = html.replace("<!--SEO_RENTALS_GRAPH-->", isProductPage ? RENTALS_GRAPH : "");
 
   /* Corps SEO fallback dans #root (remplacé par React au runtime) */
   html = html.replace(/<div id="root">\s*<\/div>/, buildSeoBody({ h1, title, desc, routePath, intro, sections }));
@@ -935,15 +930,20 @@ const ARTICLE_ROUTES = (() => {
   }
 })();
 
-// Page d'accueil + toutes les routes prérendues + articles D1
-const sitemapEntries = [
-  { path: "/", ...SITEMAP_META["/"] },
+// Toutes les routes prérendues + articles D1 (dédup par path — ROUTES inclut déjà "/")
+const _rawSitemapEntries = [
   ...ROUTES.map(r => ({
     path: r.path,
     ...(SITEMAP_META[r.path] ?? { priority: "0.7", changefreq: "monthly" }),
   })),
   ...ARTICLE_ROUTES,
 ];
+const _seenPaths = new Set();
+const sitemapEntries = _rawSitemapEntries.filter(e => {
+  if (_seenPaths.has(e.path)) return false;
+  _seenPaths.add(e.path);
+  return true;
+});
 
 const xmlLines = [
   '<?xml version="1.0" encoding="UTF-8"?>',

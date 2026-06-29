@@ -408,16 +408,11 @@ export async function onRequest(context) {
     ]);
 
     const imageAlt = `${bien.nom} — ${isMarti ? bien.lieu + ", Martinique" : bien.lieu}`;
-    const hreflang = isMarti
-      ? [
-          `<link rel="alternate" hreflang="fr" href="${url}" />`,
-          `<link rel="alternate" hreflang="en" href="${BASE}/villa-rental-martinique" />`,
-          `<link rel="alternate" hreflang="x-default" href="${url}" />`,
-        ].join("\n")
-      : [
-          `<link rel="alternate" hreflang="fr" href="${url}" />`,
-          `<link rel="alternate" hreflang="x-default" href="${url}" />`,
-        ].join("\n");
+    // Pas de hreflang EN par fiche : les biens n'ont pas de page traduite 1:1 → cluster many-to-one invalide supprimé.
+    const hreflang = [
+      `<link rel="alternate" hreflang="fr" href="${url}" />`,
+      `<link rel="alternate" hreflang="x-default" href="${url}" />`,
+    ].join("\n");
     const meta = { ...buildMeta(title, desc, url, image), slug, imageAlt, hreflang };
 
     // Fetch the base index.html via the next handler (static serving)

@@ -1,4 +1,5 @@
 import { resendFrom } from "./_email.js";
+import { rateLimit } from "./_ratelimit.js";
 // Cloudflare Pages Function — POST /api/sign-contract (cpw-101, phase C3)
 // Signature électronique « maison » du contrat de location : on stocke la
 // signature manuscrite (PNG dataURL), le nom, l'acceptation, + horodatage et IP
@@ -37,6 +38,9 @@ export async function onRequestPost(context) {
   if (!db) return json({ error: "DB indisponible" }, 500);
 
   const ip = request.headers.get("CF-Connecting-IP") || request.headers.get("X-Forwarded-For") || "";
+
+  const rl = await rateLimit(db, { key: `sign:${ip}`, limit: 5, windowSec: 3600 });
+  if (!rl.ok) return json({ error: "Trop de tentatives, réessayez dans une heure" }, 429);
   const ua = request.headers.get("User-Agent") || "";
 
   try {
