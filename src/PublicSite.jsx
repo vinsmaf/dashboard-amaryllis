@@ -1530,20 +1530,27 @@ function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) 
           items: [{ item_id: bien.id, item_name: bien.nom, price: bien.prix, quantity: nights || 1 }],
         }));
       } catch { /* */ }
+      let _gaDeferred1 = false;
       if (window.gtag) {
         const guardKey = `ga_purchase_fired_${paymentIntent.id}`;
         if (!ssGet(guardKey)) {
-          ssSet(guardKey, "1");
+          _gaDeferred1 = true;
+          let _done1 = false;
+          // tracked=true → event envoyé → on pose guardKey pour que Merci.jsx skip
+          // tracked=false → timeout sans callback → redirect sans guardKey → Merci.jsx peut retenter
+          const _go1 = (tracked) => { if (!_done1) { _done1 = true; if (tracked) ssSet(guardKey, "1"); window.location.href = "/merci"; } };
           window.gtag("event", "purchase", {
             transaction_id: paymentIntent.id, currency: "EUR", value: amount,
             bien_id: bien.id, niveau_tarifaire: niveauTarifaire(bien, localCheckin),
             property_category: propCategory(bien.id), lead_time_days: leadTimeDays(localCheckin),
             items: [{ item_id: bien.id, item_name: bien.nom, price: bien.prix, quantity: nights || 1 }],
+            event_callback: () => _go1(true),
           });
           mpTrack("Purchase", { value: amount, currency: "EUR", eventID: paymentIntent.id, content_ids: [bien.id], content_type: "product" });
+          setTimeout(() => _go1(false), 800);
         }
       }
-      window.location.href = "/merci";
+      if (!_gaDeferred1) window.location.href = "/merci";
     }
     setPaying(false);
   }
@@ -2249,10 +2256,13 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
           items: [{ item_id: bien.id, item_name: bien.nom, price: bien.prix, quantity: nights }],
         }));
       } catch { /* */ }
+      let _gaDeferred2 = false;
       if (window.gtag) {
         const guardKey = `ga_purchase_fired_${paymentIntent.id}`;
         if (!ssGet(guardKey)) {
-          ssSet(guardKey, "1");
+          _gaDeferred2 = true;
+          let _done2 = false;
+          const _go2 = (tracked) => { if (!_done2) { _done2 = true; if (tracked) ssSet(guardKey, "1"); window.location.href = "/merci"; } };
           window.gtag("event", "purchase", {
             transaction_id: paymentIntent.id,
             currency: "EUR",
@@ -2261,8 +2271,10 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
             niveau_tarifaire: niveauTarifaire(bien, checkin),
             property_category: propCategory(bien.id), lead_time_days: leadTimeDays(checkin),
             items: [{ item_id: bien.id, item_name: bien.nom, price: bien.prix, quantity: nights }],
+            event_callback: () => _go2(true),
           });
           mpTrack("Purchase", { value: total, currency: "EUR", eventID: paymentIntent.id, content_ids: [bien.id], content_type: "product" });
+          setTimeout(() => _go2(false), 800);
         }
       }
       // Notifier l'hôte des upsells sélectionnés
@@ -2282,7 +2294,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
         }).catch(() => {}); // fire-and-forget
       }
       // Paiement réussi → confirmation. La caution est gérée automatiquement avant l'arrivée.
-      window.location.href = "/merci";
+      if (!_gaDeferred2) window.location.href = "/merci";
     }
     setPaying(false);
   }
@@ -6413,15 +6425,19 @@ function GroupPaymentModal({ biens, checkin, checkout, guests, nights, total, on
           items: (biens || []).map(b => ({ item_id: b.id, item_name: b.nom, price: b.prix, quantity: nights || 1 })),
         }));
       } catch { /* */ }
+      let _gaDeferred3 = false;
       if (window.gtag) {
         const guardKey = `ga_purchase_fired_${paymentIntent.id}`;
         if (!ssGet(guardKey)) {
-          ssSet(guardKey, "1");
-          try { window.gtag("event", "purchase", { transaction_id: paymentIntent.id, currency: "EUR", value: total, bien_id: biens?.[0]?.id, niveau_tarifaire: niveauTarifaire(biens?.[0], checkin), property_category: propCategory(biens?.[0]?.id), lead_time_days: leadTimeDays(checkin), items: (biens || []).map(b => ({ item_id: b.id, item_name: b.nom, price: b.prix, quantity: nights || 1 })) }); } catch { /* */ }
+          _gaDeferred3 = true;
+          let _done3 = false;
+          const _go3 = (tracked) => { if (!_done3) { _done3 = true; if (tracked) ssSet(guardKey, "1"); window.location.href = "/merci"; } };
+          try { window.gtag("event", "purchase", { transaction_id: paymentIntent.id, currency: "EUR", value: total, bien_id: biens?.[0]?.id, niveau_tarifaire: niveauTarifaire(biens?.[0], checkin), property_category: propCategory(biens?.[0]?.id), lead_time_days: leadTimeDays(checkin), items: (biens || []).map(b => ({ item_id: b.id, item_name: b.nom, price: b.prix, quantity: nights || 1 })), event_callback: () => _go3(true) }); } catch { _go3(false); }
           mpTrack("Purchase", { value: total, currency: "EUR", eventID: paymentIntent.id, content_ids: (biens || []).map(b => b.id), content_type: "product" });
+          setTimeout(() => _go3(false), 800);
         }
       }
-      window.location.href = "/merci";
+      if (!_gaDeferred3) window.location.href = "/merci";
       return;
     }
     setPaying(false);
