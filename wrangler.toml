@@ -10,9 +10,8 @@ crons = [
   "0 11 * * 1",   # Réunion Générale cross-fleet — lundi 11h UTC (7h Martinique)
   "0 12 * * *",   # Génération drafts éditoriaux J+2 + alerte ménage — 12h UTC (8h MQ)
   "0 13 * * *",   # Charge balance soldes 2× J-30 — 13h UTC (migré depuis cron-job.org 7798126)
-  "0 6 * * 1",    # Rapport hebdomadaire + prix-recap — lundi 6h UTC (2h Martinique / 8h Paris)
-  "0 1 1 * *",    # Mensuel — export comptable + article SEO long-tail (1er du mois 1h UTC)
-  "0 8 1,15 * *", # QA bi-hebdomadaire — 1er et 15 du mois, 8h UTC (4h Martinique)
+  "0 6 * * 1",    # Rapport hebdo + prix-recap + QA hebdo (flux/endpoints/tracking/emails) — lundi 6h UTC
+  "0 1 1 * *",    # Mensuel — export comptable + article SEO long-tail + QA mensuel (sécu/SEO/multimedia)
 ]
 
 # KV namespace pour stocker les UIDs connus (anti-doublon notifications)

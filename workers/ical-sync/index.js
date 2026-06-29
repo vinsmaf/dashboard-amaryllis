@@ -3222,25 +3222,28 @@ Format de réponse (français, concis, max 400 mots):
   console.log(`[reunion] ✅ exec=${execRate}% alertes=${alerts.length} watch=${watches.length} top3=${top3.length} date=${dateTag}`);
 }
 
-// ── Session QA bi-hebdomadaire (1er et 15 du mois, 8h UTC) ─────────────────
-// 8 agents ciblés : qa-tester · architecte-reseau · webmaster · data-analyst
-//                   seo-local · developpeur-multimedia · prompt-engineer · crm-manager
-// Delta : compare agent_actions depuis la dernière session (KV qa_session:last)
-async function runQASession(env) {
+// ── Batch QA (générique) ────────────────────────────────────────────────────
+// agents : liste d'IDs à appeler · kvKey : clé KV de la dernière session
+// label  : "hebdo" | "mensuel" (pour les logs/notif)
+const QA_WEEKLY  = ["qa-tester", "webmaster", "data-analyst", "prompt-engineer", "crm-manager"];
+const QA_MONTHLY = ["architecte-reseau", "seo-local", "developpeur-multimedia"];
+
+async function runQABatch(env, agents, kvKey, label) {
   const siteUrl = env.SITE_URL || "https://villamaryllis.com";
   const now = Math.floor(Date.now() / 1000);
+  const defaultWindow = label === "mensuel" ? 30 * 86400 : 7 * 86400;
 
   // 1. Dernière session depuis KV
-  let lastSession = { ts: now - 14 * 86400, summary: "première session" };
+  let lastSession = { ts: now - defaultWindow };
   try {
-    const raw = await env.ICAL_STORE.get("qa_session:last", { type: "json" });
+    const raw = await env.ICAL_STORE.get(kvKey, { type: "json" });
     if (raw?.ts) lastSession = raw;
   } catch { /* première session */ }
 
   const sinceLast = lastSession.ts;
   const db = env.revenue_manager;
 
-  // 2. Delta : nouvelles actions / résolues depuis dernière session
+  // 2. Delta agent_actions
   let newActions = 0, resolvedActions = 0;
   try {
     const [nr, dr] = await Promise.all([
@@ -3251,60 +3254,49 @@ async function runQASession(env) {
     resolvedActions = dr?.n ?? 0;
   } catch { /* D1 indisponible */ }
 
-  // 3. Brief QA contextualisé
   const dateStr = new Date(now * 1000).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
   const lastDateStr = new Date(sinceLast * 1000).toLocaleDateString("fr-FR", { day: "numeric", month: "long" });
+  const freq = label === "mensuel" ? "mensuel" : "hebdomadaire";
 
-  const QA_AGENTS = [
-    "qa-tester", "architecte-reseau", "webmaster", "data-analyst",
-    "seo-local", "developpeur-multimedia", "prompt-engineer", "crm-manager",
-  ];
-
-  const brief = `SESSION QA BI-HEBDOMADAIRE — ${dateStr}
+  const brief = `SESSION QA ${freq.toUpperCase()} — ${dateStr}
 Site : https://villamaryllis.com — 7 biens (Amaryllis, Zandoli, Géko, Mabouya, Schœlcher, Nogent, Iguana-bail)
 Dernière QA : ${lastDateStr} | Delta : +${newActions} actions créées, ${resolvedActions} résolues depuis.
 
 MISSION selon TON domaine spécifique :
-— Tester les flux critiques, détecter les régressions vs il y a 14 jours.
+— Tester les flux critiques, détecter les régressions vs la dernière session.
 — Vérifier les endpoints, formulaires, emails, calendriers, paiements.
 — Identifier les anomalies silencieuses (rien ne crash mais quelque chose dérive).
 
 SORTIE ATTENDUE : liste de findings (titre · sévérité critique/moyen/faible · action concrète).
 Ne rapporter QUE ce qui est cassé, dégradé ou à risque. Pas de "tout va bien" sans vérif.`;
 
-  // 4. Lancer les 8 agents QA
   let okCount = 0;
   try {
     const res = await fetch(`${siteUrl}/api/agents-run?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ agents: QA_AGENTS, brief, source: "qa_session" }),
+      body: JSON.stringify({ agents, brief, source: `qa_${label}` }),
     });
     const data = await res.json().catch(() => ({}));
     okCount = data.ok_count ?? 0;
-    console.log(`[qa-session] ✓ ${okCount}/${QA_AGENTS.length} agents · +${newActions} actions delta`);
+    console.log(`[qa-${label}] ✓ ${okCount}/${agents.length} agents · +${newActions} delta`);
   } catch (e) {
-    console.error("[qa-session] Erreur agents-run:", e.message);
+    console.error(`[qa-${label}] Erreur agents-run:`, e.message);
     return;
   }
 
-  // 5. Notif ntfy
   const topic = env.NTFY_TOPIC;
   if (topic) {
     await fetch(`https://ntfy.sh/${topic}`, {
       method: "POST",
-      headers: { Title: "🔍 Session QA Amaryllis", Priority: "default", Tags: "mag,white_check_mark" },
-      body: `${dateStr}\n+${newActions} nouvelles actions · ${resolvedActions} résolues depuis le ${lastDateStr}\n${okCount}/${QA_AGENTS.length} agents OK\n→ Admin > Agents pour le détail`,
+      headers: { Title: `🔍 QA ${freq} Amaryllis`, Priority: "default", Tags: "mag,white_check_mark" },
+      body: `${dateStr}\n+${newActions} actions · ${resolvedActions} résolues depuis ${lastDateStr}\n${okCount}/${agents.length} agents OK → Admin > Agents`,
     }).catch(() => {});
   }
 
-  // 6. Sauvegarder session en KV
-  await env.ICAL_STORE.put("qa_session:last", JSON.stringify({
-    ts: now,
-    agents: QA_AGENTS,
-    new_actions: newActions,
-    resolved: resolvedActions,
-    summary: `${okCount}/${QA_AGENTS.length} agents · +${newActions} delta`,
+  await env.ICAL_STORE.put(kvKey, JSON.stringify({
+    ts: now, agents, new_actions: newActions, resolved: resolvedActions,
+    summary: `${okCount}/${agents.length} agents · +${newActions} delta`,
   })).catch(() => {});
 }
 
@@ -3312,11 +3304,7 @@ export default {
   async scheduled(event, env, ctx) {
     const cron = event.cron;
 
-    if (cron === "0 8 1,15 * *") {
-      // 1er et 15 du mois, 8h UTC (4h Martinique) — session QA bi-hebdomadaire
-      ctx.waitUntil(runQASession(env));
-
-    } else if (cron === "0 11 * * 1") {
+    if (cron === "0 11 * * 1") {
       // Lundi 11h UTC (7h Martinique) — Réunion Générale cross-fleet
       ctx.waitUntil(runReunioneGenerale(env));
 
@@ -3332,6 +3320,7 @@ export default {
         runSeoReport(env), // 📈 rapport SEO hebdo (Search Console) par email
         runBugTriage(env), // 🐞 triage hebdo des bugs captés en prod → backlog + digest
         runMemoryDistill(env), // 🧠 B2 — distille l'expérience du réseau en apprentissages durables
+        runQABatch(env, QA_WEEKLY, "qa_session:weekly", "hebdo"), // 🔍 QA hebdo (flux, endpoints, tracking, emails, agents)
         runGuideWrite(env), // 📝 réécriture prose d'accueil guides D1 (welcome_message + tagline)
         (async () => {
           try {
@@ -3351,6 +3340,7 @@ export default {
         runMonthlyExport(env, allEvents),
         runMonthlySeoArticle(env),
         runTokenRotationReminder(env), // arch-018 — mensuel (META_PAGE_TOKEN expire ~60j)
+        runQABatch(env, QA_MONTHLY, "qa_session:monthly", "mensuel"), // 🔍 QA mensuel (sécu, SEO, perf médias)
         runReviewRefresh(env), // refresh mensuel des avis Airbnb (scrape + D1)
         (async () => {
           // Mémoire saisonnière : agrège rm_kpi_snapshots → seasonal_memory
