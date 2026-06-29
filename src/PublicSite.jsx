@@ -7701,14 +7701,12 @@ function LogoDropdown() {
   ];
 
   return (
-    <div ref={ref} style={{ position: "relative" }}>
-      <button
-        onClick={() => setOpen(o => !o)}
-        style={{ display: "flex", alignItems: "center", gap: 14, background: "none", border: "none", cursor: "pointer", padding: 0 }}
-      >
+    <div ref={ref} style={{ position: "relative", display: "flex", alignItems: "center", gap: 4 }}>
+      {/* Logo = <a> crawlable par Google · le chevron ▾ ouvre le menu séparément */}
+      <a href="/" style={{ display: "flex", alignItems: "center", gap: 14, textDecoration: "none" }}>
         <img
           src="/brand/amaryllis-mark-cream.svg"
-          alt="Amaryllis"
+          alt="Amaryllis Locations"
           width="36"
           height="36"
           style={{ display: "block" }}
@@ -7717,7 +7715,14 @@ function LogoDropdown() {
           <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 15, letterSpacing: "0.55em", color: "var(--c-ivory)", textTransform: "uppercase" }}>AMARYLLIS</div>
           <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 9, color: "rgba(250,245,233,0.4)", letterSpacing: "0.35em", textTransform: "uppercase", marginTop: 2 }}>LOCATIONS D'EXCEPTION</div>
         </div>
-        <span style={{ fontSize: 9, color: "rgba(250,245,233,0.35)", marginLeft: -4, transform: open ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s", display: "inline-block" }}>▾</span>
+      </a>
+      <button
+        onClick={() => setOpen(o => !o)}
+        aria-label="Menu navigation"
+        aria-expanded={open}
+        style={{ background: "none", border: "none", cursor: "pointer", padding: "4px 2px", display: "flex", alignItems: "center" }}
+      >
+        <span style={{ fontSize: 9, color: "rgba(250,245,233,0.35)", transform: open ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s", display: "inline-block" }}>▾</span>
       </button>
 
       {open && (
@@ -7800,25 +7805,28 @@ function PropertyDropdown({ onSelect }) {
           animation: "fadeUp 0.18s ease both",
         }}>
           {BIENS.map(b => (
-            <button
+            /* <a href> crawlable par Google — les 7 fiches apparaissent dans la nav */
+            <a
               key={b.id}
-              onClick={() => { onSelect(b); setOpen(false); }}
+              href={`/${b.id}`}
+              onClick={() => setOpen(false)}
               style={{
-                width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
-                background: "transparent", border: "none",
+                display: "flex", alignItems: "center", justifyContent: "space-between",
                 color: "rgba(250,245,233,0.8)", borderRadius: 8,
-                padding: "10px 14px", cursor: "pointer",
-                textAlign: "left", transition: "background 0.15s",
+                padding: "10px 14px", textDecoration: "none",
+                fontFamily: "'Jost', sans-serif", fontWeight: 300,
+                fontSize: 13, letterSpacing: "0.05em",
+                transition: "background 0.15s, color 0.15s",
                 gap: 12,
               }}
               onMouseEnter={e => { e.currentTarget.style.background = "rgba(196,114,84,0.12)"; e.currentTarget.style.color = "var(--c-ivory)"; }}
               onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "rgba(250,245,233,0.8)"; }}
             >
               <div>
-                <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13, letterSpacing: "0.05em" }}>{b.nom}</div>
-                <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 10, color: "rgba(250,245,233,0.4)", letterSpacing: "0.05em", marginTop: 2 }}>{b.lieu}</div>
+                <div>{b.nom}</div>
+                <div style={{ fontSize: 10, color: "rgba(250,245,233,0.4)", marginTop: 2 }}>{b.lieu} · {b.prix}€/nuit</div>
               </div>
-            </button>
+            </a>
           ))}
         </div>
       )}
@@ -9388,49 +9396,50 @@ export default function PublicSite() {
 
       {/* ── NAVIGATION ── */}
       <header style={{ position: "sticky", top: 0, zIndex: 200 }}>
+        <style>{`
+          @media (max-width: 860px) { .header-nav-link { display: none !important; } }
+        `}</style>
         <div style={{
           height: 62,
-          background: scrolled ? "#0e3b3a" : "rgba(7,18,42,0.45)",
-          backdropFilter: scrolled ? "none" : "blur(6px)",
-          WebkitBackdropFilter: scrolled ? "none" : "blur(6px)",
+          background: "#0e3b3a",
           padding: "0 28px",
           display: "flex", alignItems: "center",
           borderBottom: scrolled ? "1px solid rgba(250,245,233,0.07)" : "none",
-          transition: "background 0.35s ease, border-color 0.35s ease, backdrop-filter 0.35s ease",
+          transition: "border-color 0.35s ease",
         }}>
           <div style={{ maxWidth: 1280, margin: "0 auto", width: "100%", display: "flex", alignItems: "center", gap: 20 }}>
-            {/* Logo menu */}
+            {/* Logo = <a href="/"> crawlable */}
             <LogoDropdown />
 
             {/* Separator */}
             <div style={{ width: 1, height: 20, background: "rgba(250,245,233,0.12)", flexShrink: 0 }} />
 
-            {/* Property selector — fills center */}
+            {/* Property selector — fills center, liens <a> crawlables */}
             <div style={{ flex: 1 }}>
               <PropertyDropdown onSelect={openDetail} />
             </div>
 
-            {/* Right: liens + contact CTA */}
-            <div style={{ display: "flex", alignItems: "center", gap: 18, flexShrink: 0 }}>
-              <a href="/guide-hub" style={{ fontSize: 12, fontFamily: "'Jost', sans-serif", fontWeight: 300, color: "rgba(250,245,233,0.6)", textDecoration: "none", letterSpacing: "0.08em", whiteSpace: "nowrap", display: window.innerWidth < 860 ? "none" : "block", transition: "color 0.2s" }}
+            {/* Right: nav + CTA */}
+            <nav aria-label="Navigation principale" style={{ display: "flex", alignItems: "center", gap: 18, flexShrink: 0 }}>
+              <a href="/guide-hub" className="header-nav-link" style={{ fontSize: 12, fontFamily: "'Jost', sans-serif", fontWeight: 300, color: "rgba(250,245,233,0.6)", textDecoration: "none", letterSpacing: "0.08em", whiteSpace: "nowrap", transition: "color 0.2s" }}
                 onMouseEnter={e => e.currentTarget.style.color = "var(--c-ivory)"}
                 onMouseLeave={e => e.currentTarget.style.color = "rgba(250,245,233,0.6)"}
               >
                 {t("exploreLink")}
               </a>
-              <a href="/avis" style={{ fontSize: 12, fontFamily: "'Jost', sans-serif", fontWeight: 300, color: "rgba(250,245,233,0.6)", textDecoration: "none", letterSpacing: "0.08em", whiteSpace: "nowrap", display: window.innerWidth < 860 ? "none" : "block", transition: "color 0.2s" }}
+              <a href="/avis" className="header-nav-link" style={{ fontSize: 12, fontFamily: "'Jost', sans-serif", fontWeight: 300, color: "rgba(250,245,233,0.6)", textDecoration: "none", letterSpacing: "0.08em", whiteSpace: "nowrap", transition: "color 0.2s" }}
                 onMouseEnter={e => e.currentTarget.style.color = "var(--c-ivory)"}
                 onMouseLeave={e => e.currentTarget.style.color = "rgba(250,245,233,0.6)"}
               >
                 Avis
               </a>
-              <a href="/nos-partenaires" style={{ fontSize: 12, fontFamily: "'Jost', sans-serif", fontWeight: 300, color: "rgba(250,245,233,0.6)", textDecoration: "none", letterSpacing: "0.08em", whiteSpace: "nowrap", display: window.innerWidth < 860 ? "none" : "block", transition: "color 0.2s" }}
+              <a href="/nos-partenaires" className="header-nav-link" style={{ fontSize: 12, fontFamily: "'Jost', sans-serif", fontWeight: 300, color: "rgba(250,245,233,0.6)", textDecoration: "none", letterSpacing: "0.08em", whiteSpace: "nowrap", transition: "color 0.2s" }}
                 onMouseEnter={e => e.currentTarget.style.color = "var(--c-ivory)"}
                 onMouseLeave={e => e.currentTarget.style.color = "rgba(250,245,233,0.6)"}
               >
                 Bonnes adresses
               </a>
-              <a href="/location-voiture-martinique-pas-cher" style={{ fontSize: 12, fontFamily: "'Jost', sans-serif", fontWeight: 300, color: "rgba(250,245,233,0.6)", textDecoration: "none", letterSpacing: "0.08em", whiteSpace: "nowrap", display: window.innerWidth < 860 ? "none" : "block", transition: "color 0.2s" }}
+              <a href="/location-voiture-martinique-pas-cher" className="header-nav-link" style={{ fontSize: 12, fontFamily: "'Jost', sans-serif", fontWeight: 300, color: "rgba(250,245,233,0.6)", textDecoration: "none", letterSpacing: "0.08em", whiteSpace: "nowrap", transition: "color 0.2s" }}
                 onMouseEnter={e => e.currentTarget.style.color = "var(--c-ivory)"}
                 onMouseLeave={e => e.currentTarget.style.color = "rgba(250,245,233,0.6)"}
               >
@@ -9438,8 +9447,25 @@ export default function PublicSite() {
               </a>
               <LangToggle />
               <ThemeToggle inline />
-              {/* CTA Contact — pill */}
-              <HoverContact direction="down" pill /></div>
+              {/* CTA Réserver — visible desktop + mobile */}
+              <button
+                onClick={() => setShowBienPicker(true)}
+                style={{
+                  fontFamily: "'Jost', sans-serif", fontWeight: 600,
+                  fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase",
+                  background: "var(--c-coral)", color: "var(--c-ivory)",
+                  border: "none", borderRadius: 6, padding: "8px 18px",
+                  cursor: "pointer", flexShrink: 0,
+                  transition: "opacity 0.2s",
+                }}
+                onMouseEnter={e => e.currentTarget.style.opacity = "0.88"}
+                onMouseLeave={e => e.currentTarget.style.opacity = "1"}
+              >
+                {CTA_LABEL_FR}
+              </button>
+              {/* CTA Contact */}
+              <HoverContact direction="down" pill />
+            </nav>
           </div>
         </div>
       </header>
