@@ -135,6 +135,12 @@ const DEJA_EN_PLACE = `
 • Divers : chat IA, météo, géoloc, API avis Google.
 • Ads : kits Google Ads + Meta Ads RÉDIGÉS et prêts (ne PAS proposer de les "créer" — Vincent les lance lui-même).
 `;
+
+const CROSS_BRAIN_INSTRUCTION = `
+🔗 SIGNAL CROSS-FLEET (optionnel) : Si ton analyse révèle quelque chose d'important pour le domaine PATRIMOINE (trésorerie Amaryllis exceptionnelle, anomalie fiscale LMP, pic de revenus, signal saisonnalité fort), ajouter dans ton JSON :
+"cross_signal": { "message": "1 ligne max — ce que les agents patrimoine doivent savoir", "tags": ["tresorerie"|"fiscal"|"revenu"|"saisonnalite"], "urgency": "alert"|"watch"|"ok", "for": "patrimoine" }
+Ne pas émettre si rien de notable. Qualité > quantité.`;
+
 import { factCheckCaption, loadLearnedLessons } from "./_factcheck.js";
 
 import { verifyBearer } from "./_adminauth.js";
@@ -861,7 +867,8 @@ TON DOMAINE D'EXPERTISE : ${agent.focus}
 
 FICHIERS CLÉS à analyser : ${agent.files_hint}
 ${vincentSection}${fiscalSection}${playbookSection}${skillSection}${liveSection}${sharedSection}${ragSection}${bannedSection}${memorySection}${feedbackSection}${outcomesSection}${historySection}
-${DEJA_EN_PLACE}
+${DEJA_EN_PLACE}${CROSS_BRAIN_INSTRUCTION}
+
 MISSION : Identifie les actions concrètes NOUVELLES à réaliser dans ton domaine. Tiens compte de ce qui a déjà été fait ou identifié pour approfondir ton analyse et aller plus loin. Si une idée recoupe une capacité « DÉJÀ EN PLACE », ne la propose PAS — sauf amélioration précise et chiffrée (dis ce qui manque concrètement).
 
 📋 DONNÉES CANONIQUES PROPRIÉTÉS (NE JAMAIS INVENTER) :
@@ -1303,6 +1310,23 @@ export async function onRequest(context) {
   } catch {}
   const liveSection = renderLiveSection(liveCtx, prevSnapshot);
 
+  // ── Cross-brain signals (patrimoine → locatif) ──────────────────────────
+  let crossBrainContext = "";
+  if (env.CROSS_BRAIN_KV) {
+    try {
+      const raw = await env.CROSS_BRAIN_KV.get("cross:patrimoine:signals");
+      if (raw) {
+        const d = JSON.parse(raw);
+        const age_h = Math.floor((Date.now() / 1000 - d.ts) / 3600);
+        if (age_h < 48 && d.signals?.length) {
+          crossBrainContext = `\n═══ SIGNAUX PATRIMOINE → LOCATIF (${age_h}h — ${d.run_summary || ''}) ═══\n`
+            + d.signals.map(s => `• [${(s.urgency || 'watch').toUpperCase()}] ${s.label}: ${s.message}`).join('\n')
+            + '\n════════════════════════════════════════════════\n';
+        }
+      }
+    } catch { /* KV absent ou données invalides — fail-soft */ }
+  }
+
   // Mots/expressions interdits (curatés depuis l'onglet Approbations) → injectés dans chaque prompt.
   let bannedSection = "";
   try {
@@ -1351,6 +1375,7 @@ export async function onRequest(context) {
           blocks.push(`📡 SIGNAUX DU RÉSEAU (émis par les autres agents — contexte transverse frais) :\n${sig.map(s => `  • ${s.value}`).join("\n")}`);
         }
         if (blocks.length) sharedSection = `\n${blocks.join("\n\n")}\n`;
+        if (crossBrainContext) sharedSection += crossBrainContext;
       } catch { /* bus indisponible → run sans signaux, fail-soft */ }
 
       // Feedback (lever #2) : actions passées en "fait" depuis le dernier run de cet agent
@@ -1425,6 +1450,7 @@ export async function onRequest(context) {
       // Lu par tous les autres agents au run suivant (agent_memory '_shared'). 1 par agent
       // (ON CONFLICT remplace l'ancien) → le réseau partage ses tendances sans silo.
       const signal = typeof parsed.signal === "string" ? parsed.signal.trim() : "";
+      const crossSignal = parsed.cross_signal || null;
       if (signal && signal.length > 8 && !/^optionnel/i.test(signal)) {
         await db.prepare(`INSERT INTO agent_memory (agent, key, value) VALUES (?,?,?)
           ON CONFLICT(agent, key) DO UPDATE SET value=excluded.value, created_at=unixepoch()`)
@@ -1743,7 +1769,7 @@ Si verdict=reject : "improved_blocks": null`;
         ON CONFLICT(agent, key) DO UPDATE SET value=excluded.value, created_at=unixepoch()
       `).bind(agent.id, "last_run_ts", String(now)).run().catch(() => {});
 
-      return { agent: agent.id, model: activeModel, ok: true, inserted, updated, rejected, skipped, drafts: draftsCreated, actions: actions.length, context_size: history.length, completed_since: completedSince };
+      return { agent: agent.id, model: activeModel, ok: true, inserted, updated, rejected, skipped, drafts: draftsCreated, actions: actions.length, context_size: history.length, completed_since: completedSince, cross_signal: crossSignal, label: agent.label, emoji: agent.emoji };
     } catch (e) {
       return {
         agent: agent.id,
@@ -1782,6 +1808,29 @@ Si verdict=reject : "improved_blocks": null`;
 
   const ok = results.filter(r => r.ok).length;
   const errors = results.filter(r => r.error).length;
+
+  // ── Cross-brain KV write (locatif → patrimoine) ─────────────────────────
+  if (env.CROSS_BRAIN_KV) {
+    try {
+      const crossSignals = results
+        .filter(r => r.ok && r.cross_signal?.message)
+        .map(r => ({
+          agent: r.agent,
+          label: `${r.emoji || ''}${r.label || r.agent}`.trim(),
+          urgency: r.cross_signal.urgency || 'watch',
+          message: String(r.cross_signal.message).slice(0, 200),
+          tags: Array.isArray(r.cross_signal.tags) ? r.cross_signal.tags : [],
+          for: 'patrimoine'
+        }));
+      await env.CROSS_BRAIN_KV.put('cross:locatif:signals', JSON.stringify({
+        ts: now,
+        fleet: 'locatif',
+        run_summary: `${results.length} agents · ${ok} ok`,
+        signals: crossSignals
+      }), { expirationTtl: 7 * 24 * 3600 });
+    } catch { /* fail-soft */ }
+  }
+
   clog('agents-run', errors > 0 ? 'warn' : 'info', { agents: targetAgents.length, ok, errors, ms: t() });
   return json({ ok: true, agents_run: targetAgents.length, ok_count: ok, error_count: errors, live: !!liveSection, kpi_captured: kpiCaptured, rev_diag: kpiResult.revDiag, outcomes_measured: outcomesMeasured, results });
 }
