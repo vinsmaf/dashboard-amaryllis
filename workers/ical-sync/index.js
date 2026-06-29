@@ -3368,11 +3368,26 @@ async function runAccountability(env) {
         patrimoineLines = `\n📊 Patrimoine: ${pFleet.length} agents · 🔴 ${pCrit} critique(s)`;
       }
     } catch { }
+    // Outcomes : actions clôturées cette semaine sans note d'impact (boucle feedback)
+    let outcomeLines = '';
+    try {
+      const outcomes = await db.prepare(
+        `SELECT aa.action, ao.user_note FROM agent_actions aa
+         JOIN action_outcomes ao ON ao.action_id = aa.id
+         WHERE ao.completed_at > ? AND ao.impact_label IS NULL
+         LIMIT 5`
+      ).bind(weekAgo).all().catch(() => ({ results: [] }));
+      const noNote = (outcomes?.results || []).filter(o => !o.user_note);
+      if (noNote.length > 0) {
+        outcomeLines = `\n📝 ${noNote.length} action(s) sans note d'impact — annoter dans le dashboard pour que les agents apprennent`;
+      }
+    } catch { }
     const title = `📊 Accountability sem. — ${fait}/${total} (${pct}%) · 🔴 ${critique_open} critique(s)`;
     const lines = [
       `🏠 Locatif (7j) : ${fait}/${total} réalisées (${pct}%)`,
       critique_open > 0 ? `  🔴 ${critique_open} critique(s) non résolue(s)` : `  ✅ 0 critique en attente`,
       haute_open > 0 ? `  🟡 ${haute_open} haute(s) en attente` : '',
+      outcomeLines,
       patrimoineLines,
       '',
       `→ Réunion générale lundi 10h Martinique`,

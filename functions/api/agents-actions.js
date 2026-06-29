@@ -334,14 +334,22 @@ export async function onRequest(context) {
               completed_at INTEGER NOT NULL,
               measured_at  INTEGER,
               impact_label TEXT,
-              detail_json  TEXT
+              detail_json  TEXT,
+              user_note    TEXT
             )
           `).run();
+          try { await db.prepare("ALTER TABLE action_outcomes ADD COLUMN user_note TEXT").run(); } catch (_) {}
           await db.prepare(`
-            INSERT INTO action_outcomes (action_id, agent, completed_at) VALUES (?,?,?)
-            ON CONFLICT(action_id) DO UPDATE SET completed_at=excluded.completed_at, measured_at=NULL, impact_label=NULL, detail_json=NULL
-          `).bind(id, row?.agent || "?", Math.floor(Date.now() / 1000)).run();
+            INSERT INTO action_outcomes (action_id, agent, completed_at, user_note) VALUES (?,?,?,?)
+            ON CONFLICT(action_id) DO UPDATE SET completed_at=excluded.completed_at, measured_at=NULL, impact_label=NULL, detail_json=NULL, user_note=excluded.user_note
+          `).bind(id, row?.agent || "?", Math.floor(Date.now() / 1000), body.user_note ?? null).run();
         } catch (_) { /* best-effort, ne bloque jamais le PATCH */ }
+      }
+      // user_note seul (action déjà fait, on ajoute/met à jour la note d'impact)
+      if (body.user_note !== undefined && body.status !== "fait") {
+        try {
+          await db.prepare("UPDATE action_outcomes SET user_note=? WHERE action_id=?").bind(body.user_note, id).run();
+        } catch (_) {}
       }
 
       return json({ ok: true, id });
