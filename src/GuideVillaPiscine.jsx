@@ -93,7 +93,7 @@ const VILLAS = [
   },
   {
     id: "mabouya",
-    nom: "Villa Mabouya",
+    nom: "Mabouya",
     accroche: "Jacuzzi privatif vue mer — l'adresse romantique du Sud Martinique",
     capacite: "2 personnes",
     chambres: "1 chambre",

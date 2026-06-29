@@ -110,7 +110,7 @@ const villas = [
   },
   {
     id: "schoelcher",
-    nom: "Schœlcher",
+    nom: "Bellevue Schœlcher",
     desc: "2 personnes · Terrasse · Vue mer · Piscine partagée",
     photo: "https://villamaryllis.com/photos/schoelcher/01.webp",
   },

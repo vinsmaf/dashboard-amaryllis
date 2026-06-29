@@ -147,13 +147,13 @@ const villas = [
   },
   {
     id: "mabouya",
-    nom: "Villa Mabouya",
+    nom: "Mabouya",
     desc: "Jacuzzi privatif vue mer, jardin, 2 chambres",
     photo: "https://villamaryllis.com/photos/mabouya/01.webp",
   },
   {
     id: "schoelcher",
-    nom: "Villa Schœlcher",
+    nom: "Bellevue Schœlcher",
     desc: "Terrasse vue mer, piscine partagée, 2 chambres",
     photo: "https://villamaryllis.com/photos/schoelcher/01.webp",
   },
