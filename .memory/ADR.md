@@ -3,6 +3,30 @@
 > 1 entrée par décision qui engage la suite. Format 5 lignes : **Choix · Alternatives refusées · Conséquences attendues · Périmètre · Statut**.
 > Décisions d'archi détaillées (specs complets) → `../docs/superpowers/specs/README.md` (ADR-001→010). Ici = log curaté de session.
 
+## ADR-AUDIT-PROD-001 · 2026-06-29 · Passe adversariale ultracode 24 findings → architecture de correction
+
+1. **Choix** : Session ultracode (38 agents, 2,86M tokens, 8 dimensions + vérification adversariale) pour identifier puis corriger les 24 findings confirmés en prod — traités un par un avec explication, sans skip. La démarche adversariale (agent sceptique lit le code avant de confirmer) a éliminé 6 faux positifs (secrets GA4, preload, srcset, dimensions, hreflang, JSON-LD duplicate).
+2. **Alternatives refusées** : (A) todo-list sans vérification = risque de fix inutiles sur code déjà correct ; (B) refactoring global = trop large, hors cible.
+3. **Conséquences attendues** : (1) Idempotency Stripe = plus de risque double-débit sur crash Worker ; (2) désabonnement RGPD fonctionne réellement ; (3) leaflet hors critical path = LCP amélioré toutes pages ; (4) SEO propre (1 source JSON-LD, sitemap sans doublon, hreflang valides) ; (5) A11y WCAG 2.1 AA pour le tunnel de réservation.
+4. **Périmètre** : `functions/api/charge-balance.js` · `functions/api/sign-contract.js` · `functions/api/ai-summary.js` · `public/email-templates/newsletter-hiver.html` · `src/GuideReservationDirecte.jsx` · `vite.config.js` · `scripts/prerender.mjs` · `functions/[slug].js` · `src/PublicSite.jsx` · `src/GuideSainteLuce.jsx` · `src/GuideEnCouple.jsx` · `src/GuideVillaPiscine.jsx` · `public/_headers`. Commits `62f9264` `b8c7cc6` `8dd38ef` `87d747b`.
+5. **Statut** : acté & déployé (push main `87d747b`).
+
+## ADR-TRACKING-EVENTCALLBACK-001 · 2026-06-29 · gtag purchase : event_callback avant redirect
+
+1. **Choix** : Remplacer le redirect `window.location.href = "/merci"` synchrone (qui tuait le beacon gtag) par une closure `_go(tracked)` déclenchée via `event_callback` gtag (succès → `ssSet(guardKey)` + redirect) ou timeout 800ms failsafe (échec → redirect sans guardKey, Merci.jsx peut retenter).
+2. **Alternatives refusées** : (A) `navigator.sendBeacon` via gtag interne — non exposé publiquement ; (B) supprimer la guardKey partout — double-compte si event_callback ET Merci.jsx firaient tous les deux ; (C) Measurement Protocol server-side dans stripe-webhook.js — plus robuste mais complexe (nécessite `client_id` GA4), gardé comme étape 2 si le fix client-side reste insuffisant.
+3. **Conséquences attendues** : `purchase` doit apparaître dans GA4 events dans les prochains jours (dès la prochaine réservation directe). `amaryllis (web) purchase` > 0 dans Google Ads → permet de basculer les campagnes en "Maximiser les conversions".
+4. **Périmètre** : `src/PublicSite.jsx` (3 blocs : tunnel standard ~l.1533, tunnel 3DS ~l.2252, groupe ~l.6416). `src/Merci.jsx` inchangé (logique guardKey déjà correcte). Commit `42d9ba9`.
+5. **Statut** : acté & déployé. À vérifier GA4 + Google Ads le 2026-07-07.
+
+## ADR-LLM-IDS-FIX-001 · 2026-06-29 · Correctifs IDs modèles LLM + coverage llm-ping
+
+1. **Choix** : (A) DeepSeek `deepseek-v4-flash`/`deepseek-v4-pro` → `deepseek-chat`/`deepseek-reasoner` (IDs officiels ; les fantômes causaient 3-4s timeout sur chaque cascade) ; (B) Cerebras smart `zai-glm-4.7` → `gpt-oss-120b` (ZhipuAI bridgé non documenté) ; (C) `llm-ping.js` étend les tests à DeepSeek + OpenRouter (était aveugle à leurs pannes).
+2. **Alternatives refusées** : laisser en place et espérer (cascade masquait l'erreur mais coûtait ~4s par hit DeepSeek).
+3. **Conséquences attendues** : cascade LLM ~2-4s plus rapide par appel qui tombait sur DeepSeek. `llm-ping` couvre maintenant les 6 providers actifs.
+4. **Périmètre** : `functions/api/_llm.js` (lignes 132-144) · `functions/api/llm-ping.js` (PROVIDERS array + sources ?list=1). Commits `c2fa923`.
+5. **Statut** : acté & déployé.
+
 ## ADR-PIPELINE-SECURITE-001 · 2026-06-27 · Sécurisation pipeline réservations — 4 gaps comblés
 
 1. **Choix** : (A) `deleteReservation_` GAS lit bien+mois AVANT suppression puis appelle `rebuildRevenus2026/2027_` automatiquement (`Utilities.formatDate` pour les cellules Date GAS) ; (B) `beds24-webhook.js` déclenche `revenus2026/2027RebuildBienApply` en background (`context.waitUntil`) après chaque annulation Beds24 ; (C) nouvel endpoint `/api/trigger-sync` (auth CLAUDE_SECRET) force re-sync D1→GAS sans attendre le cron ; (D) `syncFeed` retourne `{ok, error}` → `runSync` détecte les failures et envoie 1 ntfy consolidé throttlé 2h (KV `ical_failure_alert`).

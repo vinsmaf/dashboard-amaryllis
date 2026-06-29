@@ -3,6 +3,44 @@
 > Pièges déjà rencontrés + comment les éviter. 1 entrée = 1 leçon actionnable « la prochaine fois ».
 > Le journal d'erreurs exhaustif reste `../docs/ERREURS-LOG.md`.
 
+## 🔧 manualChunks vite + lazy() = piège Rolldown (leaflet sur critical path) — 2026-06-29
+- **Piège** : épingler un paquet dans `manualChunks` (ex. `"leaflet"`) force Rolldown à créer une référence statique depuis l'entry chunk pour satisfaire le graphe de modules — même si tous les imports consommateurs sont derrière `lazy()`. Résultat : modulepreload + CSS render-blocking sur toutes les pages.
+- **La prochaine fois** : ne pas mettre dans `manualChunks` les paquets qui sont UNIQUEMENT importés par des composants lazy. Les laisser suivre naturellement leurs chunks lazy. Vérifier : `grep "leaflet" dist/index.html` après build → doit retourner 0.
+
+## 🔒 Tout endpoint avec écriture D1 publique = rate limit obligatoire — 2026-06-29
+- **Piège** : `sign-contract.js` stockait des PNG base64 (~300 Ko) dans D1 sans rate limit → flood possible (mail + remplissage D1 + pollution base contrats).
+- **La prochaine fois** : avant tout endpoint public qui écrit en D1 ou envoie un email, ajouter `rateLimit(db, { key: \`prefix:\${ip}\`, limit: N, windowSec: 3600 })`. Pattern = `_ratelimit.js` déjà présent et réutilisable.
+
+## 📋 hreflang : cluster many-to-one = invalide Google — 2026-06-29
+- **Piège** : pointer plusieurs pages FR vers une même page EN (`/villa-rental-martinique`) via hreflang crée un cluster invalide ignoré par Google.
+- **La prochaine fois** : hreflang EN uniquement si la page EN existe vraiment en 1:1. Sinon, ne garder que `fr` + `x-default`. Les fiches biens n'ont pas de page EN by-property.
+
+## 📦 prerender.mjs @graph VacationRental = conditionner au type de page — 2026-06-29
+- **Piège** : le marqueur `<!--SEO_RENTALS_GRAPH-->` était remplacé inconditionnellement → 6 `VacationRental` injectés sur chaque guide/article. Données produit sur page éditoriale = risque action manuelle Google.
+- **La prochaine fois** : toute injection JSON-LD de type produit doit être conditionnée à `routePath === "/" || BIEN_SLUGS.has(slug)`.
+
+## ♿ WCAG 2.1 tunnel réservation — 3 patterns à retenir — 2026-06-29
+- **Calendrier** : les cellules jours cliquables DOIVENT avoir `role="button"` + `tabIndex=0` + `onKeyDown (Enter/Space)` + `aria-label` + `aria-disabled`. Sans ça = invisible aux AT et clavier.
+- **Modales** : `role="dialog"` + `aria-modal="true"` + `aria-labelledby` sur le container interne (pas l'overlay). Sans ça le SR lit le fond pendant que la modale est ouverte.
+- **Erreurs dynamiques** : `role="alert"` + `aria-live="polite"` sur les div d'erreur → annonce automatique aux AT sans déplacement de focus (WCAG 4.1.3).
+
+## 🔴 gtag("event", "purchase") + window.location.href = race condition mortelle — 2026-06-29
+- **Piège** : appeler `window.gtag("event", "purchase", {...})` puis `window.location.href = "/merci"` dans la même tick JS → le browser annule les requêtes XHR/beacon en cours avant qu'ils partent → 0 events GA4, 0 conversions Google Ads.
+- **Symptôme** : event absent du top-events GA4 sur 28j (confirmé console GA4 2026-06-29 après 2 semaines de campagnes 253€/488 clics).
+- **La prochaine fois** : utiliser `event_callback` pour déclencher le redirect APRÈS confirmation d'envoi. Pattern :
+  ```js
+  let done = false;
+  const go = (tracked) => { if (!done) { done = true; if (tracked) ssSet(guardKey, "1"); window.location.href = "/merci"; } };
+  window.gtag("event", "purchase", { ..., event_callback: () => go(true) });
+  setTimeout(() => go(false), 800); // failsafe si callback ne revient pas
+  ```
+  La guardKey est posée DANS le callback (pas avant) → si timeout sans callback, Merci.jsx peut retenter.
+- **Corollaire** : toujours vérifier dans GA4 Events que l'event apparaît (au moins 1 fois) avant de croire que le tracking est OK. `purchase` absent du top-10 sur 28j = signal d'alarme immédiat.
+
+## 🔍 GA4 pour diagnostiquer un tracking brisé — 2026-06-29
+- **La prochaine fois** : aller dans GA4 → Rapports → Événements → voir si `purchase`/`begin_checkout` apparaissent. Si absent du top-10 sur 28j avec un trafic significatif → tracking entier cassé, pas juste "peu de ventes".
+- **Indicateur clé** : "Événements clés = 0 (-100%)" sur la vue d'ensemble GA4 = aucun event de conversion n'est tagué comme Key Event. Vérifier aussi dans GA4 Admin → Key Events.
+
 ## 📅 GAS : les cellules Date sont des objets JS, pas des strings — 2026-06-27
 - **Piège** : `r[4]` (colonne checkin) dans GAS retourne un objet `Date` JS, pas une chaîne. `String(dateObject)` → "Sat Aug 15 2026 00:00:00 GMT+0000 (UTC)" → `parseInt` sur les 4 premiers chars = NaN.
 - **La prochaine fois** : toujours tester `if (raw instanceof Date)` et utiliser `Utilities.formatDate(raw, "UTC", "yyyy-MM-dd")`. Sinon `String(raw || "")` pour les autres types. Affecte toutes les fonctions GAS qui lisent des colonnes de dates (`deleteReservation_`, `cancelReservations_`, etc.).

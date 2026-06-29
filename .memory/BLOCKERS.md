@@ -4,6 +4,15 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
+## En cours → ✅ terminé le 2026-06-29 (Audit prod ultracode 24 findings + session tracking + LLM)
+
+## En cours → ✅ terminé le 2026-06-29 (Session tracking + LLM + backlog agents)
+
+## 🟡 Perf pubs — attendre conversion purchase dans GA4 + Google Ads
+- **Statut** : fix `event_callback` déployé (commit `42d9ba9`, 2026-06-29). GA4 n'avait aucun event `purchase` depuis juin (race condition beacon vs redirect).
+- **Prochaine vérif** : 2026-07-07 → GA4 Events (purchase doit apparaître) + Google Ads `amaryllis (web) purchase` > 0.
+- **Si OK** : basculer campagnes Google en "Maximiser les conversions" + Meta en "Purchase". **Si toujours 0** : envisager Measurement Protocol server-side dans stripe-webhook.js (client_id GA4 via cookie `_ga`).
+
 ## En cours → ✅ terminé le 2026-06-27 (Session pipeline sécurité réservations — 4 gaps comblés)
 
 ## 🟡 Annulation directe Stripe = toujours manuelle
