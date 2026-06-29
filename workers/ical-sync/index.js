@@ -3222,11 +3222,101 @@ Format de réponse (français, concis, max 400 mots):
   console.log(`[reunion] ✅ exec=${execRate}% alertes=${alerts.length} watch=${watches.length} top3=${top3.length} date=${dateTag}`);
 }
 
+// ── Session QA bi-hebdomadaire (1er et 15 du mois, 8h UTC) ─────────────────
+// 8 agents ciblés : qa-tester · architecte-reseau · webmaster · data-analyst
+//                   seo-local · developpeur-multimedia · prompt-engineer · crm-manager
+// Delta : compare agent_actions depuis la dernière session (KV qa_session:last)
+async function runQASession(env) {
+  const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+  const now = Math.floor(Date.now() / 1000);
+
+  // 1. Dernière session depuis KV
+  let lastSession = { ts: now - 14 * 86400, summary: "première session" };
+  try {
+    const raw = await env.ICAL_STORE.get("qa_session:last", { type: "json" });
+    if (raw?.ts) lastSession = raw;
+  } catch { /* première session */ }
+
+  const sinceLast = lastSession.ts;
+  const db = env.revenue_manager;
+
+  // 2. Delta : nouvelles actions / résolues depuis dernière session
+  let newActions = 0, resolvedActions = 0;
+  try {
+    const [nr, dr] = await Promise.all([
+      db.prepare("SELECT COUNT(*) n FROM agent_actions WHERE created_at > ? AND status NOT IN ('done','ignored')").bind(sinceLast).first(),
+      db.prepare("SELECT COUNT(*) n FROM agent_actions WHERE updated_at > ? AND status IN ('done','ignored')").bind(sinceLast).first(),
+    ]);
+    newActions = nr?.n ?? 0;
+    resolvedActions = dr?.n ?? 0;
+  } catch { /* D1 indisponible */ }
+
+  // 3. Brief QA contextualisé
+  const dateStr = new Date(now * 1000).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const lastDateStr = new Date(sinceLast * 1000).toLocaleDateString("fr-FR", { day: "numeric", month: "long" });
+
+  const QA_AGENTS = [
+    "qa-tester", "architecte-reseau", "webmaster", "data-analyst",
+    "seo-local", "developpeur-multimedia", "prompt-engineer", "crm-manager",
+  ];
+
+  const brief = `SESSION QA BI-HEBDOMADAIRE — ${dateStr}
+Site : https://villamaryllis.com — 7 biens (Amaryllis, Zandoli, Géko, Mabouya, Schœlcher, Nogent, Iguana-bail)
+Dernière QA : ${lastDateStr} | Delta : +${newActions} actions créées, ${resolvedActions} résolues depuis.
+
+MISSION selon TON domaine spécifique :
+— Tester les flux critiques, détecter les régressions vs il y a 14 jours.
+— Vérifier les endpoints, formulaires, emails, calendriers, paiements.
+— Identifier les anomalies silencieuses (rien ne crash mais quelque chose dérive).
+
+SORTIE ATTENDUE : liste de findings (titre · sévérité critique/moyen/faible · action concrète).
+Ne rapporter QUE ce qui est cassé, dégradé ou à risque. Pas de "tout va bien" sans vérif.`;
+
+  // 4. Lancer les 8 agents QA
+  let okCount = 0;
+  try {
+    const res = await fetch(`${siteUrl}/api/agents-run?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ agents: QA_AGENTS, brief, source: "qa_session" }),
+    });
+    const data = await res.json().catch(() => ({}));
+    okCount = data.ok_count ?? 0;
+    console.log(`[qa-session] ✓ ${okCount}/${QA_AGENTS.length} agents · +${newActions} actions delta`);
+  } catch (e) {
+    console.error("[qa-session] Erreur agents-run:", e.message);
+    return;
+  }
+
+  // 5. Notif ntfy
+  const topic = env.NTFY_TOPIC;
+  if (topic) {
+    await fetch(`https://ntfy.sh/${topic}`, {
+      method: "POST",
+      headers: { Title: "🔍 Session QA Amaryllis", Priority: "default", Tags: "mag,white_check_mark" },
+      body: `${dateStr}\n+${newActions} nouvelles actions · ${resolvedActions} résolues depuis le ${lastDateStr}\n${okCount}/${QA_AGENTS.length} agents OK\n→ Admin > Agents pour le détail`,
+    }).catch(() => {});
+  }
+
+  // 6. Sauvegarder session en KV
+  await env.ICAL_STORE.put("qa_session:last", JSON.stringify({
+    ts: now,
+    agents: QA_AGENTS,
+    new_actions: newActions,
+    resolved: resolvedActions,
+    summary: `${okCount}/${QA_AGENTS.length} agents · +${newActions} delta`,
+  })).catch(() => {});
+}
+
 export default {
   async scheduled(event, env, ctx) {
     const cron = event.cron;
 
-    if (cron === "0 11 * * 1") {
+    if (cron === "0 8 1,15 * *") {
+      // 1er et 15 du mois, 8h UTC (4h Martinique) — session QA bi-hebdomadaire
+      ctx.waitUntil(runQASession(env));
+
+    } else if (cron === "0 11 * * 1") {
       // Lundi 11h UTC (7h Martinique) — Réunion Générale cross-fleet
       ctx.waitUntil(runReunioneGenerale(env));
 
