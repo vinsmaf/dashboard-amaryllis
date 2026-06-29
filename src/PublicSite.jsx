@@ -853,9 +853,15 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
           if (isCO) borderRadius = "0 8px 8px 0";
           if (blocked) { bg = "repeating-linear-gradient(135deg, #f4ecdc, #f4ecdc 3px, #e8dcc1 3px, #e8dcc1 6px)"; borderRadius = "6px"; }
 
+          const dayLabel = ds ? `${parseInt(ds.split("-")[2])} ${new Date(ds + "T12:00:00").toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}${disabled ? " (indisponible)" : ""}` : "";
           return (
             <div
               key={i}
+              role={ds && !readOnly ? "button" : undefined}
+              tabIndex={ds && !readOnly && !disabled ? 0 : undefined}
+              aria-label={ds && !readOnly ? dayLabel : undefined}
+              aria-disabled={ds && !readOnly && disabled ? true : undefined}
+              onKeyDown={e => { if (!readOnly && !disabled && ds && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onSelect(ds); } }}
               onMouseEnter={() => {
                 if (readOnly) return;
                 if (!disabled && checkin && !checkout) onHover(ds);
@@ -1573,7 +1579,7 @@ function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) 
 
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 1200, background: "rgba(6,22,22,0.72)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px 16px" }}>
-      <div style={{ background: IVORY, borderRadius: 14, overflow: "hidden", width: "100%", maxWidth: 520, maxHeight: "calc(94vh - env(safe-area-inset-bottom))", display: "flex", flexDirection: "column", boxShadow: "0 32px 80px rgba(0,0,0,0.45)" }}>
+      <div role="dialog" aria-modal="true" aria-labelledby="booking-modal-title" style={{ background: IVORY, borderRadius: 14, overflow: "hidden", width: "100%", maxWidth: 520, maxHeight: "calc(94vh - env(safe-area-inset-bottom))", display: "flex", flexDirection: "column", boxShadow: "0 32px 80px rgba(0,0,0,0.45)" }}>
 
         {/* ── Header ── */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 24px", borderBottom: `1px solid ${SAND}`, flexShrink: 0 }}>
@@ -1581,7 +1587,7 @@ function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) 
             <Eyebrow style={{ marginBottom: 4 }}>
               {phase === 1 ? "Réservation directe" : "Paiement sécurisé"}
             </Eyebrow>
-            <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 22, letterSpacing: "0.1em", textTransform: "uppercase", color: NAVY }}>
+            <div id="booking-modal-title" style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 22, letterSpacing: "0.1em", textTransform: "uppercase", color: NAVY }}>
               {bien.nom}
             </div>
           </div>
@@ -1689,35 +1695,35 @@ function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) 
             {/* Coordonnées */}
             <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
               <div style={{ flex: 1 }}>
-                <label style={labelStyle}>Prénom</label>
-                <input value={form.prenom} onChange={e => setF("prenom", e.target.value)} placeholder="Jean" style={inputStyle} />
+                <label htmlFor="bm-prenom" style={labelStyle}>Prénom</label>
+                <input id="bm-prenom" value={form.prenom} onChange={e => setF("prenom", e.target.value)} placeholder="Jean" style={inputStyle} />
               </div>
               <div style={{ flex: 1 }}>
-                <label style={labelStyle}>Nom *</label>
-                <input value={form.nom} onChange={e => setF("nom", e.target.value)} placeholder="Dupont" style={inputStyle} />
+                <label htmlFor="bm-nom" style={labelStyle}>Nom *</label>
+                <input id="bm-nom" value={form.nom} onChange={e => setF("nom", e.target.value)} placeholder="Dupont" style={inputStyle} />
               </div>
             </div>
             <div style={{ marginBottom: 14 }}>
-              <label style={labelStyle}>E-mail *</label>
-              <input type="email" value={form.email} onChange={e => setF("email", e.target.value)} placeholder="jean.dupont@email.com" style={inputStyle} />
+              <label htmlFor="bm-email" style={labelStyle}>E-mail *</label>
+              <input id="bm-email" type="email" value={form.email} onChange={e => setF("email", e.target.value)} placeholder="jean.dupont@email.com" style={inputStyle} />
             </div>
             <div style={{ marginBottom: 14 }}>
-              <label style={labelStyle}>Téléphone</label>
-              <input type="tel" value={form.tel} onChange={e => setF("tel", e.target.value)} placeholder="+33 6 12 34 56 78" style={inputStyle} />
+              <label htmlFor="bm-tel" style={labelStyle}>Téléphone</label>
+              <input id="bm-tel" type="tel" value={form.tel} onChange={e => setF("tel", e.target.value)} placeholder="+33 6 12 34 56 78" style={inputStyle} />
             </div>
             <div style={{ display: "flex", gap: 10, marginBottom: 22 }}>
               <div style={{ flex: 1 }}>
-                <label style={labelStyle}>Adultes *</label>
-                <input type="number" min="1" max="6" value={form.adultes} onChange={e => setF("adultes", e.target.value)} style={inputStyle} />
+                <label htmlFor="bm-adultes" style={labelStyle}>Adultes *</label>
+                <input id="bm-adultes" type="number" min="1" max="6" value={form.adultes} onChange={e => setF("adultes", e.target.value)} style={inputStyle} />
               </div>
               <div style={{ flex: 1 }}>
-                <label style={labelStyle}>Enfants</label>
-                <input type="number" min="0" max="6" value={form.enfants} onChange={e => setF("enfants", e.target.value)} style={inputStyle} />
+                <label htmlFor="bm-enfants" style={labelStyle}>Enfants</label>
+                <input id="bm-enfants" type="number" min="0" max="6" value={form.enfants} onChange={e => setF("enfants", e.target.value)} style={inputStyle} />
               </div>
             </div>
 
             {createErr && (
-              <div style={{ color: "#e53e3e", fontSize: 12, marginBottom: 14, background: "rgba(229,62,62,0.08)", borderRadius: 8, padding: "10px 14px" }}>
+              <div role="alert" aria-live="polite" style={{ color: "#e53e3e", fontSize: 12, marginBottom: 14, background: "rgba(229,62,62,0.08)", borderRadius: 8, padding: "10px 14px" }}>
                 {createErr}
               </div>
             )}
@@ -1753,7 +1759,7 @@ function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) 
             <div id="b24-spe" ref={spRef} style={{ marginBottom: 16 }} />
 
             {payError && (
-              <div style={{ color: "#e53e3e", fontSize: 12, marginBottom: 14, background: "rgba(229,62,62,0.08)", borderRadius: 8, padding: "10px 14px" }}>
+              <div role="alert" aria-live="polite" style={{ color: "#e53e3e", fontSize: 12, marginBottom: 14, background: "rgba(229,62,62,0.08)", borderRadius: 8, padding: "10px 14px" }}>
                 {payError}
               </div>
             )}
@@ -2667,7 +2673,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
             </div>
             {/* Stripe injoignable (réseau/adblock) : ne pas laisser un bouton mort sans explication */}
             {stripeFailed && <div style={errStyle}>⚠ Le module de paiement n'a pas pu se charger (réseau ou bloqueur de publicité). Réessayez, ou écrivez-nous : on vous envoie un lien de paiement sécurisé.</div>}
-            {payError && <div style={errStyle}>⚠ {payError}</div>}
+            {payError && <div role="alert" aria-live="polite" style={errStyle}>⚠ {payError}</div>}
           </>
         )}
 
@@ -2711,7 +2717,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
                 {paying ? "Traitement…" : `✓ Confirmer et payer ${total}€`}
               </button>
             </div>
-            {payError && <div style={errStyle}>⚠ {payError}</div>}
+            {payError && <div role="alert" aria-live="polite" style={errStyle}>⚠ {payError}</div>}
           </>
         )}
 
@@ -5631,11 +5637,11 @@ function AlerteDispoModal({ bien, checkin: initCheckin, checkout: initCheckout, 
 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 2100, background: "rgba(6,22,22,0.72)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, animation: "fadeIn 0.2s ease" }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: IVORY, borderRadius: 16, padding: "36px 32px", maxWidth: 440, width: "100%", boxShadow: "0 24px 64px rgba(0,0,0,0.28)", animation: "slideUpFull 0.28s ease" }}>
+      <div onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="alert-modal-title" style={{ background: IVORY, borderRadius: 16, padding: "36px 32px", maxWidth: 440, width: "100%", boxShadow: "0 24px 64px rgba(0,0,0,0.28)", animation: "slideUpFull 0.28s ease" }}>
         {sent ? (
           <div style={{ textAlign: "center" }}>
             <div style={{ fontSize: 36, marginBottom: 12 }}>🔔</div>
-            <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 18, color: NAVY, marginBottom: 8 }}>Alerte enregistrée !</div>
+            <div id="alert-modal-title" style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 18, color: NAVY, marginBottom: 8 }}>Alerte enregistrée !</div>
             <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13, color: MUTED, lineHeight: 1.7, margin: "0 0 6px" }}>
               Nous vous préviendrons dès que <strong>{bien.nom}</strong> se libère.
             </p>
@@ -5763,9 +5769,9 @@ function ExitIntentModal({ onClose }) {
   }, [onClose]);
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 2000, background: "rgba(6,22,22,0.75)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, animation: "fadeIn 0.25s ease" }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: IVORY, borderRadius: 16, padding: "40px 36px", maxWidth: 440, width: "100%", textAlign: "center", boxShadow: "0 24px 64px rgba(0,0,0,0.3)", animation: "slideUpFull 0.3s ease" }}>
+      <div onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="exit-modal-title" style={{ background: IVORY, borderRadius: 16, padding: "40px 36px", maxWidth: 440, width: "100%", textAlign: "center", boxShadow: "0 24px 64px rgba(0,0,0,0.3)", animation: "slideUpFull 0.3s ease" }}>
         <div style={{ fontSize: 36, marginBottom: 12 }}>🌴</div>
-        <Editorial size="lg" style={{ color: NAVY, marginBottom: 8, lineHeight: 1.3 }}>
+        <Editorial id="exit-modal-title" size="lg" style={{ color: NAVY, marginBottom: 8, lineHeight: 1.3 }}>
           Avant de partir…
         </Editorial>
         <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 14, color: MUTED, lineHeight: 1.7, margin: "0 0 24px" }}>
@@ -6448,10 +6454,10 @@ function GroupPaymentModal({ biens, checkin, checkout, guests, nights, total, on
 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(7,18,42,0.55)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: IVORY, borderRadius: 16, maxWidth: 460, width: "100%", maxHeight: "92vh", overflowY: "auto", padding: "26px 26px 28px" }}>
+      <div onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="group-modal-title" style={{ background: IVORY, borderRadius: 16, maxWidth: 460, width: "100%", maxHeight: "92vh", overflowY: "auto", padding: "26px 26px 28px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
           <div>
-            <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 24, color: NAVY }}>Réservation groupée</div>
+            <div id="group-modal-title" style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 24, color: NAVY }}>Réservation groupée</div>
             <div style={{ fontSize: 12, color: MUTED, fontFamily: "'Jost', sans-serif", marginTop: 2 }}>{logementsLabel}</div>
           </div>
           <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 22, color: MUTED, cursor: "pointer", lineHeight: 1 }}>×</button>
@@ -8158,10 +8164,10 @@ function DevisPage() {
               <div style={{ fontSize: 13, color: "#44403c", lineHeight: 1.7, marginBottom: 14 }}>
                 En signant, vous confirmez votre réservation de <strong>{data.bienNom || data.bienId}</strong> du <strong>{data.checkin}</strong> au <strong>{data.checkout}</strong> pour <strong>{fmtEur(data.total)}</strong>{data.depot > 0 ? ` (+ dépôt de garantie ${fmtEur(data.depot)} pré-autorisé)` : ""}, et acceptez le contrat de location meublé de tourisme et les <a href="/conditions-generales" target="_blank" rel="noopener noreferrer" style={{ color: CORAL }}>conditions générales</a> (règlement intérieur, conditions d'annulation, dépôt de garantie).
               </div>
-              <label style={{ fontSize: 12, fontWeight: 700, color: NAVY, display: "block", marginBottom: 6 }}>Nom et prénom du signataire</label>
-              <input type="text" value={signName} onChange={e => setSignName(e.target.value)} placeholder="ex : Jean Dupont"
+              <label htmlFor="sign-name" style={{ fontSize: 12, fontWeight: 700, color: NAVY, display: "block", marginBottom: 6 }}>Nom et prénom du signataire</label>
+              <input id="sign-name" type="text" value={signName} onChange={e => setSignName(e.target.value)} placeholder="ex : Jean Dupont"
                 style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid rgba(0,0,0,0.15)", fontSize: 14, boxSizing: "border-box", marginBottom: 12, fontFamily: "Georgia,serif" }} />
-              <label style={{ fontSize: 12, fontWeight: 700, color: NAVY, display: "block", marginBottom: 6 }}>Signature manuscrite</label>
+              <label htmlFor="sign-pad" style={{ fontSize: 12, fontWeight: 700, color: NAVY, display: "block", marginBottom: 6 }}>Signature manuscrite</label>
               <SignaturePad onChange={setSigData} />
               <label style={{ display: "flex", alignItems: "flex-start", gap: 8, marginTop: 14, fontSize: 13, color: "#44403c", cursor: "pointer" }}>
                 <input type="checkbox" checked={accepted} onChange={e => setAccepted(e.target.checked)} style={{ marginTop: 3 }} />
