@@ -1810,24 +1810,48 @@ Si verdict=reject : "improved_blocks": null`;
   const errors = results.filter(r => r.error).length;
 
   // ── Cross-brain KV write (locatif → patrimoine) ─────────────────────────
+  const crossSignals = results
+    .filter(r => r.ok && r.cross_signal?.message)
+    .map(r => ({
+      agent: r.agent,
+      label: `${r.emoji || ''}${r.label || r.agent}`.trim(),
+      urgency: r.cross_signal.urgency || 'watch',
+      message: String(r.cross_signal.message).slice(0, 200),
+      tags: Array.isArray(r.cross_signal.tags) ? r.cross_signal.tags : [],
+      for: 'patrimoine'
+    }));
   if (env.CROSS_BRAIN_KV) {
     try {
-      const crossSignals = results
-        .filter(r => r.ok && r.cross_signal?.message)
-        .map(r => ({
-          agent: r.agent,
-          label: `${r.emoji || ''}${r.label || r.agent}`.trim(),
-          urgency: r.cross_signal.urgency || 'watch',
-          message: String(r.cross_signal.message).slice(0, 200),
-          tags: Array.isArray(r.cross_signal.tags) ? r.cross_signal.tags : [],
-          for: 'patrimoine'
-        }));
       await env.CROSS_BRAIN_KV.put('cross:locatif:signals', JSON.stringify({
         ts: now,
         fleet: 'locatif',
         run_summary: `${results.length} agents · ${ok} ok`,
         signals: crossSignals
       }), { expirationTtl: 7 * 24 * 3600 });
+    } catch { /* fail-soft */ }
+  }
+
+  // ── Alerte ntfy réactive si actions critiques fraîches (< 5 min) ──────────
+  if (env.NTFY_TOPIC && env.revenue_manager) {
+    try {
+      const freshCrit = await env.revenue_manager.prepare(
+        `SELECT COUNT(*) as cnt FROM agent_actions WHERE priority='critique' AND status!='fait' AND last_analyzed > ?`
+      ).bind(now - 300).first().catch(() => null);
+      const alertSigs = crossSignals.filter(s => s.urgency === 'alert');
+      const cnt = freshCrit?.cnt ?? 0;
+      if (cnt > 0 || alertSigs.length > 0) {
+        const parts = [];
+        if (cnt > 0) parts.push(`${cnt} critique${cnt > 1 ? 's' : ''}`);
+        if (alertSigs.length > 0) parts.push(`${alertSigs.length} cross-alert`);
+        const body = alertSigs.length > 0
+          ? alertSigs.map(s => `• [${s.label}] ${s.message}`).join('\n')
+          : `${cnt} action(s) critique(s) non résolue(s) — voir le dashboard`;
+        await fetch(`https://ntfy.sh/${env.NTFY_TOPIC}`, {
+          method: 'POST',
+          headers: { Title: `🔴 Agents locatif — ${parts.join(' · ')}`, Priority: '5', Tags: 'robot,warning', 'Content-Type': 'text/plain; charset=utf-8' },
+          body,
+        }).catch(() => {});
+      }
     } catch { /* fail-soft */ }
   }
 

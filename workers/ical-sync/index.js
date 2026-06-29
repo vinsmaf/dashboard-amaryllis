@@ -3334,6 +3334,65 @@ Ne rapporter QUE ce qui est cassé, dégradé ou à risque. Pas de "tout va bien
   })).catch(() => {});
 }
 
+// ── Accountability hebdo (dimanche 20h UTC = 16h Martinique) ──────────────────
+// Calcule taux d'exécution des actions de la semaine, envoie résumé ntfy.
+// Prépare la réunion générale du lundi.
+async function runAccountability(env) {
+  try {
+    const db = env.revenue_manager;
+    const ntfyTopic = env.NTFY_TOPIC;
+    if (!db || !ntfyTopic) { console.log('[accountability] SKIP — D1 ou NTFY_TOPIC absent'); return; }
+    const weekAgo = Math.floor(Date.now() / 1000) - 7 * 24 * 3600;
+    const rows = await db.prepare(
+      `SELECT COUNT(*) as total,
+       SUM(CASE WHEN status='fait' THEN 1 ELSE 0 END) as fait,
+       SUM(CASE WHEN status!='fait' AND priority='critique' THEN 1 ELSE 0 END) as critique_open,
+       SUM(CASE WHEN status!='fait' AND priority='haute' THEN 1 ELSE 0 END) as haute_open
+       FROM agent_actions WHERE created_at > ?`
+    ).bind(weekAgo).first().catch(() => null);
+    const total = rows?.total ?? 0;
+    const fait = rows?.fait ?? 0;
+    const critique_open = rows?.critique_open ?? 0;
+    const haute_open = rows?.haute_open ?? 0;
+    const pct = total > 0 ? Math.round(fait / total * 100) : 0;
+    // Patrimoine — lecture fleet
+    let patrimoineLines = '';
+    try {
+      if (env.FLEET_SECRET) {
+        const pRes = await fetch('https://patrimoine-dashboard.pages.dev/api/patrimoine-agents-run?read=1', {
+          headers: { Authorization: `Bearer ${env.FLEET_SECRET}` },
+        });
+        const pData = await pRes.json().catch(() => ({}));
+        const pFleet = Object.values(pData.fleet || {});
+        const pCrit = pFleet.filter(a => (a.actions || []).some(x => x.priority === 'critique')).length;
+        patrimoineLines = `\n📊 Patrimoine: ${pFleet.length} agents · 🔴 ${pCrit} critique(s)`;
+      }
+    } catch { }
+    const title = `📊 Accountability sem. — ${fait}/${total} (${pct}%) · 🔴 ${critique_open} critique(s)`;
+    const lines = [
+      `🏠 Locatif (7j) : ${fait}/${total} réalisées (${pct}%)`,
+      critique_open > 0 ? `  🔴 ${critique_open} critique(s) non résolue(s)` : `  ✅ 0 critique en attente`,
+      haute_open > 0 ? `  🟡 ${haute_open} haute(s) en attente` : '',
+      patrimoineLines,
+      '',
+      `→ Réunion générale lundi 10h Martinique`,
+    ].filter(s => s !== '').join('\n');
+    await fetch(`https://ntfy.sh/${ntfyTopic}`, {
+      method: 'POST',
+      headers: {
+        Title: title,
+        Priority: String(critique_open > 0 ? 4 : 3),
+        Tags: 'bar_chart,clipboard',
+        'Content-Type': 'text/plain; charset=utf-8',
+      },
+      body: lines,
+    });
+    console.log(`[accountability] ✓ ${fait}/${total} (${pct}%) · critique_open=${critique_open}`);
+  } catch (e) {
+    console.error('[accountability] Cron error:', e.message);
+  }
+}
+
 export default {
   async scheduled(event, env, ctx) {
     const cron = event.cron;
@@ -3646,6 +3705,10 @@ export default {
           console.error("[charge-balance] Cron error:", e.message);
         }
       })());
+
+    } else if (cron === "0 20 * * 0") {
+      // Dimanche 20h UTC (16h Martinique) — accountability hebdo (prépare réunion générale lundi)
+      ctx.waitUntil(runAccountability(env));
 
     } else {
       // Toutes les 10 min — sync iCal + annulation Beds24 non payées + publication éditoriale due + relance panier
