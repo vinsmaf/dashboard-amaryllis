@@ -3706,7 +3706,7 @@ export default {
         }
       })());
 
-    } else if (cron === "0 20 * * 0") {
+    } else if (cron === "0 20 * * 7") {
       // Dimanche 20h UTC (16h Martinique) — accountability hebdo (prépare réunion générale lundi)
       ctx.waitUntil(runAccountability(env));
 

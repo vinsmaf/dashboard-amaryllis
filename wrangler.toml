@@ -12,7 +12,7 @@ crons = [
   "0 13 * * *",   # Charge balance soldes 2× J-30 — 13h UTC (migré depuis cron-job.org 7798126)
   "0 6 * * 1",    # Rapport hebdo + prix-recap + QA hebdo (flux/endpoints/tracking/emails) — lundi 6h UTC
   "0 1 1 * *",    # Mensuel — export comptable + article SEO long-tail + QA mensuel (sécu/SEO/multimedia)
-  "0 20 * * 0",   # Dimanche 20h UTC (16h Martinique) — accountability hebdo + ntfy avant réunion lundi
+  "0 20 * * 7",   # Dimanche 20h UTC (16h Martinique) — accountability hebdo + ntfy avant réunion lundi
 ]
 
 # KV namespace pour stocker les UIDs connus (anti-doublon notifications)
