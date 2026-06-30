@@ -3,6 +3,14 @@
 > 1 entrée par décision qui engage la suite. Format 5 lignes : **Choix · Alternatives refusées · Conséquences attendues · Périmètre · Statut**.
 > Décisions d'archi détaillées (specs complets) → `../docs/superpowers/specs/README.md` (ADR-001→010). Ici = log curaté de session.
 
+## ADR-CONCURRENTS-RM-001 · 2026-06-30 · Sélection et import des concurrents directs dans le RM
+
+1. **Choix** : 18 nouveaux concurrents ajoutés via `/api/rm-competitors/import-listings` (UPSERT) pour les 6 biens actifs — sélectionnés par Firecrawl `site:airbnb.fr` + critères capacité/zone/type.
+2. **Alternatives refusées** : import manuel via l'UI admin (lent) ; remplacer les existants (risque de perte de snapshots de prix déjà collectés).
+3. **Conséquences attendues** : le scan Firecrawl du lundi suivant couvrira ~50 % de concurrents supplémentaires par bien. Les signaux marché seront recalculés automatiquement. Le prochain scan Mabouya aura 4 studios directs à surveiller (était 0 studios pertinents).
+4. **Périmètre** : D1 `rm_competitor_listings` / `rm_competitor_sets` (données seulement, aucun code modifié).
+5. **Statut** : acté — données en prod, scan auto lundi.
+
 ## ADR-NOTE-IMPACT-UI-001 · 2026-06-30 · Boucle feedback agents : note d'impact dans AgentsKanban
 
 1. **Choix** : champ textarea "💡 Note d'impact" ajouté dans la card d'action (visible si status=fait + expanded). Sauvegarde PATCH `/api/agents-actions?id=X {user_note}` on blur, pre-chargé depuis `action_outcomes.user_note`.

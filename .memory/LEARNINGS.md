@@ -3,6 +3,17 @@
 > Pièges déjà rencontrés + comment les éviter. 1 entrée = 1 leçon actionnable « la prochaine fois ».
 > Le journal d'erreurs exhaustif reste `../docs/ERREURS-LOG.md`.
 
+## 🏠 Firecrawl airbnb.fr → fichier toujours trop gros — 2026-06-30
+- **Piège** : `firecrawl_search site:airbnb.fr` retourne des fichiers de 100-260 k chars → overflow automatique dans un fichier texte, jamais lisible directement.
+- **La prochaine fois** : grep le fichier résultant immédiatement — `grep -oE "https://www.airbnb.fr/rooms/[0-9]+"` pour extraire les URLs, puis `grep -B5 "room_id"` pour les titres. Ne jamais lire le fichier en entier.
+
+## 🚫 Ton propre listing peut apparaître dans une recherche concurrent — 2026-06-30
+- **Piège** : lors du search Mabouya jacuzzi, le premier résultat était `rooms/1046596752160926069` = "Mabouya | Jacuzzi privatif" = le listing Airbnb de Vincent lui-même.
+- **La prochaine fois** : avant d'ajouter un concurrent, vérifier que le nom ne correspond pas à un bien de la résidence (Amaryllis / Iguana / Zandoli / Géko / Mabouya / Schœlcher / Nogent).
+
+## 🔄 `import-listings` est un UPSERT sûr — 2026-06-30
+- **Fait** : `/api/rm-competitors/import-listings` fait un `COALESCE((SELECT id ... WHERE property_id=? AND platform_listing_id=?), ?)` → si le listing existe déjà, il est mis à jour sans perte des snapshots de prix liés. Safe à relancer plusieurs fois.
+
 ## 🔍 Vérifier le code AVANT d'implémenter une "amélioration" — 2026-06-29
 - **Piège** : proposer 7 améliorations SEO/perf → 5/7 étaient déjà en place (FAQ Schema, preload hero, Fonts preconnect+swap, Nogent SEO). Implémenter sans vérifier = travail en double ou régression.
 - **La prochaine fois** : grep/read EN PARALLÈLE pour chaque item avant de coder. 5 min de vérif évitent 30 min de "fix" inutile.

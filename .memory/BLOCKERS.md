@@ -4,6 +4,8 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
+## En cours → ✅ terminé le 2026-06-30 (Veille concurrentielle RM — sélection + import 18 concurrents)
+
 ## En cours → ✅ terminé le 2026-06-30 (Cerveau AGENDA cleanup + UI note d'impact agents)
 
 ## En cours → ✅ terminé le 2026-06-29 (Header SEO + conversion + iguana noindex + aggregateRating home)
