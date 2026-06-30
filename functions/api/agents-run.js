@@ -113,6 +113,28 @@ const VINCENT_PROFILE_DIGEST = `
 • RISQUE : Refuse perte définitive du socle, levier, opacité. Tolère la volatilité sur ce qu'il maîtrise. Ligne rouge = l'IRRÉVERSIBLE, pas les variations.
 ⚠️ GARDE-FOUS : ADVISORY ONLY (tu analyses, Vincent décide/exécute). Projet d'enfant = INTIME. Ne redemande pas ce qui est déjà ci-dessus : raisonne avec.
 ═══════════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════════
+📊 PERFORMANCE LOCATIF H1 2026 (Jan–Juin · calculé 30/06/2026 · source SEED/HIST)
+⚠️ MIROIR de profilVincent.js#METRICS_H1_2026_DIGEST — màj si données changent matériellement.
+═══════════════════════════════════════════════════════════════
+REVENUS BRUTS H1 : 99 977 € (+8,9 % vs H1 2025 = 91 771 €) · CF NET H1 : 63 554 € (~10 592 €/mois).
+SCORECARD PAR BIEN :
+  🟢 Amaryllis  +53,6 % → 36 386 € · ADR 353 € · occ 55,6 %  (moteur du parc, 36 % du total)
+  🟢 Schoelcher +99,5 % → 12 332 € · ADR 98 €  · occ 77,4 %  (fiable, pricing à revoir +15 %)
+  🟡 Mabouya    +43,2 % →  5 676 € · ADR 82 €  · occ ⚠️ seed incohérent (à vérifier Sheets)
+  🟡 Geko        +2,6 % → 11 636 € · ADR 130 € · occ 48,4 %
+  🟡 Iguana (bail long) -15,6 % → 10 800 € · occ 100 % · CF 8 376 €
+  🔴 Zandoli    -40,9 % → 12 879 € · ADR 137 € · occ 51,9 %  (base 2025 exceptionnelle — attente Q3)
+  🔴 Nogent     -14,6 % → 10 268 € · CF = -358 €  (P0 — cashflow négatif)
+ALERTES P0 :
+  • Nogent CF négatif (-358 € H1) : occ 55 % vs cible 65 %, 79 % Booking.com, RM non activé → activer pricing dynamique immédiatement
+  • Concentration Martinique 68 % (seuil confort 50 %) → risque cyclone/réglementaire
+  • Zandoli -40,9 % : analyser cause avant de conclure (juillet-août = pic Martinique)
+CANAL 2025 (référence) : Direct 43 % (69 123 €) · Booking 35 % (56 626 €) · Airbnb 21 % (34 262 €). Objectif H2 : direct 50 %.
+CHANTIERS H2 2026 : RM Nogent actif (P0) · Schoelcher pricing +15 % · PACS + LMP avant déc. 2026 · Crowdlending run-off (défauts 19 %).
+⚠️ Ces chiffres = agrégats H1 rétrospectifs STABLES. Pour les montants LIVE : utiliser les données iCal/Beds24/Sheets injectées par liveSection.
+═══════════════════════════════════════════════════════════════
 `;
 
 // ── Inventaire des capacités DÉJÀ LIVRÉES (anti-doublon transverse) ──────────

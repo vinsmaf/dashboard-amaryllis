@@ -3,6 +3,18 @@
 > Pièges déjà rencontrés + comment les éviter. 1 entrée = 1 leçon actionnable « la prochaine fois ».
 > Le journal d'erreurs exhaustif reste `../docs/ERREURS-LOG.md`.
 
+## 🔍 Vérifier le code AVANT d'implémenter une "amélioration" — 2026-06-29
+- **Piège** : proposer 7 améliorations SEO/perf → 5/7 étaient déjà en place (FAQ Schema, preload hero, Fonts preconnect+swap, Nogent SEO). Implémenter sans vérifier = travail en double ou régression.
+- **La prochaine fois** : grep/read EN PARALLÈLE pour chaque item avant de coder. 5 min de vérif évitent 30 min de "fix" inutile.
+
+## 🔗 Logo header = `<a href="/">`, jamais `<button onClick>` — 2026-06-29
+- **Piège** : logo en `<button onClick>` → Google ne suit pas les onClick JS, aucun PageRank transmis vers la home.
+- **La prochaine fois** : tout élément nav qui pointe vers une URL = `<a href>`. Si le bouton ouvre aussi un dropdown, séparer le `<a>` du bouton `▾`.
+
+## 🤖 noindex = double couche (prerender statique + runtime Functions) — 2026-06-29
+- **Piège** : CF Pages Functions exécute `injectMeta()` à chaque requête et peut écraser un `<meta robots>` injecté uniquement par prerender.
+- **La prochaine fois** : tout meta critique (noindex, canonical) = injecté dans les DEUX couches. Sinon survivance non garantie selon le chemin de serving CF Pages.
+
 ## 🔧 manualChunks vite + lazy() = piège Rolldown (leaflet sur critical path) — 2026-06-29
 - **Piège** : épingler un paquet dans `manualChunks` (ex. `"leaflet"`) force Rolldown à créer une référence statique depuis l'entry chunk pour satisfaire le graphe de modules — même si tous les imports consommateurs sont derrière `lazy()`. Résultat : modulepreload + CSS render-blocking sur toutes les pages.
 - **La prochaine fois** : ne pas mettre dans `manualChunks` les paquets qui sont UNIQUEMENT importés par des composants lazy. Les laisser suivre naturellement leurs chunks lazy. Vérifier : `grep "leaflet" dist/index.html` après build → doit retourner 0.
@@ -693,6 +705,18 @@
 - **CI smoke test : ne jamais tester un endpoint qui dépend d'un secret externe** (OpenWeatherMap) sur l'alias preview CF Pages. Les secrets CF Pages ne s'appliquent qu'à l'env `production`. Tester uniquement les routes statiques React (/ et /amaryllis) dans la CI ; les APIs avec clés externes = test depuis prod directement (curl post-deploy manuel si nécessaire).
 - **Token API Cloudflare pour CI** : doit avoir les 2 permissions `Cloudflare Pages: Edit` + `Workers Scripts: Edit`. Le token existant `amaryllis` (Workers AI + Account Settings) est insuffisant pour déployer.
 - **Git push origin main déclenche la CI** — mais origin/main était ~100 commits en retard depuis des mois. Penser à pusher régulièrement pour ne pas accumuler ce delta.
+
+## 📅 AGENDA = engagements humains datés seulement, jamais de récurrences auto — 2026-06-30
+- **Piège** : 31 items `[QA hebdo/mensuel]` pour des crons automatiques ajoutés dans AGENDA.md → hook session-brain les injectait à T-7j chaque session pendant 6 mois.
+- **La prochaine fois** : avant d'ajouter dans AGENDA.md, vérifier : "Est-ce une action que VINCENT doit faire à une date précise ?" Non → zéro entrée AGENDA. Documenter dans le Worker/cron lui-même.
+
+## 🔄 Hook auto-commit brain = ne pas re-commiter après Edit mémoire — 2026-06-30
+- **Piège** : après Edit sur `~/.claude/memory/AGENDA.md`, tentative de `git commit` → "nothing to commit" — le hook PostToolUse auto-brain avait déjà tout commité instantanément.
+- **La prochaine fois** : après Edit d'un fichier `~/.claude/memory/`, le hook a déjà commité. Juste `git push` si nécessaire pour envoyer sur remote.
+
+## ⚛️ React prop async + local state : `useEffect` de synchro obligatoire — 2026-06-30
+- **Cas** : note d'impact initialisée depuis `userNote` prop (chargé depuis API). Après changement de statut → `load()` recharge → `userNote` change → local state `note` doit se resynchroniser.
+- **La prochaine fois** : `useEffect(() => { setNote(userNote || ""); }, [userNote])` à côté de `useState(userNote || "")`. Sans cet effet, le state local reste "stale" même après re-fetch parent.
 
 ## 🤖 Recos agents ignorées : toujours envoyer le "pourquoi" à l'agent — 2026-06-25
 - **Règle** : quand on ignore une reco d'agent, relancer cet agent avec un `brief` expliquant pourquoi → il apprend et affine ses prochaines recos.

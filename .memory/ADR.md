@@ -3,6 +3,39 @@
 > 1 entrée par décision qui engage la suite. Format 5 lignes : **Choix · Alternatives refusées · Conséquences attendues · Périmètre · Statut**.
 > Décisions d'archi détaillées (specs complets) → `../docs/superpowers/specs/README.md` (ADR-001→010). Ici = log curaté de session.
 
+## ADR-NOTE-IMPACT-UI-001 · 2026-06-30 · Boucle feedback agents : note d'impact dans AgentsKanban
+
+1. **Choix** : champ textarea "💡 Note d'impact" ajouté dans la card d'action (visible si status=fait + expanded). Sauvegarde PATCH `/api/agents-actions?id=X {user_note}` on blur, pre-chargé depuis `action_outcomes.user_note`.
+2. **Alternatives refusées** : popup modale (plus de friction) ; fichier séparé (pas en ligne avec l'action, jamais rempli).
+3. **Conséquences attendues** : agents peuvent cross-référencer les notes dans `agent_memory` → recos futures mieux calibrées. Cron hebdo peut inclure les notes dans le rapport ntfy.
+4. **Périmètre** : `src/AgentsKanban.jsx` · `functions/api/agents-actions.js` · D1 `action_outcomes.user_note`.
+5. **Statut** : acté (commit `e7da44e`, 2026-06-30).
+
+## ADR-AGENDA-RECURRENTS-001 · 2026-06-30 · AGENDA = engagements humains datés seulement
+
+1. **Choix** : `AGENDA.md` ne contient QUE des engagements humains ponctuels à date précise (deadline, action externe, vérification future). Zéro récurrence automatique (cron, QA hebdo/mensuel, routine).
+2. **Alternatives refusées** : garder 31 items QA récurrents dans l'AGENDA et cocher `[x]` chaque semaine → trop de friction + pollution du hook session-brain (injecte tout à T-7j).
+3. **Conséquences attendues** : hook session-brain propre → seuls les vrais engagements remontent. Crons QA gérés par le cron Worker (lun 6h UTC / 1er 1h UTC). Un seul item `[QA semestriel]` reste (2026-10-01).
+4. **Périmètre** : `~/.claude/memory/AGENDA.md`.
+5. **Statut** : acté (2026-06-30). Règle à appliquer avant toute future insertion.
+
+
+## ADR-HEADER-SEO-001 · 2026-06-29 · Header : logo crawlable + nav sémantique + CTA RÉSERVER + noindex Iguana
+
+1. **Choix** : Refactoring chirurgical du header public — (a) logo `<button>` → `<a href="/">` + chevron `▾` séparé ; (b) PropertyDropdown `<button>` → `<a href="/{b.id}">` pour les 7 fiches ; (c) bouton RÉSERVER coral dans la barre sticky (toujours visible) ; (d) `<nav aria-label="Navigation principale">` ; (e) backdrop blur initial supprimé (fond plein) ; (f) CSS media query `.header-nav-link` remplace `window.innerWidth` inline.
+2. **Alternatives refusées** : (A) dropdown JS avec onClick seul (non crawlable, perdant pour SEO) ; (B) hydratation serveur-side (trop lourd, pas dans la stack) ; (C) ne pas ajouter CTA header (conversion laissée sur la table).
+3. **Conséquences attendues** : Google peut crawler les 7 fiches biens depuis la nav header → PageRank distribué. CTR amélioré via CTA sticky. INP amélioré (blur GPU supprimé).
+4. **Périmètre** : `src/PublicSite.jsx` (LogoDropdown, PropertyDropdown, header). Commit `c580e8f`.
+5. **Statut** : acté & déployé.
+
+## ADR-SEO-IGUANA-RATING-001 · 2026-06-29 · Iguana noindex + aggregateRating LodgingBusiness home
+
+1. **Choix** : (a) Iguana `/iguana` → `noindex, nofollow` sur 2 couches (prerender statique + runtime Functions) car bail long Joël Bailleul, non bookable en courte durée → confus pour Google et visiteurs ; (b) `LodgingBusiness` dans le `RENTALS_GRAPH` de la home enrichi d'un `aggregateRating` calculé dynamiquement (moyenne pondérée biens.js : 4.78★ / 132 avis).
+2. **Alternatives refusées** : (A) noindex uniquement prerender (le runtime Functions écrase le <head> → injecté sur les 2 couches) ; (B) note globale codée en dur (périme dès qu'un avis change → calculée depuis CANON au build) ; (C) ne pas noindexer (gaspillage crawl budget + UX trompeuse).
+3. **Conséquences attendues** : déindexation Iguana dans 2-4 semaines. Étoiles Google sur "Amaryllis Locations" dans la SERP dans 4-6 semaines.
+4. **Périmètre** : `scripts/prerender.mjs` (route iguana + buildRentalsGraph), `functions/[slug].js` (noindex runtime). Commit `f2253a6`.
+5. **Statut** : acté & déployé.
+
 ## ADR-AUDIT-PROD-001 · 2026-06-29 · Passe adversariale ultracode 24 findings → architecture de correction
 
 1. **Choix** : Session ultracode (38 agents, 2,86M tokens, 8 dimensions + vérification adversariale) pour identifier puis corriger les 24 findings confirmés en prod — traités un par un avec explication, sans skip. La démarche adversariale (agent sceptique lit le code avant de confirmer) a éliminé 6 faux positifs (secrets GA4, preload, srcset, dimensions, hreflang, JSON-LD duplicate).

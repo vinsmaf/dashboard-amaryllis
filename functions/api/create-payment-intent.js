@@ -3,7 +3,7 @@
 // Enregistre un "panier" en D1 dès la création du PaymentIntent.
 // Sert à la relance panier abandonné (cron send-relance-panier) si le paiement
 // n'aboutit pas. Fail-silent : ne bloque jamais la création du PaymentIntent.
-async function storeAbandonedCart(env, paymentIntentId, m = {}) {
+async function storeAbandonedCart(env, paymentIntentId, m = {}, amountCents = 0) {
   const db = env.revenue_manager;
   const email = String(m.email || "").trim();
   if (!db || !paymentIntentId || !email.includes("@") || !m.checkin) return;
@@ -13,19 +13,21 @@ async function storeAbandonedCart(env, paymentIntentId, m = {}) {
       bien_id TEXT, type TEXT, logements TEXT, checkin TEXT, checkout TEXT,
       guests TEXT, phone TEXT, created_at INTEGER NOT NULL DEFAULT (unixepoch()),
       relance_sent INTEGER DEFAULT 0)`).run();
-    // Migration idempotente : ajoute phone aux tables créées avant ce champ (RM-10 — capture
-    // du tél des NON-acheteurs pour relance). Le tél reste optionnel (NULL si non saisi).
-    try { await db.prepare(`ALTER TABLE abandoned_carts ADD COLUMN phone TEXT`).run(); } catch { /* colonne déjà présente */ }
+    // Migrations idempotentes
+    try { await db.prepare(`ALTER TABLE abandoned_carts ADD COLUMN phone TEXT`).run(); } catch { /* déjà présente */ }
+    try { await db.prepare(`ALTER TABLE abandoned_carts ADD COLUMN amount_eur INTEGER DEFAULT 0`).run(); } catch { /* déjà présente */ }
     const prenom = String(m.voyageur || "").trim().split(/\s+/)[0] || "";
+    const amountEur = Math.round((amountCents || 0) / 100);
     await db.prepare(`INSERT INTO abandoned_carts
-        (payment_intent_id, email, prenom, bien_id, type, logements, checkin, checkout, guests, phone)
-      VALUES (?,?,?,?,?,?,?,?,?,?)
+        (payment_intent_id, email, prenom, bien_id, type, logements, checkin, checkout, guests, phone, amount_eur)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?)
       ON CONFLICT(payment_intent_id) DO UPDATE SET
         email=excluded.email, prenom=excluded.prenom, bien_id=excluded.bien_id,
         type=excluded.type, logements=excluded.logements,
         checkin=excluded.checkin, checkout=excluded.checkout, guests=excluded.guests,
-        phone=COALESCE(excluded.phone, abandoned_carts.phone)`)
-      .bind(paymentIntentId, email, prenom, m.bienId || "", m.type || "", m.logements || "", m.checkin || "", m.checkout || "", m.guests || "", String(m.phone || "").trim() || null).run();
+        phone=COALESCE(excluded.phone, abandoned_carts.phone),
+        amount_eur=excluded.amount_eur`)
+      .bind(paymentIntentId, email, prenom, m.bienId || "", m.type || "", m.logements || "", m.checkin || "", m.checkout || "", m.guests || "", String(m.phone || "").trim() || null, amountEur).run();
   } catch (e) { console.error("[cart] D1:", e.message); }
 }
 
@@ -145,7 +147,7 @@ export async function onRequestPost(context) {
       checkout: metadata.checkout || "",
       ts: new Date().toISOString(),
     }));
-    await storeAbandonedCart(env, parsed.id, metadata).catch(() => {});
+    await storeAbandonedCart(env, parsed.id, metadata, amount).catch(() => {});
     return json({ clientSecret: parsed.client_secret, customerId });
   } catch (err) {
     console.error(JSON.stringify({

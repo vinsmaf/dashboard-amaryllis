@@ -4,6 +4,10 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
+## En cours → ✅ terminé le 2026-06-30 (Cerveau AGENDA cleanup + UI note d'impact agents)
+
+## En cours → ✅ terminé le 2026-06-29 (Header SEO + conversion + iguana noindex + aggregateRating home)
+
 ## En cours → ✅ terminé le 2026-06-29 (Audit prod ultracode 24 findings + session tracking + LLM)
 
 ## En cours → ✅ terminé le 2026-06-29 (Session tracking + LLM + backlog agents)

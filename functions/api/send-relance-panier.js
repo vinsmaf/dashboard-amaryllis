@@ -10,8 +10,8 @@
 // Cron-job.org : GET https://villamaryllis.com/api/send-relance-panier?secret=<SECRET> toutes les heures.
 //
 // Séquence 2 relances :
-//   Relance 1 (J+1) : relance_sent=0 + panier âgé 3h–72h  → relance_sent=1
-//   Relance 2 (J+3) : relance_sent=1 + panier âgé 48h–96h → relance_sent=3
+//   Relance 1 (30 min) : relance_sent=0 + panier âgé 30min–72h  → relance_sent=1
+//   Relance 2 (J+3)    : relance_sent=1 + panier âgé 48h–96h    → relance_sent=3
 // La fenêtre étendue à 72h évite de rater les paniers si le cron saute une heure.
 
 import { sendGuestEmail } from "./send-guest-email.js";
@@ -23,8 +23,21 @@ const json = (d, s = 200) => new Response(JSON.stringify(d), {
 const NOMS = {
   amaryllis: "Villa Amaryllis", iguana: "Villa Iguana", zandoli: "Zandoli",
   geko: "Géko", mabouya: "Mabouya", bellevue: "Appartement Bellevue",
-  schoelcher: "Appartement Bellevue", nogent: "Appartement Nogent", groupe: "Résidence Amaryllis",
+  schoelcher: "Bellevue Schœlcher", nogent: "Appartement Nogent", groupe: "Résidence Amaryllis",
 };
+
+// Preuve sociale par bien (source : src/data/biens.js — mettre à jour à chaque maj)
+const RATINGS = {
+  amaryllis: { note: "4,9", avis: "33" },
+  zandoli:   { note: "4,5", avis: "16" },
+  geko:      { note: "4,8", avis: "24" },
+  mabouya:   { note: "4,6", avis: "11" },
+  schoelcher:{ note: "4,8", avis: "30" },
+  nogent:    { note: "4,8", avis: "18" },
+};
+
+// Frais de service Airbnb voyageur ≈ 14 % — économie directe
+const AIRBNB_FEE_RATE = 0.14;
 
 const SITE = "https://villamaryllis.com";
 
@@ -43,8 +56,8 @@ function lienReprise(c) {
   return `${SITE}/${bien}?${q.toString()}`;
 }
 
-// Relance 1 : 3h → 72h après création
-const R1_MIN = 3 * 3600;
+// Relance 1 : 30 min → 72h après création (fenêtre large = rattrape si cron saute)
+const R1_MIN = 30 * 60;
 const R1_MAX = 72 * 3600;
 // Relance 2 : 48h → 96h après création (envoyée seulement si relance 1 déjà faite)
 const R2_MIN = 48 * 3600;
@@ -66,7 +79,10 @@ export async function onRequestGet(context) {
       guests TEXT, created_at INTEGER NOT NULL DEFAULT (unixepoch()),
       relance_sent INTEGER DEFAULT 0)`).run();
 
-    // Candidats relance 1 : jamais relancés, dans la fenêtre 3h–72h
+    // Migration idempotente si table existe sans amount_eur
+    try { await db.prepare(`ALTER TABLE abandoned_carts ADD COLUMN amount_eur INTEGER DEFAULT 0`).run(); } catch { /* déjà présente */ }
+
+    // Candidats relance 1 : jamais relancés, dans la fenêtre 30min–72h
     const { results: cands1 } = await db.prepare(
       `SELECT rowid AS rid, * FROM abandoned_carts
        WHERE relance_sent = 0 AND email IS NOT NULL AND email != ''
@@ -99,6 +115,32 @@ export async function onRequestGet(context) {
         ? (c.logements || "Résidence Amaryllis")
         : (NOMS[c.bien_id] || "votre logement");
 
+      // Preuve sociale
+      const rating = RATINGS[c.bien_id] || { note: "4,8", avis: "20" };
+
+      // Prix et économie directe vs Airbnb
+      const prixTotal = c.amount_eur > 0 ? c.amount_eur : null;
+      const savings = prixTotal ? Math.round(prixTotal * AIRBNB_FEE_RATE) : null;
+      const prixStr = prixTotal ? `${prixTotal.toLocaleString("fr-FR")} €` : "";
+      const savingsStr = savings ? `${savings} €` : "";
+
+      // Blocs HTML conditionnels (le moteur de templates ne supporte que {{var}})
+      const prixBlock = prixTotal
+        ? `<tr><td style="font-size:18px; color:#1f2a3d; font-weight:bold; padding-top:4px;">Total : ${prixStr}</td></tr>`
+        : "";
+      const savingsBlock = savings
+        ? `<tr><td style="padding:12px 32px 8px 32px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#1f2a3d; border-radius:8px;">
+<tr><td style="padding:16px 20px; font-size:15px; color:#fffdf8; line-height:1.7;">
+<span style="font-size:13px; color:#c47254; letter-spacing:2px; text-transform:uppercase; display:block; margin-bottom:8px;">Pourquoi réserver en direct ?</span>
+✓ &nbsp;Vous économisez <strong style="color:#c47254;">~${savingsStr}</strong> de frais de service Airbnb<br>
+✓ &nbsp;Paiement sécurisé Stripe, confirmation immédiate<br>
+✓ &nbsp;Contact direct avec l'équipe en cas de question
+</td></tr>
+</table>
+</td></tr>`
+        : "";
+
       // Relance 2 : sujet légèrement différent pour éviter les filtres anti-spam
       const subject = relanceNum === 2
         ? `${c.prenom ? c.prenom + ", " : ""}vos dates au ${bienNom} sont encore disponibles`
@@ -114,6 +156,10 @@ export async function onRequestGet(context) {
           checkin: c.checkin || "",
           checkout: c.checkout || "",
           lien_reprise: lienReprise(c),
+          prix_block: prixBlock,
+          savings_block: savingsBlock,
+          note_google: rating.note,
+          avis_count: rating.avis,
           unsubscribe: "mailto:contact@villamaryllis.com?subject=Desabonnement%20relances",
         },
       });
