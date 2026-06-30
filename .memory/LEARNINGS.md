@@ -3,6 +3,12 @@
 > Pièges déjà rencontrés + comment les éviter. 1 entrée = 1 leçon actionnable « la prochaine fois ».
 > Le journal d'erreurs exhaustif reste `../docs/ERREURS-LOG.md`.
 
+## 🎯 Google Ads via automatisation Chrome — toujours réauditer après publication — 2026-06-30
+- **Piège** : le wizard de création de campagne Google Ads peut crasher silencieusement ("Un problème est survenu") et perdre le brouillon entièrement (campagne disparue de Brouillons ET Campagnes) sans message d'erreur clair. Pire : même une fois republiée avec succès, des champs configurés pendant le wizard peuvent diverger une fois la campagne réellement live — vécu sur "Géko - Location Martinique" : la case "Limite d'enchère au CPC maximale" était décochée (alors que cochée+remplie pendant le wizard) et la zone géographique avait "France" en plus de "Canada" (jamais demandé).
+- **La prochaine fois** : ne JAMAIS faire confiance à ce qui a été saisi pendant le wizard de création. Après publication, toujours rouvrir la campagne et auditer champ par champ via les sous-pages dédiées (Paramètres de la campagne, Zones, Langues, Mots clés, Annonces, Groupes d'annonces) — pas juste la page de vérification finale du wizard qui peut afficher des résumés obsolètes ("Annonces: Aucune" alors que les annonces existent bien).
+- **Piège secondaire** : un retry après crash peut créer des **doublons silencieux** (2 groupes d'annonces quasi-identiques sur Géko) — vérifier aussi la structure (nb de groupes d'annonces) pas seulement le contenu des champs.
+- **Popup "Confirmez votre identité"** apparaît systématiquement au moment de publier/sauvegarder certaines actions sensibles — Claude ne peut jamais la valider (règle absolue), il faut la passer la main à Vincent et reprendre la vérification après.
+
 ## 🏠 Firecrawl airbnb.fr → fichier toujours trop gros — 2026-06-30
 - **Piège** : `firecrawl_search site:airbnb.fr` retourne des fichiers de 100-260 k chars → overflow automatique dans un fichier texte, jamais lisible directement.
 - **La prochaine fois** : grep le fichier résultant immédiatement — `grep -oE "https://www.airbnb.fr/rooms/[0-9]+"` pour extraire les URLs, puis `grep -B5 "room_id"` pour les titres. Ne jamais lire le fichier en entier.

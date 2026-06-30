@@ -4,6 +4,18 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
+## En cours
+- **Tâche** : Campagne Google Ads "Géko - Location Martinique" (Réseau de Recherche)
+- **Étape** : Campagne publiée et **mise en veille** (pause) — config auditée champ par champ et 2 erreurs corrigées (CPC max + zone géo). 1 point restant non résolu : présence de 2 groupes d'annonces dupliqués.
+- **Prochaine action** : ouvrir Google Ads → campagne Géko → Groupes d'annonces → comparer le contenu des 2 groupes ("Groupe d'annonces 1" et "Groupe d'annonces 2", tous deux pointent vers villamaryllis.com/geko) → supprimer le doublon, garder un seul groupe → puis demander à Vincent de réactiver quand prêt.
+- **Fichiers ouverts** : aucun (travail 100% dans l'UI Google Ads, pas de code)
+- **Contexte critique** : (1) campaignId=23983721226. (2) Statut **doit rester En veille** tant que Vincent n'a pas explicitement validé l'activation (argent réel). (3) Toute republication/édition via le wizard Google Ads doit être réauditée ensuite — voir LEARNINGS.
+
+## 🟡 Géko Ads — 2 groupes d'annonces dupliqués à nettoyer
+- **Statut** : la campagne "Géko - Location Martinique" (campaignId=23983721226) a 2 groupes d'annonces quasi-identiques, créés lors d'un retry après crash du wizard de création.
+- **Action** : avant d'activer la campagne, comparer le contenu des 2 groupes et supprimer le doublon (garder le plus complet/cohérent).
+- **Ce qui débloque** : 5 minutes de vérification manuelle dans Google Ads.
+
 ## En cours → ✅ terminé le 2026-06-30 (Veille concurrentielle RM — sélection + import 18 concurrents)
 
 ## En cours → ✅ terminé le 2026-06-30 (Cerveau AGENDA cleanup + UI note d'impact agents)
@@ -52,11 +64,7 @@
 > - Géko airbnb juin : 378.3€ → **698.3€** (Esméralda 320€ + Rabia 378.3€) ✅
 > - Zandoli booking août : 0€ → **820.78€** (Booking iCal sans montant, saisi manuellement) ✅
 > - Amaryllis booking déc : 2805.08€ → **0€** (résa annulée + supprimée du Sheet, memo empêche re-sync) ✅
-> 🟡 **Schœlcher direct juillet = 2585.71€ → PENDING** : valeur actuelle incohérente (Morgane prorata-by-nights rejeté). Vincent doit trancher :
->   - Option A : **1600€** (Éléonore BEVON uniquement, juillet = hors de la période Morgane divisée sur 3 mois)
->   - Option B : **2575€** (1600€ Éléonore + 975€ Morgane si division sur 4 mois avr/mai/juin/juil)
->   Commande : `POST /api/sheets-proxy {"action":"revenus2026ManualPatch","bien":"schoelcher","canal":"direct","month":7,"value":1600,"mode":"set"}` (ou 2575 selon choix)
-> Aucun commit repo (changements uniquement Apps Script via clasp, déploiement @71).
+> Schœlcher direct juillet : **1600€** ✅ (Éléonore BEVON uniquement — Option A retenue par Vincent le 2026-07-01).
 
 ## ✅ Schœlcher direct juillet — 2585.71€ → 1600€ (Éléonore BEVON uniquement, 2026-06-26)
 
