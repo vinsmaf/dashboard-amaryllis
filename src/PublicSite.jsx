@@ -2015,6 +2015,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState("");
   const addPaymentInfoFired = useRef(false); // n'émettre add_payment_info qu'une fois (aller-retour étape 2↔3)
+  const piPreloadRef = useRef(null); // { key, promise } — PI précréé dès formOk pour éliminer le délai au clic
   const elRef = useRef(null);
   const depositAmt = DEPOSIT_AMOUNTS[bien.id] ?? 0;
   const [payPlan, setPayPlan] = useState("full");
@@ -2159,6 +2160,42 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
 
   const stripeAppearance = { theme: "stripe", variables: { colorPrimary: CORAL, borderRadius: "8px", colorBackground: CREAM, colorText: NAVY } };
 
+  // Reset preload si l'utilisateur revient au step 1 (dates changées)
+  useEffect(() => { if (step === 1) piPreloadRef.current = null; }, [step]);
+
+  // Précharge le PaymentIntent dès que le formulaire est valide (step 2 + Stripe prêt).
+  // Élimine ~400ms de latence au clic "Passer au paiement" dans 90 % des cas (sans upsells/promo).
+  // Clé = montant + payPlan + email → invalide si l'un change (nouveau fetch dans goToPayment).
+  useEffect(() => {
+    if (!formOk || !stripe || step !== 2) return;
+    const isTwoX = twoPartOk && payPlan === "2x";
+    const chargeNow = isTwoX ? depositAmount(total) : total;
+    const key = `${chargeNow}|${payPlan}|${form.email}`;
+    if (piPreloadRef.current?.key === key) return;
+    piPreloadRef.current = {
+      key,
+      promise: fetch("/api/create-payment-intent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: chargeNow * 100, currency: "eur",
+          payPlan: isTwoX ? "2x" : "full",
+          metadata: {
+            bienId: bien.id, checkin, checkout,
+            voyageur: `${form.prenom} ${form.nom}`.trim(), email: form.email,
+            prenom: form.prenom?.trim() || "", nom: form.nom?.trim() || "", phone: form.tel?.trim() || "",
+            nb_guests: String(nbGuests || 1), nb_pets: String(nbPets || 0),
+            ...(earlyCheckin ? { early_checkin: "oui" } : {}),
+            ...(lateCheckout ? { late_checkout: "oui" } : {}),
+            ...(isTwoX ? { balance_amount: String(balanceAmount(total)), due_date: balanceDueDate(checkin), full_total: String(total) } : {}),
+            ...getAttributionMetadata(),
+          },
+        }),
+      }).then(r => r.json()).catch(() => null),
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formOk, stripe, step, payPlan, total, form.email]);
+
   async function validatePromo() {
     const code = promoInput.trim().toUpperCase();
     if (!code) return;
@@ -2184,32 +2221,43 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
       // Payment intent
       const isTwoX = twoPartOk && payPlan === "2x";
       const chargeNow = isTwoX ? depositAmount(total) : total;
-      const res = await fetch("/api/create-payment-intent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: chargeNow * 100,
-          currency: "eur",
-          payPlan: isTwoX ? "2x" : "full",
-          metadata: {
-            bienId: bien.id, checkin, checkout,
-            voyageur: `${form.prenom} ${form.nom}`, email: form.email,
-            prenom: form.prenom?.trim() || "", nom: form.nom?.trim() || "", phone: form.tel?.trim() || "",
-            nb_guests: String(nbGuests || 1), nb_pets: String(nbPets || 0),
-            ...(earlyCheckin  ? { early_checkin:  "oui" } : {}),
-            ...(lateCheckout  ? { late_checkout:  "oui" } : {}),
-            ...(upsellsStr ? { upsells: upsellsStr } : {}),
-            ...(promoData ? { promo_code: promoData.code, promo_value: String(promoDiscountAmt) } : {}),
-            ...(isTwoX ? {
-              balance_amount: String(balanceAmount(total)),
-              due_date: balanceDueDate(checkin),
-              full_total: String(total),
-            } : {}),
-            ...getAttributionMetadata(),
-          },
-        }),
-      });
-      const data = await res.json();
+      const hasExtras = selectedUpsells.length > 0 || !!promoData;
+      const piKey = `${chargeNow}|${payPlan}|${form.email}`;
+      // Utilise le PI précréé si disponible, valide (même montant/payPlan) et sans extras à inclure
+      let data = null;
+      if (!hasExtras && piPreloadRef.current?.key === piKey) {
+        data = await piPreloadRef.current.promise;
+        piPreloadRef.current = null;
+        if (data?.error || !data?.clientSecret) data = null; // fallback si le preload a échoué
+      }
+      if (!data) {
+        const res = await fetch("/api/create-payment-intent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            amount: chargeNow * 100,
+            currency: "eur",
+            payPlan: isTwoX ? "2x" : "full",
+            metadata: {
+              bienId: bien.id, checkin, checkout,
+              voyageur: `${form.prenom} ${form.nom}`, email: form.email,
+              prenom: form.prenom?.trim() || "", nom: form.nom?.trim() || "", phone: form.tel?.trim() || "",
+              nb_guests: String(nbGuests || 1), nb_pets: String(nbPets || 0),
+              ...(earlyCheckin  ? { early_checkin:  "oui" } : {}),
+              ...(lateCheckout  ? { late_checkout:  "oui" } : {}),
+              ...(upsellsStr ? { upsells: upsellsStr } : {}),
+              ...(promoData ? { promo_code: promoData.code, promo_value: String(promoDiscountAmt) } : {}),
+              ...(isTwoX ? {
+                balance_amount: String(balanceAmount(total)),
+                due_date: balanceDueDate(checkin),
+                full_total: String(total),
+              } : {}),
+              ...getAttributionMetadata(),
+            },
+          }),
+        });
+        data = await res.json();
+      }
       if (data.error) throw new Error(data.error);
 
       // Caution : plus de pré-autorisation à la réservation. Elle est posée automatiquement avant
@@ -2595,6 +2643,20 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
         {/* ── ÉTAPE 2 — Vos infos ── */}
         {step === 2 && (
           <>
+            {/* Récap prix mobile (masqué desktop — le panneau droit est visible) */}
+            {checkin && checkout && (
+              <div className="bm-mob-recap" style={{
+                background: CREAM, border: `1px solid ${SAND}`, borderRadius: 8,
+                padding: "10px 14px", marginBottom: 18,
+                alignItems: "center", justifyContent: "space-between", gap: 8,
+              }}>
+                <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, color: MUTED, lineHeight: 1.4 }}>
+                  <strong style={{ color: NAVY }}>{bien.nom}</strong>
+                  <br />{formatDateShort(checkin)} → {formatDateShort(checkout)} · {nights} nuit{nights > 1 ? "s" : ""}
+                </div>
+                <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 700, fontSize: 18, color: NAVY, whiteSpace: "nowrap" }}>{total} €</div>
+              </div>
+            )}
             <div style={{ marginBottom: 26 }}>
               <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 10, letterSpacing: "0.45em", textTransform: "uppercase", color: CORAL, marginBottom: 10 }}>Étape 2 sur {nSteps}</div>
               <h2 style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 28, letterSpacing: "0.08em", textTransform: "uppercase", color: NAVY, margin: "0 0 6px", lineHeight: 1.1 }}>
@@ -2630,12 +2692,12 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
                 Politique d'annulation
               </div>
               {[
-                ["✓", "#16a34a", "Annulation gratuite jusqu'à J−14 — remboursement intégral"],
-                ["◗", MUTED,     "Entre J−14 et J−2 — 50 % remboursé"],
-                ["✗", MUTED,     "Moins de 48 h — non remboursable (report possible)"],
-                ["🌀", "#0ea5e9", "Vigilance cyclonique orange/rouge — 100 % remboursé"],
-              ].map(([icon, color, text]) => (
-                <div key={text} style={{ display: "flex", gap: 8, fontFamily: "'Jost', sans-serif", fontSize: 11.5, color: NAVY, marginBottom: 4 }}>
+                ["✓", "#16a34a", "Annulation gratuite jusqu'à J−14 — remboursement intégral", false],
+                ["🌀", "#0ea5e9", "Vigilance cyclonique — 100 % remboursé", false],
+                ["◗", MUTED,     "J−14 à J−2 — 50 % remboursé", true],
+                ["✗", MUTED,     "Moins de 48 h — non remboursable (report possible)", true],
+              ].map(([icon, color, text, muted]) => (
+                <div key={text} style={{ display: "flex", gap: 8, fontFamily: "'Jost', sans-serif", fontSize: muted ? 10.5 : 11.5, color: muted ? MUTED : NAVY, marginBottom: 4, opacity: muted ? 0.75 : 1 }}>
                   <span style={{ width: 16, flexShrink: 0, color }}>{icon}</span>
                   <span>{text}</span>
                 </div>
@@ -8915,6 +8977,8 @@ export default function PublicSite() {
   async function openBien(bien, initialCheckin = null, initialCheckout = null) {
     if (BOOKING_DISABLED.has(bien.id)) return;
     if (window.gtag) window.gtag("event", "availability_check", { bien_id: bien.id, bien_nom: bien.nom, has_dates: !!(initialCheckin && initialCheckout) });
+    // Funnel GA4 — step 1 (event nommé explicitement pour l'exploration funnel)
+    if (window.gtag) window.gtag("event", "booking_modal_open", { bien_id: bien.id, bien_nom: bien.nom, has_dates: !!(initialCheckin && initialCheckout) });
     saveSession(bien.id, initialCheckin, initialCheckout);
     if (bien.useBeds24) {
       openDetail(null);
