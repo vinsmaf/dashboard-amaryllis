@@ -111,8 +111,8 @@ const PROVIDERS = {
 export const MODELS = {
   groq: {
     fast:    "llama-3.1-8b-instant",
-    medium:  "llama-3.3-70b-versatile",
-    smart:   "llama-3.3-70b-versatile",
+    medium:  "openai/gpt-oss-120b",  // remplace llama-3.3-70b-versatile (décommissionné 2026-08-16, annonce Groq)
+    smart:   "openai/gpt-oss-120b",
   },
   cloudflare: {
     fast:    "@cf/meta/llama-3.1-8b-instruct-fast",
@@ -159,7 +159,9 @@ const COST_RATES = {
   "deepseek-v4-pro":                           { in: 0.27,  out: 1.10  },
   "meta-llama/llama-3.3-70b-instruct:free":    { in: 0,     out: 0     },
   "meta-llama/llama-4-maverick:free":          { in: 0,     out: 0     },
-  "llama-3.3-70b-versatile":                  { in: 0.59,  out: 0.79  },
+  // llama-3.3-70b-versatile décommissionné 2026-08-16 (annonce Groq) → entrée retirée (plus appelé).
+  // ⚠️ "openai/gpt-oss-120b" (son remplaçant) n'a pas encore d'entrée ici — tarif réel à vérifier
+  // sur console.groq.com avant d'en ajouter une (estimateCost() retourne 0 en son absence, sans crash).
   "mistral-small-2506":                        { in: 0.10,  out: 0.30  },
   "mistral-medium-2505":                       { in: 0.40,  out: 2.00  },
   "mistral-large-2512":                        { in: 2.00,  out: 6.00  },

@@ -166,10 +166,10 @@ Retourne un JSON strict (aucun texte avant ou après) :
     let agentsConsulted = AGENT_IDS.join(",");
 
     // Modèle dédié orchestrateur — bucket SÉPARÉ des agents (évite 429 post-run)
-    // llama3-70b-8192 = bucket différent de llama-3.3-70b-versatile utilisé par juriste/revenue-manager
+    // llama3-70b-8192 = bucket différent de openai/gpt-oss-120b utilisé par juriste/revenue-manager
     const ORCH_MODELS = [
       "llama3-70b-8192",                           // bucket propre à l'orchestrateur
-      "llama-3.3-70b-versatile",                    // fallback Groq confirmé actif
+      "openai/gpt-oss-120b",                       // fallback Groq — remplace llama-3.3-70b-versatile (décommissionné 2026-08-16)
       "llama3-8b-8192",                            // fallback rapide
     ];
 

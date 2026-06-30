@@ -411,7 +411,7 @@ export const AGENTS = [
 // Chaque modèle a sa propre bucket de rate limit → on peut les appeler simultanément
 // UNIQUEMENT modèles ACTIFS vérifiés (pas de modèles décommissionnés)
 const GROQ_MODELS = [
-  { model: "llama-3.3-70b-versatile",                   tier: "high"   }, // ✅ confirmé actif
+  { model: "openai/gpt-oss-120b",                       tier: "high"   }, // remplace llama-3.3-70b-versatile (décommissionné 2026-08-16, annonce Groq)
   { model: "llama-3.1-8b-instant",                      tier: "fast"   }, // ✅ confirmé actif
   // meta-llama/llama-4-scout-17b-16e-instruct deprecated 2026-06-24
   { model: "llama3-70b-8192",                           tier: "high"   }, // llama3 classic 70b
