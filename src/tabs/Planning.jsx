@@ -162,6 +162,7 @@ export default function Planning() {
   const [listSortKey, setListSortKey] = useState("checkin");
   const [listSortDir, setListSortDir] = useState("asc");
   const [listYear, setListYear] = useState(String(new Date().getFullYear()));
+  const [pastOpen, setPastOpen] = useState(false);
   const [patchResa, setPatchResa] = useState(null); // résa iCal à patcher
   const [patchForm, setPatchForm] = useState({ voyageur: "", montant: "" });
   const [patchLoading, setPatchLoading] = useState(false);
@@ -929,6 +930,51 @@ export default function Planning() {
               fontWeight: 600, textTransform: "uppercase", cursor: "pointer", userSelect: "none", whiteSpace: "nowrap",
             });
 
+            const upcomingRows = sorted.filter(r => r.checkout >= td);
+            const pastRows = sorted.filter(r => r.checkout < td);
+
+            const renderRow = r => {
+              const b = biens.find(x => x.id === r.bienId);
+              const isPast = r.checkout < td;
+              const isCurr = r.checkin <= td && r.checkout > td;
+              const isFuture = r.checkin > td;
+              const statusLabel = isCurr ? "En cours" : isFuture ? "À venir" : "Passée";
+              const statusColor = isCurr ? "#10b981" : isFuture ? "#0ea5e9" : "#475569";
+              const statusBg = isCurr ? "rgba(16,185,129,0.12)" : isFuture ? "rgba(14,165,233,0.1)" : "transparent";
+              return (
+                <tr key={r.id} style={{ borderTop: "1px solid rgba(255,255,255,0.04)", opacity: isPast ? 0.45 : 1, background: isCurr ? "rgba(16,185,129,0.04)" : "transparent" }}>
+                  <td style={{ padding: "7px 10px", fontSize: 11 }}>{b?.emoji} {b?.nom}</td>
+                  <td style={{ padding: "7px 10px", color: "#e2e8f0", fontSize: 11, fontWeight: 500 }}>
+                    {r.voyageur}
+                    {needsManualFill(r) && <span title="L'iCal ne transmet ni nom ni prix — à saisir à la main" style={{ fontSize: 8, color: "#f59e0b", marginLeft: 4, padding: "1px 4px", borderRadius: 4, background: "rgba(245,158,11,0.15)", fontWeight: 700, whiteSpace: "nowrap" }}>✏️</span>}
+                  </td>
+                  <td style={{ padding: "7px 10px" }}>
+                    <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 8, background: CB[r.canal], color: CC[r.canal], fontWeight: 600 }}>{r.canal}</span>
+                  </td>
+                  <td style={{ padding: "7px 10px", color: "#94a3b8", fontSize: 10, fontFamily: "var(--font-mono)", whiteSpace: "nowrap" }}>{r.checkin}</td>
+                  <td style={{ padding: "7px 10px", color: "#0ea5e9", fontSize: 10, fontFamily: "var(--font-mono)" }}>{r.checkin_time || "—"}</td>
+                  <td style={{ padding: "7px 10px", color: "#94a3b8", fontSize: 10, fontFamily: "var(--font-mono)", whiteSpace: "nowrap" }}>{r.checkout}</td>
+                  <td style={{ padding: "7px 10px", color: "#64748b", fontSize: 10, textAlign: "center" }}>{r.nb_guests || "—"}</td>
+                  <td style={{ padding: "7px 10px", color: "#64748b", fontSize: 11 }}>{diffDays(r.checkin, r.checkout)}j</td>
+                  <td style={{ padding: "7px 10px", color: "#e2e8f0", fontSize: 10, fontWeight: 600, whiteSpace: "nowrap" }}>{r.montant ? `${Number(r.montant).toLocaleString("fr-FR")} €` : "—"}</td>
+                  <td style={{ padding: "7px 10px" }}>
+                    <span style={{ fontSize: 9, padding: "2px 7px", borderRadius: 6, background: statusBg, color: statusColor, fontWeight: 600, whiteSpace: "nowrap" }}>{statusLabel}</span>
+                  </td>
+                  <td style={{ padding: "7px 10px", textAlign: "center" }}>
+                    <button onClick={() => togRes(r.id, "checkin_done")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 13, opacity: r.checkin_done ? 1 : 0.2 }}>✅</button>
+                  </td>
+                  <td style={{ padding: "7px 10px", textAlign: "center" }}>
+                    <button onClick={() => togRes(r.id, "menage_done")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 13, opacity: r.menage_done ? 1 : 0.2 }}>🧹</button>
+                  </td>
+                  <td style={{ padding: "7px 10px", whiteSpace: "nowrap" }}>
+                    {needsManualFill(r) && <button onClick={() => openPatch(r)} title="Patch rapide : saisir nom + prix" style={{ background: "rgba(245,158,11,0.15)", border: "none", cursor: "pointer", color: "#f59e0b", fontSize: 11, marginRight: 4, borderRadius: 4, padding: "2px 5px", fontWeight: 700 }}>⚡</button>}
+                    <button onClick={() => openEdit(r)} style={{ background: "none", border: "none", cursor: "pointer", color: "#0ea5e9", fontSize: 11, marginRight: 4 }}>✎</button>
+                    <button onClick={() => delRes(r.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#475569", fontSize: 11 }}>✕</button>
+                  </td>
+                </tr>
+              );
+            };
+
             return (
             <div style={{ overflowX: "auto" }}>
               <div style={{ padding: "4px 16px 4px", fontSize: 10, color: "#475569" }}>
@@ -954,49 +1000,39 @@ export default function Planning() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sorted.map(r => {
-                    const b = biens.find(x => x.id === r.bienId);
-                    const isPast = r.checkout < td;
-                    const isCurr = r.checkin <= td && r.checkout > td;
-                    const isFuture = r.checkin > td;
-                    const statusLabel = isCurr ? "En cours" : isFuture ? "À venir" : "Passée";
-                    const statusColor = isCurr ? "#10b981" : isFuture ? "#0ea5e9" : "#475569";
-                    const statusBg = isCurr ? "rgba(16,185,129,0.12)" : isFuture ? "rgba(14,165,233,0.1)" : "transparent";
-                    return (
-                      <tr key={r.id} style={{ borderTop: "1px solid rgba(255,255,255,0.04)", opacity: isPast ? 0.45 : 1, background: isCurr ? "rgba(16,185,129,0.04)" : "transparent" }}>
-                        <td style={{ padding: "7px 10px", fontSize: 11 }}>{b?.emoji} {b?.nom}</td>
-                        <td style={{ padding: "7px 10px", color: "#e2e8f0", fontSize: 11, fontWeight: 500 }}>
-                          {r.voyageur}
-                          {needsManualFill(r) && <span title="L'iCal ne transmet ni nom ni prix — à saisir à la main" style={{ fontSize: 8, color: "#f59e0b", marginLeft: 4, padding: "1px 4px", borderRadius: 4, background: "rgba(245,158,11,0.15)", fontWeight: 700, whiteSpace: "nowrap" }}>✏️</span>}
-                        </td>
-                        <td style={{ padding: "7px 10px" }}>
-                          <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 8, background: CB[r.canal], color: CC[r.canal], fontWeight: 600 }}>{r.canal}</span>
-                        </td>
-                        <td style={{ padding: "7px 10px", color: "#94a3b8", fontSize: 10, fontFamily: "var(--font-mono)", whiteSpace: "nowrap" }}>{r.checkin}</td>
-                        <td style={{ padding: "7px 10px", color: "#0ea5e9", fontSize: 10, fontFamily: "var(--font-mono)" }}>{r.checkin_time || "—"}</td>
-                        <td style={{ padding: "7px 10px", color: "#94a3b8", fontSize: 10, fontFamily: "var(--font-mono)", whiteSpace: "nowrap" }}>{r.checkout}</td>
-                        <td style={{ padding: "7px 10px", color: "#64748b", fontSize: 10, textAlign: "center" }}>{r.nb_guests || "—"}</td>
-                        <td style={{ padding: "7px 10px", color: "#64748b", fontSize: 11 }}>{diffDays(r.checkin, r.checkout)}j</td>
-                        <td style={{ padding: "7px 10px", color: "#e2e8f0", fontSize: 10, fontWeight: 600, whiteSpace: "nowrap" }}>{r.montant ? `${Number(r.montant).toLocaleString("fr-FR")} €` : "—"}</td>
-                        <td style={{ padding: "7px 10px" }}>
-                          <span style={{ fontSize: 9, padding: "2px 7px", borderRadius: 6, background: statusBg, color: statusColor, fontWeight: 600, whiteSpace: "nowrap" }}>{statusLabel}</span>
-                        </td>
-                        <td style={{ padding: "7px 10px", textAlign: "center" }}>
-                          <button onClick={() => togRes(r.id, "checkin_done")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 13, opacity: r.checkin_done ? 1 : 0.2 }}>✅</button>
-                        </td>
-                        <td style={{ padding: "7px 10px", textAlign: "center" }}>
-                          <button onClick={() => togRes(r.id, "menage_done")} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 13, opacity: r.menage_done ? 1 : 0.2 }}>🧹</button>
-                        </td>
-                        <td style={{ padding: "7px 10px", whiteSpace: "nowrap" }}>
-                          {needsManualFill(r) && <button onClick={() => openPatch(r)} title="Patch rapide : saisir nom + prix" style={{ background: "rgba(245,158,11,0.15)", border: "none", cursor: "pointer", color: "#f59e0b", fontSize: 11, marginRight: 4, borderRadius: 4, padding: "2px 5px", fontWeight: 700 }}>⚡</button>}
-                          <button onClick={() => openEdit(r)} style={{ background: "none", border: "none", cursor: "pointer", color: "#0ea5e9", fontSize: 11, marginRight: 4 }}>✎</button>
-                          <button onClick={() => delRes(r.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#475569", fontSize: 11 }}>✕</button>
+                  {upcomingRows.length > 0
+                    ? upcomingRows.map(renderRow)
+                    : (
+                      <tr>
+                        <td colSpan={13} style={{ padding: "16px 10px", textAlign: "center", color: "#475569", fontSize: 11 }}>
+                          Aucune réservation à venir{pastRows.length > 0 ? " — voir les réservations passées ci-dessous" : ""}
                         </td>
                       </tr>
-                    );
-                  })}
+                    )}
                 </tbody>
               </table>
+              {pastRows.length > 0 && (
+                <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                  <button
+                    onClick={() => setPastOpen(o => !o)}
+                    style={{
+                      width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+                      padding: "10px 16px", background: "rgba(255,255,255,0.02)", border: "none", cursor: "pointer",
+                      color: "#94a3b8", fontSize: 11, fontWeight: 600,
+                    }}
+                  >
+                    <span>🗂️ {pastRows.length} réservation{pastRows.length > 1 ? "s" : ""} passée{pastRows.length > 1 ? "s" : ""}</span>
+                    <span style={{ transition: "transform 0.2s ease", transform: pastOpen ? "rotate(180deg)" : "rotate(0)", color: "#64748b" }}>▾</span>
+                  </button>
+                  {pastOpen && (
+                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 660 }}>
+                      <tbody>
+                        {pastRows.map(renderRow)}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              )}
             </div>
             );
           })()}
