@@ -65,8 +65,13 @@ export async function onRequestGet(context) {
     try { await db.prepare(`ALTER TABLE direct_bookings ADD COLUMN phone TEXT`).run(); } catch { /* déjà présente */ }
     try { await db.prepare(`ALTER TABLE direct_bookings ADD COLUMN nb_guests INTEGER DEFAULT 1`).run(); } catch { /* déjà présente */ }
     try { await db.prepare(`ALTER TABLE direct_bookings ADD COLUMN nb_pets INTEGER DEFAULT 0`).run(); } catch { /* déjà présente */ }
+    // Migration idempotente : colonnes ajoutées par airbnb-email-import
+    try { await db.prepare(`ALTER TABLE direct_bookings ADD COLUMN canal TEXT DEFAULT 'Direct'`).run(); } catch { /* existe déjà */ }
+    try { await db.prepare(`ALTER TABLE direct_bookings ADD COLUMN platform_booking_id TEXT`).run(); } catch { /* existe déjà */ }
+
     const rows = await db.prepare(
-      `SELECT payment_intent_id, bien_id, bien_nom, voyageur, email, phone, nb_guests, nb_pets, total, depot, checkin, checkout
+      `SELECT payment_intent_id, bien_id, bien_nom, voyageur, email, phone, nb_guests, nb_pets, total, depot, checkin, checkout,
+              canal, platform_booking_id
        FROM direct_bookings
        WHERE checkout >= date('now', '-90 days')
        ORDER BY checkin DESC`
@@ -78,24 +83,35 @@ export async function onRequestGet(context) {
         const a = new Date(r.checkin + "T12:00:00Z"), b = new Date(r.checkout + "T12:00:00Z");
         return Math.round((b - a) / 86400000);
       })();
+      // Canal : la colonne `canal` prime ; fallback sur détection par l'ID
+      const pid   = String(r.payment_intent_id || "");
+      const canal = r.canal
+        || (pid.startsWith("airbnb-")      ? "Airbnb"
+          : pid.startsWith("booking-")     ? "Booking.com"
+          : pid.startsWith("pi_")          ? "Direct"
+          : "Direct");
+      const source = canal === "Direct" ? "Stripe direct"
+                   : canal === "Airbnb" ? "Email Airbnb"
+                   : "Email Booking";
       return {
-        id:        "direct-" + r.payment_intent_id,
-        bienId:    r.bien_id || "",
-        voyageur:  r.voyageur || "—",
-        canal:     "Direct",
-        checkin:   r.checkin,
-        checkout:  r.checkout,
+        id:          "direct-" + pid,
+        bienId:      r.bien_id || "",
+        voyageur:    r.voyageur || "—",
+        canal,
+        checkin:     r.checkin,
+        checkout:    r.checkout,
         nights,
-        montant:   r.total || 0,
-        depot:     r.depot || 0,
-        nb_guests: r.nb_guests || 1,
-        nb_pets:   r.nb_pets || 0,
-        phone:     r.phone || "",
-        notes:     r.email ? `Email: ${r.email}` : "",
-        source:    "Stripe direct",
-        status:    "Confirmé",
-        bienNom:   r.bien_nom || NOMS[r.bien_id] || "",
-        email:     r.email || "",
+        montant:     r.total || 0,
+        depot:       r.depot || 0,
+        nb_guests:   r.nb_guests || 1,
+        nb_pets:     r.nb_pets || 0,
+        phone:       r.phone || "",
+        notes:       r.email ? `Email: ${r.email}` : "",
+        source,
+        status:      "Confirmé",
+        bienNom:     r.bien_nom || NOMS[r.bien_id] || "",
+        email:       r.email || "",
+        bookingRef:  r.platform_booking_id || "",
       };
     });
 
