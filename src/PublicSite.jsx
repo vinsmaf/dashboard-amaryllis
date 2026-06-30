@@ -825,6 +825,10 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
   function getState(ds) {
     if (!ds) return "empty";
     if (ds < effectiveMin) return "past";
+    // La date de départ déjà confirmée reste affichée comme telle même si elle
+    // marque le début d'une nuit bloquée (jour de turnover) — sinon elle se
+    // désélectionne visuellement au rendu suivant alors que la sélection est valide.
+    if (checkin && ds === checkout && ds > checkin) return "checkout";
     const pickingCheckout = !!checkin && !checkout && ds > checkin;
     if (blockedSet.has(ds)) {
       if (!pickingCheckout || hasBlockedBetween(checkin, ds)) return "blocked";
@@ -979,6 +983,9 @@ function DateRangePicker({ checkin, checkout, blockedDates = [], onChange, daily
   function handleSelect(ds) {
     if (!checkin || (checkin && checkout)) {
       if (ds < minCheckinStr) return; // bloquer aujourd'hui et le passé
+      // Une date de départ déjà confirmée peut être une date bloquée (turnover) —
+      // on ne doit jamais autoriser un nouveau check-in sur une nuit bloquée.
+      if (blockedDates.includes(ds)) return;
       onChange(ds, null);
     } else if (ds <= checkin) {
       onChange(ds, null);
