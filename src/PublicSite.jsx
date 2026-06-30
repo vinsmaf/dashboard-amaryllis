@@ -810,10 +810,27 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
     return n < minNights;
   }
 
+  // Une date bloquée représente le DÉBUT d'une nuit indisponible (cf. get-availability.js).
+  // Elle reste donc valide comme date de DÉPART (jour de turnover) tant qu'aucune nuit
+  // strictement comprise entre l'arrivée et elle n'est elle-même bloquée.
+  function hasBlockedBetween(from, to) {
+    let cur = addDays(from, 1);
+    while (cur < to) {
+      if (blockedSet.has(cur)) return true;
+      cur = addDays(cur, 1);
+    }
+    return false;
+  }
+
   function getState(ds) {
     if (!ds) return "empty";
     if (ds < effectiveMin) return "past";
-    if (blockedSet.has(ds)) return "blocked";
+    const pickingCheckout = !!checkin && !checkout && ds > checkin;
+    if (blockedSet.has(ds)) {
+      if (!pickingCheckout || hasBlockedBetween(checkin, ds)) return "blocked";
+    } else if (pickingCheckout && hasBlockedBetween(checkin, ds)) {
+      return "blocked";
+    }
     if (isBelowMin(ds)) return "belowmin";
     if (ds === checkin) return "checkin";
     if (ds === checkout) return "checkout";
