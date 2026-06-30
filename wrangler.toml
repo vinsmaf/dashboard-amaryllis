@@ -23,6 +23,10 @@ binding = "ICAL_STORE"
 id = "7d431dde6407494b979e5720e5c7a71c"
 preview_id = "75d715c5f2f5492f975c86c7995738d4"
 
+[[kv_namespaces]]
+binding = "CROSS_BRAIN_KV"
+id = "fc2f8d9276ab433093c993baed19e529"
+
 # Variables d'environnement publiques
 [vars]
 NOTIFICATION_EMAIL = "vinsmaf@hotmail.com,celine.hartog@hotmail.fr"
