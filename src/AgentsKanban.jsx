@@ -74,8 +74,11 @@ function timeAgo(ts) {
 }
 
 // ── Composant Card ────────────────────────────────────────────────────────────
-function ActionCard({ action, onStatusChange, mob, impact }) {
+function ActionCard({ action, onStatusChange, mob, impact, userNote, onNoteChange }) {
   const [open, setOpen] = useState(false);
+  const [note, setNote] = useState(userNote || "");
+  // Sync when prop changes (e.g. action just marked fait → outcome row created)
+  useEffect(() => { setNote(userNote || ""); }, [userNote]);
   const prio = PRIORITY_COLORS[action.priority] || PRIORITY_COLORS.basse;
   const cat  = CATEGORY_LABELS[action.category] || action.category;
   const ago  = timeAgo(action.last_analyzed);
@@ -155,6 +158,28 @@ function ActionCard({ action, onStatusChange, mob, impact }) {
             ID: {action.id} · {new Date(action.created_at * 1000).toLocaleDateString("fr-FR")}
           </div>
 
+          {/* Note d'impact — visible quand "fait" */}
+          {action.status === "fait" && (
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 10, color: "#64748b", marginBottom: 4 }}>
+                💡 Note d'impact (résultat observé, optionnel)
+              </div>
+              <textarea
+                value={note}
+                onChange={e => setNote(e.target.value)}
+                onBlur={() => onNoteChange(action.id, note)}
+                placeholder="Ex: +3% taux de clic, délai réduit de 2j, 0 plainte depuis..."
+                style={{
+                  width: "100%", padding: "6px 8px", borderRadius: 6,
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  background: "rgba(15,23,42,0.8)", color: "#e2e8f0",
+                  fontSize: 11, resize: "vertical", minHeight: 52,
+                  boxSizing: "border-box", fontFamily: "inherit", outline: "none",
+                }}
+              />
+            </div>
+          )}
+
           {/* Boutons de changement de statut */}
           <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
             {(NEXT_STATUS[action.status] || []).map(st => {
@@ -195,6 +220,7 @@ export default function AgentsKanban({ mob }) {
   const [lastRefresh, setLastRefresh] = useState(null);
   const [liveActive, setLiveActive]   = useState(false);
   const [outcomes, setOutcomes]       = useState({});
+  const [userNotes, setUserNotes]     = useState({});
   const runTimeout  = useRef(null);
   const pollRef     = useRef(null);
   const actionsRef  = useRef([]);
@@ -206,11 +232,14 @@ export default function AgentsKanban({ mob }) {
       adminFetch("/api/agents-actions?table=outcomes")
         .then(r => r.json())
         .then(o => {
-          const map = {};
+          const impactMap = {};
+          const notesMap = {};
           for (const x of (o.outcomes || [])) {
-            if (x.impact_label) map[x.action_id] = x.impact_label;
+            if (x.impact_label) impactMap[x.action_id] = x.impact_label;
+            if (x.user_note)    notesMap[x.action_id]  = x.user_note;
           }
-          setOutcomes(map);
+          setOutcomes(impactMap);
+          setUserNotes(notesMap);
         })
         .catch(() => {});
 
@@ -301,6 +330,16 @@ export default function AgentsKanban({ mob }) {
     // Adapter la fréquence de polling selon le nouveau statut
     schedulePoll();
   };
+
+  // ── Sauvegarder la note d'impact ────────────────────────────────────────
+  const handleNoteChange = useCallback(async (id, note) => {
+    setUserNotes(prev => ({ ...prev, [id]: note || undefined }));
+    await adminFetch(`/api/agents-actions?id=${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_note: note }),
+    }).catch(() => {});
+  }, []);
 
   // ── Relancer l'analyse (tous les agents) ─────────────────────────────────
   const handleRunAll = async () => {
@@ -548,7 +587,7 @@ export default function AgentsKanban({ mob }) {
                 </div>
               ) : (
                 cards.map(a => (
-                  <ActionCard key={a.id} action={a} onStatusChange={handleStatusChange} mob={mob} impact={outcomes[a.id]} />
+                  <ActionCard key={a.id} action={a} onStatusChange={handleStatusChange} mob={mob} impact={outcomes[a.id]} userNote={userNotes[a.id]} onNoteChange={handleNoteChange} />
                 ))
               )}
             </div>
