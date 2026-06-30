@@ -57,7 +57,8 @@ async function main() {
   const page = await context.newPage();
 
   // Pré-remplir l'email si fourni
-  await page.goto('https://account.booking.com/sign-in', { waitUntil: 'domcontentloaded' });
+  // L'extranet redirige vers le login Booking.com avec le bon redirect_uri
+  await page.goto('https://admin.booking.com', { waitUntil: 'domcontentloaded' });
 
   if (email) {
     try {
@@ -74,7 +75,7 @@ async function main() {
   const currentUrl = page.url();
   console.log('URL actuelle :', currentUrl);
 
-  if (currentUrl.includes('sign-in') || currentUrl.includes('login')) {
+  if (!currentUrl.includes('admin.booking.com') && !currentUrl.includes('extranet')) {
     console.error('❌ Il semble que vous ne soyez pas encore connecté. Relancez le script.');
     await browser.close();
     process.exit(1);

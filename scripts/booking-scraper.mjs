@@ -1,12 +1,10 @@
-/**
- * booking-scraper.mjs
- * Scrape les réservations Booking.com depuis l'extranet (headless).
- * Utilise la session sauvegardée par booking-login.mjs.
- * Pousse les nouvelles résas vers /api/airbnb-email-import (D1 direct_bookings).
- *
- * Usage : node scripts/booking-scraper.mjs [--days=90] [--dry]
- * Cron  : 0 */6 * * * cd ~/locatif-dashboard && node scripts/booking-scraper.mjs >> /tmp/booking-scraper.log 2>&1
- */
+// booking-scraper.mjs
+// Scrape les réservations Booking.com depuis l'extranet (headless).
+// Utilise la session sauvegardée par booking-login.mjs.
+// Pousse les nouvelles résas vers /api/airbnb-email-import (D1 direct_bookings).
+//
+// Usage : node scripts/booking-scraper.mjs [--days=90] [--dry]
+// Cron  : toutes les 6h  →  0 STAR/6 * * *  (remplacer STAR par asterisque dans crontab)6 * * * cd ~/locatif-dashboard && node scripts/booking-scraper.mjs >> /tmp/booking-scraper.log 2>&1
 
 import { chromium } from 'playwright';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
