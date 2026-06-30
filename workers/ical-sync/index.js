@@ -1593,6 +1593,137 @@ async function sendCancellations(env, annulations) {
   }
 }
 
+// ── Auto-import Booking.com ──────────────────────────────────────────────────
+// Quand l'iCal détecte une nouvelle résa Booking.com, on scrape l'admin
+// pour récupérer le nom du voyageur + le montant, puis on upsert en D1.
+// Prérequis : token `ses` enregistré via POST /api/booking-session
+
+const BOOKING_BIEN_NOMS = {
+  amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko",
+  mabouya: "Mabouya", schoelcher: "Bellevue Schœlcher", nogent: "Appartement Nogent",
+};
+
+// "8 déc. 2025" → "2025-12-08"
+function parseFrBookingDate(s) {
+  if (!s) return null;
+  const M = { janv:1, fevr:2, mars:3, avr:4, mai:5, juin:6, juil:7, aout:8, sept:9, oct:10, nov:11, dec:12 };
+  const norm = s.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\./g, "").toLowerCase().trim();
+  const m = norm.match(/(\d{1,2})\s+([a-z]+)\s+(\d{4})/);
+  if (!m) return null;
+  const month = M[m[2].slice(0, 4)];
+  if (!month) return null;
+  return `${m[3]}-${String(month).padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+}
+
+// Parse la table HTML admin Booking.com — cherche la ligne arrivée = targetCheckin
+function parseBookingAdminHtml(html, targetCheckin) {
+  const rowBlocks = html.split(/<tr[\s>]/i).slice(1);
+  for (const row of rowBlocks) {
+    const cell = (h) => {
+      const m = row.match(new RegExp(`data-heading=["']${h}["'][^>]*>([\\s\\S]*?)</td>`, "i"));
+      return m ? m[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() : "";
+    };
+    const arrivee = cell("Arrivée") || cell("Arrival");
+    if (!arrivee || parseFrBookingDate(arrivee) !== targetCheckin) continue;
+
+    const nomRaw   = cell("Nom du client") || cell("Guest name");
+    const voyageur = nomRaw.split(/\n|\s{2,}/)[0].trim() || null;
+    const paiement = cell("Paiement total") || cell("Total price");
+    const price    = paiement.match(/([\d\s.,]+)/);
+    const total    = price ? parseFloat(price[1].replace(/\s/g, "").replace(",", ".")) || 0 : 0;
+    const resaCell = cell("Numéro de réservation") || cell("Reservation number");
+    const bookingId = (row.match(/reservation_id=(\d+)/) || row.match(/bookingId=(\d+)/) || resaCell.match(/(\d{8,12})/))?.[1] || null;
+    return { voyageur, total, bookingId };
+  }
+  return null;
+}
+
+// Scrape l'admin Booking pour récupérer nom+montant d'une résa par date arrivée
+async function scrapeBookingDetails(env, bienId, checkin) {
+  let ses;
+  try {
+    const row = await env.revenue_manager.prepare("SELECT value FROM app_config WHERE key='booking_ses'").first();
+    ses = row?.value;
+  } catch (e) { console.warn("[booking-scrape] D1 app_config:", e.message); return null; }
+  if (!ses) { console.log("[booking-scrape] Aucun token ses — import partiel"); return null; }
+
+  const url = `https://admin.booking.com/hotel/hoteladmin/groups/reservations/index.html`
+    + `?lang=fr&ses=${ses}&dateType=ARRIVAL&dateFrom=${checkin}&dateTo=${checkin}`;
+  let html;
+  try {
+    const resp = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml",
+        "Accept-Language": "fr-FR,fr;q=0.9",
+      },
+      redirect: "follow",
+    });
+    const finalUrl = resp.url || "";
+    if (resp.status === 401 || resp.status === 403 || finalUrl.includes("signin") || finalUrl.includes("login")) {
+      console.warn("[booking-scrape] ⚠️ Session expirée");
+      fetch(`https://ntfy.sh/${env.NTFY_TOPIC || "amaryllis-alertes-7r4k9"}`, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain; charset=utf-8", "Title": "⚠️ Session Booking.com expirée", "Priority": "high", "Tags": "warning,booking" },
+        body: `Résa ${bienId} ${checkin} importée SANS nom/prix.\nOuvre admin.booking.com → lance le bookmarklet "Booking→Admin"`,
+      }).catch(() => {});
+      return null;
+    }
+    if (!resp.ok) { console.error(`[booking-scrape] HTTP ${resp.status}`); return null; }
+    html = await resp.text();
+  } catch (e) { console.error("[booking-scrape] fetch:", e.message); return null; }
+
+  const details = parseBookingAdminHtml(html, checkin);
+  if (details) console.log(`[booking-scrape] ✅ ${bienId}/${checkin} → ${details.voyageur} ${details.total}€ (id:${details.bookingId})`);
+  else console.warn(`[booking-scrape] ⚠️ Aucune ligne pour ${bienId}/${checkin}`);
+  return details;
+}
+
+// Upsert D1 direct_bookings (avec ou sans détails scrapés)
+async function upsertBookingReservation(env, evt, details) {
+  const { bienId, checkin, checkout, uid } = evt;
+  const bookingId       = details?.bookingId;
+  const paymentIntentId = bookingId ? `booking.com-${bookingId}` : `booking.com-ical-${uid}`;
+  const voyageur        = (details?.voyageur && !/^voyageur/i.test(details.voyageur)) ? details.voyageur : "Voyageur Booking";
+  const total           = details?.total || 0;
+
+  try { await env.revenue_manager.prepare(`CREATE TABLE IF NOT EXISTS app_config (key TEXT PRIMARY KEY, value TEXT, updated_at TEXT DEFAULT (datetime('now')))`).run(); } catch { /* ok */ }
+  try { await env.revenue_manager.prepare(`ALTER TABLE direct_bookings ADD COLUMN canal TEXT DEFAULT 'Direct'`).run(); } catch { /* ok */ }
+  try { await env.revenue_manager.prepare(`ALTER TABLE direct_bookings ADD COLUMN platform_booking_id TEXT`).run(); } catch { /* ok */ }
+  try { await env.revenue_manager.prepare(`ALTER TABLE direct_bookings ADD COLUMN raw_subject TEXT`).run(); } catch { /* ok */ }
+
+  try {
+    await env.revenue_manager.prepare(`
+      INSERT INTO direct_bookings
+        (payment_intent_id, bien_id, bien_nom, voyageur, email, phone,
+         nb_guests, total, depot, checkin, checkout, canal, platform_booking_id, raw_subject)
+      VALUES (?, ?, ?, ?, '', '', 1, ?, 0, ?, ?, 'Booking.com', ?, ?)
+      ON CONFLICT(payment_intent_id) DO UPDATE SET
+        voyageur            = CASE WHEN excluded.voyageur NOT IN ('Voyageur Booking','Voyageur') THEN excluded.voyageur ELSE direct_bookings.voyageur END,
+        total               = CASE WHEN excluded.total > 0 THEN excluded.total ELSE direct_bookings.total END,
+        checkin             = excluded.checkin,
+        checkout            = excluded.checkout,
+        platform_booking_id = COALESCE(excluded.platform_booking_id, direct_bookings.platform_booking_id),
+        raw_subject         = excluded.raw_subject
+    `).bind(paymentIntentId, bienId, BOOKING_BIEN_NOMS[bienId] || bienId, voyageur, total, checkin, checkout, bookingId || null, `Auto-import iCal ${new Date().toISOString().slice(0, 10)}`).run();
+    console.log(`[booking-auto-import] ${total > 0 ? "✅" : "⚠️ sans prix"} ${paymentIntentId} — ${voyageur} — ${bienId} ${checkin}→${checkout} — ${total}€`);
+  } catch (e) { console.error("[booking-auto-import] D1:", e.message); }
+}
+
+// Appelé depuis runSync après détection des nouvelles résas
+async function autoImportNewBookings(env, nouvelles) {
+  const evts = nouvelles.filter(e => e.canal === "booking");
+  if (evts.length === 0) return;
+  console.log(`[booking-auto-import] ${evts.length} nouvelle(s) résa(s) Booking à traiter`);
+  await Promise.all(evts.map(async (evt) => {
+    try {
+      const details = await scrapeBookingDetails(env, evt.bienId, evt.checkin);
+      await upsertBookingReservation(env, evt, details);
+    } catch (e) { console.error(`[booking-auto-import] ${evt.bienId}/${evt.checkin}:`, e.message); }
+  }));
+}
+// ── Fin auto-import Booking.com ──────────────────────────────────────────────
+
 async function runSync(env) {
   console.log(`[amaryllis-sync] Démarrage — ${new Date().toISOString()}`);
   const allEvents = [], nouvelles = [], annulations = [];
@@ -1639,6 +1770,8 @@ async function runSync(env) {
 
   if (annulations.length > 0) await sendCancellations(env, annulations);
   if (nouvelles.length > 0) await sendNouvellesResas(env, nouvelles);
+  // Auto-import Booking.com : scrape nom+prix et upsert D1 pour chaque nouvelle résa Booking
+  if (nouvelles.some(e => e.canal === "booking")) await autoImportNewBookings(env, nouvelles);
   if (allEvents.length > 0) await pushToSheets(env, allEvents);
 
   console.log(`[amaryllis-sync] Terminé — ${allEvents.length} evt (dont ${directs.length} direct), ${nouvelles.length} nouveaux, ${annulations.length} annulations`);
