@@ -1,23 +1,23 @@
-/**
- * booking-login.mjs
- * Connexion manuelle à l'extranet Booking.com (headful).
- * À lancer UNE seule fois pour sauvegarder la session.
- * Gère la 2FA (OTP email) côté humain.
- *
- * Usage : node scripts/booking-login.mjs
- */
+// booking-login.mjs
+// Connexion manuelle à l'extranet Booking.com via profil Chrome persistant.
+// À lancer UNE seule fois (ou quand la session expire).
+// Le profil est réutilisé tel quel par booking-scraper.mjs (headless).
+//
+// Usage : node scripts/booking-login.mjs
 
 import { chromium } from 'playwright';
-import { writeFileSync, existsSync, readFileSync } from 'fs';
+import { existsSync, readFileSync, mkdirSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { join, dirname } from 'path';
+import { homedir } from 'os';
 import readline from 'readline';
 
-const __dir = dirname(fileURLToPath(import.meta.url));
-const SESSION_FILE = join(__dir, '../.booking-session.json');
+const __dir  = dirname(fileURLToPath(import.meta.url));
 const DEV_VARS = join(__dir, '../.dev.vars');
 
-// Charge les vars locales si présentes
+// Profil Chrome persistant (partagé avec booking-scraper.mjs)
+export const PROFILE_DIR = join(homedir(), '.booking-scraper-profile');
+
 function loadDevVars() {
   if (!existsSync(DEV_VARS)) return;
   for (const line of readFileSync(DEV_VARS, 'utf8').split('\n')) {
@@ -37,66 +37,44 @@ function prompt(question) {
 }
 
 async function main() {
-  console.log('\n🔑 Booking.com — Connexion manuelle\n');
-  console.log('Le navigateur va s\'ouvrir. Connectez-vous normalement (email + mot de passe + 2FA si demandé).');
-  console.log('Une fois sur le tableau de bord de l\'extranet, revenez ici et appuyez sur Entrée.\n');
+  console.log('\n🔑 Booking.com Extranet — Connexion (profil persistant)\n');
+  console.log('Profil Chrome :', PROFILE_DIR);
+  console.log('Le navigateur va s\'ouvrir → connectez-vous sur l\'extranet Booking.com.');
+  console.log('Attendez d\'être bien sur le tableau de bord, puis revenez ici.\n');
 
-  const email = process.env.BOOKING_EMAIL || await prompt('Email Booking.com : ');
+  mkdirSync(PROFILE_DIR, { recursive: true });
 
-  const browser = await chromium.launch({
+  // Profil persistant = le même répertoire utilisé par le scraper
+  const context = await chromium.launchPersistentContext(PROFILE_DIR, {
     headless: false,
-    args: ['--start-maximized'],
-  });
-
-  const context = await browser.newContext({
+    args: ['--start-maximized', '--disable-blink-features=AutomationControlled'],
+    ignoreDefaultArgs: ['--enable-automation'],
     userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
-    viewport: { width: 1280, height: 900 },
+    viewport: null, // plein écran natif
     locale: 'fr-FR',
   });
 
-  const page = await context.newPage();
+  const page = context.pages()[0] || await context.newPage();
 
-  // Pré-remplir l'email si fourni
-  // L'extranet redirige vers le login Booking.com avec le bon redirect_uri
+  // Aller directement sur la page de login extranet partenaire
   await page.goto('https://admin.booking.com', { waitUntil: 'domcontentloaded' });
 
-  if (email) {
-    try {
-      await page.fill('input[name="loginname"], input[type="email"]', email, { timeout: 5000 });
-      console.log(`Email pré-rempli : ${email}`);
-    } catch (_) {
-      console.log('(Remplissez l\'email manuellement dans le navigateur)');
-    }
-  }
-
-  // Attente que l'utilisateur finisse la connexion
-  await prompt('\n✅ Une fois connecté sur l\'extranet Booking.com, appuyez sur Entrée : ');
+  await prompt('✅ Une fois sur le tableau de bord de l\'extranet, appuyez sur Entrée : ');
 
   const currentUrl = page.url();
-  console.log('URL actuelle :', currentUrl);
+  console.log('URL finale :', currentUrl);
 
   if (!currentUrl.includes('admin.booking.com') && !currentUrl.includes('extranet')) {
-    console.error('❌ Il semble que vous ne soyez pas encore connecté. Relancez le script.');
-    await browser.close();
+    console.error('❌ Vous ne semblez pas être sur l\'extranet. Relancez et complétez la connexion.');
+    await context.close();
     process.exit(1);
   }
 
-  // Sauvegarde la session
-  const cookies = await context.cookies();
-  const storageState = await context.storageState();
+  // Ferme proprement (le profil est déjà sauvé sur disque)
+  await context.close();
 
-  const session = {
-    savedAt: new Date().toISOString(),
-    url: currentUrl,
-    cookies,
-    storageState,
-  };
-
-  writeFileSync(SESSION_FILE, JSON.stringify(session, null, 2));
-  console.log(`\n✅ Session sauvegardée dans : ${SESSION_FILE}`);
-  console.log('Vous pouvez maintenant lancer : node scripts/booking-scraper.mjs\n');
-
-  await browser.close();
+  console.log('\n✅ Profil sauvegardé dans :', PROFILE_DIR);
+  console.log('Lancez maintenant : node scripts/booking-scraper.mjs --dry\n');
 }
 
 main().catch(err => {

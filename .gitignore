@@ -57,3 +57,6 @@ graphify-out/
 # Booking.com scraper — session + état (NE JAMAIS committer)
 .booking-session.json
 .booking-state.json
+
+# Profil Chrome Booking.com scraper (hors repo, dans $HOME)
+# Le répertoire ~/.booking-scraper-profile est géré par booking-login.mjs
