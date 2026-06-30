@@ -128,6 +128,131 @@ function setupAirbnbIngest() {
   return { ok: true, trigger: "ingestAirbnbEmails_ toutes les 15 min", premierPassage: res };
 }
 
+// ── PUSH Gmail Airbnb → webhook /api/airbnb-email-import ──────────────────────
+// Parse les emails de confirmation Airbnb reçus sur Gmail et POST les données
+// structurées (nom, dates, bien, montant net) vers Cloudflare D1 via le webhook.
+// Idempotent : chaque thread traité reçoit le label « airbnb-webhook-sent ».
+// Trigger automatique : toutes les 15 min (setupWebhookTrigger).
+function pushAirbnbEmailsToWebhook_(opts) {
+  opts = opts || {};
+  var LABEL = "airbnb-webhook-sent";
+  var label = GmailApp.getUserLabelByName(LABEL) || GmailApp.createLabel(LABEL);
+  var WEBHOOK_URL = PropertiesService.getScriptProperties().getProperty("AIRBNB_WEBHOOK_URL")
+    || "https://villamaryllis.com/api/airbnb-email-import?secret=79a03d767d57bae7bda15175137b10fac3bd231e7dae3c1e";
+  var days = parseInt(opts.days || opts.newer_than || 60, 10) || 60;
+  var queries = [
+    'from:(airbnb) subject:("réservation confirmée" OR "reservation confirmed" OR "nouvelle réservation" OR "booking confirmed") newer_than:' + days + 'd -label:' + LABEL,
+    'from:(automated@airbnb.com) newer_than:' + days + 'd -label:' + LABEL,
+  ];
+  var seen = {}, allThreads = [];
+  for (var q = 0; q < queries.length; q++) {
+    var found = GmailApp.search(queries[q], 0, 50);
+    for (var t = 0; t < found.length; t++) {
+      var tid = found[t].getId();
+      if (!seen[tid]) { seen[tid] = true; allThreads.push(found[t]); }
+    }
+  }
+
+  var MONTHS_FR = { jan:1,fév:2,fevr:2,févr:2,mar:3,mars:3,avr:4,mai:5,jun:6,juin:6,jul:7,juil:7,aoû:8,aout:8,sep:9,sept:9,oct:10,nov:11,déc:12,dec:12 };
+  var MONTHS_EN = { jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12 };
+  function parseAirbnbDate(raw, year) {
+    if (!raw) return null;
+    var s = String(raw).toLowerCase().replace(/\./g,'').trim();
+    // "dim 3 mars" or "3 mars" or "mars 3"
+    var m = s.match(/(\d{1,2})\s+([a-záàâéèêëîïôùûü]+)/);
+    if (m) { var day=parseInt(m[1]), mon=MONTHS_FR[m[2].substring(0,4)]||MONTHS_EN[m[2].substring(0,3)]; if (mon&&day) return year+'-'+String(mon).padStart(2,'0')+'-'+String(day).padStart(2,'0'); }
+    m = s.match(/([a-záàâéèêëîïôùûü]+)\s+(\d{1,2})/);
+    if (m) { var mon2=MONTHS_FR[m[1].substring(0,4)]||MONTHS_EN[m[1].substring(0,3)], day2=parseInt(m[2]); if (mon2&&day2) return year+'-'+String(mon2).padStart(2,'0')+'-'+String(day2).padStart(2,'0'); }
+    return null;
+  }
+  var BIENS = [
+    { id:'nogent',     kw:['nogent','portes de paris','standing aux portes','appartement de standing','suresnes'] },
+    { id:'amaryllis',  kw:['amaryllis'] },
+    { id:'iguana',     kw:['iguana'] },
+    { id:'geko',       kw:['géko','geko','gecko'] },
+    { id:'zandoli',    kw:['zandoli'] },
+    { id:'mabouya',    kw:['mabouya'] },
+    { id:'schoelcher', kw:['schoelcher','schœlcher','bellevue schoelcher'] },
+  ];
+  function detectBien(txt) {
+    var t = txt.toLowerCase();
+    for (var i = 0; i < BIENS.length; i++) {
+      for (var j = 0; j < BIENS[i].kw.length; j++) { if (t.indexOf(BIENS[i].kw[j]) >= 0) return BIENS[i].id; }
+    }
+    return null;
+  }
+
+  var pushed=0, errors=0, skipped=0, log=[];
+  for (var th = 0; th < allThreads.length; th++) {
+    var msgs = allThreads[th].getMessages();
+    for (var mi = 0; mi < msgs.length; mi++) {
+      var msg = msgs[mi];
+      var subj = msg.getSubject() || '';
+      // Skip reminders / follow-ups (not booking confirmations)
+      if (/rappel|reminder|arriv[ae]\s+bient/i.test(subj) && !/confirm/i.test(subj)) { skipped++; continue; }
+      var body = msg.getPlainBody() || '';
+      var year = msg.getDate().getFullYear();
+      // Guest name from subject: "Réservation confirmée : Jean Dupont arrive le..."
+      var gm = subj.match(/:\s+(.+?)\s+arriv[ae]/i);
+      var guestName = gm ? gm[1].trim() : '';
+      // Confirmation code (10 uppercase alphanum chars)
+      var codeM = body.match(/\b([A-Z0-9]{10})\b/);
+      var confirmCode = codeM ? codeM[1] : ('gmail-' + msg.getId());
+      // Dates: look for "Arrivée ... Départ ..." block
+      var checkin = null, checkout = null;
+      var arrBlock = body.match(/arriv[eé]e[\s\S]{0,10}([A-ZDLMJVS][A-Z\.\s]+\d{1,2}[^\n]+)/i);
+      if (arrBlock) checkin = parseAirbnbDate(arrBlock[1], year);
+      var depBlock = body.match(/d[eé]part[\s\S]{0,10}([A-ZDLMJVS][A-Z\.\s]+\d{1,2}[^\n]+)/i);
+      if (depBlock) checkout = parseAirbnbDate(depBlock[1], year);
+      // Fallback: "DIM. 3 MARS MER. 6 MARS" on same line after "Arrivée Départ"
+      if (!checkin || !checkout) {
+        var sameLine = body.match(/arrivée\s+départ[\s\r\n]+([^\n]+)/i);
+        if (sameLine) {
+          var parts = sameLine[1].split(/\s{3,}|\t/);
+          if (parts.length >= 2) { checkin = checkin || parseAirbnbDate(parts[0], year); checkout = checkout || parseAirbnbDate(parts[parts.length-1], year); }
+        }
+      }
+      // Property
+      var bienId = detectBien(body) || detectBien(subj);
+      // Host payout total
+      var totalNet = 0;
+      var payoutM = body.match(/versement[\s\S]{0,400}total\s*\(eur\)\s*([\d\s]+[.,]\d{2})/i);
+      if (payoutM) { totalNet = parseFloat(payoutM[1].replace(/\s/g,'').replace(',','.')); }
+      else {
+        var allTotals = body.match(/total\s*\(eur\)\s*([\d\s]+[.,]\d{2})/gi) || [];
+        if (allTotals.length) { var last = allTotals[allTotals.length-1].match(/([\d\s]+[.,]\d{2})/); if (last) totalNet = parseFloat(last[1].replace(/\s/g,'').replace(',','.')); }
+      }
+      var nbGuests = 1;
+      var guestNbM = body.match(/(\d+)\s+adulte/i) || body.match(/(\d+)\s+adult/i);
+      if (guestNbM) nbGuests = parseInt(guestNbM[1]);
+      if (!guestName || !checkin || !checkout) {
+        log.push({ skip:true, subj:subj.slice(0,60), code:confirmCode, guest:guestName, checkin:checkin, checkout:checkout });
+        skipped++; continue;
+      }
+      var payload = { platform:'Airbnb', airbnbId:confirmCode, guestName:guestName, nbGuests:nbGuests, checkin:checkin, checkout:checkout, bienId:bienId||'inconnu', totalNet:totalNet, rawSubject:subj };
+      try {
+        var resp = UrlFetchApp.fetch(WEBHOOK_URL, { method:'post', contentType:'application/json', payload:JSON.stringify(payload), muteHttpExceptions:true });
+        var rc = resp.getResponseCode();
+        if (rc === 200) { pushed++; log.push({ ok:true, code:confirmCode, guest:guestName, bien:bienId, checkin:checkin, total:totalNet }); }
+        else { errors++; log.push({ ok:false, code:confirmCode, guest:guestName, httpCode:rc, body:resp.getContentText().slice(0,200) }); }
+      } catch(e) { errors++; log.push({ error:String(e), code:confirmCode }); }
+    }
+    allThreads[th].addLabel(label);
+  }
+  return { ok:true, threads:allThreads.length, pushed:pushed, errors:errors, skipped:skipped, log:log };
+}
+
+// Installe le déclencheur toutes-les-15-min + lance un premier passage sur les 365 derniers jours.
+function setupWebhookTrigger() {
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'pushAirbnbEmailsToWebhook_') ScriptApp.deleteTrigger(triggers[i]);
+  }
+  ScriptApp.newTrigger('pushAirbnbEmailsToWebhook_').timeBased().everyMinutes(15).create();
+  var res = pushAirbnbEmailsToWebhook_({ days: 7 });
+  return { ok:true, trigger:'pushAirbnbEmailsToWebhook_ toutes les 15 min', firstRun:res };
+}
+
 // Enrichit UNE résa existante de « Toutes les Réservations » avec nom/prix venant d'un mail OTA
 // (Airbnb/Booking ne transmettent ni nom ni prix par iCal). NON DESTRUCTIF : n'écrit Voyageur
 // (col C) et Montant (col H) QUE s'ils sont vides/placeholder. Matching par clé-contenu
@@ -211,6 +336,8 @@ function doGet(e) {
   if (action === "ingestAirbnbEmails") return json_(ingestAirbnbEmails_());
   if (action === "setupAirbnbIngest")  return json_(setupAirbnbIngest());
   if (action === "debugGmailSearch")   return debugGmailSearch_();
+  if (action === "pushAirbnbEmails")   return json_(pushAirbnbEmailsToWebhook_(e.parameter));
+  if (action === "setupWebhookTrigger") return json_(setupWebhookTrigger());
   if (action === "enrichReservation")  return enrichReservation_(e.parameter);
   if (action === "revenus2026FromMonth") return json_(revenus2026FromMonth_(parseInt(e.parameter.month||7), e.parameter.apply==="true", e.parameter.ignoreMemo==="true"));
   if (action === "revenus2026Inspect")   return json_(revenusInspect2026_()); // eslint-disable-line no-undef
@@ -238,6 +365,8 @@ function doPost(e) {
   if (action === "readEmails")            return readEmails_(body);
   if (action === "ingestAirbnbEmails")    return json_(ingestAirbnbEmails_());
   if (action === "setupAirbnbIngest")     return json_(setupAirbnbIngest());
+  if (action === "pushAirbnbEmails")      return json_(pushAirbnbEmailsToWebhook_(body));
+  if (action === "setupWebhookTrigger")   return json_(setupWebhookTrigger());
   if (action === "enrichReservation")     return enrichReservation_(body);
   if (action === "getConfig")             return getConfig_(body);
   if (action === "revenus2026DryRun")     return json_({ ok: true, preview: testRevenus2026_dryRun() });
