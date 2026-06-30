@@ -3677,15 +3677,15 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
   const touchStartXDetail = useRef(null);
 
   // Google reviews — Amaryllis (fiche dédiée) + biens de la résidence Sainte-Luce (place=residence).
-  // Schœlcher/Nogent n'ont pas de fiche Google → avis statiques.
+  // Schœlcher/Nogent n'ont pas de fiche Google → pas d'avis Google (ne pas afficher les avis Amaryllis).
   useEffect(() => {
     const GOOGLE_PLACE_BY_BIEN = { amaryllis: "amaryllis", zandoli: "residence", geko: "residence", mabouya: "residence" };
     const place = GOOGLE_PLACE_BY_BIEN[bien.id];
-    if (!place) { setGoogleRevs(STATIC_REVIEWS); return; }
+    if (!place) { setGoogleRevs([]); return; }
     fetch(`/api/google-reviews?place=${place}`)
       .then(r => r.json())
-      .then(d => { if (d.ok && d.reviews?.length) setGoogleRevs(d.reviews); else setGoogleRevs(STATIC_REVIEWS); })
-      .catch(() => setGoogleRevs(STATIC_REVIEWS));
+      .then(d => { if (d.ok && d.reviews?.length) setGoogleRevs(d.reviews); else setGoogleRevs([]); })
+      .catch(() => setGoogleRevs([]));
   }, [bien.id]);
 
   // Vrais avis voyageurs Airbnb (D1, non masqués) — pour tous les biens.
@@ -4956,7 +4956,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
 
             {/* Avis voyageurs */}
             {/* ── Avis voyageurs — Airbnb + Google fusionnés ── */}
-            {((bien.avis && bien.avis.length > 0) || googleRevs || (voyageurRevs && voyageurRevs.length > 0)) && (() => {
+            {((bien.avis && bien.avis.length > 0) || (googleRevs && googleRevs.length > 0) || (voyageurRevs && voyageurRevs.length > 0)) && (() => {
               const stripHtml = (t) => String(t || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
               const MOIS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
               const frDate = (iso) => { const m = /^(\d{4})-(\d{2})/.exec(iso || ""); return m ? `${MOIS[+m[2] - 1]} ${m[1]}` : (iso || ""); };
