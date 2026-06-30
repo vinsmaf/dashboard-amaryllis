@@ -53,3 +53,7 @@ public/competitors/*.csv
 
 # Sortie générée par le skill graphify (knowledge graph) — ne pas committer
 graphify-out/
+
+# Booking.com scraper — session + état (NE JAMAIS committer)
+.booking-session.json
+.booking-state.json
