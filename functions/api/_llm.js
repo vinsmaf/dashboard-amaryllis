@@ -235,9 +235,13 @@ export async function callLLM(env, opts) {
       ? provider.endpoint(env, model)
       : provider.endpoint;
 
-    // Retry sur 429/rate limit (max 2 fois par provider, puis cascade)
+    // Retry-avec-backoff (429) réservé au DERNIER candidat modèle : les candidats précédents
+    // basculent immédiatement sur le suivant sans attendre (la redondance du tableau remplace
+    // le retry — évite de cumuler 2 modèles × 2 tentatives × backoff = latence qui explose).
+    const isLastCandidate = model === modelCandidates[modelCandidates.length - 1];
+    const maxAttempts = isLastCandidate ? 2 : 1;
     let res, attempt = 0;
-    while (attempt < 2) {
+    while (attempt < maxAttempts) {
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), timeoutMs);
       const t0 = Date.now();
@@ -284,11 +288,12 @@ export async function callLLM(env, opts) {
         break;
       }
 
-      // Retry sur 429
+      // Retry sur 429 (backoff uniquement si une nouvelle tentative reste possible)
       if (res.status === 429) {
         attempt++;
         const txt = await res.clone().text().catch(() => "");
         errors.push({ provider: providerId, model, error: `429 try ${attempt}: ${txt.slice(0, 80)}` });
+        if (attempt >= maxAttempts) break; // dernier essai épuisé → candidat/provider suivant sans attendre
         await new Promise(r => setTimeout(r, 1500 * attempt));
         continue;
       }
