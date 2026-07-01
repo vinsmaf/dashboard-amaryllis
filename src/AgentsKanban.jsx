@@ -1,4 +1,4 @@
-// AgentsKanban.jsx — Tableau Kanban des actions des 23 agents Amaryllis
+// AgentsKanban.jsx — Tableau Kanban des actions des agents Amaryllis
 // Onglet "Agents" dans l'admin dashboard
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -50,6 +50,7 @@ const ALL_AGENTS = [
   { id: "webdesigner",               label: "Webdesigner",  emoji: "🎨"  },
   { id: "chef-produit-web",          label: "Chef Produit", emoji: "🏗️" },
   { id: "community-manager",         label: "Community Mgr",emoji: "📱"  },
+  { id: "repondeur-social",          label: "Répondeur Social", emoji: "💬" },
   { id: "commercial-publicite",      label: "Commercial",   emoji: "💼"  },
   { id: "crm-manager",               label: "CRM Manager",  emoji: "📧"  },
   { id: "consultant-ebusiness",      label: "e-Business",   emoji: "🚀"  },
@@ -62,7 +63,25 @@ const ALL_AGENTS = [
   { id: "prompt-engineer",           label: "Prompt Eng.",  emoji: "🪄"  },
   { id: "seo-local",                 label: "SEO Local",    emoji: "🗺️"  },
   { id: "voyageur-research",         label: "Voy. Research",emoji: "🔬"  },
+  { id: "fiscaliste",                label: "Fiscaliste LMP",emoji: "📜"  },
+  { id: "controleur-fiscal",         label: "Contrôleur Fiscal", emoji: "🏛️" },
+  { id: "comptable",                 label: "Comptable",    emoji: "📒"  },
+  { id: "notaire-assurance",         label: "Notaire & Assur.", emoji: "⚖️" },
 ];
+
+// Détecte le tag "⚠️ VÉRIF[risque]: critique" ajouté par /api/agents-verify
+// dans les notes d'une action, pour l'afficher comme badge distinct plutôt
+// que noyé dans le texte libre.
+function parseVerif(notes) {
+  if (!notes) return null;
+  const m = notes.match(/⚠️\s*VÉRIF\[(\w+)\]:\s*([^\n]*)/);
+  if (!m) return null;
+  return { risque: m[1], critique: m[2].trim() };
+}
+const VERIF_COLORS = {
+  haut:  { bg: "rgba(239,68,68,0.18)",  text: "#f87171" },
+  moyen: { bg: "rgba(245,158,11,0.18)", text: "#fbbf24" },
+};
 
 // ── Utils ────────────────────────────────────────────────────────────────────
 function timeAgo(ts) {
@@ -82,6 +101,8 @@ function ActionCard({ action, onStatusChange, mob, impact, userNote, onNoteChang
   const prio = PRIORITY_COLORS[action.priority] || PRIORITY_COLORS.basse;
   const cat  = CATEGORY_LABELS[action.category] || action.category;
   const ago  = timeAgo(action.last_analyzed);
+  const verif = parseVerif(action.notes);
+  const verifCol = verif ? (VERIF_COLORS[verif.risque] || VERIF_COLORS.moyen) : null;
 
   const NEXT_STATUS = {
     "backlog":      ["a-planifier", "en-cours", "fait", "bloqué"],
@@ -110,6 +131,14 @@ function ActionCard({ action, onStatusChange, mob, impact, userNote, onNoteChang
         <span style={{ fontSize: 14, flexShrink: 0 }}>{action.agent_emoji}</span>
         <span style={{ fontSize: 11, color: "#94a3b8", flexShrink: 0, marginTop: 1 }}>{action.agent_label}</span>
         <div style={{ marginLeft: "auto", display: "flex", gap: 4, flexShrink: 0 }}>
+          {verif && (
+            <span
+              title={`Vérification adversariale — risque ${verif.risque} : ${verif.critique}`}
+              style={{ fontSize: 9, padding: "1px 6px", borderRadius: 4, background: verifCol.bg, color: verifCol.text, fontWeight: 700 }}
+            >
+              ⚠️ VÉRIF {verif.risque.toUpperCase()}
+            </span>
+          )}
           <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 4, background: prio.bg, color: prio.text, fontWeight: 700 }}>
             {action.priority.toUpperCase()}
           </span>
@@ -149,11 +178,19 @@ function ActionCard({ action, onStatusChange, mob, impact, userNote, onNoteChang
           style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.07)" }}
           onClick={e => e.stopPropagation()}
         >
-          {action.notes && (
-            <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 8, fontStyle: "italic" }}>
-              📝 {action.notes}
+          {verif && (
+            <div style={{ fontSize: 11, padding: "6px 8px", borderRadius: 6, marginBottom: 8, background: verifCol.bg, color: verifCol.text, fontWeight: 600, lineHeight: 1.4 }}>
+              ⚠️ Vérification adversariale — risque {verif.risque} : {verif.critique}
             </div>
           )}
+          {(() => {
+            const rest = (action.notes || "").replace(/⚠️\s*VÉRIF\[\w+\]:[^\n]*/, "").trim();
+            return rest ? (
+              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 8, fontStyle: "italic" }}>
+                📝 {rest}
+              </div>
+            ) : null;
+          })()}
           <div style={{ fontSize: 10, color: "#475569", marginBottom: 8 }}>
             ID: {action.id} · {new Date(action.created_at * 1000).toLocaleDateString("fr-FR")}
           </div>
@@ -204,6 +241,69 @@ function ActionCard({ action, onStatusChange, mob, impact, userNote, onNoteChang
   );
 }
 
+// ── Panneau observabilité (/api/agents-stats) ──────────────────────────────────
+// Branché sur un endpoint backend déjà complet mais jusqu'ici jamais appelé
+// par le front : coût LLM 7j, qualité moyenne (llm_evals), modèles actifs.
+function StatsPanel({ stats }) {
+  if (!stats) return null;
+  const costTotal = (stats.llm_cost_daily || []).reduce((s, d) => s + (d.cost || 0), 0)
+    || (stats.llm_traces_7j || []).reduce((s, t) => s + (t.cost_total || 0), 0);
+  const qualEntries = stats.qualite_7j || [];
+  const qualN = qualEntries.reduce((s, q) => s + (q.n || 0), 0);
+  const qualAvg = qualN > 0
+    ? qualEntries.reduce((s, q) => s + (q.avg_global || 0) * (q.n || 0), 0) / qualN
+    : null;
+  // p.models est imbriqué { provider: { tier: model } } (voir _llm.js / ai-ops.js).
+  const modelsByProvider = stats.modeles_actifs?.models || {};
+  const modelChips = Object.entries(modelsByProvider).flatMap(([provider, tiers]) =>
+    Object.entries(tiers || {}).map(([tier, model]) => ({ key: `${provider}-${tier}`, label: `${provider}/${tier}: ${model}` }))
+  );
+  const traces = (stats.llm_traces_7j || []).slice(0, 6);
+  const totalErrors = (stats.llm_traces_7j || []).reduce((s, t) => s + (t.errors || 0), 0);
+
+  return (
+    <div style={{ background: "rgba(15,23,42,0.6)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: "12px 16px", marginBottom: 16 }}>
+      <div style={{ display: "flex", gap: 20, flexWrap: "wrap", marginBottom: traces.length ? 12 : 0 }}>
+        <div>
+          <div style={{ fontSize: 10, color: "#64748b" }}>💸 Coût LLM (7j)</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: "#e2e8f0" }}>${costTotal.toFixed(4)}</div>
+        </div>
+        <div>
+          <div style={{ fontSize: 10, color: "#64748b" }}>⭐ Qualité moy. (7j)</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: qualAvg == null ? "#475569" : qualAvg >= 7 ? "#10b981" : qualAvg >= 5 ? "#f59e0b" : "#ef4444" }}>
+            {qualAvg == null ? "—" : `${qualAvg.toFixed(1)}/10`} {qualN > 0 && <span style={{ fontSize: 10, color: "#475569", fontWeight: 400 }}>({qualN} évals)</span>}
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: 10, color: "#64748b" }}>❌ Erreurs LLM (7j)</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: totalErrors > 0 ? "#ef4444" : "#10b981" }}>{totalErrors}</div>
+        </div>
+        {modelChips.length > 0 && (
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ fontSize: 10, color: "#64748b", marginBottom: 4 }}>🧠 Modèles actifs (AI-Ops)</div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {modelChips.map(m => (
+                <span key={m.key} style={{ fontSize: 10, padding: "2px 8px", borderRadius: 5, background: "rgba(99,102,241,0.14)", color: "#a5b4fc" }}>
+                  {m.label}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+      {traces.length > 0 && (
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 10 }}>
+          {traces.map((t, i) => (
+            <span key={i} title={`latence moy. ${t.avg_latency_ms || "?"}ms`} style={{ fontSize: 10, padding: "2px 8px", borderRadius: 5, background: "rgba(255,255,255,0.05)", color: "#94a3b8" }}>
+              {t.provider}/{t.model} · {t.calls} appels{t.errors > 0 ? ` · ⚠️${t.errors}` : ""}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Composant principal ───────────────────────────────────────────────────────
 export default function AgentsKanban({ mob }) {
   const [actions, setActions]         = useState([]);
@@ -221,6 +321,8 @@ export default function AgentsKanban({ mob }) {
   const [liveActive, setLiveActive]   = useState(false);
   const [outcomes, setOutcomes]       = useState({});
   const [userNotes, setUserNotes]     = useState({});
+  const [agentStats, setAgentStats]   = useState(null);
+  const [statsOpen, setStatsOpen]     = useState(false);
   const runTimeout  = useRef(null);
   const pollRef     = useRef(null);
   const actionsRef  = useRef([]);
@@ -281,17 +383,31 @@ export default function AgentsKanban({ mob }) {
     }, delay);
   }, [load]);
 
+  // ── Observabilité (/api/agents-stats) — chargée à part, rafraîchie moins souvent ──
+  const loadAgentStats = useCallback(async () => {
+    try {
+      const r = await adminFetch("/api/agents-stats");
+      const d = await r.json();
+      if (d.ok) setAgentStats(d);
+    } catch {
+      // silencieux — panneau optionnel, ne doit pas bloquer le reste de l'onglet
+    }
+  }, []);
+
   useEffect(() => {
     load();
     schedulePoll();
+    loadAgentStats();
+    const statsInterval = setInterval(loadAgentStats, 120_000);
     const onVisible = () => { if (document.visibilityState === "visible") { load(true); schedulePoll(); } };
     document.addEventListener("visibilitychange", onVisible);
     return () => {
       clearTimeout(pollRef.current);
       clearTimeout(runTimeout.current);
+      clearInterval(statsInterval);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [load, schedulePoll]);
+  }, [load, schedulePoll, loadAgentStats]);
 
   // Re-schedule poll chaque fois que les actions changent (adapte la fréquence)
   useEffect(() => { schedulePoll(); }, [actions, schedulePoll]);
@@ -359,6 +475,7 @@ export default function AgentsKanban({ mob }) {
         setRunResult(d);
         setLastRun(new Date().toLocaleTimeString("fr-FR"));
         await load();
+        loadAgentStats();
       }
     } catch (e) {
       setRunResult({ error: e.message });
@@ -449,6 +566,17 @@ export default function AgentsKanban({ mob }) {
         </div>
 
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          {/* Bouton stats */}
+          <button
+            onClick={() => setStatsOpen(o => !o)}
+            style={{
+              padding: "8px 16px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)",
+              background: statsOpen ? "rgba(255,255,255,0.08)" : "transparent",
+              color: "#94a3b8", fontSize: 12, cursor: "pointer", fontWeight: 600,
+            }}
+          >
+            📊 Stats {statsOpen ? "▲" : "▼"}
+          </button>
           {/* Bouton relancer */}
           <button
             onClick={handleRunAll}
@@ -483,6 +611,9 @@ export default function AgentsKanban({ mob }) {
           }
         </div>
       )}
+
+      {/* ── Panneau stats (observabilité LLM) ── */}
+      {statsOpen && <StatsPanel stats={agentStats} />}
 
       {/* ── Progress global ── */}
       <div style={{ background: "rgba(15,23,42,0.6)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: "12px 16px", marginBottom: 20 }}>
