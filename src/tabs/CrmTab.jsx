@@ -5,6 +5,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAppData } from "../AppDataContext.jsx";
 import { fetchJSON } from "../lib/apiFetch.js";
+import { computeTier } from "../utils/loyaltyTiers.js";
 
 const BIENS = ["amaryllis","iguana","zandoli","geko","mabouya","schoelcher","nogent"];
 const CANAL_LABEL = { airbnb: "Airbnb", booking: "Booking", direct: "Direct", inconnu: "Inconnu" };
@@ -86,6 +87,7 @@ function ClientCard({ client, onSelect, selected }) {
   const tags   = parseTags(client.tags);
   const isVip  = tags.includes("vip");
   const isRec  = client.is_recurrent;
+  const tier   = computeTier(client);
   return (
     <div
       onClick={() => onSelect(client)}
@@ -103,6 +105,11 @@ function ClientCard({ client, onSelect, selected }) {
           </span>
           {isVip && <span style={{ marginLeft: 8, fontSize: 11, color: "#f59e0b" }}>★ VIP</span>}
           {isRec ? <span style={{ marginLeft: 6, fontSize: 11, color: "#a78bfa" }}>↩ récurrent</span> : null}
+          {tier && (
+            <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 700, color: tier.color }} title={tier.avantage}>
+              {tier.emoji} {tier.label}
+            </span>
+          )}
         </div>
         <div style={{ fontWeight: 700, color: "#34d399", fontSize: 15 }}>{fmt(client.ltv_total)}</div>
       </div>
@@ -153,6 +160,7 @@ function DetailPanel({ client, onClose, onSave, onDelete, allClients }) {
   const [mergeTarget, setMergeTarget] = useState(null);
   const biens = parseBiens(client.biens);
   const tags  = parseTags(client.tags);
+  const tier  = computeTier(client);
 
   async function save() {
     setSaving(true);
@@ -213,6 +221,19 @@ function DetailPanel({ client, onClose, onSave, onDelete, allClients }) {
       <div style={{ fontSize: 12, color: "var(--c-muted,#94a3b8)", marginBottom: 16 }}>
         {tags.map(t => <TagBadge key={t} tag={t} />)}
       </div>
+
+      {/* Palier fidélité */}
+      {tier && (
+        <section style={{
+          marginBottom: 20, padding: "10px 12px", borderRadius: 8,
+          background: `${tier.color}18`, border: `1px solid ${tier.color}44`,
+        }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: tier.color, marginBottom: 4 }}>
+            {tier.emoji} Palier {tier.label}
+          </div>
+          <div style={{ fontSize: 12, color: "var(--c-muted,#94a3b8)" }}>{tier.avantage}</div>
+        </section>
+      )}
 
       {/* Contact éditable */}
       <section style={{ marginBottom: 20 }}>
