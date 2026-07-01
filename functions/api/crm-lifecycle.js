@@ -1,13 +1,17 @@
-// GET /api/crm-lifecycle?secret=POSTSTAY_SECRET&segment=winback|fidelite[&dry=1]
-// Phase 1 CRM — réactivation des clients passés (table crm_clients).
-//   - winback  : dormants/perdus (dernier_sejour 6–36 mois) → « votre villa vous attend »
-//   - fidelite : accès prioritaire haute saison à TOUS les anciens (nb_sejours ≥ 1)
+// GET /api/crm-lifecycle?secret=POSTSTAY_SECRET&segment=winback|fidelite|anniversaire[&dry=1]
+// Phase 1+2 CRM — réactivation + fidélisation des clients passés (table crm_clients).
+//   - winback      : dormants/perdus (dernier_sejour 6–36 mois) → « votre villa vous attend »
+//   - fidelite     : accès prioritaire haute saison à TOUS les anciens (nb_sejours ≥ 1)
+//   - anniversaire : 1 an jour pour jour après le dernier séjour (fenêtre 350–380j pour
+//     couvrir un déclenchement mensuel sans repasser 2× sur le même client) — mentionne
+//     le palier fidélité du client (src/utils/loyaltyTiers.js) si applicable.
 // ?dry=1 (DÉFAUT IMPLICITE conseillé) : liste la cible sans envoyer.
 // Anti-doublon : table crm_campaigns (un client n'est pas recontacté 2× pour la même campagne).
-// RM advisory : AUCUNE remise chiffrée codée en dur — l'argument = le direct sans frais d'agence
-// (factuel). Tout barème fidélité reste appliqué manuellement par Vincent.
+// RM advisory : AUCUNE remise chiffrée codée en dur au-delà du texte du palier déjà validé
+// par Vincent (voir loyaltyTiers.js) — pas de nouveau barème inventé ici.
 
 import { resendFrom } from "./_email.js";
+import { computeTier } from "../../src/utils/loyaltyTiers.js";
 
 const json = (d, s = 200) => new Response(JSON.stringify(d), {
   status: s, headers: { "Content-Type": "application/json" },
@@ -43,6 +47,21 @@ const SEGMENTS = {
        <p>Réservez en direct, sans frais d'agence — répondez simplement à cet email et nous bloquons vos dates.</p>`,
     cta: "Choisir mes dates",
   },
+  anniversaire: {
+    // 1 an jour pour jour (± 15j) après le dernier séjour (Iguana exclu — RM-19).
+    where: "c.nb_sejours >= 1 AND c.email IS NOT NULL AND c.email != '' " +
+           "AND (c.biens IS NULL OR c.biens NOT LIKE '%iguana%') " +
+           "AND c.dernier_sejour IS NOT NULL " +
+           "AND julianday('now') - julianday(c.dernier_sejour) BETWEEN 350 AND 380",
+    subject: (p) => `${p}, ça fait déjà un an !`,
+    utm: "utm_source=email&utm_medium=crm&utm_campaign=anniversaire-sejour",
+    intro: (p, bien, tier) =>
+      `<p style="font-size:16px;margin:0 0 16px;">Bonjour ${p},</p>
+       <p>Il y a un an tout juste, vous étiez ${bien} — le temps passe vite !</p>
+       ${tier ? `<p>En tant que membre <strong>${tier.emoji} ${tier.label}</strong> de notre programme fidélité : ${tier.avantage}.</p>` : ""}
+       <p>Réservez en direct, sans frais d'agence, et retrouvez la Martinique.</p>`,
+    cta: "Revoir nos disponibilités",
+  },
 };
 
 const BIEN_LABELS = {
@@ -63,6 +82,7 @@ function bienPhrase(biensRaw) {
 function buildHtml(client, seg) {
   const prenom = (client.prenom || (client.nom || "").split(" ")[0] || "cher voyageur").trim();
   const bien = bienPhrase(client.biens);
+  const tier = computeTier(client);
   return `
 <div style="font-family:'Helvetica Neue',Arial,sans-serif;max-width:580px;margin:0 auto;background:#fdfaf3;border-radius:16px;overflow:hidden;border:1px solid #e8e0d0">
   <div style="background:#0e3b3a;padding:24px;text-align:center;">
@@ -70,7 +90,7 @@ function buildHtml(client, seg) {
     <div style="color:#c47254;font-size:11px;margin-top:4px;letter-spacing:2px;">LOCATIONS</div>
   </div>
   <div style="padding:32px 28px;color:#0e3b3a;line-height:1.6;">
-    ${seg.intro(prenom, bien)}
+    ${seg.intro(prenom, bien, tier)}
     <div style="margin:24px 0;text-align:center;">
       <a href="${SITE}?${seg.utm}" style="display:inline-block;padding:14px 32px;background:#c47254;color:#fdfaf3;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;">${seg.cta}</a>
     </div>
