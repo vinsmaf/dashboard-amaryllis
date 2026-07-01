@@ -20,6 +20,10 @@ RESEND_API_KEY=re_xxxxxxxxxxxx
 RESEND_FROM=Amaryllis <notifications@mail.villamaryllis.com>
 NOTIFICATION_EMAIL=votre@email.com
 
+# ── Gmail (Messagerie voyageurs — chantier connecteurs 2026-07, voir docs/GMAIL-SETUP.md) ────
+GOOGLE_OAUTH_CLIENT_ID=votre_client_id.apps.googleusercontent.com
+GOOGLE_OAUTH_CLIENT_SECRET=votre_client_secret
+
 BEDS24_API_KEY=votre_api_key_beds24
 BEDS24_PROP_KEY=votre_prop_key_beds24
 BEDS24_WEBHOOK_SECRET=optionnel

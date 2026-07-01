@@ -141,6 +141,9 @@ All server-side logic lives in `functions/api/` (Cloudflare Pages Functions form
 | `/api/send-prix-alert` | POST | `send-prix-alert.js` | Envoie email + push ntfy quand des prix sont sous le seuil minimum. Appelé depuis le CalendrierTarifs. |
 | `/api/send-prix-recap` | GET | `send-prix-recap.js` | Récap email hebdomadaire des prix + liens Airbnb (prévu pour cron-job.org chaque lundi). Auth : `?secret=PRIX_RECAP_SECRET`. |
 | `/api/send-guest-email` | POST | `send-guest-email.js` | Envoi générique email voyageur (templates `public/email-templates/*`). Réservé résas DIRECTES. Auth `X-Send-Secret`/`?secret=POSTSTAY_SECRET`. |
+| `/api/gmail-oauth-start` | GET | `gmail-oauth-start.js` | Démarre le consentement OAuth Gmail (bouton "Connecter Gmail" dans Messagerie). Auth admin via `?token=`. |
+| `/api/gmail-oauth-callback` | GET | `gmail-oauth-callback.js` | Retour Google : échange le code contre un refresh_token, le stocke en D1 (`oauth_tokens`). |
+| `/api/gmail-sync` | GET | `gmail-sync.js` | Poll `contact@villamaryllis.com` (lecture seule) → importe les réponses voyageurs dans `emails_log` (`direction='in'`). `?secret=POSTSTAY_SECRET` (cron 10 min) ou Bearer admin (bouton "Sync"). `?status=1` = simple check de connexion. Voir `docs/GMAIL-SETUP.md`. |
 | `/api/send-prearrivee` | GET | `send-prearrivee.js` | Cron J-3 : email pré-arrivée aux résas directes (D1 `direct_bookings`). |
 | `/api/send-poststay` | GET | `send-poststay.js` | Cron J+1/J+3 : post-séjour (Nogent/Beds24 + résas directes). Liens avis Google par bien. |
 | `/api/send-relance-panier` | GET | `send-relance-panier.js` | Cron horaire : relance panier abandonné (D1 `abandoned_carts`, exclut convertis). |
@@ -315,7 +318,19 @@ Toujours redéployer sur **ce même deployment id** (= `APPS_SCRIPT_URL`) pour p
 Infra : `src/utils/abTest.js` — `getVariant("nom_test")` (cookie 50/50 + GA4 `ab_variant_assigned`), `trackConversion("nom_test", {…})` (GA4 `ab_conversion`). Tests actifs : `cta_label`, `hero_amaryllis`.
 ⚠️ **Ne jamais A/B le prix via `bien.prix`** : il alimente le calcul du total de réservation (incohérence checkout). Un test charm-pricing nécessiterait un champ d'affichage `prixAffiche` découplé du calcul.
 
-### 6. Déploiement & vérif
+### 6. Messagerie Gmail entrante (depuis 07/2026)
+
+`emails_log` contient maintenant des lignes `direction='in'` (réponses voyageurs importées
+depuis `contact@villamaryllis.com` via `gmail-sync.js`, voir `docs/GMAIL-SETUP.md`) EN PLUS
+des lignes `direction='out'` (envois Resend, comportement historique).
+⚠️ **Piège** : pour ces lignes entrantes, `to_email` vaut toujours `"contact@villamaryllis.com"`
+(la boîte réceptrice) et c'est `from_email` qui contient l'adresse du voyageur. Toute nouvelle
+requête D1 sur `emails_log` qui groupe/filtre par voyageur **doit** utiliser l'expression
+`CASE WHEN direction = 'in' THEN from_email ELSE to_email END` (déjà appliquée dans
+`functions/api/emails-log.js`) — grouper naïvement par `to_email` ferait disparaître toutes
+les réponses voyageurs sous un unique bucket `contact@villamaryllis.com`.
+
+### 7. Déploiement & vérif
 
 - `npm run deploy:pages` rebuild + déploie + **smoke test** (home/villa/admin, bundle JS, kill-switch SW, anti-asset-gelé `/guide-hub`, API `get-config`/`social`, `sitemap.xml`, meta prérendue). Échec smoke = exit 1.
 - **Audit d'invariants au déploiement** (non bloquant) : `scripts/audit-invariants.mjs` (post-smoke) vérifie source unique des biens, miroirs GAS/Worker, CSP vs tracking, longueurs meta, mémoire `.memory/` → verdict 🟢/🟡/🔴 + rapport `docs/_audits/AUDIT-latest.md` (gitignoré). **Ne bloque jamais** (`SKIP_AUDIT=1` pour désactiver). Pour un audit riche piloté : skill **`auditeur`** (manuelle).

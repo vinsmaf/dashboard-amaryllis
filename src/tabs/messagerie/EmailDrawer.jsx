@@ -81,16 +81,28 @@ export default function EmailDrawer({ toEmail, onClose, onCompose }) {
 
         {loading && <div style={{ fontSize: 12, color: "#64748b" }}>Chargement…</div>}
         {!loading && emails.length === 0 && (
-          <div style={{ fontSize: 12, color: "#64748b", padding: "20px 0" }}>Aucun email envoyé à ce destinataire.</div>
+          <div style={{ fontSize: 12, color: "#64748b", padding: "20px 0" }}>Aucun échange avec ce voyageur.</div>
         )}
 
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {emails.map(e => (
-            <div key={e.id} style={{ background: "rgba(255,255,255,0.03)", borderRadius: 9, padding: "10px 14px", border: "1px solid rgba(255,255,255,0.05)" }}>
+          {emails.map(e => {
+            const inbound = e.direction === "in";
+            return (
+            <div key={e.id} style={{
+              background: inbound ? "rgba(59,130,246,0.08)" : "rgba(255,255,255,0.03)",
+              borderRadius: 9, padding: "10px 14px",
+              border: inbound ? "1px solid rgba(59,130,246,0.25)" : "1px solid rgba(255,255,255,0.05)",
+              marginLeft: inbound ? 0 : 24, marginRight: inbound ? 24 : 0,
+            }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
-                <span style={{ fontSize: 10, color: e.status === "sent" ? "#10b981" : "#ef4444", fontWeight: 700 }}>
-                  {e.status === "sent" ? "✓" : "✗"} {e.status}
+                <span style={{ fontSize: 9, background: inbound ? "rgba(59,130,246,0.2)" : "rgba(16,185,129,0.15)", color: inbound ? "#93c5fd" : "#6ee7b7", borderRadius: 4, padding: "1px 6px", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                  {inbound ? "📩 Voyageur" : "📤 Vous"}
                 </span>
+                {!inbound && (
+                  <span style={{ fontSize: 10, color: e.status === "sent" ? "#10b981" : "#ef4444", fontWeight: 700 }}>
+                    {e.status === "sent" ? "✓" : "✗"} {e.status}
+                  </span>
+                )}
                 {e.template && (
                   <span style={{ fontSize: 9, background: "rgba(99,102,241,0.15)", color: "#a5b4fc", borderRadius: 4, padding: "1px 6px", fontWeight: 600 }}>
                     {e.template}
@@ -113,7 +125,7 @@ export default function EmailDrawer({ toEmail, onClose, onCompose }) {
                 />
               )}
             </div>
-          ))}
+          );})}
         </div>
       </div>
     </div>

@@ -18,6 +18,10 @@ function formatDate(ts) {
   return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "2-digit" });
 }
 
+function adminToken() {
+  return sessionStorage.getItem("ldb_tok") || localStorage.getItem("admin_token") || "";
+}
+
 export default function MessagerieTab() {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,6 +31,62 @@ export default function MessagerieTab() {
   const [composerOpen, setComposerOpen] = useState(false);
   const [composerPrefill, setComposerPrefill] = useState({});
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [gmail, setGmail] = useState({ checked: false, connected: false, accountEmail: null });
+  const [gmailSyncing, setGmailSyncing] = useState(false);
+  const [gmailBanner, setGmailBanner] = useState(null);
+
+  const reloadClients = () => {
+    fetch("/api/emails-log?group=clients", { headers: { Authorization: `Bearer ${adminToken()}` } })
+      .then(r => r.json())
+      .then(d => setClients(d.clients || []))
+      .catch(() => {});
+  };
+
+  // Statut de connexion Gmail (bouton "Connecter Gmail" / "✓ connecté")
+  useEffect(() => {
+    fetch("/api/gmail-sync?status=1", { headers: { Authorization: `Bearer ${adminToken()}` } })
+      .then(r => r.json())
+      .then(d => setGmail({ checked: true, connected: !!d.connected, accountEmail: d.accountEmail || null }))
+      .catch(() => setGmail({ checked: true, connected: false, accountEmail: null }));
+  }, []);
+
+  // Retour du flow OAuth (?gmail_oauth=ok|error dans l'URL après redirection /admin)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get("gmail_oauth");
+    if (!status) return;
+    if (status === "ok") {
+      const account = params.get("account");
+      setGmailBanner({ type: "ok", text: `Gmail connecté${account ? ` (${account})` : ""} ✓` });
+      setGmail(g => ({ ...g, connected: true, accountEmail: account || g.accountEmail }));
+    } else {
+      setGmailBanner({ type: "error", text: `Connexion Gmail échouée : ${params.get("reason") || "erreur inconnue"}` });
+    }
+    params.delete("gmail_oauth"); params.delete("account"); params.delete("reason");
+    const rest = params.toString();
+    window.history.replaceState({}, "", window.location.pathname + (rest ? `?${rest}` : ""));
+  }, []);
+
+  function connectGmail() {
+    window.location.href = `/api/gmail-oauth-start?token=${encodeURIComponent(adminToken())}`;
+  }
+
+  async function syncGmailNow() {
+    setGmailSyncing(true);
+    try {
+      const r = await fetch("/api/gmail-sync", { headers: { Authorization: `Bearer ${adminToken()}` } });
+      const d = await r.json();
+      if (d.connected === false) {
+        setGmailBanner({ type: "error", text: "Gmail non connecté." });
+      } else {
+        setGmailBanner({ type: "ok", text: `Sync ✓ — ${d.imported ?? 0} nouveau(x) message(s)` });
+        reloadClients();
+      }
+    } catch (e) {
+      setGmailBanner({ type: "error", text: `Erreur sync : ${e.message}` });
+    }
+    setGmailSyncing(false);
+  }
 
   useEffect(() => {
     const token = sessionStorage.getItem("ldb_tok") || localStorage.getItem("admin_token") || "";
@@ -78,7 +138,30 @@ export default function MessagerieTab() {
           value={search} onChange={e => setSearch(e.target.value)}
           style={{ padding: "8px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#0f172a", color: "#e2e8f0", fontSize: 12, outline: "none", minWidth: 240 }}
         />
-        <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+          {gmail.checked && (
+            gmail.connected ? (
+              <>
+                <span style={{ fontSize: 11, color: "#6ee7b7", fontWeight: 600, whiteSpace: "nowrap" }}>
+                  ✓ Gmail connecté{gmail.accountEmail ? ` (${gmail.accountEmail})` : ""}
+                </span>
+                <button
+                  onClick={syncGmailNow}
+                  disabled={gmailSyncing}
+                  style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(110,231,183,0.3)", background: "rgba(16,185,129,0.08)", color: "#6ee7b7", fontSize: 12, fontWeight: 700, cursor: gmailSyncing ? "default" : "pointer", whiteSpace: "nowrap" }}
+                >
+                  {gmailSyncing ? "⏳ Sync…" : "🔄 Sync"}
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={connectGmail}
+                style={{ padding: "8px 14px", borderRadius: 8, border: "1px solid rgba(239,68,68,0.35)", background: "rgba(239,68,68,0.08)", color: "#fca5a5", fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
+              >
+                📩 Connecter Gmail
+              </button>
+            )
+          )}
           <button
             onClick={() => setBulkOpen(true)}
             style={{ padding: "8px 14px", borderRadius: 8, border: "1px solid rgba(99,102,241,0.4)", background: "rgba(99,102,241,0.1)", color: "#a5b4fc", fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
@@ -93,6 +176,20 @@ export default function MessagerieTab() {
           </button>
         </div>
       </div>
+
+      {gmailBanner && (
+        <div
+          onClick={() => setGmailBanner(null)}
+          style={{
+            marginBottom: 12, padding: "8px 14px", borderRadius: 8, fontSize: 12, cursor: "pointer",
+            background: gmailBanner.type === "ok" ? "rgba(16,185,129,0.1)" : "rgba(239,68,68,0.1)",
+            border: `1px solid ${gmailBanner.type === "ok" ? "rgba(16,185,129,0.25)" : "rgba(239,68,68,0.25)"}`,
+            color: gmailBanner.type === "ok" ? "#6ee7b7" : "#f87171",
+          }}
+        >
+          {gmailBanner.text} <span style={{ opacity: 0.6 }}>(clic pour fermer)</span>
+        </div>
+      )}
 
       {loading && <div style={{ fontSize: 12, color: "#64748b" }}>Chargement des conversations…</div>}
       {error && (
@@ -125,8 +222,13 @@ export default function MessagerieTab() {
           >
             <span style={{ fontSize: 14 }}>{c.booking_id ? "🔵" : "⚪"}</span>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "#e2e8f0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#e2e8f0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "flex", alignItems: "center", gap: 6 }}>
                 {c.to_email}
+                {c.has_unread_reply && (
+                  <span style={{ fontSize: 9, background: "rgba(59,130,246,0.2)", color: "#93c5fd", borderRadius: 4, padding: "1px 6px", fontWeight: 700, textTransform: "uppercase", flexShrink: 0 }}>
+                    📩 a répondu
+                  </span>
+                )}
               </div>
               <div style={{ fontSize: 11, color: "#64748b", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 {c.last_subject || "—"}
@@ -138,9 +240,13 @@ export default function MessagerieTab() {
               )}
               <div style={{ fontSize: 10, color: "#475569", marginTop: 2 }}>{c.count} email{c.count > 1 ? "s" : ""} · {formatDate(c.last_sent)}</div>
             </div>
-            <span style={{ fontSize: 10, color: c.last_status === "sent" ? "#10b981" : "#ef4444", fontWeight: 700 }}>
-              {c.last_status === "sent" ? "✓" : "✗"}
-            </span>
+            {c.last_direction === "in" ? (
+              <span style={{ fontSize: 10, color: "#93c5fd", fontWeight: 700 }}>📩</span>
+            ) : (
+              <span style={{ fontSize: 10, color: c.last_status === "sent" ? "#10b981" : "#ef4444", fontWeight: 700 }}>
+                {c.last_status === "sent" ? "✓" : "✗"}
+              </span>
+            )}
           </div>
         ))}
       </div>

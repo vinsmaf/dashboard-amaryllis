@@ -38,7 +38,7 @@ export async function onRequest(context) {
       const id = url.searchParams.get("id");
       if (!id) return json({ error: "id requis" }, 400);
       const row = await db.prepare(
-        `SELECT id, resend_id, to_email, from_email, subject, html, text, sent_at, status, error, template
+        `SELECT id, resend_id, to_email, from_email, subject, html, text, sent_at, status, error, template, direction
          FROM emails_log WHERE id = ? AND category = 'client'`
       ).bind(id).first();
       if (!row) return json({ error: "introuvable" }, 404);
@@ -68,10 +68,16 @@ export async function onRequest(context) {
     }
 
     // Mode booking_id : tous les emails d'une résa
+    // NB : "guest_email" = l'adresse voyageur quelle que soit la direction du message
+    // (to_email si direction='out', from_email si direction='in' — cf. migration 0004).
+    // Sans cette normalisation, les réponses entrantes se regrouperaient toutes sous
+    // "contact@villamaryllis.com" au lieu de rester rattachées à chaque voyageur.
+    const GUEST_EMAIL_EXPR = "CASE WHEN direction = 'in' THEN from_email ELSE to_email END";
+
     const bookingId = url.searchParams.get("booking_id");
     if (bookingId) {
       const { results } = await db.prepare(
-        `SELECT id, to_email, subject, template, status, sent_at, opened_at, clicked_at, bien_id, booking_id
+        `SELECT id, to_email, from_email, direction, subject, template, status, sent_at, opened_at, clicked_at, bien_id, booking_id
          FROM emails_log
          WHERE booking_id = ? AND category = 'client'
          ORDER BY sent_at DESC
@@ -80,46 +86,49 @@ export async function onRequest(context) {
       return json({ emails: results || [] });
     }
 
-    // Mode to : fil d'un destinataire
+    // Mode to : fil d'un voyageur (identifié par son adresse, quel que soit le sens des messages)
     const to = url.searchParams.get("to");
     if (to) {
       const { results } = await db.prepare(
-        `SELECT id, to_email, subject, template, status, sent_at, opened_at, clicked_at, bien_id, booking_id
+        `SELECT id, to_email, from_email, direction, subject, template, status, sent_at, opened_at, clicked_at, bien_id, booking_id
          FROM emails_log
-         WHERE to_email = ? AND category = 'client'
+         WHERE ${GUEST_EMAIL_EXPR} = ? AND category = 'client'
          ORDER BY sent_at DESC
          LIMIT 100`
       ).bind(to).all();
       return json({ emails: results || [] });
     }
 
-    // Mode group=clients : agrégat par destinataire
+    // Mode group=clients : agrégat par voyageur (fusion entrant + sortant)
     if (url.searchParams.get("group") === "clients") {
       const { results } = await db.prepare(
         `SELECT
-           to_email,
+           ${GUEST_EMAIL_EXPR} as to_email,
            COUNT(*) as count,
            MAX(sent_at) as last_sent,
+           MAX(CASE WHEN direction = 'in' THEN sent_at END) as last_inbound_at,
            MAX(bien_id) as bien_id,
            MAX(booking_id) as booking_id
          FROM emails_log
          WHERE category = 'client'
-         GROUP BY to_email
+         GROUP BY ${GUEST_EMAIL_EXPR}
          ORDER BY last_sent DESC
          LIMIT 200`
       ).all();
-      // Pour chaque destinataire, fetch le sujet + statut du dernier email
+      // Pour chaque voyageur, fetch le sujet + statut + direction du dernier message
       const enriched = [];
       for (const row of results || []) {
         const last = await db.prepare(
-          `SELECT subject, status FROM emails_log
-           WHERE to_email = ? AND category = 'client'
+          `SELECT subject, status, direction FROM emails_log
+           WHERE ${GUEST_EMAIL_EXPR} = ? AND category = 'client'
            ORDER BY sent_at DESC LIMIT 1`
         ).bind(row.to_email).first();
         enriched.push({
           ...row,
           last_subject: last?.subject || "",
           last_status: last?.status || "",
+          last_direction: last?.direction || "out",
+          has_unread_reply: !!row.last_inbound_at && row.last_inbound_at === row.last_sent,
         });
       }
       return json({ clients: enriched });

@@ -3865,6 +3865,20 @@ export default {
         await runCancelUnpaidBeds24Bookings(env);
         await runEditorialRetry(env);
         await runEditorialAutoPublish(env);
+        // ── Sync Gmail entrant (réponses voyageurs → contact@villamaryllis.com) ─────────────────────
+        //    Silencieux si pas encore connecté (connected:false) — pas d'erreur bloquante.
+        try {
+          const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+          const gmRes = await fetch(`${siteUrl}/api/gmail-sync?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`);
+          const gmData = await gmRes.json().catch(() => ({}));
+          if (gmData.connected === false) {
+            // pas encore connecté via le bouton "Connecter Gmail" — rien à faire
+          } else if ((gmData.imported ?? 0) > 0) {
+            console.log(`[gmail-sync] ✓ ${gmData.imported} nouveau(x) message(s) voyageur`);
+          }
+        } catch (e) {
+          console.error("[gmail-sync] Cron error:", e.message);
+        }
         // ── Relance panier abandonné (horaire — D1 de-dup dans l'endpoint) ────────────────────────
         try {
           const siteUrl = env.SITE_URL || "https://villamaryllis.com";
