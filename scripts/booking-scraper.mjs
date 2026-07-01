@@ -1,24 +1,24 @@
 // booking-scraper.mjs
-// Scrape les réservations Booking.com depuis l'extranet (headless).
-// Utilise le profil Chrome persistant créé par booking-login.mjs.
+// Scrape les réservations Booking.com depuis l'extranet via CDP (Chrome DevTools Protocol).
+// Se connecte au Chrome RÉEL de l'utilisateur (vrais cookies, vraie session).
 // Pousse les nouvelles résas vers /api/airbnb-email-import (D1 direct_bookings).
 //
+// PRÉREQUIS : Chrome doit tourner avec --remote-debugging-port=9222
+//   → bash scripts/booking-chrome-debug.sh
+//
 // Usage : node scripts/booking-scraper.mjs [--days=90] [--dry]
-// Cron  : toutes les 6h — ajouter dans crontab -e :
-//   0 */6 * * * cd ~/locatif-dashboard && node scripts/booking-scraper.mjs >> /tmp/booking-scraper.log 2>&1
+// Cron  : 0 */6 * * * bash ~/locatif-dashboard/scripts/booking-chrome-debug.sh 2>/dev/null; \
+//           cd ~/locatif-dashboard && node scripts/booking-scraper.mjs >> /tmp/booking-scraper.log 2>&1
 
 import { chromium } from 'playwright';
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { join, dirname } from 'path';
-import { homedir } from 'os';
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const DEV_VARS   = join(__dir, '../.dev.vars');
 const STATE_FILE = join(__dir, '../.booking-state.json');
-
-// Même profil que booking-login.mjs
-const PROFILE_DIR = join(homedir(), '.booking-scraper-profile');
+const CDP_URL    = 'http://localhost:9222';
 
 // ── Env ──────────────────────────────────────────────────────────────────────
 function loadDevVars() {
@@ -27,7 +27,7 @@ function loadDevVars() {
     const eq = line.indexOf('=');
     if (eq > 0) {
       const k = line.slice(0, eq).trim();
-      const v = line.slice(eq + 1).trim().replace(/^["'](.*)["']$/, '$1');
+      const v = line.slice(eq + 1).trim().replace(/^["'](.*)['""]$/, '$1');
       if (k && !process.env[k]) process.env[k] = v;
     }
   }
@@ -166,30 +166,46 @@ async function extractFromDOM(page) {
   });
 }
 
+// ── Vérifier si Chrome CDP est disponible ────────────────────────────────────
+async function checkCDP() {
+  try {
+    const res = await fetch(`${CDP_URL}/json/version`, { signal: AbortSignal.timeout(3000) });
+    const info = await res.json();
+    return info;
+  } catch (_) {
+    return null;
+  }
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 async function main() {
   const ts = new Date().toISOString();
   console.log(`\n[booking-scraper] ${ts} — DAYS=${DAYS}${DRY_RUN ? ' DRY' : ''}`);
 
-  if (!existsSync(PROFILE_DIR)) {
-    console.error('[booking-scraper] ❌ Profil non trouvé. Lance d\'abord : node scripts/booking-login.mjs');
+  // Vérifier CDP
+  const cdpInfo = await checkCDP();
+  if (!cdpInfo) {
+    console.error('[booking-scraper] ❌ Chrome CDP non disponible sur ' + CDP_URL);
+    console.error('[booking-scraper] Lance Chrome en mode debug :');
+    console.error('[booking-scraper]   bash scripts/booking-chrome-debug.sh');
     process.exit(1);
   }
+  console.log(`[booking-scraper] ✅ Chrome CDP connecté : ${cdpInfo.Browser}`);
 
   const state         = loadState();
   const alreadyPushed = new Set(state.pushed || []);
 
-  // Utilise le même profil persistant que le login → aucun transfert de cookies
-  const context = await chromium.launchPersistentContext(PROFILE_DIR, {
-    headless: true,
-    args: ['--disable-blink-features=AutomationControlled'],
-    ignoreDefaultArgs: ['--enable-automation'],
-    userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
-    viewport: { width: 1280, height: 900 },
-    locale: 'fr-FR',
-  });
+  // Connexion CDP au Chrome réel (vrais cookies, vraie session)
+  const browser = await chromium.connectOverCDP(CDP_URL);
+  
+  // Utiliser le contexte existant (profil Chrome réel)
+  let context = browser.contexts()[0];
+  if (!context) {
+    console.log('[booking-scraper] Création d\'un nouveau contexte...');
+    context = await browser.newContext();
+  }
 
-  const page = context.pages()[0] || await context.newPage();
+  const page = await context.newPage();
 
   // Intercept les appels API JSON
   const apiData = [];
@@ -198,7 +214,8 @@ async function main() {
     const ct  = response.headers()['content-type'] || '';
     if (!ct.includes('json')) return;
     if (url.includes('/reservations') || url.includes('/bookings') ||
-        url.includes('extranet_ng') || url.includes('fresa/extranet')) {
+        url.includes('extranet_ng') || url.includes('fresa/extranet') ||
+        url.includes('groups') && url.includes('api')) {
       try {
         const data = await response.json();
         if (data && typeof data === 'object') apiData.push({ url: url.split('?')[0], data });
@@ -212,27 +229,49 @@ async function main() {
     const future = new Date(today); future.setDate(future.getDate() + DAYS);
     const fmt    = d => d.toISOString().split('T')[0].replace(/-/g, '');
 
-    const listUrl = `https://admin.booking.com/hotel/hoteladmin/extranet_ng/manage/booking-list.html?lang=fr&source=nav&upcoming=0&date_type=arrival&date_from=${fmt(past)}&date_to=${fmt(future)}`;
+    // Démarrer depuis la page groupe
+    console.log('[booking-scraper] Navigation vers admin.booking.com...');
+    await page.goto('https://admin.booking.com/hotel/hoteladmin/groups/home/index.html?lang=fr', {
+      waitUntil: 'networkidle',
+      timeout: 30000,
+    });
 
-    console.log('[booking-scraper] Navigation :', listUrl.split('?')[0]);
-    await page.goto(listUrl, { waitUntil: 'networkidle', timeout: 30000 });
+    let currentUrl = page.url();
+    console.log('[booking-scraper] URL :', currentUrl);
 
-    const currentUrl = page.url();
-    console.log('[booking-scraper] URL chargée :', currentUrl);
-
-    // Détection session expirée (page login)
-    if (currentUrl.includes('sign-in') || currentUrl.includes('/login')
-        || currentUrl.includes('account.booking.com')) {
+    if (currentUrl.includes('sign-in') || currentUrl.includes('account.booking.com')) {
       await page.screenshot({ path: '/tmp/booking-session-expired.png', fullPage: true });
-      console.error('[booking-scraper] ❌ Session expirée. Relance : node scripts/booking-login.mjs');
-      await context.close();
+      console.error('[booking-scraper] ❌ Non connecté à Booking.com dans Chrome.');
+      console.error('[booking-scraper] Ouvre admin.booking.com dans Chrome, connecte-toi, puis relance.');
+      await page.close();
+      await browser.close();
       process.exit(1);
+    }
+
+    console.log('[booking-scraper] ✅ Session active');
+
+    // Essayer les URLs de liste réservations pour compte groupe
+    const reservationUrls = [
+      `https://admin.booking.com/hotel/hoteladmin/groups/reservations.html?lang=fr&date_from=${fmt(past)}&date_to=${fmt(future)}`,
+      `https://admin.booking.com/hotel/hoteladmin/groups/booking-list.html?lang=fr&date_from=${fmt(past)}&date_to=${fmt(future)}`,
+      `https://admin.booking.com/hotel/hoteladmin/extranet_ng/manage/booking-list.html?lang=fr&date_from=${fmt(past)}&date_to=${fmt(future)}`,
+    ];
+
+    for (const listUrl of reservationUrls) {
+      console.log('[booking-scraper] Essai :', listUrl.split('?')[0]);
+      try {
+        await page.goto(listUrl, { waitUntil: 'networkidle', timeout: 20000 });
+      } catch (_) {}
+      currentUrl = page.url();
+      console.log('[booking-scraper] → URL :', currentUrl);
+      if (!currentUrl.includes('sign-in') && !currentUrl.includes('account.booking.com')) break;
     }
 
     await page.waitForTimeout(4000);
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await page.waitForTimeout(2000);
     await page.screenshot({ path: '/tmp/booking-last-run.png', fullPage: true });
+    console.log('[booking-scraper] Screenshot : /tmp/booking-last-run.png');
 
     // ── Extraction ──────────────────────────────────────────────────────────
     let reservations = [];
@@ -284,7 +323,8 @@ async function main() {
     console.log(`[booking-scraper] Terminé — ${pushed} poussée(s), ${errors} erreur(s)\n`);
 
   } finally {
-    await context.close();
+    await page.close();
+    await browser.close();
   }
 }
 

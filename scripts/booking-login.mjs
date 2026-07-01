@@ -47,6 +47,7 @@ async function main() {
   // Profil persistant = le même répertoire utilisé par le scraper
   const context = await chromium.launchPersistentContext(PROFILE_DIR, {
     headless: false,
+    channel: 'chrome',                           // vrai Chrome installé
     args: ['--start-maximized', '--disable-blink-features=AutomationControlled'],
     ignoreDefaultArgs: ['--enable-automation'],
     userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
