@@ -111,8 +111,10 @@ const PROVIDERS = {
 export const MODELS = {
   groq: {
     fast:    "llama-3.1-8b-instant",
-    medium:  "openai/gpt-oss-120b",  // remplace llama-3.3-70b-versatile (décommissionné 2026-08-16, annonce Groq)
-    smart:   "openai/gpt-oss-120b",
+    // Tableau = fallback interne au provider (essaie chaque modèle avant de passer au provider suivant
+    // de la cascade). Remplace llama-3.3-70b-versatile (décommissionné 2026-08-16, annonce Groq).
+    medium:  ["openai/gpt-oss-120b", "qwen/qwen3-32b"],
+    smart:   ["openai/gpt-oss-120b", "qwen/qwen3-32b"],
   },
   cloudflare: {
     fast:    "@cf/meta/llama-3.1-8b-instruct-fast",
@@ -222,9 +224,13 @@ export async function callLLM(env, opts) {
     if (!apiKey) { errors.push({ provider: providerId, error: `missing ${provider.needsKey}` }); continue; }
 
     // Modèle : opts.model (usage isolé) > plan AI-Ops (D1) > MODELS statique
-    const model = opts.model || plan.models?.[providerId]?.[tier] || MODELS[providerId]?.[tier];
-    if (!model) { errors.push({ provider: providerId, error: `no model for tier=${tier}` }); continue; }
+    // Peut être un tableau (fallback interne au provider, ex. MODELS.groq.medium) → essaie chacun
+    // avant de passer au provider suivant de la cascade.
+    const rawModel = opts.model || plan.models?.[providerId]?.[tier] || MODELS[providerId]?.[tier];
+    if (!rawModel) { errors.push({ provider: providerId, error: `no model for tier=${tier}` }); continue; }
+    const modelCandidates = Array.isArray(rawModel) ? rawModel : [rawModel];
 
+    for (const model of modelCandidates) {
     const endpoint = typeof provider.endpoint === "function"
       ? provider.endpoint(env, model)
       : provider.endpoint;
@@ -293,6 +299,7 @@ export async function callLLM(env, opts) {
       errors.push({ provider: providerId, model, error: `${res.status}: ${txt.slice(0, 120)}` });
       break;
     }
+    } // fin for (model of modelCandidates) — épuisé → provider suivant de la cascade
   }
 
   return { ok: false, text: "", provider: null, model: null, attempts: 0, errors };
