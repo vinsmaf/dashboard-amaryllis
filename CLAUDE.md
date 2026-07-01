@@ -116,6 +116,7 @@ All server-side logic lives in `functions/api/` (Cloudflare Pages Functions form
 | `/api/caution-checkout` | POST | `caution-checkout.js` | Crée une Stripe Checkout Session en pré-autorisation — retourne une URL Stripe hébergée à envoyer au voyageur. |
 | `/api/manage-deposit` | POST | `manage-deposit.js` | Gère les cautions pré-autorisées. Body : `{ action: "capture"\|"cancel"\|"list", paymentIntentId, amount }`. |
 | `/api/stripe-webhook` | POST | `stripe-webhook.js` | Reçoit les événements Stripe (`payment_intent.succeeded`, `checkout.session.completed`) — confirme la réservation Beds24 correspondante et notifie l'hôte par email. |
+| `/api/stripe-reconcile` | GET | `stripe-reconcile.js` | Rapprochement Stripe (chantier connecteurs 2026-07) — liste les derniers virements bancaires (`/v1/payouts`), détaille les transactions (`/v1/balance_transactions`, frais/net), rattache chaque charge à `direct_bookings` via `payment_intent_id`. Bearer admin. Onglet 🏦 Rapprochement Stripe (Finance). Aucun secret supplémentaire (réutilise `STRIPE_SECRET_KEY`). |
 
 **Revenue Manager**
 

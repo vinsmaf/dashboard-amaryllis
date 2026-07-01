@@ -24,6 +24,7 @@ import LivretQR from "./tabs/LivretQR.jsx";
 import Travaux from "./tabs/Travaux.jsx";
 import Prestataires from "./tabs/Prestataires.jsx";
 import Cautions from "./tabs/Cautions.jsx";
+import StripeReconcileTab from "./tabs/StripeReconcileTab.jsx";
 import AdminChatTab from "./tabs/AdminChatTab.jsx";
 import DevisEditor from "./tabs/DevisEditor.jsx";
 import InterventionsTab from "./tabs/InterventionsTab.jsx";
@@ -1348,6 +1349,7 @@ export default function App() {
         { id: "pilotage",   icon: "💼", label: "Pilotage" },
         { id: "net-revpar", icon: "📉", label: "Net RevPAR" },
         { id: "cautions",   icon: "🔒", label: "Cautions" },
+        { id: "stripe-reco", icon: "🏦", label: "Rapprochement Stripe" },
       ],
     },
     {
@@ -1596,6 +1598,7 @@ export default function App() {
             {tab === "messages" && <MessageTemplates />}
             {tab === "emails" && <EmailSync mob={mob} />}
             {tab === "cautions" && <Cautions />}
+            {tab === "stripe-reco" && <StripeReconcileTab />}
             {tab === "travaux"  && <Travaux />}
             {tab === "livrets"  && <LivretEditor />}
             {tab === "devis"    && <DevisEditor />}
