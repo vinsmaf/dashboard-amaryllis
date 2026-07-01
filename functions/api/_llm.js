@@ -119,7 +119,7 @@ export const MODELS = {
   cloudflare: {
     fast:    "@cf/meta/llama-3.1-8b-instruct-fast",
     medium:  "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
-    smart:   "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+    smart:   "@cf/moonshotai/kimi-k2.6",  // synchronisé avec STATIC_CF de ai-ops.js (source réelle du plan D1)
   },
   mistral: {
     fast:   "mistral-small-2506",   // 2.25M tok/min, 5 req/s — très généreux

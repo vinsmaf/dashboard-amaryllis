@@ -35,7 +35,7 @@ const MODELS_URL = {
 const STATIC_CF = {
   fast:   "@cf/meta/llama-3.1-8b-instruct-fast",
   medium: "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
-  smart:  "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+  smart:  "@cf/moonshotai/kimi-k2.6",  // ajouté 2026-07-01 : plus fort que llama-3.3-70b sur coding/agentique, gratuit (Workers AI)
 };
 // Classement de préférence par tier (sous-chaînes, meilleur → moins bon).
 const RANK = {
