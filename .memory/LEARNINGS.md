@@ -3,6 +3,21 @@
 > Pièges déjà rencontrés + comment les éviter. 1 entrée = 1 leçon actionnable « la prochaine fois ».
 > Le journal d'erreurs exhaustif reste `../docs/ERREURS-LOG.md`.
 
+## 🔴 OAuth Google : activer l'écran de consentement ≠ activer l'API — 403 garanti si oublié — 2026-07-01
+- **Piège** : créer l'écran de consentement OAuth + l'ID client dans Google Cloud Console ne suffit PAS. Il faut en plus activer explicitement l'API concernée dans **APIs & Services → Library** (ex: "Gmail API" → bouton "Activer"). Sans ça, tout appel API renvoie un **403** même avec un access_token valide et un consentement accepté — le premier réflexe (soupçonner le scope ou le refresh_token) est un faux chemin.
+- **La prochaine fois** : après tout setup OAuth Google, avant de déboguer un 403, vérifier en premier `console.cloud.google.com/apis/library/<api>.googleapis.com` → statut "Activé" ou bouton "Activer" encore visible.
+
+## 🎯 OAuth Google en mode Externe/Test : whitelister l'utilisateur AVANT de tenter le consentement — 2026-07-01
+- **Piège** : un compte Google personnel (pas Workspace) ne peut pas passer l'écran de consentement en mode "Interne" — seul "Externe" est disponible. En mode Externe + statut "Test" (avant validation Google), **seuls les comptes explicitement ajoutés dans Audience → Utilisateurs tests** peuvent compléter le flow OAuth ; sinon Google bloque l'accès silencieusement côté utilisateur.
+- **La prochaine fois** : avant de cliquer "Connecter" côté app, aller dans `console.cloud.google.com/auth/audience` et vérifier/ajouter le compte cible (ex: la boîte mail à connecter, si différente du compte propriétaire du projet Cloud) dans la liste des utilisateurs tests.
+- **Point de vigilance à surveiller** : en mode Test (non "Production"), le refresh_token expire au bout de 7 jours — si Vincent voit "Gmail non connecté" réapparaître après une semaine, c'est probablement ça (voir `docs/GMAIL-SETUP.md` §Dépannage).
+
+## 🎯 Cloudflare Pages : une variable d'env/secret ajoutée ne prend effet qu'au PROCHAIN déploiement — 2026-07-01
+Ajouter/modifier une variable dans Settings → Variables and secrets ne l'injecte pas dans le déploiement en cours de prod — il faut redéployer (bouton "Retry deployment" sur le dernier déploiement, ou un nouveau push) pour que les Functions la voient. Signal : l'app renvoie encore l'ancien message d'erreur ("Secrets Google manquants") juste après avoir sauvegardé la variable dans le dashboard.
+
+## 🎯 Computer-use : les navigateurs sont accordés en tier "read" — utiliser claude-in-chrome pour interagir — 2026-07-01
+`request_access` sur un navigateur (Chrome/Safari/etc.) via l'outil `computer-use` ne donne qu'un accès lecture (screenshots) — clics/frappe bloqués par design. Pour naviguer/remplir des formulaires dans un navigateur, charger et utiliser les outils `mcp__claude-in-chrome__*` (navigate/computer/find/form_input) à la place, en créant un nouvel onglet dans le même profil Chrome (les cookies/session de l'utilisateur sont partagés). **Règle absolue conservée dans les deux cas** : ne jamais saisir un secret/token/mot de passe dans un champ, même via claude-in-chrome — laisser ces champs vides pour que l'utilisateur les remplisse lui-même.
+
 ## 🎯 Le plan AI-Ops (D1) prime TOUJOURS sur `MODELS` statique de `_llm.js` — 2026-07-01
 `callLLM()` résout le modèle via `opts.model || plan.models?.[providerId]?.[tier] || MODELS[providerId]?.[tier]` — le plan D1 (construit par `/api/ai-ops` via discovery live + `RANK` de `ai-ops.js`) **écrase toujours** le fallback statique. Corriger `MODELS.groq` dans `_llm.js` après une dépréciation provider est nécessaire (filet de sécurité si le plan est absent/périmé) mais **insuffisant seul** — si le plan D1 existant référence encore l'ancien modèle, il continue à être utilisé jusqu'au prochain refresh (auto si `age_h > 20`, ou manuel `POST /api/ai-ops?secret=...&action=refresh`). **Réflexe après toute dépréciation Groq/provider : (1) corriger `RANK` dans `ai-ops.js` (retire l'entrée dépréciée) ET `MODELS` dans `_llm.js`, (2) forcer un refresh du plan, (3) vérifier `GET /api/ai-ops?secret=...` que le plan ne référence plus l'ancien modèle.** Vécu 2026-07-01 : `medium` pointait encore vers `llama-3.3-70b-versatile` dans le plan D1 malgré la correction statique, jusqu'au refresh manuel.
 
