@@ -9,6 +9,7 @@
 
 import { verifyBearer } from "./_adminauth.js";
 import { rateLimit } from "./_ratelimit.js";
+import { randomSuffix, buildPrefix } from "../../src/utils/promoCodeGen.js";
 
 const CORS = {
   "Content-Type": "application/json",
@@ -18,23 +19,6 @@ const CORS = {
 };
 
 const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: CORS });
-
-const RANDOM_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // sans 0/O/1/I/L
-
-function randomSuffix(len = 4) {
-  const bytes = new Uint8Array(len);
-  crypto.getRandomValues(bytes);
-  let out = "";
-  for (let i = 0; i < len; i++) out += RANDOM_ALPHABET[bytes[i] % RANDOM_ALPHABET.length];
-  return out;
-}
-
-function buildPrefix(email) {
-  if (!email) return "AMARYL";
-  const local = String(email).split("@")[0] || "";
-  const clean = local.toUpperCase().replace(/[^A-Z0-9]/g, "");
-  return clean.slice(0, 6) || "AMARYL";
-}
 
 export async function onRequest(context) {
   const { request, env } = context;

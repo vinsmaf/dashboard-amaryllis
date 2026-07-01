@@ -5,6 +5,8 @@ import { lowAmountInfo } from "../../src/utils/priceGuard.js";
 import { cautionAmountFor, placeDateFor, leadDays, isISODate } from "../../src/utils/caution.js";
 import { ensureCautionTable, createHold } from "./_caution.js";
 import { clog, timer } from "./_log.js";
+import { randomSuffix, buildPrefix } from "../../src/utils/promoCodeGen.js";
+import { REFERRAL_PARRAIN_REWARD, referralNote } from "../../src/utils/referralReward.js";
 // Cloudflare Pages Function — POST /api/stripe-webhook
 // Reçoit les événements Stripe et notifie l'hôte par email
 //
@@ -163,6 +165,66 @@ async function sendEmail(env, { subject, html, to, booking_id, bien_id, category
   });
   if (!result.ok) {
     console.error(`[webhook] Resend erreur:`, result.error);
+  }
+}
+
+// Programme de parrainage (Phase 3 fidélité) — quand un code promo utilisé porte
+// un referrer_client_id (généré par crm-lifecycle.js segment "parrainage"), crédite
+// automatiquement le parrain d'un code -100€ (src/utils/referralReward.js) et le
+// notifie par email. Best-effort strict : ne doit JAMAIS faire échouer la
+// confirmation de la résa du filleul (même logique que l'incrément used_count).
+async function creditReferralParrain(env, db, promoCode) {
+  try {
+    const row = await db.prepare(
+      "SELECT referrer_client_id, reward_credited FROM promo_codes WHERE code = ?"
+    ).bind(promoCode).first();
+    if (!row?.referrer_client_id || row.reward_credited) return;
+
+    const parrain = await db.prepare(
+      "SELECT id, prenom, nom, email FROM crm_clients WHERE id = ?"
+    ).bind(row.referrer_client_id).first();
+    if (!parrain?.email) return;
+
+    const prefix = buildPrefix(parrain.email);
+    const now = Date.now();
+    const expiresAt = now + REFERRAL_PARRAIN_REWARD.validityDays * 86400_000;
+    const label = `${parrain.prenom || ""} ${parrain.nom || ""}`.trim() || parrain.email;
+
+    let rewardCode = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const candidate = `${prefix}-${randomSuffix(4)}`;
+      try {
+        await db.prepare(
+          `INSERT INTO promo_codes (code, type, value, bien_id, expires_at, max_uses, used_count, created_at, created_for, note)
+           VALUES (?, ?, ?, NULL, ?, 1, 0, ?, ?, ?)`
+        ).bind(
+          candidate, REFERRAL_PARRAIN_REWARD.type, REFERRAL_PARRAIN_REWARD.value,
+          expiresAt, now, parrain.email, referralNote("parrain", label)
+        ).run();
+        rewardCode = candidate;
+        break;
+      } catch (e) {
+        if (!/UNIQUE|already exists/i.test(String(e.message || ""))) throw e;
+      }
+    }
+    if (!rewardCode) return; // collision 3x, quasi impossible — pas de récompense perdue, reward_credited reste 0
+
+    await db.prepare("UPDATE promo_codes SET reward_credited = 1 WHERE code = ?").bind(promoCode).run();
+
+    const prenomParrain = (parrain.prenom || "").trim() || "cher client";
+    await sendEmail(env, {
+      subject: `${prenomParrain}, votre filleul a réservé — ${REFERRAL_PARRAIN_REWARD.value}€ pour vous !`,
+      html: `<p>Bonjour ${prenomParrain},</p>
+             <p>Bonne nouvelle : la personne à qui vous avez partagé votre code Amaryllis vient de réserver en direct !</p>
+             <p>Voici votre récompense : <strong>${rewardCode}</strong> — ${REFERRAL_PARRAIN_REWARD.value}€ crédités sur votre prochain séjour direct (valable ${REFERRAL_PARRAIN_REWARD.validityDays} jours).</p>
+             <p>Merci de votre confiance,<br>Vincent — Amaryllis Locations</p>`,
+      to: parrain.email,
+      category: "client",
+      template: "referral_reward",
+    });
+    console.log(`[webhook] parrainage : ${promoCode} → récompense ${rewardCode} pour ${parrain.email}`);
+  } catch (e) {
+    console.error("[webhook] erreur crédit parrainage:", e.message);
   }
 }
 
@@ -648,6 +710,8 @@ export async function onRequestPost(context) {
       } catch (e) {
         console.error(`[webhook] erreur incrément promo_code:`, e.message);
       }
+      // Parrainage : si ce code appartient à un parrain, le crédite (best-effort, cf fonction).
+      await creditReferralParrain(env, env.revenue_manager, meta.promo_code);
     }
 
     return json({ ok: true, type: event.type });
