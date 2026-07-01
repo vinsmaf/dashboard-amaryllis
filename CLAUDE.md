@@ -141,9 +141,10 @@ All server-side logic lives in `functions/api/` (Cloudflare Pages Functions form
 | `/api/send-prix-alert` | POST | `send-prix-alert.js` | Envoie email + push ntfy quand des prix sont sous le seuil minimum. Appelé depuis le CalendrierTarifs. |
 | `/api/send-prix-recap` | GET | `send-prix-recap.js` | Récap email hebdomadaire des prix + liens Airbnb (prévu pour cron-job.org chaque lundi). Auth : `?secret=PRIX_RECAP_SECRET`. |
 | `/api/send-guest-email` | POST | `send-guest-email.js` | Envoi générique email voyageur (templates `public/email-templates/*`). Réservé résas DIRECTES. Auth `X-Send-Secret`/`?secret=POSTSTAY_SECRET`. |
-| `/api/gmail-oauth-start` | GET | `gmail-oauth-start.js` | Démarre le consentement OAuth Gmail (bouton "Connecter Gmail" dans Messagerie). Auth admin via `?token=`. |
-| `/api/gmail-oauth-callback` | GET | `gmail-oauth-callback.js` | Retour Google : échange le code contre un refresh_token, le stocke en D1 (`oauth_tokens`). |
+| `/api/gmail-oauth-start` | GET | `gmail-oauth-start.js` | Démarre le consentement OAuth Google — multi-provider via `?provider=gmail\|calendar` (boutons "Connecter Gmail"/"Connecter Calendar"). Auth admin via `?token=`. |
+| `/api/gmail-oauth-callback` | GET | `gmail-oauth-callback.js` | Callback **unique et partagé** pour tous les providers Google (le provider est encodé/signé dans `state`) : échange le code contre un refresh_token, le stocke en D1 (`oauth_tokens`, clé = provider). |
 | `/api/gmail-sync` | GET | `gmail-sync.js` | Poll `contact@villamaryllis.com` (lecture seule) → importe les réponses voyageurs dans `emails_log` (`direction='in'`). `?secret=POSTSTAY_SECRET` (cron 10 min) ou Bearer admin (bouton "Sync"). `?status=1` = simple check de connexion. Voir `docs/GMAIL-SETUP.md`. |
+| `/api/calendar-sync` | GET/POST | `calendar-sync.js` | GET `?status=1` = statut connexion Calendar (Bearer admin). POST = crée/MAJ un event Google Calendar par ménage (liste envoyée par MenageTab, dédup D1 `menage_calendar_events`). Bouton manuel "📅 Sync calendrier", pas de cron. Voir `docs/GMAIL-SETUP.md`. |
 | `/api/send-prearrivee` | GET | `send-prearrivee.js` | Cron J-3 : email pré-arrivée aux résas directes (D1 `direct_bookings`). |
 | `/api/send-poststay` | GET | `send-poststay.js` | Cron J+1/J+3 : post-séjour (Nogent/Beds24 + résas directes). Liens avis Google par bien. |
 | `/api/send-relance-panier` | GET | `send-relance-panier.js` | Cron horaire : relance panier abandonné (D1 `abandoned_carts`, exclut convertis). |
@@ -329,6 +330,14 @@ requête D1 sur `emails_log` qui groupe/filtre par voyageur **doit** utiliser l'
 `CASE WHEN direction = 'in' THEN from_email ELSE to_email END` (déjà appliquée dans
 `functions/api/emails-log.js`) — grouper naïvement par `to_email` ferait disparaître toutes
 les réponses voyageurs sous un unique bucket `contact@villamaryllis.com`.
+
+⚠️ **OAuth multi-provider** : la table D1 `oauth_tokens` a une ligne par provider
+(`gmail`, `calendar`, ...) — se connecter à l'un ne connecte PAS l'autre, même si c'est
+le même compte Google physique et le même Client ID/Secret. Toujours préciser le bon
+`provider` dans `getValidAccessToken(env, db, provider)`. Le callback OAuth
+(`/api/gmail-oauth-callback`) est partagé et lit le provider cible depuis `state`
+(signé côté serveur, voir `_googleOAuth.js`) — ne jamais faire confiance à un `?provider=`
+en clair dans l'URL du callback lui-même (il n'y en a pas, justement pour ça).
 
 ### 7. Déploiement & vérif
 

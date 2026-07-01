@@ -1,8 +1,9 @@
 // GET /api/gmail-oauth-callback — retour du consentement Google (redirect_uri déclaré
-// dans les identifiants OAuth Google Cloud). Échange le code contre un refresh_token,
-// le stocke en D1 (oauth_tokens), puis redirige vers /admin.
+// UNE FOIS dans les identifiants OAuth Google Cloud, partagé par tous les providers).
+// Échange le code contre un refresh_token, le stocke en D1 (oauth_tokens, clé = provider
+// lu depuis `state`), puis redirige vers /admin.
 
-import { exchangeCodeForTokens, verifyOAuthState, saveOAuthTokens } from "./_googleOAuth.js";
+import { exchangeCodeForTokens, verifyOAuthState, saveOAuthTokens, fetchGoogleAccountEmail } from "./_googleOAuth.js";
 
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
@@ -11,38 +12,28 @@ export async function onRequestGet({ request, env }) {
   const errorParam = url.searchParams.get("error");
 
   const adminUrl = `${env.SITE_URL || "https://villamaryllis.com"}/admin`;
+  const redirectErr = (provider, reason) =>
+    Response.redirect(`${adminUrl}?gmail_oauth=error&provider=${encodeURIComponent(provider || "")}&reason=${encodeURIComponent(reason)}`, 302);
 
-  if (errorParam) {
-    return Response.redirect(`${adminUrl}?gmail_oauth=error&reason=${encodeURIComponent(errorParam)}`, 302);
-  }
-  if (!code || !(await verifyOAuthState(env, state))) {
-    return Response.redirect(`${adminUrl}?gmail_oauth=error&reason=state_invalide`, 302);
-  }
+  const { valid, provider } = await verifyOAuthState(env, state);
+
+  if (errorParam) return redirectErr(provider, errorParam);
+  if (!code || !valid) return redirectErr(provider, "state_invalide");
 
   const db = env.revenue_manager;
-  if (!db) return Response.redirect(`${adminUrl}?gmail_oauth=error&reason=d1_indisponible`, 302);
+  if (!db) return redirectErr(provider, "d1_indisponible");
 
   try {
     const tokens = await exchangeCodeForTokens(env, code);
     if (!tokens.refresh_token) {
       // Arrive si le compte avait déjà consenti sans prompt=consent — normalement
       // buildAuthUrl force prompt=consent donc ne devrait pas se produire.
-      return Response.redirect(`${adminUrl}?gmail_oauth=error&reason=pas_de_refresh_token`, 302);
+      return redirectErr(provider, "pas_de_refresh_token");
     }
 
-    // Récupère l'adresse du compte connecté (informatif, affiché dans l'UI)
-    let accountEmail = null;
-    try {
-      const profileRes = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/profile", {
-        headers: { Authorization: `Bearer ${tokens.access_token}` },
-      });
-      if (profileRes.ok) {
-        const profile = await profileRes.json();
-        accountEmail = profile.emailAddress || null;
-      }
-    } catch { /* non bloquant */ }
+    const accountEmail = await fetchGoogleAccountEmail(tokens.access_token);
 
-    await saveOAuthTokens(db, "gmail", {
+    await saveOAuthTokens(db, provider, {
       accountEmail,
       refreshToken: tokens.refresh_token,
       accessToken: tokens.access_token,
@@ -50,8 +41,11 @@ export async function onRequestGet({ request, env }) {
       scope: tokens.scope,
     });
 
-    return Response.redirect(`${adminUrl}?gmail_oauth=ok&account=${encodeURIComponent(accountEmail || "")}`, 302);
+    return Response.redirect(
+      `${adminUrl}?gmail_oauth=ok&provider=${encodeURIComponent(provider)}&account=${encodeURIComponent(accountEmail || "")}`,
+      302
+    );
   } catch (e) {
-    return Response.redirect(`${adminUrl}?gmail_oauth=error&reason=${encodeURIComponent(e.message)}`, 302);
+    return redirectErr(provider, e.message);
   }
 }

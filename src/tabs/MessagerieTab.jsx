@@ -50,11 +50,14 @@ export default function MessagerieTab() {
       .catch(() => setGmail({ checked: true, connected: false, accountEmail: null }));
   }, []);
 
-  // Retour du flow OAuth (?gmail_oauth=ok|error dans l'URL après redirection /admin)
+  // Retour du flow OAuth (?gmail_oauth=ok|error&provider=gmail dans l'URL après redirection /admin)
+  // Ne réagit que si provider=gmail (ou absent, rétro-compat) — le callback OAuth est
+  // partagé avec MenageTab (provider=calendar), qui gère son propre effet.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const status = params.get("gmail_oauth");
-    if (!status) return;
+    const provider = params.get("provider") || "gmail";
+    if (!status || provider !== "gmail") return;
     if (status === "ok") {
       const account = params.get("account");
       setGmailBanner({ type: "ok", text: `Gmail connecté${account ? ` (${account})` : ""} ✓` });
@@ -62,13 +65,13 @@ export default function MessagerieTab() {
     } else {
       setGmailBanner({ type: "error", text: `Connexion Gmail échouée : ${params.get("reason") || "erreur inconnue"}` });
     }
-    params.delete("gmail_oauth"); params.delete("account"); params.delete("reason");
+    params.delete("gmail_oauth"); params.delete("account"); params.delete("reason"); params.delete("provider");
     const rest = params.toString();
     window.history.replaceState({}, "", window.location.pathname + (rest ? `?${rest}` : ""));
   }, []);
 
   function connectGmail() {
-    window.location.href = `/api/gmail-oauth-start?token=${encodeURIComponent(adminToken())}`;
+    window.location.href = `/api/gmail-oauth-start?provider=gmail&token=${encodeURIComponent(adminToken())}`;
   }
 
   async function syncGmailNow() {

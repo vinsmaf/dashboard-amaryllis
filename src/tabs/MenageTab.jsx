@@ -3,8 +3,24 @@
  * Inclut MenageCard (utilisé uniquement ici).
  * Extrait de src/App.jsx (refactor 2026, batch B/3).
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAppData } from "../AppDataContext.jsx";
+import { PRESTATAIRES_KEY } from "../App.jsx";
+
+function adminToken() {
+  return sessionStorage.getItem("ldb_tok") || localStorage.getItem("admin_token") || "";
+}
+
+/** Résout l'email d'un prestataire depuis l'annuaire localStorage (Prestataires.jsx),
+ *  par correspondance de nom insensible à la casse/accents. Retourne null si pas de match
+ *  ou si aucun email renseigné — l'event Calendar sera créé sans attendee dans ce cas. */
+function findPrestataireEmail(nom, contacts) {
+  if (!nom || !nom.trim()) return null;
+  const norm = s => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+  const target = norm(nom);
+  const hit = contacts.find(c => norm(c.nom) === target) || contacts.find(c => target.includes(norm(c.nom)) && norm(c.nom).length > 2);
+  return hit?.email || null;
+}
 
 function MenageCard({ m, saveRes }) {
   const [assigne, setAssigne] = useState(m.resa.assigne || "");
@@ -52,6 +68,42 @@ function MenageCard({ m, saveRes }) {
 
 export default function MenageTab() {
   const { biens, reservations, saveRes, mob } = useAppData();
+  const [calendar, setCalendar] = useState({ checked: false, connected: false, accountEmail: null });
+  const [calendarSyncing, setCalendarSyncing] = useState(false);
+  const [calendarBanner, setCalendarBanner] = useState(null);
+  const [prestataires] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(PRESTATAIRES_KEY) || "[]"); } catch { return []; }
+  });
+
+  useEffect(() => {
+    fetch("/api/calendar-sync?status=1", { headers: { Authorization: `Bearer ${adminToken()}` } })
+      .then(r => r.json())
+      .then(d => setCalendar({ checked: true, connected: !!d.connected, accountEmail: d.accountEmail || null }))
+      .catch(() => setCalendar({ checked: true, connected: false, accountEmail: null }));
+  }, []);
+
+  // Retour du flow OAuth partagé (?gmail_oauth=ok|error&provider=calendar)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get("gmail_oauth");
+    const provider = params.get("provider");
+    if (!status || provider !== "calendar") return;
+    if (status === "ok") {
+      const account = params.get("account");
+      setCalendarBanner({ type: "ok", text: `Calendar connecté${account ? ` (${account})` : ""} ✓` });
+      setCalendar(c => ({ ...c, connected: true, accountEmail: account || c.accountEmail }));
+    } else {
+      setCalendarBanner({ type: "error", text: `Connexion Calendar échouée : ${params.get("reason") || "erreur inconnue"}` });
+    }
+    params.delete("gmail_oauth"); params.delete("account"); params.delete("reason"); params.delete("provider");
+    const rest = params.toString();
+    window.history.replaceState({}, "", window.location.pathname + (rest ? `?${rest}` : ""));
+  }, []);
+
+  function connectCalendar() {
+    window.location.href = `/api/gmail-oauth-start?provider=calendar&token=${encodeURIComponent(adminToken())}`;
+  }
+
   const today = new Date(); today.setHours(0,0,0,0);
   const in21  = new Date(today.getTime() + 21 * 86400000);
   const todayStr = today.toISOString().slice(0,10);
@@ -91,8 +143,80 @@ export default function MenageTab() {
     saveRes(reservations.map(r => r.id === id ? { ...r, [field]: val } : r));
   };
 
+  async function syncCalendarNow() {
+    setCalendarSyncing(true);
+    try {
+      const payload = menages.map(m => ({
+        bienId: m.bienId,
+        bienNom: m.bienNom,
+        checkoutISO: m.checkout.toISOString().slice(0, 10),
+        checkinNextISO: m.nextCheckin ? m.nextCheckin.toISOString().slice(0, 10) : null,
+        guestOut: m.resa.voyageur || null,
+        guestIn: m.nextResa?.voyageur || null,
+        windowHours: m.windowHours,
+        assigneNom: m.resa.assigne || null,
+        assigneEmail: findPrestataireEmail(m.resa.assigne, prestataires),
+      }));
+      const r = await fetch("/api/calendar-sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken()}` },
+        body: JSON.stringify({ menages: payload }),
+      });
+      const d = await r.json();
+      if (d.connected === false) {
+        setCalendarBanner({ type: "error", text: "Calendar non connecté." });
+      } else {
+        const errTxt = d.errors?.length ? ` · ${d.errors.length} erreur(s)` : "";
+        setCalendarBanner({ type: d.errors?.length ? "error" : "ok", text: `Sync ✓ — ${d.created ?? 0} créé(s), ${d.updated ?? 0} mis à jour${errTxt}` });
+      }
+    } catch (e) {
+      setCalendarBanner({ type: "error", text: `Erreur sync : ${e.message}` });
+    }
+    setCalendarSyncing(false);
+  }
+
   return (
     <div>
+      {/* Connexion Google Calendar */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+        {calendar.checked && (
+          calendar.connected ? (
+            <>
+              <span style={{ fontSize: 11, color: "#6ee7b7", fontWeight: 600, whiteSpace: "nowrap" }}>
+                ✓ Calendar connecté{calendar.accountEmail ? ` (${calendar.accountEmail})` : ""}
+              </span>
+              <button
+                onClick={syncCalendarNow}
+                disabled={calendarSyncing || menages.length === 0}
+                style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(110,231,183,0.3)", background: "rgba(16,185,129,0.08)", color: "#6ee7b7", fontSize: 12, fontWeight: 700, cursor: calendarSyncing ? "default" : "pointer", whiteSpace: "nowrap" }}
+              >
+                {calendarSyncing ? "⏳ Sync…" : "📅 Sync calendrier"}
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={connectCalendar}
+              style={{ padding: "8px 14px", borderRadius: 8, border: "1px solid rgba(239,68,68,0.35)", background: "rgba(239,68,68,0.08)", color: "#fca5a5", fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
+            >
+              📅 Connecter Calendar
+            </button>
+          )
+        )}
+      </div>
+      {calendarBanner && (
+        <div
+          onClick={() => setCalendarBanner(null)}
+          style={{
+            marginBottom: 14, padding: "8px 14px", borderRadius: 8, fontSize: 12, cursor: "pointer",
+            background: calendarBanner.type === "ok" ? "rgba(16,185,129,0.1)" : "rgba(239,68,68,0.1)",
+            border: `1px solid ${calendarBanner.type === "ok" ? "rgba(16,185,129,0.25)" : "rgba(239,68,68,0.25)"}`,
+            color: calendarBanner.type === "ok" ? "#6ee7b7" : "#f87171",
+          }}
+        >
+          {calendarBanner.text} <span style={{ opacity: 0.6 }}>(clic pour fermer)</span>
+        </div>
+      )}
+
       {/* KPIs */}
       <div style={{ display: "grid", gridTemplateColumns: mob ? "repeat(2,1fr)" : "repeat(4,1fr)", gap: 10, marginBottom: 20 }}>
         {[

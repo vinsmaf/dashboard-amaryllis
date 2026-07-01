@@ -1,20 +1,33 @@
-// _googleOAuth.js — helper partagé OAuth2 "installed/web app" pour les APIs Google
-// (Gmail pour l'instant ; réutilisable pour Google Calendar — chantier 2 du plan
-// connecteurs 2026-07, voir PROJECT_MEMORY.md).
+// _googleOAuth.js — helper partagé OAuth2 "installed/web app" pour les APIs Google.
+// Multi-provider depuis le chantier 2 (Calendar) : un même compte Google Cloud
+// (GOOGLE_OAUTH_CLIENT_ID/SECRET) sert plusieurs connexions indépendantes — une par
+// "provider" (gmail, calendar, ...), chacune avec son propre refresh_token en D1
+// (table oauth_tokens, migration 0004) pour ne pas toucher à une connexion qui marche
+// déjà quand on en ajoute une nouvelle.
 //
 // Différent de functions/api/analytics.js (Service Account JWT, pas de consentement
-// utilisateur) : ici on lit la boîte contact@villamaryllis.com, un compte Workspace
-// standard sur lequel Vincent doit donner un consentement OAuth une fois via le
-// bouton "Connecter Gmail" (MessagerieTab). Le refresh_token obtenu est stocké en
-// D1 (table oauth_tokens, migration 0004) et ne nécessite plus jamais de re-consentement
-// tant qu'il n'est pas révoqué côté Google.
+// utilisateur) : ici on lit/écrit sur le compte contact@villamaryllis.com, un compte
+// Workspace standard sur lequel Vincent doit donner un consentement OAuth une fois par
+// provider (boutons "Connecter Gmail" / "Connecter Calendar"). Le refresh_token obtenu
+// ne nécessite plus jamais de re-consentement tant qu'il n'est pas révoqué côté Google.
 //
 // Secrets Cloudflare requis : GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET
 // (créés dans Google Cloud Console — voir docs/GMAIL-SETUP.md pour la procédure complète).
+// Le même Client ID/Secret sert à TOUS les providers — un seul projet Google Cloud.
 
 export const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
+export const CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.events";
+// "openid email" est ajouté systématiquement (peu importe le provider) pour pouvoir
+// afficher quel compte Google est connecté, via l'endpoint userinfo standard.
+const IDENTITY_SCOPES = "openid email";
+export const SCOPES_BY_PROVIDER = {
+  gmail: GMAIL_SCOPE,
+  calendar: CALENDAR_SCOPE,
+};
+
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
+const USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo";
 
 const enc = new TextEncoder();
 function b64url(bytes) {
@@ -29,23 +42,27 @@ async function hmac(secret, msg) {
 }
 
 /**
- * State signé anti-CSRF pour le flow OAuth (5 min de validité). Utilise le même secret
- * que la session admin (_adminauth.js) — pas de stockage nécessaire côté serveur.
+ * State signé anti-CSRF pour le flow OAuth (5 min de validité), encode aussi le
+ * provider ciblé (gmail|calendar) pour que le callback unique sache où stocker le
+ * token obtenu. Utilise le même secret que la session admin (_adminauth.js) — pas
+ * de stockage nécessaire côté serveur.
  */
-export async function signOAuthState(env) {
+export async function signOAuthState(env, provider) {
   const secret = env.ADMIN_PASSWORD || env.ADMIN_PWD || "";
   const exp = Math.floor(Date.now() / 1000) + 300;
-  const sig = await hmac(secret, `gmail_oauth.${exp}`);
-  return `${exp}.${sig}`;
+  const sig = await hmac(secret, `gmail_oauth.${provider}.${exp}`);
+  return `${provider}.${exp}.${sig}`;
 }
+/** Retourne { valid, provider } — provider absent/invalide si valid=false. */
 export async function verifyOAuthState(env, state) {
   const secret = env.ADMIN_PASSWORD || env.ADMIN_PWD || "";
-  if (!secret || !state) return false;
-  const [expStr, sig] = String(state).split(".");
+  if (!secret || !state) return { valid: false };
+  const [provider, expStr, sig] = String(state).split(".");
   const exp = parseInt(expStr, 10);
-  if (!exp || exp < Math.floor(Date.now() / 1000)) return false;
-  const expected = await hmac(secret, `gmail_oauth.${exp}`);
-  return expected === sig;
+  if (!provider || !exp || exp < Math.floor(Date.now() / 1000)) return { valid: false };
+  const expected = await hmac(secret, `gmail_oauth.${provider}.${exp}`);
+  if (expected !== sig) return { valid: false };
+  return { valid: true, provider };
 }
 
 /** URL de redirection canonique (doit être ajoutée telle quelle dans les identifiants OAuth Google Cloud). */
@@ -54,18 +71,28 @@ export function oauthRedirectUri(env) {
   return `${site}/api/gmail-oauth-callback`;
 }
 
-/** Construit l'URL de consentement Google. `state` sert à vérifier l'origine au retour (anti-CSRF léger). */
-export function buildAuthUrl(env, state) {
+/** Construit l'URL de consentement Google pour un provider donné (scope + identité). */
+export function buildAuthUrl(env, state, providerScope) {
   const params = new URLSearchParams({
     client_id: env.GOOGLE_OAUTH_CLIENT_ID || "",
     redirect_uri: oauthRedirectUri(env),
     response_type: "code",
     access_type: "offline",   // requis pour obtenir un refresh_token
     prompt: "consent",        // force la réémission du refresh_token même si déjà autorisé avant
-    scope: GMAIL_SCOPE,
+    scope: `${providerScope} ${IDENTITY_SCOPES}`,
     state: state || "",
   });
   return `${AUTH_URL}?${params.toString()}`;
+}
+
+/** Récupère l'adresse du compte Google connecté (scope "email" — fonctionne pour tous les providers). */
+export async function fetchGoogleAccountEmail(accessToken) {
+  try {
+    const r = await fetch(USERINFO_URL, { headers: { Authorization: `Bearer ${accessToken}` } });
+    if (!r.ok) return null;
+    const data = await r.json();
+    return data.email || null;
+  } catch { return null; }
 }
 
 /** Échange le code d'autorisation contre { access_token, refresh_token, expires_in }. */
@@ -133,7 +160,7 @@ export async function saveOAuthTokens(db, provider, { accountEmail, refreshToken
 export async function getValidAccessToken(env, db, provider = "gmail") {
   const row = await getOAuthRow(db, provider);
   if (!row || !row.refresh_token) {
-    throw new Error(`Gmail non connecté — utilise le bouton "Connecter Gmail" dans Messagerie (provider=${provider})`);
+    throw new Error(`Compte Google (${provider}) non connecté — utilise le bouton "Connecter" correspondant dans l'admin`);
   }
   const now = Date.now();
   if (row.access_token && row.expires_at && row.expires_at - 60_000 > now) {
