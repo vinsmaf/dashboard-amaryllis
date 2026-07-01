@@ -3,6 +3,13 @@
 > 1 entrée par décision qui engage la suite. Format 5 lignes : **Choix · Alternatives refusées · Conséquences attendues · Périmètre · Statut**.
 > Décisions d'archi détaillées (specs complets) → `../docs/superpowers/specs/README.md` (ADR-001→010). Ici = log curaté de session.
 
+## ADR-LLM-002 · 2026-07-01 · Ajout Kimi K2.6 (Workers AI gratuit) sur tier smart — GLM-5.2/MiniMax M3 écartés
+1. **Choix** : `STATIC_CF.smart` (`ai-ops.js`) passe de `@cf/meta/llama-3.3-70b-instruct-fp8-fast` à `@cf/moonshotai/kimi-k2.6` — plus fort en coding/agentique (58,6 SWE-bench Pro), gratuit via Workers AI. `MODELS.cloudflare.smart` (`_llm.js`) synchronisé en filet de secours statique.
+2. **Alternatives refusées** : GLM-5.2, MiniMax M3 — vérifiés en direct (Groq/Cerebras `/v1/models` + OpenRouter `pricing`) : absents des 2 premiers, payants sur OpenRouter (pas de variante `:free`). Écartés.
+3. **Conséquences attendues** : les agents tier `smart` (community-manager, growth-experiments, etc. — cf `AGENT_TIERS`) peuvent recevoir Kimi K2.6 quand Cloudflare répond en premier dans la cascade `groq→cloudflare→mistral→...`. **Découverte structurante** : `STATIC_CF` est la SEULE source réelle du plan D1 pour `cloudflare` (`buildPlan()` fait `models.cloudflare = {...STATIC_CF}`, aucune discovery live possible sur ce provider — catalogue figé). `MODELS.cloudflare` dans `_llm.js` n'est qu'un filet de secours jamais consulté tant qu'un plan D1 existe (cf LEARNINGS 2026-07-01).
+4. **Périmètre** : `functions/api/ai-ops.js` (`STATIC_CF`), `functions/api/_llm.js` (`MODELS.cloudflare`).
+5. **Statut** : ✅ déployé (CI push `21d59b0`). Testé : refresh manuel du plan → health-check `cloudflare.smart` `{ok:true, ms:3810, model:'@cf/moonshotai/kimi-k2.6'}`.
+
 ## ADR-CONCURRENTS-RM-001 · 2026-06-30 · Sélection et import des concurrents directs dans le RM
 
 1. **Choix** : 18 nouveaux concurrents ajoutés via `/api/rm-competitors/import-listings` (UPSERT) pour les 6 biens actifs — sélectionnés par Firecrawl `site:airbnb.fr` + critères capacité/zone/type.
