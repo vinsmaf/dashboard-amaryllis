@@ -4,7 +4,9 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
-## En cours
+## En cours → ✅ terminé le 2026-07-01 (Bug calendrier réservation + bug Maintenance + feature reconduction)
+
+## En cours (reporté de session précédente — non touché aujourd'hui)
 - **Tâche** : Campagne Google Ads "Géko - Location Martinique" (Réseau de Recherche)
 - **Étape** : Campagne publiée et **mise en veille** (pause) — config auditée champ par champ et 2 erreurs corrigées (CPC max + zone géo). 1 point restant non résolu : présence de 2 groupes d'annonces dupliqués.
 - **Prochaine action** : ouvrir Google Ads → campagne Géko → Groupes d'annonces → comparer le contenu des 2 groupes ("Groupe d'annonces 1" et "Groupe d'annonces 2", tous deux pointent vers villamaryllis.com/geko) → supprimer le doublon, garder un seul groupe → puis demander à Vincent de réactiver quand prêt.
