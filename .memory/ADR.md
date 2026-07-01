@@ -3,6 +3,13 @@
 > 1 entrée par décision qui engage la suite. Format 5 lignes : **Choix · Alternatives refusées · Conséquences attendues · Périmètre · Statut**.
 > Décisions d'archi détaillées (specs complets) → `../docs/superpowers/specs/README.md` (ADR-001→010). Ici = log curaté de session.
 
+## ADR-LLM-001 · 2026-07-01 · Migration llama-3.3-70b-versatile → gpt-oss-120b + fallback array + fix plan AI-Ops
+1. **Choix** : suite à l'email Groq (décommission `llama-3.3-70b-versatile` le 16/08/2026), migration de `_llm.js` (`MODELS.groq`), `agents-run.js` (`GROQ_MODELS`, découvert code mort), `orchestrator.js` (`ORCH_MODELS`), `ai-ops.js` (`RANK` medium/smart) vers `openai/gpt-oss-120b`. `MODELS.groq.medium/smart` transformés en tableaux (`callLLM()` étendu pour essayer chaque modèle du tableau avant de cascader vers le provider suivant, retry-429 réservé au dernier candidat pour borner la latence). Refresh manuel du plan AI-Ops D1 déclenché (sinon la correction statique reste inerte — le plan prime toujours).
+2. **Alternatives refusées** : ne rien faire avant le 16/08 (risque de casse silencieuse) ; laisser le fallback array retry chaque candidat avec backoff complet (testé, latence 50,9s constatée en prod → resserré à 1 tentative par candidat intermédiaire, backoff réservé au dernier).
+3. **Conséquences attendues** : plus aucun point de défaillance unique sur un modèle Groq précis dans ce fichier. Découverte structurante : le plan AI-Ops (D1, clé `ai_ops.plan`) **prime toujours** sur `MODELS` statique de `_llm.js` — corriger le statique seul ne suffit pas si le plan existant référence encore l'ancien modèle (vécu : `medium` pointait toujours vers `llama-3.3-70b-versatile` après ma correction, jusqu'au refresh manuel). `GROQ_MODELS` dans `agents-run.js` confirmé code mort (jamais consommé).
+4. **Périmètre** : `_llm.js`, `agents-run.js`, `orchestrator.js`, `ai-ops.js`.
+5. **Statut** : ✅ déployé via CI (push `70dad15`, `3e68ee8`, `f11a383`). Testé en prod : juriste-compliance (Groq préféré, tier medium) ok 21,6s. Plan D1 refreshé et vérifié propre (`llama-3.3-70b-versatile` absent).
+
 ## ADR-LLM-002 · 2026-07-01 · Ajout Kimi K2.6 (Workers AI gratuit) sur tier smart — GLM-5.2/MiniMax M3 écartés
 1. **Choix** : `STATIC_CF.smart` (`ai-ops.js`) passe de `@cf/meta/llama-3.3-70b-instruct-fp8-fast` à `@cf/moonshotai/kimi-k2.6` — plus fort en coding/agentique (58,6 SWE-bench Pro), gratuit via Workers AI. `MODELS.cloudflare.smart` (`_llm.js`) synchronisé en filet de secours statique.
 2. **Alternatives refusées** : GLM-5.2, MiniMax M3 — vérifiés en direct (Groq/Cerebras `/v1/models` + OpenRouter `pricing`) : absents des 2 premiers, payants sur OpenRouter (pas de variante `:free`). Écartés.

@@ -286,7 +286,7 @@ flowchart TD
 
 **Fleet de ~27 agents advisory** sur LLM multi-provider à cascade, orchestré par crons Worker, persisté en D1.
 
-- **Abstraction LLM** (`_llm.js`) : cascade Groq→Cloudflare→Mistral→Cerebras(→Gemini), tiers fast/medium/smart, plan dynamique AI-Ops (`ai_ops`, `ai-ops.js`).
+- **Abstraction LLM** (`_llm.js`) : cascade Groq→Cloudflare(+Kimi K2.6 tier smart)→Mistral→Cerebras(→Gemini), tiers fast/medium/smart, plan dynamique AI-Ops (`ai_ops`, `ai-ops.js`). ⚠️ **Invariant** (2026-07-01) : le plan D1 `ai_ops.plan` PRIME TOUJOURS sur `MODELS`/`STATIC_CF` statiques — corriger un modèle déprécié dans le code ne suffit pas, il faut aussi rafraîchir le plan (`POST /api/ai-ops?action=refresh`) sinon l'ancien modèle reste actif. Pour `cloudflare` : `STATIC_CF` (`ai-ops.js`) est la SEULE source (pas de discovery live possible, catalogue figé) — `MODELS.cloudflare` de `_llm.js` n'est qu'un filet de secours synchronisé manuellement.
 - **Cœur fleet** (`agents-run.js`) : exécution en vagues de 4, prompts injectant skill métier (`_skills.js`) + faits (`_biens.js` + `EQUIP_RULES_TEXT`) + playbook/fiscal + RAG (`_rag.js` → Vectorize) + bus inter-agents (`agent_memory _shared`) + eval_feedback + mots bannis (`agent_lessons`). Sorties : actions (`agent_actions`) + drafts (`agent_drafts`).
 - **Garde-fous empilés** :
   - **Triage** (`_triage.js`) : vague/doublon/risque (`classifyRisk` : blocked/auto/review).
