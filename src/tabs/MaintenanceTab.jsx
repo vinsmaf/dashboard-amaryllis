@@ -30,7 +30,19 @@ const EMPTY_FORM = {
   cost: "", status: "a_planifier", scheduled_at: "", done_at: "", next_due_at: "", notes: "",
 };
 
+// Cadence par défaut pour les catégories récurrentes — sert à suggérer la
+// prochaine échéance en un clic (clim tous les 6 mois, piscine tous les 15 jours).
+const DEFAULT_INTERVAL = {
+  clim:    { days: 180, label: "+6 mois" },
+  piscine: { days: 15,  label: "+15 jours" },
+};
+
 function todayStr() { return new Date().toISOString().slice(0, 10); }
+function addDaysStr(dateStr, days) {
+  const d = new Date((dateStr || todayStr()) + "T12:00:00");
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
 function daysUntil(dateStr) {
   if (!dateStr) return null;
   const diff = Math.ceil((new Date(dateStr + "T12:00:00") - new Date()) / 86400000);
@@ -70,14 +82,32 @@ export default function MaintenanceTab() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Reconduction automatique : quand une entrée récurrente passe à "Fait" avec
+  // une "Prochaine échéance" renseignée, on recrée la même intervention en
+  // "À planifier" à cette date — pour ne jamais perdre le fil (clim, piscine…).
+  async function createFollowUp(rec) {
+    try {
+      await fetchJSON("/api/maintenance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bien_id: rec.bien_id, category: rec.category, titre: rec.titre, prestataire: rec.prestataire || "",
+          status: "a_planifier", scheduled_at: rec.next_due_at, notes: "",
+        }),
+      });
+    } catch (e) { console.warn("[maintenance] reconduction", e.message); }
+  }
+
   async function save() {
     if (!form.titre.trim()) { setErr("Le titre est requis."); return; }
     setSaving(true); setErr(null);
     try {
+      const wasFait = editId ? records.find(r => r.id === editId)?.status === "fait" : false;
       const body = { ...form, cost: parseInt(form.cost) || 0 };
       const opts = { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
       if (editId) await fetchJSON(`/api/maintenance?id=${editId}`, { ...opts, method: "PATCH" });
       else await fetchJSON("/api/maintenance", { ...opts, method: "POST" });
+      if (body.status === "fait" && !wasFait && body.next_due_at) await createFollowUp(body);
       await load();
       closeForm();
     } catch (e) { setErr(e.message || "Erreur"); }
@@ -86,12 +116,14 @@ export default function MaintenanceTab() {
 
   async function markFait(id) {
     try {
+      const rec = records.find(r => r.id === id);
       await fetchJSON(`/api/maintenance?id=${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "fait", done_at: todayStr() }),
       });
-      setRecords(rs => rs.map(r => r.id === id ? { ...r, status: "fait", done_at: todayStr() } : r));
+      if (rec?.next_due_at) await createFollowUp(rec);
+      await load();
     } catch (e) { window.alert("Erreur : " + e.message); }
   }
 
@@ -217,7 +249,19 @@ export default function MaintenanceTab() {
             )}
             <div>
               <label style={lbl}>Prochaine échéance</label>
-              <input style={inp} type="date" value={form.next_due_at} onChange={e => setForm(f => ({ ...f, next_due_at: e.target.value }))} />
+              <div style={{ display: "flex", gap: 6 }}>
+                <input style={inp} type="date" value={form.next_due_at} onChange={e => setForm(f => ({ ...f, next_due_at: e.target.value }))} />
+                {DEFAULT_INTERVAL[form.category] && (
+                  <button
+                    type="button"
+                    title="Suggérer la prochaine échéance"
+                    onClick={() => setForm(f => ({ ...f, next_due_at: addDaysStr(f.done_at || f.scheduled_at, DEFAULT_INTERVAL[f.category].days) }))}
+                    style={{ padding: "0 10px", borderRadius: 8, border: "1px solid rgba(14,165,233,0.3)", background: "rgba(14,165,233,0.08)", color: "#0ea5e9", fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}
+                  >
+                    🔄 {DEFAULT_INTERVAL[form.category].label}
+                  </button>
+                )}
+              </div>
             </div>
             <div style={{ gridColumn: mob ? "" : "span 2" }}>
               <label style={lbl}>Notes</label>
