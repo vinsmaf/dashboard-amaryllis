@@ -18,26 +18,29 @@ const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, header
 const VALID_STATUS   = ["a_planifier", "planifie", "fait"];
 const VALID_CATEGORY = ["clim", "piscine", "jacuzzi", "jardin", "plomberie", "electricite", "structure", "autre"];
 
+// db.exec() (D1) découpe l'entrée par saut de ligne : un template literal multi-lignes
+// classique casse la requête en fragments invalides. Toujours construire le DDL en une
+// seule ligne (concaténation), comme client-errors.js / voyageur-feedback.js.
 async function initTable(db) {
-  await db.exec(`
-    CREATE TABLE IF NOT EXISTS maintenance (
-      id           TEXT    PRIMARY KEY,
-      bien_id      TEXT    NOT NULL DEFAULT 'tous',
-      category     TEXT    NOT NULL DEFAULT 'autre',
-      titre        TEXT    NOT NULL,
-      prestataire  TEXT    DEFAULT '',
-      cost         INTEGER DEFAULT 0,
-      status       TEXT    NOT NULL DEFAULT 'a_planifier',
-      scheduled_at TEXT,
-      done_at      TEXT,
-      next_due_at  TEXT,
-      notes        TEXT    DEFAULT '',
-      created_at   INTEGER NOT NULL DEFAULT (unixepoch()),
-      updated_at   INTEGER NOT NULL DEFAULT (unixepoch())
-    )
-  `);
+  await db.exec(
+    "CREATE TABLE IF NOT EXISTS maintenance (" +
+    "id TEXT PRIMARY KEY," +
+    "bien_id TEXT NOT NULL DEFAULT 'tous'," +
+    "category TEXT NOT NULL DEFAULT 'autre'," +
+    "titre TEXT NOT NULL," +
+    "prestataire TEXT DEFAULT ''," +
+    "cost INTEGER DEFAULT 0," +
+    "status TEXT NOT NULL DEFAULT 'a_planifier'," +
+    "scheduled_at TEXT," +
+    "done_at TEXT," +
+    "next_due_at TEXT," +
+    "notes TEXT DEFAULT ''," +
+    "created_at INTEGER NOT NULL DEFAULT (unixepoch())," +
+    "updated_at INTEGER NOT NULL DEFAULT (unixepoch())" +
+    ")"
+  );
   await db.exec("CREATE INDEX IF NOT EXISTS idx_maint_status ON maintenance(status)");
-  await db.exec("CREATE INDEX IF NOT EXISTS idx_maint_bien   ON maintenance(bien_id)");
+  await db.exec("CREATE INDEX IF NOT EXISTS idx_maint_bien ON maintenance(bien_id)");
 }
 
 export async function onRequest({ request, env }) {
