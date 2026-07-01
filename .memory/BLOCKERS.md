@@ -4,15 +4,19 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
-## En cours → ✅ terminé le 2026-07-01 (soir 2) — Setup Gmail Messagerie + scripts booking committés
+## En cours → ✅ terminé le 2026-07-01 (soir 3) — Calendar/Stripe reconcile/Agents/Programme fidélité (3 étapes)
+
+## 🟡 Récompense parrain — montant fixe 100€, pas indexé sur le bien réservé par le filleul
+- **Statut** : `REFERRAL_PARRAIN_REWARD` (`src/utils/referralReward.js`) = 100€ flat pour tout parrainage, simplification volontaire de la proposition initiale ("~90-110€ selon le bien"). Validé par Vincent tel quel dans le barème global.
+- **Ce qui débloque** : si Vincent veut un montant différencié par bien plus tard, ajuster `REFERRAL_PARRAIN_REWARD` en fonction du `bien_id` de la résa du filleul (actuellement non lu par `creditReferralParrain`).
 
 ## 🟡 Booking.com scraper CDP — crontab local à vérifier/mettre à jour
 - **Statut** : `scripts/booking-scraper.mjs` bascule sur `connectOverCDP` (nécessite `bash scripts/booking-chrome-debug.sh` lancé AVANT). Non vérifié si le crontab existant sur le Mac de Vincent (`crontab -e`, mentionné dans le commentaire du script) a été mis à jour pour chaîner les deux étapes.
 - **Ce qui débloque** : Vincent vérifie/édite son crontab local pour lancer `booking-chrome-debug.sh` avant `booking-scraper.mjs` (commande suggérée en commentaire dans le script).
 
-## 🟡 Gmail OAuth — mode Test, refresh_token expire à J+7
-- **Statut** : app OAuth Google en mode Externe/Test (compte `vinsmaf@gmail.com` = Gmail perso, pas Workspace → mode Interne indisponible). Connexion Gmail vérifiée fonctionnelle le 2026-07-01 (`checked:1, imported:1`).
-- **Ce qui débloque** : si "Gmail non connecté" réapparaît après ~7 jours (~2026-07-08), c'est l'expiration attendue du refresh_token en mode Test — re-cliquer "Connecter Gmail" (re-consentement rapide) ou envisager de soumettre l'app à validation Google / passer sur un compte Workspace pour un mode Interne permanent.
+## 🟡 OAuth Google (Gmail + Calendar) — mode Test, refresh_token expire à J+7
+- **Statut** : app OAuth Google en mode Externe/Test (compte `vinsmaf@gmail.com` = Gmail perso, pas Workspace → mode Interne indisponible) — s'applique aux DEUX providers connectés (Gmail vérifié `checked:1, imported:1` le 01/07 ; Calendar vérifié fonctionnel le 01/07 soir après ajout des scopes manquants + reconnexion).
+- **Ce qui débloque** : si "Gmail non connecté" OU "Calendar non connecté" réapparaît après ~7 jours (~2026-07-08), c'est l'expiration attendue du refresh_token en mode Test — re-cliquer "Connecter" (re-consentement rapide, whitelisté comme utilisateur test) ou envisager de soumettre l'app à validation Google / passer sur un compte Workspace pour un mode Interne permanent (couvrirait les 2 providers d'un coup).
 
 ## En cours → ✅ terminé le 2026-07-01 (Bug calendrier réservation + bug Maintenance + feature reconduction)
 
