@@ -4,6 +4,7 @@
  */
 import { useState, useEffect, useCallback } from "react";
 import { useAppData } from "../AppDataContext.jsx";
+import { fetchJSON } from "../lib/apiFetch.js";
 
 const CAT = [
   { id: "clim",        label: "Climatisation", icon: "🌬️" },
@@ -58,18 +59,14 @@ export default function MaintenanceTab() {
   const [saving,     setSaving] = useState(false);
   const [err,        setErr]    = useState(null);
 
-  const tok = () => (typeof sessionStorage !== "undefined" ? sessionStorage.getItem("ldb_tok") : "") || "";
-  const auth = () => ({ Authorization: "Bearer " + tok(), "Content-Type": "application/json" });
-
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await fetch("/api/maintenance", { headers: auth() });
-      const d = await r.json();
+      const d = await fetchJSON("/api/maintenance", { timeout: 10000 });
       if (d.ok) setRecords(d.records);
-    } catch {}
+    } catch (e) { console.warn("[maintenance] load", e.message); }
     setLoading(false);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => { load(); }, [load]);
 
@@ -78,28 +75,32 @@ export default function MaintenanceTab() {
     setSaving(true); setErr(null);
     try {
       const body = { ...form, cost: parseInt(form.cost) || 0 };
-      let r;
-      if (editId) {
-        r = await fetch(`/api/maintenance?id=${editId}`, { method: "PATCH", headers: auth(), body: JSON.stringify(body) });
-      } else {
-        r = await fetch("/api/maintenance", { method: "POST", headers: auth(), body: JSON.stringify(body) });
-      }
-      const d = await r.json();
-      if (d.ok) { await load(); closeForm(); }
-      else setErr(d.error || "Erreur");
-    } catch { setErr("Erreur réseau"); }
+      const opts = { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
+      if (editId) await fetchJSON(`/api/maintenance?id=${editId}`, { ...opts, method: "PATCH" });
+      else await fetchJSON("/api/maintenance", { ...opts, method: "POST" });
+      await load();
+      closeForm();
+    } catch (e) { setErr(e.message || "Erreur"); }
     setSaving(false);
   }
 
   async function markFait(id) {
-    await fetch(`/api/maintenance?id=${id}`, { method: "PATCH", headers: auth(), body: JSON.stringify({ status: "fait", done_at: todayStr() }) });
-    setRecords(rs => rs.map(r => r.id === id ? { ...r, status: "fait", done_at: todayStr() } : r));
+    try {
+      await fetchJSON(`/api/maintenance?id=${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "fait", done_at: todayStr() }),
+      });
+      setRecords(rs => rs.map(r => r.id === id ? { ...r, status: "fait", done_at: todayStr() } : r));
+    } catch (e) { window.alert("Erreur : " + e.message); }
   }
 
   async function del(id) {
     if (!window.confirm("Supprimer cette entrée ?")) return;
-    await fetch(`/api/maintenance?id=${id}`, { method: "DELETE", headers: auth() });
-    setRecords(rs => rs.filter(r => r.id !== id));
+    try {
+      await fetchJSON(`/api/maintenance?id=${id}`, { method: "DELETE" });
+      setRecords(rs => rs.filter(r => r.id !== id));
+    } catch (e) { window.alert("Erreur : " + e.message); }
   }
 
   function openEdit(rec) {
