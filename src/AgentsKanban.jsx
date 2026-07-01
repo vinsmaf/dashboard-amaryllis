@@ -457,8 +457,10 @@ export default function AgentsKanban({ mob }) {
     }).catch(() => {});
   }, []);
 
-  // ── Relancer l'analyse (tous les agents) ─────────────────────────────────
-  const handleRunAll = async () => {
+  // ── Relancer l'analyse — tous les agents, ou une liste ciblée ────────────
+  // Le backend (agents-run.js) accepte déjà `agents: "all"` ou un tableau
+  // d'ids ciblés — seul le bouton "relancer un seul agent" manquait côté UI.
+  const runAgents = async (agentsPayload) => {
     if (running) return;
     setRunning(true);
     setRunResult(null);
@@ -466,7 +468,7 @@ export default function AgentsKanban({ mob }) {
       const r = await adminFetch("/api/agents-run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ agents: "all" }),
+        body: JSON.stringify({ agents: agentsPayload }),
       });
       const d = await r.json();
       if (d.error === "ANTHROPIC_API_KEY not configured in Cloudflare Pages env vars") {
@@ -484,6 +486,8 @@ export default function AgentsKanban({ mob }) {
       runTimeout.current = setTimeout(() => setRunResult(null), 8000);
     }
   };
+  const handleRunAll = () => runAgents("all");
+  const handleRunOne = () => runAgents([filterAgent]);
 
   // ── Filtres ──────────────────────────────────────────────────────────────
   const filtered = actions.filter(a => {
@@ -577,7 +581,23 @@ export default function AgentsKanban({ mob }) {
           >
             📊 Stats {statsOpen ? "▲" : "▼"}
           </button>
-          {/* Bouton relancer */}
+          {/* Bouton relancer un seul agent — visible quand le filtre Agent est actif */}
+          {filterAgent !== "all" && (
+            <button
+              onClick={handleRunOne}
+              disabled={running}
+              title={`Relance uniquement ${ALL_AGENTS.find(a => a.id === filterAgent)?.label || filterAgent}, sans toucher aux autres agents`}
+              style={{
+                padding: "8px 16px", borderRadius: 8, border: "1px solid rgba(16,185,129,0.4)",
+                background: running ? "rgba(16,185,129,0.08)" : "rgba(16,185,129,0.18)",
+                color: running ? "#64748b" : "#6ee7b7", fontSize: 12, cursor: running ? "not-allowed" : "pointer",
+                fontWeight: 600, display: "flex", alignItems: "center", gap: 6,
+              }}
+            >
+              🎯 Relancer {ALL_AGENTS.find(a => a.id === filterAgent)?.label || filterAgent}
+            </button>
+          )}
+          {/* Bouton relancer tous les agents */}
           <button
             onClick={handleRunAll}
             disabled={running}
@@ -591,7 +611,7 @@ export default function AgentsKanban({ mob }) {
             {running ? (
               <><span style={{ display: "inline-block", animation: "spin 1s linear infinite" }}>⚙️</span> Analyse en cours…</>
             ) : (
-              <><span>🔄</span> Relancer l'analyse</>
+              <><span>🔄</span> Relancer tout</>
             )}
           </button>
         </div>

@@ -162,8 +162,9 @@ const COST_RATES = {
   "meta-llama/llama-3.3-70b-instruct:free":    { in: 0,     out: 0     },
   "meta-llama/llama-4-maverick:free":          { in: 0,     out: 0     },
   // llama-3.3-70b-versatile décommissionné 2026-08-16 (annonce Groq) → entrée retirée (plus appelé).
-  // ⚠️ "openai/gpt-oss-120b" (son remplaçant) n'a pas encore d'entrée ici — tarif réel à vérifier
-  // sur console.groq.com avant d'en ajouter une (estimateCost() retourne 0 en son absence, sans crash).
+  // Tarifs vérifiés sur groq.com/pricing (2026-07) pour le duo fallback MODELS.groq.medium/smart :
+  "openai/gpt-oss-120b":                       { in: 0.15,  out: 0.60  },
+  "qwen/qwen3-32b":                            { in: 0.29,  out: 0.59  },
   "mistral-small-2506":                        { in: 0.10,  out: 0.30  },
   "mistral-medium-2505":                       { in: 0.40,  out: 2.00  },
   "mistral-large-2512":                        { in: 2.00,  out: 6.00  },
