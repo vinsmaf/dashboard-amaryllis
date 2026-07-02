@@ -8040,9 +8040,22 @@ function LogoDropdown() {
         onClick={() => setOpen(o => !o)}
         aria-label="Menu navigation"
         aria-expanded={open}
-        style={{ background: "none", border: "none", cursor: "pointer", padding: "4px 2px", display: "flex", alignItems: "center" }}
+        style={{
+          display: "flex", alignItems: "center", gap: 6,
+          background: "transparent",
+          border: "1px solid rgba(250,245,233,0.18)",
+          color: "rgba(250,245,233,0.75)",
+          borderRadius: 20, padding: "6px 14px",
+          fontFamily: "'Jost', sans-serif", fontWeight: 300,
+          fontSize: 11, letterSpacing: "0.1em",
+          cursor: "pointer", textTransform: "uppercase",
+          transition: "all 0.18s",
+        }}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(196,114,84,0.5)"; e.currentTarget.style.color = "var(--c-ivory)"; }}
+        onMouseLeave={e => { if (!open) { e.currentTarget.style.borderColor = "rgba(250,245,233,0.18)"; e.currentTarget.style.color = "rgba(250,245,233,0.75)"; } }}
       >
-        <span style={{ fontSize: 9, color: "rgba(250,245,233,0.35)", transform: open ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.2s", display: "inline-block" }}>▾</span>
+        <span style={{ fontSize: 13, lineHeight: 1 }}>☰</span>
+        Menu
       </button>
 
       {open && (
