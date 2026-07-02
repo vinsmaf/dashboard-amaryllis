@@ -4,7 +4,12 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
-## En cours → ✅ terminé le 2026-07-01 (soir 3) — Calendar/Stripe reconcile/Agents/Programme fidélité (3 étapes)
+## En cours → ✅ terminé le 2026-07-02 — Fiabilisation auto-pub réseaux + hero vidéo home
+> Détail complet : ADR-EDITORIAL-RELIABILITY-001, ADR-HERO-VIDEO-001.
+
+## 🟡 Refonte visuelle home — mockups reçus, revue interrompue (non conclue)
+- **Statut** : Vincent a fourni un export (`Animation pour réservation Villa Maryllis.zip`) contenant 3 propositions d'accueil (V1/V2/V3) + une page bien, générées par un outil de design tiers (format `.dc.html`, design system + assets inclus). Revue commencée (structure/emplacement des sections, PAS le contenu placeholder) mais interrompue par la demande hero vidéo — jamais conclue. Fichiers extraits dans le scratchpad de session (non persistés dans le repo).
+- **Ce qui débloque** : si Vincent relance le sujet, reprendre l'extraction du zip + servir les `.dc.html` via un serveur statique local (le hero embarque une animation JS `<x-import>` qui ne s'affiche pas hors du runtime propriétaire de l'outil — seul le reste de la page HTML/CSS est directement lisible). Points déjà repérés à vérifier avant tout emprunt structurel : les données affichées dans les mockups (notes, avis, %) sont des placeholders parfois incohérents avec `src/data/biens.js` (ex. Villa Amaryllis notée 4,74 dans un mockup vs 4,94 réel) — ne jamais copier un chiffre depuis ces mockups sans revérifier contre la source unique.
 
 ## 🟡 Récompense parrain — montant fixe 100€, pas indexé sur le bien réservé par le filleul
 - **Statut** : `REFERRAL_PARRAIN_REWARD` (`src/utils/referralReward.js`) = 100€ flat pour tout parrainage, simplification volontaire de la proposition initiale ("~90-110€ selon le bien"). Validé par Vincent tel quel dans le barème global.

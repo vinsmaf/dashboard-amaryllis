@@ -3,6 +3,23 @@
 > Pièges déjà rencontrés + comment les éviter. 1 entrée = 1 leçon actionnable « la prochaine fois ».
 > Le journal d'erreurs exhaustif reste `../docs/ERREURS-LOG.md`.
 
+## 🎥 `<video autoPlay muted loop>` en React : forcer `.muted` + `.play()` impérativement — 2026-07-02
+- **Piège** : React ne synchronise pas toujours à temps la PROPRIÉTÉ `.muted` (juste l'attribut HTML JSX) avant que le navigateur évalue l'autoplay → lecture silencieusement refusée, la vidéo reste figée sur le poster (aucune erreur console). Constaté en prod alors que ça semblait fonctionner en preview locale — le timing diffère selon l'environnement, donc toujours vérifier en LIVE, pas juste en dev.
+- **La prochaine fois** : pour toute vidéo de fond autoplay, poser un `ref` + `useEffect(() => { ref.current.muted = true; ref.current.play().catch(() => {}); }, [])` plutôt que de compter sur les attributs JSX seuls.
+- **2e piège lié** : le navigateur peut aussi SUSPENDRE une vidéo de fond en cours de lecture (économie d'énergie, indépendant de la visibilité de l'onglet) → prévoir un listener `pause` qui relance `.play()` automatiquement, sinon la vidéo se fige en plein milieu sans jamais planter.
+
+## 🔍 Bug intermittent signalé par Vincent = creuser la cause racine SILENCIEUSE, pas la façade — 2026-07-01/02
+- **Piège évité** : "les posts cassent plusieurs fois par semaine" ressemblait à plusieurs petits bugs indépendants (rotation, gate). En creusant plus loin, la cause dominante était UN SEUL point : `generateReelDraft` appelait `/api/ai-summary`, cassé depuis toujours (clé absente) et échouant EN SILENCE (juste un `console.error` que personne ne lit) — le rattrapage automatique (`runEditorialRetry`, qui régénère en format différent) masquait le symptôme en le rendant aléatoire plutôt qu'absent.
+- **La prochaine fois** : face à un "ça marche parfois pas", chercher d'abord les échecs SILENCIEUX (try/catch qui avale l'erreur, fallback qui masque le vrai problème) avant de corriger les symptômes de surface un par un — un mécanisme de rattrapage qui fonctionne À MOITIÉ est le signe classique d'une cause racine cachée derrière.
+
+## 🕵️ Avant de conclure qu'un outil de vérification (preview_eval) ment, isoler l'artefact de l'automation — 2026-07-02
+- **Piège** : le hero vidéo semblait "en pause" à chaque vérification via l'outil de preview automatisé (onglet piloté par script), même après un vrai fix. Diagnostic a montré : fichier entièrement chargé, zéro erreur — un onglet automatisé n'est jamais vraiment "au premier plan" pour le navigateur, ce qui peut déclencher les mêmes suspensions qu'un onglet réellement en arrière-plan.
+- **La prochaine fois** : quand un signal automatisé contredit un fix par ailleurs bien identifié (cause connue, correction ciblée), demander une vérification humaine directe plutôt que de continuer à creuser dans l'outil — ne pas faire tourner l'utilisateur en rond sur un artefact de tooling.
+
+## 🧹 Avant d'appliquer un vieux `git stash`, vérifier s'il n'est pas déjà superseded — 2026-07-02
+- **Piège évité** : un stash de session passée (observabilité LLM + sécurité + CSP) semblait contenir du travail en attente. Comparaison hunk par hunk avec l'état actuel a montré que TOUT était déjà commité proprement ailleurs (et la version du stash était même parfois une régression — moins de providers, tarifs obsolètes).
+- **La prochaine fois** : avant d'appliquer un stash ancien, differ chaque fichier contre l'état courant plutôt que de supposer qu'il contient du travail perdu — un `git stash drop` après vérification est plus sûr qu'un `git stash pop` qui réintroduit du code déjà périmé.
+
 ## 🎯 Avant de proposer un barème chiffré (fidélité, promo, seuils), interroger les VRAIES données — pas une moyenne agrégée aveugle — 2026-07-01
 - **Piège évité** : en préparant le barème du programme fidélité, `AVG(ltv_total)` groupé par `nb_sejours` montrait un LTV moyen de 9863€ pour les clients "3 séjours" — un chiffre qui aurait fait exploser n'importe quel palier basé dessus. En creusant (`SELECT ... WHERE nb_sejours >= 3`), ce chiffre était en fait UN SEUL client : Joël Bailleul, locataire longue durée Iguana (3400€/mois), pas un vrai repeat customer de courts séjours — sa LTV de 46090€ écrasait la moyenne des 4 autres clients réels (~572-969€ chacun).
 - **La prochaine fois** : dès qu'une moyenne groupée sert de base à une décision chiffrée (barème, seuil, tarif), toujours vérifier la liste des lignes individuelles derrière un groupe à faible effectif (n<10) avant de s'y fier — un seul outlier structurel (bail long, résa test, doublon) peut fausser toute la proposition.
