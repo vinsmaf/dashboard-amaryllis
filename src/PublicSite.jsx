@@ -6883,9 +6883,10 @@ function HeroBrand({ biens, onBook }) {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Fond vidéo en boucle (6s, sans son, sans texte incrusté — cf. hero-amaryllis-loop.mp4)
-  // au lieu de la photo statique. Layout original repris tel quel : plus de texte vidéo
-  // à éviter, donc plus besoin des positions "en haut" bricolées pour l'essai précédent.
+  // Fond vidéo en boucle (~25s, sans son, sans texte incrusté) : le TOUR COMPLET des biens
+  // (Amaryllis nuit → Zandoli → Géko → Mabouya → Schœlcher vue baie → Amaryllis sunset).
+  // Découpe 4.2s→29s de la source (intro logo et fondu final retirés). Demande Vincent :
+  // « je veux que l'on voie l'ensemble de la vidéo, surtout les différents biens ».
   // heroPhoto (variante A/B growth-003) sert de fond de repli tant que la vidéo charge.
   const USE_VIDEO_BG = true;
   // React ne synchronise pas toujours la PROPRIÉTÉ `.muted` (juste l'attribut HTML) avant
@@ -6915,7 +6916,7 @@ function HeroBrand({ biens, onBook }) {
           poster="/photos/amaryllis/hero-loop-poster.webp"
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
         >
-          <source src="/video/hero-amaryllis-loop.mp4" type="video/mp4" />
+          <source src="/video/hero-biens-loop.mp4" type="video/mp4" />
         </video>
       )}
       {/* gradient overlay */}
