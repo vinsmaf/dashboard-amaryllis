@@ -6888,6 +6888,18 @@ function HeroBrand({ biens, onBook }) {
   // à éviter, donc plus besoin des positions "en haut" bricolées pour l'essai précédent.
   // heroPhoto (variante A/B growth-003) sert de fond de repli tant que la vidéo charge.
   const USE_VIDEO_BG = true;
+  // React ne synchronise pas toujours la PROPRIÉTÉ `.muted` (juste l'attribut HTML) avant
+  // que le navigateur évalue l'autoplay → autoplay silencieusement refusé, la vidéo reste
+  // bloquée sur le poster (constaté en prod : lecture qui démarre puis se fige). Fix connu :
+  // forcer `.muted = true` puis `.play()` impérativement au montage.
+  const videoRef = useRef(null);
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = true;
+    const p = v.play();
+    if (p?.catch) p.catch(() => {}); // autoplay refusé (rare, hors politique navigateur) → reste sur le poster, pas d'erreur console
+  }, []);
 
   return (
     <div style={{
@@ -6898,6 +6910,7 @@ function HeroBrand({ biens, onBook }) {
     }}>
       {USE_VIDEO_BG && (
         <video
+          ref={videoRef}
           autoPlay muted loop playsInline
           poster="/photos/amaryllis/hero-loop-poster.webp"
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
