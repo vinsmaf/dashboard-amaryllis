@@ -6883,6 +6883,12 @@ function HeroBrand({ biens, onBook }) {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Fond vidéo en boucle (6s, sans son, sans texte incrusté — cf. hero-amaryllis-loop.mp4)
+  // au lieu de la photo statique. Layout original repris tel quel : plus de texte vidéo
+  // à éviter, donc plus besoin des positions "en haut" bricolées pour l'essai précédent.
+  // heroPhoto (variante A/B growth-003) sert de fond de repli tant que la vidéo charge.
+  const USE_VIDEO_BG = true;
+
   return (
     <div style={{
       position: "relative",
@@ -6890,6 +6896,15 @@ function HeroBrand({ biens, onBook }) {
       background: `#0e2020 url('${heroPhoto}') center/cover no-repeat`,
       overflow: "hidden",
     }}>
+      {USE_VIDEO_BG && (
+        <video
+          autoPlay muted loop playsInline
+          poster="/photos/amaryllis/hero-loop-poster.webp"
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+        >
+          <source src="/video/hero-amaryllis-loop.mp4" type="video/mp4" />
+        </video>
+      )}
       {/* gradient overlay */}
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(14,59,58,0.18) 0%, rgba(14,59,58,0.72) 100%)", pointerEvents: "none" }} />
 
