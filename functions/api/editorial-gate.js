@@ -16,6 +16,7 @@
 import { verifyBearer } from "./_adminauth.js";
 import { loadLearnedLessons, factCheckCaption } from "./_factcheck.js";
 import { evaluateGate, parsePhotoUrl } from "./_editorialGate.js";
+import { callLLM } from "./_llm.js";
 
 const CORS = {
   "Content-Type": "application/json",
@@ -138,7 +139,6 @@ export async function onRequest(context) {
     if (dry) continue;
 
     const short = (payload.caption || "").split("\n")[0].slice(0, 80);
-    const siteUrl = new URL(request.url).origin;
 
     // ── Boucle de réécriture ───────────────────────────────────────────────────
     // Si le seul blocage est score/verdict (pas doublon / mots_interdits / photo),
@@ -186,13 +186,14 @@ Réécris ce caption pour atteindre ${minScore}/100 minimum.
 Réponds UNIQUEMENT avec le texte du caption réécrit, sans explication ni balises.`;
 
         try {
-          const rwRes = await fetch(`${siteUrl}/api/ai-summary`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ prompt: rewritePrompt, maxTokens: 700 }),
+          // callLLM (cascade multi-provider) et non /api/ai-summary : ce dernier dépend
+          // d'ANTHROPIC_API_KEY, absente en prod → la réécriture échouait SILENCIEUSEMENT
+          // depuis toujours (chaque draft imparfait escaladait au lieu de s'auto-réparer).
+          const rw = await callLLM(env, {
+            tier: "smart", max_tokens: 700, temperature: 0.4, logSource: "editorial-gate:rewrite",
+            messages: [{ role: "user", content: rewritePrompt }],
           });
-          const rwData = await rwRes.json().catch(() => ({}));
-          const newCaption = (rwData.summary || rwData.text || "").trim();
+          const newCaption = (rw.text || "").trim();
 
           if (newCaption && newCaption.length > 80) {
             // Re-score le nouveau caption
@@ -210,13 +211,11 @@ Critères (total 100pts) :
 - Pas d'erreurs factuelles (biens sur hauteurs, pas bord de mer) : 10pts
 Retourne UNIQUEMENT : {"score":0-100,"verdict":"approve"|"reject"|"needs_edits","reason":"1 phrase"}`;
 
-            const scRes = await fetch(`${siteUrl}/api/ai-summary`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ prompt: scorePrompt, maxTokens: 120 }),
+            const sc = await callLLM(env, {
+              tier: "smart", max_tokens: 120, temperature: 0.1, logSource: "editorial-gate:rescore",
+              messages: [{ role: "user", content: scorePrompt }],
             });
-            const scData = await scRes.json().catch(() => ({}));
-            const scText = scData.summary || scData.text || "{}";
+            const scText = sc.text || "{}";
             let newJudge = { score: 0, verdict: "reject", reason: "parse error" };
             try { newJudge = JSON.parse(scText.match(/\{[\s\S]*\}/)?.[0] || "{}"); } catch (parseErr) { console.error("[gate-rescore]", parseErr.message); }
 
