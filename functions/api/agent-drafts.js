@@ -87,9 +87,13 @@ async function executeDraft(env, draft) {
         let fallback = null;
         try {
           const row = await env.revenue_manager?.prepare(
-            "SELECT photo_url FROM editorial_calendar WHERE draft_id=?"
+            "SELECT photo_url, bien_id FROM editorial_calendar WHERE draft_id=?"
           ).bind(draft.id).first();
-          fallback = row?.photo_url || null;
+          // La photo_url planifiée est parfois cross-bien (bug d'anciens seeds, ex. entry
+          // schoelcher → photo zandoli) : n'accepter le fallback que s'il montre LE bon bien.
+          if (row?.photo_url && row?.bien_id && row.photo_url.includes(`/photos/${row.bien_id}/`)) {
+            fallback = row.photo_url;
+          }
         } catch { /* pas d'entrée calendrier liée */ }
         if (fallback && await isRealImage(fallback)) {
           console.warn(`[executeDraft] imageUrl invalide (${imageUrl}) → fallback photo planifiée ${fallback}`);
