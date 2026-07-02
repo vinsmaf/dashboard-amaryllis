@@ -4674,7 +4674,13 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                       </div>
                       <div style={{ marginBottom: 26, paddingLeft: 18, borderLeft: s.titre ? `2px solid ${(bien.couleur || "#8a7a6a")}28` : "2px solid transparent" }}>
                         {s.titre && (
-                          <Eyebrow color="muted" tracking="0.42em" style={{ marginBottom: 9, color: bien.couleur || undefined }}>{s.titre}</Eyebrow>
+                          <div style={{
+                            fontFamily: "'Jost', sans-serif", fontWeight: 700, fontSize: isMobile ? 18 : 20,
+                            letterSpacing: "0.03em", textTransform: "none",
+                            color: bien.couleur || NAVY, marginBottom: 12,
+                          }}>
+                            {s.titre}
+                          </div>
                         )}
                         <Editorial style={{ fontSize: isMobile ? 15 : 17 }}>{s.texte}</Editorial>
                         {s.photos && s.photos.length > 0 && (
