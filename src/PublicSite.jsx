@@ -9748,7 +9748,7 @@ export default function PublicSite() {
 
       {/* ── PROPERTIES SECTION — immédiatement après le hero ── */}
       <div id="properties" style={{ background: IVORY }}>
-        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "72px 32px 28px" }}>
+        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "110px 32px 28px" }}>
 
           {/* Header centré — Claude Design */}
           <div style={{ textAlign: "center", marginBottom: 48 }}>
