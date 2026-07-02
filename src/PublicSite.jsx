@@ -6036,6 +6036,29 @@ function SearchByDates({ biens, onBook, onDetail }) {
   }
 
   const [open, setOpen] = useState(false);
+
+  // Écoute la barre de recherche du hero (HeroSearchBar) — préremplit + lance la recherche.
+  useEffect(() => {
+    const onHeroSearch = (e) => {
+      const { checkin: ci, checkout: co, guests } = e.detail || {};
+      if (!ci || !co) return;
+      setCheckin(ci);
+      setCheckout(co);
+      if (guests && guests !== "0") setMinGuests(guests);
+      setOpen(true);
+    };
+    window.addEventListener("hero-search", onHeroSearch);
+    return () => window.removeEventListener("hero-search", onHeroSearch);
+  }, []);
+  // Lance la recherche une fois checkin/checkout mis à jour par le hero. setTimeout(0) reporte
+  // l'appel (qui fait setState) hors du corps synchrone de l'effet (règle react-hooks/set-state-in-effect).
+  useEffect(() => {
+    if (!(open && checkin && checkout && checkout > checkin && !results && !loading)) return;
+    const t = setTimeout(() => search(), 0);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, checkin, checkout]);
+
   const canSearch = checkin && checkout && checkout > checkin;
   const availableCount = results ? results.filter(r => r.isAvailable && !r.belowMin).length : 0;
   // >8 voyageurs : aucune villa seule ne suffit (max Amaryllis = 8) → pousser l'offre groupée résidence
@@ -6858,7 +6881,7 @@ function BienPickerModal({ biens, onSelect, onClose }) {
 }
 
 // ── Hero Brand ───────────────────────────────────────────────────
-function HeroBrand({ biens, onBook }) {
+function HeroBrand({ biens }) {
   const { lang } = useLang();
   // growth-003 — A/B hero Amaryllis : A = piscine (actuel), B = salon (07.webp)
   const heroVariant = getVariant("hero_amaryllis");
@@ -6915,6 +6938,11 @@ function HeroBrand({ biens, onBook }) {
   }, []);
 
   return (
+    // Wrapper séparé du corps du hero : le hero a overflow:hidden (indispensable pour
+    // habiller la vidéo/le gradient), ce qui coupait la barre de recherche qui déborde
+    // volontairement en bas (chevauchement avec la section suivante, constaté cassé par
+    // Vincent : "on ne voit pas la totalité"). La barre vit ici, hors de ce overflow:hidden.
+    <div style={{ position: "relative" }}>
     <div style={{
       position: "relative",
       height: "clamp(480px, 72vh, 640px)",
@@ -6961,11 +6989,75 @@ function HeroBrand({ biens, onBook }) {
           >
             {lang === "fr" ? "Découvrir nos villas" : "Explore villas"}
           </Button>
-          <Button variant="onDark" size="lg" onClick={onBook}>
-            {lang === "fr" ? "Réserver" : "Book now"}
-          </Button>
         </div>
       </div>
+
+    </div>
+
+      {/* Barre de recherche dans le hero — test structurel (essai V2/V3 des mockups) :
+          dates visibles dès l'atterrissage plutôt qu'enterrées dans le panneau repliable
+          de SearchByDates plus bas. Soumission → événement window, écouté par SearchByDates
+          (aucune logique de recherche/dispo/prix dupliquée). */}
+      <HeroSearchBar />
+    </div>
+  );
+}
+
+function HeroSearchBar() {
+  const { lang } = useLang();
+  const [checkin, setCheckin] = useState("");
+  const [checkout, setCheckout] = useState("");
+  const [guests, setGuests] = useState("0");
+  const todayVal = (() => { const d = new Date(); return d.toISOString().slice(0, 10); })();
+
+  function submit() {
+    if (!checkin || !checkout || checkout <= checkin) return;
+    window.dispatchEvent(new CustomEvent("hero-search", { detail: { checkin, checkout, guests } }));
+    const el = document.getElementById("properties");
+    if (el) el.scrollIntoView({ behavior: "smooth" });
+  }
+
+  return (
+    <div style={{
+      position: "absolute", left: "50%", bottom: 0, transform: "translate(-50%, 50%)",
+      zIndex: 3, background: IVORY, borderRadius: 14, border: `1px solid ${SAND}`,
+      boxShadow: "0 12px 32px rgba(14,59,58,0.22)",
+      display: "flex", alignItems: "stretch", flexWrap: "wrap",
+      width: "min(920px, calc(100% - 32px))",
+    }}>
+      <label style={{ flex: "1 1 160px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 2, padding: "10px 18px", borderRight: `1px solid ${SAND}` }}>
+        <span style={{ fontSize: 10, color: MUTED, fontFamily: "'Jost', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase" }}>
+          {lang === "fr" ? "Arrivée" : "Check-in"}
+        </span>
+        <input type="date" value={checkin} min={todayVal} onChange={e => setCheckin(e.target.value)}
+          style={{ background: "none", border: "none", color: NAVY, fontSize: 14, fontFamily: "'Jost', sans-serif", outline: "none", cursor: "pointer", colorScheme: "light" }} />
+      </label>
+      <label style={{ flex: "1 1 160px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 2, padding: "10px 18px", borderRight: `1px solid ${SAND}` }}>
+        <span style={{ fontSize: 10, color: MUTED, fontFamily: "'Jost', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase" }}>
+          {lang === "fr" ? "Départ" : "Check-out"}
+        </span>
+        <input type="date" value={checkout} min={checkin || todayVal} onChange={e => setCheckout(e.target.value)}
+          style={{ background: "none", border: "none", color: NAVY, fontSize: 14, fontFamily: "'Jost', sans-serif", outline: "none", cursor: "pointer", colorScheme: "light" }} />
+      </label>
+      <label style={{ flex: "1 1 160px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 2, padding: "10px 18px" }}>
+        <span style={{ fontSize: 10, color: MUTED, fontFamily: "'Jost', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase" }}>
+          {lang === "fr" ? "Voyageurs" : "Guests"}
+        </span>
+        <select value={guests} onChange={e => setGuests(e.target.value)} style={{
+          background: "none", border: "none", color: guests === "0" ? MUTED : NAVY, fontSize: 14,
+          fontFamily: "'Jost', sans-serif", outline: "none", cursor: "pointer", appearance: "none", WebkitAppearance: "none",
+        }}>
+          <option value="0">{lang === "fr" ? "2 voyageurs" : "2 guests"}</option>
+          {[1,2,3,4,5,6,7,8,9,10,11].map(n => <option key={n} value={n}>{n} {lang === "fr" ? `voyageur${n > 1 ? "s" : ""}` : `guest${n > 1 ? "s" : ""}`}</option>)}
+        </select>
+      </label>
+      <button onClick={submit} style={{
+        flex: "1 1 200px", background: CORAL, border: "none", color: "#fff", cursor: "pointer",
+        fontFamily: "'Jost', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase",
+        borderRadius: "0 14px 14px 0",
+      }}>
+        {lang === "fr" ? "Vérifier les disponibilités" : "Check availability"}
+      </button>
     </div>
   );
 }
@@ -9600,7 +9692,7 @@ export default function PublicSite() {
       </header>
 
       {/* ── HERO BRAND ── */}
-      <HeroBrand biens={biensList} onBook={() => setShowBienPicker(true)} />
+      <HeroBrand biens={biensList} />
 
       {/* ── PROPERTIES SECTION — immédiatement après le hero ── */}
       <div id="properties" style={{ background: IVORY }}>
