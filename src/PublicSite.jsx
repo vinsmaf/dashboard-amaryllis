@@ -961,7 +961,7 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
   );
 }
 
-function DateRangePicker({ checkin, checkout, blockedDates = [], onChange, dailyPricesMap = {}, basePrice = 0, minNights = 1, gapDates = {}, bienNom = "" }) {
+function DateRangePicker({ checkin, checkout, blockedDates = [], onChange, dailyPricesMap = {}, basePrice = 0, minNights = 1, gapDates = {}, bienNom = "", compact = false }) {
   const todayStr = today();
   const minCheckinStr = addDays(todayStr, 1); // 24h minimum avant arrivée
   const initY = new Date().getFullYear();
@@ -974,6 +974,11 @@ function DateRangePicker({ checkin, checkout, blockedDates = [], onChange, daily
     window.addEventListener("resize", fn, { passive: true });
     return () => window.removeEventListener("resize", fn);
   }, []);
+  // compact = recherche générale tous biens (HeroSearchBar) : pas de blockedDates réelles à
+  // représenter (Vincent : "dispo/indispo ne peuvent pas être dessus sauf si tous les biens le
+  // sont"), donc la légende disponible/indisponible + la notice 24h (contact pour UN bien) n'ont
+  // pas de sens ici → masquées. 1 seul mois affiché (popup "beaucoup trop grande" sinon).
+  const singleMonth = compact || isMobile;
 
   const m1 = (initM + offset) % 12;
   const y1 = initY + Math.floor((initM + offset) / 12);
@@ -1019,8 +1024,10 @@ function DateRangePicker({ checkin, checkout, blockedDates = [], onChange, daily
       </div>
       <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
         <CalendarMonth year={y1} month={m1} checkin={checkin} checkout={checkout} hovered={hovered} blockedDates={blockedDates} onSelect={handleSelect} onHover={setHovered} dailyPricesMap={dailyPricesMap} basePrice={basePrice} minNights={minNights} gapDates={gapDates} minCheckin={minCheckinStr} />
-        {!isMobile && <CalendarMonth year={y2} month={m2} checkin={checkin} checkout={checkout} hovered={hovered} blockedDates={blockedDates} onSelect={handleSelect} onHover={setHovered} dailyPricesMap={dailyPricesMap} basePrice={basePrice} minNights={minNights} gapDates={gapDates} minCheckin={minCheckinStr} />}
+        {!singleMonth && <CalendarMonth year={y2} month={m2} checkin={checkin} checkout={checkout} hovered={hovered} blockedDates={blockedDates} onSelect={handleSelect} onHover={setHovered} dailyPricesMap={dailyPricesMap} basePrice={basePrice} minNights={minNights} gapDates={gapDates} minCheckin={minCheckinStr} />}
       </div>
+      {!compact && (
+      <>
       {/* Notice 24h */}
       <div style={{ marginTop: 10, padding: "8px 12px", background: "#fef9f0", border: "1px solid #f0e0c0", borderRadius: 8, fontSize: 12, color: "#7a5c2e", fontFamily: "'Jost', sans-serif", lineHeight: 1.5 }}>
         ⏱ Réservation en ligne : minimum 24h à l'avance.{" "}
@@ -1040,6 +1047,8 @@ function DateRangePicker({ checkin, checkout, blockedDates = [], onChange, daily
           Indisponible
         </span>
       </div>
+      </>
+      )}
 
       {checkin && checkout && (
         <div style={{ marginTop: 10, textAlign: "right" }}>
@@ -5999,9 +6008,10 @@ function SearchByDates({ biens, onBook, onDetail }) {
       return 0;
     });
 
-    // ── Combos résidence (groupe > 8) : combinaisons Zandoli+Géko+Mabouya réellement libres ──
+    // ── Combos résidence (groupe > 8 voyageurs OU 4+ chambres) : combinaisons Zandoli+Géko+Mabouya
+    // réellement libres — aucun bien seul n'a plus de 3 chambres, donc 4+ implique une résidence.
     let combos = [];
-    if (gFilter > 8) {
+    if (gFilter > 8 || cFilter >= 4) {
       const RES = ["zandoli", "geko", "mabouya"];
       const disc = getDiscount(nights);
       const info = {};
@@ -6037,14 +6047,26 @@ function SearchByDates({ biens, onBook, onDetail }) {
 
   const [open, setOpen] = useState(false);
 
+  // Desktop : le hero (HeroSearchBar) est l'UNIQUE module de recherche visible — ce déclencheur
+  // (trigger + panneau repliable) faisait doublon avec lui (Vincent : "ça devient redondant").
+  // Mobile : le hero n'affiche rien (évite le chevauchement constaté) — CE panneau reste donc
+  // le module de recherche mobile, inchangé, avec son propre déclencheur visible.
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+  useEffect(() => {
+    const fn = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener("resize", fn);
+    return () => window.removeEventListener("resize", fn);
+  }, []);
+
   // Écoute la barre de recherche du hero (HeroSearchBar) — préremplit + lance la recherche.
   useEffect(() => {
     const onHeroSearch = (e) => {
-      const { checkin: ci, checkout: co, guests } = e.detail || {};
+      const { checkin: ci, checkout: co, guests, chambres } = e.detail || {};
       if (!ci || !co) return;
       setCheckin(ci);
       setCheckout(co);
       if (guests && guests !== "0") setMinGuests(guests);
+      if (chambres && chambres !== "0") setMinChambres(chambres);
       setOpen(true);
     };
     window.addEventListener("hero-search", onHeroSearch);
@@ -6061,17 +6083,23 @@ function SearchByDates({ biens, onBook, onDetail }) {
 
   const canSearch = checkin && checkout && checkout > checkin;
   const availableCount = results ? results.filter(r => r.isAvailable && !r.belowMin).length : 0;
-  // >8 voyageurs : aucune villa seule ne suffit (max Amaryllis = 8) → pousser l'offre groupée résidence
-  const groupNeeded = parseInt(minGuests || "0", 10) > 8;
+  // >8 voyageurs OU 4+ chambres : aucun bien seul ne suffit (max Amaryllis = 8 pers/3 ch.)
+  // → pousser l'offre groupée résidence (Zandoli+Géko+Mabouya combinables).
+  const groupNeeded = parseInt(minGuests || "0", 10) > 8 || parseInt(minChambres || "0", 10) >= 4;
 
   // Fermer et réinitialiser
   function reset() { setCheckin(""); setCheckout(""); setResults(null); setGroupCombos([]); setOpen(false); }
+
+  // Desktop, rien à chercher/afficher encore : le hero est l'unique entrée, pas de déclencheur
+  // ici → éviter une barre vide sans contenu tant qu'aucune recherche n'est arrivée.
+  if (!isMobile && !open) return null;
 
   return (
     <div style={{ background: IVORY, borderBottom: `1px solid ${SAND}` }}>
       <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 32px" }}>
 
-        {/* Trigger — ligne discrète */}
+        {/* Trigger — mobile uniquement (desktop : le hero est l'unique module de recherche) */}
+        {isMobile && (
         <button
           onClick={() => { setOpen(o => !o); if (open) { setResults(null); } }}
           style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", background: "none", border: "none", padding: "13px 0", cursor: "pointer", textAlign: "left" }}
@@ -6092,6 +6120,7 @@ function SearchByDates({ biens, onBook, onDetail }) {
             <path d="M1 1l4 4 4-4" stroke={NAVY} strokeWidth="1.5" strokeLinecap="round"/>
           </svg>
         </button>
+        )}
 
         {/* Panel dépliable */}
         {open && (
@@ -6136,6 +6165,7 @@ function SearchByDates({ biens, onBook, onDetail }) {
               }}>
                 <option value="0">Chambres</option>
                 {[1,2,3].map(n => <option key={n} value={n}>{n} chambre{n > 1 ? "s" : ""}</option>)}
+                <option value="4">4+ chambres (groupe)</option>
               </select>
 
               {/* Bouton recherche */}
@@ -7013,55 +7043,110 @@ function HeroSearchBar() {
   const [checkin, setCheckin] = useState("");
   const [checkout, setCheckout] = useState("");
   const [guests, setGuests] = useState("0");
-  const todayVal = (() => { const d = new Date(); return d.toISOString().slice(0, 10); })();
+  const [chambres, setChambres] = useState("0");
+  // Calendrier stylé du site (DateRangePicker, déjà utilisé sur les fiches biens) au lieu du
+  // <input type="date"> natif — moche et non personnalisable (Vincent : "travailler le design
+  // du calendrier qui s'ouvre"). Pas de bien précis ici (recherche tous biens confondus) → pas
+  // de blockedDates/prix à passer, CalendarMonth masque déjà les prix proprement si basePrice=0.
+  const [showCalendar, setShowCalendar] = useState(false);
+  const calendarRef = useRef(null);
+  useEffect(() => {
+    if (!showCalendar) return;
+    const onClickOutside = (e) => { if (calendarRef.current && !calendarRef.current.contains(e.target)) setShowCalendar(false); };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [showCalendar]);
+
+  // Le formulaire complet (4 champs) empilé sur mobile dépassait 370px de haut et recouvrait
+  // le bouton "Découvrir nos villas" + le titre suivant (constaté par Vincent sur iPhone).
+  // Sur mobile, on ne duplique pas un 2e module de recherche dans le hero : le panneau
+  // SearchByDates existant (plus bas, déjà pensé pour le tactile) s'ouvre directement par
+  // défaut sur mobile — c'est LUI le module de recherche mobile, pas de widget en plus ici.
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+  useEffect(() => {
+    const fn = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener("resize", fn);
+    return () => window.removeEventListener("resize", fn);
+  }, []);
 
   function submit() {
     if (!checkin || !checkout || checkout <= checkin) return;
-    window.dispatchEvent(new CustomEvent("hero-search", { detail: { checkin, checkout, guests } }));
+    window.dispatchEvent(new CustomEvent("hero-search", { detail: { checkin, checkout, guests, chambres } }));
     const el = document.getElementById("properties");
     if (el) el.scrollIntoView({ behavior: "smooth" });
   }
+
+  if (isMobile) return null;
 
   return (
     <div style={{
       position: "absolute", left: "50%", bottom: 0, transform: "translate(-50%, 50%)",
       zIndex: 3, background: IVORY, borderRadius: 14, border: `1px solid ${SAND}`,
       boxShadow: "0 12px 32px rgba(14,59,58,0.22)",
-      display: "flex", alignItems: "stretch", flexWrap: "wrap",
-      width: "min(920px, calc(100% - 32px))",
+      display: "flex", alignItems: "stretch", flexWrap: "nowrap",
+      width: "min(820px, calc(100% - 32px))",
     }}>
-      <label style={{ flex: "1 1 160px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 2, padding: "10px 18px", borderRight: `1px solid ${SAND}` }}>
-        <span style={{ fontSize: 10, color: MUTED, fontFamily: "'Jost', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase" }}>
-          {lang === "fr" ? "Arrivée" : "Check-in"}
-        </span>
-        <input type="date" value={checkin} min={todayVal} onChange={e => setCheckin(e.target.value)}
-          style={{ background: "none", border: "none", color: NAVY, fontSize: 14, fontFamily: "'Jost', sans-serif", outline: "none", cursor: "pointer", colorScheme: "light" }} />
-      </label>
-      <label style={{ flex: "1 1 160px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 2, padding: "10px 18px", borderRight: `1px solid ${SAND}` }}>
-        <span style={{ fontSize: 10, color: MUTED, fontFamily: "'Jost', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase" }}>
-          {lang === "fr" ? "Départ" : "Check-out"}
-        </span>
-        <input type="date" value={checkout} min={checkin || todayVal} onChange={e => setCheckout(e.target.value)}
-          style={{ background: "none", border: "none", color: NAVY, fontSize: 14, fontFamily: "'Jost', sans-serif", outline: "none", cursor: "pointer", colorScheme: "light" }} />
-      </label>
-      <label style={{ flex: "1 1 160px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 2, padding: "10px 18px" }}>
-        <span style={{ fontSize: 10, color: MUTED, fontFamily: "'Jost', sans-serif", letterSpacing: "0.12em", textTransform: "uppercase" }}>
+      <div ref={calendarRef} style={{ position: "relative", flex: "1 1 0", minWidth: 0 }}>
+        <button
+          type="button"
+          onClick={() => setShowCalendar(o => !o)}
+          style={{
+            width: "100%", height: "100%", minWidth: 0, display: "flex", flexDirection: "column",
+            justifyContent: "center", alignItems: "flex-start", gap: 2, padding: "10px 12px",
+            borderRight: `1px solid ${SAND}`, border: "none", borderRightWidth: 1, borderRightStyle: "solid", borderRightColor: SAND,
+            borderRadius: "13px 0 0 13px",
+            background: "none", cursor: "pointer", textAlign: "left",
+          }}
+        >
+          <span style={{ fontSize: 9, color: MUTED, fontFamily: "'Jost', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", whiteSpace: "nowrap" }}>
+            {lang === "fr" ? "Arrivée → Départ" : "Check-in → out"}
+          </span>
+          <span style={{ fontSize: 13, color: checkin ? NAVY : MUTED, fontFamily: "'Jost', sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {checkin && checkout ? `${formatDateShort(checkin)} → ${formatDateShort(checkout)}` : checkin ? `${formatDateShort(checkin)} → …` : (lang === "fr" ? "Choisir les dates" : "Choose dates")}
+          </span>
+        </button>
+        {showCalendar && (
+          <div style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, zIndex: 10 }}>
+            <DateRangePicker
+              checkin={checkin}
+              checkout={checkout}
+              onChange={(ci, co) => { setCheckin(ci || ""); setCheckout(co || ""); if (ci && co) setShowCalendar(false); }}
+              compact
+            />
+          </div>
+        )}
+      </div>
+      <label style={{ flex: "1 1 0", minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center", gap: 2, padding: "10px 12px", borderRight: `1px solid ${SAND}` }}>
+        <span style={{ fontSize: 9, color: MUTED, fontFamily: "'Jost', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", whiteSpace: "nowrap" }}>
           {lang === "fr" ? "Voyageurs" : "Guests"}
         </span>
         <select value={guests} onChange={e => setGuests(e.target.value)} style={{
-          background: "none", border: "none", color: guests === "0" ? MUTED : NAVY, fontSize: 14,
+          width: "100%", minWidth: 0, background: "none", border: "none", color: guests === "0" ? MUTED : NAVY, fontSize: 13,
           fontFamily: "'Jost', sans-serif", outline: "none", cursor: "pointer", appearance: "none", WebkitAppearance: "none",
         }}>
           <option value="0">{lang === "fr" ? "2 voyageurs" : "2 guests"}</option>
           {[1,2,3,4,5,6,7,8,9,10,11].map(n => <option key={n} value={n}>{n} {lang === "fr" ? `voyageur${n > 1 ? "s" : ""}` : `guest${n > 1 ? "s" : ""}`}</option>)}
         </select>
       </label>
+      <label style={{ flex: "1 1 0", minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center", gap: 2, padding: "10px 12px" }}>
+        <span style={{ fontSize: 9, color: MUTED, fontFamily: "'Jost', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", whiteSpace: "nowrap" }}>
+          {lang === "fr" ? "Chambres" : "Bedrooms"}
+        </span>
+        <select value={chambres} onChange={e => setChambres(e.target.value)} style={{
+          width: "100%", minWidth: 0, background: "none", border: "none", color: chambres === "0" ? MUTED : NAVY, fontSize: 13,
+          fontFamily: "'Jost', sans-serif", outline: "none", cursor: "pointer", appearance: "none", WebkitAppearance: "none",
+        }}>
+          <option value="0">{lang === "fr" ? "Indifférent" : "Any"}</option>
+          {[1,2,3].map(n => <option key={n} value={n}>{n} {lang === "fr" ? `chambre${n > 1 ? "s" : ""}` : `bedroom${n > 1 ? "s" : ""}`}</option>)}
+          <option value="4">{lang === "fr" ? "4+ (groupe)" : "4+ (group)"}</option>
+        </select>
+      </label>
       <button onClick={submit} style={{
-        flex: "1 1 200px", background: CORAL, border: "none", color: "#fff", cursor: "pointer",
-        fontFamily: "'Jost', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase",
-        borderRadius: "0 14px 14px 0",
+        flex: "0 0 auto", background: CORAL, border: "none", color: "#fff", cursor: "pointer",
+        fontFamily: "'Jost', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: "0.04em", textTransform: "uppercase",
+        padding: "0 22px", whiteSpace: "nowrap", borderRadius: "0 13px 13px 0",
       }}>
-        {lang === "fr" ? "Vérifier les disponibilités" : "Check availability"}
+        {lang === "fr" ? "Vérifier →" : "Check →"}
       </button>
     </div>
   );
