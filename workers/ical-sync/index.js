@@ -2318,7 +2318,8 @@ async function generateReelDraft(env, entry, siteUrl) {
   };
   const bienName = BIEN_NAMES[bienId] || bienId;
 
-  // 1. Caption LLM via /api/ai-summary ───────────────────────────────────────
+  // 1. Caption LLM via /api/llm-generate (cascade résiliente — /api/ai-summary dépend
+  //    d'ANTHROPIC_API_KEY absente en prod → échouait systématiquement, silencieusement).
   const captionPrompt = `Tu es le community manager d'Amaryllis Locations (conciergerie Martinique). Rédige un caption Instagram Reel pour "${bienName}", thème "${theme}"${variante ? `, angle "${variante}"` : ""}.
 
 Structure OBLIGATOIRE (5 blocs séparés par \\n\\n) :
@@ -2333,14 +2334,14 @@ INTERDIT (biens sur les hauteurs, pas en bord de mer) : vagues, clapotis, plage 
 
 Retourne UNIQUEMENT le caption brut (pas de JSON, pas de balises).`;
 
-  const aiRes  = await fetch(`${siteUrl}/api/ai-summary`, {
+  const aiRes  = await fetch(`${siteUrl}/api/llm-generate?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ prompt: captionPrompt, maxTokens: 600 }),
   });
   const aiData = await aiRes.json().catch(() => ({}));
-  const caption = (aiData.summary || aiData.text || "").trim();
-  if (!caption) throw new Error("LLM caption vide");
+  const caption = (aiData.text || "").trim();
+  if (!caption) throw new Error("LLM caption vide" + (aiData.error ? `: ${aiData.error}` : ""));
 
   // 2. Plan de montage déterministe (5 photos par bien, Ken Burns varié) ────
   const PHOTO_SETS = {
@@ -2428,13 +2429,13 @@ Critères (total 100pts) :
 - Pas d'erreurs factuelles (biens sur hauteurs, pas bord de mer) : 10pts
 Retourne UNIQUEMENT : {"score":0-100,"verdict":"approve"|"reject","reason":"1 phrase"}`;
 
-    const jRes  = await fetch(`${siteUrl}/api/ai-summary`, {
+    const jRes  = await fetch(`${siteUrl}/api/llm-generate?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ prompt: judgePrompt, maxTokens: 120 }),
     });
     const jData = await jRes.json().catch(() => ({}));
-    const jText = jData.summary || jData.text || "{}";
+    const jText = jData.text || "{}";
     let judge = { score: 0, verdict: "reject", reason: "parse error" };
     try { judge = JSON.parse(jText.match(/\{[\s\S]*\}/)?.[0] || "{}"); } catch {}
 
@@ -2532,6 +2533,15 @@ async function runEditorialDraftGen(env) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ status: "failed" }),
           }).catch(() => {});
+          // Alerte immédiate : un échec de génération silencieux (console non lu) était
+          // la cause principale des posts ratés — cf. incidents 06/2026-07/2026.
+          try {
+            await fetch(`https://ntfy.sh/${env.NTFY_TOPIC || "amaryllis-alertes-7r4k9"}`, {
+              method: "POST",
+              headers: { Title: `⚠️ Reel non généré — ${e.bien_id || "?"}`, Priority: "default", Tags: "movie_camera,x" },
+              body: `Entry #${e.id} (${e.theme || "?"}) — génération échouée : ${err.message.slice(0, 150)}\n\nLa relance auto (J+1) tentera de le régénérer en carrousel.`,
+            });
+          } catch { /* best-effort */ }
         }
         continue;
       }
