@@ -14,8 +14,8 @@
 // Auth : admin (Bearer) OU secret. Appelé par le Worker après runEditorialDraftGen.
 
 import { verifyBearer } from "./_adminauth.js";
-import { loadLearnedLessons } from "./_factcheck.js";
-import { evaluateGate } from "./_editorialGate.js";
+import { loadLearnedLessons, factCheckCaption } from "./_factcheck.js";
+import { evaluateGate, parsePhotoUrl } from "./_editorialGate.js";
 
 const CORS = {
   "Content-Type": "application/json",
@@ -68,13 +68,16 @@ export async function onRequest(context) {
 
   const learnedRules = await loadLearnedLessons(db).catch(() => []);
 
-  const recentBienPosts = new Set();
+  // Publications récentes (bien_id + published_at) : l'anti-doublon se calcule
+  // PAR ENTRÉE, relatif à SON créneau (scheduled_at - 4j), pas à l'heure du run —
+  // sinon une entrée à J+2 est bloquée par un post qui aura >4j au moment de partir.
+  let recentPubRows = [];
   try {
-    const since = now - 4 * 86400;
+    const since = now - 10 * 86400;
     const { results } = await db.prepare(
-      "SELECT DISTINCT bien_id FROM editorial_calendar WHERE status='published' AND published_at >= ?"
+      "SELECT bien_id, published_at FROM editorial_calendar WHERE status='published' AND published_at >= ?"
     ).bind(since).all();
-    for (const r of results || []) recentBienPosts.add(r.bien_id);
+    recentPubRows = results || [];
   } catch { /* ignore */ }
 
   // Drafts prêts à juger : entrées calendrier 'drafted' avec un draft_id
@@ -100,11 +103,21 @@ export async function onRequest(context) {
     // TTL court (4h) pour permettre la réévaluation quand les règles changent ou qu'un draft stagne.
     const GATE_TTL = 4 * 3600;
     if (reviews.gate && !dry && reviews.gate.at && (now - reviews.gate.at) < GATE_TTL) { out.skipped++; continue; }
+    // Décision précédente (avant écrasement) — sert à ne pas re-notifier une escalade identique.
+    const prevGate = reviews.gate || null;
 
     // Pour les reels (reel_post) : pas d'imageUrl unique → dériver de la 1ère clip du plan
     const reelImageUrl = draft.type === "reel_post" && payload.plan?.bienId && payload.plan?.clips?.[0]?.src
       ? `/photos/${payload.plan.bienId}/${payload.plan.clips[0].src}`
       : null;
+    // Anti-doublon relatif au créneau de CETTE entrée : biens publiés dans les 4j
+    // précédant le moment de publication EFFECTIF (créneau futur = scheduled_at ;
+    // créneau passé = rattrapage → publication imminente = maintenant).
+    const effectiveAt = Math.max(now, e.scheduled_at || now);
+    const recentBienPosts = new Set(
+      recentPubRows.filter(r => r.published_at >= effectiveAt - 4 * 86400 && r.published_at <= effectiveAt)
+        .map(r => r.bien_id)
+    );
     const verdict = evaluateGate({
       caption: payload.caption,
       imageUrl: payload.imageUrl || reelImageUrl,
@@ -133,8 +146,14 @@ export async function onRequest(context) {
     // Max 1 tentative (budget CPU CF Pages Function).
     if (!verdict.pass) {
       const blockingFilters = new Set(verdict.fails.map(f => f.filter));
-      // Réécriture si blocage = score/verdict/mots_interdits (pas doublon/photo manquante/canaux)
-      const hardBlock = ["doublon", "missing_photo", "channels"].some(f => blockingFilters.has(f));
+      // Réécriture si blocage = score/verdict/mots_interdits UNIQUEMENT. Les filtres
+      // "photo" (image hors whitelist/hallucinée), "forme" (canaux) et "doublon" ne sont
+      // PAS réparables par une réécriture de caption → escalade directe.
+      // ⚠️ Les noms doivent matcher evaluateGate() (_editorialGate.js) : l'ancien
+      // ["missing_photo","channels"] ne matchait jamais → un draft à photo invalide
+      // pouvait être auto-approuvé par la boucle de réécriture (incident #151, image
+      // hallucinée /images/*.jpg publiée → FB "Invalid parameter").
+      const hardBlock = ["doublon", "photo", "forme"].some(f => blockingFilters.has(f));
 
       if (!hardBlock && !reviews.rewrite_attempted) {
         const failReasons = verdict.fails.map(f => `• ${f.reason}`).join("\n");
@@ -202,7 +221,10 @@ Retourne UNIQUEMENT : {"score":0-100,"verdict":"approve"|"reject"|"needs_edits",
             try { newJudge = JSON.parse(scText.match(/\{[\s\S]*\}/)?.[0] || "{}"); } catch (parseErr) { console.error("[gate-rescore]", parseErr.message); }
 
             const newScore = Math.min(100, Math.max(0, Number(newJudge.score) || 0));
-            const newPass = newScore >= minScore && newJudge.verdict === "approve";
+            // Le fact-check déterministe (filtre BLOQUANT n°1) doit repasser sur le
+            // caption RÉÉCRIT — le juge LLM seul ne suffit pas (exigence Vincent).
+            const newFactErrors = factCheckCaption(newCaption, learnedRules, parsePhotoUrl(payload.imageUrl)?.bien || e.bien_id);
+            const newPass = newScore >= minScore && newJudge.verdict === "approve" && newFactErrors.length === 0;
 
             // Stocker le résultat de réécriture dans reviews
             reviews.rewrite_attempted = true;
@@ -262,10 +284,15 @@ Retourne UNIQUEMENT : {"score":0-100,"verdict":"approve"|"reject"|"needs_edits",
       out.would_publish++;
       await notify(env, `👁 SHADOW — aurait publié (${e.bien_id})`, `${short}…\n\nEn mode live, ce post serait parti seul. Vérifie qu'il est bon.`, "low");
     } else {
-      // FAIL → escalade à valider à la main
+      // FAIL → escalade à valider à la main. Re-notifie seulement si l'escalade a
+      // CHANGÉ depuis la dernière évaluation (le gate repasse toutes les heures).
       out.escalated++;
-      const why = verdict.fails.map((f) => `• ${f.filter}: ${f.reason}`).join("\n");
-      await notify(env, `⚠️ Post à valider — ${e.bien_id}`, `${short}…\n\nNon auto-publié :\n${why}\n\n→ onglet Approbations`, "default");
+      const sameAsBefore = prevGate?.decision === "escalated"
+        && JSON.stringify(prevGate.fails || []) === JSON.stringify(verdict.fails);
+      if (!sameAsBefore) {
+        const why = verdict.fails.map((f) => `• ${f.filter}: ${f.reason}`).join("\n");
+        await notify(env, `⚠️ Post à valider — ${e.bien_id}`, `${short}…\n\nNon auto-publié :\n${why}\n\n→ onglet Approbations`, "default");
+      }
     }
   }
 

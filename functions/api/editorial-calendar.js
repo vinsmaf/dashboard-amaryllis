@@ -107,23 +107,22 @@ const VARIANTES = {
 // Configurable via body.excluded_biens ou par défaut ci-dessous
 const DEFAULT_EXCLUDED_BIENS = ["iguana"]; // Villa Iguana : louée à l'année
 
-// Rotation des biens selon target occurrences — séquence sans les exclus
+// Rotation des biens — INVARIANT : à 1 post/jour, chaque bien revient tous les
+// N jours (N = biens disponibles, 6 en général) → jamais 2 posts du même bien
+// à <4j d'intervalle (règle anti-doublon du gate, cf. _editorialGate.js).
+// L'ancienne séquence pondérée (amaryllis 8×/30j) créait des écarts de 2-3j
+// → escalades systématiques du gate → soirées sans post (incident 07-01/07-02).
 const FULL_SEQUENCE = [
-  "amaryllis", "mabouya", "zandoli", "nogent",        // S1 j1-j4
-  "schoelcher", "geko", "amaryllis", "mabouya",       // S1 j5-j8
-  "zandoli", "schoelcher", "nogent", "amaryllis",     // S2 j9-j12
-  "geko", "amaryllis", "mabouya", "zandoli",          // S2 j13-j16
-  "schoelcher", "mabouya", "geko", "nogent",          // S3 j17-j20
-  "amaryllis", "zandoli", "nogent", "schoelcher",     // S3 j21-j24
-  "amaryllis", "geko", "mabouya", "zandoli",          // S4 j25-j28
-  "nogent", "amaryllis",                              // S4 j29-j30
+  "amaryllis", "zandoli", "mabouya", "schoelcher", "geko", "nogent",
 ];
 
-function pickBienForDay(dayIndex, excludedSet) {
-  // Filtre la séquence pour skip les biens exclus
+function pickBienForDay(ts, excludedSet) {
+  // Index STABLE dérivé de la date (jours epoch) — pas de curseur remis à zéro
+  // entre deux reseeds hebdo : deux runs différents alignent la même rotation,
+  // donc pas de doublon à la frontière entre l'ancien et le nouveau seed.
   const available = FULL_SEQUENCE.filter(b => !excludedSet.has(b));
   if (available.length === 0) return null;
-  return available[dayIndex % available.length];
+  return available[Math.floor(ts / 86400) % available.length];
 }
 
 // Récupère les biens occupés sur la période (depuis Beds24 via API interne)
@@ -185,7 +184,7 @@ async function handleSeed30Days(env, db, body) {
     existingDates = new Set((results || []).map(r => unixToYMD(r.scheduled_at)));
   } catch {}
 
-  let inserted = 0, skipped = 0, dayCursor = 0;
+  let inserted = 0, skipped = 0;
   const entries = [];
 
   for (let i = 0; i < 30; i++) {
@@ -193,9 +192,8 @@ async function handleSeed30Days(env, db, body) {
     const date = unixToYMD(ts);
     if (existingDates.has(date)) { skipped++; continue; }
 
-    const bienId = pickBienForDay(dayCursor, excludedSet);
+    const bienId = pickBienForDay(ts, excludedSet);
     if (!bienId) { skipped++; continue; } // tous les biens exclus
-    dayCursor++;
 
     const dow       = (startDay + i) % 7;
     const tplDay    = dow === 0 ? 7 : dow;

@@ -69,9 +69,36 @@ async function executeDraft(env, draft) {
     const siteOrigin = "https://villamaryllis.com";
     // Normalise imageUrl : chemin relatif → URL absolue villamaryllis.com
     const rawImageUrl = payload.imageUrl || null;
-    const imageUrl = rawImageUrl
+    let imageUrl = rawImageUrl
       ? (rawImageUrl.startsWith("http") ? rawImageUrl : `${siteOrigin}${rawImageUrl.startsWith("/") ? "" : "/"}${rawImageUrl}`)
       : null;
+    // 🛡️ Garde image de DERNIÈRE MINUTE : une URL hallucinée (ex. /images/xxx.jpg) renvoie
+    // 200 mais en text/html (fallback SPA de CF Pages) → Graph API rejette avec un message
+    // opaque (FB "Invalid parameter", IG "image format not supported" — incident entry #151).
+    // On vérifie le Content-Type réel ; si invalide → fallback photo planifiée du calendrier.
+    if (imageUrl) {
+      const isRealImage = async (u) => {
+        try {
+          const res = await fetch(u, { method: "HEAD" });
+          return res.ok && (res.headers.get("content-type") || "").startsWith("image/");
+        } catch { return false; }
+      };
+      if (!(await isRealImage(imageUrl))) {
+        let fallback = null;
+        try {
+          const row = await env.revenue_manager?.prepare(
+            "SELECT photo_url FROM editorial_calendar WHERE draft_id=?"
+          ).bind(draft.id).first();
+          fallback = row?.photo_url || null;
+        } catch { /* pas d'entrée calendrier liée */ }
+        if (fallback && await isRealImage(fallback)) {
+          console.warn(`[executeDraft] imageUrl invalide (${imageUrl}) → fallback photo planifiée ${fallback}`);
+          imageUrl = fallback;
+        } else {
+          return { ok: false, error: `image invalide : ${imageUrl} ne sert pas une image (Content-Type non image/*)`, blocked: true };
+        }
+      }
+    }
     // /api/social POST est gaté (verifyBearer OU ?secret=) → appel interne signé par le secret partagé
     const r = await fetch(`${origin}/api/social?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
       method: "POST",

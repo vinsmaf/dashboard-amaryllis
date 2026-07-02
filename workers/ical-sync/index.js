@@ -3864,6 +3864,19 @@ export default {
         await runSync(env);
         await runCancelUnpaidBeds24Bookings(env);
         await runEditorialRetry(env);
+        // Gate horaire (top of hour) AVANT l'auto-publish : donne une 2e chance aux drafts
+        // escaladés à 12h UTC (réévaluation TTL 4h + réécriture) le jour même, au lieu de
+        // rater silencieusement leur créneau 20h (incidents #156/#157 des 01-02/07).
+        // Idempotent et peu coûteux : le gate skippe tout draft évalué il y a <4h.
+        if (new Date(event.scheduledTime || Date.now()).getUTCMinutes() === 0) {
+          try {
+            const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+            const gateMode = env.EDITORIAL_GATE_MODE || "live";
+            const gr = await fetch(`${siteUrl}/api/editorial-gate?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}&mode=${gateMode}`, { method: "POST" });
+            const gd = await gr.json().catch(() => ({}));
+            if (gd.evaluated) console.log(`[editorial-gate/h] évalués=${gd.evaluated} approuvés=${gd.queued_for_publish} escaladés=${gd.escalated}`);
+          } catch (err) { console.error("[editorial-gate/h] error:", err.message); }
+        }
         await runEditorialAutoPublish(env);
         // ── Sync Gmail entrant (réponses voyageurs → contact@villamaryllis.com) ─────────────────────
         //    Silencieux si pas encore connecté (connected:false) — pas d'erreur bloquante.
