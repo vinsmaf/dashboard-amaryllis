@@ -6047,16 +6047,9 @@ function SearchByDates({ biens, onBook, onDetail }) {
 
   const [open, setOpen] = useState(false);
 
-  // Desktop : le hero (HeroSearchBar) est l'UNIQUE module de recherche visible — ce déclencheur
-  // (trigger + panneau repliable) faisait doublon avec lui (Vincent : "ça devient redondant").
-  // Mobile : le hero n'affiche rien (évite le chevauchement constaté) — CE panneau reste donc
-  // le module de recherche mobile, inchangé, avec son propre déclencheur visible.
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
-  useEffect(() => {
-    const fn = () => setIsMobile(window.innerWidth < 640);
-    window.addEventListener("resize", fn);
-    return () => window.removeEventListener("resize", fn);
-  }, []);
+  // Le hero (HeroSearchBar) est l'UNIQUE module de recherche visible, desktop ET mobile
+  // (adapté). Ce composant reste 100% headless : plus de déclencheur propre, il ne fait que
+  // réagir à l'événement 'hero-search' et afficher les résultats juste en dessous du hero.
 
   // Écoute la barre de recherche du hero (HeroSearchBar) — préremplit + lance la recherche.
   useEffect(() => {
@@ -6090,37 +6083,13 @@ function SearchByDates({ biens, onBook, onDetail }) {
   // Fermer et réinitialiser
   function reset() { setCheckin(""); setCheckout(""); setResults(null); setGroupCombos([]); setOpen(false); }
 
-  // Desktop, rien à chercher/afficher encore : le hero est l'unique entrée, pas de déclencheur
+  // Rien à chercher/afficher encore : le hero est l'unique entrée, plus de déclencheur propre
   // ici → éviter une barre vide sans contenu tant qu'aucune recherche n'est arrivée.
-  if (!isMobile && !open) return null;
+  if (!open) return null;
 
   return (
     <div style={{ background: IVORY, borderBottom: `1px solid ${SAND}` }}>
       <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 32px" }}>
-
-        {/* Trigger — mobile uniquement (desktop : le hero est l'unique module de recherche) */}
-        {isMobile && (
-        <button
-          onClick={() => { setOpen(o => !o); if (open) { setResults(null); } }}
-          style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", background: "none", border: "none", padding: "13px 0", cursor: "pointer", textAlign: "left" }}
-        >
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, opacity: 0.45 }}>
-            <circle cx="6.5" cy="6.5" r="5" stroke={NAVY} strokeWidth="1.5"/>
-            <line x1="10.5" y1="10.5" x2="15" y2="15" stroke={NAVY} strokeWidth="1.5" strokeLinecap="round"/>
-          </svg>
-          <span style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, fontWeight: 400, letterSpacing: "0.18em", textTransform: "uppercase", color: MUTED }}>
-            Rechercher par dates
-          </span>
-          {results && !open && (
-            <span style={{ marginLeft: 6, fontSize: 10, color: CORAL, fontFamily: "'Jost', sans-serif", letterSpacing: "0.05em" }}>
-              · {availableCount} disponible{availableCount > 1 ? "s" : ""}
-            </span>
-          )}
-          <svg width="10" height="6" viewBox="0 0 10 6" fill="none" style={{ marginLeft: "auto", transition: "transform 0.2s", transform: open ? "rotate(180deg)" : "rotate(0deg)", opacity: 0.35 }}>
-            <path d="M1 1l4 4 4-4" stroke={NAVY} strokeWidth="1.5" strokeLinecap="round"/>
-          </svg>
-        </button>
-        )}
 
         {/* Panel dépliable */}
         {open && (
@@ -7057,11 +7026,10 @@ function HeroSearchBar() {
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [showCalendar]);
 
-  // Le formulaire complet (4 champs) empilé sur mobile dépassait 370px de haut et recouvrait
-  // le bouton "Découvrir nos villas" + le titre suivant (constaté par Vincent sur iPhone).
-  // Sur mobile, on ne duplique pas un 2e module de recherche dans le hero : le panneau
-  // SearchByDates existant (plus bas, déjà pensé pour le tactile) s'ouvre directement par
-  // défaut sur mobile — c'est LUI le module de recherche mobile, pas de widget en plus ici.
+  // Version mobile ADAPTÉE (pas masquée) : le formulaire 1-ligne (4 champs) empilait 370px de
+  // haut et recouvrait "Découvrir nos villas" (constaté par Vincent sur iPhone). Fix : layout
+  // repensé en 3 rangées compactes (dates pleine largeur → voyageurs/chambres 50/50 → bouton
+  // pleine largeur) au lieu de tout empiler verticalement champ par champ.
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
   useEffect(() => {
     const fn = () => setIsMobile(window.innerWidth < 640);
@@ -7076,37 +7044,40 @@ function HeroSearchBar() {
     if (el) el.scrollIntoView({ behavior: "smooth" });
   }
 
-  if (isMobile) return null;
+  const fieldStyle = {
+    minWidth: 0, boxSizing: "border-box", display: "flex", flexDirection: "column", justifyContent: "center", gap: 2,
+    padding: "10px 12px", borderRight: `1px solid ${SAND}`,
+  };
+  const labelStyle = { fontSize: 9, color: MUTED, fontFamily: "'Jost', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", whiteSpace: "nowrap" };
+  const valueStyle = { width: "100%", minWidth: 0, background: "none", border: "none", fontSize: 13, fontFamily: "'Jost', sans-serif", outline: "none", cursor: "pointer", appearance: "none", WebkitAppearance: "none" };
 
   return (
     <div style={{
-      position: "absolute", left: "50%", bottom: 0, transform: "translate(-50%, 50%)",
+      position: "absolute", left: "50%", bottom: 0, transform: isMobile ? "translate(-50%, 78%)" : "translate(-50%, 50%)",
       zIndex: 3, background: IVORY, borderRadius: 14, border: `1px solid ${SAND}`,
       boxShadow: "0 12px 32px rgba(14,59,58,0.22)",
-      display: "flex", alignItems: "stretch", flexWrap: "nowrap",
-      width: "min(820px, calc(100% - 32px))",
+      display: "flex", alignItems: "stretch", flexWrap: isMobile ? "wrap" : "nowrap",
+      width: isMobile ? "calc(100% - 32px)" : "min(820px, calc(100% - 32px))",
+      maxWidth: isMobile ? 360 : "none",
     }}>
-      <div ref={calendarRef} style={{ position: "relative", flex: "1 1 0", minWidth: 0 }}>
+      <div ref={calendarRef} style={{ position: "relative", flex: isMobile ? "1 1 100%" : "1 1 0", minWidth: 0 }}>
         <button
           type="button"
           onClick={() => setShowCalendar(o => !o)}
           style={{
-            width: "100%", height: "100%", minWidth: 0, display: "flex", flexDirection: "column",
-            justifyContent: "center", alignItems: "flex-start", gap: 2, padding: "10px 12px",
-            borderRight: `1px solid ${SAND}`, border: "none", borderRightWidth: 1, borderRightStyle: "solid", borderRightColor: SAND,
-            borderRadius: "13px 0 0 13px",
+            ...fieldStyle, width: "100%", height: "100%", alignItems: "flex-start",
+            border: "none", borderBottom: isMobile ? `1px solid ${SAND}` : "none",
+            borderRadius: isMobile ? "13px 13px 0 0" : "13px 0 0 13px",
             background: "none", cursor: "pointer", textAlign: "left",
           }}
         >
-          <span style={{ fontSize: 9, color: MUTED, fontFamily: "'Jost', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-            {lang === "fr" ? "Arrivée → Départ" : "Check-in → out"}
-          </span>
+          <span style={labelStyle}>{lang === "fr" ? "Arrivée → Départ" : "Check-in → out"}</span>
           <span style={{ fontSize: 13, color: checkin ? NAVY : MUTED, fontFamily: "'Jost', sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {checkin && checkout ? `${formatDateShort(checkin)} → ${formatDateShort(checkout)}` : checkin ? `${formatDateShort(checkin)} → …` : (lang === "fr" ? "Choisir les dates" : "Choose dates")}
           </span>
         </button>
         {showCalendar && (
-          <div style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, zIndex: 10 }}>
+          <div style={{ position: "absolute", top: "calc(100% + 8px)", left: isMobile ? "50%" : 0, transform: isMobile ? "translateX(-50%)" : "none", zIndex: 10 }}>
             <DateRangePicker
               checkin={checkin}
               checkout={checkout}
@@ -7116,35 +7087,26 @@ function HeroSearchBar() {
           </div>
         )}
       </div>
-      <label style={{ flex: "1 1 0", minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center", gap: 2, padding: "10px 12px", borderRight: `1px solid ${SAND}` }}>
-        <span style={{ fontSize: 9, color: MUTED, fontFamily: "'Jost', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-          {lang === "fr" ? "Voyageurs" : "Guests"}
-        </span>
-        <select value={guests} onChange={e => setGuests(e.target.value)} style={{
-          width: "100%", minWidth: 0, background: "none", border: "none", color: guests === "0" ? MUTED : NAVY, fontSize: 13,
-          fontFamily: "'Jost', sans-serif", outline: "none", cursor: "pointer", appearance: "none", WebkitAppearance: "none",
-        }}>
+      <label style={{ ...fieldStyle, flex: isMobile ? "1 1 50%" : "1 1 0" }}>
+        <span style={labelStyle}>{lang === "fr" ? "Voyageurs" : "Guests"}</span>
+        <select value={guests} onChange={e => setGuests(e.target.value)} style={{ ...valueStyle, color: guests === "0" ? MUTED : NAVY }}>
           <option value="0">{lang === "fr" ? "2 voyageurs" : "2 guests"}</option>
           {[1,2,3,4,5,6,7,8,9,10,11].map(n => <option key={n} value={n}>{n} {lang === "fr" ? `voyageur${n > 1 ? "s" : ""}` : `guest${n > 1 ? "s" : ""}`}</option>)}
         </select>
       </label>
-      <label style={{ flex: "1 1 0", minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center", gap: 2, padding: "10px 12px" }}>
-        <span style={{ fontSize: 9, color: MUTED, fontFamily: "'Jost', sans-serif", letterSpacing: "0.1em", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-          {lang === "fr" ? "Chambres" : "Bedrooms"}
-        </span>
-        <select value={chambres} onChange={e => setChambres(e.target.value)} style={{
-          width: "100%", minWidth: 0, background: "none", border: "none", color: chambres === "0" ? MUTED : NAVY, fontSize: 13,
-          fontFamily: "'Jost', sans-serif", outline: "none", cursor: "pointer", appearance: "none", WebkitAppearance: "none",
-        }}>
+      <label style={{ ...fieldStyle, flex: isMobile ? "1 1 50%" : "1 1 0", borderRight: isMobile ? "none" : fieldStyle.borderRight }}>
+        <span style={labelStyle}>{lang === "fr" ? "Chambres" : "Bedrooms"}</span>
+        <select value={chambres} onChange={e => setChambres(e.target.value)} style={{ ...valueStyle, color: chambres === "0" ? MUTED : NAVY }}>
           <option value="0">{lang === "fr" ? "Indifférent" : "Any"}</option>
           {[1,2,3].map(n => <option key={n} value={n}>{n} {lang === "fr" ? `chambre${n > 1 ? "s" : ""}` : `bedroom${n > 1 ? "s" : ""}`}</option>)}
           <option value="4">{lang === "fr" ? "4+ (groupe)" : "4+ (group)"}</option>
         </select>
       </label>
       <button onClick={submit} style={{
-        flex: "0 0 auto", background: CORAL, border: "none", color: "#fff", cursor: "pointer",
+        flex: isMobile ? "1 1 100%" : "0 0 auto", boxSizing: "border-box", background: CORAL, border: "none", color: "#fff", cursor: "pointer",
         fontFamily: "'Jost', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: "0.04em", textTransform: "uppercase",
-        padding: "0 22px", whiteSpace: "nowrap", borderRadius: "0 13px 13px 0",
+        padding: isMobile ? "12px 22px" : "0 22px", whiteSpace: "nowrap",
+        borderRadius: isMobile ? "0 0 13px 13px" : "0 13px 13px 0",
       }}>
         {lang === "fr" ? "Vérifier →" : "Check →"}
       </button>
