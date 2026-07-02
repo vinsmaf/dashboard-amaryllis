@@ -6223,10 +6223,15 @@ function SearchByDates({ biens, onBook, onDetail }) {
                         transition: "opacity 0.2s, box-shadow 0.2s",
                         boxShadow: unavailable ? "none" : "0 1px 6px rgba(14,59,58,0.06)",
                       }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
-                          <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 12, color: NAVY, lineHeight: 1.2 }}>{bien.nom}</div>
-                          <div style={{ fontSize: 10, color: MUTED, fontFamily: "'Jost', sans-serif", textAlign: "right", lineHeight: 1.4, marginLeft: 6, flexShrink: 0 }}>
-                            {bien.capacite} pers · {bien.chambres} ch.
+                        <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 4 }}>
+                          {bien.photos?.[0] && (
+                            <RImg src={bien.photos[0]} alt={bien.nom} style={{ width: 44, height: 44, borderRadius: 6, objectFit: "cover", flexShrink: 0 }} sizes="44px" />
+                          )}
+                          <div style={{ flex: 1, minWidth: 0, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                            <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 12, color: NAVY, lineHeight: 1.2 }}>{bien.nom}</div>
+                            <div style={{ fontSize: 10, color: MUTED, fontFamily: "'Jost', sans-serif", textAlign: "right", lineHeight: 1.4, marginLeft: 6, flexShrink: 0 }}>
+                              {bien.capacite} pers · {bien.chambres} ch.
+                            </div>
                           </div>
                         </div>
 
