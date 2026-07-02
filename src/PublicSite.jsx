@@ -6898,8 +6898,20 @@ function HeroBrand({ biens, onBook }) {
     const v = videoRef.current;
     if (!v) return;
     v.muted = true;
-    const p = v.play();
-    if (p?.catch) p.catch(() => {}); // autoplay refusé (rare, hors politique navigateur) → reste sur le poster, pas d'erreur console
+    const tryPlay = () => { const p = v.play(); if (p?.catch) p.catch(() => {}); }; // refus → poster, pas d'erreur
+    tryPlay();
+    // Les navigateurs (économie d'énergie, onglet en arrière-plan…) SUSPENDENT une vidéo
+    // de fond en cours de lecture (constaté en prod : pause spontanée à ~12s). On relance
+    // à chaque pause non demandée tant que la page est visible ; si le navigateur refuse,
+    // play() rejette sans re-déclencher 'pause' → pas de boucle infinie.
+    const onPause = () => { if (!document.hidden) tryPlay(); };
+    const onVis = () => { if (!document.hidden && v.paused) tryPlay(); };
+    v.addEventListener("pause", onPause);
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      v.removeEventListener("pause", onPause);
+      document.removeEventListener("visibilitychange", onVis);
+    };
   }, []);
 
   return (
