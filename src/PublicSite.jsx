@@ -4705,7 +4705,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                             letterSpacing: "0.03em", textTransform: "none",
                             color: NAVY, marginBottom: 12,
                           }}>
-                            {s.titre === "Votre hôte" ? "🤝 Votre hôte" : s.titre}
+                            {s.titre}
                           </div>
                         )}
                         <Editorial style={{ fontSize: isMobile ? 15 : 17 }}>{s.texte}</Editorial>
@@ -4746,9 +4746,9 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                   {/* Informations pratiques */}
                   {bien.descFull.find(s => s.items) && (
                     <div style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 8, padding: isMobile ? "20px 18px" : "24px 28px", marginTop: 12 }}>
-                      <Eyebrow color="muted" tracking="0.42em" style={{ marginBottom: 20 }}>
+                      <SectionTitle>
                         {bien.descFull.find(s => s.items).titre || "Informations pratiques"}
-                      </Eyebrow>
+                      </SectionTitle>
                       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? "14px 0" : "16px 40px" }}>
                         {bien.descFull.find(s => s.items).items.map((it, j) => (
                           <div key={j}>
