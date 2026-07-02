@@ -4695,14 +4695,17 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                         <div style={{ width: 5, height: 5, borderRadius: "50%", background: bien.couleur || MUTED, opacity: 0.6 }} />
                         <div style={{ flex: 1, height: 1, background: SAND }} />
                       </div>
-                      <div style={{ marginBottom: 26, paddingLeft: 18, borderLeft: s.titre ? `2px solid ${(bien.couleur || "#8a7a6a")}28` : "2px solid transparent" }}>
+                      <div style={s.titre === "Votre hôte"
+                        ? { marginBottom: 26, background: CREAM, border: `1px solid ${SAND}`, borderRadius: 16, padding: isMobile ? "24px 22px" : "32px 34px" }
+                        : { marginBottom: 26, paddingLeft: 18, borderLeft: s.titre ? `2px solid ${(bien.couleur || "#8a7a6a")}28` : "2px solid transparent" }
+                      }>
                         {s.titre && (
                           <div style={{
                             fontFamily: "'Jost', sans-serif", fontWeight: 700, fontSize: isMobile ? 18 : 20,
                             letterSpacing: "0.03em", textTransform: "none",
                             color: bien.couleur || NAVY, marginBottom: 12,
                           }}>
-                            {s.titre}
+                            {s.titre === "Votre hôte" ? "🤝 Votre hôte" : s.titre}
                           </div>
                         )}
                         <Editorial style={{ fontSize: isMobile ? 15 : 17 }}>{s.texte}</Editorial>
