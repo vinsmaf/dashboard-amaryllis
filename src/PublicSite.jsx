@@ -194,6 +194,19 @@ const TEXT   = "var(--c-text)";   // body text
 const MUTED  = "var(--c-muted)";  // secondary text
 const GOLD   = "var(--c-gold)";   // star ratings, accents
 
+// Titre de section standalone (pas un eyebrow au-dessus d'un H2 — LE titre du bloc).
+// L'ancien pattern <Eyebrow color="muted"> (10px, poids 200) était trop discret pour ce rôle.
+function SectionTitle({ children, color }) {
+  return (
+    <div style={{
+      fontFamily: "'Jost', sans-serif", fontWeight: 700, fontSize: "clamp(18px, 2.2vw, 20px)",
+      letterSpacing: "0.02em", color: color || NAVY, marginBottom: 14,
+    }}>
+      {children}
+    </div>
+  );
+}
+
 // ── CSS Animations ────────────────────────────────────────────────
 if (typeof document !== "undefined" && !document.getElementById("__site_styles")) {
   // Google Fonts chargées en superset dans index.html via <link rel="stylesheet">
@@ -4726,7 +4739,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
 
             {/* Amenities */}
             <div style={{ marginBottom: 32 }}>
-              <Eyebrow color="muted" style={{ marginBottom: 14 }}>{lang === "fr" ? "Équipements" : "Amenities"}</Eyebrow>
+              <SectionTitle>{lang === "fr" ? "Équipements" : "Amenities"}</SectionTitle>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {(lang === "fr" ? (bien.amenities || []) : (bien.amenitiesEn || bien.amenities || [])).map(a => (
                   <Chip key={a}>{a}</Chip>
@@ -4891,7 +4904,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                         ))}
                       </div>
                     )}
-                    <Eyebrow color="muted" style={{ marginBottom: 14 }}>{lang === "fr" ? "Disponibilités" : "Availability"}</Eyebrow>
+                    <SectionTitle>{lang === "fr" ? "Disponibilités" : "Availability"}</SectionTitle>
                     {loadingAvail ? (
                       <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
                         {[0,1].map(col => (
@@ -4952,7 +4965,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
               <>
                 <div style={{ height: 1, background: SAND, marginBottom: 26 }} />
                 <div style={{ marginBottom: 32 }}>
-                  <Eyebrow color="muted" style={{ marginBottom: 14 }}>Localisation</Eyebrow>
+                  <SectionTitle>Localisation</SectionTitle>
                   <div style={{ fontSize: 13, color: TEXT, fontFamily: "'Jost', sans-serif", fontWeight: 300, marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
                     <span style={{ color: CORAL }}>📍</span> {bien.lieu}
                     <span style={{ color: SAND, fontSize: 11, marginLeft: 4 }}>· Position approximative</span>
@@ -5037,9 +5050,9 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                 <>
                   <div style={{ height: 1, background: SAND, marginBottom: 26 }} />
                   <div style={{ marginBottom: 32 }}>
-                    <Eyebrow color="muted" style={{ marginBottom: 18 }}>
+                    <SectionTitle>
                       Avis · ★ {bien.rating} · {totalCount > (bien.reviews ?? 0) ? totalCount : bien.reviews} avis vérifiés
-                    </Eyebrow>
+                    </SectionTitle>
                     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                       {allCards.map(c => (
                         <div key={c.key} style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 10, padding: "18px 20px" }}>
@@ -5372,7 +5385,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
         {/* ── Conditions & Garanties — jur-005 + jur-006 ─────────────────────── */}
         {!BOOKING_DISABLED.has(bien.id) && (
           <div style={{ borderTop: `1px solid ${SAND}`, margin: "48px 20px 48px", paddingTop: 40 }}>
-            <Eyebrow color="muted" style={{ marginBottom: 20 }}>Conditions &amp; Garanties</Eyebrow>
+            <SectionTitle>Conditions &amp; Garanties</SectionTitle>
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
 
               {/* Politique d'annulation */}
@@ -5479,16 +5492,22 @@ function GuidesSection({ bienId, bienNom, isMobile }) {
   if (!nearby.length) return null;
   return (
     <div style={{ borderTop: `1px solid ${SAND}`, margin: "48px 20px 48px", paddingTop: 40 }}>
-      <Eyebrow color="muted" style={{ marginBottom: 8 }}>À faire depuis {bienNom || "votre villa"}</Eyebrow>
+      <SectionTitle>À faire depuis {bienNom || "votre villa"}</SectionTitle>
       <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 15, color: NAVY, margin: "0 0 28px", lineHeight: 1.5 }}>
         Nos guides rédigés par vos hôtes — expériences et adresses à proximité
       </p>
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(3, 1fr)", gap: 12 }}>
         {nearby.map(g => (
-          <a key={g.href} href={g.href} style={{ display: "flex", flexDirection: "column", gap: 6, padding: "14px 16px", background: IVORY, border: `1px solid ${SAND}`, borderRadius: 10, textDecoration: "none" }}>
-            <span style={{ fontSize: 20 }}>{g.emoji}</span>
-            <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 13, color: NAVY, lineHeight: 1.3 }}>{g.nom}</span>
-            <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11, color: MUTED }}>à {g.dist[bienId]} min en voiture</span>
+          <a key={g.href} href={g.href} style={{ display: "flex", gap: 12, alignItems: "center", padding: "10px 14px 10px 10px", background: IVORY, border: `1px solid ${SAND}`, borderRadius: 10, textDecoration: "none" }}>
+            {g.photo ? (
+              <RImg src={g.photo} alt={g.nom} sizes="56px" loading="lazy" style={{ width: 56, height: 56, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />
+            ) : (
+              <span style={{ width: 56, height: 56, borderRadius: 8, background: CREAM, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>{g.emoji}</span>
+            )}
+            <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
+              <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 13, color: NAVY, lineHeight: 1.3 }}>{g.emoji} {g.nom}</span>
+              <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11, color: MUTED }}>à {g.dist[bienId]} min en voiture</span>
+            </div>
           </a>
         ))}
       </div>
@@ -5538,7 +5557,7 @@ function ArticlesSection({ bienId, bienNom, isMobile }) {
 
   return (
     <div style={{ borderTop: `1px solid ${SAND}`, margin: "0 20px 48px", paddingTop: 40 }}>
-      <Eyebrow color="muted" style={{ marginBottom: 8 }}>Nos conseils pour {bienNom || "votre séjour"}</Eyebrow>
+      <SectionTitle>Nos conseils pour {bienNom || "votre séjour"}</SectionTitle>
       <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 15, color: NAVY, margin: "0 0 28px", lineHeight: 1.5 }}>
         Bien choisir, organiser et réserver votre séjour — nos articles pratiques
       </p>
@@ -10085,9 +10104,9 @@ export default function PublicSite() {
       {/* ── RÉCEMMENT CONSULTÉS ── */}
       {recentlyViewed.length > 0 && !detailBien && (
         <div style={{ maxWidth: 1280, margin: "0 auto", padding: "32px 32px 0" }}>
-          <Eyebrow color="muted" style={{ marginBottom: 16 }}>
+          <SectionTitle>
             Récemment consultés
-          </Eyebrow>
+          </SectionTitle>
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
             {recentlyViewed.map(id => {
               const b = biensList.find(x => x.id === id);
