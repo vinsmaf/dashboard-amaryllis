@@ -9994,29 +9994,49 @@ export default function PublicSite() {
             </div>
           )}
 
-          {/* ── Reassurance block ── */}
-          <div style={{ marginTop: 16, marginBottom: 64 }}>
-            <Reveal anim="fadeUp" delay={0} style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 14, padding: "28px 28px 24px", maxWidth: 560 }}>
-              <Eyebrow style={{ marginBottom: 14 }}>{t("whyTitle")}</Eyebrow>
-              {[
-                ["🏷️", t("why1t"), t("why1d")],
-                ["🎖️", t("why2t"), t("why2d")],
-                ["⭐", t("why3t"), t("why3d")],
-                ["🔒", t("why4t"), t("why4d")],
-              ].map(([icon, title, text]) => (
-                <div key={title} style={{ display: "flex", gap: 12, marginBottom: 14 }}>
-                  <span style={{ fontSize: 18, flexShrink: 0, marginTop: 1 }}>{icon}</span>
-                  <div>
-                    <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 13, color: NAVY, marginBottom: 2 }}>{title}</div>
-                    <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 12, color: MUTED, lineHeight: 1.5 }}>{text}</div>
-                  </div>
-                </div>
-              ))}
-            </Reveal>
-          </div>
-
         </div>{/* /maxWidth container */}
       </div>{/* /properties section */}
+
+      {/* ── RÉSERVEZ EN DIRECT — bandeau navy plein écran, 3 chiffres + comparatif (maquette v3) ── */}
+      <div style={{ background: NAVY, padding: isMobile ? "56px 24px" : "80px 28px" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center", gap: 18, textAlign: "center" }}>
+          <div style={{ fontWeight: 200, fontSize: 11, letterSpacing: "0.5em", textTransform: "uppercase", color: CORAL, fontFamily: "'Jost', sans-serif", paddingLeft: "0.5em" }}>
+            {t("whyEyebrow")}
+          </div>
+          <h2 style={{ margin: 0, fontWeight: 200, fontSize: "clamp(24px, 4vw, 34px)", letterSpacing: "0.1em", textTransform: "uppercase", color: IVORY, fontFamily: "'Jost', sans-serif" }}>
+            {t("whyTitle")}
+          </h2>
+          <div style={{ width: 72, height: 1, background: GOLD }} />
+
+          {/* 3 chiffres */}
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: isMobile ? 36 : 44, marginTop: 40, width: "100%" }}>
+            {[
+              [t("whyStat1n"), t("whyStat1l"), t("whyStat1d")],
+              [t("whyStat2n"), t("whyStat2l"), t("whyStat2d")],
+              [t("whyStat3n"), t("whyStat3l"), t("whyStat3d")],
+            ].map(([n, l, d]) => (
+              <div key={l} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+                <div style={{ fontWeight: 200, fontSize: isMobile ? 44 : 56, color: IVORY, lineHeight: 1, fontFamily: "'Jost', sans-serif" }}>{n}</div>
+                <div style={{ fontWeight: 300, fontSize: 12, letterSpacing: "0.26em", textTransform: "uppercase", color: GOLD, fontFamily: "'Jost', sans-serif" }}>{l}</div>
+                <p style={{ margin: 0, fontFamily: "'Cormorant Garamond', Georgia, serif", fontStyle: "italic", fontSize: 16, lineHeight: 1.65, color: "rgba(250,245,233,0.8)", maxWidth: 270 }}>{d}</p>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, marginTop: 40 }}>
+            <a
+              href="#properties"
+              onClick={(e) => { e.preventDefault(); const el = document.getElementById("properties"); if (el) el.scrollIntoView({ behavior: "smooth" }); }}
+              style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 13, letterSpacing: "0.14em", textTransform: "uppercase", color: IVORY, background: CORAL, padding: "15px 40px", borderRadius: 8, textDecoration: "none" }}
+            >
+              {t("whyCta")}
+            </a>
+            <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontStyle: "italic", fontSize: 14, color: GOLD }}>
+              {t("whySecure")}
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* ── TESTIMONIALS — fond crème, cards blanches ── */}
       <TestimonialsSection onDetail={openDetail} />
