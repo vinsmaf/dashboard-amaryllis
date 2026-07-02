@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense, Fragment } from "react";
 import { getAttributionMetadata } from "./lib/trackingAttribution.js";
 import MerciPage from "./Merci.jsx";
 import { loadDailyPrices, applyServerPriceOverrides } from "./seedPrices.js";
@@ -280,9 +280,9 @@ const BIENS = [
     desc: "Perchée sur les hauteurs de Sainte-Luce, bercée par les alizés et le parfum des fleurs tropicales, la Villa Amaryllis vous invite à un séjour d'exception. Dès l'arrivée, vous êtes accueillis dans un univers élégant et chaleureux, pensé dans les moindres détails pour que vos vacances soient reposantes et inoubliables. Notre équipe sur place, attentionnée et discrète, veille à ce que chaque instant soit parfait.",
     descEn: "Perched on the heights of Sainte-Luce, caressed by trade winds and tropical flowers, Villa Amaryllis invites you to an exceptional stay. From the moment you arrive, you are welcomed into an elegant, warm setting crafted to the last detail so your holiday is restful and unforgettable. Our discreet, attentive on-site team ensures every moment is perfect.",
     descFull: [
-      { titre: "Les chambres", texte: "La villa dispose de trois chambres spacieuses. Chaque chambre est dotée d'un lit king-size pour un sommeil réparateur, d'une salle de bain privative avec douche à l'italienne, vasque en pierre naturelle et WC suspendu, d'un accès direct à la grande terrasse avec vue sur la mer, et de la climatisation pour un confort optimal en toutes saisons." },
-      { titre: "Les espaces de vie", texte: "Les pièces à vivre allient convivialité et sérénité : salon lumineux avec canapé confortable et vue mer, salle à manger pour 8 convives baignée de lumière, cuisine américaine entièrement équipée — réfrigérateur, plaques à induction, four combiné, micro-ondes, lave-vaisselle, cafetière, toaster. Tout est prêt pour cuisiner comme à la maison, ou pour accueillir un chef à domicile." },
-      { titre: "Les extérieurs", texte: "L'atout majeur de la villa, ce sont ses espaces extérieurs dignes d'une carte postale. Terrasse en bois Cumaru de 100 m², parfaite pour les petits-déjeuners face à la mer ou les apéros au coucher du soleil. Piscine lagon naturel (4×7 m, profondeur 1,35 m) à débordement avec plage immergée, chauffée par le soleil. Jardin tropical fleuri invitant à la détente. Carbet traditionnel en feuille de latanier, équipé d'un hamac, d'un salon d'extérieur et d'une table pour 8 — le lieu idéal pour vos soirées ou vos pauses lecture à l'ombre. Barbecue à gaz avec tout le nécessaire pour préparer poissons frais, langoustes et grillades." },
+      { titre: "Les chambres", texte: "La villa dispose de trois chambres spacieuses. Chaque chambre est dotée d'un lit king-size pour un sommeil réparateur, d'une salle de bain privative avec douche à l'italienne, vasque en pierre naturelle et WC suspendu, d'un accès direct à la grande terrasse avec vue sur la mer, et de la climatisation pour un confort optimal en toutes saisons.", photos: ["/photos/amaryllis/20.webp", "/photos/amaryllis/17.webp"] },
+      { titre: "Les espaces de vie", texte: "Les pièces à vivre allient convivialité et sérénité : salon lumineux avec canapé confortable et vue mer, salle à manger pour 8 convives baignée de lumière, cuisine américaine entièrement équipée — réfrigérateur, plaques à induction, four combiné, micro-ondes, lave-vaisselle, cafetière, toaster. Tout est prêt pour cuisiner comme à la maison, ou pour accueillir un chef à domicile.", photos: ["/photos/amaryllis/15.webp", "/photos/amaryllis/07.webp"] },
+      { titre: "Les extérieurs", texte: "L'atout majeur de la villa, ce sont ses espaces extérieurs dignes d'une carte postale. Terrasse en bois Cumaru de 100 m², parfaite pour les petits-déjeuners face à la mer ou les apéros au coucher du soleil. Piscine lagon naturel (4×7 m, profondeur 1,35 m) à débordement avec plage immergée, chauffée par le soleil. Jardin tropical fleuri invitant à la détente. Carbet traditionnel en feuille de latanier, équipé d'un hamac, d'un salon d'extérieur et d'une table pour 8 — le lieu idéal pour vos soirées ou vos pauses lecture à l'ombre. Barbecue à gaz avec tout le nécessaire pour préparer poissons frais, langoustes et grillades.", photos: ["/photos/amaryllis/04.webp", "/photos/amaryllis/01.webp"] },
       { titre: "Équipements & services", texte: "Wifi Starlink haut débit dans toute la propriété. TV connectée. Linge de maison fourni (draps, serviettes, torchons). Espace buanderie. Transats au bord de la piscine." },
       { titre: "Accès", texte: "Vous disposez d'un accès privatif et sécurisé à l'ensemble de la propriété, pour une intimité totale. Parking privé sur place. Chemin bien entretenu menant directement à la villa. Accès libre à la piscine lagon naturel à débordement, à la terrasse en bois Cumaru, au carbet traditionnel en feuille de latanier et au jardin tropical fleuri. La villa est entièrement climatisée et ventilée naturellement. Wifi Starlink disponible dans toute la propriété. Système d'alarme et éclairage extérieur automatique pour votre sécurité." },
       { titre: "Votre hôte", texte: "Nous mettons un point d'honneur à ce que votre séjour à la Villa Amaryllis soit parfait. Avant et pendant votre voyage, nous restons entièrement disponibles par message ou téléphone pour répondre à toutes vos questions. Accueil personnalisé sur place par notre hôte référent, avec remise des clés et visite complète de la villa. Lors de votre arrivée, nous vous remettons un guide d'accueil avec nos meilleures adresses, bons plans restaurants et idées d'activités locales. Présents si vous avez besoin, mais toujours discrets afin que vous profitiez pleinement de votre intimité." },
@@ -3667,7 +3667,6 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
   const [photoIdx, setPhotoIdx] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [showFull, setShowFull] = useState(false);
   const [calCheckin, setCalCheckin] = useState(initialCheckin || null);
   const [calCheckout, setCalCheckout] = useState(initialCheckout || null);
   // Sync when dates arrive async (availability loaded after mount) + navigate calendar to the right month
@@ -4661,25 +4660,40 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                 {lang === "fr" ? bien.desc : (bien.descEn || bien.desc)}
               </Editorial>
 
-              {bien.descFull && showFull && (
+              {bien.descFull && (
                 <div style={{ marginTop: 32 }}>
-                  {/* Decorative separator */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 32 }}>
-                    <div style={{ flex: 1, height: 1, background: SAND }} />
-                    <div style={{ width: 5, height: 5, borderRadius: "50%", background: bien.couleur || MUTED, opacity: 0.6 }} />
-                    <div style={{ width: 3, height: 3, borderRadius: "50%", background: SAND }} />
-                    <div style={{ width: 5, height: 5, borderRadius: "50%", background: bien.couleur || MUTED, opacity: 0.6 }} />
-                    <div style={{ flex: 1, height: 1, background: SAND }} />
-                  </div>
-
-                  {/* Narrative sections */}
+                  {/* Narrative sections — séparateur décoratif avant chaque section */}
                   {bien.descFull.filter(s => !s.items).map((s, i) => (
-                    <div key={i} style={{ marginBottom: 26, paddingLeft: 18, borderLeft: s.titre ? `2px solid ${(bien.couleur || "#8a7a6a")}28` : "2px solid transparent" }}>
-                      {s.titre && (
-                        <Eyebrow color="muted" tracking="0.42em" style={{ marginBottom: 9, color: bien.couleur || undefined }}>{s.titre}</Eyebrow>
-                      )}
-                      <Editorial style={{ fontSize: isMobile ? 15 : 17 }}>{s.texte}</Editorial>
-                    </div>
+                    <Fragment key={i}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 32 }}>
+                        <div style={{ flex: 1, height: 1, background: SAND }} />
+                        <div style={{ width: 5, height: 5, borderRadius: "50%", background: bien.couleur || MUTED, opacity: 0.6 }} />
+                        <div style={{ width: 3, height: 3, borderRadius: "50%", background: SAND }} />
+                        <div style={{ width: 5, height: 5, borderRadius: "50%", background: bien.couleur || MUTED, opacity: 0.6 }} />
+                        <div style={{ flex: 1, height: 1, background: SAND }} />
+                      </div>
+                      <div style={{ marginBottom: 26, paddingLeft: 18, borderLeft: s.titre ? `2px solid ${(bien.couleur || "#8a7a6a")}28` : "2px solid transparent" }}>
+                        {s.titre && (
+                          <Eyebrow color="muted" tracking="0.42em" style={{ marginBottom: 9, color: bien.couleur || undefined }}>{s.titre}</Eyebrow>
+                        )}
+                        <Editorial style={{ fontSize: isMobile ? 15 : 17 }}>{s.texte}</Editorial>
+                        {s.photos && s.photos.length > 0 && (
+                          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(2, 1fr)", gap: 12, marginTop: 16 }}>
+                            {s.photos.map(src => (
+                              <RImg
+                                key={src}
+                                src={src}
+                                alt={`${bien.nom} — ${s.titre}`}
+                                sizes="(max-width: 640px) 50vw, 340px"
+                                loading="lazy"
+                                style={{ width: "100%", aspectRatio: "3/2", objectFit: "cover", borderRadius: 12, display: "block", cursor: "zoom-in" }}
+                                onClick={() => { const idx = photos.indexOf(src); if (idx >= 0) { setPhotoIdx(idx); setLightboxOpen(true); } }}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </Fragment>
                   ))}
 
                   {/* Informations pratiques */}
@@ -4702,21 +4716,6 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                 </div>
               )}
 
-              {/* Toggle */}
-              {bien.descFull && (
-                <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 24 }}>
-                  <div style={{ flex: 1, height: 1, background: SAND }} />
-                  <button
-                    onClick={() => setShowFull(v => !v)}
-                    style={{ background: "none", border: `1px solid ${SAND}`, borderRadius: 4, padding: "7px 20px", cursor: "pointer", fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11, color: MUTED, letterSpacing: "0.12em", textTransform: "uppercase", flexShrink: 0 }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = NAVY; e.currentTarget.style.color = NAVY; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = SAND; e.currentTarget.style.color = MUTED; }}
-                  >
-                    {showFull ? "Réduire" : "Lire la suite"}
-                  </button>
-                  <div style={{ flex: 1, height: 1, background: SAND }} />
-                </div>
-              )}
             </div>
 
             {/* Amenities */}
