@@ -8808,6 +8808,15 @@ export default function PublicSite() {
   const [recentlyViewed, setRecentlyViewed] = useState(() => {
     try { return JSON.parse(localStorage.getItem("amaryllis_recent") || "[]"); } catch { return []; }
   });
+  // Filtres thématiques/lieu/voyageurs : accordéon replié par défaut sur mobile
+  // (la pile verticale sous la barre de recherche hero est déjà chargée).
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  useEffect(() => {
+    const fn = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener("resize", fn);
+    return () => window.removeEventListener("resize", fn);
+  }, []);
 
   // ── Géo-personnalisation ─────────────────────────────────────────────────
   const geo = useGeo();
@@ -9768,8 +9777,32 @@ export default function PublicSite() {
           {/* Barre de recherche par dates */}
           <SearchByDates biens={biensList} onBook={openBien} onDetail={openDetail} />
 
+          {/* Filtres thématiques/lieu/voyageurs : accordéon replié par défaut sur mobile
+              (pile verticale déjà chargée sous la barre de recherche hero), toujours
+              visibles sur desktop (une seule ligne, coût quasi nul). */}
+          {isMobile && (() => {
+            const activeCount = (themeFilter !== "tout" ? 1 : 0) + (filterLieu !== "all" ? 1 : 0) + (showFavorites ? 1 : 0) + (filterGuests > 0 ? 1 : 0);
+            return (
+              <button
+                type="button"
+                onClick={() => setFiltersOpen(o => !o)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 8, marginTop: 28, marginBottom: filtersOpen ? 16 : 24,
+                  padding: "9px 16px", borderRadius: 20, border: `1px solid ${activeCount > 0 ? CORAL : SAND}`,
+                  background: activeCount > 0 ? "rgba(200,85,61,0.08)" : "transparent",
+                  color: activeCount > 0 ? CORAL : MUTED, cursor: "pointer",
+                  fontSize: 12, fontFamily: "'Jost', sans-serif", fontWeight: 600, letterSpacing: "0.04em",
+                }}
+              >
+                <span>{lang === "fr" ? "Filtres" : "Filters"}{activeCount > 0 ? ` (${activeCount})` : ""}</span>
+                <span style={{ fontSize: 10, transform: filtersOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▾</span>
+              </button>
+            );
+          })()}
+          {(!isMobile || filtersOpen) && (
+          <>
           {/* ── Filtres thématiques + lieu + favoris — une seule ligne ── */}
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 24, alignItems: "center", marginTop: 28 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 24, alignItems: "center", marginTop: isMobile ? 0 : 28 }}>
             {/* Thématiques */}
             {[
               { key: "tout",       label: "Tout",              icon: "✦" },
@@ -9908,6 +9941,8 @@ export default function PublicSite() {
               </span>
             )}
           </div>
+          </>
+          )}
 
           {/* Météo live */}
           <WeatherStrip filterLieu={filterLieu} />
