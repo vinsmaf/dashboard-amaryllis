@@ -71,7 +71,7 @@ function rentalNode(id) {
       "@type": "Accommodation",
       "additionalType": "EntirePlace",
       "numberOfBedrooms": b.chambres,
-      "occupancy": { "@type": "QuantitativeValue", "maxValue": b.capacite },
+      "occupancy": { "@type": "QuantitativeValue", "value": b.capacite, "maxValue": b.capacite },
       "amenityFeature": amenityFeature,
     },
     "address": {
@@ -160,7 +160,7 @@ function buildVacationRentalLd({ id, nom, desc, prix, capacite, chambres, rating
           "@type": "Accommodation",
           "additionalType": "EntirePlace",
           ...(chambres ? { "numberOfBedrooms": chambres } : {}),
-          ...(capacite ? { "occupancy": { "@type": "QuantitativeValue", "maxValue": capacite } } : {}),
+          ...(capacite ? { "occupancy": { "@type": "QuantitativeValue", "value": capacite, "maxValue": capacite } } : {}),
         },
         ...(bookable && prix ? {
           "priceRange": `À partir de ${prix}€/nuit`,
