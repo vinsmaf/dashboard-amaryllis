@@ -1842,13 +1842,40 @@ Si verdict=reject : "improved_blocks": null`;
       tags: Array.isArray(r.cross_signal.tags) ? r.cross_signal.tags : [],
       for: 'patrimoine'
     }));
+
+  // Dernière réservation ENREGISTRÉE (created_at le plus récent) — pour la question
+  // "quelle est ma dernière réservation" côté assistant vocal patrimoine (2026-07-03).
+  // ⚠️ Source = D1 direct_bookings uniquement, PAS le merge complet Sheet+D1 que fait
+  // App.jsx côté client (cf. CLAUDE.md §2 "Toutes les Réservations") — un vrai appel
+  // Apps Script depuis ce cron ajouterait une dépendance externe fragile (POST-redirect
+  // quirk documenté) pour un gain marginal, direct_bookings couvre déjà les 3 canaux en
+  // pratique (Direct/Airbnb/Booking.com y arrivent via le webhook Stripe + les syncs
+  // existants). Caveat explicite côté prompt vocal plutôt qu'une fausse exhaustivité.
+  let lastReservation = null
+  if (db) {
+    try {
+      const row = await db.prepare(
+        `SELECT bien_nom, voyageur, nb_guests, checkin, checkout, canal, total, created_at
+         FROM direct_bookings ORDER BY created_at DESC LIMIT 1`
+      ).first()
+      if (row) {
+        lastReservation = {
+          bien: row.bien_nom, voyageur: row.voyageur, guests: row.nb_guests,
+          checkin: row.checkin, checkout: row.checkout, canal: row.canal,
+          total: row.total, bookedAt: row.created_at,
+        }
+      }
+    } catch { /* fail-soft */ }
+  }
+
   if (env.CROSS_BRAIN_KV) {
     try {
       await env.CROSS_BRAIN_KV.put('cross:locatif:signals', JSON.stringify({
         ts: now,
         fleet: 'locatif',
         run_summary: `${results.length} agents · ${ok} ok`,
-        signals: crossSignals
+        signals: crossSignals,
+        last_reservation: lastReservation,
       }), { expirationTtl: 7 * 24 * 3600 });
     } catch { /* fail-soft */ }
   }
