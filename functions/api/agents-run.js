@@ -1852,6 +1852,7 @@ Si verdict=reject : "improved_blocks": null`;
   // pratique (Direct/Airbnb/Booking.com y arrivent via le webhook Stripe + les syncs
   // existants). Caveat explicite côté prompt vocal plutôt qu'une fausse exhaustivité.
   let lastReservation = null
+  let lastReservationByProperty = []
   if (db) {
     try {
       const row = await db.prepare(
@@ -1866,6 +1867,26 @@ Si verdict=reject : "improved_blocks": null`;
         }
       }
     } catch { /* fail-soft */ }
+
+    // Par bien (2026-07-03) — la requête globale ci-dessus ne répond QUE pour le bien
+    // globalement le plus récent (ex. Géko) ; Vincent a besoin de la dernière résa d'un
+    // bien PRÉCIS (ex. "et pour Zandoli ?"), qui peut être un autre bien. Groupé par
+    // bien_id (PAS bien_nom : incohérence d'accent constatée "Géko"/"Geko" en base —
+    // bien_id est la clé stable, bien_nom n'est là que pour l'affichage).
+    try {
+      const { results } = await db.prepare(
+        `SELECT bien_id, bien_nom, voyageur, nb_guests, checkin, checkout, canal, total, created_at
+         FROM direct_bookings d1
+         WHERE bien_id IS NOT NULL
+           AND created_at = (SELECT MAX(created_at) FROM direct_bookings d2 WHERE d2.bien_id = d1.bien_id)
+         ORDER BY created_at DESC`
+      ).all()
+      lastReservationByProperty = (results || []).map(row => ({
+        bienId: row.bien_id, bien: row.bien_nom, voyageur: row.voyageur, guests: row.nb_guests,
+        checkin: row.checkin, checkout: row.checkout, canal: row.canal,
+        total: row.total, bookedAt: row.created_at,
+      }))
+    } catch { /* fail-soft */ }
   }
 
   if (env.CROSS_BRAIN_KV) {
@@ -1876,6 +1897,7 @@ Si verdict=reject : "improved_blocks": null`;
         run_summary: `${results.length} agents · ${ok} ok`,
         signals: crossSignals,
         last_reservation: lastReservation,
+        last_reservation_by_property: lastReservationByProperty,
       }), { expirationTtl: 7 * 24 * 3600 });
     } catch { /* fail-soft */ }
   }
