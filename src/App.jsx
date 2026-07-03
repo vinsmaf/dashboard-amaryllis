@@ -1155,10 +1155,20 @@ export default function App() {
           const r = await fetch("/api/direct-bookings", { headers: { Authorization: "Bearer " + tok } });
           if (r.ok) {
             const j = await r.json();
-            if (Array.isArray(j.reservations) && j.reservations.length > 0) {
+            if (Array.isArray(j.reservations)) {
               setReservations(current => {
-                const currentMap = new Map(current.map(x => [String(x.id), x]));
+                // D1 direct_bookings = source AUTORITAIRE pour ce canal (id "direct-<pi>") :
+                // toute entrée locale de ce canal absente de la réponse fraîche a été
+                // annulée/supprimée côté D1 → elle doit disparaître ici aussi (sinon une
+                // résa annulée reste affichée indéfiniment, la fusion n'étant qu'additive).
+                const freshIds = new Set(j.reservations.map(x => String(x.id)));
+                const currentMap = new Map();
                 let changed = false;
+                for (const x of current) {
+                  const key = String(x.id);
+                  if (key.startsWith("direct-") && !freshIds.has(key)) { changed = true; continue; }
+                  currentMap.set(key, x);
+                }
                 for (const x of j.reservations) {
                   if (!x.checkin || !x.checkout) continue;
                   const key = String(x.id);
