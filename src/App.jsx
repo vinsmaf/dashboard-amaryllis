@@ -402,15 +402,18 @@ function TodayBanner({ biens, n, reservations, onTab, mob }) {
     <div style={{ background: "linear-gradient(135deg,#0f172a,#1a2744)", borderBottom: "1px solid rgba(255,255,255,0.06)", padding: mob ? "10px 12px" : "10px 22px" }}>
       <div style={{ display: "flex", gap: mob ? 8 : 16, alignItems: "stretch", flexWrap: "wrap" }}>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 14px", background: "rgba(14,165,233,0.08)", borderRadius: 10, border: "1px solid rgba(14,165,233,0.15)", flex: mob ? "1 1 42%" : "none" }}>
+        <div
+          title={`Revenus ${MOIS_FULL[moisCourant]} (${fmtK(revMois)}) comparés à votre moyenne mensuelle ${new Date().getFullYear()} (${fmtK(objMois)} = total encaissé depuis janvier ÷ ${n} mois écoulés). 100% = vous êtes au moins au niveau de votre rythme habituel.`}
+          style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 14px", background: "rgba(14,165,233,0.08)", borderRadius: 10, border: "1px solid rgba(14,165,233,0.15)", flex: mob ? "1 1 42%" : "none", cursor: "help" }}
+        >
           <Gauge pct={pctMois} size={44} />
           <div>
             <div style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-              {MOIS_FULL[moisCourant]} — objectif
+              {MOIS_FULL[moisCourant]} vs moyenne {new Date().getFullYear()} ℹ︎
             </div>
             <div style={{ fontSize: 14, fontWeight: 700, color: "#0ea5e9", fontFamily: "var(--font-mono)" }}>
               {fmtK(revMois)}
-              <span style={{ fontSize: 10, color: "#64748b", fontWeight: 400 }}> / {fmtK(objMois)}</span>
+              <span style={{ fontSize: 10, color: "#64748b", fontWeight: 400 }}> / {fmtK(objMois)} moy.</span>
             </div>
           </div>
         </div>
