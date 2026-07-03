@@ -73,11 +73,14 @@ function json(data, status = 200) {
 async function fetchDirectBlocked(env, bienId) {
   if (!env.revenue_manager || !bienId) return new Set();
   try {
+    // Migration idempotente — cf. cancel-booking.js (même colonne, appelée en lecture ici).
+    try { await env.revenue_manager.prepare(`ALTER TABLE direct_bookings ADD COLUMN status TEXT DEFAULT 'confirmed'`).run(); } catch { /* déjà présente */ }
     const today = new Date().toISOString().slice(0, 10);
     const rows = await env.revenue_manager
       // Inclut les résas groupées (offre résidence) dont ce bien fait partie
       // (group_biens = CSV des bien_ids, encadré de virgules pour un match exact).
-      .prepare("SELECT checkin, checkout FROM direct_bookings WHERE (bien_id=? OR (bien_id='groupe' AND (',' || group_biens || ',') LIKE '%,' || ? || ',%')) AND checkout>=?")
+      // Exclut les résas annulées : une annulation doit immédiatement libérer les dates.
+      .prepare("SELECT checkin, checkout FROM direct_bookings WHERE (bien_id=? OR (bien_id='groupe' AND (',' || group_biens || ',') LIKE '%,' || ? || ',%')) AND checkout>=? AND (status IS NULL OR status != 'cancelled')")
       .bind(bienId, bienId, today).all();
     const blocked = new Set();
     for (const r of (rows?.results || [])) {

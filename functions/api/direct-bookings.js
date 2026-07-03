@@ -68,12 +68,13 @@ export async function onRequestGet(context) {
     // Migration idempotente : colonnes ajoutées par airbnb-email-import
     try { await db.prepare(`ALTER TABLE direct_bookings ADD COLUMN canal TEXT DEFAULT 'Direct'`).run(); } catch { /* existe déjà */ }
     try { await db.prepare(`ALTER TABLE direct_bookings ADD COLUMN platform_booking_id TEXT`).run(); } catch { /* existe déjà */ }
+    try { await db.prepare(`ALTER TABLE direct_bookings ADD COLUMN status TEXT DEFAULT 'confirmed'`).run(); } catch { /* existe déjà */ }
 
     const rows = await db.prepare(
       `SELECT payment_intent_id, bien_id, bien_nom, voyageur, email, phone, nb_guests, nb_pets, total, depot, checkin, checkout,
               canal, platform_booking_id
        FROM direct_bookings
-       WHERE checkout >= date('now', '-90 days')
+       WHERE checkout >= date('now', '-90 days') AND (status IS NULL OR status != 'cancelled')
        ORDER BY checkin DESC`
     ).all();
 

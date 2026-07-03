@@ -173,8 +173,11 @@ export async function onRequestGet({ request, env }) {
 
   let reservations = [];
   try {
+    // Migration idempotente — cf. cancel-booking.js. Exclut les résas annulées : une
+    // annulation ne doit plus déclencher de faux positif double-booking.
+    try { await db.prepare(`ALTER TABLE direct_bookings ADD COLUMN status TEXT DEFAULT 'confirmed'`).run(); } catch { /* déjà présente */ }
     const { results } = await db.prepare(
-      "SELECT payment_intent_id AS id, bien_nom AS bien, voyageur, total, depot, checkin, checkout FROM direct_bookings"
+      "SELECT payment_intent_id AS id, bien_nom AS bien, voyageur, total, depot, checkin, checkout FROM direct_bookings WHERE status IS NULL OR status != 'cancelled'"
     ).all();
     reservations = results || [];
   } catch (e) {

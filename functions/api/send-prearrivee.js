@@ -51,9 +51,11 @@ export async function onRequestGet(context) {
       created_at INTEGER NOT NULL DEFAULT (unixepoch()),
       email TEXT, prenom TEXT, bien_id TEXT,
       prearrivee_sent INTEGER DEFAULT 0, poststay_sent INTEGER DEFAULT 0)`).run();
+    try { await db.prepare(`ALTER TABLE direct_bookings ADD COLUMN status TEXT DEFAULT 'confirmed'`).run(); } catch { /* déjà présente */ }
     // Email obligatoire : les lignes notify-booking sans email sont ignorées.
+    // Exclut les résas annulées (cf. cancel-booking.js) — pas d'email pré-arrivée après annulation.
     const { results } = await db.prepare(
-      "SELECT rowid AS rid, * FROM direct_bookings WHERE checkin = ? AND prearrivee_sent = 0 AND email IS NOT NULL AND email != ''"
+      "SELECT rowid AS rid, * FROM direct_bookings WHERE checkin = ? AND prearrivee_sent = 0 AND email IS NOT NULL AND email != '' AND (status IS NULL OR status != 'cancelled')"
     ).bind(target).all();
 
     let sent = 0, failed = 0;

@@ -186,8 +186,10 @@ async function sendDirectPostStay(env, origin) {
       created_at INTEGER NOT NULL DEFAULT (unixepoch()),
       email TEXT, prenom TEXT, bien_id TEXT,
       prearrivee_sent INTEGER DEFAULT 0, poststay_sent INTEGER DEFAULT 0)`).run();
+    try { await db.prepare(`ALTER TABLE direct_bookings ADD COLUMN status TEXT DEFAULT 'confirmed'`).run(); } catch { /* déjà présente */ }
+    // Exclut les résas annulées (cf. cancel-booking.js) — pas de demande d'avis pour un séjour annulé.
     const { results } = await db.prepare(
-      "SELECT rowid AS rid, * FROM direct_bookings WHERE checkout = ? AND poststay_sent = 0 AND email IS NOT NULL AND email != ''"
+      "SELECT rowid AS rid, * FROM direct_bookings WHERE checkout = ? AND poststay_sent = 0 AND email IS NOT NULL AND email != '' AND (status IS NULL OR status != 'cancelled')"
     ).bind(yesterday).all();
     let sent = 0, failed = 0;
     for (const b of results || []) {

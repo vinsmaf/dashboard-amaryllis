@@ -167,6 +167,10 @@ export default function Planning() {
   const [patchForm, setPatchForm] = useState({ voyageur: "", montant: "" });
   const [patchLoading, setPatchLoading] = useState(false);
   const [patchResult, setPatchResult] = useState(null);
+  const [cancelResa, setCancelResa] = useState(null); // résa directe à annuler
+  const [cancelAmount, setCancelAmount] = useState("");
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [cancelResult, setCancelResult] = useState(null);
   const [dailyPrices, setDailyPrices] = useState(loadDailyPrices);
 
   useEffect(() => {
@@ -388,6 +392,44 @@ export default function Planning() {
       setPatchResult({ ok: false, error: e.message });
     } finally {
       setPatchLoading(false);
+    }
+  };
+
+  const openCancel = (r) => {
+    const days = diffDays(todayStr(), r.checkin);
+    const montant = Number(r.montant) || 0;
+    // Suggestion basée sur la politique CGV (≥30j 100% · 15-29j 50% · <15j 0%) — admin ajuste librement.
+    const suggested = days >= 30 ? montant : days >= 15 ? Math.round(montant * 0.5) : 0;
+    setCancelResa(r);
+    setCancelAmount(String(suggested));
+    setCancelResult(null);
+  };
+
+  const submitCancel = async () => {
+    if (!cancelResa) return;
+    setCancelLoading(true);
+    setCancelResult(null);
+    try {
+      const tok = sessionStorage.getItem("ldb_tok") || "";
+      const paymentIntentId = String(cancelResa.id).replace(/^direct-/, "");
+      const res = await fetch("/api/cancel-booking", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + tok },
+        body: JSON.stringify({ paymentIntentId, refundAmount: parseFloat(cancelAmount) || 0 }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        saveRes(reservations.filter(r => r.id !== cancelResa.id));
+        addToast(`Réservation annulée — ${cancelResa.voyageur}`, "success");
+        setCancelResult({ ok: true });
+        setTimeout(() => { setCancelResa(null); setCancelResult(null); }, 1500);
+      } else {
+        setCancelResult({ ok: false, error: data.error || "Erreur" });
+      }
+    } catch (e) {
+      setCancelResult({ ok: false, error: e.message });
+    } finally {
+      setCancelLoading(false);
     }
   };
 
@@ -969,6 +1011,7 @@ export default function Planning() {
                   <td style={{ padding: "7px 10px", whiteSpace: "nowrap" }}>
                     {needsManualFill(r) && <button onClick={() => openPatch(r)} title="Patch rapide : saisir nom + prix" style={{ background: "rgba(245,158,11,0.15)", border: "none", cursor: "pointer", color: "#f59e0b", fontSize: 11, marginRight: 4, borderRadius: 4, padding: "2px 5px", fontWeight: 700 }}>⚡</button>}
                     <button onClick={() => openEdit(r)} style={{ background: "none", border: "none", cursor: "pointer", color: "#0ea5e9", fontSize: 11, marginRight: 4 }}>✎</button>
+                    {r.canal === "Direct" && <button onClick={() => openCancel(r)} title="Annuler cette réservation (remboursement + libération caution/dates)" style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444", fontSize: 11, marginRight: 4 }}>🚫</button>}
                     <button onClick={() => delRes(r.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#475569", fontSize: 11 }}>✕</button>
                   </td>
                 </tr>
@@ -1084,6 +1127,49 @@ export default function Planning() {
               </button>
               <button onClick={() => { setPatchResa(null); setPatchResult(null); }} style={{ padding: "9px 14px", background: "transparent", border: "1px solid #334155", borderRadius: 8, color: "#64748b", fontSize: 12, cursor: "pointer" }}>
                 Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {cancelResa && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 110 }} onClick={() => { setCancelResa(null); setCancelResult(null); }}>
+          <div style={{ background: "#1e293b", border: "1px solid rgba(239,68,68,0.4)", borderRadius: 16, padding: 22, width: "100%", maxWidth: 340 }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#ef4444", marginBottom: 4 }}>🚫 Annuler la réservation</div>
+            <div style={{ fontSize: 10, color: "#64748b", marginBottom: 14 }}>
+              {cancelResa.voyageur} · {cancelResa.bienId} · {cancelResa.checkin} → {cancelResa.checkout}
+            </div>
+            <div style={{ fontSize: 11, color: "#94a3b8", lineHeight: 1.6, marginBottom: 14, padding: "8px 10px", background: "rgba(255,255,255,0.03)", borderRadius: 8 }}>
+              À {diffDays(todayStr(), cancelResa.checkin)} jour(s) de l'arrivée. Politique CGV : ≥30j = 100% · 15-29j = 50% · &lt;15j = 0%.
+              Montant réglé : <strong>{cancelResa.montant || 0} €</strong>. Le montant ci-dessous est une suggestion — ajustable librement.
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 4, fontWeight: 600 }}>MONTANT À REMBOURSER (€, 0 = aucun remboursement)</div>
+              <input
+                autoFocus
+                type="number"
+                value={cancelAmount}
+                onChange={e => setCancelAmount(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") submitCancel(); if (e.key === "Escape") setCancelResa(null); }}
+                style={{ width: "100%", padding: "8px 10px", background: "#0f172a", border: "1px solid #334155", borderRadius: 8, color: "#e2e8f0", fontSize: 13, boxSizing: "border-box" }}
+              />
+            </div>
+            {cancelResult && (
+              <div style={{ marginBottom: 12, padding: "8px 10px", borderRadius: 8, background: cancelResult.ok ? "rgba(16,185,129,0.12)" : "rgba(239,68,68,0.12)", color: cancelResult.ok ? "#10b981" : "#ef4444", fontSize: 11, fontWeight: 600 }}>
+                {cancelResult.ok ? "✅ Réservation annulée" : `❌ ${cancelResult.error}`}
+              </div>
+            )}
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={submitCancel}
+                disabled={cancelLoading}
+                style={{ flex: 1, padding: "9px 0", background: "#ef4444", border: "none", borderRadius: 8, color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", opacity: cancelLoading ? 0.5 : 1 }}
+              >
+                {cancelLoading ? "⏳ En cours…" : "🚫 Confirmer l'annulation"}
+              </button>
+              <button onClick={() => { setCancelResa(null); setCancelResult(null); }} style={{ padding: "9px 14px", background: "transparent", border: "1px solid #334155", borderRadius: 8, color: "#64748b", fontSize: 12, cursor: "pointer" }}>
+                Fermer
               </button>
             </div>
           </div>

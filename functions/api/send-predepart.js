@@ -44,9 +44,11 @@ export async function onRequestGet(context) {
     try {
       await db.prepare("ALTER TABLE direct_bookings ADD COLUMN predepart_sent INTEGER DEFAULT 0").run();
     } catch { /* colonne déjà présente */ }
+    try { await db.prepare(`ALTER TABLE direct_bookings ADD COLUMN status TEXT DEFAULT 'confirmed'`).run(); } catch { /* déjà présente */ }
 
+    // Exclut les résas annulées (cf. cancel-booking.js).
     const { results } = await db.prepare(
-      "SELECT rowid AS rid, * FROM direct_bookings WHERE checkout = ? AND predepart_sent = 0 AND email IS NOT NULL AND email != ''"
+      "SELECT rowid AS rid, * FROM direct_bookings WHERE checkout = ? AND predepart_sent = 0 AND email IS NOT NULL AND email != '' AND (status IS NULL OR status != 'cancelled')"
     ).bind(target).all();
 
     let sent = 0, failed = 0;
