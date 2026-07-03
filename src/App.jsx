@@ -446,8 +446,11 @@ function TodayBanner({ biens, n, reservations, onTab, mob }) {
         </div>
 
         {!mob && top && (
-          <div style={{ padding: "8px 14px", background: "rgba(255,255,255,0.03)", borderRadius: 10, border: "1px solid rgba(255,255,255,0.06)" }}>
-            <div style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Ce mois</div>
+          <div
+            title={`Cumul des revenus depuis janvier ${new Date().getFullYear()} (${n} mois), pas le mois en cours seul.`}
+            style={{ padding: "8px 14px", background: "rgba(255,255,255,0.03)", borderRadius: 10, border: "1px solid rgba(255,255,255,0.06)", cursor: "help" }}
+          >
+            <div style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Top / Flop · YTD {new Date().getFullYear()}</div>
             <div style={{ fontSize: 12, color: "#10b981", marginBottom: 2 }}>
               🏆 {top.nom} — {fmtK(sumN(top.revenus, n))}
             </div>
