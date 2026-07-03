@@ -4,6 +4,17 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
+## En cours → ✅ terminé le 2026-07-03 — PWA guide-sejour + urgence Géko + clarté KPI admin
+> Détail complet : ADR-GUIDE-PWA-001, ADR-GEKO-EXCEPTION-001, ADR-ADMIN-KPI-CLARITY-001.
+
+## 🟡 Backlog guide-sejour PWA — 4 améliorations identifiées, non traitées (voir SPRINT_2026_07.md #11-14)
+- **Statut** : offline fragile (SW ne cache pas `/assets/*`), aucun QR physique vers `/guide-sejour/<bien>` (seul chemin actuel = emails), pas de tracking d'adoption PWA (`?source=pwa`), fade visuel manquant sur la quick-nav.
+- **Ce qui débloque** : prochaine session, reprendre les tasks #40-43 (déjà détaillées, prêtes à l'emploi).
+
+## 🟡 Exceptions Géko auto-expirantes (03→06/07/2026) — rien à faire, mais à savoir si le calendrier "change tout seul"
+- **Statut** : min-nights (D1 `min_nights_config`) + délai 24h (`SAME_DAY_BOOKING_BIENS`/`SAME_DAY_BOOKING_WINDOW` dans `PublicSite.jsx`) reviennent automatiquement à la normale après le 06/07 — aucune action requise.
+- **Ce qui débloque** : si Vincent (ou une future session) s'étonne que Géko redevienne "moins souple" début juillet, c'est normal et voulu (ADR-GEKO-EXCEPTION-001) — ne pas re-corriger par réflexe.
+
 ## En cours → ✅ terminé le 2026-07-02 — Fiabilisation auto-pub réseaux + hero vidéo home
 > Détail complet : ADR-EDITORIAL-RELIABILITY-001, ADR-HERO-VIDEO-001.
 
