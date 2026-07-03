@@ -107,7 +107,11 @@ function appendCell_(sheet, row, col, delta) {
 function isBlocage_(voy, statut, notes) {
   voy = String(voy || "").toLowerCase(); statut = String(statut || "").toLowerCase(); notes = String(notes || "").toLowerCase();
   if (statut === "confirmé" || statut === "confirmed") return false;
+  // "Annulé"/"annule"/"cancelled" : statut déjà utilisé par les imports CSV Airbnb/Booking
+  // (voir importFromAirbnbSheet_/importFromBookingSheet_) mais jamais exclu du calcul des
+  // revenus jusqu'ici — une résa annulée comptait quand même dans revenus locatifs 2026.
   return statut.indexOf("bloqu") >= 0 || statut.indexOf("closed") >= 0 ||
+         statut.indexOf("annul") >= 0 || statut.indexOf("cancel") >= 0 ||
          voy.indexOf("not available") >= 0 || voy.indexOf("indisponible") >= 0 ||
          notes.indexOf("closed") >= 0 || notes.indexOf("not available") >= 0;
 }

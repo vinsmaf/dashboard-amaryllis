@@ -630,7 +630,7 @@ function addReservation_(p) {
   const canalLabel = RESA_CANAL_LABELS[p.canal] || p.canal || "Direct";
   const now = Utilities.formatDate(new Date(), "Europe/Paris", "yyyy-MM-dd");
   const row = [ id, bienLabel, p.voyageur || "—", canalLabel, p.checkin || "", p.checkout || "", nights,
-                parseFloat(p.montant) || 0, "Confirmé", parseInt(p.voyageurs || p.numGuests || 1, 10) || 1,
+                parseFloat(p.montant) || 0, p.statut || p.status || "Confirmé", parseInt(p.voyageurs || p.numGuests || 1, 10) || 1,
                 p.notes || "", "Manuel", now, p.phone || p.tel || "", p.email || "" ];
 
   const lastRow = sheet.getLastRow();

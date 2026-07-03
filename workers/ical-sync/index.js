@@ -883,7 +883,7 @@ async function runWeeklyReport(env, allEvents) {
         `SELECT COUNT(*) as cnt,
                 COALESCE(SUM(CAST(julianday(checkout) - julianday(checkin) AS INTEGER)), 0) as nights,
                 COALESCE(SUM(CAST(total AS REAL) / 100.0), 0) as rev
-         FROM direct_bookings WHERE created_at >= unixepoch('now', '-30 days')`
+         FROM direct_bookings WHERE created_at >= unixepoch('now', '-30 days') AND (status IS NULL OR status != 'cancelled')`
       ).first();
       directCount  = row?.cnt    || 0;
       directNights = row?.nights || 0;
@@ -1453,10 +1453,14 @@ async function runMonthlyExport(env, allEvents) {
 async function fetchDirectBookingsAsEvents(env) {
   if (!env.revenue_manager) return [];
   try {
+    // Migration idempotente — colonne ajoutée par functions/api/cancel-booking.js.
+    try { await env.revenue_manager.prepare(`ALTER TABLE direct_bookings ADD COLUMN status TEXT DEFAULT 'confirmed'`).run(); } catch { /* déjà présente */ }
+    // Exclut les résas annulées : sans ce filtre, ce sync (15 min) re-poussait vers le
+    // Sheet une résa qu'on venait juste de supprimer manuellement (résurrection silencieuse).
     const rows = await env.revenue_manager.prepare(
       `SELECT payment_intent_id, bien_id, bien_nom, voyageur, total, depot, checkin, checkout
        FROM direct_bookings
-       WHERE checkout >= date('now', '-90 days')`
+       WHERE checkout >= date('now', '-90 days') AND (status IS NULL OR status != 'cancelled')`
     ).all();
     return (rows?.results || []).filter(r => r.bien_id && r.checkin && r.checkout).map(r => ({
       uid:      "direct-" + r.payment_intent_id,  // pushToSheets utilise e.uid comme id
