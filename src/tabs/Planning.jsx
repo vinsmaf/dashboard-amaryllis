@@ -1011,7 +1011,7 @@ export default function Planning() {
                   <td style={{ padding: "7px 10px", whiteSpace: "nowrap" }}>
                     {needsManualFill(r) && <button onClick={() => openPatch(r)} title="Patch rapide : saisir nom + prix" style={{ background: "rgba(245,158,11,0.15)", border: "none", cursor: "pointer", color: "#f59e0b", fontSize: 11, marginRight: 4, borderRadius: 4, padding: "2px 5px", fontWeight: 700 }}>⚡</button>}
                     <button onClick={() => openEdit(r)} style={{ background: "none", border: "none", cursor: "pointer", color: "#0ea5e9", fontSize: 11, marginRight: 4 }}>✎</button>
-                    {r.canal === "Direct" && <button onClick={() => openCancel(r)} title="Annuler cette réservation (remboursement + libération caution/dates)" style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444", fontSize: 11, marginRight: 4 }}>🚫</button>}
+                    {String(r.canal || "").toLowerCase() === "direct" && <button onClick={() => openCancel(r)} title="Annuler cette réservation (remboursement + libération caution/dates)" style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444", fontSize: 11, marginRight: 4 }}>🚫</button>}
                     <button onClick={() => delRes(r.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#475569", fontSize: 11 }}>✕</button>
                   </td>
                 </tr>
