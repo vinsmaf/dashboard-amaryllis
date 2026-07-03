@@ -184,6 +184,16 @@ const PRICE_HIDDEN = new Set(["iguana"]);
 // grille saisonnière statique jugée redondante/non dynamique → on s'appuie sur le
 // calendrier de disponibilités/réservation qui lit les prix réels (onglet admin Tarifs).
 const PRICING_CAL_HIDDEN = new Set(["amaryllis", "geko", "mabouya", "zandoli", "schoelcher", "nogent"]);
+// Réservation directe le jour même (pas le délai de 24h par défaut) — exception ponctuelle
+// Vincent, ce weekend uniquement (03→06/07/2026), pour Géko. S'auto-désactive après la fenêtre,
+// pas besoin d'y repenser plus tard.
+const SAME_DAY_BOOKING_BIENS = new Set(["geko"]);
+const SAME_DAY_BOOKING_WINDOW = { from: "2026-07-03", to: "2026-07-06" };
+function sameDayBookingAllowed(bienId) {
+  if (!SAME_DAY_BOOKING_BIENS.has(bienId)) return false;
+  const t = today();
+  return t >= SAME_DAY_BOOKING_WINDOW.from && t <= SAME_DAY_BOOKING_WINDOW.to;
+}
 
 const IVORY  = "var(--c-ivory)";  // paper — main background
 const CREAM  = "var(--c-cream)";  // cream — card/modal background
@@ -984,9 +994,9 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
   );
 }
 
-function DateRangePicker({ checkin, checkout, blockedDates = [], onChange, dailyPricesMap = {}, basePrice = 0, minNights = 1, gapDates = {}, bienNom = "", compact = false }) {
+function DateRangePicker({ checkin, checkout, blockedDates = [], onChange, dailyPricesMap = {}, basePrice = 0, minNights = 1, gapDates = {}, bienNom = "", bienId = "", compact = false }) {
   const todayStr = today();
-  const minCheckinStr = addDays(todayStr, 1); // 24h minimum avant arrivée
+  const minCheckinStr = sameDayBookingAllowed(bienId) ? todayStr : addDays(todayStr, 1); // 24h minimum avant arrivée (sauf exception)
   const initY = new Date().getFullYear();
   const initM = new Date().getMonth();
   const [offset, setOffset] = useState(0);
@@ -1051,7 +1061,8 @@ function DateRangePicker({ checkin, checkout, blockedDates = [], onChange, daily
       </div>
       {!compact && (
       <>
-      {/* Notice 24h */}
+      {/* Notice 24h — masquée si réservation jour même exceptionnellement activée pour ce bien */}
+      {!sameDayBookingAllowed(bienId) && (
       <div style={{ marginTop: 10, padding: "8px 12px", background: "#fef9f0", border: "1px solid #f0e0c0", borderRadius: 8, fontSize: 12, color: "#7a5c2e", fontFamily: "'Jost', sans-serif", lineHeight: 1.5 }}>
         ⏱ Réservation en ligne : minimum 24h à l'avance.{" "}
         Besoin pour <strong>aujourd'hui</strong> ?{" "}
@@ -1059,6 +1070,7 @@ function DateRangePicker({ checkin, checkout, blockedDates = [], onChange, daily
         {" "}ou{" "}
         <a href="mailto:contact@villamaryllis.com" style={{ color: "#0e3b3a", fontWeight: 600, textDecoration: "none" }}>email</a>.
       </div>
+      )}
       {/* Légende disponibilité */}
       <div style={{ marginTop: 14, display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
         <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: MUTED, fontFamily: "'Jost', sans-serif" }}>
@@ -2519,7 +2531,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
                 <OrganicLoader size={18} color={CORAL} /> Chargement des disponibilités…
               </div>
             )}
-            <DateRangePicker checkin={checkin} checkout={checkout} blockedDates={blockedDates} onChange={(ci, co) => { setCheckin(ci); setCheckout(co); if (ci && co && window.gtag) window.gtag("event", "date_selected", { bien_id: bien.id, checkin: ci, checkout: co, context: "booking_modal" }); }} dailyPricesMap={dailyPricesMap} basePrice={bien.prix} minNights={minNights} gapDates={gapDates} bienNom={bien.nom} />
+            <DateRangePicker checkin={checkin} checkout={checkout} blockedDates={blockedDates} onChange={(ci, co) => { setCheckin(ci); setCheckout(co); if (ci && co && window.gtag) window.gtag("event", "date_selected", { bien_id: bien.id, checkin: ci, checkout: co, context: "booking_modal" }); }} dailyPricesMap={dailyPricesMap} basePrice={bien.prix} minNights={minNights} gapDates={gapDates} bienNom={bien.nom} bienId={bien.id} />
 
             {/* Voyageurs */}
             {bien.capacite > 1 && (
@@ -4447,6 +4459,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                   minNights={getMinNights(bien.id, calCheckin)}
                   gapDates={gapDates}
                   bienNom={bien.nom}
+                  bienId={bien.id}
                 />
               )}
 
@@ -4812,10 +4825,10 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
               const y2 = baseY + Math.floor((baseM + calOffset + 1) / 12);
               const m2 = (baseM + calOffset + 1) % 12;
 
-              const minCheckinStr = addDays(today(), 1);
+              const minCheckinStr = sameDayBookingAllowed(bien.id) ? today() : addDays(today(), 1);
               const handleSelect = (ds) => {
                 if (!calCheckin || (calCheckin && calCheckout)) {
-                  if (ds < minCheckinStr) return; // 24h minimum
+                  if (ds < minCheckinStr) return; // 24h minimum (sauf exception)
                   setCalCheckin(ds); setCalCheckout(null);
                 } else if (ds <= calCheckin) {
                   setCalCheckin(ds); setCalCheckout(null);
@@ -5283,10 +5296,10 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                     const y1 = baseY + Math.floor((baseM + calOffset) / 12);
                     const m1 = (baseM + calOffset) % 12;
 
-                    const minCheckinStr = addDays(today(), 1);
+                    const minCheckinStr = sameDayBookingAllowed(bien.id) ? today() : addDays(today(), 1);
                     const handleSelect = (ds) => {
                       if (!calCheckin || (calCheckin && calCheckout)) {
-                        if (ds < minCheckinStr) return; // 24h minimum
+                        if (ds < minCheckinStr) return; // 24h minimum (sauf exception)
                         setCalCheckin(ds); setCalCheckout(null);
                       } else if (ds <= calCheckin) {
                         setCalCheckin(ds); setCalCheckout(null);
