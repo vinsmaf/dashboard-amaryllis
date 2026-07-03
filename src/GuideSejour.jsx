@@ -29,17 +29,112 @@ const NAMES = {
   nogent:    "Appartement Nogent",
 };
 
-function Card({ children, style }) {
+function Card({ children, style, id }) {
   return (
-    <div style={{
+    <div id={id} style={{
       background: "#fff",
       borderRadius: 14,
       border: `1px solid #ece6d9`,
       padding: "20px 18px",
       marginBottom: 14,
+      scrollMarginTop: 68,
       ...style,
     }}>
       {children}
+    </div>
+  );
+}
+
+function QuickNav({ items }) {
+  if (!items.length) return null;
+  return (
+    <div style={{
+      position: "sticky", top: 0, zIndex: 20,
+      background: "rgba(255,253,248,0.96)", backdropFilter: "blur(6px)",
+      borderBottom: `1px solid #ece6d9`,
+      overflowX: "auto", WebkitOverflowScrolling: "touch",
+      padding: "10px 14px", display: "flex", gap: 8,
+    }}>
+      {items.map(it => (
+        <button
+          key={it.id}
+          onClick={() => document.getElementById(it.id)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+          style={{
+            flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6,
+            background: "#fff", border: `1px solid #ece6d9`, borderRadius: 20,
+            padding: "7px 14px", fontSize: 13, fontWeight: 500, color: NAVY,
+            cursor: "pointer", fontFamily: "'Jost',sans-serif", whiteSpace: "nowrap",
+          }}
+        >
+          <span>{it.icon}</span>{it.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function InstallPWABanner({ bien }) {
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [dismissed, setDismissed] = useState(() => {
+    try { return !!sessionStorage.getItem(`pwa_dismissed_${bien}`); } catch { return false; }
+  });
+  const [installed] = useState(() =>
+    window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true
+  );
+  const isIOS = /iphone|ipad|ipod/i.test(window.navigator.userAgent || "") && !window.MSStream;
+
+  useEffect(() => {
+    function onBeforeInstall(e) {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    }
+    window.addEventListener("beforeinstallprompt", onBeforeInstall);
+    return () => window.removeEventListener("beforeinstallprompt", onBeforeInstall);
+  }, []);
+
+  function dismiss() {
+    setDismissed(true);
+    try { sessionStorage.setItem(`pwa_dismissed_${bien}`, "1"); } catch { /* navigation privée */ }
+  }
+
+  async function install() {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    setDeferredPrompt(null);
+    dismiss();
+  }
+
+  if (installed || dismissed || (!deferredPrompt && !isIOS)) return null;
+
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", gap: 12,
+      background: NAVY, color: IVORY, borderRadius: 14,
+      padding: "14px 16px", marginBottom: 14,
+    }}>
+      <span style={{ fontSize: 26, flexShrink: 0 }}>📲</span>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 14, fontWeight: 600 }}>Gardez ce guide sous la main</div>
+        <div style={{ fontSize: 12.5, color: "#aeb6c2", marginTop: 2, lineHeight: 1.5 }}>
+          {isIOS
+            ? <>Appuyez sur <strong style={{ color: IVORY }}>Partager</strong> puis <strong style={{ color: IVORY }}>« Sur l'écran d'accueil »</strong></>
+            : "Installez-le en un tap, il fonctionne même hors connexion."}
+        </div>
+      </div>
+      {!isIOS && (
+        <button onClick={install} style={{
+          flexShrink: 0, background: CORAL, color: "#fff", border: "none",
+          borderRadius: 10, padding: "9px 16px", fontSize: 13, fontWeight: 700,
+          cursor: "pointer", fontFamily: "'Jost',sans-serif",
+        }}>
+          Installer
+        </button>
+      )}
+      <button onClick={dismiss} aria-label="Fermer" style={{
+        flexShrink: 0, background: "none", border: "none", color: "#aeb6c2",
+        fontSize: 18, cursor: "pointer", padding: 4, lineHeight: 1,
+      }}>×</button>
     </div>
   );
 }
@@ -88,7 +183,7 @@ function FAQ({ items }) {
   const [open, setOpen] = useState(null);
   if (!items?.length) return null;
   return (
-    <Card>
+    <Card id="faq">
       <SectionTitle icon="❓" title="Questions fréquentes" />
       {items.map((item, i) => (
         <div key={i} style={{ borderBottom: i < items.length - 1 ? `1px solid #f0ebe0` : "none" }}>
@@ -115,7 +210,7 @@ function FAQ({ items }) {
 function Contacts({ items, waNumber }) {
   if (!items?.length && !waNumber) return null;
   return (
-    <Card>
+    <Card id="contacts">
       <SectionTitle icon="📞" title="Contacts utiles" />
       {waNumber && (
         <a
@@ -206,6 +301,63 @@ export default function GuideSejour() {
 
   const nom = guide?.property_name || NAMES[bien] || "votre logement";
 
+  // PWA — service worker offline scopé à /guide-sejour/ (voir public/sw-guide.js)
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+    navigator.serviceWorker.register("/sw-guide.js", { scope: "/guide-sejour/" }).catch(() => {});
+  }, []);
+
+  // PWA — manifest dynamique par bien (nom, icônes, start_url) via Blob URL
+  useEffect(() => {
+    const manifest = {
+      name: `${nom} — Guide du séjour`,
+      short_name: nom.length > 14 ? nom.split(" ").slice(-1)[0] : nom,
+      start_url: `/guide-sejour/${bien}`,
+      scope: `/guide-sejour/${bien}`,
+      display: "standalone",
+      background_color: IVORY,
+      theme_color: NAVY,
+      icons: [
+        { src: "/icon-guide-192.png", sizes: "192x192", type: "image/png" },
+        { src: "/icon-guide-512.png", sizes: "512x512", type: "image/png" },
+      ],
+    };
+    const blobUrl = URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type: "application/manifest+json" }));
+
+    let link = document.querySelector('link[rel="manifest"]');
+    const prevHref = link?.getAttribute("href");
+    const created = !link;
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "manifest";
+      document.head.appendChild(link);
+    }
+    link.setAttribute("href", blobUrl);
+
+    // iOS choisit le 1er <link rel="apple-touch-icon"> trouvé — désactiver temporairement
+    // ceux du site (icône admin sombre) pour que seul le nôtre soit vu sur cette page.
+    const siteTouchIcons = [...document.querySelectorAll('link[rel="apple-touch-icon"]')];
+    siteTouchIcons.forEach(l => { l.dataset.guideDisabledRel = l.rel; l.rel = "apple-touch-icon-disabled"; });
+
+    const touchIcon = document.createElement("link");
+    touchIcon.rel = "apple-touch-icon";
+    touchIcon.href = "/icon-guide-180.png";
+    document.head.appendChild(touchIcon);
+
+    const themeMeta = document.querySelector('meta[name="theme-color"]');
+    const prevTheme = themeMeta?.getAttribute("content");
+    if (themeMeta) themeMeta.setAttribute("content", NAVY);
+
+    return () => {
+      URL.revokeObjectURL(blobUrl);
+      if (created) link.remove();
+      else if (prevHref) link.setAttribute("href", prevHref);
+      touchIcon.remove();
+      siteTouchIcons.forEach(l => { l.rel = l.dataset.guideDisabledRel; delete l.dataset.guideDisabledRel; });
+      if (themeMeta && prevTheme) themeMeta.setAttribute("content", prevTheme);
+    };
+  }, [bien, nom]);
+
   if (loading) return (
     <div style={{ minHeight: "100vh", background: IVORY, display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ color: MUTED, fontFamily: "Georgia,serif", fontSize: 16 }}>Chargement…</div>
@@ -225,6 +377,14 @@ export default function GuideSejour() {
   // Numéro WhatsApp hôte depuis contacts
   const waContact = guide.contacts?.find(c => c.whatsapp || (c.phone && c.label?.toLowerCase().includes("propriétaire")));
   const waNumber = waContact?.whatsapp || waContact?.phone;
+
+  // Navigation rapide — un item par section réellement affichée
+  const navItems = [
+    { id: "essentiel", icon: "ℹ️", label: "Essentiel" },
+    ...(guide.sections || []).map(s => ({ id: s.id, icon: s.icon || "📌", label: s.title })),
+    ...(guide.faq?.length ? [{ id: "faq", icon: "❓", label: "FAQ" }] : []),
+    ...((guide.contacts?.length || waNumber) ? [{ id: "contacts", icon: "📞", label: "Contacts" }] : []),
+  ];
 
   return (
     <div style={{ minHeight: "100vh", background: IVORY, fontFamily: "'Jost',system-ui,sans-serif", color: TEXT }}>
@@ -249,7 +409,11 @@ export default function GuideSejour() {
         )}
       </div>
 
+      <QuickNav items={navItems} />
+
       <div style={{ maxWidth: 520, margin: "0 auto", padding: "16px 14px 40px" }}>
+
+        <InstallPWABanner bien={bien} />
 
         {/* Message d'accueil */}
         {guide.welcome_message && (
@@ -266,7 +430,7 @@ export default function GuideSejour() {
         )}
 
         {/* Infos essentielles */}
-        <Card>
+        <Card id="essentiel">
           <SectionTitle icon="ℹ️" title="L'essentiel" />
           {guide.checkin_time && <InfoRow label="Check-in" value={`À partir de ${guide.checkin_time}`} />}
           {guide.checkout_time && <InfoRow label="Check-out" value={`Avant ${guide.checkout_time}`} />}

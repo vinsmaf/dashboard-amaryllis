@@ -235,12 +235,14 @@
       // Service Worker DÉSACTIVÉ (fiabilité > offline pour réservation/admin).
       // On désinscrit tout SW résiduel et on purge ses caches directement, pour
       // nettoyer les navigateurs encore infectés par d'anciens documents en cache.
-      if ('serviceWorker' in navigator) {
+      // Exception : /guide-sejour/* a son propre SW scoped (sw-guide.js, offline PWA) —
+      // ne pas le désinscrire ni purger son cache sous peine de casser le mode hors-ligne.
+      if ('serviceWorker' in navigator && !location.pathname.startsWith('/guide-sejour/')) {
         navigator.serviceWorker.getRegistrations()
-          .then(regs => regs.forEach(r => r.unregister()))
+          .then(regs => regs.forEach(r => { if (r.scope.indexOf('/guide-sejour/') === -1) r.unregister(); }))
           .catch(() => {});
         if (window.caches && caches.keys) {
-          caches.keys().then(ks => ks.forEach(k => caches.delete(k))).catch(() => {});
+          caches.keys().then(ks => ks.forEach(k => { if (k.indexOf('guide-sejour') === -1) caches.delete(k); })).catch(() => {});
         }
       }
     </script>
