@@ -321,10 +321,10 @@ function doGet(e) {
   if (action === "revenus2026Setup")  return json_(setupRevenus2026());
   if (action === "revenus2026Sync")   return json_(syncRevenus2026());
   if (action === "revenus2026PurgeZero")    return json_(revenus2026PurgeZero_());
-  if (action === "revenus2026RebuildDry")       return json_(rebuildRevenus2026_(false, parseInt(e.parameter.fromMonth, 10) || 6));
-  if (action === "revenus2026RebuildApply")     return json_(rebuildRevenus2026_(true,  parseInt(e.parameter.fromMonth, 10) || 6));
-  if (action === "revenus2026RebuildBienDry")   return json_(rebuildRevenus2026_(false, parseInt(e.parameter.fromMonth, 10) || 4, e.parameter.bien || "schoelcher"));
-  if (action === "revenus2026RebuildBienApply") return json_(rebuildRevenus2026_(true,  parseInt(e.parameter.fromMonth, 10) || 4, e.parameter.bien || "schoelcher"));
+  if (action === "revenus2026RebuildDry")       return json_(rebuildRevenus2026_(false, parseInt(e.parameter.fromMonth, 10)));
+  if (action === "revenus2026RebuildApply")     return json_(rebuildRevenus2026_(true,  parseInt(e.parameter.fromMonth, 10)));
+  if (action === "revenus2026RebuildBienDry")   return json_(rebuildRevenus2026_(false, parseInt(e.parameter.fromMonth, 10), e.parameter.bien || "schoelcher"));
+  if (action === "revenus2026RebuildBienApply") return json_(rebuildRevenus2026_(true,  parseInt(e.parameter.fromMonth, 10), e.parameter.bien || "schoelcher"));
   if (action === "revenus2027DryRun") return json_({ ok: true, preview: testRevenus2027_dryRun() });
   if (action === "revenus2027Setup")  return json_(setupRevenus2027());
   if (action === "revenus2027Sync")   return json_(syncRevenus2027());
@@ -341,7 +341,7 @@ function doGet(e) {
   if (action === "enrichReservation")  return enrichReservation_(e.parameter);
   if (action === "revenus2026FromMonth") return json_(revenus2026FromMonth_(parseInt(e.parameter.month||7), e.parameter.apply==="true", e.parameter.ignoreMemo==="true"));
   if (action === "revenus2026Inspect")   return json_(revenusInspect2026_()); // eslint-disable-line no-undef
-  if (action === "revenus2026Rebuild")   return json_(rebuildRevenus2026_(e.parameter.apply==="true", parseInt(e.parameter.fromMonth||4))); // eslint-disable-line no-undef
+  if (action === "revenus2026Rebuild")   return json_(rebuildRevenus2026_(e.parameter.apply==="true", parseInt(e.parameter.fromMonth, 10))); // eslint-disable-line no-undef
   if (action === "cleanSlate2026")       return json_(cleanSlate2026_()); // eslint-disable-line no-undef
   if (action === "fixMontantsAberrants") return json_(fixMontantsAberrants_(parseInt(e.parameter.cap || 50000, 10)));
   if (action === "importFromAirbnb")  return json_(importFromAirbnbSheet_());
@@ -385,10 +385,10 @@ function doPost(e) {
   if (action === "addReservation")          return addReservation_(body);
   if (action === "deleteReservation")       return deleteReservation_(body);
   if (action === "revenus2026PurgeZero")    return json_(revenus2026PurgeZero_());
-  if (action === "revenus2026RebuildDry")       return json_(rebuildRevenus2026_(false, parseInt(body.fromMonth, 10) || 6));
-  if (action === "revenus2026RebuildApply")     return json_(rebuildRevenus2026_(true,  parseInt(body.fromMonth, 10) || 6));
-  if (action === "revenus2026RebuildBienDry")   return json_(rebuildRevenus2026_(false, parseInt(body.fromMonth, 10) || 4, body.bien || "schoelcher"));
-  if (action === "revenus2026RebuildBienApply") return json_(rebuildRevenus2026_(true,  parseInt(body.fromMonth, 10) || 4, body.bien || "schoelcher"));
+  if (action === "revenus2026RebuildDry")       return json_(rebuildRevenus2026_(false, parseInt(body.fromMonth, 10)));
+  if (action === "revenus2026RebuildApply")     return json_(rebuildRevenus2026_(true,  parseInt(body.fromMonth, 10)));
+  if (action === "revenus2026RebuildBienDry")   return json_(rebuildRevenus2026_(false, parseInt(body.fromMonth, 10), body.bien || "schoelcher"));
+  if (action === "revenus2026RebuildBienApply") return json_(rebuildRevenus2026_(true,  parseInt(body.fromMonth, 10), body.bien || "schoelcher"));
   if (action === "revenus2026ManualPatch")      return json_(revenus2026ManualPatch_(body)); // eslint-disable-line no-undef
   if (action === "revenus2026Inspect")    return json_(revenusInspect2026_());            // eslint-disable-line no-undef
   if (action === "revenus2026Rebuild")    return json_(rebuildRevenus2026_(!!body.apply, body.fromMonth)); // eslint-disable-line no-undef

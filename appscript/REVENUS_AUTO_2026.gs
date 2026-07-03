@@ -437,11 +437,15 @@ function revenusInspect2026_() {
 //   Pour chaque mois cible : zero des lignes data (revenus+counts+nuits) cols fromMonth..dec,
 //   puis re-application des resas 2026 dont l'ARRIVEE est au mois >= fromMonth (regle 100%).
 //   Les lignes TOTAL/OCC/ADR (formules =SUM/ratio) se recalculent seules.
-//   apply=false -> dry-run. fromMonth defaut 4 (avril : 1ere arrivee presente en source).
+//   apply=false -> dry-run. fromMonth defaut = MOIS COURANT (auto, jamais figé) —
+//   protège toujours les mois déjà clos sans maintenance manuelle mensuelle.
 // bienFilter optionnel : si fourni (ex. "schoelcher"), ne recompute QUE ce bien.
 // Permet un rebuild chirurgical sans toucher les autres lignes du Sheet.
+function currentMonthDefault_() {
+  return new Date().getMonth() + 1;
+}
 function rebuildRevenus2026_(apply, fromMonth, bienFilter) {
-  fromMonth = parseInt(fromMonth, 10); if (!fromMonth || fromMonth < 1 || fromMonth > 12) fromMonth = 4;
+  fromMonth = parseInt(fromMonth, 10); if (!fromMonth || fromMonth < 1 || fromMonth > 12) fromMonth = currentMonthDefault_();
   var ss = SpreadsheetApp.openById(SHEET_ID);
   var dst = ss.getSheetByName(DST_SHEET); if (!dst) return { ok:false, error:"dst introuvable" };
   var startCol = fromMonth + 2;
