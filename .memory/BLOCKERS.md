@@ -4,8 +4,16 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
-## En cours → ✅ terminé le 2026-07-03 — PWA guide-sejour + urgence Géko + clarté KPI admin
-> Détail complet : ADR-GUIDE-PWA-001, ADR-GEKO-EXCEPTION-001, ADR-ADMIN-KPI-CLARITY-001.
+## En cours → ✅ terminé le 2026-07-03 (suite) — Triage inbox bugs + endpoint occupation + widget Cockpit
+> Détail complet : ADR-BUG-INBOX-TRIAGE-001, ADR-OCCUPANCY-STATS-001.
+
+## ✅ Inbox 🐞 Bugs — vidée (0 entrée new/backlog au 2026-07-03)
+- **Statut** : 8 erreurs JS marquées ignored (bruit MetaMask + chunk périmé post-déploiement, cf LEARNINGS), 2 doubles réservations résolues (résas annulées confirmées par Vincent puis supprimées de D1 `direct_bookings`).
+- **Ce qui débloque** : rien — si l'inbox se remplit à nouveau, mêmes outils (`?secret=POSTSTAY_SECRET` sur `/api/client-errors`, `wrangler d1 execute --remote` pour les doubles réservations après confirmation explicite).
+
+## 🟡 Widget Cockpit "🔮 30j à venir" — non vérifié visuellement (mot de passe admin indisponible)
+- **Statut** : `Cockpit.jsx` affiche désormais l'occupation forward 30j par bien (nouvel endpoint `/api/occupancy-stats`) — lint/tests/build verts, endpoint vérifié en direct via curl, mais jamais cliqué dans le navigateur (admin password-gated).
+- **Ce qui débloque** : Vincent confirme visuellement à l'occasion, ou fournit un accès de test si ce genre de vérif doit devenir systématique.
 
 ## 🟡 Backlog guide-sejour PWA — 4 améliorations identifiées, non traitées (voir SPRINT_2026_07.md #11-14)
 - **Statut** : offline fragile (SW ne cache pas `/assets/*`), aucun QR physique vers `/guide-sejour/<bien>` (seul chemin actuel = emails), pas de tracking d'adoption PWA (`?source=pwa`), fade visuel manquant sur la quick-nav.
