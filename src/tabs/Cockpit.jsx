@@ -7,7 +7,7 @@
  *
  * Comportement préservé strictement (refactor pur). Voir docs/REFACTOR_2026.md.
  */
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   BarChart, Bar, Line, ComposedChart,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -17,6 +17,7 @@ import {
 import { Gauge, fmt, fmtK, MOIS, DOT, TT } from "../App.jsx";
 import { sumN, avgN, statutBien } from "../utils/calculations.js";
 import { useAppData } from "../AppDataContext.jsx";
+import { fetchJSON } from "../lib/apiFetch.js";
 
 // ── Spark — micrograph trend (uniquement utilisé dans Cockpit) ──────────────
 function Spark({ data = [], color = "#0ea5e9", w = 68, h = 26 }) {
@@ -296,6 +297,20 @@ export default function Cockpit() {
   const tc = { court: "#0ea5e9", long: "#10b981", moyen: "#f59e0b" };
   const tl = { court: "Court", long: "Long", moyen: "Moyen" };
 
+  // Occupation RÉELLE à venir (30j glissants, par bien) — distincte de l'"Occ."
+  // historique de la carte (moyenne Sheet) : ici on lit le dernier snapshot
+  // rm_kpi_snapshots, calculé par le Worker depuis les nuits déjà réservées.
+  const [occForward, setOccForward] = useState({});
+  useEffect(() => {
+    fetchJSON("/api/occupancy-stats")
+      .then(d => {
+        const map = {};
+        (d?.properties || []).forEach(p => { map[p.property_id] = p; });
+        setOccForward(map);
+      })
+      .catch(() => {});
+  }, []);
+
   const monthly = useMemo(() => MOIS.slice(0, Math.min(n + 2, 8)).map((_, i) => {
     const row = { m: MOIS[i] };
     biens.forEach(b => { row[b.id] = i < n ? (b.revenus[i] || 0) : 0; });
@@ -447,6 +462,15 @@ export default function Cockpit() {
               </div>
 
               <PBar pct={pct} label={`vs prorata 2025 (${fmtK(pp)})`} />
+
+              {occForward[b.id] && (
+                <div style={{ marginTop: 8 }}>
+                  <PBar
+                    pct={occForward[b.id].occupancy_pct || 0}
+                    label={`🔮 30j à venir (${occForward[b.id].nights_sold}/${occForward[b.id].nights_available} nuits)`}
+                  />
+                </div>
+              )}
 
               {onUpdateRevenu && (
                 <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: "3px 4px" }}>
