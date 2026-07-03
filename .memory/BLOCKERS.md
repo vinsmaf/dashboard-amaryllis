@@ -4,6 +4,13 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
+## En cours → ✅ terminé le 2026-07-03 (suite 2) — Résa Ary Augustin (modif+paiement+vérif revenus) + fix rebuild auto-mois
+> Détail complet : ADR-REVENUS-REBUILD-AUTOMONTH-001.
+- Résa Ary Augustin (Zandoli) raccourcie 6→4 nuits (27→31 juillet 2026), payée via Stripe Payment Link (710€, `pi_3TpEmvDstT3IRAj22H8tWc5w`), réconciliée en D1 `direct_bookings` (gap découvert : n'existait qu'au Sheet, pas en D1).
+- Question de Vincent "les revenus 2026 n'ont pas créé de doublon ?" → vérifié : PAS de doublon, mais chiffre périmé (898€ au lieu de 710€, `syncRevenus2026()` ne se déclenche pas sur update). Corrigé via `revenus2026RebuildBienApply` (zandoli/juillet) : 2759€→2571€.
+- **Fix systémique demandé par Vincent** : le défaut `fromMonth` du script de rebuild était codé en dur (`4`=avril, jamais mis à jour) → risque d'écraser des mois déjà clos si appelé sans argument. Remplacé par `currentMonthDefault_()` (mois courant calculé à chaque appel). Déployé (`clasp deploy @79`) + commité (`4d6135c`).
+- 🟡 **Thread Google Ads en pause, non repris** : création d'une action de conversion native "Balise Google" en secondaire (recommandé par Vincent après diagnostic tracking) bloquée par instabilité UI Google Ads (`document_idle` timeout répétés). Vincent a dit "on revient dans 15 min" puis a enchaîné sur d'autres tâches sans y revenir — **ne pas reprendre spontanément**, attendre qu'il le redemande.
+
 ## En cours → ✅ terminé le 2026-07-03 (suite) — Triage inbox bugs + endpoint occupation + widget Cockpit
 > Détail complet : ADR-BUG-INBOX-TRIAGE-001, ADR-OCCUPANCY-STATS-001.
 
