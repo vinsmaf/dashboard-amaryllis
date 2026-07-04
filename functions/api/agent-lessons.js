@@ -36,6 +36,12 @@ async function ensureTable(db) {
   try { for (const s of DDL.split(";").filter(s => s.trim())) await db.prepare(s).run(); } catch {}
   // Migration : colonne `term` (mot/expression lisible saisi par l'admin) — ignore si déjà présente.
   try { await db.prepare("ALTER TABLE agent_lessons ADD COLUMN term TEXT").run(); } catch {}
+  // Migration : colonne `scope` — distingue les clichés de captions ('caption', défaut historique)
+  // des outils/frameworks hallucinés ('tool', vérifiables sans ambiguïté hors contexte créatif).
+  // Nécessaire car agents-triage.js (blocage AUTOMATIQUE du backlog) ne doit jamais utiliser les
+  // clichés de captions — un item qui PROPOSE de créer un contenu sur un thème n'est pas le
+  // contenu final, contrairement à une caption générée qui, elle, ne doit jamais contenir le cliché.
+  try { await db.prepare("ALTER TABLE agent_lessons ADD COLUMN scope TEXT DEFAULT 'caption'").run(); } catch {}
 }
 
 // Échappe un mot/expression littéral pour en faire une regex sûre (anti-injection regex).
@@ -59,7 +65,7 @@ export async function onRequest(context) {
     if (!authed) return json({ error: "Non autorisé" }, 401);
     try {
       const { results } = await db.prepare(
-        "SELECT id, pattern, reason, bien_id, term, created_at FROM agent_lessons ORDER BY created_at DESC LIMIT 200"
+        "SELECT id, pattern, reason, bien_id, term, scope, created_at FROM agent_lessons ORDER BY created_at DESC LIMIT 200"
       ).all();
       return json({ lessons: results || [], total: (results || []).length });
     } catch (e) { return json({ error: e.message }, 500); }
@@ -69,10 +75,11 @@ export async function onRequest(context) {
   if (request.method === "POST") {
     if (!authed) return json({ error: "Non autorisé" }, 401);
     const body = await request.json().catch(() => ({}));
-    let { term, pattern, reason, bien_id } = body;
+    let { term, pattern, reason, bien_id, scope } = body;
 
     term = (term || "").trim();
     pattern = (pattern || "").trim();
+    scope = scope === "tool" ? "tool" : "caption"; // défaut historique : cliché de caption
     // Mode simple (recommandé) : un terme littéral → regex échappée.
     if (term && !pattern) pattern = escapeRegex(term);
     if (!pattern) return json({ error: "term (mot/expression) requis" }, 400);
@@ -84,8 +91,8 @@ export async function onRequest(context) {
 
     try {
       const r = await db.prepare(
-        "INSERT INTO agent_lessons (pattern, reason, bien_id, term) VALUES (?, ?, ?, ?)"
-      ).bind(pattern, String(reason).trim(), bien_id || null, term || null).run();
+        "INSERT INTO agent_lessons (pattern, reason, bien_id, term, scope) VALUES (?, ?, ?, ?, ?)"
+      ).bind(pattern, String(reason).trim(), bien_id || null, term || null, scope).run();
       return json({ ok: true, id: r.meta?.last_row_id });
     } catch (e) { return json({ error: e.message }, 500); }
   }

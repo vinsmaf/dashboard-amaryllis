@@ -53,7 +53,11 @@ export async function onRequest(context) {
     db.prepare(
       "SELECT id, agent, action FROM agent_actions WHERE status IN ('backlog','a-planifier','en-cours') ORDER BY created_at DESC LIMIT 150"
     ).all(),
-    db.prepare("SELECT pattern, reason, term FROM agent_lessons ORDER BY created_at DESC LIMIT 60").all(),
+    // scope='tool' UNIQUEMENT — les clichés de captions (scope='caption', ex: "mezzanine perchée")
+    // sont conçus pour interdire une PHRASE dans un texte généré final, pas pour juger qu'une
+    // RECOMMANDATION qui propose un thème de contenu est invalide. Mélanger les deux causait des
+    // faux positifs (ex: "faire un Reel sur la vue panoramique" bloqué à tort).
+    db.prepare("SELECT pattern, reason, term FROM agent_lessons WHERE scope='tool' ORDER BY created_at DESC LIMIT 60").all(),
   ]);
 
   if (!items || items.length === 0) {
@@ -79,7 +83,10 @@ ${bannedText}
 
 STACK RÉELLE : React 19+Vite, Cloudflare Pages+Functions+Worker+D1+KV, tests=Vitest (jamais Jest), email=Resend (jamais Brevo/HubSpot), alertes=ntfy (jamais Slack), aucun service AWS.
 
-Ne bloque JAMAIS un item par excès de prudence — en cas de doute, laisse-le. Ne juge PAS la qualité créative/business d'un item (ça reste la décision de Vincent). Réponds UNIQUEMENT par un tableau JSON, un objet par item à bloquer (n'inclus PAS les items à garder) : [{"id":"...","reason":"raison précise et courte en français"}]. Tableau vide si rien à bloquer. Aucun texte autour.`;
+RÈGLE 1 (outil banni) : ne s'applique QUE si l'item propose de littéralement UTILISER/INTÉGRER l'outil (ex: "via HubSpot", "trigger Brevo") — PAS si le mot apparaît sans rapport ou par association vague.
+RÈGLE 2 (fait bien) : ne s'applique QUE si l'item affirme un chiffre/statut qui contredit DIRECTEMENT et sans ambiguïté un fait ci-dessus (prix exact différent, bookable=false utilisé pour une action de réservation/conversion) — pas une simple mention du nom du bien.
+
+Ne bloque JAMAIS un item par excès de prudence — en cas de doute, laisse-le. Ne juge PAS la qualité créative/business d'un item (ça reste la décision de Vincent). N'inclus dans le tableau QUE les items que tu bloques réellement — si tu écris toi-même dans ta raison "pas de problème"/"pas de blocage"/"correct ici"/"légitime", alors NE L'INCLUS PAS dans le tableau, laisse-le simplement de côté. Réponds UNIQUEMENT par un tableau JSON, un objet par item à bloquer : [{"id":"...","reason":"raison précise et courte en français, affirmative, jamais hésitante"}]. Tableau vide si rien à bloquer. Aucun texte autour.`;
 
   const llm = await callLLM(env, {
     tier: "medium",
@@ -89,9 +96,17 @@ Ne bloque JAMAIS un item par excès de prudence — en cas de doute, laisse-le. 
   });
   const verdicts = extractJsonArray(llm.text) || [];
   const known = new Set(items.map(it => it.id));
-  const toBlock = verdicts.filter(v => v && v.id && known.has(v.id) && v.reason);
+  // Garde-fou : rejette tout verdict dont le raisonnement se contredit lui-même
+  // (le LLM inclut parfois un item dans le tableau "à bloquer" tout en écrivant
+  // dans sa propre raison que ce n'est pas un problème — trouvé en dry-run le 2026-07-03).
+  const HEDGE_RE = /pas de (probl[eè]me|blocage|souci)|pas exactement|l[ée]gitime ici|correct ici|aucun souci/i;
+  let toBlock = verdicts.filter(v => v && v.id && known.has(v.id) && v.reason && !HEDGE_RE.test(v.reason));
+  // Garde-fou : si plus de 30% du lot serait bloqué d'un coup, quelque chose s'est mal passé
+  // côté LLM (halluciné/dérapé) — on n'applique rien plutôt que de risquer un dégât en masse.
+  const capExceeded = toBlock.length > Math.ceil(items.length * 0.3);
+  if (capExceeded) toBlock = [];
 
-  if (!dry) {
+  if (!dry && !capExceeded) {
     for (const v of toBlock) {
       await db.prepare("UPDATE agent_actions SET status='bloqué', notes=?, updated_at=unixepoch() WHERE id=?")
         .bind(`[triage auto] ${String(v.reason).slice(0, 300)}`, v.id).run();
@@ -99,7 +114,9 @@ Ne bloque JAMAIS un item par excès de prudence — en cas de doute, laisse-le. 
   }
 
   const top = toBlock.slice(0, 8).map(v => `  • [${v.id}] ${v.reason}`).join("\n");
-  const summary = `🧹 Triage recos — ${items.length} analysé${items.length > 1 ? "s" : ""} : ${toBlock.length} bloqué${toBlock.length > 1 ? "s" : ""}.` + (top ? `\n${top}` : "");
+  const summary = capExceeded
+    ? `🧹 Triage recos — ${items.length} analysés : ⚠️ ABANDONNÉ (le LLM voulait bloquer plus de 30% du lot d'un coup, probable dérapage — rien appliqué, à vérifier manuellement).`
+    : `🧹 Triage recos — ${items.length} analysé${items.length > 1 ? "s" : ""} : ${toBlock.length} bloqué${toBlock.length > 1 ? "s" : ""}.` + (top ? `\n${top}` : "");
 
-  return json({ ok: true, dry, analyzed: items.length, blocked: toBlock.length, llm_provider: llm.provider, summary });
+  return json({ ok: true, dry, analyzed: items.length, blocked: toBlock.length, cap_exceeded: capExceeded, llm_provider: llm.provider, summary });
 }
