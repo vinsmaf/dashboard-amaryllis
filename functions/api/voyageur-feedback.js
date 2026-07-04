@@ -29,6 +29,7 @@ import { verifyBearer } from "./_adminauth.js";
 import { callLLM } from "./_llm.js";
 import { classifyReview, buildReviewReplyPrompt } from "../../src/utils/reviewClassification.js";
 import { buildThemeCodingPrompt, parseThemeCodingResponse } from "../../src/utils/reviewThemes.js";
+import { PINNED_DOCS } from "./_docsDigest.js";
 import { BIENS } from "./_biens.js";
 
 const CORS = {
@@ -99,6 +100,17 @@ export async function onRequest(context) {
 
   // ── GET : lecture (admin) ────────────────────────────────────────────────
   if (request.method === "GET") {
+    // report : rapport "Voix du Voyageur" (voyageur-003) en markdown intégral —
+    // servi depuis _docsDigest.js (PINNED_DOCS), régénéré par generate-docs-digest.mjs.
+    if (action === "report") {
+      const { ok: adminOk } = await verifyBearer(request, env);
+      if (!adminOk) return json({ error: "Non autorisé" }, 401);
+      const path = "docs/crm/rapport-voix-voyageur-2026-07.md";
+      const markdown = PINNED_DOCS[path];
+      if (!markdown) return json({ ok: false, error: "Rapport indisponible — digest pas encore régénéré" }, 404);
+      return json({ ok: true, path, markdown });
+    }
+
     // stats : public-safe (agrégats, pas de PII). Exclut les avis masqués.
     if (action === "stats") {
       const { results } = await db.prepare(

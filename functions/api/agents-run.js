@@ -95,6 +95,31 @@ Reste factuel : ne cite pas un chiffre que tu n'as pas ici ; pointe vers la piè
 ═══════════════════════════════════════════════════════════════
 `;
 
+// ── Voix du Voyageur — insights avis clients (accès PERMANENT, pas juste via RAG) ──
+// Demande explicite de Vincent (2026-07-04) : les agents en contact avec l'expérience
+// voyageur doivent avoir ce rapport TOUJOURS en contexte, pas seulement si le RAG le
+// retrouve par hasard sémantique. Digest condensé du rapport complet, à tenir à jour
+// manuellement à chaque nouveau rapport voyageur-research (docs/crm/rapport-voix-voyageur-*.md).
+// ⚠️ MIROIR : si un nouveau rapport est produit, mettre à jour ce bloc + redéployer.
+const VOYAGEUR_INSIGHTS_AGENTS = new Set([
+  "voyageur-research", "responsable-service-client", "responsable-logistique",
+  "revenue-manager", "community-manager",
+]);
+const VOYAGEUR_INSIGHTS_DIGEST = `
+═══════════════════════════════════════════════════════════════
+🗣️ VOIX DU VOYAGEUR — insights avis clients (rapport baseline 2026-07, 116 avis codés)
+═══════════════════════════════════════════════════════════════
+Corpus : 116 avis Airbnb (5 biens, Iguana/Nogent hors périmètre), note moy. 4,78/5, historique
+2018-2026 (PAS un vrai Q1 — le vrai Q1 2026 n'a que 10 avis, trop peu pour conclure).
+3 INSIGHTS :
+• Wifi/connectivité = friction transversale répétée sur Zandoli ET Mabouya malgré notes 4-5★.
+• Schœlcher : agencement salon (canapé en trop) cité par 2 avis indépendants — pattern le plus net du corpus.
+• Amaryllis (premium 280€/nuit) : 3 frictions concentrées dans 1 avis (domotique sans notice, piscine jugée petite, vaisselle/linge sous-dimensionnés vs capacité 8p).
+5 RECOS : (1) vérifier couverture wifi Zandoli+Mabouya (2) Schœlcher retirer un canapé (3) livret domotique Amaryllis (4) vérifier stock vaisselle/linge Amaryllis vs 8p (5) brise-vue jacuzzi Mabouya.
+Rapport complet : docs/crm/rapport-voix-voyageur-2026-07.md (onglet admin Avis).
+═══════════════════════════════════════════════════════════════
+`;
+
 // ── Profil humain de Vincent (TOUS les agents) ──────────────────────────────
 // Miroir condensé de ~/patrimoine-dashboard/src/data/profilVincent.js + VINCENT.md (2026-06-29).
 // Une CF Function ne lit pas les fichiers locaux au runtime → miroir embarqué (même pattern que PLAYBOOK/FISCAL).
@@ -737,6 +762,9 @@ MÉMOIRE DE TES RUNS PRÉCÉDENTS :
   // ── Playbook revenue management / hospitality (agents revenue & marketing) ──
   const playbookSection = PLAYBOOK_AGENTS.has(agent.id) ? PLAYBOOK_DIGEST : "";
 
+  // ── Voix du Voyageur — accès permanent (pas juste via RAG), demande Vincent 2026-07-04 ──
+  const voyageurSection = VOYAGEUR_INSIGHTS_AGENTS.has(agent.id) ? VOYAGEUR_INSIGHTS_DIGEST : "";
+
   // ── Skill métier injecté (manuel d'opération de l'agent) ────────────────
   const skill = getSkillForAgent(agent.id);
   const skillSection = skill ? `
@@ -888,7 +916,7 @@ Retourne UN SEUL JSON :
 TON DOMAINE D'EXPERTISE : ${agent.focus}
 
 FICHIERS CLÉS à analyser : ${agent.files_hint}
-${vincentSection}${fiscalSection}${playbookSection}${skillSection}${liveSection}${sharedSection}${ragSection}${bannedSection}${memorySection}${feedbackSection}${outcomesSection}${historySection}
+${vincentSection}${fiscalSection}${playbookSection}${voyageurSection}${skillSection}${liveSection}${sharedSection}${ragSection}${bannedSection}${memorySection}${feedbackSection}${outcomesSection}${historySection}
 ${DEJA_EN_PLACE}${CROSS_BRAIN_INSTRUCTION}
 
 MISSION : Identifie les actions concrètes NOUVELLES à réaliser dans ton domaine. Tiens compte de ce qui a déjà été fait ou identifié pour approfondir ton analyse et aller plus loin. Si une idée recoupe une capacité « DÉJÀ EN PLACE », ne la propose PAS — sauf amélioration précise et chiffrée (dis ce qui manque concrètement).

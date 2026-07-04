@@ -6,6 +6,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAppData } from "../AppDataContext.jsx";
 import { fetchJSON } from "../lib/apiFetch.js";
+import { mdToHtml } from "../utils/mdToHtml.js";
 
 // Retire les balises HTML (les textes Airbnb contiennent des <br/>).
 function clean(t) {
@@ -24,6 +25,9 @@ export default function AvisTab() {
   const [showHidden, setShowHidden] = useState(true);
   const [busy, setBusy] = useState({});      // id -> bool (PATCH en cours)
   const [draftBusy, setDraftBusy] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportMd, setReportMd] = useState(null); // null = pas encore chargé
+  const [reportLoading, setReportLoading] = useState(false);
 
   const nomOf = useMemo(() => Object.fromEntries(biens.map(b => [b.id, b.nom])), [biens]);
 
@@ -135,6 +139,23 @@ export default function AvisTab() {
     );
   }
 
+  async function toggleReport() {
+    const next = !reportOpen;
+    setReportOpen(next);
+    if (next && reportMd === null && !reportLoading) {
+      setReportLoading(true);
+      try {
+        const d = await fetchJSON("/api/voyageur-feedback?action=report");
+        setReportMd(d.markdown || "Rapport indisponible.");
+      } catch (e) {
+        setReportMd(null);
+        addToast(e.message || "Échec du chargement du rapport", "error");
+      } finally {
+        setReportLoading(false);
+      }
+    }
+  }
+
   const pendingDrafts = (rows || []).filter(r => r.draft_status === "pending").length;
 
   // ── styles ────────────────────────────────────────────────────────────
@@ -147,6 +168,41 @@ export default function AvisTab() {
 
   return (
     <div style={{ maxWidth: 820, margin: "0 auto" }}>
+      <div style={{ ...card, background: "rgba(56,189,248,0.06)", border: "1px solid rgba(56,189,248,0.25)" }}>
+        <button
+          onClick={toggleReport}
+          style={{ ...sel, width: "100%", textAlign: "left", background: "transparent", border: "none", padding: 0, display: "flex", alignItems: "center", gap: 8, color: "#7dd3fc", fontWeight: 600 }}>
+          <span>{reportOpen ? "▾" : "▸"}</span>
+          📋 Rapport Voix du Voyageur (baseline historique, 116 avis codés)
+        </button>
+        {reportOpen && (
+          <div style={{ marginTop: 12, color: "#cbd5e1", fontSize: 13, lineHeight: 1.6 }}>
+            {reportLoading && <em style={{ color: "#64748b" }}>Chargement…</em>}
+            {!reportLoading && reportMd && (
+              <>
+                <style>{`
+                  .voyageur-report h1{font-size:18px;margin:0 0 8px;color:#f1f5f9}
+                  .voyageur-report h2{font-size:15px;margin:20px 0 8px;color:#7dd3fc;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:5px}
+                  .voyageur-report h3{font-size:13px;margin:14px 0 6px;color:#e2e8f0}
+                  .voyageur-report p{margin:6px 0}
+                  .voyageur-report blockquote{color:#94a3b8;border-left:3px solid rgba(255,255,255,0.15);margin:6px 0;padding:2px 10px;font-style:italic}
+                  .voyageur-report code{background:#0f172a;padding:1px 5px;border-radius:4px;color:#7dd3fc;font-size:12px}
+                  .voyageur-report ul{margin:6px 0;padding-left:18px}
+                  .voyageur-report li{margin:2px 0}
+                  .voyageur-report table{width:100%;border-collapse:collapse;margin:8px 0;font-size:12px}
+                  .voyageur-report th,.voyageur-report td{border:1px solid rgba(255,255,255,0.1);padding:5px 8px;text-align:left}
+                  .voyageur-report th{background:#0f172a;color:#7dd3fc}
+                `}</style>
+                <div
+                  className="voyageur-report"
+                  dangerouslySetInnerHTML={{ __html: mdToHtml(reportMd) }}
+                />
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
         <div>
           <h2 style={{ margin: 0, color: "#f1f5f9", fontSize: 20 }}>⭐ Avis voyageurs</h2>

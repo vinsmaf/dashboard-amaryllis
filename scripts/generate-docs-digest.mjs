@@ -35,6 +35,13 @@ const DOCS_DIRS = [
 ];
 const MAX_CHUNK_CHARS = 700; // sous la limite de 800 chars du stockage metadata (_rag.js)
 
+// Docs "épinglés" : contenu INTÉGRAL (pas chunké/tronqué) exporté en plus des sections
+// RAG — pour un affichage admin complet (ex. AvisTab) ou une injection permanente dans
+// le prompt d'agents précis, sans dépendre du hasard de la retrieval RAG. Liste courte
+// et volontaire (pas tout docs/) : n'ajouter que des docs vraiment destinés à un accès
+// garanti, pas juste "intéressants".
+const PINNED_PATHS = ["docs/crm/rapport-voix-voyageur-2026-07.md"];
+
 function walkMd(dir) {
   const abs = join(ROOT, dir);
   let entries;
@@ -100,6 +107,12 @@ function docItems(relPath) {
 const allFiles = DOCS_DIRS.flatMap(walkMd).sort();
 const items = allFiles.flatMap(docItems);
 
+const pinned = {};
+for (const p of PINNED_PATHS) {
+  try { pinned[p] = readFileSync(join(ROOT, p), "utf8"); }
+  catch { console.warn(`⚠️  PINNED_PATHS: ${p} introuvable, ignoré`); }
+}
+
 const out = `// GÉNÉRÉ par scripts/generate-docs-digest.mjs — snapshot périodique (PAS live, PAS à chaque build).
 // But : donner au RAG (rag-ingest.js) un accès au contenu des docs stratégiques
 // (docs/marketing, strategie, revenue-manager, crm, service-client, seo, legal) —
@@ -110,6 +123,9 @@ const out = `// GÉNÉRÉ par scripts/generate-docs-digest.mjs — snapshot pér
 // Dernière génération : ${new Date().toISOString().slice(0, 10)} — ${allFiles.length} docs, ${items.length} sections.
 
 export const DOCS_DIGEST = ${JSON.stringify(items, null, 2)};
+
+// Contenu intégral (non chunké) des docs épinglés — cf. PINNED_PATHS du générateur.
+export const PINNED_DOCS = ${JSON.stringify(pinned, null, 2)};
 `;
 
 writeFileSync(join(ROOT, "functions", "api", "_docsDigest.js"), out);
