@@ -68,8 +68,9 @@ export async function onRequestPost(context) {
   const amountCents = Math.round(amount * 100);
   const bienNom = NOMS[bienId] || bienId;
 
-  // Expiration du lien : 72h
-  const expiresAt = Math.floor(Date.now() / 1000) + 72 * 3600;
+  // Expiration du lien : 24h (max autorisé par Stripe Checkout Sessions — un
+  // essai à 72h renvoie "expires_at timestamp must be less than 24 hours").
+  const expiresAt = Math.floor(Date.now() / 1000) + 23 * 3600;
 
   const payload = new URLSearchParams({
     mode: "payment",
