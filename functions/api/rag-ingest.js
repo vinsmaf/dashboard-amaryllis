@@ -6,6 +6,7 @@
 
 import { ragUpsert } from "./_rag.js";
 import { BIENS } from "./_biens.js";
+import { DOCS_DIGEST } from "./_docsDigest.js";
 
 const json = (d, s = 200) => new Response(JSON.stringify(d, null, 2), {
   status: s, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
@@ -21,7 +22,7 @@ export async function onRequestGet({ request, env }) {
   if (!env.VECTORIZE) return json({ error: "binding VECTORIZE absent — redéployer après ajout du binding" }, 503);
 
   const items = [];
-  const by = { facts: 0, avis: 0, drafts: 0 };
+  const by = { facts: 0, avis: 0, drafts: 0, docs: 0 };
 
   // 1) Faits canoniques des 7 biens
   for (const [id, b] of Object.entries(BIENS)) {
@@ -61,6 +62,12 @@ export async function onRequestGet({ request, env }) {
       }
     } catch {}
   }
+
+  // 4) Docs stratégiques (marketing/strategie/revenue-manager/crm/service-client/seo/legal)
+  // — snapshot statique généré par scripts/generate-docs-digest.mjs (pas d'accès
+  // filesystem possible en prod Cloudflare, donc ne peut pas lire docs/ au runtime).
+  items.push(...DOCS_DIGEST);
+  by.docs = DOCS_DIGEST.length;
 
   try {
     const ingested = await ragUpsert(env, items);
