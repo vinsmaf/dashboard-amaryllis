@@ -1,6 +1,7 @@
 import { resendFrom } from "./_email.js";
 import { sendEmail as sendEmailHelper } from "./_sendEmail.js";
 import { sendGuestEmail } from "./send-guest-email.js";
+import { getBien } from "../../src/data/biens.js";
 // Cloudflare Pages Function — POST /api/notify-booking
 // Alerte fiable de NOUVELLE RÉSERVATION DIRECTE, déclenchée côté client juste
 // après un paiement Stripe réussi (indépendant de la config webhook Stripe).
@@ -147,6 +148,8 @@ export async function onRequest(context) {
 
   // ── 3. Email de confirmation au voyageur ──
   if (email) {
+    const bienConfirm = getBien(bienId || "amaryllis");
+    const photoPathConfirm = bienConfirm?.photos?.[0];
     sendGuestEmail(env, url0.origin, {
       template: "confirmation",
       to: email,
@@ -157,6 +160,7 @@ export async function onRequest(context) {
         checkin, checkout,
         nb_guests: String(nb_guests || 1),
         total: String(Math.round(fullTotal)),
+        photo_url: photoPathConfirm ? `${url0.origin}${photoPathConfirm}` : `${url0.origin}/photos/amaryllis/01.webp`,
         wa_hote: "33610880772",
       },
     }).catch(() => {}); // non bloquant

@@ -1,9 +1,11 @@
 // Cloudflare Pages Function — GET /api/send-pre-depart
-// Cron J-1 checkout : email la veille du départ — consignes, heure de départ, late check-out, fidélité, avis Google.
+// Cron J-1 checkout : email la veille du départ — heure de départ, late check-out
+// (80€/19h), remise fidélité -10%, avis Google.
 // Auth : ?secret=<POSTSTAY_SECRET>
 // Cron Worker : déclenché dans scheduled() 0 9 * * *
 
 import { sendGuestEmail } from "./send-guest-email.js";
+import { getBien } from "../../src/data/biens.js";
 
 const json = (d, s = 200) => new Response(JSON.stringify(d), {
   status: s, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
@@ -24,19 +26,6 @@ function dateStrPlusDays(n) {
   const d = new Date();
   d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);
-}
-
-function formatCheckoutSteps(sections) {
-  const section = (sections || []).find(s =>
-    s.id === "checkout" || s.title?.toLowerCase().includes("départ") || s.title?.toLowerCase().includes("depart")
-  );
-  if (!section || !Array.isArray(section.items)) return null;
-  return section.items
-    .map(item => {
-      if (typeof item === "string") return `✓ ${item}`;
-      return `<strong>${item.label || ""}</strong>${item.value ? ` — ${item.value}` : ""}`;
-    })
-    .join("<br>");
 }
 
 export async function onRequestGet(context) {
@@ -63,25 +52,18 @@ export async function onRequestGet(context) {
 
     let sent = 0, failed = 0;
     for (const b of results || []) {
-      // Récupérer les instructions de départ depuis le guide
-      let instructionsHtml = null;
-      try {
-        const guideRes = await fetch(`${url.origin}/api/guides?property_id=${b.bien_id || "amaryllis"}`);
-        if (guideRes.ok) {
-          const guideData = await guideRes.json();
-          instructionsHtml = formatCheckoutSteps(guideData?.guide?.sections);
-        }
-      } catch {}
+      const bien = getBien(b.bien_id || "amaryllis");
+      const photoPath = bien?.photos?.[0];
 
       const r = await sendGuestEmail(env, url.origin, {
         template: "pre-depart",
         to: b.email,
-        subject: `Votre départ de ${b.bien_nom || "Amaryllis"} demain — consignes & informations`,
+        subject: `${b.prenom ? b.prenom + ", v" : "V"}otre départ de ${b.bien_nom || "Amaryllis"} est demain`,
         vars: {
           prenom: b.prenom || "",
           bien_nom: b.bien_nom || "votre logement",
           checkout: b.checkout || target,
-          instructions_depart: instructionsHtml || "Veuillez laisser le logement propre et en ordre. Merci de rassembler le linge sale, de jeter les ordures et d'éteindre toutes les lumières et climatisations.",
+          photo_url: photoPath ? `${url.origin}${photoPath}` : `${url.origin}/photos/amaryllis/01.webp`,
           wa_hote: "33610880772",
           lien_avis_google: GOOGLE_REVIEW[b.bien_id] || GOOGLE_REVIEW.default,
         },

@@ -55,8 +55,15 @@
             <td class="px" style="padding:36px 40px 8px 40px;font-family:Georgia,'Times New Roman',serif;">
               <h1 class="h1" style="margin:0;font-size:28px;line-height:36px;color:#1f2a3d;font-weight:normal;">Demain, c'est déjà le départ, {{prenom}}.</h1>
               <p style="margin:18px 0 0 0;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:26px;color:#3a4658;">
-                Merci d'avoir profité de <strong style="color:#1f2a3d;">{{bien_nom}}</strong>. Avant de boucler vos valises, voici les derniers détails pour un départ sans stress.
+                Nous espérons que votre séjour à <strong style="color:#1f2a3d;">{{bien_nom}}</strong> vous a apporté détente et de merveilleux souvenirs en Martinique. Ce fut un réel plaisir de vous accueillir et de contribuer à la réussite de votre passage sur notre île.
               </p>
+            </td>
+          </tr>
+
+          <!-- Photo du logement -->
+          <tr>
+            <td class="px" style="padding:20px 40px 0 40px;">
+              <img src="{{photo_url}}" alt="{{bien_nom}}" width="220" style="width:100%;max-width:220px;height:auto;border-radius:14px;display:block;margin:0 auto;">
             </td>
           </tr>
 
@@ -68,7 +75,7 @@
                   <td style="padding:22px 24px;font-family:Arial,Helvetica,sans-serif;" align="center">
                     <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#c47254;font-weight:bold;">Heure de départ</div>
                     <div style="font-size:42px;color:#1f2a3d;font-family:Georgia,'Times New Roman',serif;margin-top:8px;font-weight:normal;">12h00</div>
-                    <div style="font-size:13px;color:#8a8170;margin-top:4px;">le {{checkout}}</div>
+                    <div style="font-size:13px;color:#8a8170;margin-top:4px;">le {{checkout}} au plus tard — dites-nous votre heure prévue</div>
                   </td>
                 </tr>
               </table>
@@ -124,18 +131,18 @@
                 <tr>
                   <td style="padding:22px 24px;font-family:Arial,Helvetica,sans-serif;">
                     <div style="font-size:20px;line-height:1;margin-bottom:10px;">&#x23F0;</div>
-                    <div style="font-family:Georgia,'Times New Roman',serif;font-size:18px;color:#1f2a3d;margin-bottom:8px;">Pas prêts à 12h ?</div>
+                    <div style="font-family:Georgia,'Times New Roman',serif;font-size:18px;color:#1f2a3d;margin-bottom:8px;">Envie de profiter un peu plus longtemps ?</div>
                     <p style="margin:0 0 16px 0;font-size:15px;line-height:24px;color:#3a4658;">
-                      Si vous avez besoin de deux heures de plus, un départ tardif jusqu'à <strong style="color:#1f2a3d;">14h00</strong> est possible selon disponibilité. Il suffit de nous écrire.
+                      Sur demande et selon nos disponibilités, nous vous proposons un <strong style="color:#1f2a3d;">Late Check-Out jusqu'à 19h</strong> pour un supplément de <strong style="color:#1f2a3d;">80€</strong> (espèces ou virement instantané). Faites-le nous savoir si cela vous intéresse.
                     </p>
                     <!--[if mso]>
-                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://wa.me/{{wa_hote}}?text=Bonjour%2C%20je%20souhaite%20un%20d%C3%A9part%20tardif%20pour%20{{bien_nom}}" style="height:46px;v-text-anchor:middle;width:230px;" arcsize="22%" strokecolor="#c47254" fillcolor="#c47254">
+                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://wa.me/{{wa_hote}}?text=Bonjour%2C%20je%20souhaite%20un%20late%20check-out%20pour%20{{bien_nom}}" style="height:46px;v-text-anchor:middle;width:230px;" arcsize="22%" strokecolor="#c47254" fillcolor="#c47254">
                       <w:anchorlock/>
                       <center style="color:#ffffff;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Demander un départ tardif</center>
                     </v:roundrect>
                     <![endif]-->
                     <!--[if !mso]><!-- -->
-                    <a href="https://wa.me/{{wa_hote}}?text=Bonjour%2C%20je%20souhaite%20un%20d%C3%A9part%20tardif%20pour%20{{bien_nom}}" style="background-color:#c47254;color:#ffffff;display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;text-decoration:none;padding:13px 28px;border-radius:10px;">Demander un départ tardif</a>
+                    <a href="https://wa.me/{{wa_hote}}?text=Bonjour%2C%20je%20souhaite%20un%20late%20check-out%20pour%20{{bien_nom}}" style="background-color:#c47254;color:#ffffff;display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;text-decoration:none;padding:13px 28px;border-radius:10px;">Demander un départ tardif</a>
                     <!--<![endif]-->
                   </td>
                 </tr>
@@ -143,13 +150,36 @@
             </td>
           </tr>
 
+          <!-- Remise fidélité -->
+          <tr>
+            <td class="px" style="padding:24px 40px 0 40px;font-family:Arial,Helvetica,sans-serif;">
+              <div style="font-size:13px;letter-spacing:2px;text-transform:uppercase;color:#1f2a3d;font-weight:bold;border-bottom:2px solid #c47254;display:inline-block;padding-bottom:4px;">Un petit geste pour vous remercier</div>
+              <p style="margin:16px 0 0 0;font-size:15px;line-height:24px;color:#3a4658;">
+                Parce que votre satisfaction est notre plus belle récompense, nous serions ravis de vous accueillir à nouveau. En réservant directement auprès de nous lors de votre prochain séjour, vous bénéficierez d'une remise exclusive de <strong style="color:#1f2a3d;">10%</strong> sur le tarif du logement — il vous suffira de mentionner ce message lors de votre réservation.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Avis Google -->
+          <tr>
+            <td class="px" style="padding:24px 40px 0 40px;font-family:Arial,Helvetica,sans-serif;">
+              <div style="font-size:13px;letter-spacing:2px;text-transform:uppercase;color:#1f2a3d;font-weight:bold;border-bottom:2px solid #c47254;display:inline-block;padding-bottom:4px;">Votre avis compte beaucoup pour nous</div>
+              <p style="margin:16px 0 0 0;font-size:15px;line-height:24px;color:#3a4658;">
+                Si vous avez apprécié votre séjour, nous serions très reconnaissants que vous partagiez votre expérience en laissant un avis sur Google.
+              </p>
+              <div style="margin-top:16px;">
+                <a href="{{lien_avis_google}}" style="background-color:#1f2a3d;color:#ffffff;display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;text-decoration:none;padding:13px 28px;border-radius:10px;">Laisser un avis Google</a>
+              </div>
+            </td>
+          </tr>
+
           <!-- Signature -->
           <tr>
             <td class="px" style="padding:30px 40px 36px 40px;font-family:Georgia,'Times New Roman',serif;">
               <p style="margin:0;font-size:16px;line-height:26px;color:#3a4658;">
-                Profitez bien de votre dernière soirée. À bientôt sous le soleil de Martinique.
+                Nous vous souhaitons un excellent retour, en espérant que vous garderez de beaux souvenirs de votre passage à {{bien_nom}}. Au plaisir de vous revoir lors d'une prochaine escapade en Martinique&nbsp;!
               </p>
-              <p style="margin:16px 0 0 0;font-size:16px;color:#1f2a3d;">L'équipe Amaryllis</p>
+              <p style="margin:16px 0 0 0;font-size:16px;color:#1f2a3d;">Chaleureusement,<br>L'équipe Amaryllis</p>
             </td>
           </tr>
 

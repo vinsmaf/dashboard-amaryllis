@@ -3222,18 +3222,6 @@ async function runAgentsTriage(env) {
   } catch (e) { console.error("[agents-triage] erreur:", e.message); }
 }
 
-// ── Email pré-départ J-1 (late-checkout push) ────────────────────────────────
-async function runPredepart(env) {
-  const secret = env.POSTSTAY_SECRET || "";
-  if (!secret) { console.log("[predepart] POSTSTAY_SECRET absent — skip"); return; }
-  const siteUrl = env.SITE_URL || "https://villamaryllis.com";
-  try {
-    const r = await fetch(`${siteUrl}/api/send-predepart?secret=${encodeURIComponent(secret)}`);
-    const d = await r.json().catch(() => ({}));
-    console.log(`[predepart] ✓ ${d.sent ?? 0} envoyés / ${d.candidats ?? 0} candidats (checkout demain ${d.target ?? "?"})`);
-  } catch (e) { console.error("[predepart] erreur:", e.message); }
-}
-
 // ── Newsletter : séquence J+7 (offre abonné) ─────────────────────────────────
 async function runNewsletterSequence(env) {
   const db = env.revenue_manager;
@@ -3734,18 +3722,20 @@ export default {
           console.error("[caution-cron] Cron error:", e.message);
         }
         await runInventoryAlerts(env);
-        // ── Emails voyageurs résas directes : J-3 (infos pratiques) + J-1 (codes d'accès) ──
+        // ── Emails voyageurs résas directes : J-3 (infos pratiques) + J+1 (vérif arrivée) + J-1 (codes d'accès + pré-départ) ──
         try {
           const siteUrl = env.SITE_URL || "https://villamaryllis.com";
           const sec = encodeURIComponent(env.POSTSTAY_SECRET || "");
-          const [r3, r1, rd] = await Promise.all([
+          const [r3, rv, r1, rd] = await Promise.all([
             fetch(`${siteUrl}/api/send-prearrivee?secret=${sec}`).then(r => r.json()).catch(() => ({})),
+            fetch(`${siteUrl}/api/send-verif-arrivee?secret=${sec}`).then(r => r.json()).catch(() => ({})),
             fetch(`${siteUrl}/api/send-j1-acces?secret=${sec}`).then(r => r.json()).catch(() => ({})),
             fetch(`${siteUrl}/api/send-pre-depart?secret=${sec}`).then(r => r.json()).catch(() => ({})),
           ]);
-          console.log(`[prearrivee J-3]  sent=${r3.sent ?? 0} failed=${r3.failed ?? 0} target=${r3.target ?? "?"}`);
-          console.log(`[j1-acces J-1]    sent=${r1.sent ?? 0} failed=${r1.failed ?? 0} target=${r1.target ?? "?"}`);
-          console.log(`[pre-depart J-1]  sent=${rd.sent ?? 0} failed=${rd.failed ?? 0} target=${rd.target ?? "?"}`);
+          console.log(`[prearrivee J-3]   sent=${r3.sent ?? 0} failed=${r3.failed ?? 0} target=${r3.target ?? "?"}`);
+          console.log(`[verif-arrivee J+1] sent=${rv.sent ?? 0} failed=${rv.failed ?? 0} target=${rv.target ?? "?"}`);
+          console.log(`[j1-acces J-1]     sent=${r1.sent ?? 0} failed=${r1.failed ?? 0} target=${r1.target ?? "?"}`);
+          console.log(`[pre-depart J-1]   sent=${rd.sent ?? 0} failed=${rd.failed ?? 0} target=${rd.target ?? "?"}`);
         } catch (e) {
           console.error("[emails-voyageurs] Cron error:", e.message);
         }
@@ -3760,7 +3750,9 @@ export default {
         }
         await runDevisSoldeCron(env); // C2 — solde devis 2 fois : lien J-30 + relances J-25/J-20 + annulation J-15
         await runEnrichFromEmails(env); // complète nom+payout des résas Airbnb depuis les mails (onglet « Emails ») AVANT le contrôle de cohérence
-        await runPredepart(env);        // crm — email pré-départ J-1 (late-checkout push)
+        // pré-départ J-1 = géré uniquement par /api/send-pre-depart (voir Promise.all plus haut) —
+        // doublon runPredepart()/send-predepart supprimé le 2026-07-04 (envoyait le même email 2×,
+        // chaque fonction suivant sa propre colonne pre_depart_sent/predepart_sent).
         // ── Contrôle de cohérence des réservations (chantier 2 Robustesse) ──
         //    Détecte double-bookings / totaux aberrants / bien inconnu → inbox 🐞 Bugs + ntfy si critique.
         try {
