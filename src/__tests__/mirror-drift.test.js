@@ -171,9 +171,10 @@ describe("miroir resaDedup ↔ SCRIPT_SHEETS.js", () => {
   //     d = new Date("2026-07-04T00:00:00+02:00")  (= 2026-07-03T22:00Z)
   //     src  normDate(d)  → "2026-07-03"   (composantes UTC)
   //     GAS  normDate_(d) → "2026-07-04"   (composantes locales Paris)
-  //   Chaque implémentation est correcte DANS SON runtime. À noter : les nd_ de
-  //   REVENUS_AUTO_2026/2027.gs utilisent, eux, getUTC* (comme src) — si un jour
-  //   ces scripts GAS échangent des clés bâties sur des Date, ça divergera.
+  //   Chaque implémentation est correcte DANS SON runtime. FIX 2026-07-04 : les
+  //   nd_ de REVENUS_AUTO_2026/2027.gs utilisaient, eux, getUTC* (comme src) —
+  //   incohérence interne au projet GAS (avec toNoonUTC_, LOCAL, dans le même
+  //   fichier) désormais alignée sur normDate_ (voir section 2 plus bas).
   it.skip("normDate(Date à minuit local) — divergence UTC vs local ASSUMÉE (voir commentaire)", () => {});
 
   it("dedupKey — équivalence clé complète (bienId + dates, 12 combinaisons)", () => {
@@ -206,16 +207,20 @@ describe("miroir resaDedup ↔ REVENUS_AUTO_2026/2027.gs", () => {
   const nd26 = evalMirror(extractFunction(key26, "nd_"), ["nd_"]).nd_;
   const nd27 = evalMirror(extractFunction(key27, "nd_"), ["nd_"]).nd_;
 
-  it("nd_ (2026 & 2027) — équivalence stricte avec normDate, y compris Date à minuit UTC (23 cas)", () => {
-    // Ces nd_ utilisent getUTC* comme src → l'équivalence doit tenir pour TOUTE
-    // Date valide, même minuit UTC (contrairement au normDate_ de SCRIPT_SHEETS).
-    const inputs = [...STRINGY_INPUTS, ...NOON_UTC_DATES,
-      new Date("2026-07-04T00:00:00Z"), new Date("2026-01-01T23:59:59Z"), new Date(0)];
-    for (const v of inputs) {
+  it("nd_ (2026 & 2027) — équivalence sur strings/scalaires/limites + Date à midi UTC (20 cas)", () => {
+    // FIX 2026-07-04 : nd_ lisait getUTC* alors que ce même fichier GAS traite
+    // déjà les Date de cellule Sheet en LOCAL ailleurs (toNoonUTC_) — incohérence
+    // interne trouvée en écrivant ce test. Aligné sur SCRIPT_SHEETS.normDate_
+    // (composantes locales, cf. son commentaire) : mêmes garanties qu'elle,
+    // donc plus d'équivalence garantie sur une Date à minuit UTC (cf. skip
+    // ci-dessous, identique à celui de normDate_).
+    for (const v of [...STRINGY_INPUTS, ...NOON_UTC_DATES]) {
       expect(nd26(v), `2026 nd_(${String(v)})`).toBe(normDate(v));
       expect(nd27(v), `2027 nd_(${String(v)})`).toBe(normDate(v));
     }
   });
+
+  it.skip("nd_(Date à minuit local) — divergence UTC(src) vs local(nd_) ASSUMÉE, comme normDate_", () => {});
 
   it("contentKeyRow_ / contentKeyRow27_ — même format de clé que dedupKey (stub mapping)", () => {
     const ck26 = evalMirror(key26, ["contentKeyRow_"], { BIEN_BY_LABEL: { "villa amaryllis": "amaryllis" } }).contentKeyRow_;

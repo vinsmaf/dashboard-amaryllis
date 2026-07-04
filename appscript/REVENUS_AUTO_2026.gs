@@ -204,8 +204,15 @@ function appendProcessed_(memo, ids) {
 function contentKeyRow_(row, C) {
   function nd_(v) {
     if (v == null) return "";
+    // Composantes LOCALES (pas getUTC*) : la feuille Google stocke/lit les dates
+    // à minuit heure Europe/Paris (Apps Script convertit une cellule formatée
+    // date en objet Date natif) — getUTC* reculait d'un jour, exactement le bug
+    // déjà corrigé dans SCRIPT_SHEETS.normDate_ et déjà évité dans CE MÊME
+    // fichier par toNoonUTC_ (qui lit aussi les composantes locales). Trouvé
+    // 2026-07-04 en documentant le miroir (mirror-drift.test.js) : les deux
+    // fonctions de ce fichier étaient incohérentes entre elles.
     if (v instanceof Date && !isNaN(v)) {
-      return v.getUTCFullYear() + "-" + String(v.getUTCMonth() + 1).padStart(2, "0") + "-" + String(v.getUTCDate()).padStart(2, "0");
+      return v.getFullYear() + "-" + String(v.getMonth() + 1).padStart(2, "0") + "-" + String(v.getDate()).padStart(2, "0");
     }
     return String(v).slice(0, 10);
   }

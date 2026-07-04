@@ -181,8 +181,10 @@ function appendProcessed27_(memo, ids) {
 function contentKeyRow27_(row, C) {
   function nd_(v) {
     if (v == null) return "";
+    // Composantes LOCALES (pas getUTC*) : même fix que REVENUS_AUTO_2026.gs
+    // (miroir SCRIPT_SHEETS.normDate_) — voir son commentaire pour le détail.
     if (v instanceof Date && !isNaN(v)) {
-      return v.getUTCFullYear() + "-" + String(v.getUTCMonth() + 1).padStart(2, "0") + "-" + String(v.getUTCDate()).padStart(2, "0");
+      return v.getFullYear() + "-" + String(v.getMonth() + 1).padStart(2, "0") + "-" + String(v.getDate()).padStart(2, "0");
     }
     return String(v).slice(0, 10);
   }
