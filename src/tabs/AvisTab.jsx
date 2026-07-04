@@ -23,6 +23,7 @@ export default function AvisTab() {
   const [sortLow, setSortLow] = useState(false);           // tri par note croissante
   const [showHidden, setShowHidden] = useState(true);
   const [busy, setBusy] = useState({});      // id -> bool (PATCH en cours)
+  const [draftBusy, setDraftBusy] = useState(false);
 
   const nomOf = useMemo(() => Object.fromEntries(biens.map(b => [b.id, b.nom])), [biens]);
 
@@ -89,6 +90,53 @@ export default function AvisTab() {
     }
   }
 
+  // Vague 3 (délégation) — génère les brouillons de réponse pour les avis pas
+  // encore traités (draft_status='none'). DRY-RUN : rien n'est publié, Vincent
+  // copie-colle manuellement (pas d'API d'écriture Google/Airbnb branchée).
+  async function generateDrafts() {
+    setDraftBusy(true);
+    try {
+      const d = await fetchJSON("/api/voyageur-feedback?action=draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      if (d.generated) {
+        addToast(`${d.generated} brouillon(s) généré(s)${d.failed ? ` (${d.failed} échec(s))` : ""}`, "success");
+        const fresh = await fetchJSON("/api/voyageur-feedback");
+        setRows(fresh.reviews || []);
+      } else {
+        addToast("Aucun nouvel avis à traiter", "info");
+      }
+    } catch (e) {
+      addToast(e.message || "Échec de la génération", "error");
+    } finally {
+      setDraftBusy(false);
+    }
+  }
+
+  async function setDraftStatus(id, status) {
+    setRows(rs => rs.map(x => x.id === id ? { ...x, draft_status: status } : x)); // optimiste
+    try {
+      await fetchJSON("/api/voyageur-feedback?action=draft-status", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status }),
+      });
+    } catch (e) {
+      addToast(e.message || "Échec de la mise à jour", "error");
+    }
+  }
+
+  function copyDraft(text) {
+    navigator.clipboard?.writeText(text).then(
+      () => addToast("Brouillon copié", "success"),
+      () => addToast("Impossible de copier — sélectionne le texte manuellement", "error")
+    );
+  }
+
+  const pendingDrafts = (rows || []).filter(r => r.draft_status === "pending").length;
+
   // ── styles ────────────────────────────────────────────────────────────
   const card = { background: "#1e293b", borderRadius: 12, border: "1px solid rgba(255,255,255,0.06)", padding: 14, marginBottom: 12 };
   const sel = { padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#0f172a", color: "#e2e8f0", fontSize: 13, cursor: "pointer" };
@@ -134,8 +182,21 @@ export default function AvisTab() {
           <button style={{ ...sel, background: showHidden ? "#334155" : "#0f172a" }} onClick={() => setShowHidden(v => !v)}>
             {showHidden ? "👁 Masqués visibles" : "🙈 Masqués cachés"}
           </button>
+          <button
+            onClick={generateDrafts}
+            disabled={draftBusy}
+            style={{ ...sel, background: "rgba(99,102,241,0.18)", color: "#a5b4fc", border: "1px solid rgba(99,102,241,0.4)", opacity: draftBusy ? 0.6 : 1 }}
+            title="Génère un brouillon de réponse (LLM) pour les avis pas encore traités — dry-run, rien n'est publié">
+            {draftBusy ? "…" : "🪄 Générer les brouillons"}
+          </button>
         </div>
       </div>
+
+      {pendingDrafts > 0 && (
+        <div style={{ ...card, background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.3)", fontSize: 13, color: "#c7d2fe" }}>
+          📝 {pendingDrafts} brouillon(s) prêt(s) à copier-coller — aucune publication automatique (pas d'API d'écriture Google/Airbnb branchée).
+        </div>
+      )}
 
       {/* Synthèse par bien */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px,1fr))", gap: 10, marginBottom: 18 }}>
@@ -170,6 +231,28 @@ export default function AvisTab() {
             </button>
           </div>
           <div style={{ color: "#cbd5e1", fontSize: 13, lineHeight: 1.5 }}>{clean(r.review_text) || <em style={{ color: "#64748b" }}>(note sans texte)</em>}</div>
+
+          {r.draft_status && r.draft_status !== "none" && (
+            <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px dashed rgba(255,255,255,0.1)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                <span style={{ ...chip, background: r.classification === "auto" ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)", color: r.classification === "auto" ? "#6ee7b7" : "#fca5a5" }}>
+                  {r.classification === "auto" ? "🟢 éligible auto (futur)" : "🔴 à traiter toi-même"}
+                </span>
+                {r.draft_status === "sent" && <span style={{ ...chip, background: "rgba(16,185,129,0.15)", color: "#6ee7b7" }}>✅ envoyée</span>}
+                {r.draft_status === "dismissed" && <span style={{ ...chip, color: "#64748b" }}>ignoré</span>}
+              </div>
+              <div style={{ color: "#e2e8f0", fontSize: 13, lineHeight: 1.5, background: "rgba(255,255,255,0.03)", borderRadius: 8, padding: 10, whiteSpace: "pre-wrap" }}>
+                {r.draft_reply}
+              </div>
+              {r.draft_status === "pending" && (
+                <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                  <button onClick={() => copyDraft(r.draft_reply)} style={{ ...sel, fontSize: 12, padding: "4px 10px" }}>📋 Copier</button>
+                  <button onClick={() => setDraftStatus(r.id, "sent")} style={{ ...sel, fontSize: 12, padding: "4px 10px", color: "#86efac" }}>✅ Envoyée</button>
+                  <button onClick={() => setDraftStatus(r.id, "dismissed")} style={{ ...sel, fontSize: 12, padding: "4px 10px", color: "#94a3b8" }}>✕ Ignorer</button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
         );
       })}

@@ -26,6 +26,9 @@ const AIRBNB_LISTINGS = {
 };
 
 import { verifyBearer } from "./_adminauth.js";
+import { callLLM } from "./_llm.js";
+import { classifyReview, buildReviewReplyPrompt } from "../../src/utils/reviewClassification.js";
+import { BIENS } from "./_biens.js";
 
 const CORS = {
   "Content-Type": "application/json",
@@ -53,6 +56,14 @@ async function ensureTable(db) {
   await db.exec("CREATE INDEX IF NOT EXISTS idx_vf_bien ON voyageur_feedback(bien_id)");
   // Migration : ajoute la colonne hidden si la table existait déjà (sinon no-op).
   try { await db.exec("ALTER TABLE voyageur_feedback ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0"); } catch {}
+  // Migration — Projet Délégation Vague 3 (réponses aux avis, dry-run) : classification
+  // + brouillon de réponse générés par LLM, jamais auto-publiés (pas d'API d'écriture
+  // Google/Airbnb branchée). draft_status : 'none' (pas généré) | 'pending' (à copier) |
+  // 'sent' (posté manuellement par Vincent) | 'dismissed' (pas pertinent).
+  try { await db.exec("ALTER TABLE voyageur_feedback ADD COLUMN classification TEXT"); } catch {}
+  try { await db.exec("ALTER TABLE voyageur_feedback ADD COLUMN draft_reply TEXT"); } catch {}
+  try { await db.exec("ALTER TABLE voyageur_feedback ADD COLUMN draft_status TEXT NOT NULL DEFAULT 'none'"); } catch {}
+  try { await db.exec("ALTER TABLE voyageur_feedback ADD COLUMN draft_generated_at TEXT"); } catch {}
 }
 
 // Hash déterministe court (anti-doublon sans dépendance crypto lourde)
@@ -301,6 +312,36 @@ export async function onRequest(context) {
     });
   }
 
+  // ── POST ?action=draft : génère les brouillons de réponse (Vague 3, DRY-RUN) ──
+  // Aucune publication réelle (aucune API d'écriture Google/Airbnb branchée) :
+  // remplit classification + draft_reply, à copier-coller manuellement par Vincent.
+  if (request.method === "POST" && action === "draft") {
+    const { ok: adminOk } = await verifyBearer(request, env);
+    if (!adminOk) return json({ error: "Non autorisé" }, 401);
+    const body = await request.json().catch(() => ({}));
+    const ids = Array.isArray(body.ids) ? body.ids.slice(0, 20) : null;
+
+    const q = ids
+      ? db.prepare(`SELECT * FROM voyageur_feedback WHERE id IN (${ids.map(() => "?").join(",")}) AND draft_status='none'`).bind(...ids)
+      : db.prepare("SELECT * FROM voyageur_feedback WHERE draft_status='none' AND review_text IS NOT NULL AND review_text!='' ORDER BY review_date DESC LIMIT 20");
+    const { results } = await q.all();
+
+    const generated = [];
+    const failed = [];
+    for (const r of results) {
+      const classification = classifyReview(r.rating);
+      const bienNom = BIENS[r.bien_id]?.nom || r.bien_id;
+      const { messages } = buildReviewReplyPrompt({ bienNom, rating: r.rating, reviewText: r.review_text, classification });
+      const llm = await callLLM(env, { tier: "smart", messages, logSource: "review-draft" });
+      if (!llm.ok || !llm.text) { failed.push(r.id); continue; }
+      await db.prepare(
+        "UPDATE voyageur_feedback SET classification=?, draft_reply=?, draft_status='pending', draft_generated_at=datetime('now') WHERE id=?"
+      ).bind(classification, llm.text.trim(), r.id).run();
+      generated.push(r.id);
+    }
+    return json({ ok: true, generated: generated.length, failed: failed.length, ids: generated });
+  }
+
   // ── PATCH ?action=moderate : masquer/afficher un avis (admin) ─────────────
   if (request.method === "PATCH" && action === "moderate") {
     const { ok: adminOk } = await verifyBearer(request, env);
@@ -311,6 +352,19 @@ export async function onRequest(context) {
     const hidden = body.hidden ? 1 : 0;
     await db.prepare("UPDATE voyageur_feedback SET hidden=? WHERE id=?").bind(hidden, id).run();
     return json({ ok: true, id, hidden });
+  }
+
+  // ── PATCH ?action=draft-status : marquer un brouillon envoyé/ignoré (admin) ──
+  if (request.method === "PATCH" && action === "draft-status") {
+    const { ok: adminOk } = await verifyBearer(request, env);
+    if (!adminOk) return json({ error: "Non autorisé" }, 401);
+    const body = await request.json().catch(() => ({}));
+    const { id, status } = body;
+    if (!id || !["sent", "dismissed", "pending"].includes(status)) {
+      return json({ error: "id et status ('sent'|'dismissed'|'pending') requis" }, 400);
+    }
+    await db.prepare("UPDATE voyageur_feedback SET draft_status=? WHERE id=?").bind(status, id).run();
+    return json({ ok: true, id, status });
   }
 
   return json({ error: "Méthode/action non supportée" }, 405);
