@@ -16,12 +16,15 @@
  *   6. Transition saisonnière Martinique dans ≤14j (🟡)
  *   7. Occupation sous la moyenne historique même mois de ≥20pts (🟡 — seasonal_memory)
  *   8. Pipeline éditorial vide (<3 posts drafted/approved dans 14j) (🟡)
+ *   9. Conversion funnel (30j) en baisse >30% vs semaine précédente (🟡) — arch-monitoring
+ *      Snapshot quotidien GA4 (conversion_snapshots), garde anti-bruit si volume faible.
  *
  * D1 binding : revenue_manager · Secrets : POSTSTAY_SECRET · NTFY_TOPIC
  */
 
 import { clog, timer } from './_log.js'
-import { DDL_SUGGESTION_ACKS } from './_schema.js'
+import { DDL_SUGGESTION_ACKS, DDL_CONVERSION_SNAPSHOTS } from './_schema.js'
+import { detectConversionDrop } from '../../src/utils/conversionDrift.js'
 
 const BIENS_BOOKABLES = ['amaryllis', 'zandoli', 'geko', 'mabouya', 'schoelcher', 'nogent']
 
@@ -333,6 +336,56 @@ export async function onRequestGet({ request, env }) {
     }
   } catch (e) {
     clog('kpi-sentinel', 'warn', { step: 'editorial', err: e.message })
+  }
+
+  // ── 9. Conversion funnel (30j) en baisse — arch-monitoring ──────────────
+  // Snapshot quotidien du funnel GA4 (jamais persisté ailleurs, cf ADR-G-001)
+  // pour pouvoir comparer vs 7j en arrière. Anti-bruit : volume minimum requis
+  // (conversionDrift.js), sinon un jour calme fausserait le %.
+  try {
+    await db.prepare(DDL_CONVERSION_SNAPSHOTS).run()
+
+    const analytics = await fetch(`${siteUrl}/api/analytics`, {
+      headers: { 'User-Agent': 'amaryllis-kpi-sentinel' },
+    }).then(r => r.ok ? r.json() : null).catch(() => null)
+
+    if (analytics?.funnel) {
+      const f = Object.fromEntries(analytics.funnel.map(x => [x.eventName, x.eventCount]))
+      const sessions = (analytics.overview || [])
+        .filter(r => r.dateRange === 'date_range_0')
+        .reduce((s, r) => s + (r.sessions || 0), 0)
+      const revenueCents = Math.round((analytics.revenue?.[0]?.totalRevenue || 0) * 100)
+
+      await db.prepare(
+        `INSERT INTO conversion_snapshots (snapshot_date, sessions, view_item, purchase, revenue_cents, calculated_at)
+         VALUES (?,?,?,?,?,?)
+         ON CONFLICT(snapshot_date) DO UPDATE SET
+           sessions=excluded.sessions, view_item=excluded.view_item, purchase=excluded.purchase,
+           revenue_cents=excluded.revenue_cents, calculated_at=excluded.calculated_at`
+      ).bind(today, sessions, f.view_item || 0, f.purchase || 0, revenueCents, Math.floor(Date.now() / 1000)).run()
+
+      const prevSnap = await db.prepare(
+        `SELECT view_item, purchase FROM conversion_snapshots WHERE snapshot_date = ?`
+      ).bind(ago7).first().catch(() => null)
+
+      if (prevSnap) {
+        const drop = detectConversionDrop(
+          { viewItem: f.view_item || 0, purchase: f.purchase || 0 },
+          { viewItem: prevSnap.view_item, purchase: prevSnap.purchase }
+        )
+        if (drop) {
+          anomalies.push({
+            level: 'yellow',
+            signal: 'Conversion funnel',
+            detail: `${drop.dropPct}% vs il y a 7j (${(drop.currentRate * 100).toFixed(1)}% → était ${(drop.previousRate * 100).toFixed(1)}%)`,
+            suggestion: `Vérifier tunnel de résa (prix affichés, Stripe, tracking GA4) — npm run funnel pour le détail`,
+            id: ackId('conversion-funnel', today),
+          })
+        }
+      }
+    }
+  } catch (e) {
+    clog('kpi-sentinel', 'warn', { step: 'conversion', err: e.message })
   }
 
   // ── Filtrer les anomalies déjà ackées (done/ignore dans les 7j) ─────────
