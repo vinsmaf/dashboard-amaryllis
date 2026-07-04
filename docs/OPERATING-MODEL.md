@@ -3,7 +3,7 @@
 > **Fichier identique dans `locatif-dashboard` ET `patrimoine-dashboard`.** Toute évolution du standard
 > se réplique dans les deux repos. C'est le « mode de fonctionnement serein » partagé : un seul jeu de
 > règles, deux applications.
-> Dernière synchro : **2026-06-04**.
+> Dernière synchro : **2026-07-03** (revue Cowork — 4 cerveaux audités : locatif, patrimoine, trading-bot, life-os).
 
 Les deux projets sont des **jumeaux d'outillage** : React 19 + Vite, Cloudflare Pages Functions,
 Google Apps Script/Sheets, vitest, déploiement wrangler avec garde-fou anti-projet-croisé. Ils
@@ -79,37 +79,53 @@ la doc), `docs/ERREURS-LOG.md` / `ERRORS_LOG.md` (journal d'erreurs exhaustif).
 
 ---
 
-## 7. Matrice de conformité (2026-06-04)
+## 7. Matrice de conformité (rafraîchie 2026-07-03 — voir aussi trading-bot/life-os en annexe §9)
 
 | Élément du standard | 🏠 locatif | 💰 patrimoine |
 |---|---|---|
 | `.memory/` 8 fichiers + `.last-consolidation` | ✅ | ✅ (RECALL/DECISIONS présents) |
-| `docs/INDEX.md` (carte doc) | ✅ | ❌ docs éparpillés |
+| `docs/INDEX.md` (carte doc) | ✅ | ❌ docs éparpillés (toujours vrai au 03/07) |
 | Index ADR formel (specs/plans) | ✅ | ⚠️ ADR.md seul |
-| Hook SessionStart (rappel auto) | ✅ | ❌ aucun `.claude/settings.json` |
-| Audit invariants au deploy + `docs/_audits/` | ✅ | ❌ |
+| Hook SessionStart (rappel auto) | ✅ | ✅ **comblé** (`scripts/session-context.mjs` en place) |
+| Audit invariants au deploy + `docs/_audits/` | ✅ | ✅ **comblé** (`audit-invariants.mjs` dans `npm run deploy`, écrit `docs/_audits/AUDIT-latest.md`) |
 | Smoke test post-deploy | ✅ 7 checks | ⚠️ keepalive seul |
-| PROJECT_MEMORY ≤ ~40 KB | ✅ 35 KB | ❌ 139 KB legacy |
-| Carte source-de-vérité déclarative | ⚠️ seed ad-hoc | ✅ `PATRIMOINE_SOURCE` |
+| PROJECT_MEMORY ≤ ~40 KB | ✅ 35 KB | ✅ **comblé** (≈16 KB, dégraissé depuis 139 KB) |
+| Carte source-de-vérité déclarative | ⚠️ seed ad-hoc (toujours vrai) | ✅ `PATRIMOINE_SOURCE` |
 | Totaux dérivés dynamiquement | ⚠️ partiel | ✅ |
-| Lint dans le gate | ❌ exclu | ✅ |
+| Lint dans le gate | ❌ exclu (mais ≈0 erreur aujourd'hui — prêt à réactiver, cf BLOCKERS) | ✅ (`check-lint-critical.mjs` dans le gate deploy) |
 | Keepalive proactif (session/token fragile) | ❌ | ✅ Finary cron |
-| Profondeur de tests | 118 | 361 |
-| Cron `/consolidation` hebdo | ⏳ bloqué backend | ⏳ bloqué backend |
+| Profondeur de tests (nb fichiers `*.test.js`) | 23 | 86 |
+| Cron `/consolidation` hebdo | ✅ **comblé 2026-07-03** — tâche planifiée Cowork (contourne le blocage backend noté dans BLOCKERS/ADR-749) | ✅ **comblé 2026-07-03** — idem |
 | **Drift des miroirs GAS/Worker** | ❌ non couvert | ❌ non couvert |
 
 ## 8. Backlog de synchronisation (qui copie quoi)
 
-**➡️ patrimoine adopte de locatif :** (1) hook SessionStart · (2) `docs/INDEX.md` · (3) dégraisser
-`PROJECT_MEMORY` 139→<40 KB · (4) audit d'invariants au deploy + `docs/_audits/`.
+**➡️ patrimoine adopte de locatif :** ~~(1) hook SessionStart~~ ✅ fait · (2) `docs/INDEX.md` (toujours ouvert) ·
+~~(3) dégraisser PROJECT_MEMORY~~ ✅ fait (16 KB) · ~~(4) audit d'invariants au deploy~~ ✅ fait.
 
-**⬅️ locatif adopte de patrimoine :** (1) carte source-de-vérité déclarative (champs canoniques vs Sheet) ·
-(2) réintégrer le lint au gate (≈0 erreur aujourd'hui) · (3) keepalive proactif tokens fragiles
-(META_PAGE_TOKEN ~60j, Beds24) · (4) monter la couverture de tests.
+**⬅️ locatif adopte de patrimoine :** (1) carte source-de-vérité déclarative (champs canoniques vs Sheet, toujours ouvert) ·
+(2) réintégrer le lint au gate (≈0 erreur aujourd'hui, toujours ouvert — le plus facile à fermer) · (3) keepalive proactif tokens fragiles
+(META_PAGE_TOKEN ~60j, Beds24, toujours ouvert) · (4) monter la couverture de tests (23 vs 86 fichiers, écart qui se creuse).
 
 **🤝 chantier commun le plus rentable :** **tuer le drift des miroirs GAS/Worker** — un test de cohérence
 qui extrait la fonction des deux côtés et compare la logique normalisée (ou une génération de code depuis
-le module pur). À concevoir une fois, appliquer dans les deux repos.
+le module pur). À concevoir une fois, appliquer dans les deux repos. Toujours ouvert au 03/07.
+
+## 9. Extension du standard aux 2 autres cerveaux de Vincent (2026-07-03)
+
+Le standard `.memory/` (§1-2) n'est plus réservé à locatif/patrimoine — il s'étend, **adapté au contexte
+de chaque projet** (pas de copier-coller aveugle) :
+
+| Projet | État au 03/07 | Adaptation |
+|---|---|---|
+| **trading-bot** | 6/8 fichiers déjà là (INDEX/CONTEXT/ADR/LEARNINGS/BLOCKERS/ITERATIONS_LOG) + un `AUDIT-2026-06-15.md` en plus. Manquait RECALL.md/DECISIONS.md/`.last-consolidation`/hook SessionStart. | Comblé le 03/07 — voir `.memory/` du repo. Pas de contrainte privacy (données de marché, pas personnelles). |
+| **life-os** | Aucun `.memory/` — charte `SKILL.md` + agents + données **gitignorées** (`health/`, `journal/`, `second-brain/`). | `.memory/` créé mais **scopé au système** (quelles routines marchent, décisions d'architecture vie-os) — **jamais** de chiffre santé, conformément aux règles absolues déjà écrites dans son `CLAUDE.md`. Pas de pont vers locatif/patrimoine (domaine isolé, volontaire). |
+
+**Rituel `/consolidation` hebdo** : jusqu'ici bloqué faute de backend cron (cf. §8 historique + BLOCKERS).
+Résolu via **tâche planifiée Cowork** (`mcp__scheduled-tasks`) — une passe hebdomadaire qui relit les 4
+`.memory/`, signale le stale (BLOCKERS jamais fermés, `.last-consolidation` > 7j) et propose des fusions/archivages.
+Ce n'est PAS un remplacement des rituels `/cloture-session` et `/auditeur` (ceux-ci restent des skills
+globaux `~/.claude/`, hors de portée de cette session Cowork qui n'a accès qu'aux 4 dossiers projet).
 
 ## Règle de tenue
 Ce fichier est **identique dans les deux repos**. Toute évolution du standard (nouveau rituel, nouveau
