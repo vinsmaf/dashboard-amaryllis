@@ -1,5 +1,6 @@
 import { resendFrom } from "./_email.js";
 import { sendEmail as sendEmailHelper } from "./_sendEmail.js";
+import { TEMPLATE_FIELDS, plainToHtml } from "./_emailTemplateFields.js";
 // Cloudflare Pages Function — POST /api/send-guest-email
 // crm-010/016 — Envoi générique d'un email voyageur depuis un template HTML.
 //
@@ -29,31 +30,37 @@ export async function sendGuestEmail(env, origin, { template, to, subject, vars 
   if (!to || !String(to).includes("@")) return { ok: false, error: "destinataire invalide" };
   if (!env.RESEND_API_KEY) return { ok: false, error: "RESEND_API_KEY manquante" };
 
-  // Surcharge admin (email-templates-admin.js) prioritaire sur le fichier statique —
-  // même pattern que property_guides (D1 d'abord, fallback fichier).
   try {
-  let raw = null;
-  if (env.revenue_manager) {
-    try {
-      const row = await env.revenue_manager
-        .prepare("SELECT html FROM email_template_overrides WHERE template_id = ?")
-        .bind(template).first();
-      if (row?.html) raw = row.html;
-    } catch { /* table pas encore créée — pas bloquant, fallback fichier */ }
-  }
-
   // Pages fait du "clean URL" (/x.html → /x) ; on cible directement l'URL propre.
   // Cache-bust + bypass cache CF : l'edge peut servir un template figé malgré no-cache
   // → on garantit la dernière version au moment de l'envoi.
-  if (raw === null) {
-    const tplRes = await fetch(`${origin}/email-templates/${template}?cb=${Date.now()}`, {
-      redirect: "follow",
-      cache: "no-store",
-    });
-    if (!tplRes.ok) return { ok: false, error: `template introuvable (${tplRes.status})` };
-    raw = await tplRes.text();
+  const tplRes = await fetch(`${origin}/email-templates/${template}?cb=${Date.now()}`, {
+    redirect: "follow",
+    cache: "no-store",
+  });
+  if (!tplRes.ok) return { ok: false, error: `template introuvable (${tplRes.status})` };
+  const raw = await tplRes.text();
+
+  // Paragraphes éditables (email-templates-admin.js, texte simple) — surcharge
+  // D1 sinon valeur par défaut, résolus avec les vars de la résa AVANT d'être
+  // injectés dans le template (permet {{bien_nom}} etc. dans le texte édité).
+  const fieldDefs = TEMPLATE_FIELDS[template];
+  const fieldVars = {};
+  if (fieldDefs && env.revenue_manager) {
+    let overrides = {};
+    try {
+      const { results } = await env.revenue_manager
+        .prepare("SELECT field_key, value FROM email_field_overrides WHERE template_id = ?")
+        .bind(template).all();
+      overrides = Object.fromEntries((results || []).map(r => [r.field_key, r.value]));
+    } catch { /* table pas encore créée — pas bloquant, valeurs par défaut */ }
+    for (const f of fieldDefs) {
+      const plain = overrides[f.key] ?? f.default;
+      fieldVars[f.key] = plainToHtml(fillTemplate(plain, vars));
+    }
   }
-  const html = fillTemplate(raw, vars);
+
+  const html = fillTemplate(raw, { ...vars, ...fieldVars });
 
   const result = await sendEmailHelper(env, {
     to,

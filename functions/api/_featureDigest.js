@@ -51,7 +51,7 @@ export const ENDPOINTS_DIGEST = [
   "/api/editorial-gate (editorial-gate.js) — Gate de qualité d'AUTO-PUBLICATION réseaux. Remplace le clic « Approuver » humain :",
   "/api/editorial-photos (editorial-photos.js) — Whitelist des photos AUTORISÉES à la publication réseaux (les « plus belles »,",
   "/api/editorial-videos (editorial-videos.js) — Whitelist des vidéos AUTORISÉES pour la génération de Reels (sélectionnées",
-  "/api/email-templates-admin (email-templates-admin.js) — Éditeur admin des templates email AUTOMATIQUES (pas les templates manuels",
+  "/api/email-templates-admin (email-templates-admin.js) — Éditeur admin des paragraphes ÉDITABLES (texte simple) des 4 templates email",
   "/api/fetch-ical (fetch-ical.js) — Server-side proxy to bypass CORS for Booking.com / Airbnb iCal URLs",
   "/api/geo (geo.js) — Retourne le pays et la ville du visiteur via les headers Cloudflare.",
   "/api/get-availability (get-availability.js) — env vars accessed via context.env (set in CF Pages dashboard)",
