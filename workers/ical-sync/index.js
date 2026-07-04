@@ -3179,6 +3179,32 @@ async function runBugTriage(env) {
   } catch (e) { console.error("[bug-triage] erreur:", e.message); }
 }
 
+// 🧹 Triage hebdo du backlog des agents IA — bloque les items hors-sol détectables
+// automatiquement (outil banni / fait bien contredit / doublon), voir agents-triage.js.
+// Ne remplace PAS une revue humaine avec accès au repo (ne détecte jamais "déjà codé").
+async function runAgentsTriage(env) {
+  const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+  const secret = env.POSTSTAY_SECRET || "";
+  if (!secret) { console.log("[agents-triage] POSTSTAY_SECRET absent — skip"); return; }
+  try {
+    const r = await fetch(`${siteUrl}/api/agents-triage?secret=${encodeURIComponent(secret)}`);
+    const d = await r.json().catch(() => ({}));
+    if (!d.ok) { console.log("[agents-triage] indisponible:", JSON.stringify(d).slice(0, 200)); return; }
+    console.log(`[agents-triage] ✓ ${d.analyzed || 0} analysés, ${d.blocked || 0} bloqués`);
+    if (!d.blocked) return; // pas de bruit si rien à signaler
+    const summaryHtml = (d.summary || "").replace(/\n/g, "<br>");
+    await sendEmail(env, {
+      to: env.NOTIFICATION_EMAIL || "contact@villamaryllis.com",
+      subject: `🧹 Triage backlog agents — ${d.blocked} item${d.blocked > 1 ? "s" : ""} bloqué${d.blocked > 1 ? "s" : ""}`,
+      html: `<div style="font-family:system-ui,sans-serif;color:#2c2c2c">
+        <h2 style="color:#0e3b3a">Triage automatique du backlog agents (semaine)</h2>
+        <p style="font-size:14px;white-space:pre-line">${summaryHtml}</p>
+        <p style="color:#888;font-size:12px;margin-top:16px">Détecte outils bannis (agent_lessons), faits biens contredits, doublons — jamais "déjà codé" (nécessite une revue avec accès au repo). Détail dans l'admin → onglet Agents.</p>
+      </div>`,
+    });
+  } catch (e) { console.error("[agents-triage] erreur:", e.message); }
+}
+
 // ── Email pré-départ J-1 (late-checkout push) ────────────────────────────────
 async function runPredepart(env) {
   const secret = env.POSTSTAY_SECRET || "";
@@ -3574,6 +3600,7 @@ export default {
         runTokenHealthCheck(env), // alerte si META_PAGE_TOKEN invalide/expire <7j
         runSeoReport(env), // 📈 rapport SEO hebdo (Search Console) par email
         runBugTriage(env), // 🐞 triage hebdo des bugs captés en prod → backlog + digest
+        runAgentsTriage(env), // 🧹 triage hebdo backlog agents IA → bloque outils bannis/faits contredits/doublons
         runMemoryDistill(env), // 🧠 B2 — distille l'expérience du réseau en apprentissages durables
         runQABatch(env, QA_WEEKLY, "qa_session:weekly", "hebdo"), // 🔍 QA hebdo (flux, endpoints, tracking, emails, agents)
         runGuideWrite(env), // 📝 réécriture prose d'accueil guides D1 (welcome_message + tagline)

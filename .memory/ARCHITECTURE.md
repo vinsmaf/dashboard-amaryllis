@@ -361,7 +361,7 @@ flowchart TD
 | `0 11 * * 1` | lundi 11h UTC / 7h MTQ | **`runReunioneGenerale`** — accountability D1 (`category=reunion`) + backlog locatif (critique/haute) + fleet patrimoine HTTP + synthèse LLM (`/api/ai-summary`) + top 3 actions créées D1 (`rg-YYYYMMDD-N`, `category=reunion`) + mémoire delta (`rg-memory-last`) + ntfy · `FLEET_SECRET` Worker requis |
 | `0 12 * * *` | 12h UTC / 8h MTQ | `runEditorialReseed` (30j) + `runEditorialDraftGen` (drafts J+2 → gate) |
 | `0 13 * * *` | 13h UTC / 9h MTQ | `charge-balance` (soldes 2× J-30 — migré cron-job.org 7798126) |
-| `0 6 * * 1` | lundi 6h UTC | rapport hebdo · prix-recap · RAG ingest · agents-execute + digest · token health check · SEO report · bug-triage · memory-distill · guide-write |
+| `0 6 * * 1` | lundi 6h UTC | rapport hebdo · prix-recap · RAG ingest · agents-execute + digest · token health check · SEO report · bug-triage · **agents-triage** · memory-distill · guide-write |
 | `0 1 1 * *` | 1er du mois 1h UTC | export comptable CSV · article SEO long-tail · rappel rotation tokens · refresh avis (Apify) · **`seasonal-update`→`seasonal_memory`** |
 
 ### Crons cron-job.org (déclencheurs HTTP `?secret=`)

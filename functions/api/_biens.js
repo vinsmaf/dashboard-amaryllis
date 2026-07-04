@@ -26,7 +26,7 @@ const GROUNDING = {
 
 export const BIENS = Object.fromEntries(Object.values(CANON).map(b => [b.id, {
   nom: b.nom, type: b.type, capacite: b.capacite, chambres: b.chambres,
-  prix: b.prix, lieu: b.lieu, ...GROUNDING[b.id],
+  prix: b.prix, lieu: b.lieu, bookable: b.bookable, ...GROUNDING[b.id],
 }]));
 
 // Bloc règles géo + équipements injecté tel quel dans le prompt des agents.
