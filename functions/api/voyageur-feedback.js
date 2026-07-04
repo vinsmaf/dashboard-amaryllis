@@ -28,6 +28,7 @@ const AIRBNB_LISTINGS = {
 import { verifyBearer } from "./_adminauth.js";
 import { callLLM } from "./_llm.js";
 import { classifyReview, buildReviewReplyPrompt } from "../../src/utils/reviewClassification.js";
+import { buildThemeCodingPrompt, parseThemeCodingResponse } from "../../src/utils/reviewThemes.js";
 import { BIENS } from "./_biens.js";
 
 const CORS = {
@@ -64,6 +65,9 @@ async function ensureTable(db) {
   try { await db.exec("ALTER TABLE voyageur_feedback ADD COLUMN draft_reply TEXT"); } catch {}
   try { await db.exec("ALTER TABLE voyageur_feedback ADD COLUMN draft_status TEXT NOT NULL DEFAULT 'none'"); } catch {}
   try { await db.exec("ALTER TABLE voyageur_feedback ADD COLUMN draft_generated_at TEXT"); } catch {}
+  // Migration — voyageur-002 : codage thématique (7 thèmes fixes, src/utils/reviewThemes.js).
+  // JSON array en texte (ex. '["piscine","reco"]'), NULL tant que pas codé.
+  try { await db.exec("ALTER TABLE voyageur_feedback ADD COLUMN themes TEXT"); } catch {}
 }
 
 // Hash déterministe court (anti-doublon sans dépendance crypto lourde)
@@ -340,6 +344,40 @@ export async function onRequest(context) {
       generated.push(r.id);
     }
     return json({ ok: true, generated: generated.length, failed: failed.length, ids: generated });
+  }
+
+  // ── POST ?action=code-themes : codage thématique batché (voyageur-002) ──────
+  // Traite les avis pas encore codés (themes IS NULL), par lots de 15 par appel LLM
+  // (réduit le nb d'appels vs 1/avis), plafonné à 8 lots (120 avis) par requête HTTP
+  // pour rester dans le temps d'exécution d'une Function.
+  if (request.method === "POST" && action === "code-themes") {
+    const { ok: adminOk } = await verifyBearer(request, env);
+    if (!adminOk) return json({ error: "Non autorisé" }, 401);
+
+    const { results } = await db.prepare(
+      "SELECT id, bien_id, rating, review_text FROM voyageur_feedback " +
+      "WHERE themes IS NULL AND review_text IS NOT NULL AND review_text!='' " +
+      "ORDER BY review_date DESC LIMIT 120"
+    ).all();
+
+    const BATCH = 15;
+    let coded = 0;
+    const failedBatches = [];
+    for (let i = 0; i < results.length; i += BATCH) {
+      const batch = results.slice(i, i + BATCH);
+      const reviews = batch.map(r => ({
+        id: r.id, bienNom: BIENS[r.bien_id]?.nom || r.bien_id, rating: r.rating, text: r.review_text,
+      }));
+      const { messages } = buildThemeCodingPrompt(reviews);
+      const llm = await callLLM(env, { tier: "smart", messages, logSource: "review-theme-coding" });
+      if (!llm.ok || !llm.text) { failedBatches.push(i / BATCH); continue; }
+      const parsed = parseThemeCodingResponse(llm.text, batch.map(r => r.id));
+      const stmts = parsed.map(p =>
+        db.prepare("UPDATE voyageur_feedback SET themes=? WHERE id=?").bind(JSON.stringify(p.themes), p.id)
+      );
+      if (stmts.length) { await db.batch(stmts); coded += stmts.length; }
+    }
+    return json({ ok: true, coded, remaining_untouched: results.length - coded, failedBatches });
   }
 
   // ── PATCH ?action=moderate : masquer/afficher un avis (admin) ─────────────
