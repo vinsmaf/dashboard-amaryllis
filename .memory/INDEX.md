@@ -10,8 +10,8 @@
 |---|---|---|
 | **[CONTEXT.md](./CONTEXT.md)** | État courant condensé (chiffres frais, où on en est) | **Toujours, en 1er** |
 | **[ARCHITECTURE.md](./ARCHITECTURE.md)** | 🗺️ Carte VIVANTE du système (site public + admin + backend + RM + IA + D1, 2 schémas Mermaid, table des crons). Tenue à jour à chaque `/cloture-session` (§4a). | **Pour comprendre l'ensemble / avant de toucher la structure** |
-| **[ADR.md](./ADR.md)** | Décisions structurantes datées (5 lignes : choix / alternatives / conséquences / périmètre / statut) | Avant de toucher l'archi/les données |
-| **[LEARNINGS.md](./LEARNINGS.md)** | Enseignements réutilisables (pièges déjà rencontrés) | Avant d'agir sur un sujet à risque |
+| **[ADR.md](./ADR.md)** | Décisions structurantes datées (5 lignes : choix / alternatives / conséquences / périmètre / statut). **Mois courant uniquement** — archives par mois dans `archive/ADR-YYYY-MM.md` | Avant de toucher l'archi/les données |
+| **[LEARNINGS.md](./LEARNINGS.md)** | Pointeur — enseignements réutilisables splittés par thème dans `learnings/*.md` (10 fichiers, [index](./learnings/INDEX.md)) | Avant d'agir sur un sujet à risque |
 | **[BLOCKERS.md](./BLOCKERS.md)** | Frictions / dettes / points bloquants + statut | Pour savoir ce qui attend quoi/qui |
 | **[RECALL.md](./RECALL.md)** | Rappel contextuel : quoi se rappeler avant de toucher un domaine (niv.2) | **Avant d'agir sur un domaine** |
 | **[DECISIONS.md](./DECISIONS.md)** | Moteur de décision : critères déterministes par type de décision (niv.3) | Avant de trancher |
@@ -19,6 +19,7 @@
 | **[ITERATIONS_LOG.md](./ITERATIONS_LOG.md)** | Journal des sessions (rolling) | Pour retracer l'historique récent |
 | **[METRICS_H1_2026.md](./METRICS_H1_2026.md)** | Revue de performance H1 2026 — scorecard 7 biens, alertes P0, canal mix, chantiers H2 | En début de session ou avant tout conseil pricing/locatif |
 | **[SPRINT_2026_07.md](./SPRINT_2026_07.md)** | Sprint plan 01–14 juillet 2026 — P0/P1/stretch, statuts, dates clés | En début de session pour savoir quoi faire en priorité |
+| **[whatsapp-contacts-collecte.md](./whatsapp-contacts-collecte.md)** | Détail de la collecte de contacts WhatsApp (88 contacts, recoupement téléphone/email) | Si besoin du détail contacts voyageurs |
 
 ## Archives profondes (référence, pas à relire intégralement)
 - `../docs/OPERATING-MODEL.md` — **charte de fonctionnement COMMUNE aux 2 projets** (mémoire, rituels, deploy, matrice de conformité, backlog de synchro). Identique dans patrimoine-dashboard.

@@ -90,68 +90,48 @@
 - **Action Vincent** : dès réception des emails TA → transmettre les 6 URLs à Claude → mise à jour `TRIPADVISOR_REVIEW` dans `functions/api/send-poststay.js` → redéploiement.
 - **En attendant** : le bloc TripAdvisor est dans les emails post-séjour mais les liens sont des placeholders (ne fonctionnent pas). Les emails partent quand même (bloc non-critique).
 
-## En cours → ✅ terminé le 2026-06-26 (Session Apple Business Connect — résidence Amaryllis configurée)
-> Tâche : configuration Apple Business Connect (org + fiche résidence Amaryllis). ADR-APPLE-MAPS-001.
-> Résidence Amaryllis configurée : description ✅, fuseau horaire ✅ (Porto Rico = UTC-4), site web ✅.
-> 🟡 **Actions Vincent pendantes (non bloquantes)** :
->   - Uploader **logo** correct pour résidence Amaryllis (mauvais logo sélectionné pendant la session → Vincent refait)
->   - Uploader **photo de couverture** : `~/Downloads/residence-amaryllis-cover.jpg` (2000×1125 JPG, photo géko/16)
->   - Après validation org Apple (≤5j ouvrés depuis 26/06) → créer les 6 emplacements manquants (Villa Amaryllis, Iguana, Zandoli, Géko, Mabouya, Nogent)
+## ✅ 2026-06-26 — Session Apple Business Connect — résidence Amaryllis configurée — détail complet : `.memory/ITERATIONS_LOG.md`
 
 ## 🟡 Apple Business Connect — validation org en attente (soumise 26/06/2026)
 - **Statut** : dossier soumis avec justificatifs (Kbis + enregistrement DNS TXT). Délai ≤5j ouvrés.
 - **Ce qui débloque** : email de confirmation Apple → création des 6 emplacements restants.
 - **Date limite estimée** : ~2026-07-03 (5j ouvrés).
 
-## En cours → ✅ terminé le 2026-06-26 (Session RM plancher CalendrierTarifs — fix complet server+UI)
+## ✅ 2026-06-26 — Session RM plancher CalendrierTarifs — fix complet server+UI — détail complet : `.memory/ITERATIONS_LOG.md`
 
-## En cours → ✅ terminé le 2026-06-26 (Session revenus — corrections chirurgicales Sheet « revenus locatifs 2026 »)
-> Corrections 2026-06-26 via `revenus2026ManualPatch_` (@71) :
-> - Schœlcher direct juin : 1285.71€ → **1300€** (Morgane POMPADOU, division égale 3900€/3 mois) ✅
-> - Géko airbnb juin : 378.3€ → **698.3€** (Esméralda 320€ + Rabia 378.3€) ✅
-> - Zandoli booking août : 0€ → **820.78€** (Booking iCal sans montant, saisi manuellement) ✅
-> - Amaryllis booking déc : 2805.08€ → **0€** (résa annulée + supprimée du Sheet, memo empêche re-sync) ✅
-> Schœlcher direct juillet : **1600€** ✅ (Éléonore BEVON uniquement — Option A retenue par Vincent le 2026-07-01).
+## ✅ 2026-06-26 — Session revenus — corrections chirurgicales Sheet « revenus locatifs 2026 » — détail complet : `.memory/ITERATIONS_LOG.md`
 
 ## ✅ Schœlcher direct juillet — 2585.71€ → 1600€ (Éléonore BEVON uniquement, 2026-06-26)
 
-## En cours → ✅ terminé le 2026-06-25 (Session UI visuelle — nav 8→6 groupes + 5 améliorations visuelles admin)
-> (1) `NAV_GROUPS` App.jsx : 8 groupes → 6 (Quotidien/Opérations/Finance/Analyses/Marketing/Admin). ADR-NAV-GROUPS-001. Commit `eeeac4e`. (2) `SubTabBar` ajouté à `src/primitives.jsx` ; Charges.jsx + Pilotage.jsx migrés. (3) Nav pill active (borderLeft → rounded pill 8px margin). (4) TodayBanner "Actions aujourd'hui" : border plus marquée + boxShadow coloré vert/rouge. (5) KPI cards Cockpit : padding 8→10px, gap 8→10, border subtile. (6) Tooltip recharts `TT` : fond `#0a0f1e`, padding propre. ADR-SUBTABBAR-001. Commit `7580510`.
+## ✅ 2026-06-25 — Session UI visuelle — nav 8→6 groupes + 5 améliorations visuelles admin — détail complet : `.memory/ITERATIONS_LOG.md`
 
-## En cours → ✅ terminé le 2026-06-24 (Session dashboard UX — Charges Évolution + Pilotage consolidation + ROI pub)
-> (1) Charges.jsx : sub-tab "📊 Évolution" (historique charges/cashflow/revenus 2022-2025 + 2026 YTD, graphes ComposedChart + BarChart taux + table). Renommé "Budget YTD". (2) Pilotage consolidation : CPA canal intégré comme sous-tab "💸 CPA", doublon "Canaux 2025" supprimé (ADR-PILOTAGE-CONSOLIDATION-001). (3) CanalLivePerf enrichi : filtre YTD/90j/30j, encart désintermédiation % direct vs 2025/objectif 40%, graphe mix canal par mois. (4) CpaCanalTab enrichi : ROI pub direct + encart seuil Ads détaillé. (5) Historique déplacé Analyses → Finance (ADR-NAV-HISTORIQUE-001). Commits `a28906a`/`88b16bb`/`0899e90`.
+## ✅ 2026-06-24 — Session dashboard UX — Charges Évolution + Pilotage consolidation + ROI pub — détail complet : `.memory/ITERATIONS_LOG.md`
 
-## En cours → ✅ terminé le 2026-06-24 (Feature contacts : base guest_contacts WhatsApp+Sheet + onglet)
-> Table D1 `guest_contacts` = 88 contacts (53 WhatsApp + 35 Sheet), endpoint CRUD+merge, onglet 📇 Contacts. Tout en prod (CI). ADR-CONTACTS-001.
-> 🟡 **Reste à la main de Vincent** (non bloquant) : (1) 13 contacts WhatsApp **sans résa au Sheet** = prospects ou résas jamais saisies — à vérifier au cas par cas. (2) **Doublons WhatsApp↔Sheet même personne / 2 numéros** (ex. Pascal/4REAZONS vs Pascal Guilbaud) **non auto-fusionnables** (nom WhatsApp = prénom+bien) → fusion manuelle dans l'onglet si repérés. (3) Heuristique `pays` imparfaite sur quelques numéros étrangers (Dominique LOUIS skynet.be taggé FR au lieu de BE) — cosmétique, corrigeable en 1 clic.
+## ✅ 2026-06-24 — Feature contacts : base guest_contacts WhatsApp+Sheet + onglet — détail complet : `.memory/ITERATIONS_LOG.md`
 
-## En cours → ✅ terminé le 2026-06-24 (Incident deploy agent : drift réparé + garde anti-agent + division instances)
-> Agent locatif avait déployé `cbb50f6` hors-git (drift prod≠origin). Réconcilié (`git push`, rien perdu), garde TTY dans `deploy-pages.sh` (`5cc47a7`), division actée (agent=locatif / instance=patrimoine). Prod = origin = `03ba65e`. Vérif finale OK (37 articles + winback 26 + 88 guest_contacts vivants).
+## ✅ 2026-06-24 — Incident deploy agent : drift réparé + garde anti-agent + division instances — détail complet : `.memory/ITERATIONS_LOG.md`
 
-## En cours → ✅ terminé le 2026-06-23 (Session CRM : Phase 0/1 + 1ère campagne réelle)
-> Moteur réactivation `crm-lifecycle.js` (winback+fidelite, batch Resend, anti-doublon `crm_campaigns`, Iguana exclu) déployé. **winback envoyé 26/26 dormants.** fidelite programmé 08/09 (assisté). Vue segments CRM. Roadmap `docs/crm-roadmap.md`. 🟡 Suivi humain : réponses des 26 + résas directes = KPI repeat (pas de mécanisme auto de tracking de la conversion réactivation→résa pour l'instant).
+## ✅ 2026-06-23 — Session CRM : Phase 0/1 + 1ère campagne réelle — détail complet : `.memory/ITERATIONS_LOG.md`
 
-## En cours → ✅ terminé le 2026-06-23 (Session articles SEO : portage + maillage + optimisations)
-> Système articles SEO longue traîne (37 publiés) porté de la branche orpheline `claude/sad-bartik-02a3c2` (supprimée), déployé. Maillage interne entrant (footer/menu/fiches biens/guides), 5 doublons dépubliés (cannibalisation), images hero, schema BreadcrumbList, GA4, affiliés guides manquants comblés, liens contextuels. Fix bug deploy (smoke race condition) + ADR-DEPLOY-001 (Claude=git push only). Revue SEO programmée 15/07. Tout en prod, CI verte.
+## ✅ 2026-06-23 — Session articles SEO : portage + maillage + optimisations — détail complet : `.memory/ITERATIONS_LOG.md`
 
-## En cours → ✅ terminé le 2026-06-23 (Session backlog agents 61-76 + data-056/060)
-> Sweep complet du backlog : 76 items traités (✅/👤/🔄/❌), 2 post-backlog (send-leads-promo + Net RevPAR). Déployé en prod.
+## ✅ 2026-06-23 — Session backlog agents 61-76 + data-056/060 — détail complet : `.memory/ITERATIONS_LOG.md`
 
-## En cours → ✅ terminé le 2026-06-23 (Session guides : 4 gaps résolus + 11 guides 404 corrigés + Gmail drafts)
+## ✅ 2026-06-23 — Session guides : 4 gaps résolus + 11 guides 404 corrigés + Gmail drafts — détail complet : `.memory/ITERATIONS_LOG.md`
 
 ## 🟡 Draft Gmail Sabina DiscoverCars — échec 1er appel create_draft
 - 🟡 Le 1er appel `create_draft` pour Sabina a retourné une erreur tool. Le draft Ilina a réussi (`id: r-7175489248125367124`). Adresse Ilina déduite (`ilina.beskina@discovercars.com`) — non confirmée.
 - **Débloque** : Vincent vérifie dans Gmail Brouillons. Si draft Sabina absent → créer manuellement (To: `sabina.maliseva@discovercars.com`, Sujet: `Re: Special Offer 2 — Amaryllis Locations`, corps : statut Special Offer 2 / 80% commission / prochaine étape). Vérifier aussi l'adresse Ilina avant envoi.
 
-## En cours → ✅ terminé le 2026-06-23 (Session Pubs — campagne Google Ads Canada LIVE, Meta toujours bloqué)
+## ✅ 2026-06-23 — Session Pubs — campagne Google Ads Canada LIVE, Meta toujours bloqué — détail complet : `.memory/ITERATIONS_LOG.md`
 
-## En cours → ✅ terminé le 2026-06-23 (Session reels tous biens — GekoReel + 5 nouveaux déployés)
+## ✅ 2026-06-23 — Session reels tous biens — GekoReel + 5 nouveaux déployés — détail complet : `.memory/ITERATIONS_LOG.md`
 
-## En cours → ✅ terminé le 2026-06-23 (Session immersification guides — 20 guides déployés)
+## ✅ 2026-06-23 — Session immersification guides — 20 guides déployés — détail complet : `.memory/ITERATIONS_LOG.md`
 
-## En cours → ✅ terminé le 2026-06-22 (Session affiliate GYG + nav fixes + widget embed)
+## ✅ 2026-06-22 — Session affiliate GYG + nav fixes + widget embed — détail complet : `.memory/ITERATIONS_LOG.md`
 
-## En cours → ✅ terminé le 2026-06-22 (Session git sync + CI fix + spam + gate rewrite)
+## ✅ 2026-06-22 — Session git sync + CI fix + spam + gate rewrite — détail complet : `.memory/ITERATIONS_LOG.md`
 
 ## 🟡 Email "différence main/prod" — source non confirmée
 - 🟡 Vincent signale un email à chaque deploy "comme quoi il y a une différence entre le main et la prod". Recherche exhaustive (Worker, scripts, fonctions, crons) = **aucun code custom trouvé**.
@@ -160,26 +140,18 @@
 
 ---
 
-## En cours → ✅ terminé le 2026-06-21 (Session organisation société d'agents + crons)
+## ✅ 2026-06-21 — Session organisation société d'agents + crons — détail complet : `.memory/ITERATIONS_LOG.md`
 
----
+## ✅ 2026-06-21 — Session sync permanent main=prod + couche monitoring live — détail complet : `.memory/ITERATIONS_LOG.md`
 
-## En cours → ✅ terminé le 2026-06-21 (Session sync permanent main=prod + couche monitoring live)
-
----
-
-## En cours → ✅ terminé le 2026-06-21 (Session calendrier compact + auto-scroll + Leaflet ESM)
+## ✅ 2026-06-21 — Session calendrier compact + auto-scroll + Leaflet ESM — détail complet : `.memory/ITERATIONS_LOG.md`
 
 ## 🟡 META_PAGE_TOKEN — migration System User token permanent
 - 🟡 **Token actuel ≈ 60j (page token long-lived)** : renouvellement via `meta-token-exchange.js` (D1 `kv_store`). Le seul chemin "jamais expire" = **System User token** (Meta Business Manager → Business Settings → System Users → Create → Admin → Générer token avec toutes les permissions Meta). Disponible seulement après Business Verification complète.
 - **Débloque** : BV validée (soumise 2026-06-17) → créer System User → générer token sans date d'expiration → remplacer `META_PAGE_TOKEN` dans les secrets CF (Pages + Worker). Supprimer `meta-token-exchange.js` ensuite.
 - **Action AGENDA ajoutée** : 2026-06-25 (dès validation BV).
 
-## En cours → ✅ terminé le 2026-06-20 (Session sécurité : 3 trous fermés + 2 bugs CSP + audit multimédia)
-> Findings #1-3 de l'audit architecte-réseau déployés (manage-deposit auth, social auth, beds24 cache private).
-> CSP corrigée : api.open-meteo.com + unpkg style-src.
-> Findings #4-13 restants en backlog (non demandés).
-> ⏳ **À surveiller — verdict 03/07** : `add_payment_info` se remplit-il ? ventes quittent "Unassigned" ? AGENDA 2026-07-03.
+## ✅ 2026-06-20 — Session sécurité : 3 trous fermés + 2 bugs CSP + audit multimédia — détail complet : `.memory/ITERATIONS_LOG.md`
 
 ## 🟡 Config page Facebook — éléments en attente
 - 🟡 **CTA "Book now" URL non vérifiée** : le bouton existe sur la page en vue visiteur, mais l'URL de destination n'a pas été confirmée/éditée (session interrompue). → En vue visiteur : hover bouton → crayon → vérifier que cible = `villamaryllis.com`. Si besoin : Page Settings → Buttons.

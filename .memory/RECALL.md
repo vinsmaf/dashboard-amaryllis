@@ -23,6 +23,8 @@
 | **Mémoire** | 3 niveaux : `.memory/` (vif) · `PROJECT_MEMORY.md` (long terme) · `docs/` (livrables). Archiver le journal daté dans `docs/_archive/` au-delà de ~10 entrées. | LEARNINGS |
 | **Skills / capacités** | **Consulter la LISTE des skills** (Skill tool) avant de déclarer qu'une capacité manque — un `grep ~/.claude/skills` ne suffit pas. | LEARNINGS |
 | **Workflow multi-agents** | Donner les **chemins ABSOLUS** dans les prompts agents — le worktree (cwd session) peut être périmé → verdict faux NO_GO vécu 2026-06-18. | LEARNINGS |
+| **cwd inhabituel (worktree)** | Avant de travailler dans un cwd qui n'est pas le repo principal, vérifier `git branch --show-current` + `lsof -p <pid> \| grep cwd` (quel process sert réellement les fichiers) — un worktree périmé rend les éditions silencieusement sans effet, ou fait déployer un preview au lieu de la prod (vécu 3× : 2026-06-18/19/21). | LEARNINGS |
+| **Secret/var Cloudflare Pages tout juste posé** | Après un `wrangler pages secret put` sur une clé JAMAIS UTILISÉE avant, tester en live (curl direct) — un déploiement Production existant peut ne pas refléter le nouveau secret tant qu'un déploiement n'a pas eu lieu APRÈS son ajout. Si ça échoue, redéployer avant de creuser plus loin. | CROSS-LEARNINGS |
 
 | **BLOCKERS.md — items à proposer** | ⚠️ **VÉRIFIER LE CODE AVANT DE PROPOSER.** Un item BLOCKERS peut être stale (fix appliqué mais entrée non fermée). Règle : avant de proposer un item, grep/read 30s pour confirmer qu'il est encore ouvert. Exemples stales vus : beds24Amount, iCal null guard, smoke test Playwright → déjà fixés sans fermeture. **Ne jamais proposer un item BLOCKERS sans preuve que le problème existe encore dans le code.** | LEARNINGS |
 

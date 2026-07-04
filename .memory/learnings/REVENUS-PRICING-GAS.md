@@ -1,0 +1,116 @@
+# Revenus & Pricing (GAS/Worker/RM) — Learnings locatif-dashboard
+
+> Revenus 2026/2027 (GAS), pricing Revenue Manager, sync Sheet/D1/Worker
+> Extrait de `../LEARNINGS.md` le 2026-07-04 (consolidation mémoire — split thématique).
+> 25 entrées, triées par date décroissante.
+
+## 🔴 `addReservation_` (GAS) ne resynchronise JAMAIS les revenus sur une résa MODIFIÉE, seulement sur une résa NOUVELLE — 2026-07-03
+- **Piège** : `addReservation_` a 3 branches de dédup — (1) id exact match → "updated" (ligne écrasée en place), (2) même contenu (bien|checkin|checkout) → "updated, merged:true" (ligne écrasée, ancien id préservé), (3) `sheet.appendRow(row)` → "added" (vraie nouvelle ligne). **`syncRevenus2026()` n'est appelé QUE dans la branche (3)`.** Résultat concret : en modifiant la résa d'Ary Augustin (Zandoli, 6→4 nuits, 898€→710€) via un id existant → branche "updated" → le Sheet "Revenus locatifs 2026" a gardé l'ANCIEN montant (898€) pendant toute la session, sans aucune erreur ni signal — jusqu'à ce que Vincent demande explicitement "et sur les revenus 2026 ça n'a pas créé de doublon ?".
+- **La prochaine fois** : après TOUTE modification de prix/dates d'une résa existante (pas seulement création/annulation), relancer `revenus2026RebuildBienApply` (ou l'équivalent dry d'abord) pour le bien/mois concerné — ne jamais supposer que `syncRevenus2026()` a suivi automatiquement. Le vrai risque n'est pas le doublon (dédup id/contenu solide) mais le **chiffre périmé silencieux**.
+
+## 🟡 Un défaut temporel codé en dur dans un script "safe/idempotent" rote silencieusement — se donner un défaut auto-actualisé — 2026-07-03
+- **Piège évité** : `rebuildRevenus2026_` avait `fromMonth` par défaut = `4` (avril), choisi car "avril = 1ère arrivée en source" **au moment où le code a été écrit**. Ce chiffre n'a plus jamais bougé. Si un appel avait omis `fromMonth` (oubli humain, script tiers, cron futur), le rebuild aurait re-zéroté et recompute avril→décembre en écrasant des mois déjà clos (juin par ex.) — sans qu'aucun signal ne prévienne, puisque la fonction est justement conçue pour "écraser puis recalculer".
+- **La prochaine fois** : pour tout script de recalcul/rebuild dont le "point de départ" est un mois/une date, préférer un défaut **calculé dynamiquement** (`new Date().getMonth()+1` dans ce cas, via `currentMonthDefault_()`) plutôt qu'une constante — ça protège perpétuellement les périodes déjà closes sans exiger de maintenance mensuelle. Garder la possibilité de forcer une valeur explicite pour les corrections volontaires de mois passés (ne pas bloquer ce cas d'usage légitime).
+
+## 📅 GAS : les cellules Date sont des objets JS, pas des strings — 2026-06-27
+- **Piège** : `r[4]` (colonne checkin) dans GAS retourne un objet `Date` JS, pas une chaîne. `String(dateObject)` → "Sat Aug 15 2026 00:00:00 GMT+0000 (UTC)" → `parseInt` sur les 4 premiers chars = NaN.
+- **La prochaine fois** : toujours tester `if (raw instanceof Date)` et utiliser `Utilities.formatDate(raw, "UTC", "yyyy-MM-dd")`. Sinon `String(raw || "")` pour les autres types. Affecte toutes les fonctions GAS qui lisent des colonnes de dates (`deleteReservation_`, `cancelReservations_`, etc.).
+
+## ⚡ CF Pages Function : `context.waitUntil` pour GAS en background après webhook — 2026-06-27
+- **Pattern** : webhook Beds24 doit répondre vite (timeout 10s). GAS `rebuildRevenus` prend >5s → répondre 200 immédiatement, puis pousser le rebuild en background avec `context.waitUntil(Promise.all(jobs))`.
+- **La prochaine fois** : chaque fois qu'une Pages Function reçoit un webhook et doit déclencher une opération lente (GAS, sync longue), utiliser `context.waitUntil` avec `fetch(sheetsProxy, ...)` → le CF runtime maintient la Function vivante jusqu'à la fin du rebuild, sans bloquer la réponse.
+
+## ⏱ GAS via proxy CF = timeout sur opérations lourdes — 2026-06-27
+- **Piège** : `cancelReservations_` (delete + rebuild en 1 appel GAS) appelé via `/api/sheets-proxy` → 502 timeout. Pages Functions ont un timeout court.
+- **La prochaine fois** : pour les appels manuels Claude, TOUJOURS séparer en 2 : `deleteReservation` puis `revenus2026RebuildBienApply`. Le Worker appelle GAS directement (pas via proxy) → pas de timeout pour les vraies annulations auto.
+
+## 🔴 GAS revenus : revenus2026FromMonth(ignoreMemo:true) = INTERDIT — 2026-06-27
+- **Piège vécu (grave)** : appeler `revenus2026FromMonth` avec `ignoreMemo:true` quand des cellules ont déjà des valeurs → double-compte TOUT (18 IDs, juin-déc, tous biens). Symptôme : "5 résas alors qu'il y en a qu'une, 12 jours au lieu de 2".
+- **La prochaine fois** : utiliser UNIQUEMENT `revenus2026RebuildBienApply` (zero + recalcul idempotent). La fonction `ignoreMemo` est maintenant BLOQUÉE côté GAS (retourne une erreur 400). `patch-booking.js` utilise désormais `RebuildBienApply`.
+
+## 🔴 GAS cancelReservations : syncRevenus2026 ne soustrait pas — 2026-06-27
+- **Piège** : l'ancien `cancelReservations_` appelait `revenus2026Forget + syncRevenus2026` après suppression. `syncRevenus2026` est additif (ajoute des deltas), ne soustrait jamais → revenus restaient au niveau pré-annulation.
+- **La prochaine fois** : après suppression d'une résa, toujours appeler `rebuildRevenus2026_(true, month, bienId)` pour le bien+mois affecté. `cancelReservations_` fait maintenant ça automatiquement (capture cols A+B+E avant delete, rebuild par bien/mois).
+
+## 📅 iCal Worker : stocker {uid, checkout}, pas juste uid — 2026-06-27
+- **Piège vécu** : Géko a reçu une fausse alerte d'annulation (UID dont le préfixe était le même qu'une résa terminée). Root cause : KV stockait des UIDs sans date → impossible de savoir si la résa était terminée ou si Airbnb avait juste roté l'UID.
+- **La prochaine fois** : `ICAL_STORE` key `uids:{bienId}:{canal}` = array de `{uid, checkout}`. Deux filtres à appliquer avant de marquer une annulation : (1) même préfixe (avant `-`) dans les résas actuelles = rotation UID ignorée ; (2) checkout < today = séjour terminé ignoré. Backward-compatible : old strings → `{uid, checkout: null}`.
+
+## 🏷️ RM : passer `daily_floors` au `/calculate` = pattern correct pour respecter les prix réels — 2026-06-26
+- **Pattern validé** : passer `{ daily_floors: { "2026-07-01": 280, ... } }` dans le body du POST `/api/rm-recommendations/calculate` → `calcDateReco` reçoit `calFloorCents` comme 5ème couche du `hardFloor`. D1 stocke les vraies valeurs.
+- **La prochaine fois** : tout recalcul RM depuis le frontend doit inclure `daily_floors: calendrierPrices` (bien seul) ou `allPrices[bienId]` (bulk). Si un cron côté Worker doit recalculer, il devra charger les prix depuis une autre source (seedPrices.js n'est pas disponible server-side) → à prévoir si besoin.
+- **Ne pas confondre avec l'UI-floor** (`effectiveCents()`) qui reste utile pour les recos pré-existantes en D1 avant ce fix.
+
+## 🏷️ RM D1 `rm_properties` : base_price_* = NULL par défaut — plancher = siteMinCents seulement — 2026-06-26
+- **Découverte** : tous les champs `base_price_low/mid/high`, `price_min`, `price_max` = NULL dans `rm_properties` (jamais configurés). Le moteur `calcDateReco` remplace les NULL par 0 → `hardFloor = max(0, 0, siteMinCents, 0) = siteMinCents` (prix biens.js uniquement). Le fix `basePrice` dans `hardFloor` (session précédente) était sans effet car `base_price_mid = NULL → 0`.
+- **La prochaine fois** : pour que les recos RM respectent les saisons, 2 options — (A) Alimenter `rm_properties` avec la grille via `/api/rm-properties` (Bearer auth + JSON) ; (B) Plancher UI-side via `loadDailyPrices` (option choisie 26/06). Option B = 0 D1 touch, toujours à jour avec le CalendrierTarifs réel.
+
+## 🏷️ RM `/api/rm-properties` : auth = Bearer token (session) pas `?secret=` — 2026-06-26
+- L'endpoint `/api/rm-properties` utilise `verifyBearer` (token de session `ldb_tok`) et non `?secret=POSTSTAY_SECRET`. Pour l'appeler en curl → extraire le `ldb_tok` depuis sessionStorage admin après login.
+
+## 💰 Revenus Apps Script : toujours lire la cellule AVANT de patcher — 2026-06-26
+- **Piège vécu** : Géko airbnb juin avait Rabia (378.3€) déjà en cellule. Appel `manualPatch add 378.3€` → doublon à 756.6€. Seule Esméralda (320€) manquait réellement. Fix : set à 698.3€ = 320 + 378.3.
+- **La prochaine fois** : avant tout `mode=add`, appeler `mode=add&value=0` pour lire le "before". Confirmer que la valeur en cellule = ce qu'on pense, PUIS faire le vrai add.
+
+## 💰 Revenus Apps Script : division égale par mois pour longs séjours — 2026-06-26
+- **Piège** : implémentation initiale utilisait prorata par nuits → résultats non entiers (985.71€ au lieu de 975€). Vincent a explicitement rejeté.
+- **La prochaine fois** : séjour long (>30 nuits) = `equalShare = Math.round(montant / nMonths * 100) / 100` sur chaque mois touché. Logique identique dans les deux GS (`applyOne_` 2026 et `applyOne27_` 2027) — si on modifie l'un, modifier l'autre.
+
+## 💰 Revenus Apps Script : MIN_AUTO_MONTH=6 — les arrivées avant juin jamais auto-traitées — 2026-06-26
+- `syncRevenus2026_()` ignore les arrivées < juin même après `PurgeZero`. Pour corriger une résa avec arrivalMonth < 6 : soit `revenus2026ManualPatch_` (cellule unique), soit `rebuildRevenus2026_(apply, fromMonth, bienFilter)` (rebuild chirurgical par bien).
+
+## 💰 Revenus Apps Script : le memo empêche le re-sync des résas supprimées — 2026-06-26
+- Supprimer une résa du Sheet via `deleteReservation` NE retire PAS son ID du memo → le sync ne la retraitera jamais. C'est voulu pour les annulations (ex: Amaryllis Booking déc annulée → reste à 0€ même si l'iCal la repousse).
+- Si on veut forcer le re-traitement d'une résa → purger son ID du memo (`revenus2026PurgeZero_` ou DELETE D1 direct).
+
+## ⚠️ Apps Script revenus2026 : `apply:false` via sheets-proxy N'EST PAS un dry-run fiable — 2026-06-19
+- **Piège vécu (donnée compta corrompue)** : appel `{"action":"revenus2026FromMonth","apply":"false","ignoreMemo":"true"}` via `/api/sheets-proxy` → la réponse a retourné `mode:"applied"` (PAS dry !) et a recompté 11 résas juillet→déc en **ignorant la mémoire anti-doublon** → **double comptage** (le système `appendCell_` ADDITIONNE, n'écrase pas). Le param `apply` n'a pas été respecté par le routing proxy/doGet/doPost.
+- **La prochaine fois** : NE JAMAIS lancer une action GAS d'écriture potentielle « pour voir » en se fiant à `apply:false`. Lire d'abord le code de la fonction (`appscript/REVENUS_AUTO_2026.gs`) pour savoir ce que fait vraiment le param. Tester sur une copie ou demander à Vincent.
+- **Réparation propre** = `revenus2026Rebuild` (`rebuildRevenus2026_(apply,fromMonth)`) : il **ZÉROISE** les colonnes fromMonth→déc puis **recompte chaque résa 1× (dédup id+contenu)** → annule tout double comptage ET ne peut pas aggraver (au pire dry=no-op). Réparé juillet→déc 2026 (49 lignes zéroées, 8 résas recomptées, Nogent témoin stable).
+- **Sheet revenus = source-dérivé** : "revenus locatif 2026" est recalculé depuis "Toutes les Réservations" + "réservations" (montant 100% sur mois d'ARRIVÉE, dédup mémoire `rev2026_traites`). Un fix de montant (ex. Ludo Savoye Amaryllis Booking déc 2805,08€) doit être dans la SOURCE pour survivre à un rebuild — un ajustement direct dans le Sheet revenus serait écrasé.
+
+## 💶 Prix = prix journaliers du calendrier UNIQUEMENT — jamais `biens.js prix` ni API RM — 2026-06-19 (fusion 2026-06-05)
+- **Piège récurrent (3x vécu)** : utiliser `bien.prix` (ex. 110€ Zandoli) ou `rm-recommendations.recommended_price_cents` → montants faux. Le vrai Zandoli juillet = 133€/nuit moy = 1 861€/15 nuits.
+- **Source de vérité = prix journaliers du calendrier admin** (`loadDailyPrices()` = `SEED_DAILY_PRICES` + overrides `/api/site-config?type=prices`). **Devis juste = lien tunnel `…/<bien>?checkin=&checkout=` OU onglet Tarifs OU onglet Devis.** Réf : `docs/PRICING.md`. Je ne peux pas accéder au localStorage directement → dire à Vincent "fais le test sur le site".
+- `biens.js` `prix` = **plancher réel** (min des tarifs) + fallback SEO "dès X€" → jamais facturable directement. À ré-aligner si les tarifs changent fortement.
+- `/api/rm-recommendations` = prix conseillés RM → advisory only, Vincent ne les applique pas forcément.
+
+## 📥 Import de données dans le Sheet : pré-transformer en TSV propre, ne pas compter sur `buildColMap_` — 2026-06-17
+- Le CSV brut d'un export (Airbnb « Historique des transactions ») **ne mappe pas** : entêtes « Date de début/fin » ≠ alias `arrivée/départ` (et l'alias `arrivée` matche par erreur « Arrivée au plus tard le », vide pour les résas) ; le **nom d'annonce ne contient pas le bienId** (« Appartement de standing avec jardin, proche Paris » ≠ nogent ; « …splendide vue mer » = schoelcher). `guessAirbnbBienId_` échoue. **La prochaine fois** : pré-transformer en TSV avec entêtes reconnues + **bienId écrit en clair** dans la colonne logement + dates ISO + montant nettoyé. Filtrer `Type=Réservation` (exclure Payout/résolutions) et **agréger par code de confirmation** (les altérations = 2-3 lignes du même séjour à sommer).
+- IDs : code exposé (Airbnb `Code de confirmation`) → `airbnb-<code>` ; aucun code (Booking vue groupe) → **ID synthétique stable** `booking-BK-<bien>-<checkin>`. La dédup `importAllReservations_` (par ID **et** clé `bien|checkin|checkout`) rend l'import **idempotent** → relançable sans doublon, et **met à jour en place** les résas iCal déjà présentes (enrichit nom voyageur + montant).
+
+## 🚫 `/api/sheets-proxy` POST = 403 WAF depuis un script → écrire en GET direct vers la web app GAS — 2026-06-17
+- POST programmatique (`urllib`, UA par défaut) sur `/api/sheets-proxy` **bloqué 403 par le WAF Cloudflare**. **Contournement** : répliquer `forwardChunked` côté script → chunks **GET** directs vers `script.google.com/.../exec?action=importAllReservations&data=<json>` (~1800 chars/chunk). La web app GAS est publique, hors WAF.
+- Upsert `importAllReservations_` **O(n²)** → sur 355+ lignes Google **coupe le HTTP à ~2 min** mais **continue côté serveur jusqu'à 6 min** → vérifier le compte via `?action=read` avant de relancer (idempotent). Imports en **arrière-plan**.
+- Nouvelle action GAS exposée seulement après `clasp push` **+ `clasp deploy -i <même deployment id>`** (sinon `{"error":"action inconnue"}`).
+
+## 2026-06-16 (audit Playbook)
+- **`BIENS[].lieu` est ENRICHI** ("…, Martinique") → `isMartinique(b)` se trompe sur un élément BIENS. Pour le marché d'un bien, passer par le canonique BRUT `CANON[id]` (RM-20).
+- **Donnée saisie puis JETÉE** : `form.tel` collecté mais jamais transmis (metadata/INSERT). Avant de "capturer", vérifier si c'est déjà saisi côté front et juste perdu en aval (RM-10).
+- **A/B = proxy ≠ conversion** : câbler `trackConversion(step:"purchase")` à la résa confirmée (Merci.jsx), n'attribuer qu'aux tests EXPOSÉS (`listActiveVariants`).
+- **Findings sur réalité d'une donnée = confirmation humaine** : RM-13 (avis statiques) faux positif (réels). Demander la provenance à Vincent avant de "corriger".
+
+## 📊 revenus2026 mémo Sheets : déduplication = id ET content-key — 2026-06-14 (soir)
+- Le mémo `revenus2026` (Apps Script) déduplique les résas par **DEUX clés** : l'id de la résa ET la content-key `bien|checkin|checkout`. **Faire un `Forget id` seul ne suffit pas** — la content-key bloque quand même le re-sync. Il faut `Forget id` + `Forget bien|checkin|checkout` PUIS relancer le sync. Cas vécu : NINA GRUBO — Forget n'avait effacé que l'id, la content-key persistait.
+
+## 🏷️ `fromIcal` ≠ Airbnb : Booking.com a aussi un iCal — 2026-06-14
+- Coder « Airbnb » en dur pour toute résa `fromIcal` est faux depuis l'ajout de l'iCal Booking.com → une résa Booking affichait « airbnb » collé au nom du client. **La prochaine fois** : dériver le libellé/couleur du **canal réel** (`r.canal`), pas de `fromIcal`. Idem pour les compteurs (« X Airbnb » → « X iCal »).
+- **Éditer une résa `fromIcal` était fragile** : le re-sync iCal réécrasait toutes les résas du bien par le parse brut → effaçait les éditions (nom/prix), puis le push 📊 propageait la perte au Sheet. Fix : préserver par UID les champs manuels + l'état opé au moment du merge.
+
+## 2026-06-13 — Webhook Beds24, Pixel, Revenus Sheet
+
+- **Toujours vérifier la version API utilisée dans CHAQUE endpoint, pas seulement dans le flux principal.** Le webhook `beds24-webhook.js` était resté en V1 (api.beds24.com/json + BEDS24_API_KEY/PROP_KEY) alors que tout le reste avait migré en V2. Les creds V1 n'existant plus en CF Pages → échec silencieux (aucune résa Nogent dans le Sheet).
+
+- **Nogent n'est PAS dans le Worker iCal.** `getBookingUrls()` dans `workers/ical-sync/index.js` exclut Nogent (pas d'iCal Airbnb Nogent). Les **seuls chemins d'écriture Sheet pour Nogent** = webhook Beds24 + bouton 📊 admin. Si l'un est cassé → résa silencieusement perdue.
+
+- **Meta Pixel consent-gating = race condition ViewContent.** `loadMetaPixel()` charge le pixel APRÈS acceptation cookies. `ViewContent` appelé avant = no-op (fbq pas encore dispo). Fix : dispatch `CustomEvent("meta-pixel-ready")` depuis `loadMetaPixel()`, ajouter listener `{ once: true }` aux call sites. Pour les URLs directes (click Meta Ads → `/amaryllis`), le fire ViewContent était totalement absent — l'ajouter dans le useEffect d'initialisation de la route.
+
+## Apps Script méthodes Auth-only = inutilisables depuis doGet/doPost anonyme — 2026-06-11
+- **`ScriptApp.getProjectTriggers()` (et toutes les méthodes `ScriptApp.*` qui touchent les triggers) nécessitent une autorisation utilisateur.** Appelées depuis le endpoint web app anonyme (`doGet`/`doPost`) → HTTP 502. **Règle : toute fonction qui crée/supprime/liste des triggers doit être exécutée depuis l'éditeur Apps Script** (bouton ▶), jamais via `/api/sheets-proxy` ou HTTP direct.
+
+## 🔄 Sync iCal → Sheet & notifications (Worker amaryllis-ical-sync) — 2026-06-05
+- **🔴 Apps Script SUPPRIME le body des POST (bug redirect Google).** Tout `fetch(APPS_SCRIPT_URL,{method:"POST",body})` direct n'écrit RIEN. Le Worker `pushToSheets` faisait ça → résas iCal jamais écrites dans le Sheet. **Règle : pour écrire dans le Sheet, TOUJOURS via `/api/sheets-proxy` (forwardChunked = GET paginé), jamais POST direct.**
+- **Cron iCal : horaire → toutes les 15 min** (`*/15 * * * *`) ; le `else` du handler `scheduled()` l'attrape.
+- **Notif nouvelle résa = email (Resend) + push (ntfy)** : push ntfy AJOUTÉ dans `sendNouvellesResas` (avant : email seul). `NTFY_TOPIC` = `amaryllis-alertes-7r4k9`. Tél doit être abonné au topic + push OS autorisé.
+- **iCal Airbnb/Booking ne transmet NI nom NI montant** → résa « Voyageur » / 0 € ; montant saisi ensuite (sauf Nogent = Beds24).
+- **CLI wrangler instable ici** (`kv get/delete`, `tail` plantent) → pour tester un cron, **poller** (ntfy `/json?poll=1`, dashboard Resend) plutôt que manipuler le KV.
