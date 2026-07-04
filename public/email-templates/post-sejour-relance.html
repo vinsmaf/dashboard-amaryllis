@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   ============================================================
-  AMARYLLIS LOCATIONS — Email POST-SÉJOUR J+3
+  AMARYLLIS LOCATIONS — Email POST-SÉJOUR RELANCE (J+7)
   ============================================================
   OBJET : {{prenom}}, votre avis sur {{bien_nom}} nous intéresse
   PRÉHEADER : 3 questions rapides + une offre pour revenir.
@@ -11,9 +11,11 @@
     {{bien_url}}       — URL de la fiche (ex. https://villamaryllis.com/amaryllis)
     {{check_out_date}} — date de départ formatée (ex. 20 juin 2026)
   UTILISATION :
-    Envoyé J+3 après le départ depuis /api/send-poststay (segment direct_bookings).
-    Distinct du J+1 (remerciement + avis Google) : ici on demande la satisfaction
-    + on active l'offre fidélité RETOUR10.
+    Envoyé J+7 après le départ depuis /api/send-poststay (segment direct_bookings) —
+    2e et DERNIÈRE touche (croisé avec le growth-005 "J+2 vs J+7", Vincent a demandé
+    max 2 relances). Distinct du J+2 (remerciement + avis Google/TripAdvisor) : ici on
+    demande la satisfaction + on active l'offre fidélité RETOUR10. Renommé depuis
+    post-sejour-j3.html (2026-07-04) — jamais branché avant, gardé tel quel sinon.
   ============================================================
 -->
 <html lang="fr" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">

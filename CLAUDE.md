@@ -147,7 +147,7 @@ All server-side logic lives in `functions/api/` (Cloudflare Pages Functions form
 | `/api/gmail-sync` | GET | `gmail-sync.js` | Poll `contact@villamaryllis.com` (lecture seule) → importe les réponses voyageurs dans `emails_log` (`direction='in'`). `?secret=POSTSTAY_SECRET` (cron 10 min) ou Bearer admin (bouton "Sync"). `?status=1` = simple check de connexion. Voir `docs/GMAIL-SETUP.md`. |
 | `/api/calendar-sync` | GET/POST | `calendar-sync.js` | GET `?status=1` = statut connexion Calendar (Bearer admin). POST = crée/MAJ un event Google Calendar par ménage (liste envoyée par MenageTab, dédup D1 `menage_calendar_events`). Bouton manuel "📅 Sync calendrier", pas de cron. Voir `docs/GMAIL-SETUP.md`. |
 | `/api/send-prearrivee` | GET | `send-prearrivee.js` | Cron J-3 : email pré-arrivée aux résas directes (D1 `direct_bookings`). |
-| `/api/send-poststay` | GET | `send-poststay.js` | Cron J+1/J+3 : post-séjour (Nogent/Beds24 + résas directes). Liens avis Google par bien. |
+| `/api/send-poststay` | GET | `send-poststay.js` | Séquence post-séjour **2 touches MAXIMUM** (jamais plus, demande Vincent 2026-07-04) : J+2 (`ask`, remerciement + avis Google/TripAdvisor) puis J+7 (`reminder`, dernière relance — satisfaction + code fidélité RETOUR10, `post-sejour-relance.html`), pour Nogent/Beds24 + résas directes. `?touch=ask\|reminder` pour forcer une seule touche, `?dry=1` simule. |
 | `/api/send-relance-panier` | GET | `send-relance-panier.js` | Cron horaire : relance panier abandonné (D1 `abandoned_carts`, exclut convertis). |
 | `/api/notify-booking` | POST | `notify-booking.js` | Alerte hôte fiable (email+ntfy) post-paiement + enregistre la résa directe en D1. |
 
