@@ -55,4 +55,15 @@ describe("buildReviewReplyPrompt", () => {
     const { messages } = buildReviewReplyPrompt({ bienNom: "Mabouya", rating: 4, reviewText: "", classification: "auto" });
     expect(messages[1].content).toContain("Mabouya");
   });
+
+  it("inclut le prénom du voyageur quand fourni — jamais le nom du bien comme un prénom", () => {
+    const { messages } = buildReviewReplyPrompt({ bienNom: "Géko", prenom: "Rabia", rating: 5, reviewText: "Top", classification: "auto" });
+    expect(messages[1].content).toContain("Rabia");
+    expect(messages[0].content).toMatch(/JAMAIS utiliser le nom du bien/);
+  });
+
+  it("sans prénom fourni, indique explicitement de ne pas en inventer un", () => {
+    const { messages } = buildReviewReplyPrompt({ bienNom: "Géko", rating: 5, reviewText: "Top", classification: "auto" });
+    expect(messages[1].content).toMatch(/non renseigné — ne pas nommer/);
+  });
 });

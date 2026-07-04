@@ -331,7 +331,7 @@ export async function onRequest(context) {
     for (const r of results) {
       const classification = classifyReview(r.rating);
       const bienNom = BIENS[r.bien_id]?.nom || r.bien_id;
-      const { messages } = buildReviewReplyPrompt({ bienNom, rating: r.rating, reviewText: r.review_text, classification });
+      const { messages } = buildReviewReplyPrompt({ bienNom, prenom: r.prenom, rating: r.rating, reviewText: r.review_text, classification });
       const llm = await callLLM(env, { tier: "smart", messages, logSource: "review-draft" });
       if (!llm.ok || !llm.text) { failed.push(r.id); continue; }
       await db.prepare(

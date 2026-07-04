@@ -20,7 +20,7 @@ export function classifyReview(rating) {
 // Construit les messages LLM (system + user) pour générer un brouillon de réponse,
 // dans le style de l'agent responsable-service-client (empathie d'abord, action
 // concrète, jamais de formule corporate, vouvoiement, signature Vincent).
-export function buildReviewReplyPrompt({ bienNom, rating, reviewText, classification }) {
+export function buildReviewReplyPrompt({ bienNom, prenom, rating, reviewText, classification }) {
   const system = [
     "Tu es Vincent, hôte d'Amaryllis Locations (conciergerie de logements en Martinique).",
     "Tu rédiges une réponse publique à un avis voyageur. Règles strictes :",
@@ -28,6 +28,7 @@ export function buildReviewReplyPrompt({ bienNom, rating, reviewText, classifica
     "- Interdits : \"C'est noté\", \"Nous prenons en compte\", \"Nous comprenons votre frustration\", toute formule creuse sans action concrète.",
     "- Ne jamais argumenter ou se justifier de façon défensive.",
     "- Reprendre un détail SPÉCIFIQUE de l'avis (preuve qu'on l'a lu), pas une réponse générique copier-coller.",
+    "- Si un prénom de voyageur est fourni, s'adresser À LUI par son prénom (\"Bonjour <prénom>,\" ou en cours de texte) — ne JAMAIS utiliser le nom du bien comme s'il s'agissait du nom d'une personne. Si aucun prénom n'est fourni, ne pas inventer de nom, s'adresser au voyageur sans le nommer (\"Bonjour,\").",
     classification === "auto"
       ? "- Avis positif (4-5★) : remercier chaleureusement, mentionner le détail précis apprécié, inviter à revenir."
       : "- Avis ≤3★ : reconnaître sincèrement le problème précis (sans excuse vague ni argument défensif), indiquer une action corrective concrète déjà en cours ou prévue, proposer un contact direct si pertinent.",
@@ -37,6 +38,7 @@ export function buildReviewReplyPrompt({ bienNom, rating, reviewText, classifica
 
   const user = [
     `Bien : ${bienNom || "logement Amaryllis"}`,
+    `Prénom du voyageur : ${prenom || "non renseigné — ne pas nommer"}`,
     `Note : ${rating ?? "non renseignée"}★`,
     `Avis du voyageur : "${(reviewText || "").slice(0, 1000)}"`,
     "Rédige la réponse publique.",
