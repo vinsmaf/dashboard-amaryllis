@@ -252,14 +252,23 @@ export async function onRequest(context) {
     }
 
     // liste détaillée : admin uniquement
+    // ?from=YYYY-MM-DD & ?to=YYYY-MM-DD : filtre par review_date — sans ça, un
+    // rapport "trimestriel" tire silencieusement sur TOUT l'historique disponible
+    // (piège vécu 2026-07-04 : un rapport "Q1 2026" s'est avéré porter sur 2018-2026).
     const { ok } = await verifyBearer(request, env);
     if (!ok && (env.ADMIN_PWD || env.ADMIN_PASSWORD)) return json({ error: "Non autorisé" }, 401);
     const bien = url.searchParams.get("bien");
-    const q = bien
-      ? db.prepare("SELECT * FROM voyageur_feedback WHERE bien_id=? ORDER BY review_date DESC LIMIT 500").bind(bien)
-      : db.prepare("SELECT * FROM voyageur_feedback ORDER BY review_date DESC LIMIT 500");
+    const from = url.searchParams.get("from");
+    const to = url.searchParams.get("to");
+    const conds = [];
+    const params = [];
+    if (bien) { conds.push("bien_id=?"); params.push(bien); }
+    if (from) { conds.push("review_date>=?"); params.push(from); }
+    if (to) { conds.push("review_date<=?"); params.push(to); }
+    const where = conds.length ? `WHERE ${conds.join(" AND ")}` : "";
+    const q = db.prepare(`SELECT * FROM voyageur_feedback ${where} ORDER BY review_date DESC LIMIT 500`).bind(...params);
     const { results } = await q.all();
-    return json({ ok: true, count: results.length, reviews: results });
+    return json({ ok: true, count: results.length, filters: { bien: bien || null, from: from || null, to: to || null }, reviews: results });
   }
 
   // ── POST ?action=ingest : SCRAPE PAYANT (Apify) ──────────────────────────
