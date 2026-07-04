@@ -4,6 +4,13 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
+## En cours → ✅ terminé le 2026-07-04 — Triage auto backlog agents (agent_lessons scope + cron + digest) + consolidation mémoire majeure
+> Détail complet : ADR-AGENTS-TRIAGE-001, ADR-MEMORY-SPLIT-001.
+- `agent_lessons` gagne un scope `tool`/`caption` + 5 bans d'outils hallucinés (Brevo/HubSpot/Slack/Jest/S3). Nouveau cron hebdo `/api/agents-triage` (lundi 6h UTC) : bloque outil-banni/fait-contredit/doublon, signale (sans bloquer) "probablement déjà construit" via `_featureDigest.js` (généré, committé, PAS régénéré à chaque build).
+- 🟡 **Dette de maintenance actée** : `_featureDigest.js` ne se régénère pas tout seul — `node scripts/generate-feature-digest.mjs` à relancer manuellement quand `functions/api/*.js` change (nouveau point 5 dans le skill `/cloture-session`, scopé locatif-dashboard uniquement). Si oublié : le digest devient juste périmé (dégrade la 4ᵉ catégorie de triage), ne casse rien.
+- Consolidation mémoire complète (skill `/consolidation`, "GO B" de Vincent) : `ADR.md` 964→131 lignes (archive mensuelle `archive/ADR-2026-06.md`), `LEARNINGS.md` 838→27 lignes pointeur (10 fichiers thématiques `learnings/*.md`), `BLOCKERS.md` compacté (20 sessions closes → 1 ligne chacune), `CONTEXT.md` header trimmé (44,7Ko→24,9Ko). Zone partagée : `JOURNAL-locatif.md` archivé (345→79 lignes).
+- **Vérification croisée a payé** : re-fetch systématique de 45 patches D1 annoncés par 16 sous-agents parallèles → 2 (`rep-002`, `sc-024`) jamais réellement écrits malgré un rapport affirmatif → corrigés. Voir `learnings/METHODOLOGIE-PROCESS.md`.
+
 ## En cours → ✅ terminé le 2026-07-03 (suite 2) — Résa Ary Augustin (modif+paiement+vérif revenus) + fix rebuild auto-mois
 > Détail complet : ADR-REVENUS-REBUILD-AUTOMONTH-001.
 - Résa Ary Augustin (Zandoli) raccourcie 6→4 nuits (27→31 juillet 2026), payée via Stripe Payment Link (710€, `pi_3TpEmvDstT3IRAj22H8tWc5w`), réconciliée en D1 `direct_bookings` (gap découvert : n'existait qu'au Sheet, pas en D1).

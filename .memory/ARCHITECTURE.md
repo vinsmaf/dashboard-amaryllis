@@ -1,6 +1,6 @@
 # 🗺️ ARCHITECTURE — Locatif (villamaryllis.com)
 
-> **Date :** 2026-07-03 · **Statut :** carte de l'état actuel, à maintenir (pas un historique).
+> **Date :** 2026-07-04 · **Statut :** carte de l'état actuel, à maintenir (pas un historique).
 > But : ne plus jamais re-déduire le système depuis le code. Quand l'archi change, on met à jour ICI.
 > **Pointeurs :** état courant volatil → `.memory/CONTEXT.md` · décisions → `.memory/ADR.md` + `DECISIONS.md` ·
 > leçons → `.memory/LEARNINGS.md` · blocages → `.memory/BLOCKERS.md` · rappel par domaine → `.memory/RECALL.md` ·
@@ -302,6 +302,7 @@ flowchart TD
 - **Rotation planner** (`editorial-calendar.js`, `seed_30days`) : séquence stable de 6 biens (Iguana exclu, bail long) indexée sur `Math.floor(scheduled_at/86400) % 6` — invariant : à 1 post/jour, un bien ne revient jamais à <4j d'intervalle (respecte l'anti-doublon du gate). L'ancienne séquence pondérée (Amaryllis 8×/30j) créait des écarts de 2-3j → escalades systématiques → soirées sans post (incidents fin juin/début juillet).
   - **Vérif adversariale** (`agents-verify.js`, challenger Mistral — manuel, non câblé cron).
   - **Éval LLM-juge** (`agents-eval.js`) : rubric 4 axes → `llm_evals` → consigne corrective `agent_memory(eval_feedback)`.
+  - **Triage hebdo du backlog** (`agents-triage.js`, 2026-07-04, cron lundi 6h UTC) : bloque automatiquement les items `agent_actions` (backlog/a-planifier/en-cours) qui (1) mentionnent un outil banni `agent_lessons.scope='tool'` (Brevo/HubSpot/Slack/Jest/S3 — distinct des 18 clichés de captions `scope='caption'`, ne pas mélanger les deux usages), (2) contredisent un fait bien (`_biens.js` — prix/bookable/capacité), (3) dupliquent un autre item du même lot. 4ᵉ catégorie signal FAIBLE (annotation `🔎`, pas blocage) : "probablement déjà construit" vs `_featureDigest.js` (snapshot statique COMMITTÉ des endpoints/onglets, généré par `scripts/generate-feature-digest.mjs` — à relancer manuellement quand `functions/api/*.js` change, cf. `/cloture-session` §4a.5). Garde-fous : rejet des verdicts LLM auto-contradictoires, abandon si >30% du lot bloqué d'un coup. Ne détecte JAMAIS "déjà codé dans le repo" avec certitude (signal faible catégorie 4 seulement) — une revue humaine/session Claude avec accès repo reste nécessaire pour ce cas.
 - **RAG** : `rag-ingest.js` (faits biens + avis Google + drafts → Vectorize bge-m3, cron lundi). `ragBlock` injecté dans les prompts des RAG_AGENTS.
 - **Auto-rédaction guides** : `_guideWriter.js` (logique PURE testée, conso `guide-write.js`, cron lundi) — l'IA ne réécrit QUE la prose d'accueil/marketing ; les champs **CRITIQUES** (wifi, code d'accès, horaires, adresse, contacts, distances) sont **INTOUCHABLES** (merge des seuls champs éditables fact-checkés ; rejet si l'IA touche un champ protégé).
 - **Boucle auto-amélioration** : produire→juger→partager (signaux `_shared`)→distiller (`memory-distill.js` hebdo → `learning:*`). 100% interne/advisory.

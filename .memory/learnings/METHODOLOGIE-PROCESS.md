@@ -4,6 +4,14 @@
 > Extrait de `../LEARNINGS.md` le 2026-07-04 (consolidation mémoire — split thématique).
 > 19 entrées, triées par date décroissante.
 
+## 🔍 Un grep de vérification trop étroit (casse/phrase exacte) peut simuler une fausse perte de données — 2026-07-04
+- **Piège évité** : en vérifiant qu'un pointeur "détail complet → ITERATIONS_LOG.md" (créé en compactant BLOCKERS.md) était honnête, un premier `grep "Apple Business Connect"` a renvoyé 0 résultat — panique momentanée (perte de données ?). En fait le fichier écrit le titre en MAJUSCULES ("APPLE BUSINESS CONNECT — ..."), le grep exact-phrase/casse-sensible ratait donc un contenu bien présent.
+- **La prochaine fois** : avant de conclure à une perte de données sur la seule foi d'un grep négatif, élargir la recherche (par date `^- \*\*2026-06-DD`, insensible à la casse, ou lecture directe d'un extrait) — un grep étroit qui ne trouve rien n'est PAS une preuve d'absence, il peut juste mal cibler la formulation réelle.
+
+## 🔴 Vérifier qu'un rapport de sous-agent ("j'ai patché X") a RÉELLEMENT persisté — pas juste son texte de fin — 2026-07-04
+- **Piège vécu** : sur 45 patches D1 annoncés comme faits par 16 sous-agents parallèles (triage qualité du backlog agents IA), une re-vérification systématique (re-fetch direct de chaque ID) a trouvé **2 patches sur 45 jamais réellement écrits** (`rep-002`, `sc-024`) malgré un rapport de sous-agent affirmant explicitement "J'ai patché sc-024 et rep-002 en bloqué avec la raison précise" — les deux venaient du MÊME sous-agent/cluster.
+- **La prochaine fois** : après une passe multi-agents qui modifie des données (D1, fichiers, API), ne jamais se contenter des rapports textuels de fin de tâche — refaire un passage de vérification indépendant (re-fetch, re-grep) sur l'ÉTAT RÉEL, surtout si le volume est important (>10 écritures). Un taux d'échec de ~4% (2/45) sur des rapports par ailleurs cohérents montre que même un sous-agent qui "raconte" une réussite peut ne pas l'avoir réellement exécutée (échec silencieux d'un appel, ou simple erreur de narration).
+
 ## 🧹 Avant d'appliquer un vieux `git stash`, vérifier s'il n'est pas déjà superseded — 2026-07-02
 - **Piège évité** : un stash de session passée (observabilité LLM + sécurité + CSP) semblait contenir du travail en attente. Comparaison hunk par hunk avec l'état actuel a montré que TOUT était déjà commité proprement ailleurs (et la version du stash était même parfois une régression — moins de providers, tarifs obsolètes).
 - **La prochaine fois** : avant d'appliquer un stash ancien, differ chaque fichier contre l'état courant plutôt que de supposer qu'il contient du travail perdu — un `git stash drop` après vérification est plus sûr qu'un `git stash pop` qui réintroduit du code déjà périmé.

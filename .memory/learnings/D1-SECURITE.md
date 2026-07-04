@@ -4,6 +4,10 @@
 > Extrait de `../LEARNINGS.md` le 2026-07-04 (consolidation mémoire — split thématique).
 > 8 entrées, triées par date décroissante.
 
+## 🔴 D1/SQLite `ALTER TABLE ADD COLUMN col DEFAULT 'x'` BACKFILLE les lignes existantes (contrairement à l'intuition NULL) — 2026-07-04
+- **Piège** : ajout d'une colonne `scope TEXT DEFAULT 'caption'` sur `agent_lessons` (pour séparer 2 usages du même mot-clé banni). Attente naïve : les lignes déjà insérées AVANT la migration auraient `scope=NULL`. Réalité SQLite : `ALTER TABLE ADD COLUMN ... DEFAULT val` applique la valeur par défaut à TOUTES les lignes préexistantes, pas seulement aux futures — 5 lignes insérées juste avant la migration se sont donc retrouvées avec `scope='caption'` (le défaut) au lieu du `scope='tool'` attendu, nécessitant un `UPDATE` correctif explicite après coup.
+- **La prochaine fois** : après un `ALTER TABLE ADD COLUMN` avec `DEFAULT`, ne jamais supposer que les lignes préexistantes avant la migration sont à NULL — vérifier leur valeur réelle (`SELECT DISTINCT col FROM table`) et les corriger explicitement si elles doivent appartenir à une catégorie différente du défaut choisi.
+
 ## 🔍 Les alertes "double_booking" (coherence) lisent D1 `direct_bookings`, PAS le Google Sheet "Toutes les Réservations" — 2026-07-03
 - **Piège évité** : cherché une résa signalée en double dans le Sheet "Toutes les Réservations" (703 lignes, via `/api/sheets-proxy` action=read) → aucun résultat. La résa existait bien, mais dans D1 `direct_bookings` — `coherence-check.js` fait `SELECT ... FROM direct_bookings`, une source complètement différente qui inclut aussi les imports email Airbnb/Booking (`payment_intent_id` du type `booking.com-XXXXX` pour ces derniers, pas un vrai PaymentIntent Stripe).
 - **La prochaine fois** : pour toute alerte de cohérence (`kind:"coherence"` dans `client_errors`), chercher directement dans D1 `direct_bookings` (via `wrangler d1 execute --remote`), pas dans le Sheet — même si le nom de colonne (`voyageur`) est identique dans les deux sources, ce ne sont pas la même table.
