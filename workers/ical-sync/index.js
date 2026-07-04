@@ -2976,6 +2976,21 @@ async function runRagIngest(env) {
   } catch (e) { console.error("[rag] ingestion échouée:", e.message); }
 }
 
+// Rafraîchit les 2 snapshots factuels (trafic SEO + signaux marché) en D1, PUIS
+// ré-ingère le RAG dans la foulée — sinon le snapshot du jour reste frais en D1
+// mais invisible du vecteur jusqu'au prochain lundi (runRagIngest n'est QUE
+// hebdo). Demandé par Vincent le 2026-07-04 pour une fraîcheur quotidienne réelle.
+async function runDocsRefresh(env) {
+  try {
+    if (!env.POSTSTAY_SECRET) { console.log("[docs-refresh] POSTSTAY_SECRET absent — skip"); return; }
+    const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+    const r = await fetch(`${siteUrl}/api/docs-refresh?secret=${env.POSTSTAY_SECRET}`);
+    const j = await r.json().catch(() => ({}));
+    console.log(`[docs-refresh] generated=${JSON.stringify(j.generated ?? [])}`);
+    await runRagIngest(env);
+  } catch (e) { console.error("[docs-refresh] error:", e.message); }
+}
+
 // ── Auto-complétion résas OTA Airbnb depuis les mails (cron horaire) ─────────
 // L'iCal Airbnb ne transmet ni nom ni prix. Un Zap (Outlook → onglet « Emails » du
 // Sheet) y dépose les mails de confirmation ; cet appel parse ces mails et complète
@@ -3894,6 +3909,9 @@ export default {
           console.error("[charge-balance] Cron error:", e.message);
         }
       })());
+      // Snapshots factuels (trafic SEO + signaux marché) → D1 → ré-ingestion RAG
+      // immédiate (PAS un rewrite des docs légaux/stratégie, cf. docs-refresh.js).
+      ctx.waitUntil(runDocsRefresh(env));
 
     } else if (cron === "0 20 * * 7") {
       // Dimanche 20h UTC (16h Martinique) — accountability hebdo (prépare réunion générale lundi)

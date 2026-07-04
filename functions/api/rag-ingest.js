@@ -22,7 +22,7 @@ export async function onRequestGet({ request, env }) {
   if (!env.VECTORIZE) return json({ error: "binding VECTORIZE absent — redéployer après ajout du binding" }, 503);
 
   const items = [];
-  const by = { facts: 0, avis: 0, drafts: 0, docs: 0 };
+  const by = { facts: 0, avis: 0, drafts: 0, docs: 0, snapshots: 0 };
 
   // 1) Faits canoniques des 7 biens
   for (const [id, b] of Object.entries(BIENS)) {
@@ -68,6 +68,27 @@ export async function onRequestGet({ request, env }) {
   // filesystem possible en prod Cloudflare, donc ne peut pas lire docs/ au runtime).
   items.push(...DOCS_DIGEST);
   by.docs = DOCS_DIGEST.length;
+
+  // 5) Snapshots quotidiens (docs FACTUELS ré-dérivés — trafic SEO, signaux marché)
+  // — écrits par /api/docs-refresh (cron quotidien), PAS les docs légaux/stratégie
+  // qui restent des snapshots statiques figés (cf. #4). Toujours plus récent que
+  // le digest statique pour ces 2 sujets — l'agent voit la date du jour.
+  if (env.revenue_manager) {
+    try {
+      const { results } = await env.revenue_manager.prepare(
+        "SELECT key, content, generated_at FROM docs_snapshots"
+      ).all();
+      for (const row of results || []) {
+        const date = new Date(row.generated_at * 1000).toISOString().slice(0, 10);
+        items.push({
+          id: `snapshot-${row.key}`,
+          text: `[snapshot du jour — ${date} — ${row.key}] ${row.content}`,
+          metadata: { source: "doc-live", doc: row.key, date },
+        });
+        by.snapshots++;
+      }
+    } catch {}
+  }
 
   try {
     const ingested = await ragUpsert(env, items);
