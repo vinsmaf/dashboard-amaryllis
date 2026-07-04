@@ -26,6 +26,7 @@
 import { readdirSync, readFileSync, writeFileSync, statSync } from "fs";
 import { join, dirname, relative } from "path";
 import { fileURLToPath } from "url";
+import { createHash } from "crypto";
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const DOCS_DIRS = [
@@ -84,7 +85,13 @@ function docItems(relPath) {
     const bodyText = s.body.join("\n").replace(/\n{3,}/g, "\n\n").trim();
     if (!bodyText) return;
     const text = `[${relPath} § ${s.title}] ${bodyText}`.slice(0, MAX_CHUNK_CHARS);
-    const id = `doc-${relPath.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-${i}`;
+    // Vectorize limite les id à 64 octets — un chemin+titre slugifié dépasse
+    // facilement (trouvé en ingérant en prod : "id too long, max 64"). Hash
+    // court du chemin (12 hex = 48 bits, collision négligeable sur 33 docs) +
+    // index de section, largement sous la limite quelle que soit la longueur
+    // du chemin d'origine.
+    const pathHash = createHash("sha1").update(relPath).digest("hex").slice(0, 12);
+    const id = `doc-${pathHash}-${i}`;
     items.push({ id, text, metadata: { source: "doc", doc: relPath } });
   });
   return items;
