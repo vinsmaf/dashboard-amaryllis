@@ -4,6 +4,10 @@
 > Extrait de `../LEARNINGS.md` le 2026-07-04 (consolidation mémoire — split thématique).
 > 11 entrées, triées par date décroissante.
 
+## 🔴 Stripe Checkout Session `expires_at` plafonne à 24h — pas 72h ni une durée arbitraire — 2026-07-04
+- **Piège trouvé en testant en prod** (pas en dry-run) : `caution-checkout.js` posait `expires_at = now + 72*3600` depuis sa création. Premier appel réel (génération d'un lien caution manuel pour un voyageur sans carte enregistrée) → Stripe refuse purement et simplement la création de la Session ("expires_at timestamp must be less than 24 hours"). L'endpoint était donc cassé pour TOUTE génération de lien depuis le jour où il a été écrit, sans que personne ne s'en aperçoive faute d'avoir eu besoin de la fonctionnalité manuelle avant.
+- **La prochaine fois** : pour toute Checkout Session créée via l'API brute (pas le SDK, qui validerait côté client), vérifier les bornes Stripe AVANT de choisir une durée "ronde" pratique côté métier (72h semblait raisonnable pour laisser le temps au voyageur) — `expires_at` doit rester strictement sous 24h à partir de la création. Un endpoint jamais exercé en conditions réelles peut rester cassé indéfiniment sans qu'aucun test/lint ne le détecte (aucune erreur tant qu'on ne l'appelle pas vraiment).
+
 ## 🎯 Avant de construire un nouveau mécanisme (parrainage, crédit, code promo…), vérifier si l'infra existe déjà à 90% — 2026-07-01
 - **Contexte** : le programme de parrainage (Phase 3 fidélité) semblait nécessiter un système de codes + application de remise au checkout entièrement nouveau. Un grep rapide (`functions/api/promo-codes.js` + le champ "Code promo" déjà présent dans `PublicSite.jsx`) a montré que la validation, l'application de la remise ET l'incrément `used_count` au paiement (`stripe-webhook.js`) existaient déjà et fonctionnaient en prod.
 - **La prochaine fois** : avant de concevoir un nouveau mécanisme de code/remise/crédit, chercher `promo_codes`/`validate=` dans le repo — la réutilisation (juste 2 colonnes ajoutées par migration : `referrer_client_id`, `reward_credited`) a réduit un "plus gros chantier" annoncé à quelques heures de travail.

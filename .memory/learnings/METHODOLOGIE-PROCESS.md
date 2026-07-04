@@ -4,6 +4,14 @@
 > Extrait de `../LEARNINGS.md` le 2026-07-04 (consolidation mémoire — split thématique).
 > 19 entrées, triées par date décroissante.
 
+## 🔍 Un `.git/index.lock` orphelin bloque tout git — vérifier qu'aucun process ne le tient avant de le supprimer — 2026-07-04
+- **Contexte** : `git add` a échoué avec "Unable to create '.git/index.lock': File exists" en tout début de session. Vérification (`ps aux | grep git` + `lsof .git/index.lock`) : aucun process git actif, seul un process `com.apple` (Spotlight/mdworker) avait le fichier ouvert EN LECTURE — le lock datait de la veille (22h10), clairement un reliquat d'une session précédente interrompue.
+- **La prochaine fois** : avant de supprimer un `index.lock`, TOUJOURS vérifier qu'aucun process git n'est réellement en train d'écrire (`ps aux | grep git`, `lsof` sur le fichier) — un lock daté de plusieurs heures sans process git actif est quasi certainement orphelin et sûr à supprimer ; un lock avec un vrai process git actif dessus ne doit jamais être touché (travail en cours ailleurs).
+
+## 🐞 `wrangler vectorize delete-vectors --ids a b c` (un seul flag, ids séparés par espace) ne fonctionne PAS malgré l'aide CLI — 2026-07-04
+- **Piège** : l'aide de `wrangler vectorize delete-vectors` montre `--ids a 'b' 1 '2'` comme exemple (un seul `--ids` suivi d'une liste espacée). En pratique, cette syntaxe fait passer TOUS les ids comme UNE SEULE chaîne concaténée à l'API Cloudflare (erreur "id too long, got 1679 bytes" pour un lot de 50 ids courts). La syntaxe qui fonctionne réellement : répéter le flag pour chaque id (`--ids a --ids b --ids c`).
+- **La prochaine fois** : pour `wrangler vectorize delete-vectors` (et probablement d'autres commandes wrangler avec un flag `[array]`), tester d'abord avec 2-3 ids en répétant le flag plutôt que de faire confiance à l'exemple d'aide CLI — un batch de 50+ ids en syntaxe erronée échoue silencieusement de façon trompeuse (message d'erreur qui ne pointe pas vers un problème de syntaxe CLI).
+
 ## 🔍 Un grep de vérification trop étroit (casse/phrase exacte) peut simuler une fausse perte de données — 2026-07-04
 - **Piège évité** : en vérifiant qu'un pointeur "détail complet → ITERATIONS_LOG.md" (créé en compactant BLOCKERS.md) était honnête, un premier `grep "Apple Business Connect"` a renvoyé 0 résultat — panique momentanée (perte de données ?). En fait le fichier écrit le titre en MAJUSCULES ("APPLE BUSINESS CONNECT — ..."), le grep exact-phrase/casse-sensible ratait donc un contenu bien présent.
 - **La prochaine fois** : avant de conclure à une perte de données sur la seule foi d'un grep négatif, élargir la recherche (par date `^- \*\*2026-06-DD`, insensible à la casse, ou lecture directe d'un extrait) — un grep étroit qui ne trouve rien n'est PAS une preuve d'absence, il peut juste mal cibler la formulation réelle.

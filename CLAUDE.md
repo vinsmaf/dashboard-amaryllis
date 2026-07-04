@@ -176,8 +176,12 @@ All server-side logic lives in `functions/api/` (Cloudflare Pages Functions form
 | `/api/llm-ping` | `llm-ping.js` — health-check par provider isolé + `?list=1` (modèles `/v1/models`). |
 | `functions/api/_biens.js` | **Source unique des faits** des 7 biens (nomenclature/équipements/capacités) + `EQUIP_RULES_TEXT`. |
 | `functions/api/_rag.js` | RAG : `embed`/`ragUpsert`/`ragSearch`/`ragBlock` (Vectorize `VECTORIZE` + embeddings `@cf/baai/bge-m3`). |
-| `/api/rag-ingest` | `rag-ingest.js` — ingère faits+avis+drafts → vecteurs. Auto chaque lundi (Worker cron). |
+| `functions/api/_ga4.js` | Helper GA4 partagé (JWT service account, `runReport`/`runReportSafe`/`parseReport`) — extrait d'`analytics.js`, réutilisé par `agents-impact.js` et `docs-refresh.js`. |
+| `functions/api/_docsDigest.js` | Snapshot statique COMMITTÉ (généré par `scripts/generate-docs-digest.mjs`) des docs stratégiques `docs/{marketing,strategie,revenue-manager,crm,service-client,seo,legal}/*.md`, découpés par section H2/H3 (435 sections/33 docs) — ingéré par `rag-ingest.js`. À régénérer manuellement si ces docs changent. |
+| `/api/rag-ingest` | `rag-ingest.js` — ingère faits+avis+drafts+docs stratégiques+snapshots factuels quotidiens → vecteurs. Auto chaque lundi (Worker cron) + chaque jour après `docs-refresh`. |
 | `/api/rag-search` | `rag-search.js` — retrieval test (`?q=`, `?debug=1`). |
+| `/api/docs-refresh` | `docs-refresh.js` — rafraîchit quotidiennement 2 SEULS docs stratégiques factuels (trafic SEO 30j GA4, signaux marché D1 `rm_market_signals`) dans D1 `docs_snapshots`. Cron Worker `0 13 * * *`. Jamais les docs légaux/stratégie/campagnes (pas d'auto-rewrite décisionnel), aucun commit Git (pas d'accès filesystem prod). |
+| `/api/agents-impact` | `agents-impact.js` — pour chaque publication éditoriale `published`, delta sessions GA4 J-2/J-1 vs J+1/J+2 (absolu+%), résumé meilleure/pire pub. |
 
 **Guides & Divers**
 

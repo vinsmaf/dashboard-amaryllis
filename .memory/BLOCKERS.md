@@ -4,6 +4,16 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
+## En cours → ✅ terminé le 2026-07-04 (suite) — agents-impact + mirror-drift + caution fix + Vague 3 avis + RAG docs stratégiques
+> Détail complet : ADR-AGENTS-IMPACT-001, ADR-MIRROR-DRIFT-001, ADR-CAUTION-EXPIRES-001, ADR-AVIS-DELEGATION-VAGUE3-001, ADR-RAG-DOCS-001.
+- **`/api/agents-impact`** : delta sessions GA4 J-2..J-1 vs J+1..J+2 par publication éditoriale. Helper GA4 factorisé en `_ga4.js` (déjà réutilisé le même jour par `docs-refresh.js`).
+- **Test anti-drift miroirs** (`mirror-drift.test.js`, gate CI) + fix bug latent GAS `nd_` (UTC→local, `contentKeyRow_`/`27_`) + correction cartographie miroirs dans `CLAUDE.md` (surestimait 3 modules sans miroir réel).
+- **Vague 3 délégation avis** : pipeline classification (≥4★=auto futur/≤3★=escalade permanente) + génération LLM de brouillons sur `voyageur_feedback`, **dry-run** (aucune API d'écriture Google/Airbnb branchée). 20 avis réels traités, bug prénom↔nom-du-bien trouvé et corrigé en vérifiant.
+- **RAG ingère les docs stratégiques** (435 sections/33 docs) + fraîcheur quotidienne scopée aux 2 seuls docs factuels (SEO GA4 + signaux marché), cron `0 13 * * *`. Décision actée avec Vincent : jamais d'auto-rewrite légal/stratégie, jamais de commit Git auto.
+- **Fix caution-checkout** (`expires_at` 72h→24h, cassé depuis sa création) trouvé en voulant poser une caution manuelle pour François Cambier — Vincent a finalement choisi de ne pas en poser pour cette location.
+- 🟡 **Dette actée** : `_docsDigest.js` ne se régénère pas tout seul (comme `_featureDigest.js`) — relancer `node scripts/generate-docs-digest.mjs` + `GET /api/rag-ingest` quand un doc du périmètre change (nouveau point 6 du skill `/cloture-session`).
+- 🟡 **Couverture partielle connue** : `rm_market_signals` (signaux marché du snapshot quotidien) ne couvre que Villa Amaryllis — les 6 autres biens n'ont aucune donnée de veille concurrentielle en base, pré-existant à cette session.
+
 ## En cours → ✅ terminé le 2026-07-04 — Triage auto backlog agents (agent_lessons scope + cron + digest) + consolidation mémoire majeure
 > Détail complet : ADR-AGENTS-TRIAGE-001, ADR-MEMORY-SPLIT-001.
 - `agent_lessons` gagne un scope `tool`/`caption` + 5 bans d'outils hallucinés (Brevo/HubSpot/Slack/Jest/S3). Nouveau cron hebdo `/api/agents-triage` (lundi 6h UTC) : bloque outil-banni/fait-contredit/doublon, signale (sans bloquer) "probablement déjà construit" via `_featureDigest.js` (généré, committé, PAS régénéré à chaque build).
