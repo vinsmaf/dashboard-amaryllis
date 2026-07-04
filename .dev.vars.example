@@ -53,3 +53,9 @@ ICAL_BOOKING_MABOUYA=
 ICAL_BOOKING_IGUANA=
 ICAL_BOOKING_ZANDOLI=
 ICAL_BOOKING_NOGENT=
+
+# Purge cache CDN manuelle (arch-011, /api/cache-purge) — optionnel, endpoint
+# renvoie 503 "non configurée" si absent. Token : Cloudflare dashboard →
+# My Profile → API Tokens → Create Token → permission "Zone.Cache Purge".
+CLOUDFLARE_API_TOKEN=
+CLOUDFLARE_ZONE_ID=

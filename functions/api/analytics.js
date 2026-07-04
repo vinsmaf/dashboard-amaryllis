@@ -134,6 +134,7 @@ export async function onRequestGet(context) {
     ]);
 
     // traf-011 : stale-while-revalidate — sert le cache pendant le refresh background
+    // arch-011 : TTL réduit à 1min (était 5min) — purge manuelle possible via /api/cache-purge
     return new Response(JSON.stringify({
       ok: true,
       overview:         parseReport(overview),
@@ -151,7 +152,7 @@ export async function onRequestGet(context) {
     }), {
       headers: {
         "Content-Type": "application/json",
-        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=3600",
+        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
       },
     });
 
@@ -164,7 +165,7 @@ export async function onRequestGet(context) {
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*", "Cache-Control": "s-maxage=300" },
+    headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" },
   });
 }
 

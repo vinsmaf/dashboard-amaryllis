@@ -23,6 +23,7 @@ Conciergerie + site de réservation directe sans commission OTA pour **7 logemen
 | Hosting | Cloudflare Pages — projet **`dashboard-amaryllis`** → `villamaryllis.com` |
 | Backend | Cloudflare Pages Functions (`functions/api/*.js`, `functions/[slug].js`) |
 | Cron / sync | Cloudflare Worker `amaryllis-ical-sync` (`workers/ical-sync/index.js`) + cron-job.org + launchd (cross-projet) |
+| Cache CDN | `/api/analytics` : `s-maxage=60` (arch-011, 2026-07-04 — était 5min) + purge manuelle via `/api/cache-purge` (Cloudflare "Purge Files by URL", secrets `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ZONE_ID`, 503 si absents) |
 | Données | D1 `revenue_manager` (~50 tables, base UNIQUE) · KV `ICAL_STORE` + `AVAIL_CACHE` · Vectorize `amaryllis-knowledge` · Google Sheet (Apps Script) · localStorage |
 | Intégrations | Stripe (LIVE) · Beds24 V2 (Nogent) · iCal Airbnb/Booking · Resend · ntfy · GA4 + **Google Analytics Data API v1beta** (`analytics.js`, Service Account) · Meta Pixel/CAPI · WhatsApp/FB/IG Graph · LLM multi-provider (cascade) + **Anthropic API direct** (`ai-summary.js`, `claude-haiku-4-5` — hors cascade) · Apify · **OpenWeatherMap** (`weather.js`) · **Google Places API v1** (`google-reviews.js`) · **Voxtral STT** (transcription vocale WhatsApp) |
 
