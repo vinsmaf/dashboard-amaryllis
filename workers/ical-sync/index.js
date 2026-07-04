@@ -3628,6 +3628,18 @@ export default {
             console.log(`[rm-auto-update lundi] ${(data.recalc || []).filter(r => r.ok).length}/${6} biens · ${scanned} concurrents scannés`);
           } catch (e) { console.error("[rm-auto-update lundi] Cron error:", e.message); }
         })(),
+        // veille-005 : détecte les nouveaux listings apparus dans la zone (diff S vs S-1),
+        // distinct du re-scan prix des concurrents déjà identifiés ci-dessus.
+        (async () => {
+          try {
+            const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+            const res = await fetch(`${siteUrl}/api/veille-zone-scan?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+            const data = await res.json().catch(() => ({}));
+            const zones = Object.entries(data.zones || {});
+            const newTotal = zones.reduce((s, [, z]) => s + (z.newFound || 0), 0);
+            console.log(`[veille-zone-scan] ${zones.map(([k, z]) => `${k}:${z.scanned ?? "?"}${z.isBaseline ? "(baseline)" : ""}`).join(" ")} · ${newTotal} nouveau(x) listing(s)`);
+          } catch (e) { console.error("[veille-zone-scan] Cron error:", e.message); }
+        })(),
       ]));
 
     } else if (cron === "0 1 1 * *") {
