@@ -29,16 +29,30 @@ export async function sendGuestEmail(env, origin, { template, to, subject, vars 
   if (!to || !String(to).includes("@")) return { ok: false, error: "destinataire invalide" };
   if (!env.RESEND_API_KEY) return { ok: false, error: "RESEND_API_KEY manquante" };
 
+  // Surcharge admin (email-templates-admin.js) prioritaire sur le fichier statique —
+  // même pattern que property_guides (D1 d'abord, fallback fichier).
+  try {
+  let raw = null;
+  if (env.revenue_manager) {
+    try {
+      const row = await env.revenue_manager
+        .prepare("SELECT html FROM email_template_overrides WHERE template_id = ?")
+        .bind(template).first();
+      if (row?.html) raw = row.html;
+    } catch { /* table pas encore créée — pas bloquant, fallback fichier */ }
+  }
+
   // Pages fait du "clean URL" (/x.html → /x) ; on cible directement l'URL propre.
   // Cache-bust + bypass cache CF : l'edge peut servir un template figé malgré no-cache
   // → on garantit la dernière version au moment de l'envoi.
-  try {
-  const tplRes = await fetch(`${origin}/email-templates/${template}?cb=${Date.now()}`, {
-    redirect: "follow",
-    cache: "no-store",
-  });
-  if (!tplRes.ok) return { ok: false, error: `template introuvable (${tplRes.status})` };
-  const raw = await tplRes.text();
+  if (raw === null) {
+    const tplRes = await fetch(`${origin}/email-templates/${template}?cb=${Date.now()}`, {
+      redirect: "follow",
+      cache: "no-store",
+    });
+    if (!tplRes.ok) return { ok: false, error: `template introuvable (${tplRes.status})` };
+    raw = await tplRes.text();
+  }
   const html = fillTemplate(raw, vars);
 
   const result = await sendEmailHelper(env, {

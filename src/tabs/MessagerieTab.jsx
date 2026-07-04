@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo } from "react";
 import EmailDrawer from "./messagerie/EmailDrawer.jsx";
 import EmailComposer from "./messagerie/EmailComposer.jsx";
 import BulkEmailModal from "./messagerie/BulkEmailModal.jsx";
+import EmailTemplatesModal from "./messagerie/EmailTemplatesModal.jsx";
 
 function formatDate(ts) {
   if (!ts) return "—";
@@ -30,6 +31,7 @@ export default function MessagerieTab() {
   const [selectedEmail, setSelectedEmail] = useState(null);
   const [composerOpen, setComposerOpen] = useState(false);
   const [composerPrefill, setComposerPrefill] = useState({});
+  const [templatesOpen, setTemplatesOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [gmail, setGmail] = useState({ checked: false, connected: false, accountEmail: null });
   const [gmailSyncing, setGmailSyncing] = useState(false);
@@ -166,6 +168,12 @@ export default function MessagerieTab() {
             )
           )}
           <button
+            onClick={() => setTemplatesOpen(true)}
+            style={{ padding: "8px 14px", borderRadius: 8, border: "1px solid rgba(148,163,184,0.3)", background: "rgba(148,163,184,0.08)", color: "#cbd5e1", fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
+          >
+            🖋️ Modèles auto
+          </button>
+          <button
             onClick={() => setBulkOpen(true)}
             style={{ padding: "8px 14px", borderRadius: 8, border: "1px solid rgba(99,102,241,0.4)", background: "rgba(99,102,241,0.1)", color: "#a5b4fc", fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
           >
@@ -280,6 +288,7 @@ export default function MessagerieTab() {
         defaultBienNom={composerPrefill.bien_nom || ""}
       />
       <BulkEmailModal isOpen={bulkOpen} onClose={() => setBulkOpen(false)} />
+      <EmailTemplatesModal isOpen={templatesOpen} onClose={() => setTemplatesOpen(false)} />
     </div>
   );
 }
