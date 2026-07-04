@@ -5,6 +5,7 @@
 // Cron-job.org : GET https://villamaryllis.com/api/send-j1-acces?secret=<SECRET> chaque jour ~11h UTC
 
 import { sendGuestEmail } from "./send-guest-email.js";
+import { getBien } from "../../src/data/biens.js";
 
 const json = (d, s = 200) => new Response(JSON.stringify(d), {
   status: s, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
@@ -22,6 +23,19 @@ function formatAccessSteps(sections) {
   return accessSection.items
     .map((item, i) => `${i + 1}. <strong>${item.label}</strong>${item.value ? ` — ${item.value}` : ""}`)
     .join("<br>");
+}
+
+// Villa Amaryllis/Zandoli/Géko/Mabouya partagent le même complexe (Sainte-Luce) —
+// on donne toujours "Résidence Amaryllis" comme point d'arrivée, pas le nom du
+// logement spécifique (le voyageur est orienté sur place vers son unité).
+const RESIDENCE_BIENS = new Set(["amaryllis", "zandoli", "geko", "mabouya"]);
+
+function lieuInfo(bienId, bien) {
+  const lieuNom = RESIDENCE_BIENS.has(bienId) ? "Résidence Amaryllis" : (bien?.nom || "votre logement");
+  const mapsUrl = bien?.coords
+    ? `https://www.google.com/maps/search/?api=1&query=${bien.coords.lat},${bien.coords.lng}`
+    : null;
+  return { lieuNom, mapsUrl };
 }
 
 export async function onRequestGet(context) {
@@ -48,15 +62,24 @@ export async function onRequestGet(context) {
 
     let sent = 0, failed = 0;
     for (const b of results || []) {
-      // Récupérer le guide du bien pour les codes d'accès
+      // Récupérer le guide du bien pour les codes d'accès — lecture D1 directe
+      // (PAS via GET /api/guides : cet endpoint masque volontairement la section
+      // "access" pour les appels non-admin, ce qui empêchait ce cron de jamais
+      // voir les vrais codes — bug trouvé le 2026-07-04).
       let accessHtml = null;
       try {
-        const guideRes = await fetch(`${url.origin}/api/guides?property_id=${b.bien_id || "amaryllis"}`);
-        if (guideRes.ok) {
-          const guideData = await guideRes.json();
-          accessHtml = formatAccessSteps(guideData?.guide?.sections);
+        const row = await db.prepare(
+          "SELECT content_json FROM property_guides WHERE property_id = ?"
+        ).bind(b.bien_id || "amaryllis").first();
+        if (row?.content_json) {
+          const guideData = JSON.parse(row.content_json);
+          accessHtml = formatAccessSteps(guideData?.sections);
         }
       } catch {}
+
+      const bien = getBien(b.bien_id || "amaryllis");
+      const photoPath = bien?.photos?.[0];
+      const { lieuNom, mapsUrl } = lieuInfo(b.bien_id, bien);
 
       const r = await sendGuestEmail(env, url.origin, {
         template: "j1-acces",
@@ -67,6 +90,9 @@ export async function onRequestGet(context) {
           bien_nom: b.bien_nom || "votre logement",
           checkin: b.checkin,
           checkin_heure: "17h",
+          photo_url: photoPath ? `${url.origin}${photoPath}` : `${url.origin}/photos/amaryllis/01.webp`,
+          lieu_nom: lieuNom,
+          maps_url: mapsUrl || "https://villamaryllis.com",
           code_acces: accessHtml
             ? `Voici vos accès :<br><br>${accessHtml}`
             : "Vos codes d'accès vous seront communiqués directement par votre hôte.",
