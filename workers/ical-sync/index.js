@@ -29,6 +29,8 @@
  *   WORKER_SECRET         — Token de sécurité pour les endpoints déclencheurs
  */
 
+import { clog, redactName } from "./_logger.js";
+
 // ── iCal URLs Airbnb ─────────────────────────────────────────────────────────
 // URLs Airbnb — lues depuis les secrets wrangler (ICAL_AIRBNB_*)
 // Fallback sur les valeurs hardcodées pour la rétrocompatibilité
@@ -467,7 +469,7 @@ N'hésitez pas si vous avez des questions. À très bientôt !
       });
 
       await env.ICAL_STORE.put(kvKey, "sent", { expirationTtl: 60 * 60 * 24 * 14 });
-      console.log(`[reminders] J-3 envoyé — ${nom} · ${guest}`);
+      clog("reminders", "info", { step: "j-3", bien: nom, guest: redactName(guest) });
     }
 
     // ── Mi-séjour : check satisfaction + upsells (J+3 après check-in) ─────────
@@ -508,7 +510,7 @@ N'hésitez pas si vous avez des questions. À très bientôt !
       });
 
       await env.ICAL_STORE.put(kvKey, "sent", { expirationTtl: 60 * 60 * 24 * 30 });
-      console.log(`[reminders] Mi-séjour envoyé — ${nom} · ${guest}`);
+      clog("reminders", "info", { step: "mi-sejour", bien: nom, guest: redactName(guest) });
     }
 
     // ── J-1 : rappel pré-départ + WhatsApp ménage ────────────────────────────
@@ -568,7 +570,7 @@ Merci et à bientôt !
       await sendWhatsApp(env, waText);
 
       await env.ICAL_STORE.put(kvKey, "sent", { expirationTtl: 60 * 60 * 24 * 14 });
-      console.log(`[reminders] J-1 + WhatsApp ménage envoyés — ${nom} · ${guest}`);
+      clog("reminders", "info", { step: "j-1-whatsapp-menage", bien: nom, guest: redactName(guest) });
     }
 
     // ── J+1 : message post-séjour ────────────────────────────────────────────
@@ -603,7 +605,7 @@ Un avis de votre part nous aiderait vraiment — merci d'avance 🙏
       });
 
       await env.ICAL_STORE.put(kvKey, "sent", { expirationTtl: 60 * 60 * 24 * 14 });
-      console.log(`[reminders] J+1 envoyé — ${nom} · ${guest}`);
+      clog("reminders", "info", { step: "j+1", bien: nom, guest: redactName(guest) });
     }
 
     // ── J+2 : demande d'avis ─────────────────────────────────────────────────
@@ -640,7 +642,7 @@ Merci encore, et à bientôt peut-être en Martinique !
       });
 
       await env.ICAL_STORE.put(kvKey, "sent", { expirationTtl: 60 * 60 * 24 * 21 });
-      console.log(`[reminders] J+2 avis envoyé — ${nom} · ${guest}`);
+      clog("reminders", "info", { step: "j+2-avis", bien: nom, guest: redactName(guest) });
     }
 
     // ── J+3 : avis Google + fidélisation ─────────────────────────────────────
@@ -698,7 +700,7 @@ Mentionnez le code <strong>${promoCode}</strong> pour bénéficier de -10% suppl
       });
 
       await env.ICAL_STORE.put(kvKey, "sent", { expirationTtl: 60 * 60 * 24 * 30 });
-      console.log(`[reminders] J+3 Google + fidélisation envoyé — ${nom} · ${guest}`);
+      clog("reminders", "info", { step: "j+3-google-fidelisation", bien: nom, guest: redactName(guest) });
     }
 
     // ── J-7 : réservation directe ────────────────────────────────────────────
@@ -731,7 +733,7 @@ Mentionnez le code <strong>${promoCode}</strong> pour bénéficier de -10% suppl
       });
 
       await env.ICAL_STORE.put(kvKey, "sent", { expirationTtl: 60 * 60 * 24 * 14 });
-      console.log(`[reminders] J-7 direct envoyé — ${nom} · ${guest}`);
+      clog("reminders", "info", { step: "j-7-direct", bien: nom, guest: redactName(guest) });
     }
 
     // ── J-7 : conseils locaux (Airbnb / Booking) ──────────────────────────────
@@ -783,7 +785,7 @@ N'hésitez pas à nous contacter si vous avez des questions. À très bientôt !
       });
 
       await env.ICAL_STORE.put(kvKey, "sent", { expirationTtl: 60 * 60 * 24 * 14 });
-      console.log(`[reminders] J-7 conseils locaux envoyé — ${nom} · ${guest}`);
+      clog("reminders", "info", { step: "j-7-conseils-locaux", bien: nom, guest: redactName(guest) });
     }
   }
 }
@@ -1678,8 +1680,8 @@ async function scrapeBookingDetails(env, bienId, checkin) {
   } catch (e) { console.error("[booking-scrape] fetch:", e.message); return null; }
 
   const details = parseBookingAdminHtml(html, checkin);
-  if (details) console.log(`[booking-scrape] ✅ ${bienId}/${checkin} → ${details.voyageur} ${details.total}€ (id:${details.bookingId})`);
-  else console.warn(`[booking-scrape] ⚠️ Aucune ligne pour ${bienId}/${checkin}`);
+  if (details) clog("booking-scrape", "info", { bienId, checkin, guest: redactName(details.voyageur), total: details.total, bookingId: details.bookingId });
+  else clog("booking-scrape", "warn", { bienId, checkin, msg: "aucune ligne trouvée" });
   return details;
 }
 
@@ -1710,8 +1712,8 @@ async function upsertBookingReservation(env, evt, details) {
         platform_booking_id = COALESCE(excluded.platform_booking_id, direct_bookings.platform_booking_id),
         raw_subject         = excluded.raw_subject
     `).bind(paymentIntentId, bienId, BOOKING_BIEN_NOMS[bienId] || bienId, voyageur, total, checkin, checkout, bookingId || null, `Auto-import iCal ${new Date().toISOString().slice(0, 10)}`).run();
-    console.log(`[booking-auto-import] ${total > 0 ? "✅" : "⚠️ sans prix"} ${paymentIntentId} — ${voyageur} — ${bienId} ${checkin}→${checkout} — ${total}€`);
-  } catch (e) { console.error("[booking-auto-import] D1:", e.message); }
+    clog("booking-auto-import", total > 0 ? "info" : "warn", { paymentIntentId, guest: redactName(voyageur), bienId, checkin, checkout, total });
+  } catch (e) { clog("booking-auto-import", "error", { step: "d1", err: e.message }); }
 }
 
 // Appelé depuis runSync après détection des nouvelles résas
@@ -1932,7 +1934,7 @@ async function runCautionAutoRelease(env) {
         const bienId = pi.metadata?.bienId || "?";
         const voyageur = pi.metadata?.voyageur || "voyageur";
         const montant = (pi.amount / 100).toFixed(0);
-        console.log(`[caution] ✓ Libéré ${montant}€ pour ${voyageur} (${bienId}) checkout ${checkoutDate}`);
+        clog("caution", "info", { step: "release", montant, guest: redactName(voyageur), bienId, checkoutDate });
 
         // Email de confirmation à l'hôte
         await sendEmail(env, {
