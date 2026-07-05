@@ -8018,6 +8018,16 @@ function ContactField({ label, value, onChange, type = "text", multiline, requir
 function LogoDropdown() {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
+  // Header mobile débordait à 375px (logo + tous les liens desktop sur une ligne fixe
+  // 62px sans wrap ni masquage) — trouvé en vérifiant le mobile après un audit conversion
+  // externe, 2026-07-05. Fix chirurgical : ne raccourcir QUE ce qui est déjà accessible
+  // ailleurs sur mobile (sous-titre décoratif, libellé "Menu" — le picto ☰ suffit).
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+  useEffect(() => {
+    const fn = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener("resize", fn);
+    return () => window.removeEventListener("resize", fn);
+  }, []);
 
   useEffect(() => {
     const fn = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
@@ -8048,8 +8058,10 @@ function LogoDropdown() {
           style={{ display: "block" }}
         />
         <div style={{ textAlign: "left" }}>
-          <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 15, letterSpacing: "0.55em", color: "var(--c-ivory)", textTransform: "uppercase" }}>AMARYLLIS</div>
-          <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 9, color: "rgba(250,245,233,0.4)", letterSpacing: "0.35em", textTransform: "uppercase", marginTop: 2 }}>LOCATIONS D'EXCEPTION</div>
+          <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: isMobile ? 13 : 15, letterSpacing: isMobile ? "0.3em" : "0.55em", color: "var(--c-ivory)", textTransform: "uppercase" }}>AMARYLLIS</div>
+          {!isMobile && (
+            <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 9, color: "rgba(250,245,233,0.4)", letterSpacing: "0.35em", textTransform: "uppercase", marginTop: 2 }}>LOCATIONS D'EXCEPTION</div>
+          )}
         </div>
       </a>
       <button
@@ -8061,7 +8073,7 @@ function LogoDropdown() {
           background: "transparent",
           border: "1px solid rgba(250,245,233,0.18)",
           color: "rgba(250,245,233,0.75)",
-          borderRadius: 20, padding: "6px 14px",
+          borderRadius: 20, padding: isMobile ? "6px 10px" : "6px 14px",
           fontFamily: "'Jost', sans-serif", fontWeight: 300,
           fontSize: 11, letterSpacing: "0.1em",
           cursor: "pointer", textTransform: "uppercase",
@@ -8071,7 +8083,7 @@ function LogoDropdown() {
         onMouseLeave={e => { if (!open) { e.currentTarget.style.borderColor = "rgba(250,245,233,0.18)"; e.currentTarget.style.color = "rgba(250,245,233,0.75)"; } }}
       >
         <span style={{ fontSize: 13, lineHeight: 1 }}>☰</span>
-        Menu
+        {!isMobile && "Menu"}
       </button>
 
       {open && (
@@ -9767,20 +9779,24 @@ export default function PublicSite() {
           borderBottom: scrolled ? "1px solid rgba(250,245,233,0.07)" : "none",
           transition: "border-color 0.35s ease",
         }}>
-          <div style={{ maxWidth: 1280, margin: "0 auto", width: "100%", display: "flex", alignItems: "center", gap: 20 }}>
+          <div style={{ maxWidth: 1280, margin: "0 auto", width: "100%", display: "flex", alignItems: "center", gap: isMobile ? 10 : 20 }}>
             {/* Logo = <a href="/"> crawlable */}
             <LogoDropdown />
 
             {/* Separator */}
             <div style={{ width: 1, height: 20, background: "rgba(250,245,233,0.12)", flexShrink: 0 }} />
 
-            {/* Property selector — fills center, liens <a> crawlables */}
-            <div style={{ flex: 1 }}>
-              <PropertyDropdown onSelect={openDetail} />
-            </div>
+            {/* Property selector — fills center, liens <a> crawlables. Masqué mobile :
+                déjà accessible via "Nos propriétés" dans le menu ☰ (LogoDropdown) —
+                header débordait à 375px sans wrap ni masquage, trouvé le 2026-07-05. */}
+            {!isMobile && (
+              <div style={{ flex: 1 }}>
+                <PropertyDropdown onSelect={openDetail} />
+              </div>
+            )}
 
             {/* Right: nav + CTA */}
-            <nav aria-label="Navigation principale" style={{ display: "flex", alignItems: "center", gap: 18, flexShrink: 0 }}>
+            <nav aria-label="Navigation principale" style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 18, flexShrink: 0 }}>
               <a href="/guide-hub" className="header-nav-link" style={{ fontSize: 12, fontFamily: "'Jost', sans-serif", fontWeight: 300, color: "rgba(250,245,233,0.6)", textDecoration: "none", letterSpacing: "0.08em", whiteSpace: "nowrap", transition: "color 0.2s" }}
                 onMouseEnter={e => e.currentTarget.style.color = "var(--c-ivory)"}
                 onMouseLeave={e => e.currentTarget.style.color = "rgba(250,245,233,0.6)"}
@@ -9806,7 +9822,8 @@ export default function PublicSite() {
                 Location voiture
               </a>
               <LangToggle />
-              <ThemeToggle inline />
+              {/* Masqué mobile — même convention qu'ailleurs dans ce fichier (ligne ~4073) */}
+              {!isMobile && <ThemeToggle inline />}
               {/* CTA Réserver — visible desktop + mobile */}
               <button
                 onClick={() => setShowBienPicker(true)}
@@ -9821,10 +9838,10 @@ export default function PublicSite() {
                 onMouseEnter={e => e.currentTarget.style.opacity = "0.88"}
                 onMouseLeave={e => e.currentTarget.style.opacity = "1"}
               >
-                {CTA_LABEL_FR}
+                {isMobile ? (lang === "fr" ? "Vérifier" : "Check") : CTA_LABEL_FR}
               </button>
-              {/* CTA Contact */}
-              <HoverContact direction="down" pill />
+              {/* CTA Contact — masqué mobile, déjà dans le menu ☰ ("Contactez-nous") */}
+              {!isMobile && <HoverContact direction="down" pill />}
             </nav>
           </div>
         </div>
