@@ -7031,12 +7031,6 @@ function HeroBrand({ biens }) {
       {/* gradient overlay */}
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(14,59,58,0.18) 0%, rgba(14,59,58,0.72) 100%)", pointerEvents: "none" }} />
 
-      {/* top-left chips */}
-      <div style={{ position: "absolute", top: 28, left: 32, display: "flex", gap: 10, zIndex: 2 }}>
-        <Chip variant="onPhoto">⭐ Coup de cœur Airbnb</Chip>
-        <Chip variant="onPhoto">★ 4,94 · 200+ avis</Chip>
-      </div>
-
       {/* bottom content */}
       <div style={{ position: "absolute", bottom: 52, left: 32, right: 32, zIndex: 2 }}>
         <Eyebrow style={{ color: "rgba(250,245,233,0.7)", marginBottom: 16, letterSpacing: "0.55em" }}>
@@ -7050,9 +7044,15 @@ function HeroBrand({ biens }) {
             ? "Sept locations de prestige en Martinique et en Île-de-France. Réservation directe, sans frais de service."
             : "Seven premium rentals in Martinique and Île-de-France. Book directly, no service fees."}
         </Editorial>
-        <div style={{ marginTop: 32, display: "flex", gap: 14, flexWrap: "wrap" }}>
+        {/* Réassurance rapprochée du CTA/de la recherche (était isolée en haut à gauche,
+            trop loin du point de décision — audit conversion 2026-07-05). */}
+        <div style={{ marginTop: 20, display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <Chip variant="onPhoto">⭐ Coup de cœur Airbnb</Chip>
+          <Chip variant="onPhoto">★ 4,94 · 200+ avis</Chip>
+        </div>
+        <div style={{ marginTop: 20, display: "flex", gap: 14, flexWrap: "wrap" }}>
           <Button
-            variant="primary"
+            variant="onDark"
             size="lg"
             onClick={() => { const el = document.getElementById("properties"); if (el) el.scrollIntoView({ behavior: "smooth" }); }}
           >
