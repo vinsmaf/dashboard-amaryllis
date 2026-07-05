@@ -69,6 +69,7 @@ export async function sendGuestEmail(env, origin, { template, to, subject, vars 
     template,
     category: "client",
     bien_id: vars.bien_id || null,
+    reply_to: "contact@villamaryllis.com",
   });
   if (!result.ok) {
     return { ok: false, error: result.error || "Resend failed" };
