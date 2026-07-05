@@ -9,7 +9,7 @@
 // Sortie : résumé console + rapport rolling docs/_audits/AUDIT-latest.md.
 // Désactiver : SKIP_AUDIT=1 npm run deploy:pages
 
-import { readFileSync, existsSync, writeFileSync, mkdirSync } from "node:fs";
+import { readFileSync, existsSync, writeFileSync, mkdirSync, readdirSync } from "node:fs";
 
 const ROOT = process.cwd();
 const read = (p) => { try { return readFileSync(`${ROOT}/${p}`, "utf8"); } catch { return null; } };
@@ -64,6 +64,31 @@ const add = (dim, status, evidence) => checks.push({ dim, status, evidence });
   add("INV6 mémoire structurée", status,
     missing.length ? `fichiers absents/vides : ${missing.join(", ")}`
       : `.memory complet · PROJECT_MEMORY ${pmBytes}o${tooBig ? " (>60Ko : à dégraisser)" : ""}`);
+}
+
+// ── INV7 — Documentation des endpoints : chaque functions/api/*.js réel doit apparaître dans CLAUDE.md
+// (évite la dette constatée le 2026-07-04 : 119 commits ajoutant des endpoints vs 21 touchant CLAUDE.md)
+{
+  const claudeMd = read("CLAUDE.md") || "";
+  const files = [];
+  const walk = (dir) => {
+    let entries;
+    try { entries = readdirSync(`${ROOT}/${dir}`, { withFileTypes: true }); } catch { return; }
+    for (const e of entries) {
+      const p = `${dir}/${e.name}`;
+      if (e.isDirectory()) walk(p);
+      else if (e.name.endsWith(".js") && !e.name.startsWith("_") && !e.name.endsWith(".test.js")) files.push(p);
+    }
+  };
+  walk("functions/api");
+  // Route réelle : functions/api/foo.js → foo · functions/api/foo/[[path]].js ou [file].js → foo (dossier parent)
+  const routeName = (p) => p.replace(/^functions\/api\//, "").replace(/\.js$/, "").split("/")[0];
+  const esc = (s) => s.replace(/[.*+?^${}()|[\]\\-]/g, "\\$&");
+  const missing = [...new Set(files.map(routeName))]
+    .filter((name) => !new RegExp(`/api/${esc(name)}(?![a-zA-Z0-9_-])`).test(claudeMd));
+  add("INV7 doc endpoints (CLAUDE.md)", missing.length ? "RISK" : "PASS",
+    missing.length ? `${missing.length} route(s) sans doc : ${missing.slice(0, 8).map((n) => `/api/${n}`).join(", ")}${missing.length > 8 ? "…" : ""}`
+      : `${files.length} fichiers, toutes les routes référencées dans CLAUDE.md`);
 }
 
 // ── Verdict global = pire dimension

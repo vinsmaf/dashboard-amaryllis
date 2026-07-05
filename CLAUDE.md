@@ -269,6 +269,8 @@ All server-side logic lives in `functions/api/` (Cloudflare Pages Functions form
 | `/api/articles` | GET/POST/PATCH | `articles.js` | CRUD articles SEO — GET liste (published seul sauf admin), `?slug=`/`?category=` filtrage. POST/PATCH admin Bearer. |
 | `/api/voyageur-feedback` | GET/POST/PATCH | `voyageur-feedback.js` | Avis Airbnb (D1 `voyageur_feedback`) — `?action=stats\|public\|report\|ingest\|draft\|code-themes`. PATCH `?action=moderate`. |
 | `/api/trigger-sync` | GET/POST | `trigger-sync.js` | Force une re-sync manuelle — `?type=direct` (D1→Sheet résas Stripe) ou `?type=full` (+ sync Worker complet). Auth Bearer `CLAUDE_SECRET`. |
+| `/api/inventory` | GET/POST/PATCH/DELETE | `inventory.js` | Gestion centralisée stocks/linge/consommables (log-008) — seuils min/max, alertes rupture, prédiction ETA. `?action=init` crée tables+seed (6 biens MQ, Nogent exclu — conciergerie externe), `?action=alerts` liste les items en rupture imminente, `?action=movement&id=N` enregistre une conso/réappro. |
+| `/api/maintenance` | GET/POST/PATCH/DELETE | `maintenance.js` | Suivi maintenance préventive (D1 `maintenance`) — clim/piscine/jacuzzi/jardin/plomberie/électricité/structure, statut à_planifier/planifié/fait. Auth Bearer admin. |
 
 **Éditorial & Réseaux sociaux**
 
