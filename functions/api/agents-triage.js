@@ -3,12 +3,20 @@
 // Attrape les catégories d'erreurs bon marché à détecter sans accès repo live
 // (contrairement à une passe manuelle avec accès repo, ce cron ne peut QUE raisonner
 // sur des données injectées : faits biens.js, mots interdits agent_lessons, texte du
-// batch, et un DIGEST STATIQUE des endpoints/onglets déjà existants) :
+// batch, un DIGEST STATIQUE des endpoints/onglets déjà existants, et une requête LIVE
+// des articles de blog publiés) :
 //   1) Mot/outil banni (table agent_lessons — Brevo, HubSpot, Slack, Jest, S3...)
 //   2) Contradiction factuelle vs biens.js (prix, bookable, nombre de biens)
 //   3) Doublon quasi-exact avec un autre item du même lot
 //   4) Probablement déjà construit (vs _featureDigest.js — signal FAIBLE, jamais certain,
 //      c'est un snapshot périodique pas une lecture live du code réel)
+//   5) Entité/bien/client halluciné — mentionne une entreprise/propriété qui n'existe pas
+//      dans le portefeuille réel (ex: "GreenTech" — trouvé le 2026-07-05, marqué "fait" à
+//      tort alors qu'aucune entité pareille n'existe. RÈGLE 2 ne le catchait pas : elle ne
+//      couvre que les contradictions de FAITS sur un bien réel, pas une entité inventée).
+//   6) Contenu déjà publié — l'item propose un article de blog qui couvre un sujet déjà
+//      traité par un article PUBLIÉ existant (requête live `seo_articles`, pas un digest
+//      périmé — trouvé le 2026-07-05 sur traf-016, jamais catché par le triage).
 //
 //   GET|POST /api/agents-triage?secret=POSTSTAY_SECRET   (ou token admin)
 //   ?dry=1  → simule (classe + résume) sans rien écrire.
@@ -18,6 +26,8 @@
 // ⚠️ La catégorie 4 reste un signal FAIBLE (digest = snapshot périodique, potentiellement
 // périmé) — jamais aussi fiable qu'une revue humaine/session Claude avec accès repo réel.
 // Régénérer le digest : node scripts/generate-feature-digest.mjs (périodique, pas auto).
+// Les catégories 5 et 6 sont des requêtes LIVE (biens.js importé + D1 seo_articles), donc
+// aussi fiables qu'une lecture directe — pas des signaux faibles comme la catégorie 4.
 
 import { verifyBearer } from "./_adminauth.js";
 import { callLLM } from "./_llm.js";
@@ -41,6 +51,11 @@ function biensFactsText() {
   ).join("\n");
 }
 
+function articlesText(articles) {
+  if (!articles || !articles.length) return "(aucun article publié)";
+  return articles.map(a => `• ${a.title}${a.keywords ? ` [${a.keywords}]` : ""}`).join("\n");
+}
+
 export async function onRequest(context) {
   const { request, env } = context;
   const url = new URL(request.url);
@@ -54,7 +69,7 @@ export async function onRequest(context) {
 
   const dry = url.searchParams.get("dry") === "1";
 
-  const [{ results: items }, { results: lessons }] = await Promise.all([
+  const [{ results: items }, { results: lessons }, { results: articles }] = await Promise.all([
     db.prepare(
       "SELECT id, agent, action FROM agent_actions WHERE status IN ('backlog','a-planifier','en-cours') ORDER BY created_at DESC LIMIT 150"
     ).all(),
@@ -63,6 +78,10 @@ export async function onRequest(context) {
     // RECOMMANDATION qui propose un thème de contenu est invalide. Mélanger les deux causait des
     // faux positifs (ex: "faire un Reel sur la vue panoramique" bloqué à tort).
     db.prepare("SELECT pattern, reason, term FROM agent_lessons WHERE scope='tool' ORDER BY created_at DESC LIMIT 60").all(),
+    // Requête LIVE (pas un digest périodique) — les articles publiés ne bougent pas assez
+    // souvent pour justifier un snapshot séparé, autant lire la vérité directement.
+    db.prepare("SELECT title, keywords FROM seo_articles WHERE status='published' ORDER BY created_at DESC LIMIT 150").all()
+      .catch(() => ({ results: [] })),
   ]);
 
   if (!items || items.length === 0) {
@@ -75,17 +94,22 @@ export async function onRequest(context) {
 
   const list = items.map(it => `[${it.id}] (agent:${it.agent}) ${it.action}`).join("\n");
 
-  const system = `Tu es un agent de contrôle qualité pour le backlog de recommandations IA de villamaryllis.com (location de 7 logements Martinique+Nogent). On te donne une liste d'items backlog. Ta seule tâche : repérer les items à BLOQUER pour l'une de ces 4 raisons précises, RIEN d'autre :
+  const system = `Tu es un agent de contrôle qualité pour le backlog de recommandations IA de villamaryllis.com (location de 7 logements Martinique+Nogent). On te donne une liste d'items backlog. Ta seule tâche : repérer les items à BLOQUER pour l'une de ces 6 raisons précises, RIEN d'autre :
 1) L'item mentionne un outil/framework banni (liste ci-dessous) de façon centrale à l'action.
 2) L'item contredit un fait vérifié sur un bien (prix, capacité, bookable) donné ci-dessous.
 3) L'item est un DOUBLON quasi-exact d'un autre item de CETTE liste (même besoin, même bien, formulation très proche).
 4) L'item décrit une feature qui existe DÉJÀ très probablement, vu le nom explicite d'un endpoint ou onglet admin ci-dessous (ex: l'item demande "créer un système de X" et un endpoint/onglet nommé quasi-X existe déjà).
+5) L'item fait référence à une ENTREPRISE/CLIENT/PROPRIÉTÉ qui n'existe PAS dans le portefeuille réel : le seul portefeuille est les 7 biens listés ci-dessous, sous le nom commercial "Amaryllis Locations" — TOUT autre nom d'entreprise/villa/client cité comme sujet de l'action (ex: "la villa Sunset", "l'entreprise GreenTech") est une hallucination à bloquer SYSTÉMATIQUEMENT, sans exception et sans hésitation, même si le reste de l'action semble par ailleurs cohérent.
+6) L'item propose de créer un article/contenu de blog sur un sujet DÉJÀ couvert par un article PUBLIÉ existant (liste ci-dessous) — même angle, même intention de recherche. Ne bloque QUE si le chevauchement est net (pas juste un thème voisin) ; un angle clairement différent sur le même thème général n'est PAS un doublon.
 
 FAITS BIENS (source unique, jamais à contredire) :
 ${biensFactsText()}
 
 OUTILS/MOTS BANNIS (jamais utilisés dans ce projet) :
 ${bannedText}
+
+ARTICLES DE BLOG DÉJÀ PUBLIÉS (requête live seo_articles, pas un snapshot périmé) :
+${articlesText(articles)}
 
 STACK RÉELLE : React 19+Vite, Cloudflare Pages+Functions+Worker+D1+KV, tests=Vitest (jamais Jest), email=Resend (jamais Brevo/HubSpot), alertes=ntfy (jamais Slack), aucun service AWS.
 
@@ -98,6 +122,8 @@ ${ADMIN_TABS_DIGEST.join(", ")}
 RÈGLE 1 (outil banni) : ne s'applique QUE si l'item propose de littéralement UTILISER/INTÉGRER l'outil (ex: "via HubSpot", "trigger Brevo") — PAS si le mot apparaît sans rapport ou par association vague.
 RÈGLE 2 (fait bien) : ne s'applique QUE si l'item affirme un chiffre/statut qui contredit DIRECTEMENT et sans ambiguïté un fait ci-dessus (prix exact différent, bookable=false utilisé pour une action de réservation/conversion) — pas une simple mention du nom du bien.
 RÈGLE 4 (déjà construit) : signal FAIBLE, sois TRÈS conservateur — ne l'utilise QUE si le nom de l'endpoint/onglet correspond de façon quasi-évidente au besoin décrit (pas une vague ressemblance thématique). En cas de doute, NE bloque PAS — un digest périmé peut aussi te tromper dans l'autre sens (un endpoint peut avoir changé de portée). Commence toujours la raison par "[digest, à re-vérifier]" pour cette règle spécifiquement, pour que ce soit distingué visuellement des 3 autres règles (plus fiables).
+RÈGLE 5 (entité inventée) : règle FIABLE (pas un signal faible) — ne PAS confondre avec la règle 2. La règle 2 juge une CONTRADICTION sur un bien réel ; la règle 5 détecte un bien/client/entreprise qui n'existe pas DU TOUT dans la liste des 7. Vérifie explicitement : le sujet principal de l'action est-il un des 7 biens listés, "Amaryllis Locations" elle-même, ou une entité générique sans nom propre (ex: "les voyageurs", "un prestataire") ? Si NON — nom propre absent de la liste — bloque TOUJOURS, sans exception ni hésitation.
+RÈGLE 6 (contenu déjà publié) : compare le SUJET de l'article proposé aux titres/mots-clés publiés ci-dessus. Ne bloque que si un article existant couvre déjà la même intention de recherche de façon quasi-identique (ex: proposer "avantages réservation directe villa Martinique" alors qu'un article "Réserver votre villa en Martinique en direct" existe déjà) — pas si c'est juste le même thème général (Martinique, villa) avec un angle différent (une activité précise, un lieu précis, une saison précise).
 
 Ne bloque JAMAIS un item par excès de prudence — en cas de doute, laisse-le. Ne juge PAS la qualité créative/business d'un item (ça reste la décision de Vincent). N'inclus dans le tableau QUE les items que tu bloques réellement — si tu écris toi-même dans ta raison "pas de problème"/"pas de blocage"/"correct ici"/"légitime", alors NE L'INCLUS PAS dans le tableau, laisse-le simplement de côté. Réponds UNIQUEMENT par un tableau JSON, un objet par item à bloquer : [{"id":"...","reason":"raison précise et courte en français, affirmative, jamais hésitante"}]. Tableau vide si rien à bloquer. Aucun texte autour.`;
 
