@@ -89,6 +89,8 @@ All server-side logic lives in `functions/api/` (Cloudflare Pages Functions form
 | `/api/beds24-prices` | GET | `beds24-prices.js` | Dérive les tarifs journaliers Nogent (propId 158192) depuis les réservations Beds24 (l'endpoint inventory V2 renvoie 500 pour ce compte). |
 | `/api/beds24-rates` | GET | `beds24-rates.js` | Récupère les tarifs journaliers Beds24 pour Nogent via `/inventory/rooms/calendar?includePrices=true`. Cache CDN 1h. Retourne `{ "YYYY-MM-DD": price }`. |
 | `/api/beds24-webhook` | POST | `beds24-webhook.js` | Reçoit les notifications Beds24 en temps réel et transmet à Apps Script. |
+| `/api/beds24-refresh` | GET | `beds24-refresh.js` | Rotation automatique du token Beds24 V2 — vérifie l'expiration, rafraîchit si < 30 jours, stocke en D1. Cron 9h UTC. Auth : `?secret=BEDS24_REFRESH_SECRET`. |
+| `/api/beds24-token-watch` | GET | `beds24-token-watch.js` | Surveillance quotidienne de l'expiration du token Beds24 V2 — alerte email (Resend) si < 7 jours avant expiration. Cron 7h UTC. Auth : `?secret=TOKEN_WATCH_SECRET`. |
 
 **iCal & Disponibilités**
 
@@ -97,6 +99,8 @@ All server-side logic lives in `functions/api/` (Cloudflare Pages Functions form
 | `/api/fetch-ical` | GET | `fetch-ical.js` | CORS proxy serveur pour les URLs iCal Airbnb/Booking.com. Param : `url=<encoded-url>`. Whitelist de domaines autorisés. |
 | `/api/get-availability` | GET | `get-availability.js` | Fusionne les iCal Airbnb + Booking.com pour un bien donné. Param : `bienId`, `bookingUrl`. |
 | `/api/ical-config` | GET | `ical-config.js` | Retourne les URLs iCal Booking.com par bien depuis les secrets Cloudflare. |
+| `/api/ical-export` | GET | `ical-export.js` | Génère un flux iCal (RFC 5545) des réservations directes (D1 `direct_bookings`) pour un bien donné, à destination d'Airbnb/Booking (anti double-booking). Auth : `?secret=ICAL_EXPORT_SECRET`. |
+| `/api/ical/<bienId>.ics` | GET | `ical/[file].js` | Variante par bien du flux iCal ci-dessus, au format `.ics` directement parsable par Airbnb/Booking.com comme calendrier externe. Auth : `?secret=ICAL_EXPORT_SECRET`. |
 
 **Google & Analytics**
 
@@ -118,6 +122,19 @@ All server-side logic lives in `functions/api/` (Cloudflare Pages Functions form
 | `/api/manage-deposit` | POST | `manage-deposit.js` | Gère les cautions pré-autorisées. Body : `{ action: "capture"\|"cancel"\|"list", paymentIntentId, amount }`. |
 | `/api/stripe-webhook` | POST | `stripe-webhook.js` | Reçoit les événements Stripe (`payment_intent.succeeded`, `checkout.session.completed`) — confirme la réservation Beds24 correspondante et notifie l'hôte par email. |
 | `/api/stripe-reconcile` | GET | `stripe-reconcile.js` | Rapprochement Stripe (chantier connecteurs 2026-07) — liste les derniers virements bancaires (`/v1/payouts`), détaille les transactions (`/v1/balance_transactions`, frais/net), rattache chaque charge à `direct_bookings` via `payment_intent_id`. Bearer admin. Onglet 🏦 Rapprochement Stripe (Finance). Aucun secret supplémentaire (réutilise `STRIPE_SECRET_KEY`). |
+| `/api/cancel-booking` | POST | `cancel-booking.js` | Annule une réservation directe — remboursement Stripe, libération caution, sync Beds24 (Nogent), email au voyageur. Auth Bearer admin. |
+| `/api/direct-bookings` | GET | `direct-bookings.js` | Liste les réservations directes (Stripe) au format Planning unifié. Avec `?view=guests`, retourne les voyageurs répétants triés par LTV. Auth Bearer admin. |
+| `/api/patch-booking` | POST | `patch-booking.js` | Met à jour une réservation iCal (nom + montant manquants) et recalcule les revenus du mois. Auth Bearer admin. |
+| `/api/booking-session` | GET/POST | `booking-session.js` | GET : statut de la session Booking.com stockée (validité < 30j). POST : enregistre un token `ses=` depuis admin.booking.com. Auth `?secret=POSTSTAY_SECRET`. |
+| `/api/complement-checkout` | POST | `complement-checkout.js` | Crée une Stripe Checkout Session pour un complément de prix (changement logement, sur-occupation) — enregistre la carte du voyageur off-session pour la caution différée. |
+| `/api/service-checkout` | POST | `service-checkout.js` | Crée un Stripe Payment Link pour l'achat d'un service additionnel (depuis `/services/<bien>` ou QR TV) — prix validé serveur depuis le catalogue du livret. Rate-limited. |
+| `/api/service-orders` | GET | `service-orders.js` | Liste les commandes de services enregistrées en D1. Auth Bearer admin. |
+| `/api/sign-contract` | POST | `sign-contract.js` | Stocke une signature électronique manuscrite du contrat (PNG dataURL), nom, acceptation, IP, horodatage — alerte email à l'hôte. Rate-limited par IP. |
+| `/api/promo-codes` | GET/POST | `promo-codes.js` | `?validate=CODE&bien_id=X` : validation publique rate-limitée. `?active=1` : listing codes (auth). POST : génère un code promo unique en D1 (auth Bearer ou `?secret`). |
+| `/api/create-payment-link` | POST | `create-payment-link.js` | Crée un Stripe Payment Link pour devis WhatsApp (montant en centimes, bien, dates, type acompte/solde/total). Auth Bearer admin. |
+| `/api/charge-balance` | GET | `charge-balance.js` | Cron quotidien : débite off-session les soldes dus (paiement en 2 fois). Auth `?secret=POSTSTAY_SECRET`. `?dry=1` pour aperçu. |
+| `/api/devis-solde-cron` | GET | `devis-solde-cron.js` | Cron quotidien : gère le solde des devis en 2 fois (lien Stripe génération J-30, relances J-25/J-20, annulation auto J-15). Auth `?secret`. `?dry=1`. |
+| `/api/caution-cron` | GET | `caution-cron.js` | Cron quotidien : réconcilie les cautions off-session (pose J-2, renouvellement avant expiration, libération J+3). Auth `?secret=POSTSTAY_SECRET`. `?dry=1`. |
 
 **Revenue Manager**
 
@@ -131,6 +148,11 @@ All server-side logic lives in `functions/api/` (Cloudflare Pages Functions form
 | `/api/rm-recommendations` | GET/POST/PUT/DELETE | `rm-recommendations.js` | CRUD + moteur de pricing complet pour les recommandations RM — calcule le prix suggéré par jour selon profils saisonniers, règles et signaux. |
 | `/api/rm-competitors` | GET/POST/PUT/DELETE | `rm-competitors.js` | Gestion des concurrents, snapshots de prix et recalcul des signaux marché (médiane, moyenne, percentiles). |
 | `/api/rm-scrape` | GET/POST | `rm-scrape.js` | Déclenche un scraping Apify (acteur Airbnb) pour les listings concurrents. Requiert `APIFY_TOKEN`. |
+| `/api/veille-zone-scan` | GET/POST | `veille-zone-scan.js` | Détecte les nouveaux listings Airbnb apparus dans une zone (diff snapshot S vs S-1). GET liste le dernier scan, POST lance le scan (toutes zones), crée une action `agent_actions` par nouveau listing. Auth `?secret=POSTSTAY_SECRET` ou Bearer admin. |
+| `/api/fc-competitors-scan` | GET/POST | `fc-competitors-scan.js` | Scan Firecrawl des prix/notes des concurrents connus (Airbnb + Booking). GET retourne l'état du dernier scan, POST en lance un nouveau, stocke les snapshots en D1 `rm_competitor_snapshots`. Auth Bearer admin. |
+| `/api/rm-auto-update` | GET | `rm-auto-update.js` | Orchestre le recalcul quotidien des recommandations RM pour tous les biens. `&scan=1` déclenche aussi le scan Firecrawl hebdo (lundi). Auth `?secret=POSTSTAY_SECRET`. |
+| `/api/coherence-check` | GET | `coherence-check.js` | Contrôle de cohérence des réservations — compare D1 `direct_bookings` vs iCal Airbnb/Booking, écrit les anomalies en `client_errors`, push ntfy si critique. `?dry=1` = simulation. Auth `?secret=POSTSTAY_SECRET`. |
+| `/api/seasonal-update` | GET | `seasonal-update.js` | Agrège `rm_kpi_snapshots` → `seasonal_memory` (par bien × mois × année) le 1er de chaque mois, pour construire la mémoire saisonnière historique. Auth `?secret=POSTSTAY_SECRET`. |
 
 **Communication & Alertes**
 
@@ -151,6 +173,37 @@ All server-side logic lives in `functions/api/` (Cloudflare Pages Functions form
 | `/api/send-poststay` | GET | `send-poststay.js` | Séquence post-séjour **2 touches MAXIMUM** (jamais plus, demande Vincent 2026-07-04) : J+2 (`ask`, remerciement + avis Google/TripAdvisor) puis J+7 (`reminder`, dernière relance — satisfaction + code fidélité RETOUR10, `post-sejour-relance.html`), pour Nogent/Beds24 + résas directes. `?touch=ask\|reminder` pour forcer une seule touche, `?dry=1` simule. |
 | `/api/send-relance-panier` | GET | `send-relance-panier.js` | Cron horaire : relance panier abandonné (D1 `abandoned_carts`, exclut convertis). |
 | `/api/notify-booking` | POST | `notify-booking.js` | Alerte hôte fiable (email+ntfy) post-paiement + enregistre la résa directe en D1. |
+| `/api/send-j1-acces` | GET | `send-j1-acces.js` | Cron J-1 arrivée : envoie le code d'accès réel au voyageur. Lit la section « access » du guide JSON du bien (D1 direct, contourne la redaction publique de `/api/guides`). Auth `?secret=POSTSTAY_SECRET`. |
+| `/api/send-pre-depart` | GET | `send-pre-depart.js` | Cron J-1 départ : email veille de départ (heure, late check-out 80€/19h, remise fidélité -10%, avis Google). Auth `?secret=POSTSTAY_SECRET`. |
+| `/api/send-verif-arrivee` | GET | `send-verif-arrivee.js` | Cron J+1 arrivée : email court « tout se passe bien ? » le lendemain du check-in, pour tous les séjours (contrairement au rappel « Mi-séjour » interne du Worker, réservé aux 5+ nuits). Auth `?secret=POSTSTAY_SECRET`. |
+| `/api/send-menage-alert` | GET | `send-menage-alert.js` | Cron J-2 arrivée : alerte ménage au prestataire via Resend. Lit les arrivées Beds24 (propId 158192, Nogent). Auth `?secret=MENAGE_ALERT_SECRET`. |
+| `/api/send-vacancy-alert` | GET | `send-vacancy-alert.js` | Cron vacance J+14→J+30 : alerte si > 10 nuits libres sur l'Appartement Nogent — calcule le RevPAR, suggère prix/promo. Auth `?secret=VACANCY_ALERT_SECRET`. |
+| `/api/send-leads-promo` | GET | `send-leads-promo.js` | Cron promo leads : envoie une offre -10% (code DIRECT10) aux leads « nouveau » non répondus, marque « répondu » après envoi. Auth `?secret=POSTSTAY_SECRET`. |
+| `/api/email-templates-admin` | GET/POST/DELETE | `email-templates-admin.js` | Éditeur admin des paragraphes éditables (texte simple) des 4 templates automatiques (confirmation, verif-arrivee, j1-acces, pre-depart). GET liste + valeurs, POST enregistre les champs, DELETE réinitialise aux valeurs par défaut. Auth Bearer admin. |
+| `/api/send-bulk-email` | POST | `send-bulk-email.js` | Envoi groupé/segmenté (segment `hot_carts`/`all_carts`/`custom`, template + code promo optionnel), max 50 destinataires. Auth Bearer admin obligatoire. |
+| `/api/send-custom-email` | POST | `send-custom-email.js` | Envoi manuel d'un email (to/subject/html requis, bien_id/booking_id/promo_code optionnels). Rate limit 20/h/IP. Auth Bearer admin ou `?secret=POSTSTAY_SECRET`. |
+| `/api/emails-log` | GET | `emails-log.js` | Interroge l'historique des emails (par destinataire, par email, par résa ou détail complet) — catégorie `client` uniquement. Auth Bearer admin ou `?secret=POSTSTAY_SECRET`. |
+| `/api/emails-import-resend` | POST | `emails-import-resend.js` | Import rétroactif des emails Resend dans `emails_log` (dédup par `resend_id`, matching booking, récupération HTML). Auth Bearer admin ou `?secret=POSTSTAY_SECRET`. |
+| `/api/enrich-from-emails` | GET | `enrich-from-emails.js` | Auto-complétion des résas OTA Airbnb — parse les confirmations dans l'onglet Emails du Sheet, enrichit la résa correspondante (nom/prix, non destructif). Auth `?secret=POSTSTAY_SECRET`. `?dry=1`. |
+| `/api/airbnb-email-import` | POST | `airbnb-email-import.js` | Webhook Zapier recevant une confirmation email Airbnb/Booking — insère en D1 `direct_bookings` via upsert idempotent (platform+bookingId). Auth `?secret=ZAPIER_WEBHOOK_SECRET`. |
+| `/api/guest-contacts` | GET/POST/PATCH/DELETE | `guest-contacts.js` | CRUD contacts (table `crm_clients`) — POST crée ou fusionne (`action=merge`). Auth Bearer admin. |
+| `/api/contacts-alert` | GET | `contacts-alert.js` | Alerte ntfy pour les leads `status='nouveau'` depuis plus de 24h. Auth `?secret=CONTACTS_ALERT_SECRET`. |
+| `/api/contacts-purge` | DELETE | `contacts-purge.js` | RGPD : purge les contacts de plus de 2 ans. Auth Bearer `PURGE_SECRET`. |
+| `/api/crm-clients` | GET/POST/PATCH | `crm-clients.js` | Gestion CRM clients — GET liste paginée ou fiche, PATCH met à jour notes/tags/statut, POST upsert manuel. Auth Bearer admin. |
+| `/api/crm-lifecycle` | GET | `crm-lifecycle.js` | Phase CRM réactivation/fidélisation/anniversaire/parrainage, filtrée par segment. `?dry=1` (défaut) prévisualise. Auth `?secret=POSTSTAY_SECRET`. |
+| `/api/reclamations` | GET/POST/PATCH | `reclamations.js` | CRUD réclamations — GET liste (admin), POST crée (public, rate-limité 20/h), PATCH met à jour statut/notes/geste (admin). |
+| `/api/whatsapp` | GET/POST | `whatsapp.js` | Webhook du bot WhatsApp Business (Meta Cloud API) — GET vérifie le webhook, POST reçoit/répond aux messages entrants (LLM contextuel par bien), enregistre les échanges en D1. |
+| `/api/whatsapp-conversations` | GET | `whatsapp-conversations.js` | Liste les conversations WhatsApp stockées en D1, filtrable par bien et numéro émetteur. Auth Bearer admin. |
+| `/api/meta-insights` | GET | `meta-insights.js` | Agrège les données d'audience Meta (Facebook + Instagram) — fans, reach, impressions, followers, top pays. Cache CDN 4h. Auth `?secret` ou Bearer admin. |
+
+**Newsletter**
+
+| Endpoint | Méthode | File | Purpose |
+|---|---|---|---|
+| `/api/newsletter-subscribe` | POST | `newsletter-subscribe.js` | Lead magnet — capture email+prénom+source (guide_id/property_id). Double opt-in RGPD, rate-limité 3 req/IP/h. |
+| `/api/newsletter-confirm` | GET | `newsletter-confirm.js` | Double opt-in : confirme l'inscription via token, envoie l'email de bienvenue, publie une alerte ntfy (premiers abonnés/jalons). Redirige. |
+| `/api/newsletter-unsubscribe` | GET | `newsletter-unsubscribe.js` | Désabonnement one-click via token — marque `unsubscribed_at`. Redirige. |
+| `/api/newsletter-admin` | GET/POST | `newsletter-admin.js` | Admin newsletter — liste/stats/filtrage des abonnés (pagination), broadcast (4 templates autorisés), renvoi de confirmation, suppression. Auth `?secret=POSTSTAY_SECRET` ou `X-Admin-Auth`. |
 
 **Agents IA**
 
@@ -167,6 +220,19 @@ All server-side logic lives in `functions/api/` (Cloudflare Pages Functions form
 | `/api/code-review` | POST | `code-review.js` | Revue LLM **du diff** (callLLM tier smart) → findings bugs JSON. `?post=1` pousse dans l'inbox (dédup). Lancé par `deploy-pages.sh` (`scripts/code-review-diff.mjs`) à chaque déploiement si `POSTSTAY_SECRET` exporté. **Vérifs au moment du changement** : `deploy-pages.sh` fait aussi un crawl visuel en arrière-plan (post-smoke-test). `SKIP_BUG_CHECKS=1` pour désactiver. |
 | `/api/agents-eval` | GET | `agents-eval.js` | LLM-juge note les sorties (table `llm_evals`). |
 | `/api/agents-verify` | GET | `agents-verify.js` | Vérif adversariale (challenger Mistral) pour agents à enjeu → annote `notes ⚠️ VÉRIF`. |
+| `/api/ack-suggestion` | GET | `ack-suggestion.js` | Enregistre l'ack (done/ignore/later) d'une suggestion KPI depuis ntfy. Pas d'auth forte (ID difficile à deviner). |
+| `/api/agent-drafts` | GET/POST/PATCH | `agent-drafts.js` | Brouillons générés par les agents IA en attente d'approbation humaine — PATCH approve/reject/publish avec exécution (`social_post`/`price_change`/`email_campaign`). Auth Bearer. |
+| `/api/agent-lessons` | GET/POST/DELETE | `agent-lessons.js` | Mots/expressions interdits appris par les agents — injectés en amont des prompts et en fact-check après génération. Auth Bearer ou `?secret`. |
+| `/api/agent-memory` | GET/POST/DELETE | `agent-memory.js` | CRUD persistant des mémoires des agents IA (clé-valeur, expiration optionnelle). |
+| `/api/agents-digest` | GET | `agents-digest.js` | Digest hebdo du statut des agents (drafts prêts, actions à valider, bloquées, faites) — push ntfy + email. Auth `?secret=POSTSTAY_SECRET`. |
+| `/api/agents-execute` | GET | `agents-execute.js` | Orchestration L3 : prépare les actions `risk=auto` en brouillons (`agent_drafts`, `status=drafted`), ne publie jamais directement. Cron hebdo ou appel manuel. Auth `?secret` ou Bearer. |
+| `/api/agents-triage` | GET/POST | `agents-triage.js` | Triage hebdo automatique du backlog (~28 agents) — détecte mots bannis, contradictions factuelles, doublons, features déjà construites. `?dry=1` simule. Auth `?secret` ou Bearer. |
+| `/api/orchestrator` | GET/POST | `orchestrator.js` | Orchestrateur multi-agents (Claude Sonnet) coordonnant les ~28 agents spécialisés. GET liste les 20 derniers runs, POST déclenche une orchestration complète. |
+| `/api/memory-distill` | GET | `memory-distill.js` | Agent-mémoire : distille l'expérience des 7 derniers jours (`llm_evals`, `action_outcomes`, signaux) en 3-5 apprentissages durables, injectés dans les prompts de tous les agents. Auth `?secret=POSTSTAY_SECRET`. |
+| `/api/kpi-sentinel` | GET | `kpi-sentinel.js` | Sentinelle KPI — détecte les anomalies par les données, 9 signaux (occupation, paniers abandonnés, cautions, RevPAR, saisonnalité, historique, éditorial, **conversion funnel** — arch-monitoring). Cron quotidien 9h UTC, ntfy si anomalie ≥ 🟡. Auth `?secret=POSTSTAY_SECRET`. |
+| `/api/morning-brief` | GET | `morning-brief.js` | Brief matinal locatif (arrivées/départs du jour, cautions, occupation semaine, revenus, posts planifiés) — push ntfy 6h Martinique. Auth `?secret=POSTSTAY_SECRET`. |
+| `/api/rapport-business` | GET | `rapport-business.js` | Rapport business autonome (lecture seule `direct_bookings`) → synthèse LLM → ntfy Vincent. Aucune action sortante. Auth `?token=RAPPORT_TOKEN`. |
+| `/api/qa-run` | GET/POST | `qa-run.js` | Déclenche un run QA manuel par type (`weekly`\|`monthly`\|`all`) — lance les agents QA spécialisés, push ntfy du résultat. Auth Bearer ou `?secret=POSTSTAY_SECRET`. |
 
 **LLM multi-provider, AI-Ops & RAG**
 
@@ -175,6 +241,7 @@ All server-side logic lives in `functions/api/` (Cloudflare Pages Functions form
 | `functions/api/_llm.js` | `callLLM(env, {provider?, tier, messages, ...})` — cascade Groq→Cloudflare→Mistral→Cerebras(+Gemini si clé). Modèle = `opts.model` > plan AI-Ops (D1 `ai_ops`) > `MODELS` statique. |
 | `/api/ai-ops` | `ai-ops.js` — **agent AI-Ops** : auto-découvre/teste/bascule les modèles gratuits, écrit un plan D1 appliqué en live par `_llm.js`. Self-refresh si >20h. |
 | `/api/llm-ping` | `llm-ping.js` — health-check par provider isolé + `?list=1` (modèles `/v1/models`). |
+| `/api/llm-generate` | `llm-generate.js` — proxy générique vers `callLLM` (cascade Groq/Cloudflare/Mistral/Cerebras) pour les appels serveur-à-serveur internes (Worker→Pages). `{prompt,maxTokens,tier}` → `{text}`. Auth `?secret=POSTSTAY_SECRET`. |
 | `functions/api/_biens.js` | **Source unique des faits** des 7 biens (nomenclature/équipements/capacités) + `EQUIP_RULES_TEXT`. |
 | `functions/api/_rag.js` | RAG : `embed`/`ragUpsert`/`ragSearch`/`ragBlock` (Vectorize `VECTORIZE` + embeddings `@cf/baai/bge-m3`). |
 | `functions/api/_ga4.js` | Helper GA4 partagé (JWT service account, `runReport`/`runReportSafe`/`parseReport`) — extrait d'`analytics.js`, réutilisé par `agents-impact.js` et `docs-refresh.js`. |
@@ -192,6 +259,31 @@ All server-side logic lives in `functions/api/` (Cloudflare Pages Functions form
 | `/api/geo` | GET | `geo.js` | Retourne pays/ville du visiteur via headers Cloudflare — suggère la langue (FR/EN) et détecte contexte Caraïbes/métropole. |
 | `/api/weather` | GET | `weather.js` | Proxy sécurisé vers OpenWeatherMap. Param : `loc=martinique\|nogent`. Cache CDN 30min. |
 | `/api/airbnb-test` | GET | `airbnb-test.js` | Test READ-ONLY de l'authentification Airbnb + lecture des prix actuels (aucune modification). |
+| `/api/health` | GET | `health.js` | Santé du système avec vérification config (env vars, bindings D1/Stripe/Resend/Apps Script). `?deep=1` active les pings réseau. Auth `?secret=POSTSTAY_SECRET`. |
+| `/api/health-check` | GET | `health-check.js` | Statut des services critiques (D1, Beds24, Resend), sans auth — HTTP 503 si un service est down. |
+| `/api/occupancy-stats` | GET | `occupancy-stats.js` | Occupation réelle 30j glissants par bien actif, depuis le dernier snapshot D1 `rm_kpi_snapshots`. Auth Bearer admin. |
+| `/api/projets` | GET/POST | `projets.js` | Tableau de bord d'avancement des projets du second cerveau (synchronisé depuis `~/.claude/memory`). Auth `?token=RAPPORT_TOKEN`. |
+| `/api/seo-report` | GET | `seo-report.js` | Rapport SEO hebdomadaire via GA4 — sessions organiques, tendance vs semaine précédente, landing pages commerciales (28j). Auth Bearer ou `?secret=POSTSTAY_SECRET`. |
+| `/api/shorten` | GET/POST | `shorten.js` | Liens courts pour devis (`villamaryllis.com/r/{code}`). POST crée (admin Bearer), GET `?code=` résout + incrémente le compteur. |
+| `/api/tv-context` | GET | `tv-context.js` | Contexte de séjour en cours pour l'écran d'accueil TV (`?p=<bien>`) — priorité `direct_bookings`, fallback iCal Airbnb/Booking. |
+| `/api/articles` | GET/POST/PATCH | `articles.js` | CRUD articles SEO — GET liste (published seul sauf admin), `?slug=`/`?category=` filtrage. POST/PATCH admin Bearer. |
+| `/api/voyageur-feedback` | GET/POST/PATCH | `voyageur-feedback.js` | Avis Airbnb (D1 `voyageur_feedback`) — `?action=stats\|public\|report\|ingest\|draft\|code-themes`. PATCH `?action=moderate`. |
+| `/api/trigger-sync` | GET/POST | `trigger-sync.js` | Force une re-sync manuelle — `?type=direct` (D1→Sheet résas Stripe) ou `?type=full` (+ sync Worker complet). Auth Bearer `CLAUDE_SECRET`. |
+
+**Éditorial & Réseaux sociaux**
+
+| Endpoint | Méthode | File | Purpose |
+|---|---|---|---|
+| `/api/editorial-calendar` | GET/POST/PATCH/DELETE | `editorial-calendar.js` | CRUD complet du calendrier éditorial — planification des posts FB/IG (thèmes, variantes, photos, CTA), auto-seed 30j selon rotation hebdo canonique. |
+| `/api/editorial-gate` | GET/POST | `editorial-gate.js` | Gate de qualité avant auto-publication réseaux — évalue les drafts prêts (`status='drafted'`), applique le fact-check, approve/escalade selon le mode (live/shadow). Auth Bearer ou `?secret`. |
+| `/api/editorial-photos` | GET/POST | `editorial-photos.js` | Whitelist des photos autorisées à la publication réseaux — l'admin sélectionne les « plus belles » par bien ; le gate refuse tout post avec une photo non whitelistée. |
+| `/api/editorial-videos` | GET/POST | `editorial-videos.js` | Whitelist des vidéos autorisées à la génération de Reels — admin sélectionne par bien depuis le manifeste statique `public/videos-manifest.json`. |
+| `/api/guide-write` | GET/POST | `guide-write.js` | Auto-rédaction des guides voyageurs — réécrit uniquement `welcome_message` + `tagline` via LLM (grounded, fact-checké), applique en D1. Mode shadow/live, kill-switch `GUIDE_WRITE_DISABLED`. |
+| `/api/reel-gen` | POST | `reel-gen.js` | Génération à la demande d'un draft `reel_post` — reçoit `{bienId, theme, variante}`, retourne la caption via LLM (cascade Groq→Mistral→Cerebras). Auth Bearer admin. |
+| `/api/social` | GET/POST | `social.js` | Proxy Meta Graph API (Instagram + Facebook) — `?action=status\|posts`, POST publish/schedule (caption, imageUrl, channels, scheduledAt). Gère les containers REELS et le polling d'encodage Meta. |
+| `/api/social-draft` | POST | `social-draft.js` | Analyse d'un verdict de répondeur social — reçoit un texte libre (commentaire groupe FB), retourne `{lead, confidence, lang, reply?}` via l'agent voix grounded. Auth `?secret`. |
+| `/api/social-poll` | GET | `social-poll.js` | Détecteur de leads SANS webhook (mode dev, aucun App Review) — lit les commentaires récents FB Page + IG, détecte les vrais leads « location Martinique », rédige une réponse via agent, push ntfy. Dédup D1. |
+| `/api/social-webhook` | GET/POST | `social-webhook.js` | Bot social auto-répondeur — GET vérifie `hub.challenge` Meta, POST reçoit les événements commentaires, tri LLM (vrai lead ?), répond en public + DM avec lien site. Modes shadow/live, anti-boucle, kill-switch `SOCIAL_BOT_DISABLED`. |
 
 **Utilitaire interne**
 
