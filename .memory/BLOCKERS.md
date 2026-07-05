@@ -4,7 +4,12 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
-## En cours → ✅ terminé le 2026-07-04 (suite) — agents-impact + mirror-drift + caution fix + Vague 3 avis + RAG docs stratégiques
+## En cours → ✅ terminé le 2026-07-05 — Doc endpoints (83 manquants) + INV7 + triage backlog renforcé (règles 5/6)
+> Détail complet : ADR-DOCS-ENDPOINTS-001, ADR-AGENTS-TRIAGE-002.
+- **Doc `CLAUDE.md` complète** : 149 endpoints réels, 83 ajoutés (6 sous-agents Explore parallèles), 2 nouvelles sections (Newsletter, Éditorial & Réseaux sociaux). `INV7` ajouté à `audit-invariants.mjs` (compare route réelle vs doc, 🟡 RISK si absente) — a trouvé 2 endpoints oubliés (`inventory.js`, `maintenance.js`) dès le premier run.
+- **Triage backlog manuel (35 items + `traf-049`/`traf-016`)** avec Vincent : 2 hallucinations trouvées (entité "GreenTech" inexistante marquée `fait` à tort, doublon de contenu blog déjà publié) → 2 nouvelles règles FIABLES ajoutées au cron `agents-triage.js` (règle 5 entité inventée, règle 6 doublon `seo_articles` publié). Déployé et vérifié `?dry=1` en live.
+- 5 items backlog fermés car doublons de `AGENDA.md` (session "réunion générale" 29/06) ; `traf-050` (campagne Ads) bloqué par règle absolue dépense pub, jamais auto-exécutable.
+- 🟡 **Friction notée, pas levée** : ticket `traf-051` (Core Web Vitals fiches biens) reporté par Vincent à la semaine du 13/07 (AGENDA). Pas de mesure Lighthouse live faite (API PageSpeed publique = 429 sans clé) — point concret déjà trouvé en attendant : animation Ken-Burns RAF 60fps en continu sur 6 fiches (Amaryllis/Géko/Zandoli/Mabouya/Schœlcher/Nogent), risque INP réel. Débloque : soit une clé API PageSpeed (gratuite, 2 min), soit attaquer direct le point RAF sans mesure préalable — décision à prendre le 13/07.
 > Détail complet : ADR-AGENTS-IMPACT-001, ADR-MIRROR-DRIFT-001, ADR-CAUTION-EXPIRES-001, ADR-AVIS-DELEGATION-VAGUE3-001, ADR-RAG-DOCS-001.
 - **`/api/agents-impact`** : delta sessions GA4 J-2..J-1 vs J+1..J+2 par publication éditoriale. Helper GA4 factorisé en `_ga4.js` (déjà réutilisé le même jour par `docs-refresh.js`).
 - **Test anti-drift miroirs** (`mirror-drift.test.js`, gate CI) + fix bug latent GAS `nd_` (UTC→local, `contentKeyRow_`/`27_`) + correction cartographie miroirs dans `CLAUDE.md` (surestimait 3 modules sans miroir réel).
