@@ -39,7 +39,7 @@ npm run test:run      # Vitest one-shot (utilisé par le gate de déploiement + 
 npm run visual-review # Crawl Playwright (débordement/sticky) → screenshots bug-reports/
 ```
 
-**Tests :** suite **vitest** (~148 tests, `npm run test:run`). Lancer un seul fichier : `npx vitest run src/utils/pricing.test.js`. Le gate de `scripts/deploy-pages.sh` **bloque le déploiement si les tests sont rouges** (bypass d'urgence `SKIP_TESTS=1` ; `SKIP_BUILD=1` saute le build). La CI GitHub (`.github/workflows/ci.yml`) rejoue `test:run` + build + prerender sur chaque push/PR `main`. **Lint exclu de la CI** (code historique = ~557 erreurs eslint, nettoyage = chantier séparé). Voir la section « Source unique des biens & filet qualité » ci-dessous.
+**Tests :** suite **vitest** (~427 tests sur 40 fichiers, dont 9 sous `functions/api/`, `npm run test:run`). Lancer un seul fichier : `npx vitest run src/utils/pricing.test.js`. Le gate de `scripts/deploy-pages.sh` **bloque le déploiement si les tests sont rouges** (bypass d'urgence `SKIP_TESTS=1` ; `SKIP_BUILD=1` saute le build). La CI GitHub (`.github/workflows/ci.yml`) rejoue `test:run` + build + prerender sur chaque push/PR `main`. **Lint exclu de la CI** (code historique = ~600 erreurs historiques (source vive : `npm run lint`), nettoyage = chantier séparé). Voir la section « Source unique des biens & filet qualité » ci-dessous.
 
 For local dev with backend functions (iCal proxy, Sheets proxy, Beds24), use `npm run dev:cf`. Copy `.dev.vars.example` to `.dev.vars` and fill in the secrets — wrangler reads this file automatically.
 
@@ -147,7 +147,6 @@ All server-side logic lives in `functions/api/` (Cloudflare Pages Functions form
 | `/api/rm-rules` | GET/POST/PUT/PATCH/DELETE | `rm-rules.js` | CRUD des règles de pricing (lead time, day-of-week, saison, etc.). Params : `property_id`. |
 | `/api/rm-recommendations` | GET/POST/PUT/DELETE | `rm-recommendations.js` | CRUD + moteur de pricing complet pour les recommandations RM — calcule le prix suggéré par jour selon profils saisonniers, règles et signaux. |
 | `/api/rm-competitors` | GET/POST/PUT/DELETE | `rm-competitors.js` | Gestion des concurrents, snapshots de prix et recalcul des signaux marché (médiane, moyenne, percentiles). |
-| `/api/rm-scrape` | GET/POST | `rm-scrape.js` | Déclenche un scraping Apify (acteur Airbnb) pour les listings concurrents. Requiert `APIFY_TOKEN`. |
 | `/api/veille-zone-scan` | GET/POST | `veille-zone-scan.js` | Détecte les nouveaux listings Airbnb apparus dans une zone (diff snapshot S vs S-1). GET liste le dernier scan, POST lance le scan (toutes zones), crée une action `agent_actions` par nouveau listing. Auth `?secret=POSTSTAY_SECRET` ou Bearer admin. |
 | `/api/fc-competitors-scan` | GET/POST | `fc-competitors-scan.js` | Scan Firecrawl des prix/notes des concurrents connus (Airbnb + Booking). GET retourne l'état du dernier scan, POST en lance un nouveau, stocke les snapshots en D1 `rm_competitor_snapshots`. Auth Bearer admin. |
 | `/api/rm-auto-update` | GET | `rm-auto-update.js` | Orchestre le recalcul quotidien des recommandations RM pour tous les biens. `&scan=1` déclenche aussi le scan Firecrawl hebdo (lundi). Auth `?secret=POSTSTAY_SECRET`. |
@@ -299,7 +298,19 @@ Environment secrets are set in Cloudflare Pages dashboard (production) or `.dev.
 
 ### Cloudflare Worker (separate deploy)
 
-`workers/ical-sync/index.js` is a standalone Cloudflare Worker deployed via `wrangler.toml` (name: `amaryllis-ical-sync`). It runs on cron (`0 * * * *` hourly, `0 9 * * *` daily):
+`workers/ical-sync/index.js` is a standalone Cloudflare Worker deployed via `wrangler.toml` (name: `amaryllis-ical-sync`). It dispatches on `event.cron` (see `wrangler.toml` `[triggers] crons`) — **8 real cron entries** (verified 2026-07-06):
+
+| Cron | Fréquence | Ce qu'il déclenche |
+|---|---|---|
+| `*/10 * * * *` | toutes les 10 min (branche `else`) | `runSync` (iCal + annulations Beds24 non payées) · `runEditorialAutoPublish` (posts `approved` dus → FB+IG) · `send-relance-panier` · sync Gmail entrant |
+| `0 9 * * *` | 9h UTC / 5h Martinique | Brief matinal, KPI sentinel, AI-Ops refresh, monitor, rappels hôte, occupancy snapshot, gap/yield pricing, caution-cron, inventaire, emails voyageurs (prearrivee/verif-arrivee/j1-acces/pre-depart), poststay, devis-solde, coherence-check, agents-run(all) + orchestrateur + digest IA |
+| `0 11 * * 1` | lundi 11h UTC / 7h MTQ | `runReunioneGenerale` — accountability cross-fleet + synthèse LLM |
+| `0 12 * * *` | 12h UTC / 8h MTQ | `runEditorialReseed` + `runEditorialDraftGen` (drafts J+2) + alerte ménage |
+| `0 13 * * *` | 13h UTC / 9h MTQ | `charge-balance` (soldes 2× J-30 — migré cron-job.org 7798126) · `docs-refresh` → `rag-ingest` |
+| `0 6 * * 1` | lundi 6h UTC | Rapport hebdo, prix-recap, QA hebdo, agents-execute + digest, token health check, SEO report, bug-triage, agents-triage, memory-distill, guide-write |
+| `0 1 1 * *` | 1er du mois 1h UTC | Export comptable, article SEO long-tail mensuel, rappel rotation tokens, refresh avis (Apify), QA mensuel, `seasonal-update` |
+| `0 20 * * 7` | dimanche 20h UTC / 16h MTQ | `runAccountability` — accountability hebdo (prépare la Réunion Générale du lundi) |
+
 - Fetches iCal from Airbnb + Booking.com for all properties
 - Detects new bookings by comparing UIDs against Cloudflare KV (`ICAL_STORE`)
 - Sends email notifications via Resend API
@@ -333,7 +344,7 @@ Data loading in `App.jsx`:
 
 ### App.jsx Structure
 
-Single large file (~3000+ lines). Key sections in order:
+~1920 lines (down from ~3000+ after extraction of tabs to `src/tabs/`, 53 top-level entries incl. `tarifs/`+`messagerie/` subfolders). **`src/PublicSite.jsx` (~9780 lines) is now the largest file in the codebase**, not `App.jsx`. Key sections of `App.jsx` in order:
 - Constants/seed data (`SEED_BIENS`, `ICAL_DEFAULTS`, `HIST_SEED`, `CHARGES_*`, `REVENUS_CANAL_*`)
 - Reusable UI components: `Gauge` (SVG circular), `Spark` (sparkline), `PBar` (progress bar), `TodayBanner`, `AISummary`, `FAB`
 - Tab components: `Planning`, `Cockpit`, `Previsionnel`, `Charges`, `Pilotage`, `Historique`, `VsAnnee`
@@ -373,7 +384,7 @@ Le `<title>` / `<meta description>` / `og:*` / JSON-LD des **fiches villas et de
 
 **Conséquence :** modifier un titre/description de villa **uniquement dans `prerender.mjs` n'a AUCUN effet en prod** — `functions/[slug].js` le réécrit par-dessus.
 
-**Slugs interceptés par `functions/[slug].js`** : les 7 biens (`amaryllis, zandoli, iguana, geko, mabouya, schoelcher, nogent`) + `guide`, `guide-le-diamant`, `guide-sainte-anne`, `villa-rental-martinique`, `activites-sainte-luce`, `guide-proximite`.
+**Slugs interceptés par `functions/[slug].js`** (liste complète vérifiée 2026-07-06) : les 7 biens (`amaryllis, zandoli, iguana, geko, mabouya, schoelcher, nogent`) + `guide` (301 vers `/guide-hub`) + `guide-le-diamant`, `guide-sainte-anne`, `villa-rental-martinique`, `activites-sainte-luce`, `guide-proximite`, `location-groupe-sainte-luce`, `location-appartement-vue-mer-schoelcher`, `plus-belles-plages-sud-martinique` + les 12 entrées de la table `GUIDE_META` : `guide-distilleries-martinique`, `guide-gastronomie-martinique`, `guide-plongee-martinique`, `guide-randonnees-martinique`, `guide-trois-ilets`, `guide-saint-pierre-martinique`, `guide-francois-martinique`, `guide-arlet`, `meilleure-saison-martinique`, `reservation-directe-martinique`, `sainte-luce-martinique`, `guide-hub`.
 
 **Règle :** pour ces slugs, éditer le titre/desc dans **`functions/[slug].js`** (objet `SEO` pour les biens, ou les constantes `GUIDE_*`). Garder `prerender.mjs` cohérent en parallèle (baseline crawler + routes non interceptées), mais la vérité = la fonction.
 
@@ -405,14 +416,14 @@ Toujours redéployer sur **ce même deployment id** (= `APPS_SCRIPT_URL`) pour p
 ### 3. Calendrier éditorial réseaux — publication auto + canaux
 
 - Source de vérité = table D1 `editorial_calendar` (pas les docs `docs/planning-*`). API : `/api/editorial-calendar`.
-- Le **Worker** (`workers/ical-sync/index.js`) génère les drafts à J-2 (`runEditorialDraftGen`, cron `0 12 * * *`) et **publie les entrées `approved`** dont l'heure est due (`runEditorialAutoPublish`, cron horaire `0 * * * *`).
+- Le **Worker** (`workers/ical-sync/index.js`) génère les drafts à J-2 (`runEditorialDraftGen`, cron `0 12 * * *`) et **publie les entrées `approved`** dont l'heure est due (`runEditorialAutoPublish`, appelé dans la branche `else` du cron **`*/10 * * * *`** — toutes les 10 min, PAS horaire).
 - La publication délègue à `/api/agent-drafts?action=publish` → `/api/social` (FB + IG via Graph API).
 - ⚠️ **Canaux** : un draft `social_post` doit avoir `payload.channels = ["ig","fb"]`. Si le LLM n'émet que `["ig"]`, **Facebook est silencieusement zappé** (pas d'erreur). Corrigé dans `agents-run.js` (force les 2 canaux), mais vérifier sur tout nouveau draft. Statut `drafted` ≠ publié : il faut `approved` pour que le cron le sorte.
 
 ### 4. Sécurité / exploitation
 
 - **Rate limiting** : module partagé `functions/api/_ratelimit.js` (`rateLimit(db, {key, limit, windowSec})`, D1, fail-open). Déjà sur `/api/admin-auth`, `/api/contact`, `/api/beds24-bookings` (60/min/IP). DB = `env.revenue_manager`.
-- **Rotation des tokens** : runbook `docs/runbook-rotation-tokens.md` + rappel email trimestriel auto (`runTokenRotationReminder`, jan/avr/juil/oct). `META_PAGE_TOKEN` expire ~60j = le plus urgent.
+- **Rotation des tokens** : runbook `docs/runbook-rotation-tokens.md` + rappel email trimestriel auto (`runTokenRotationReminder`, jan/avr/juil/oct). `META_PAGE_TOKEN` = System User token **permanent depuis 2026-06-20** (commit `6c4dee95`, suppression de l'endpoint temporaire `meta-token-exchange.js` post-migration) ; rotation trimestrielle = pour les autres tokens (Beds24, etc.).
 
 ### 5. A/B testing
 
