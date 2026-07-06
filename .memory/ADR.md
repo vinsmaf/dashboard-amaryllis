@@ -201,3 +201,27 @@
 3. **Conséquences attendues** : le cron local (`crontab -e` sur le Mac de Vincent, hors du contrôle de ce repo) doit désormais lancer `bash scripts/booking-chrome-debug.sh` AVANT `node scripts/booking-scraper.mjs` — sinon le scraper échoue avec « Chrome CDP non disponible ». **Non vérifié cette session** si le crontab existant a été mis à jour en conséquence (friction notée dans BLOCKERS).
 4. **Périmètre** : `package.json` (scripts npm) · `scripts/booking-login.mjs` (ajout `channel:'chrome'`, semi-obsolète) · `scripts/booking-scraper.mjs` (refactor CDP) · `scripts/booking-chrome-debug.sh` (nouveau). Commit `56b170e`.
 5. **Statut** : **acté & pushé**. Ces scripts sont des automatisations locales (Playwright/bash), hors bundle Cloudflare Pages — le "déploiement" ici = disponibilité dans le repo, pas un changement de prod live.
+
+## ADR-OAUTH-UPSERT-001 · 2026-07-06 · Fix root cause déconnexion OAuth Gmail/Calendar récurrente
+
+1. **Choix** : `_googleOAuth.js` sépare désormais 2 chemins d'écriture D1 : `saveOAuthTokens()` (1ère connexion uniquement, refuse `refreshToken` null) et `updateAccessToken()` (nouveau, simple `UPDATE` access_token/expires_at/scope, ne touche jamais `refresh_token`).
+2. **Alternatives refusées** : le fix précédent (07/05, passage app "Production" Google Cloud) traitait un problème réel mais secondaire (expiry 7j mode Test) — gardé, mais pas suffisant seul. La vraie cause était un bug SQL : `INSERT...ON CONFLICT DO UPDATE` avec `refreshToken=null` dans les VALUES échoue sur la contrainte NOT NULL AVANT même d'atteindre le `COALESCE` du UPDATE, qui semblait pourtant protéger à la lecture.
+3. **Conséquences attendues** : plus de reconnexion manuelle périodique nécessaire pour Gmail/Calendar. Pattern à retenir pour tout futur upsert D1 avec colonne NOT NULL : ne jamais compter sur `ON CONFLICT DO UPDATE` pour "protéger" une valeur qu'on insère à null dans le VALUES.
+4. **Périmètre** : `functions/api/_googleOAuth.js`. Commit `42f6f97`.
+5. **Statut** : **acté & déployé & vérifié en live** (`gmail-sync`/`calendar-sync?status=1` connectés sans reconnexion après plusieurs refresh de token).
+
+## ADR-OCCUPANCY-AVAIL-001 · 2026-07-06 · Fix occupation réelle — Airbnb "Not available" = résa ET blocage host, indissociables
+
+1. **Choix** : nouveau flux `allAvailEvents` (via `parseICSAvailability`) dans `workers/ical-sync/index.js`, séparé du flux `allEvents` existant — garde TOUTE plage Airbnb "Not available" comme indisponible, sans filtrer les résas voyageur (contrairement à `parseICS`/`allEvents` qui les ignore, à raison, pour les notifs/Sheet faute de nom/montant fiable). `runOccupancySnapshot`, `runOccupancyAlerts`, `runGapPricing`, `runYieldPricing` basculés sur `allAvailEvents` ; notifs+push Sheet restent sur `allEvents`.
+2. **Alternatives refusées** : modifier `parseICS`/`allEvents` directement (rejeté — risquait de faire apparaître des lignes "Voyageur"/0€ bidon dans le Sheet et de déclencher de fausses notifs "nouvelle résa" pour de simples blocages manuels, en plus de complexifier la détection nouveautés/annulations basée sur les UID stockés en KV).
+3. **Conséquences attendues** : `occupancy-stats`, les alertes vacance et le pricing gap/yield reflètent enfin la vraie occupation pour les biens dont l'export Airbnb utilise un SUMMARY générique (Schœlcher, Amaryllis confirmés — probablement d'autres). Risque résiduel : si un jour un vrai blocage manuel Airbnb existe sur ces biens, il sera aussi compté comme "occupé" pour le pricing — acceptable (le pricing doit de toute façon traiter une date indisponible comme non-vacante, peu importe la raison).
+4. **Périmètre** : `workers/ical-sync/index.js` (nouvelle fonction + 8 points d'appel rebranchés). Commit `0ffefe4`.
+5. **Statut** : **acté & déployé (Worker)**. Vérifié par recalcul local direct sur le flux iCal réel (Schœlcher : 0%→60% occ 30j) — **pas encore re-vérifié en live post-cron** (prochain cron 9h UTC 07/07, faute de `WORKER_SECRET` local pour déclencher manuellement).
+
+## ADR-RM-NOGENT-002 · 2026-07-06 · Override RM Nogent +10% ciblé (pas le +20% flat du plan H2)
+
+1. **Choix** : plutôt que le "+20% ADR été" du plan H2 (Fable 5), override ponctuel +10% (130€→143€) sur les 20 dates de haute saison Nogent encore libres (13-24/07, 24-31/08), hors la période déjà vendue à Shuaib (25/07→24/08, ~106€/nuit).
+2. **Alternatives refusées** : le +20% flat du plan (156€ sur toute la saison) — écarté car une vraie demande absorbait déjà le prix courant (résa 30 nuits juste avant la session), un +20% généralisé n'avait pas de signal de demande le justifiant. Le -15% Schœlcher du même plan a été écarté entièrement (voir ci-dessous).
+3. **Conséquences attendues** : à surveiller — si les 20 dates ne se vendent pas sous 2-3 semaines, revenir à 130€ (le override est réversible via `DELETE /api/rm-overrides?id=`).
+4. **Périmètre** : D1 `rm_overrides` (20 lignes, `property_id=nogent`), recalcul déclenché via `POST /api/rm-recommendations/calculate`. Aucun commit code (données uniquement).
+5. **Statut** : **acté et appliqué par Vincent ("GO")**. Vérifié en live (`rm-dashboard` confirme 143€/nuit sur les dates ciblées, dates vendues intactes).
