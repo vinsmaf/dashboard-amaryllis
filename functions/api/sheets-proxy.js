@@ -4,9 +4,22 @@
 //
 // ⚠️  Apps Script redirige les POST et supprime le body → les actions qui écrivent
 //     des données sont envoyées en GET paginé (chunks) pour contourner ce bug Google.
+//
+// sec (2026-07-06) : ce proxy donne accès à l'onglet "Toutes les Réservations"
+// (noms/emails/montants voyageurs) et était public. Tous les appelants identifiés
+// (src/App.jsx syncFromSheets + import résas, src/tabs/Beds24Admin.jsx) sont admin-only
+// (routés sous /admin, password-gated) — aucun flux public ne l'utilise. Auth
+// Bearer admin requise (pattern contacts.js / _adminauth.js).
+
+import { verifyBearer } from "./_adminauth.js";
 
 export async function onRequestPost(context) {
   const { request, env } = context;
+
+  if (env.ADMIN_PASSWORD || env.ADMIN_PWD) {
+    const { ok } = await verifyBearer(request, env);
+    if (!ok) return json({ error: "Non autorisé" }, 401);
+  }
 
   // URL Apps Script : env Cloudflare en priorité, sinon header envoyé par l'admin
   const headerUrl = request.headers.get("X-Script-Url");

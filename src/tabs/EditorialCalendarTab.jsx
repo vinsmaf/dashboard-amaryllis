@@ -21,7 +21,7 @@ export default function EditorialCalendarTab() {
   async function load() {
     setLoading(true);
     try {
-      const r = await fetch("/api/editorial-calendar?from=2026-01-01&to=2027-12-31");
+      const r = await adminFetch("/api/editorial-calendar?from=2026-01-01&to=2027-12-31");
       const d = await r.json();
       setEntries(d.entries || []);
     } catch (e) { setToast({ error: e.message }); }
@@ -34,7 +34,7 @@ export default function EditorialCalendarTab() {
     setSeeding(true);
     try {
       const today = new Date().toISOString().slice(0,10);
-      const r = await fetch("/api/editorial-calendar?action=seed_30days", {
+      const r = await adminFetch("/api/editorial-calendar?action=seed_30days", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ start_date: today }),
@@ -49,7 +49,7 @@ export default function EditorialCalendarTab() {
   async function purgeAll() {
     if (!confirm("Supprimer TOUTES les entrées 'planned' ? (les publiées sont conservées)")) return;
     try {
-      await fetch("/api/editorial-calendar?all=true", { method: "DELETE" });
+      await adminFetch("/api/editorial-calendar?all=true", { method: "DELETE" });
       setToast({ message: "Planning vidé", success: true });
       load();
     } catch (e) { setToast({ error: e.message }); }

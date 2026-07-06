@@ -318,8 +318,9 @@ async function syncFromSheets(biens, scriptUrl) {
   // script.google.com renvoie un 302 cross-origin (→ googleusercontent.com) qui
   // casse le CORS côté navigateur. Le proxy fait le fetch côté serveur (no CORS)
   // et renvoie le JSON tel quel. (action "read" = forwarding POST classique.)
-  const res = await fetch("/api/sheets-proxy", {
+  const res = await fetchWithTimeout("/api/sheets-proxy", {
     method: "POST",
+    timeout: 20000,
     headers: { "Content-Type": "application/json", "X-Script-Url": scriptUrl },
     body: JSON.stringify({ action: "read" }),
   });

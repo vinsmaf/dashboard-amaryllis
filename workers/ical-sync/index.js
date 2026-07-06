@@ -2410,7 +2410,7 @@ Retourne UNIQUEMENT le caption brut (pas de JSON, pas de balises).`;
   if (!draftData.ok || !draftData.id) throw new Error(`Draft création échouée : ${JSON.stringify(draftData)}`);
 
   // 4. Lier le draft au calendrier éditorial ────────────────────────────────
-  await fetch(`${siteUrl}/api/editorial-calendar?id=${entry.id}`, {
+  await fetch(`${siteUrl}/api/editorial-calendar?id=${entry.id}&secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ draft_id: draftData.id, status: "drafted" }),
@@ -2522,7 +2522,7 @@ async function runEditorialDraftGen(env) {
     console.log(`[editorial-J-2] ${entries.length} entrée(s) à générer`);
     for (const e of entries) {
       // Marque "generating"
-      await fetch(`${siteUrl}/api/editorial-calendar?id=${e.id}`, {
+      await fetch(`${siteUrl}/api/editorial-calendar?id=${e.id}&secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "generating" }),
@@ -2534,7 +2534,7 @@ async function runEditorialDraftGen(env) {
           await generateReelDraft(env, e, siteUrl);
         } catch (err) {
           console.error(`[editorial-J-2] reel entry ${e.id}:`, err.message);
-          await fetch(`${siteUrl}/api/editorial-calendar?id=${e.id}`, {
+          await fetch(`${siteUrl}/api/editorial-calendar?id=${e.id}&secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ status: "failed" }),
@@ -2572,7 +2572,7 @@ Génère UN draft social_post avec cette imageUrl exacte.`;
         const runData = await runRes.json();
         const drafts = runData.results?.[0]?.drafts || 0;
         const newStatus = drafts > 0 ? "drafted" : "failed";
-        await fetch(`${siteUrl}/api/editorial-calendar?id=${e.id}`, {
+        await fetch(`${siteUrl}/api/editorial-calendar?id=${e.id}&secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ status: newStatus }),
@@ -2598,7 +2598,7 @@ Génère UN draft social_post avec cette imageUrl exacte.`;
         }
       } catch (err) {
         console.error(`[editorial-J-2] erreur entry ${e.id}:`, err.message);
-        await fetch(`${siteUrl}/api/editorial-calendar?id=${e.id}`, {
+        await fetch(`${siteUrl}/api/editorial-calendar?id=${e.id}&secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ status: "failed" }),
@@ -2901,7 +2901,7 @@ async function runEditorialAutoPublish(env) {
         });
         const pubData = await pubRes.json();
         const newStatus = pubData.ok ? "published" : (pubData.retry ? "approved" : "failed");
-        await fetch(`${siteUrl}/api/editorial-calendar?id=${e.id}`, {
+        await fetch(`${siteUrl}/api/editorial-calendar?id=${e.id}&secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ status: newStatus, result: JSON.stringify(pubData) }),

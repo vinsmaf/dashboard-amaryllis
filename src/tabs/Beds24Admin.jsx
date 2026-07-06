@@ -87,7 +87,11 @@ export default function Beds24Admin() {
       }));
       const res  = await fetch("/api/sheets-proxy", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "X-Script-Url": scriptUrl },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Script-Url": scriptUrl,
+          Authorization: "Bearer " + (sessionStorage.getItem("ldb_tok") || ""),
+        },
         body: JSON.stringify({ action: "importAllReservations", reservations }),
       });
       const data = await res.json();

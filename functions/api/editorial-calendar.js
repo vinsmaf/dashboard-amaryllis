@@ -2,12 +2,30 @@
 // Planning éditorial Facebook + Instagram pour Amaryllis Locations.
 // Auto-init de la table éditoriale + CRUD complet.
 //
-// GET    ?from=YYYY-MM-DD&to=YYYY-MM-DD → liste des entrées
+// GET    ?from=YYYY-MM-DD&to=YYYY-MM-DD → liste des entrées (public — contenu non sensible :
+//         thèmes/captions/horaires de publication, aucune donnée client/financière)
 // GET    ?id=N → 1 entrée
-// POST   { ...entry } → créer une entrée
-// POST   ?action=seed_30days → seed 30 entrées suivant la structure hebdo canon
-// PATCH  ?id=N → mettre à jour
-// DELETE ?id=N → supprimer
+// POST   { ...entry } → créer une entrée               (auth requise)
+// POST   ?action=seed_30days → seed 30 entrées          (auth requise)
+// PATCH  ?id=N → mettre à jour                          (auth requise)
+// DELETE ?id=N → supprimer                              (auth requise)
+//
+// sec (2026-07-06) : ce endpoint alimente l'auto-publication FB/IG (le Worker
+// publie les entrées "approved") — les écritures (POST/PATCH/DELETE) exigeaient
+// AUCUNE auth. Corrigé : Bearer admin (session ldb_tok, cf. contacts.js) OU
+// ?secret=POSTSTAY_SECRET (utilisé par workers/ical-sync/index.js). GET reste
+// public : la charte éditoriale n'expose rien de confidentiel.
+
+import { verifyBearer } from "./_adminauth.js";
+
+async function checkWriteAuth(request, env) {
+  if (!env.ADMIN_PASSWORD && !env.ADMIN_PWD && !env.POSTSTAY_SECRET) return true; // dev, rien de configuré
+  const url = new URL(request.url);
+  const secret = url.searchParams.get("secret");
+  if (env.POSTSTAY_SECRET && secret === env.POSTSTAY_SECRET) return true;
+  const { ok } = await verifyBearer(request, env);
+  return ok;
+}
 
 const CORS = {
   "Content-Type": "application/json",
@@ -261,6 +279,11 @@ export async function onRequest(context) {
       const { results } = await db.prepare(q).bind(...params).all();
       return json({ entries: results || [], total: (results || []).length });
     } catch (e) { return json({ error: e.message }, 500); }
+  }
+
+  // ── POST / PATCH / DELETE : auth requise (Bearer admin ou ?secret=POSTSTAY_SECRET) ──
+  if (request.method !== "GET" && !(await checkWriteAuth(request, env))) {
+    return json({ error: "Non autorisé" }, 401);
   }
 
   // ── POST ───────────────────────────────────────────────────────────────
