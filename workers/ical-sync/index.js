@@ -3328,32 +3328,37 @@ async function runReunioneGenerale(env) {
   const dateTag = today.toISOString().slice(0, 10).replace(/-/g, "");
   const nowTs = Math.floor(Date.now() / 1000);
 
-  // 1. ACCOUNTABILITY — actions réunion N-1 depuis D1
+  // 1. ACCOUNTABILITY — statut ACTUEL des items référencés par la réunion N-1 (pas des
+  //    doublons "reunion" — cf. rg-memory-last.notes.actions, la liste d'ids d'origine)
   let execRate = null;
   let openActions = [];
   try {
-    const { results: prev } = await env.revenue_manager
-      .prepare("SELECT action, status FROM agent_actions WHERE category='reunion' AND id != 'rg-memory-last' ORDER BY created_at DESC LIMIT 20")
-      .all();
-    if (prev.length) {
-      const fait = prev.filter(a => a.status === "fait").length;
-      execRate = Math.round(fait / prev.length * 100);
-      openActions = prev.filter(a => a.status !== "fait").map(a => a.action.slice(0, 80));
-    }
-    // Mémoire delta (alertes semaine passée)
     const memRow = await env.revenue_manager
       .prepare("SELECT notes FROM agent_actions WHERE id='rg-memory-last'").first();
     var lastMem = memRow?.notes ? JSON.parse(memRow.notes) : {};
+    const prevIds = Array.isArray(lastMem.actions) ? lastMem.actions : [];
+    if (prevIds.length) {
+      const placeholders = prevIds.map(() => "?").join(",");
+      const { results: prev } = await env.revenue_manager
+        .prepare(`SELECT action, status FROM agent_actions WHERE id IN (${placeholders})`)
+        .bind(...prevIds).all();
+      if (prev.length) {
+        const fait = prev.filter(a => a.status === "fait").length;
+        execRate = Math.round(fait / prev.length * 100);
+        openActions = prev.filter(a => a.status !== "fait").map(a => a.action.slice(0, 80));
+      }
+    }
   } catch (e) {
     console.error("[reunion] accountability:", e.message);
     var lastMem = {};
   }
 
-  // 2. LOCATIF — backlog critique/haute depuis D1
+  // 2. LOCATIF — backlog critique/haute depuis D1 (id inclus — jamais dupliqué en étape 5,
+  //    seulement référencé, pour ne pas créer un 2ᵉ item pour un bug/reco déjà tracké ailleurs)
   let alerts = [], watches = [];
   try {
     const { results } = await env.revenue_manager
-      .prepare(`SELECT agent, agent_label, agent_emoji, action, priority
+      .prepare(`SELECT id, agent, agent_label, agent_emoji, action, priority
                 FROM agent_actions
                 WHERE status='backlog' AND category != 'reunion'
                 ORDER BY CASE priority WHEN 'critique' THEN 1 WHEN 'haute' THEN 2 ELSE 3 END
@@ -3419,24 +3424,14 @@ Format de réponse (français, concis, max 400 mots):
     console.error("[reunion] LLM:", e.message);
   }
 
-  // 5. CRÉER TOP 3 ACTIONS EN D1 (category=reunion, id=rg-YYYYMMDD-N)
+  // 5. TOP 3 ACTIONS DE LA SEMAINE — référencées par leur id d'origine, jamais dupliquées
+  //    en D1 (le doublon "category=reunion" créait un 2ᵉ item indépendant pour chaque bug/reco
+  //    déjà tracké ailleurs — divergence de statut constatée le 2026-07-06, cf. BLOCKERS).
   const top3 = [...alerts.slice(0, 2), ...watches.slice(0, 1)];
-  for (let i = 0; i < top3.length; i++) {
-    const a = top3[i];
-    const id = `rg-${dateTag}-${i + 1}`;
-    try {
-      await env.revenue_manager.prepare(`
-        INSERT INTO agent_actions (id, agent, agent_label, agent_emoji, category, action, priority, effort, status, created_at, updated_at)
-        VALUES (?, ?, ?, ?, 'reunion', ?, ?, '?', 'backlog', ?, ?)
-        ON CONFLICT(id) DO NOTHING
-      `).bind(id, a.agent || "reunion", a.agent_label || "Réunion", a.agent_emoji || "🏛️", a.action, a.priority, nowTs, nowTs).run();
-    } catch (e) {
-      console.error(`[reunion] insert ${id}:`, e.message);
-    }
-  }
 
-  // 6. MÉMOIRE (rg-memory-last) — delta pour la prochaine réunion
-  const memJson = JSON.stringify({ date: dateTag, ts: nowTs, alerts: alerts.length, watch: watches.length, exec_rate: execRate, actions: top3.map((_, i) => `rg-${dateTag}-${i + 1}`) });
+  // 6. MÉMOIRE (rg-memory-last) — ids ORIGINAUX (pas de nouveaux ids synthétiques) pour que
+  //    l'accountability de la prochaine réunion vérifie le statut réel de CES items.
+  const memJson = JSON.stringify({ date: dateTag, ts: nowTs, alerts: alerts.length, watch: watches.length, exec_rate: execRate, actions: top3.map(a => a.id) });
   try {
     await env.revenue_manager.prepare(`
       INSERT INTO agent_actions (id, agent, agent_label, agent_emoji, category, action, priority, effort, status, notes, created_at, updated_at)
