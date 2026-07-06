@@ -191,6 +191,38 @@ function parseICS(text, bienId, canal) {
   return events;
 }
 
+// Parse "toutes les plages indisponibles" sans filtrage — pour l'occupation réelle
+// (RM/vacance/gap/yield), PAS pour les notifs/Sheets. Bug trouvé le 2026-07-06 : sur
+// certaines annonces Airbnb (ex. Schœlcher, Amaryllis), le SUMMARY générique "Airbnb
+// (Not available)" est utilisé À LA FOIS pour les blocages manuels de l'hôte ET pour
+// les vraies résas voyageur — Airbnb ne distingue pas les deux dans ce flux iCal.
+// parseICS() ci-dessus continue de les ignorer (à raison : pas de nom/montant fiable,
+// donc pas de notif "nouvelle résa" ni de ligne Sheet) mais ça faisait aussi croire à
+// l'occupation réelle (rm_kpi_snapshots), aux alertes vacance et au gap/yield pricing
+// que ces dates étaient VIDES alors qu'elles sont occupées → occupancy-stats à 0%
+// pour un bien complet, risque de fausse remise vacance. Ce parseur garde TOUTE plage
+// (bloc manuel ou résa, peu importe) comme "indisponible", ce qui est le bon signal
+// pour ces 4 usages.
+function parseICSAvailability(text, bienId) {
+  const events = [];
+  const blocks = text.split("BEGIN:VEVENT").slice(1);
+  for (const block of blocks) {
+    const get = (key) => {
+      const m = block.match(new RegExp(key + "[^:]*:([^\\r\\n]+)"));
+      return m ? m[1].trim() : "";
+    };
+    const cleanDate = (s) => {
+      const d = s.replace(/T.*/, "");
+      return d.length === 8 ? `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}` : d;
+    };
+    const ci = cleanDate(get("DTSTART"));
+    const co = cleanDate(get("DTEND"));
+    if (!ci || !co) continue;
+    events.push({ bienId, checkin: ci, checkout: co });
+  }
+  return events;
+}
+
 async function fetchICS(url, timeoutMs = 12000) {
   const controller = new AbortController();
   const tid = setTimeout(() => controller.abort(), timeoutMs);
@@ -1506,10 +1538,11 @@ async function pushToSheets(env, allEvents) {
 }
 
 // ── Sync iCal ────────────────────────────────────────────────────────────────
-async function syncFeed(env, bienId, url, canal, allEvents, nouvelles, annulations) {
+async function syncFeed(env, bienId, url, canal, allEvents, nouvelles, annulations, allAvailEvents) {
   try {
     const text = await fetchICS(url);
     const events = parseICS(text, bienId, canal).map(e => ({ ...e, canal }));
+    if (allAvailEvents) allAvailEvents.push(...parseICSAvailability(text, bienId));
     const kvKey = `uids:${bienId}:${canal}`;
     const todayStr = new Date().toISOString().slice(0, 10);
     // raw === null ⇒ feed JAMAIS synchronisé. On distingue du feed déjà vu mais vide ("[]").
@@ -1732,13 +1765,13 @@ async function autoImportNewBookings(env, nouvelles) {
 
 async function runSync(env) {
   console.log(`[amaryllis-sync] Démarrage — ${new Date().toISOString()}`);
-  const allEvents = [], nouvelles = [], annulations = [];
+  const allEvents = [], nouvelles = [], annulations = [], allAvailEvents = [];
 
   // Fetch tous les feeds en parallèle (5× plus rapide qu'en série)
   const bookingUrls = await getBookingUrls(env);
   const airbnbUrls  = getAirbnbUrls(env);
-  const airbnbFeeds   = Object.entries(airbnbUrls).map(([id, url]) => syncFeed(env, id, url, "airbnb", allEvents, nouvelles, annulations));
-  const bookingFeeds  = Object.entries(bookingUrls).map(([id, url]) => syncFeed(env, id, url, "booking", allEvents, nouvelles, annulations));
+  const airbnbFeeds   = Object.entries(airbnbUrls).map(([id, url]) => syncFeed(env, id, url, "airbnb", allEvents, nouvelles, annulations, allAvailEvents));
+  const bookingFeeds  = Object.entries(bookingUrls).map(([id, url]) => syncFeed(env, id, url, "booking", allEvents, nouvelles, annulations, allAvailEvents));
   const feedResults   = await Promise.all([...airbnbFeeds, ...bookingFeeds]);
 
   // Alerte ntfy si un ou plusieurs feeds iCal échouent (throttle 2h via KV)
@@ -1771,6 +1804,7 @@ async function runSync(env) {
   const directs = await fetchDirectBookingsAsEvents(env);
   if (directs.length > 0) {
     allEvents.push(...directs);
+    allAvailEvents.push(...directs);
     console.log(`[direct-bookings] ${directs.length} résa(s) directe(s) ajoutée(s) au push Sheets`);
   }
 
@@ -1781,7 +1815,7 @@ async function runSync(env) {
   if (allEvents.length > 0) await pushToSheets(env, allEvents);
 
   console.log(`[amaryllis-sync] Terminé — ${allEvents.length} evt (dont ${directs.length} direct), ${nouvelles.length} nouveaux, ${annulations.length} annulations`);
-  return { allEvents, total: allEvents.length, nouvelles: nouvelles.length, annulations: annulations.length };
+  return { allEvents, allAvailEvents, total: allEvents.length, nouvelles: nouvelles.length, annulations: annulations.length };
 }
 
 // ── Monitoring quotidien ─────────────────────────────────────────────────────
@@ -3673,7 +3707,7 @@ export default {
 
     } else if (cron === "0 9 * * *") {
       // 9h UTC chaque jour — brief matinal + audit + rappels + alertes + gap pricing + agents autonomes
-      const { allEvents } = await runSync(env);
+      const { allEvents, allAvailEvents } = await runSync(env);
       ctx.waitUntil((async () => {
         // ── Brief matinal locatif (5h Martinique) ─────────────────────────────────────────────────────
         try {
@@ -3705,10 +3739,10 @@ export default {
         await runMonitor(env);
         await runReminders(env, allEvents, allEvents);
         await runArrivalsDigest(env, allEvents); // RM-16 — récap arrivées de demain à l'hôte
-        await runOccupancyAlerts(env, allEvents);
-        await runOccupancySnapshot(env, allEvents); // persiste l'occupation réelle → rm_kpi_snapshots
-        await runGapPricing(env, allEvents);
-        await runYieldPricing(env, allEvents);
+        await runOccupancyAlerts(env, allAvailEvents);
+        await runOccupancySnapshot(env, allAvailEvents); // persiste l'occupation réelle → rm_kpi_snapshots
+        await runGapPricing(env, allAvailEvents);
+        await runYieldPricing(env, allAvailEvents);
         await runCautionAutoRelease(env);
         // Caution DIFFÉRÉE (résas lointaines) : pose ~2 j avant l'arrivée, re-bloque avant chaque
         // expiration (couvre tout séjour), libère 3 j après le départ — off-session sur la carte
@@ -4003,11 +4037,11 @@ export default {
       return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
     }
     if (url.pathname === "/occupancy") {
-      const { allEvents } = await runSync(env); await runOccupancyAlerts(env, allEvents);
+      const { allAvailEvents } = await runSync(env); await runOccupancyAlerts(env, allAvailEvents);
       return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
     }
     if (url.pathname === "/occupancy-snapshot") {
-      const { allEvents } = await runSync(env); await runOccupancySnapshot(env, allEvents);
+      const { allAvailEvents } = await runSync(env); await runOccupancySnapshot(env, allAvailEvents);
       return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
     }
     if (url.pathname === "/enrich-emails") {
@@ -4027,8 +4061,8 @@ export default {
       // Recalcul à la demande si pas encore en KV
       let raw = await env.ICAL_STORE.get("gap_prices");
       if (!raw) {
-        const { allEvents } = await runSync(env);
-        const gaps = await runGapPricing(env, allEvents);
+        const { allAvailEvents } = await runSync(env);
+        const gaps = await runGapPricing(env, allAvailEvents);
         raw = JSON.stringify(gaps);
       }
       return new Response(raw, { headers: CORS_H });
@@ -4040,8 +4074,8 @@ export default {
     }
     if (url.pathname === "/gap-prices/refresh") {
       const CORS_H = { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" };
-      const { allEvents } = await runSync(env);
-      const gaps = await runGapPricing(env, allEvents);
+      const { allAvailEvents } = await runSync(env);
+      const gaps = await runGapPricing(env, allAvailEvents);
       return new Response(JSON.stringify({ ok: true, gaps }), { headers: CORS_H });
     }
     if (url.pathname === "/yield") {
@@ -4052,8 +4086,8 @@ export default {
     }
     if (url.pathname === "/yield/refresh") {
       const CORS_H = { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" };
-      const { allEvents } = await runSync(env);
-      const yieldPrices = await runYieldPricing(env, allEvents);
+      const { allAvailEvents } = await runSync(env);
+      const yieldPrices = await runYieldPricing(env, allAvailEvents);
       return new Response(JSON.stringify({ ok: true, yieldPrices }), { headers: CORS_H });
     }
     return new Response(JSON.stringify({
