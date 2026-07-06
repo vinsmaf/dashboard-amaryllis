@@ -137,8 +137,18 @@ export async function getOAuthRow(db, provider) {
   return db.prepare("SELECT * FROM oauth_tokens WHERE provider = ?").bind(provider).first();
 }
 
-/** Enregistre/écrase les tokens pour un provider (upsert). */
+/** Enregistre/écrase les tokens pour un provider (upsert) — UNIQUEMENT pour la 1ère
+ * connexion (gmail-oauth-callback.js), où refreshToken est TOUJOURS une vraie valeur.
+ * ⚠️ Ne jamais appeler avec refreshToken=null : `refresh_token` est NOT NULL en base,
+ * et SQLite valide cette contrainte sur les VALUES brutes de l'INSERT AVANT même
+ * d'évaluer le ON CONFLICT DO UPDATE — le COALESCE ci-dessous ne protège donc PAS
+ * contre un refreshToken null passé en entrée (bug trouvé le 2026-07-06 : la
+ * reconnexion Gmail/Calendar cassait à chaque refresh de token silencieusement,
+ * malgré ce COALESCE qui semblait pourtant correct à la lecture). Le rafraîchissement
+ * d'access_token (sans nouveau refresh_token) doit passer par `updateAccessToken`
+ * ci-dessous, qui ne touche jamais la colonne refresh_token. */
 export async function saveOAuthTokens(db, provider, { accountEmail, refreshToken, accessToken, expiresAt, scope }) {
+  if (!refreshToken) throw new Error("saveOAuthTokens requiert un refreshToken non-null — utiliser updateAccessToken() pour un simple refresh d'access_token");
   await db.prepare(
     `INSERT INTO oauth_tokens (provider, account_email, refresh_token, access_token, expires_at, scope, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -149,7 +159,18 @@ export async function saveOAuthTokens(db, provider, { accountEmail, refreshToken
        expires_at    = excluded.expires_at,
        scope         = excluded.scope,
        updated_at    = excluded.updated_at`
-  ).bind(provider, accountEmail || null, refreshToken || null, accessToken || null, expiresAt || null, scope || null, Date.now()).run();
+  ).bind(provider, accountEmail || null, refreshToken, accessToken || null, expiresAt || null, scope || null, Date.now()).run();
+}
+
+/** Met à jour UNIQUEMENT access_token/expires_at/scope pour un provider déjà connecté —
+ * ne touche jamais refresh_token (colonne NOT NULL). C'est le chemin correct pour un
+ * simple rafraîchissement d'access_token (Google ne renvoie pas de nouveau refresh_token
+ * à chaque refresh). Suppose que la ligne existe déjà (appelant : getValidAccessToken,
+ * après avoir lu un row avec refresh_token non-null). */
+async function updateAccessToken(db, provider, { accessToken, expiresAt, scope }) {
+  await db.prepare(
+    "UPDATE oauth_tokens SET access_token = ?, expires_at = ?, scope = ?, updated_at = ? WHERE provider = ?"
+  ).bind(accessToken || null, expiresAt || null, scope || null, Date.now(), provider).run();
 }
 
 /**
@@ -168,9 +189,7 @@ export async function getValidAccessToken(env, db, provider = "gmail") {
   }
   const refreshed = await refreshAccessToken(env, row.refresh_token);
   const expiresAt = now + (refreshed.expires_in || 3500) * 1000;
-  await saveOAuthTokens(db, provider, {
-    accountEmail: row.account_email,
-    refreshToken: null, // ne pas écraser le refresh_token existant (Google n'en renvoie pas à chaque refresh)
+  await updateAccessToken(db, provider, {
     accessToken: refreshed.access_token,
     expiresAt,
     scope: refreshed.scope || row.scope,
