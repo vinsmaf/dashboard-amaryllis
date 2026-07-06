@@ -19,6 +19,7 @@
 
 import { getActiveBeds24Token } from "./beds24-refresh.js";
 import { clog, timer } from "./_log.js";
+import { sendEmail as sendEmailHelper } from "./_sendEmail.js";
 
 const BEDS24_V2_URL = "https://beds24.com/api/v2/bookings";
 const PROP_ID       = "158192";
@@ -61,6 +62,88 @@ async function verifyWebhook(request, url, rawBody, secret) {
     if (safeEqual(provided, expected)) return { ok: true, via: "hmac" };
   }
   return { ok: false, reason: "secret/signature invalide ou absent" };
+}
+
+// ── Notification (email + ntfy) — Nogent/Beds24 n'en avait jamais eu, contrairement
+// aux 3 autres canaux (Airbnb/Booking Worker, direct Stripe notify-booking). Trouvé
+// le 2026-07-05 : une résa B2B 30 nuits/3172€ passée sans que Vincent soit alerté.
+// Anti-doublon via D1 (le webhook peut re-fire plusieurs fois pour la même résa) :
+// on ne notifie que sur un changement d'état réel (1ère apparition, ou passage à Annulé).
+async function ensureNotifiedTable(db) {
+  await db.prepare(
+    "CREATE TABLE IF NOT EXISTS beds24_notified (booking_id TEXT PRIMARY KEY, last_status TEXT NOT NULL, notified_at INTEGER NOT NULL DEFAULT (unixepoch()))"
+  ).run();
+}
+
+async function sendNtfy(env, title, body) {
+  const topic = env.NTFY_TOPIC;
+  if (!topic) return false;
+  try {
+    const r = await fetch(`https://ntfy.sh/${topic}`, {
+      method: "POST",
+      headers: { "Title": title, "Priority": "high", "Tags": "beds24,house" },
+      body,
+    });
+    return r.ok;
+  } catch { return false; }
+}
+
+const fmtDate = (iso) => {
+  if (!iso || !/^\d{4}-\d{2}-\d{2}/.test(iso)) return iso || "?";
+  const [y, m, d] = iso.slice(0, 10).split("-");
+  return `${d}/${m}/${y}`;
+};
+
+async function notifyNewOrCancelled(env, db, reservations) {
+  if (!db || !reservations.length) return;
+  await ensureNotifiedTable(db);
+
+  for (const res of reservations) {
+    const notifiableStatus = res.status === "Annulé" ? "Annulé"
+      : (res.status === "Nouveau" || res.status === "Confirmé") ? "actif"
+      : null;
+    if (!notifiableStatus) continue;
+
+    const prev = await db.prepare("SELECT last_status FROM beds24_notified WHERE booking_id = ?").bind(res.id).first();
+    const alreadyNotifiedThisState = prev && prev.last_status === notifiableStatus;
+
+    // Garder l'état à jour même sans notification (ex: nouveau→confirmé, déjà "actif")
+    await db.prepare(
+      "INSERT INTO beds24_notified (booking_id, last_status, notified_at) VALUES (?, ?, unixepoch()) " +
+      "ON CONFLICT(booking_id) DO UPDATE SET last_status = excluded.last_status, notified_at = excluded.notified_at"
+    ).bind(res.id, notifiableStatus).run();
+
+    if (alreadyNotifiedThisState) continue;
+    // 1ère apparition d'une résa déjà annulée dans le lot (rattrapage 48h) : pas la peine d'alerter.
+    if (!prev && notifiableStatus === "Annulé") continue;
+
+    const isCancel = notifiableStatus === "Annulé";
+    const title = isCancel
+      ? `❌ Annulation Nogent — ${res.voyageur}`
+      : `🔔 Nouvelle résa Nogent — ${res.voyageur}`;
+    const bodyLines = [
+      `${res.voyageur} — ${res.canal}`,
+      `${fmtDate(res.checkin)} → ${fmtDate(res.checkout)} (${res.nights} nuits)`,
+      `${res.montant} €${res.nb_guests ? ` · ${res.nb_guests} voyageur(s)` : ""}`,
+    ].join("\n");
+
+    await sendNtfy(env, title, bodyLines);
+
+    const to = env.NOTIFICATION_EMAIL
+      ? env.NOTIFICATION_EMAIL.split(",").map(s => s.trim()).filter(Boolean)
+      : ["vinsmaf@hotmail.com", "contact@villamaryllis.com"];
+    const html = `<p><strong>${title}</strong></p><p>${bodyLines.replace(/\n/g, "<br>")}</p>`;
+    await sendEmailHelper(env, {
+      to,
+      subject: title,
+      html,
+      text: bodyLines,
+      template: "notify_beds24_webhook",
+      category: "internal",
+      bien_id: "nogent",
+      booking_id: res.id,
+    }).catch(() => {});
+  }
 }
 
 export async function onRequestPost(context) {
@@ -151,6 +234,12 @@ export async function onRequestPost(context) {
     status:     b.status || "Confirmé",
     modifiedOn: b.modifiedOn || b.arrival || "",
   }));
+
+  // Notification (email + ntfy) — en arrière-plan, ne doit jamais retarder la réponse
+  // au webhook Beds24 ni faire échouer la sync Sheet si Resend/ntfy sont indisponibles.
+  context.waitUntil(
+    notifyNewOrCancelled(env, env.revenue_manager, reservations).catch((e) => console.error("[beds24-webhook] notify error:", e.message))
+  );
 
   // ⚠️ Bug RESA-001 (2026-06-13) — NE PAS POSTer directement vers scriptUrl :
   //   Apps Script redirige les POST (302) et le redirect **supprime le body**
