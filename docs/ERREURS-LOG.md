@@ -36,6 +36,13 @@
 **PUB-002 (2026-06-12)** — Bug de **scope** révélé au même endroit (`eslint no-undef`) : dans le bloc résa **groupée** de `stripe-webhook.js`, `grpValue` était déclaré dans un bloc `{ … }` puis réutilisé **hors** du bloc par `capiPurchase(...)` → `ReferenceError` au runtime = **Meta CAPI des résas groupées plantait silencieusement** (try/catch implicite côté Stripe → 200 quand même). Corrigé : déclaration sortie au scope du bloc « groupe ».
 - **Garde-fou** : `eslint` (même exclu de la CI) reste utile en delta sur un fichier touché — un `no-undef` = bug runtime réel, pas du bruit. Vérifier `npx eslint <fichier>` après édition d'une Function.
 
+## 🔓 SÉCURITÉ — endpoints d'écriture sans auth malgré un helper déjà importé
+
+**SEC-002 (2026-07-06)** — Audit sécurité a trouvé `functions/api/editorial-calendar.js` (CRUD complet, alimente l'auto-publication FB/IG) et `functions/api/sheets-proxy.js` (accès à l'onglet "Toutes les Réservations", noms/emails/montants) **totalement publics**, sans Bearer ni `?secret=`.
+- *Cause* : au moins un cas n'était même pas un oubli de câblage serveur — `src/tabs/EditorialCalendarTab.jsx` **importait déjà `adminFetch`** (helper qui injecte automatiquement le Bearer de session) et l'utilisait pour 2 des 5 appels du fichier (`agents-run`, `social`), mais **3 call-sites critiques (load/seed30/purgeAll) utilisaient un `fetch()` nu** — un copier-coller ou un ajout de fonctionnalité sans relire les imports du fichier.
+- *Solution* : auth serveur ajoutée sur `editorial-calendar.js` (Bearer admin OU `?secret=POSTSTAY_SECRET` pour le Worker) et `sheets-proxy.js` (Bearer admin, tous les callers vérifiés admin-only). Callers front corrigés pour utiliser l'helper déjà présent (`adminFetch`/`fetchWithTimeout`) au lieu d'un `fetch()` nu. Worker (`workers/ical-sync/index.js`) : 6 appels PATCH vers `editorial-calendar` ne portaient pas `?secret=` — ajouté.
+- **Garde-fou** : avant d'ajouter un nouvel appel `fetch("/api/...")` dans l'admin, **vérifier si le fichier importe déjà `adminFetch`/`fetchJSON`/`fetchWithTimeout` depuis `src/lib/apiFetch.js`** — si oui, l'utiliser systématiquement plutôt qu'un `fetch()` nu (aucune protection serveur ne compense un appel client qui "oublie" d'envoyer le Bearer). Côté serveur : **tout nouvel endpoint `functions/api/*.js` avec des méthodes d'écriture (POST/PATCH/DELETE) doit explicitement documenter son modèle d'auth en tête de fichier** (comme `contacts.js`/`send-poststay.js`) — l'absence de mention doit être traitée comme un doute à lever, pas comme "public par défaut".
+
 ---
 
 ## 🔐 SÉCURITÉ — tentatives d'injection (prompt injection)

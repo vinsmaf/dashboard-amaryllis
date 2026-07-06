@@ -4,6 +4,15 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
+## 🟡 2026-07-06 — Correctifs sécurité 1-2 fermés (commit `764f851`) ; correctif 3 (`netlify/`) BLOQUÉ par le sandbox
+- ✅ **`editorial-calendar.js`** : POST/PATCH/DELETE étaient sans AUCUNE auth (alimente l'auto-pub FB/IG). Corrigé : Bearer admin (`verifyBearer`) OU `?secret=POSTSTAY_SECRET`. GET reste public (contenu non sensible). Callers patchés : `EditorialCalendarTab.jsx` (3 sites `fetch` nu → `adminFetch`, déjà importé mais pas utilisé — bug latent), `workers/ical-sync/index.js` (6 PATCH de statut sans `?secret=` → ajouté partout).
+- ✅ **`sheets-proxy.js`** : public alors qu'il expose l'onglet "Toutes les Réservations" (noms/emails/montants). Callers vérifiés exhaustivement (grep global) : `src/App.jsx` (`syncFromSheets` + import résas) et `src/tabs/Beds24Admin.jsx` — **tous admin-only**, aucun flux public. Bearer admin requis + callers patchés pour l'envoyer (`fetchWithTimeout`/Authorization header manuel selon le style du fichier).
+- Tests : 40 fichiers / 433 cas (431 exécutés + 2 skip volontaires déjà existants) — tous verts, en batches car vitest est anormalement lent dans ce sandbox (voir LEARNINGS ci-dessous). Lint : 0 nouvelle erreur (dette pré-existante ~557 erreurs inchangée, hors scope).
+- 🔴 **Correctif 3 NON fait** : suppression de `netlify/functions/` (6 fichiers legacy dont une copie divergente de `create-payment-intent.js`) + `netlify.toml`. **Bloqué techniquement** : ce sandbox (mount FUSE bridgeant vers le Mac de Vincent) refuse TOUTE opération `unlink` sur les fichiers du repo (`rm`, `git rm`, `mv` vers un autre dossier échouent en `EPERM` — seul `mv` *dans le même dossier* fonctionne). Testé sur un fichier fraîchement créé par l'agent lui-même → même échec, donc restriction systémique du sandbox, pas un problème de permissions Unix classique.
+  - **Débloque** : Vincent (ou une session future avec accès disque réel) lance depuis son Mac : `git rm -r netlify netlify.toml && git commit -m "sec: suppression netlify/ legacy (Cloudflare Pages seul chemin de déploiement)"`.
+  - ⚠️ Un fichier de test résiduel `netlify/testdelete.txt` (créé par l'agent pour diagnostiquer le blocage, contenu inoffensif) traîne dans l'arborescence — sera supprimé par le même `git rm -r netlify`.
+  - Vérifié avant blocage : aucune référence à `netlify/` ailleurs dans le repo (scripts, CI, docs) sauf `netlify.toml` lui-même — suppression sans risque une fois débloquée.
+
 ## En cours → ✅ terminé le 2026-07-05 — Doc endpoints (83 manquants) + INV7 + triage backlog renforcé (règles 5/6)
 > Détail complet : ADR-DOCS-ENDPOINTS-001, ADR-AGENTS-TRIAGE-002.
 - **Doc `CLAUDE.md` complète** : 149 endpoints réels, 83 ajoutés (6 sous-agents Explore parallèles), 2 nouvelles sections (Newsletter, Éditorial & Réseaux sociaux). `INV7` ajouté à `audit-invariants.mjs` (compare route réelle vs doc, 🟡 RISK si absente) — a trouvé 2 endpoints oubliés (`inventory.js`, `maintenance.js`) dès le premier run.
@@ -168,10 +177,8 @@
 
 ## ✅ 2026-06-21 — Session calendrier compact + auto-scroll + Leaflet ESM — détail complet : `.memory/ITERATIONS_LOG.md`
 
-## 🟡 META_PAGE_TOKEN — migration System User token permanent
-- 🟡 **Token actuel ≈ 60j (page token long-lived)** : renouvellement via `meta-token-exchange.js` (D1 `kv_store`). Le seul chemin "jamais expire" = **System User token** (Meta Business Manager → Business Settings → System Users → Create → Admin → Générer token avec toutes les permissions Meta). Disponible seulement après Business Verification complète.
-- **Débloque** : BV validée (soumise 2026-06-17) → créer System User → générer token sans date d'expiration → remplacer `META_PAGE_TOKEN` dans les secrets CF (Pages + Worker). Supprimer `meta-token-exchange.js` ensuite.
-- **Action AGENDA ajoutée** : 2026-06-25 (dès validation BV).
+## ✅ META_PAGE_TOKEN — migration System User token permanent (fait, vérifié 2026-07-06)
+- ✅ **Preuve trouvée en consolidation hebdo** : commit `6c4dee95` (2026-06-20) "chore: supprimer meta-token-exchange.js (temporaire — post-BV System User token en place)" — `functions/api/meta-token-exchange.js` n'existe plus dans le repo. Migration System User token confirmée effectuée.
 
 ## ✅ 2026-06-20 — Session sécurité : 3 trous fermés + 2 bugs CSP + audit multimédia — détail complet : `.memory/ITERATIONS_LOG.md`
 
