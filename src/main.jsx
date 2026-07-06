@@ -32,9 +32,19 @@ if (typeof window !== "undefined") {
   // Filet : certains échecs de chunk remontent en promesse rejetée sans passer par l'event Vite.
   // Regex étendue : couvre aussi les cas Safari (MIME type) et Cloudflare SPA fallback (HTML servi à la place du JS).
   const STALE_CHUNK_PATTERNS = /Failed to fetch dynamically imported module|error loading dynamically imported module|Importing a module script failed|is not a valid JavaScript MIME type|'text\/html' is not a valid|expected a JavaScript module|Failed to load resource|Loading chunk \d+ failed|ChunkLoadError/i;
+  // "Cannot read properties of undefined (reading 'default')" survient aussi quand un chunk lazy
+  // périmé résout un module corrompu après déploiement (vu en prod sur /rates et /mabouya, chunks
+  // recharts/vendor — bug-f55e5d8e8dc49258) — mais ce message est TROP générique pour matcher seul
+  // (un vrai bug de destructuring le produit aussi). On ne le traite comme "chunk périmé" QUE si la
+  // stack référence un asset buildé (/assets/*.js), sinon on laisse remonter normalement.
+  const GENERIC_UNDEFINED_DEFAULT = /Cannot read properties of undefined \(reading 'default'\)/i;
+  const ASSET_CHUNK_STACK = /\/assets\/[^)"'\s]+\.js/i;
+  const isStaleChunkError = (msg, stack) =>
+    STALE_CHUNK_PATTERNS.test(msg) || (GENERIC_UNDEFINED_DEFAULT.test(msg) && ASSET_CHUNK_STACK.test(stack || ""));
   window.addEventListener("unhandledrejection", (e) => {
     const msg = String((e && e.reason && e.reason.message) || (e && e.reason) || "");
-    if (STALE_CHUNK_PATTERNS.test(msg)) {
+    const stack = String((e && e.reason && e.reason.stack) || "");
+    if (isStaleChunkError(msg, stack)) {
       recoverFromStaleChunk();
     }
   });
@@ -43,7 +53,8 @@ if (typeof window !== "undefined") {
   console.error = function (...args) {
     try {
       const msg = args.map(a => (a && a.message) ? a.message : (typeof a === "string" ? a : "")).join(" ");
-      if (STALE_CHUNK_PATTERNS.test(msg)) {
+      const stack = args.map(a => (a && a.stack) ? a.stack : "").join(" ");
+      if (isStaleChunkError(msg, stack)) {
         recoverFromStaleChunk();
       }
     } catch { /* noop */ }
@@ -415,8 +426,7 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <Sentry.ErrorBoundary
       onError={(error) => {
-        const STALE = /Failed to fetch dynamically imported module|error loading dynamically imported module|ChunkLoadError/i;
-        if (!STALE.test(String(error?.message || ""))) return;
+        if (!isStaleChunkError(String(error?.message || ""), String(error?.stack || ""))) return;
         let last = 0;
         try { last = Number(sessionStorage.getItem("amaryllis_chunk_reload_ts")) || 0; } catch { /* noop */ }
         if (Date.now() - last < 30000) return;
@@ -424,8 +434,7 @@ createRoot(document.getElementById('root')).render(
         window.location.reload();
       }}
       fallback={({ error }) => {
-        const STALE = /Failed to fetch dynamically imported module|error loading dynamically imported module|ChunkLoadError/i;
-        if (STALE.test(String(error?.message || ""))) {
+        if (isStaleChunkError(String(error?.message || ""), String(error?.stack || ""))) {
           return <div style={{ minHeight: "100vh", background: "#0e3b3a" }} />;
         }
         return <p>Une erreur est survenue.</p>;
