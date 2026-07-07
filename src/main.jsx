@@ -17,6 +17,21 @@ if (typeof window !== "undefined") window.__BUILD__ = "meta-pixel-2026-06-03";
 // dynamique échoue ("Failed to fetch dynamically imported module") = page blanche.
 // On recharge la page une fois pour récupérer la version fraîche. Garde anti-boucle :
 // au plus 1 reload / 30 s (si ça échoue encore, c'est un vrai problème réseau, on laisse).
+// Portée MODULE (pas dans le bloc `if` ci-dessous) : réutilisé aussi par le Sentry.ErrorBoundary
+// plus bas dans ce fichier — un scope de bloc causait un "isStaleChunkError is not defined" en
+// prod (ReferenceError Sentry 2026-07-07, régression du fix précédent).
+// Regex étendue : couvre aussi les cas Safari (MIME type) et Cloudflare SPA fallback (HTML servi à la place du JS).
+const STALE_CHUNK_PATTERNS = /Failed to fetch dynamically imported module|error loading dynamically imported module|Importing a module script failed|is not a valid JavaScript MIME type|'text\/html' is not a valid|expected a JavaScript module|Failed to load resource|Loading chunk \d+ failed|ChunkLoadError|Unable to preload CSS/i;
+// "Cannot read properties of undefined (reading 'default')" survient aussi quand un chunk lazy
+// périmé résout un module corrompu après déploiement (vu en prod sur /rates et /mabouya, chunks
+// recharts/vendor — bug-f55e5d8e8dc49258) — mais ce message est TROP générique pour matcher seul
+// (un vrai bug de destructuring le produit aussi). On ne le traite comme "chunk périmé" QUE si la
+// stack référence un asset buildé (/assets/*.js), sinon on laisse remonter normalement.
+const GENERIC_UNDEFINED_DEFAULT = /Cannot read properties of undefined \(reading 'default'\)/i;
+const ASSET_CHUNK_STACK = /\/assets\/[^)"'\s]+\.js/i;
+const isStaleChunkError = (msg, stack) =>
+  STALE_CHUNK_PATTERNS.test(msg) || (GENERIC_UNDEFINED_DEFAULT.test(msg) && ASSET_CHUNK_STACK.test(stack || ""));
+
 if (typeof window !== "undefined") {
   const RELOAD_TS_KEY = "amaryllis_chunk_reload_ts";
   const recoverFromStaleChunk = (ev) => {
@@ -30,17 +45,6 @@ if (typeof window !== "undefined") {
   // Événement officiel de Vite quand un preload de module échoue.
   window.addEventListener("vite:preloadError", recoverFromStaleChunk);
   // Filet : certains échecs de chunk remontent en promesse rejetée sans passer par l'event Vite.
-  // Regex étendue : couvre aussi les cas Safari (MIME type) et Cloudflare SPA fallback (HTML servi à la place du JS).
-  const STALE_CHUNK_PATTERNS = /Failed to fetch dynamically imported module|error loading dynamically imported module|Importing a module script failed|is not a valid JavaScript MIME type|'text\/html' is not a valid|expected a JavaScript module|Failed to load resource|Loading chunk \d+ failed|ChunkLoadError/i;
-  // "Cannot read properties of undefined (reading 'default')" survient aussi quand un chunk lazy
-  // périmé résout un module corrompu après déploiement (vu en prod sur /rates et /mabouya, chunks
-  // recharts/vendor — bug-f55e5d8e8dc49258) — mais ce message est TROP générique pour matcher seul
-  // (un vrai bug de destructuring le produit aussi). On ne le traite comme "chunk périmé" QUE si la
-  // stack référence un asset buildé (/assets/*.js), sinon on laisse remonter normalement.
-  const GENERIC_UNDEFINED_DEFAULT = /Cannot read properties of undefined \(reading 'default'\)/i;
-  const ASSET_CHUNK_STACK = /\/assets\/[^)"'\s]+\.js/i;
-  const isStaleChunkError = (msg, stack) =>
-    STALE_CHUNK_PATTERNS.test(msg) || (GENERIC_UNDEFINED_DEFAULT.test(msg) && ASSET_CHUNK_STACK.test(stack || ""));
   window.addEventListener("unhandledrejection", (e) => {
     const msg = String((e && e.reason && e.reason.message) || (e && e.reason) || "");
     const stack = String((e && e.reason && e.reason.stack) || "");
