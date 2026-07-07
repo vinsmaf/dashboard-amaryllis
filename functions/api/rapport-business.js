@@ -4,6 +4,7 @@
 // Garde-fous : 100% lecture seule · aucune action outward sauf le ntfy à l'hôte lui-même.
 
 import { callLLM } from "./_llm.js";
+import { BIENS } from "./_biens.js";
 
 const json = (d, s = 200) => new Response(JSON.stringify(d, null, 2), {
   status: s, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
@@ -18,16 +19,22 @@ export async function onRequestGet({ request, env }) {
   const today = new Date().toISOString().slice(0, 10);
 
   // ── Signaux business (lecture seule, fail-soft) ──
+  // Exclut les résas annulées partout (invariant du projet, cf. ADR-CANCEL-BOOKING-001) et
+  // groupe par bien_id (pas bien_nom : l'historique a "Geko"/"Géko" selon la résa → 2 lignes
+  // pour le même bien avec un GROUP BY texte).
   const stats = { resas: 0, ca: 0, parBien: [], arrivees7j: 0 };
   try {
-    const agg = await db.prepare("SELECT COUNT(*) n, COALESCE(SUM(total),0) ca FROM direct_bookings").first();
+    const NOT_CANCELLED = "(status IS NULL OR status != 'cancelled')";
+    const agg = await db.prepare(
+      `SELECT COUNT(*) n, COALESCE(SUM(total),0) ca FROM direct_bookings WHERE ${NOT_CANCELLED}`
+    ).first();
     stats.resas = agg?.n || 0; stats.ca = Math.round(agg?.ca || 0);
     const byBien = await db.prepare(
-      "SELECT bien_nom, COUNT(*) n, COALESCE(SUM(total),0) ca FROM direct_bookings GROUP BY bien_nom ORDER BY ca DESC LIMIT 7"
+      `SELECT bien_id, COUNT(*) n, COALESCE(SUM(total),0) ca FROM direct_bookings WHERE ${NOT_CANCELLED} GROUP BY bien_id ORDER BY ca DESC LIMIT 7`
     ).all();
-    stats.parBien = (byBien?.results || []).map(r => `${r.bien_nom || "?"}: ${r.n} résa / ${Math.round(r.ca)}€`);
+    stats.parBien = (byBien?.results || []).map(r => `${BIENS[r.bien_id]?.nom || r.bien_id || "?"}: ${r.n} résa / ${Math.round(r.ca)}€`);
     const arr = await db.prepare(
-      "SELECT COUNT(*) n FROM direct_bookings WHERE checkin >= ? AND checkin <= date(?, '+7 day')"
+      `SELECT COUNT(*) n FROM direct_bookings WHERE ${NOT_CANCELLED} AND checkin >= ? AND checkin <= date(?, '+7 day')`
     ).bind(today, today).first();
     stats.arrivees7j = arr?.n || 0;
   } catch (e) { stats.error = String(e.message || e); }
@@ -48,7 +55,7 @@ export async function onRequestGet({ request, env }) {
 
   // ── Push ntfy à Vincent (Title ASCII obligatoire — leçon escalade chat) ──
   let notified = false;
-  const topic = env.NTFY_TOPIC;
+  const topic = env.NTFY_TOPIC || "amaryllis-alertes-7r4k9";
   if (topic) {
     try {
       const res = await fetch(`https://ntfy.sh/${topic}`, {
