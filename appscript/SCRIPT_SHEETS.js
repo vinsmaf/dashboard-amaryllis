@@ -542,6 +542,55 @@ function fixMontantsAberrants_(cap) {
 }
 
 // ── LECTURE HISTORIQUE 2022-2025 ─────────────────────────────────
+// Mots-clés d'en-tête par bien (colonne A du bloc, texte exact variable selon
+// l'année) — assez spécifiques pour ne jamais se chevaucher entre biens
+// (ex: "VILLA AMARYLLIS" n'attrape pas "VILLA IGUANA AMARYLLIS").
+const HIST_HEADER_KEYWORDS = {
+  nogent:     ["NOGENT"],
+  amaryllis:  ["VILLA AMARYLLIS"],
+  iguana:     ["IGUANA"],
+  geko:       ["GEKO"],
+  zandoli:    ["ZANDOLI"],
+  mabouya:    ["MABOUYA"],
+  // "SCHEOLCHER" (lettres inversées) : vraie faute de frappe trouvée dans l'onglet
+  // "revenus locatif 2025" (cellule A29 = "T2 scheolcher") — gardée telle quelle,
+  // pas de raison de la corriger dans le Sheet, juste de la tolérer ici.
+  schoelcher: ["SCHOELCHER", "SCHEOLCHER"],
+};
+
+// Normalise accents/ligatures (é→e, œ→oe...) pour un matching robuste — la ligature
+// "œ" n'est PAS décomposée par String.normalize("NFD"), remplacement explicite requis.
+function stripDiacritics_(s) {
+  return String(s || "")
+    .replace(/œ/gi, "oe")
+    .normalize("NFD").replace(/[̀-ͯ]/g, "");
+}
+
+// Cherche dynamiquement la ligne "total X" d'un bien dans un onglet historique,
+// au lieu d'un numéro de ligne figé (BIENS_MAP.revRow) — bug trouvé le 2026-07-07 :
+// l'onglet Nogent a une ligne "Parking" en plus des autres biens, ce qui décale de
+// 2 lignes TOUS les biens suivants (Amaryllis→Schœlcher) sur les onglets 2022-2025,
+// contrairement à l'onglet 2026 qui n'a pas ce décalage. Un numéro de ligne unique
+// partagé entre toutes les années lisait donc des cellules vides/hors-sujet → 0€
+// partout pour certains mois, alors que la vraie donnée existait bien dans le Sheet.
+function findHistTotalRow_(sheet, bienId) {
+  const keywords = HIST_HEADER_KEYWORDS[bienId] || [];
+  if (!keywords.length) return null;
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return null;
+  const colA = sheet.getRange(1, 1, lastRow, 1).getValues().map(r => stripDiacritics_(r[0]).toUpperCase());
+  const colB = sheet.getRange(1, 2, lastRow, 1).getValues().map(r => stripDiacritics_(r[0]).trim().toUpperCase());
+
+  for (let i = 0; i < colA.length; i++) {
+    if (!keywords.some(k => colA[i].includes(k))) continue;
+    // Bloc trouvé (ligne 1-based = i+1) — chercher la ligne "total" dans les 6 lignes suivantes
+    for (let j = i; j < Math.min(i + 6, colB.length); j++) {
+      if (colB[j].startsWith("TOTAL")) return j + 1; // 1-based pour getRange
+    }
+  }
+  return null;
+}
+
 function readHist_() {
   const hist = {};
   const years = [2022, 2023, 2024, 2025];
@@ -567,7 +616,8 @@ function readHist_() {
 
       const yearData = {};
       for (const b of BIENS_MAP) {
-        yearData[b.id] = getVals(b.revRow, 3, 12);
+        const totalRow = findHistTotalRow_(sheet, b.id) || b.revRow; // fallback si jamais trouvé
+        yearData[b.id] = getVals(totalRow, 3, 12);
       }
       yearData.total = BIENS_MAP.reduce((totals, b) => {
         const revs = yearData[b.id];
