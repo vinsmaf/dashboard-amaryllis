@@ -57,7 +57,7 @@ export async function onRequest(context) {
       if (reservations.length === 0) {
         results.direct = { ok: true, synced: 0, msg: "Aucune résa directe dans D1 (90j)" };
       } else {
-        const r = await fetch(`${origin}/api/sheets-proxy`, {
+        const r = await fetch(`${origin}/api/sheets-proxy?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action: "importAllReservations", reservations }),

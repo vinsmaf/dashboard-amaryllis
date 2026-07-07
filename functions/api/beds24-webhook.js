@@ -247,8 +247,9 @@ export async function onRequestPost(context) {
   //   On passe par /api/sheets-proxy (même origine) qui envoie en GET paginé
   //   (forwardChunked), exactement comme le Worker iCal et le bouton 📊 admin.
   const origin = new URL(request.url).origin;
+  const proxySecret = `secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`;
   try {
-    const r = await fetch(`${origin}/api/sheets-proxy`, {
+    const r = await fetch(`${origin}/api/sheets-proxy?${proxySecret}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "importAllReservations", reservations }),
@@ -275,7 +276,7 @@ export async function onRequestPost(context) {
     if (cancelledMonths2026.length > 0 || cancelledMonths2027.length > 0) {
       const rebuildJobs = [];
       if (cancelledMonths2026.length > 0) {
-        rebuildJobs.push(fetch(`${origin}/api/sheets-proxy`, {
+        rebuildJobs.push(fetch(`${origin}/api/sheets-proxy?${proxySecret}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action: "revenus2026RebuildBienApply", fromMonth: Math.min(...cancelledMonths2026), bien: "nogent" }),
@@ -283,7 +284,7 @@ export async function onRequestPost(context) {
           .catch(e => console.error("[beds24-webhook] rebuild 2026 error:", e.message)));
       }
       if (cancelledMonths2027.length > 0) {
-        rebuildJobs.push(fetch(`${origin}/api/sheets-proxy`, {
+        rebuildJobs.push(fetch(`${origin}/api/sheets-proxy?${proxySecret}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action: "revenus2027RebuildBienApply", fromMonth: Math.min(...cancelledMonths2027), bien: "nogent" }),

@@ -18,7 +18,7 @@ export async function onRequestGet(context) {
   const dry = url.searchParams.get("dry") === "1";
   const origin = url.origin;
 
-  const proxy = (body) => fetch(`${origin}/api/sheets-proxy`, {
+  const proxy = (body) => fetch(`${origin}/api/sheets-proxy?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
   }).then(r => r.json()).catch(e => ({ ok: false, error: String(e?.message || e) }));
 

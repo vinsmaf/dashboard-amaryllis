@@ -1524,7 +1524,7 @@ async function pushToSheets(env, allEvents) {
   //    vers APPS_SCRIPT_URL n'écrivait JAMAIS rien dans le Sheet (body perdu).
   try {
     const siteUrl = env.SITE_URL || "https://villamaryllis.com";
-    const r = await fetch(`${siteUrl}/api/sheets-proxy`, {
+    const r = await fetch(`${siteUrl}/api/sheets-proxy?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Script-Url": env.APPS_SCRIPT_URL },
       body: JSON.stringify({ action: "importAllReservations", reservations }),

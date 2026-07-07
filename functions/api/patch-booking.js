@@ -24,9 +24,10 @@ export async function onRequestPost(context) {
   }
 
   const base = `${url.protocol}//${url.host}`;
+  const proxySecret = `secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`;
 
   // Étape 1 : mettre à jour la résa dans "Toutes les Réservations"
-  const addRes = await fetch(`${base}/api/sheets-proxy`, {
+  const addRes = await fetch(`${base}/api/sheets-proxy?${proxySecret}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -46,7 +47,7 @@ export async function onRequestPost(context) {
   // Étape 2 : rebuild idempotent — zero + recalcul depuis "Toutes les Réservations"
   // ⚠️ NE PAS utiliser revenus2026FromMonth(ignoreMemo:true) : additif, cause des doublons
   const checkinMonth = new Date(checkin + "T12:00:00Z").getMonth() + 1;
-  const revRes = await fetch(`${base}/api/sheets-proxy`, {
+  const revRes = await fetch(`${base}/api/sheets-proxy?${proxySecret}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: "revenus2026RebuildBienApply", fromMonth: checkinMonth, bien: bienId }),

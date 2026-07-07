@@ -16,7 +16,14 @@ import { verifyBearer } from "./_adminauth.js";
 export async function onRequestPost(context) {
   const { request, env } = context;
 
-  if (env.ADMIN_PASSWORD || env.ADMIN_PWD) {
+  // sec (2026-07-06) : le gate Bearer admin ci-dessous cassait silencieusement 5 appelants
+  // SERVEUR légitimes (Worker iCal, patch-booking, enrich-from-emails, trigger-sync,
+  // beds24-webhook — aucun n'envoie de Bearer, ce sont des appels internes cron/webhook,
+  // pas des requêtes admin depuis le navigateur) — trouvé le 2026-07-07 sur une résa Nogent
+  // jamais remontée au Sheet. `?secret=POSTSTAY_SECRET` autorise ces appels internes,
+  // Bearer admin reste le chemin pour les appels navigateur (App.jsx, Beds24Admin.jsx).
+  const secretOk = !!env.POSTSTAY_SECRET && new URL(request.url).searchParams.get("secret") === env.POSTSTAY_SECRET;
+  if (!secretOk && (env.ADMIN_PASSWORD || env.ADMIN_PWD)) {
     const { ok } = await verifyBearer(request, env);
     if (!ok) return json({ error: "Non autorisé" }, 401);
   }
