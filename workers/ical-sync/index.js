@@ -3328,6 +3328,25 @@ async function runReunioneGenerale(env) {
   const dateTag = today.toISOString().slice(0, 10).replace(/-/g, "");
   const nowTs = Math.floor(Date.now() / 1000);
 
+  // Chaque étape D1 ci-dessous est déjà entourée d'un try/catch qui ne fait que console.error
+  // (pas de wrangler tail/Logpush en place → invisible en prod). Incident du 2026-07-06 : l'écriture
+  // mémoire (étape 6) a échoué silencieusement, découvert 2 jours après en creusant manuellement.
+  // Cette alerte rend tout échec futur visible immédiatement au lieu de dépendre d'une investigation.
+  const alertReunionFailure = async (step, errMsg) => {
+    try {
+      await fetch(`https://ntfy.sh/${env.NTFY_TOPIC || "amaryllis-alertes-7r4k9"}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Title": "⚠️ Réunion Générale — échec silencieux",
+          "Priority": "high",
+          "Tags": "warning,office",
+        },
+        body: `Étape "${step}" a échoué : ${errMsg}\nLa réunion continue en dégradé, mais l'accountability de la semaine prochaine sera faussée si ce n'est pas corrigé.`,
+      }).catch(() => {});
+    } catch { /* noop */ }
+  };
+
   // 1. ACCOUNTABILITY — statut ACTUEL des items référencés par la réunion N-1 (pas des
   //    doublons "reunion" — cf. rg-memory-last.notes.actions, la liste d'ids d'origine)
   let execRate = null;
@@ -3350,6 +3369,7 @@ async function runReunioneGenerale(env) {
     }
   } catch (e) {
     console.error("[reunion] accountability:", e.message);
+    await alertReunionFailure("accountability (lecture N-1)", e.message);
     var lastMem = {};
   }
 
@@ -3368,6 +3388,7 @@ async function runReunioneGenerale(env) {
     watches = results.filter(a => a.priority === "haute").slice(0, 8);
   } catch (e) {
     console.error("[reunion] locatif D1:", e.message);
+    await alertReunionFailure("backlog locatif", e.message);
   }
 
   // 3. PATRIMOINE — fleet HTTP (si FLEET_SECRET configuré)
@@ -3440,6 +3461,7 @@ Format de réponse (français, concis, max 400 mots):
     `).bind(`Mémoire réunion ${dateTag}`, memJson, nowTs, nowTs).run();
   } catch (e) {
     console.error("[reunion] mémoire:", e.message);
+    await alertReunionFailure("écriture mémoire (rg-memory-last)", e.message);
   }
 
   // 7. PUSH NTFY
