@@ -2091,6 +2091,10 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
   const [promoData,    setPromoData]    = useState(null);
   const [promoError,   setPromoError]   = useState("");
   const [promoLoading, setPromoLoading] = useState(false);
+  // Test A/B tunnel étape 2 — champ "Message à votre hôte" replié par défaut en variante B
+  // (Téléphone reste toujours visible, jugé important par Vincent). 1 seule variable testée.
+  const [msgFieldVariant] = useState(() => getVariant("tunnel_step2_message_optionnel"));
+  const [msgFieldRevealed, setMsgFieldRevealed] = useState(false);
 
   const nights = checkin && checkout ? dateDiff(checkin, checkout) : 0;
 
@@ -2278,6 +2282,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
   }
 
   async function goToPayment() {
+    trackConversion("tunnel_step2_message_optionnel");
     setPaying(true); setPayError("");
     try {
       // Résumé des upsells sélectionnés
@@ -2740,7 +2745,17 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
               <FormField label="Nom *" value={form.nom} onChange={v => setForm(f => ({ ...f, nom: v }))} autoComplete="family-name" />
               <FormField label="Email *" value={form.email} onChange={v => setForm(f => ({ ...f, email: v }))} type="email" autoComplete="email" style={{ gridColumn: "1/-1" }} />
               <FormField label="Téléphone" value={form.tel} onChange={v => setForm(f => ({ ...f, tel: v }))} type="tel" autoComplete="tel" style={{ gridColumn: "1/-1" }} />
-              <FormField label="Message à votre hôte (optionnel)" value={form.message} onChange={v => setForm(f => ({ ...f, message: v }))} multiline style={{ gridColumn: "1/-1" }} />
+              {msgFieldVariant === "B" && !msgFieldRevealed ? (
+                <button
+                  type="button"
+                  onClick={() => setMsgFieldRevealed(true)}
+                  style={{ gridColumn: "1/-1", textAlign: "left", background: "none", border: "none", color: CORAL, fontFamily: "'Jost', sans-serif", fontSize: 12.5, letterSpacing: "0.02em", cursor: "pointer", padding: "4px 0" }}
+                >
+                  + Ajouter un message pour votre hôte (optionnel)
+                </button>
+              ) : (
+                <FormField label="Message à votre hôte (optionnel)" value={form.message} onChange={v => setForm(f => ({ ...f, message: v }))} multiline style={{ gridColumn: "1/-1" }} />
+              )}
             </div>
 
             <div style={{ display: "flex", gap: 16, padding: "12px 0", borderTop: `1px solid ${SAND}`, margin: "18px 0 0", flexWrap: "wrap" }}>
