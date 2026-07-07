@@ -3681,6 +3681,16 @@ export default {
             console.log(`[veille-zone-scan] ${zones.map(([k, z]) => `${k}:${z.scanned ?? "?"}${z.isBaseline ? "(baseline)" : ""}`).join(" ")} · ${newTotal} nouveau(x) listing(s)`);
           } catch (e) { console.error("[veille-zone-scan] Cron error:", e.message); }
         })(),
+        // Vague 4 — rapport business autonome (data-analyst, 100% lecture seule direct_bookings,
+        // synthèse LLM → ntfy). Cadence hebdo (pas quotidien, évite le bruit notif).
+        (async () => {
+          try {
+            const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+            const res = await fetch(`${siteUrl}/api/rapport-business?token=${encodeURIComponent(env.RAPPORT_TOKEN || "")}`);
+            const data = await res.json().catch(() => ({}));
+            console.log(`[rapport-business] ✓ notified=${data.notified ?? "?"} provider=${data.provider ?? "?"}`);
+          } catch (e) { console.error("[rapport-business] Cron error:", e.message); }
+        })(),
       ]));
 
     } else if (cron === "0 1 1 * *") {
