@@ -33,13 +33,13 @@ const VAGUES = [
   {
     num: 3,
     titre: "Réponses aux avis",
-    desc: "Brouillons LLM (classification ≥4★/≤3★) sur avis réels · validation humaine via AvisTab.jsx · DRY-RUN, aucune auto-publication branchée",
+    desc: "Brouillons LLM (classification ≥4★/≤3★) sur avis réels · validation humaine via AvisTab.jsx · pipeline désormais enchaîné automatiquement (cron mensuel) · DRY-RUN, auto-publication en attente d'accès API",
     statut: "wip",
-    date: "04/07/2026",
+    date: "08/07/2026",
     autonomie: "Semi-auto (brouillons, jamais auto-publié)",
-    gardeFou: "Dry-run strict : aucune API d'écriture Google/Airbnb branchée · escalade négatif/litige reste manuelle",
-    livrable: "20 avis réels traités, brouillons vérifiés (bug prénom↔nom-du-bien trouvé et corrigé)",
-    note: "Scope réduit vs plan initial : pas d'auto-publication automatique sur ≥4★ (choix prudent) — brouillons prêts, publication reste un clic humain. ADR-AVIS-DELEGATION-VAGUE3-001.",
+    gardeFou: "Dry-run strict tant que l'accès API n'est pas approuvé · alerte ntfy+email immédiate dès qu'un avis ≤3★/sans note apparaît (jamais silencieux, brouillon déjà joint) · escalade négatif reste manuelle même après activation future",
+    livrable: "20 avis réels traités (04/07) · pipeline auto enchaîné au cron mensuel Airbnb + alerte escalade (08/07) · demande d'accès Google Business Profile API soumise le 08/07 (n°6-9615000041846, réponse Google attendue sous 7-10j ouvrés)",
+    note: "Prochain jalon : réponse Google (~18/07). Si accès approuvé → bascule possible vers auto-publication réelle sur ≥4★, mêmes garde-fous conservés. ADR-AVIS-DELEGATION-VAGUE3-001.",
   },
   {
     num: 4,
@@ -91,6 +91,13 @@ const CRONS = [
     enabled: true,
     projet: "Patrimoine",
   },
+  {
+    id: "avis-refresh-draft-mensuel",
+    label: "Import avis Airbnb + brouillons réponse + alerte escalade",
+    schedule: "1er du mois (cron Worker, après ingestion)",
+    enabled: true,
+    projet: "V3",
+  },
 ];
 
 // Vague 2 (complétée 08/07, rapport hebdo veille-003), Vague 3 (livrée 04/07,
@@ -100,6 +107,7 @@ const CRONS = [
 // la demande de Vincent (accountability > masquer le retard).
 const JALONS = [
   { date: "2026-06-27", label: "Revue 7j agent V1 — mesure temps gagné + incidents", urgent: true, projet: "V1" },
+  { date: "2026-07-18", label: "Réponse Google sur la demande d'accès Business Profile API (n°6-9615000041846)", urgent: false, projet: "V3" },
 ];
 
 const ENDPOINT = "https://villamaryllis.com/api/rapport-business";
