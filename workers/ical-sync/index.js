@@ -3648,7 +3648,8 @@ export default {
     } else if (cron === "0 6 * * 1") {
       // Lundi 6h UTC — rapport hebdomadaire + rappel prix Airbnb
       const { allEvents } = await runSync(env);
-      ctx.waitUntil(Promise.all([
+      ctx.waitUntil((async () => {
+      await Promise.all([
         runWeeklyReport(env, allEvents),
         runPrixRecap(env),
         runRagIngest(env), // #2 RAG — rafraîchit l'index vectoriel chaque lundi
@@ -3691,7 +3692,19 @@ export default {
             console.log(`[rapport-business] ✓ notified=${data.notified ?? "?"} provider=${data.provider ?? "?"}`);
           } catch (e) { console.error("[rapport-business] Cron error:", e.message); }
         })(),
-      ]));
+      ]);
+      // veille-003 : rapport hebdo veille concurrentielle — SÉQUENCÉ après le Promise.all
+      // ci-dessus (pas dedans) car il doit lire rm_market_signals APRÈS que rm-auto-update
+      // ?scan=1 les ait recalculés et veille-zone-scan ait posé ses nouveaux signaux ; dans
+      // le même Promise.all ces 3 appels seraient concurrents et le rapport risquerait de
+      // lire des données de la semaine précédente.
+      try {
+        const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+        const res = await fetch(`${siteUrl}/api/send-veille-recap?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`);
+        const data = await res.json().catch(() => ({}));
+        console.log(`[send-veille-recap] ✓ sent=${data.ok ?? "?"} biens=${data.biens ?? "?"} signaux=${data.signaux ?? "?"}`);
+      } catch (e) { console.error("[send-veille-recap] Cron error:", e.message); }
+      })());
 
     } else if (cron === "0 1 1 * *") {
       // 1er du mois — export comptable + article SEO long-tail mensuel + mémoire saisonnière
