@@ -264,6 +264,7 @@ flowchart TD
 | Alerte vacance Nogent | cron lundi | hôte | `send-vacancy-alert.js` |
 | Alerte prix sous seuil | admin (CalendrierTarifs) | hôte | `send-prix-alert.js` |
 | Récap prix Airbnb hebdo | cron lundi | hôte | `send-prix-recap.js` (doublon Worker `runPrixRecap`) |
+| Rapport hebdo veille concurrentielle (2026-07-08, ADR-VEILLE-RAPPORT-001) | cron lundi, séquencé après rm-auto-update+veille-zone-scan | hôte | `send-veille-recap.js` — médian/p25/p75 marché vs notre prix, top 3 signaux |
 | Lead contact / caution-skipped / upsell | formulaire / soft-fail | hôte | `contact.js` |
 | Envoi groupé segmenté / manuel | admin | voyageurs | `send-bulk-email.js` / `send-custom-email.js` |
 | Rappels hôte J-7..J+3 + occupation + monitoring | crons Worker | hôte | `workers/ical-sync/index.js` |
@@ -367,7 +368,7 @@ flowchart TD
 | `0 11 * * 1` | lundi 11h UTC / 7h MTQ | **`runReunioneGenerale`** — accountability D1 (`category=reunion`) + backlog locatif (critique/haute) + fleet patrimoine HTTP + synthèse LLM (`/api/ai-summary`) + top 3 actions créées D1 (`rg-YYYYMMDD-N`, `category=reunion`) + mémoire delta (`rg-memory-last`) + ntfy · `FLEET_SECRET` Worker requis |
 | `0 12 * * *` | 12h UTC / 8h MTQ | `runEditorialReseed` (30j) + `runEditorialDraftGen` (drafts J+2 → gate) |
 | `0 13 * * *` | 13h UTC / 9h MTQ | `charge-balance` (soldes 2× J-30 — migré cron-job.org 7798126) · **`docs-refresh` → `rag-ingest`** (2026-07-04, snapshot factuel quotidien SEO+pricing → D1 `docs_snapshots` → réingestion RAG immédiate) |
-| `0 6 * * 1` | lundi 6h UTC | rapport hebdo · prix-recap · RAG ingest · agents-execute + digest · token health check · SEO report · bug-triage · **agents-triage** · memory-distill · guide-write |
+| `0 6 * * 1` | lundi 6h UTC | rapport hebdo · prix-recap · RAG ingest · agents-execute + digest · token health check · SEO report · bug-triage · **agents-triage** · memory-distill · guide-write · rm-auto-update?scan=1 · veille-zone-scan · rapport-business · **`send-veille-recap` (2026-07-08, SÉQUENCÉ après rm-auto-update/veille-zone-scan, pas dans le même Promise.all — dépend de leurs données fraîches)** |
 | `0 1 1 * *` | 1er du mois 1h UTC | export comptable CSV · article SEO long-tail · rappel rotation tokens · refresh avis (Apify) · **`seasonal-update`→`seasonal_memory`** |
 | `0 20 * * 7` | dimanche 20h UTC / 16h MTQ | **`runAccountability`** — accountability hebdo, prépare la Réunion Générale du lundi 11h (ajouté à cette table 2026-07-06, cron confirmé présent dans `wrangler.toml`) |
 

@@ -3,7 +3,7 @@
 // sans accès repo live (impossible depuis un Worker) ni appel API externe (pas de nouveau secret).
 // Régénérer manuellement (node scripts/generate-feature-digest.mjs) quand le digest semble périmé —
 // un oubli dégrade juste la fraîcheur du signal, ne casse jamais le build (fichier committé).
-// Dernière génération : 2026-07-04
+// Dernière génération : 2026-07-08
 
 export const ENDPOINTS_DIGEST = [
   "/api/admin-auth (admin-auth.js) — Vérifie le mot de passe admin côté serveur (jamais exposé dans le bundle JS).",
@@ -83,6 +83,7 @@ export const ENDPOINTS_DIGEST = [
   "/api/send-prix-recap (send-prix-recap.js) — Envoie un récap email hebdomadaire des prix + liens Airbnb via Resend",
   "/api/send-relance-panier (send-relance-panier.js) — crm-016 — Relance panier abandonné pour les RÉSERVATIONS DIRECTES.",
   "/api/send-vacancy-alert (send-vacancy-alert.js) — rev-007 : Alerte vacance locative J+14 à J+30",
+  "/api/send-veille-recap (send-veille-recap.js) — Rapport hebdo de veille concurrentielle (veille-003) : médian/p25/p75 marché par bien",
   "/api/send-verif-arrivee (send-verif-arrivee.js) — Cron J+1 arrivée : email court \"tout se passe bien ?\" le lendemain du check-in.",
   "/api/service-checkout (service-checkout.js) — Achat d'un SERVICE additionnel par le voyageur (depuis /services/<bien> ou le QR de l'écran TV).",
   "/api/sheets-proxy (sheets-proxy.js) — Proxy serveur → Apps Script pour éviter les CORS sur les gros payloads",

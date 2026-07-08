@@ -4,6 +4,13 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
+## En cours → ✅ terminé le 2026-07-08 — Vague 2 complétée (rapport hebdo veille concurrentielle) + tracker second cerveau réaligné
+> Détail complet : ADR-VEILLE-RAPPORT-001. Commits : `7c9ead3` (tracker V3), `8f56115` (send-veille-recap.js + cron), `9c92d78` (tracker V2).
+- **`ProjetsCerveauTab.jsx`** (`/admin#projets-cerveau`) affichait Vague 2/3 "planifié" alors qu'elles étaient largement/entièrement livrées — vérifié via git log + ADR + backlog `agent_actions` de l'agent veille-concurrentielle (pas une seule source, croisement des 3). Corrigé + jalons atteints retirés (redondants avec leur carte).
+- **`send-veille-recap.js`** (nouveau) : seul vrai trou de Vague 2 (le reste — scrape, dashboard, détection listings — existait déjà, jamais rattaché). Rapport hebdo email (médian/p25/p75 marché vs notre prix, top 3 signaux), câblé cron lundi 6h UTC séquencé après `rm-auto-update?scan=1` (pas dans le même `Promise.all`, cf. LEARNINGS DEPLOIEMENT-CF). **Vérifié par un envoi réel** avant de considérer la tâche faite (Resend id confirmé).
+- 🟡 **Friction notée, pas levée** : `send-veille-recap.js` ne vérifie pas la fraîcheur de `rm_market_signals` avant d'envoyer — si `rm-auto-update?scan=1` échoue silencieusement un lundi, le rapport partira quand même avec des signaux périmés, sans avertissement. Pas bloquant aujourd'hui (aucun échec constaté), à durcir si un rapport semble un jour incohérent.
+- 🟡 **Vague 1 (ChatWidget) non re-vérifiée en direct aujourd'hui** — son statut "live" affiché vient d'avant cette session, pas reconfirmé (dashboard admin inaccessible sans mot de passe, jamais saisi par l'agent — règle absolue). À vérifier lors d'une prochaine session qui touche au ChatWidget.
+
 ## En cours → ✅ terminé le 2026-07-08 — Fix historique Sheet + attribution Stripe→GA4 réparée
 > Détail complet : ADR-HIST-ROWSEARCH-001, ADR-ATTR-002.
 - **Fix lecture historique Sheet** (row-search dynamique par bien, `readHist_`) — les onglets 2022-2025 avaient une ligne "Parking" en plus sous Nogent qui décalait de +2 la ligne TOTAL de tous les biens suivants. Déployé Apps Script @86, committé `ea1e005`.

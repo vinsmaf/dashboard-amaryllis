@@ -110,3 +110,7 @@
 
 ## Gouvernance mémoire
 - **3 niveaux de mémoire à ne pas confondre** : `.memory/` (vive, curatée, début de session) · `PROJECT_MEMORY.md` (long terme détaillé) · `docs/` (livrables + index). Garder chacun dans son rôle ; archiver le journal daté dans `docs/_archive/` quand il dépasse ~10 entrées.
+
+## Trackers de roadmap statiques — vérifier avant de croire (2026-07-08)
+- **Un tracker statique (données codées en dur, pas d'API) périme silencieusement — croiser avec le réel avant de le corriger OU de le croire.** `ProjetsCerveauTab.jsx` affichait Vague 2/3 "planifié" alors que l'une était déjà faite à 80% et l'autre livrée depuis 4 jours. Vérifié via 3 sources croisées, pas une seule : `git log` sur les fichiers concernés, grep des ADR par nom de vague, et **le backlog `agent_actions` de l'agent fleet concerné** (souvent la source la PLUS à jour car alimentée par l'agent lui-même à chaque run — cf. AGENTS-IA-LLM.md). Une seule de ces sources aurait pu induire en erreur (un ADR named peut exister sans que le tracker le sache, un backlog peut avoir un statut "bloqué" alors que sa propre note dit "déjà fait").
+- **Distinguer "livré" de "conforme au scope initial".** Vague 3 (réponses aux avis) est réellement déployée, mais en dry-run — jamais l'auto-publication prévue à l'origine. La marquer "live" comme Vague 1/4 aurait été un mensonge par simplification ; "en cours" (wip) capture mieux qu'un livrable existe mais reste volontairement incomplet par rapport à l'ambition de départ.
