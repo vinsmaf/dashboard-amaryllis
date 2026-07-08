@@ -13,8 +13,8 @@ function setUrl(search) {
 }
 
 describe("trackingAttribution — attribution + cookies Meta (match quality CAPI)", () => {
-  beforeEach(() => { sessionStorage.clear(); clearCookies(); setUrl(""); });
-  afterEach(() => { sessionStorage.clear(); clearCookies(); setUrl(""); });
+  beforeEach(() => { localStorage.clear(); clearCookies(); setUrl(""); });
+  afterEach(() => { localStorage.clear(); clearCookies(); setUrl(""); });
 
   it("capture gclid → channel google + le conserve brut pour l'attribution serveur", () => {
     setUrl("?gclid=ABC123");
@@ -51,5 +51,36 @@ describe("trackingAttribution — attribution + cookies Meta (match quality CAPI
     expect(m.fbc).toBeUndefined();
     expect(m.gclid).toBeUndefined();
     expect(m.channel).toBe("direct");
+  });
+
+  it("first-touch 30j : un retour ultérieur sans param ne perd pas l'attribution d'origine", () => {
+    setUrl("?gclid=FIRSTCLICK");
+    captureAttribution();
+    // Retour 3 jours après, en direct (pas de gclid dans l'URL) — l'ancienne attribution doit tenir.
+    setUrl("");
+    captureAttribution();
+    const m = getAttributionMetadata();
+    expect(m.channel).toBe("google");
+    expect(m.gclid).toBe("FIRSTCLICK");
+  });
+
+  it("attribution expirée (> 30j) → re-capture au prochain accès", () => {
+    setUrl("?gclid=OLDCLICK");
+    captureAttribution();
+    const raw = JSON.parse(localStorage.getItem("aml_attribution"));
+    raw.capturedAt = Date.now() - 31 * 24 * 60 * 60 * 1000; // vieux de 31 jours
+    localStorage.setItem("aml_attribution", JSON.stringify(raw));
+
+    setUrl("?gclid=NEWCLICK");
+    captureAttribution();
+    const m = getAttributionMetadata();
+    expect(m.gclid).toBe("NEWCLICK");
+  });
+
+  it("lit le session_id GA4 depuis le cookie _ga_N9BM709ZBL", () => {
+    captureAttribution();
+    document.cookie = "_ga_N9BM709ZBL=GS1.1.1700000001.3.1.1700000123.0.0.0; path=/";
+    const m = getAttributionMetadata();
+    expect(m.ga_session_id).toBe("1700000001");
   });
 });

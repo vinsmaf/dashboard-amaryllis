@@ -176,6 +176,7 @@ function attribMeta(m = {}) {
   const out = {};
   const put = (k, v) => { const s = String(v ?? "").trim(); if (s) out[`metadata[${k}]`] = s.slice(0, 480); };
   put("fbp", m.fbp); put("fbc", m.fbc); put("fbclid", m.fbclid); put("gclid", m.gclid);
+  put("ga_client_id", m.ga_client_id); put("ga_session_id", m.ga_session_id);
   put("channel", m.channel);
   put("utm_source", m.utm_source); put("utm_medium", m.utm_medium); put("utm_campaign", m.utm_campaign);
   put("phone", m.phone); put("prenom", m.prenom); put("nom", m.nom);

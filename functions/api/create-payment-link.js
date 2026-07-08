@@ -162,6 +162,23 @@ export async function onRequestPost(context) {
     "metadata[total]":     String(totalAmount || amount),
     "metadata[solde]":     String(soldeAmount || 0),
     "metadata[email]":     email || "",
+    // metadata[...] ci-dessus ne s'attache qu'à l'objet Payment Link — Stripe ne le propage
+    // JAMAIS automatiquement au PaymentIntent résultant. stripe-webhook.js lit pi.metadata,
+    // donc sans payment_intent_data[metadata][...] la résa est invisible au pipeline auto
+    // (nécessitait jusqu'ici une réconciliation manuelle à chaque paiement par lien).
+    "payment_intent_data[metadata][bienId]":   bienId,
+    "payment_intent_data[metadata][checkin]":  checkin,
+    "payment_intent_data[metadata][checkout]": checkout,
+    "payment_intent_data[metadata][voyageur]": voyageur,
+    "payment_intent_data[metadata][beds24Id]": beds24Id,
+    "payment_intent_data[metadata][type]":     type,
+    "payment_intent_data[metadata][total]":    String(totalAmount || amount),
+    "payment_intent_data[metadata][solde]":    String(soldeAmount || 0),
+    "payment_intent_data[metadata][email]":    email || "",
+    // Canal humain (devis WhatsApp) — jamais de sessionStorage/cookie sur ce flux, donc
+    // pas d'utm/gclid/fbclid possibles ; le tag statique évite que ces ventes réapparaissent
+    // en "Unassigned" côté GA4/reporting funnel.
+    "payment_intent_data[metadata][channel]":  "whatsapp-devis",
   });
 
   // Pré-remplir l'email si fourni

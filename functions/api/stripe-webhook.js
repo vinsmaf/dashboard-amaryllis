@@ -46,7 +46,7 @@ const BEDS24_AUTH_TOKEN  = "https://beds24.com/api/v2/authentication/token";
 // GA4 — server-side event via Measurement Protocol
 // Doc : https://developers.google.com/analytics/devguides/collection/protocol/ga4
 // Requiert un API Secret créé dans GA4 Admin → Data Streams → Mesurement Protocol API secrets
-async function ga4Event(env, eventName, params = {}, clientId = null) {
+async function ga4Event(env, eventName, params = {}, clientId = null, sessionId = null) {
   const measurementId = "G-N9BM709ZBL";
   const apiSecret = env.GA4_API_SECRET;
   if (!apiSecret) {
@@ -55,6 +55,10 @@ async function ga4Event(env, eventName, params = {}, clientId = null) {
   }
   // client_id stable mais anonymisé : on prend le bookingId Stripe (unique, non-PII)
   const cid = clientId || `srv-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  // session_id : sans lui, GA4 a du mal à rattacher l'event MP à la session navigateur
+  // d'origine (même avec un bon client_id) — engagement_time_msec requis par Google dès
+  // qu'on fournit un session_id pour que GA4 le traite comme un event "engagé".
+  const eventParams = sessionId ? { ...params, session_id: sessionId, engagement_time_msec: "1" } : params;
   try {
     const res = await fetch(
       `https://www.google-analytics.com/mp/collect?measurement_id=${measurementId}&api_secret=${apiSecret}`,
@@ -64,7 +68,7 @@ async function ga4Event(env, eventName, params = {}, clientId = null) {
         body: JSON.stringify({
           client_id: cid,
           non_personalized_ads: true,
-          events: [{ name: eventName, params }],
+          events: [{ name: eventName, params: eventParams }],
         }),
       }
     );
@@ -372,7 +376,7 @@ async function notifyHostOnce(env, { paymentIntentId, bienId, bienNom, voyageur,
 
 // Stocke une réservation DIRECTE en D1 (pour emails pré-arrivée / post-séjour).
 // Fail-silent : ne casse jamais le webhook.
-async function storeDirectBooking(env, { paymentIntentId, email, voyageur, bienId, bienNom, checkin, checkout, total = null, groupBiens = null, phone = null }) {
+async function storeDirectBooking(env, { paymentIntentId, email, voyageur, bienId, bienNom, checkin, checkout, total = null, groupBiens = null, phone = null, channel = null, utmSource = null, utmMedium = null, utmCampaign = null, gclid = null, fbclid = null, gaClientId = null }) {
   const db = env.revenue_manager;
   if (!db || !email || !email.includes("@") || !checkin) return;
   try {
@@ -387,6 +391,11 @@ async function storeDirectBooking(env, { paymentIntentId, email, voyageur, bienI
     )`).run();
     // Migration idempotente : ajoute phone à la table live créée avant ce champ (RM-10).
     try { await db.prepare(`ALTER TABLE direct_bookings ADD COLUMN phone TEXT`).run(); } catch { /* colonne déjà présente */ }
+    // Migration idempotente : colonnes attribution (channel/utm/gclid/fbclid/ga_client_id) —
+    // jusqu'ici capturées en metadata Stripe puis jamais persistées, donc invisibles au reporting.
+    for (const col of ["channel TEXT", "utm_source TEXT", "utm_medium TEXT", "utm_campaign TEXT", "gclid TEXT", "fbclid TEXT", "ga_client_id TEXT"]) {
+      try { await db.prepare(`ALTER TABLE direct_bookings ADD COLUMN ${col}`).run(); } catch { /* colonne déjà présente */ }
+    }
     const prenom = String(voyageur || "").trim().split(/\s+/)[0] || "";
     // Clé stable : pi.id si dispo, sinon fallback déterministe (évite les doublons).
     const pid = paymentIntentId || `direct-${email}-${checkin}`;
@@ -395,16 +404,26 @@ async function storeDirectBooking(env, { paymentIntentId, email, voyageur, bienI
     // `total` (montant du séjour, full_total pour le 2×) : indispensable pour que le CA
     // remonte au Sheet même si le front-end notify-booking n'a pas tourné (sinon montant=0).
     // COALESCE : on ne remplace jamais un total déjà posé par le front-end (fill-if-null).
+    // Idem attribution : first-touch déjà posé par le front (localStorage 30j) fait foi, on ne
+    // l'écrase pas si une valeur existe déjà (ex. webhook rejoué, ou 2e appel storeDirectBooking).
     await db.prepare(`INSERT INTO direct_bookings
-        (payment_intent_id, email, prenom, bien_id, bien_nom, voyageur, checkin, checkout, total, group_biens, phone)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?)
+        (payment_intent_id, email, prenom, bien_id, bien_nom, voyageur, checkin, checkout, total, group_biens, phone, channel, utm_source, utm_medium, utm_campaign, gclid, fbclid, ga_client_id)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
       ON CONFLICT(payment_intent_id) DO UPDATE SET
         email=excluded.email, prenom=excluded.prenom, bien_id=excluded.bien_id,
         bien_nom=excluded.bien_nom, checkout=excluded.checkout,
         total=COALESCE(direct_bookings.total, excluded.total),
         group_biens=COALESCE(excluded.group_biens, direct_bookings.group_biens),
-        phone=COALESCE(direct_bookings.phone, excluded.phone)`)
-      .bind(pid, email, prenom, bienId || "", bienNom || "", voyageur || "", checkin, checkout || "", total != null ? Math.round(total) : null, groupBiens || null, String(phone || "").trim() || null).run();
+        phone=COALESCE(direct_bookings.phone, excluded.phone),
+        channel=COALESCE(direct_bookings.channel, excluded.channel),
+        utm_source=COALESCE(direct_bookings.utm_source, excluded.utm_source),
+        utm_medium=COALESCE(direct_bookings.utm_medium, excluded.utm_medium),
+        utm_campaign=COALESCE(direct_bookings.utm_campaign, excluded.utm_campaign),
+        gclid=COALESCE(direct_bookings.gclid, excluded.gclid),
+        fbclid=COALESCE(direct_bookings.fbclid, excluded.fbclid),
+        ga_client_id=COALESCE(direct_bookings.ga_client_id, excluded.ga_client_id)`)
+      .bind(pid, email, prenom, bienId || "", bienNom || "", voyageur || "", checkin, checkout || "", total != null ? Math.round(total) : null, groupBiens || null, String(phone || "").trim() || null,
+            channel || null, utmSource || null, utmMedium || null, utmCampaign || null, gclid || null, fbclid || null, gaClientId || null).run();
   } catch (e) {
     console.error("[direct-booking] D1:", e.message);
   }
@@ -607,10 +626,13 @@ export async function onRequestPost(context) {
           bien_id: "groupe", // param top-level → dimension custom bien_id
           items: [{ item_id: "groupe", item_name: logements || "Réservation groupe", price: grpValue, quantity: 1 }],
           channel: "direct-groupe",
-        }, pi.metadata?.ga_client_id || `booking-${pi.id}`); // vrai client_id GA4 → évite "Unassigned"
-        await ga4Event(env, "booking_completed", { bien_id: "groupe", booking_id: pi.id, value: grpValue, currency: "EUR", channel: "direct-groupe", checkin });
+        }, pi.metadata?.ga_client_id || `booking-${pi.id}`, pi.metadata?.ga_session_id); // vrai client_id GA4 → évite "Unassigned"
+        await ga4Event(env, "booking_completed", { bien_id: "groupe", booking_id: pi.id, value: grpValue, currency: "EUR", channel: "direct-groupe", checkin }, pi.metadata?.ga_client_id || `booking-${pi.id}`, pi.metadata?.ga_session_id);
       }
-      await storeDirectBooking(env, { paymentIntentId: pi.id, email: guestEmail, voyageur, bienId: "groupe", bienNom: logements, checkin, checkout, total: grpValue, groupBiens: meta.bienIds || "", phone: meta.phone });
+      await storeDirectBooking(env, {
+        paymentIntentId: pi.id, email: guestEmail, voyageur, bienId: "groupe", bienNom: logements, checkin, checkout, total: grpValue, groupBiens: meta.bienIds || "", phone: meta.phone,
+        channel: meta.channel, utmSource: meta.utm_source, utmMedium: meta.utm_medium, utmCampaign: meta.utm_campaign, gclid: meta.gclid, fbclid: meta.fbclid, gaClientId: meta.ga_client_id,
+      });
       await capiPurchase(env, {
         eventId: pi.id, value: grpValue, email: guestEmail, bienId: "groupe", bienNom: logements || "Réservation groupe",
         phone: meta.phone, firstName: meta.prenom, lastName: meta.nom,
@@ -645,7 +667,10 @@ export async function onRequestPost(context) {
 
     // 2b. Stocke la résa DIRECTE en D1 → permet les emails pré-arrivée (J-3) et post-séjour (J+1)
     //     + total du séjour (full_total si 2×, sinon montant payé) pour le CA Sheet.
-    await storeDirectBooking(env, { paymentIntentId: pi.id, email: guestEmail, voyageur, bienId, bienNom, checkin, checkout, total: twoX ? twoX.total : Math.round((pi.amount || 0) / 100), phone: meta.phone });
+    await storeDirectBooking(env, {
+      paymentIntentId: pi.id, email: guestEmail, voyageur, bienId, bienNom, checkin, checkout, total: twoX ? twoX.total : Math.round((pi.amount || 0) / 100), phone: meta.phone,
+      channel: meta.channel, utmSource: meta.utm_source, utmMedium: meta.utm_medium, utmCampaign: meta.utm_campaign, gclid: meta.gclid, fbclid: meta.fbclid, gaClientId: meta.ga_client_id,
+    });
 
     // 2b-bis. Alerte hôte fiable (relais serveur, dédup atomique avec le front-end notify-booking)
     await notifyHostOnce(env, { paymentIntentId: pi.id, bienId, bienNom, voyageur, email: guestEmail, checkin, checkout, amount, twoX, amountEur: Math.round((pi.amount || 0) / 100) });
@@ -680,7 +705,7 @@ export async function onRequestPost(context) {
       bien_id: bienId || "unknown", // param top-level → alimente la dimension custom bien_id (items[] ne suffit pas)
       items: [{ item_id: bienId || "unknown", item_name: bienNom || bienId || "Réservation directe", price: piValue, quantity: 1 }],
       channel: meta.channel || "direct",
-    }, meta.ga_client_id || `booking-${txId}`); // vrai client_id GA4 → attribution à la session d'origine (sinon "Unassigned")
+    }, meta.ga_client_id || `booking-${txId}`, meta.ga_session_id); // vrai client_id GA4 → attribution à la session d'origine (sinon "Unassigned")
     // 3b. "booking_completed" : conservé pour l'historique / rapports existants.
     await ga4Event(env, "booking_completed", {
       bien_id: bienId || "unknown",
@@ -690,7 +715,7 @@ export async function onRequestPost(context) {
       channel: meta.channel || "direct",
       checkin,
       checkout,
-    }, `booking-${txId}`);
+    }, meta.ga_client_id || `booking-${txId}`, meta.ga_session_id);
 
     // 3c. Meta CAPI (server-side) — déduplication via event_id = pi.id (même valeur que Pixel client).
     //     user_data enrichi (fbc/fbp/téléphone/nom/external_id) → Event Match Quality maximal.

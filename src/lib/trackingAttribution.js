@@ -1,16 +1,28 @@
 // Attribution tracking — capture UTM params + fbclid + gclid à l'arrivée sur le site
-// et les persiste en sessionStorage pour les injecter dans les metadata Stripe.
+// et les persiste en localStorage (30j) pour les injecter dans les metadata Stripe.
 //
-// Règle : le premier clic de la session fait foi (last-click model simple).
-// Stripe metadata → visible dans Dashboard + webhook → traçable par résa.
+// Règle : first-touch sur 30 jours (pas juste la session en cours) — un visiteur qui
+// clique une pub puis revient en direct 3 jours après doit garder son attribution
+// d'origine. Stripe metadata → visible dans Dashboard + webhook → traçable par résa.
 
 const KEY = "aml_attribution";
+const TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 jours
 
 const UTM_PARAMS = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"];
 
+function readStored() {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.capturedAt || Date.now() - parsed.capturedAt > TTL_MS) return null;
+    return parsed;
+  } catch { return null; }
+}
+
 export function captureAttribution() {
-  // Ne capturer qu'une fois par session
-  try { if (sessionStorage.getItem(KEY)) return; } catch { return; }
+  // First-touch : ne pas écraser une attribution encore valide (< 30j)
+  if (readStored()) return;
 
   const params = new URLSearchParams(window.location.search);
   const attr = {};
@@ -50,8 +62,9 @@ export function captureAttribution() {
 
   // Toujours stocker (même vide → accès direct)
   if (Object.keys(attr).length === 0) attr.channel = "direct";
+  attr.capturedAt = Date.now();
 
-  try { sessionStorage.setItem(KEY, JSON.stringify(attr)); } catch { /* */ }
+  try { localStorage.setItem(KEY, JSON.stringify(attr)); } catch { /* */ }
 }
 
 // Retourne les champs à injecter dans metadata Stripe (strings uniquement, max 500c chacune).
@@ -61,19 +74,16 @@ export function captureAttribution() {
 // de ~15-40 % à ~60-75 % (levier #1 d'attribution Meta à faible volume).
 export function getAttributionMetadata() {
   const meta = {};
-  try {
-    const raw = sessionStorage.getItem(KEY);
-    if (raw) {
-      const attr = JSON.parse(raw);
-      if (attr.channel)      meta.channel      = String(attr.channel).slice(0, 100);
-      if (attr.utm_source)   meta.utm_source   = String(attr.utm_source).slice(0, 100);
-      if (attr.utm_medium)   meta.utm_medium   = String(attr.utm_medium).slice(0, 100);
-      if (attr.utm_campaign) meta.utm_campaign = String(attr.utm_campaign).slice(0, 100);
-      if (attr.gclid)        meta.gclid        = String(attr.gclid).slice(0, 200);
-      if (attr.fbclid)       meta.fbclid       = String(attr.fbclid).slice(0, 200);
-    }
-  } catch { /* */ }
-  // Cookies Meta lus à chaud (≠ snapshot d'arrivée). _fbc reconstruit depuis fbclid si absent.
+  const attr = readStored();
+  if (attr) {
+    if (attr.channel)      meta.channel      = String(attr.channel).slice(0, 100);
+    if (attr.utm_source)   meta.utm_source   = String(attr.utm_source).slice(0, 100);
+    if (attr.utm_medium)   meta.utm_medium   = String(attr.utm_medium).slice(0, 100);
+    if (attr.utm_campaign) meta.utm_campaign = String(attr.utm_campaign).slice(0, 100);
+    if (attr.gclid)        meta.gclid        = String(attr.gclid).slice(0, 200);
+    if (attr.fbclid)       meta.fbclid       = String(attr.fbclid).slice(0, 200);
+  }
+  // Cookies Meta/GA lus à chaud (≠ snapshot d'arrivée). _fbc reconstruit depuis fbclid si absent.
   try {
     const rd = (n) => (document.cookie.match(new RegExp("(^|; )" + n + "=([^;]+)")) || [])[2] || "";
     const fbp = rd("_fbp");
@@ -85,6 +95,14 @@ export function getAttributionMetadata() {
     // Sans lui, GA4 invente un client_id et la vente tombe en "Unassigned".
     const ga = rd("_ga"); // ex: GA1.1.1234567890.1700000000
     if (ga) { const cid = ga.split(".").slice(-2).join("."); if (/^\d+\.\d+$/.test(cid)) meta.ga_client_id = cid; }
+    // session_id GA4 (_ga_<measurement-id sans "G-"> = "GS1.1.<sessionId>.<sessionNumber>...").
+    // Indispensable au Measurement Protocol pour rattacher l'event purchase à la session
+    // en cours plutôt qu'à une session serveur fabriquée (perd le canal d'origine sinon).
+    const gaSession = rd("_ga_N9BM709ZBL"); // measurement id G-N9BM709ZBL
+    if (gaSession) {
+      const parts = gaSession.split(".");
+      if (parts[2] && /^\d+$/.test(parts[2])) meta.ga_session_id = parts[2];
+    }
   } catch { /* */ }
   return meta;
 }
