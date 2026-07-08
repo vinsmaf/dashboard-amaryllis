@@ -4,6 +4,17 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
+## En cours → ✅ terminé le 2026-07-08 — Garde-fou alerte avis escalade + demande accès API Google Business Profile
+> Détail complet : ADR-AVIS-ESCALADE-ALERT-001, ADR-GBP-API-ACCESS-001.
+- **Garde-fou avis** : Vincent a demandé confirmation qu'un mécanisme répond seul aux avis faciles et remonte les compliqués — vérifié : classification existait, mais rien ne "répond seul" (dry-run strict) et l'escalade était passive (aucune alerte). Construit `notifyEscalatedReviews()` (ntfy+email groupés, brouillon joint) + rebranché le pipeline sur un vrai cron (`runReviewDrafts`, jamais réexécuté depuis le 04/07 sinon). Déployé `73d2f53`, testé en live sans coût.
+- **Demande d'accès Google Business Profile API** soumise (Villa Amaryllis, projet `site-amaryllis` n°739205709562) — numéro **6-9615000041846**, réponse Google attendue 7-10j ouvrés. Vérifié avant d'agir que l'approbation est liée au PROJET, pas à la fiche → pas de 2ᵉ demande pour Résidence Amaryllis (Vincent a validé après explication).
+- **`ProjetsCerveauTab.jsx`** (carte Vague 3) mise à jour pour refléter les 2 points ci-dessus + nouveau cron + jalon 18/07. Déployé `1f6cbc2`.
+- 🟡 **Friction notée** : ni le garde-fou avis ni la mise à jour du tracker n'ont pu être vérifiés visuellement dans l'admin (password-gated, mot de passe jamais saisi par Claude) — seuls lint/build/CI sont garantis verts.
+
+## 🟡 Demande d'accès Google Business Profile API en attente de réponse (soumise 2026-07-08)
+- **Statut** : numéro de demande **6-9615000041846**, délai annoncé 7-10 jours ouvrés. Vérifier les quotas Business Profile APIs dans Google Cloud Console (projet `site-amaryllis`) : 0 QPM = pas approuvé, 300 QPM = approuvé.
+- **Ce qui débloque** : rien à faire avant le **2026-07-18** (AGENDA) — si approuvé, confirmer que Résidence Amaryllis apparaît dans l'inventaire des locations accessibles avant de considérer la couverture multi-fiches acquise, puis étudier la bascule Vague 3 vers auto-publication réelle (`reviews.updateReply`).
+
 ## En cours → ✅ terminé le 2026-07-08 — Vague 2 complétée (rapport hebdo veille concurrentielle) + tracker second cerveau réaligné
 > Détail complet : ADR-VEILLE-RAPPORT-001. Commits : `7c9ead3` (tracker V3), `8f56115` (send-veille-recap.js + cron), `9c92d78` (tracker V2).
 - **`ProjetsCerveauTab.jsx`** (`/admin#projets-cerveau`) affichait Vague 2/3 "planifié" alors qu'elles étaient largement/entièrement livrées — vérifié via git log + ADR + backlog `agent_actions` de l'agent veille-concurrentielle (pas une seule source, croisement des 3). Corrigé + jalons atteints retirés (redondants avec leur carte).

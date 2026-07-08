@@ -369,7 +369,7 @@ flowchart TD
 | `0 12 * * *` | 12h UTC / 8h MTQ | `runEditorialReseed` (30j) + `runEditorialDraftGen` (drafts J+2 → gate) |
 | `0 13 * * *` | 13h UTC / 9h MTQ | `charge-balance` (soldes 2× J-30 — migré cron-job.org 7798126) · **`docs-refresh` → `rag-ingest`** (2026-07-04, snapshot factuel quotidien SEO+pricing → D1 `docs_snapshots` → réingestion RAG immédiate) |
 | `0 6 * * 1` | lundi 6h UTC | rapport hebdo · prix-recap · RAG ingest · agents-execute + digest · token health check · SEO report · bug-triage · **agents-triage** · memory-distill · guide-write · rm-auto-update?scan=1 · veille-zone-scan · rapport-business · **`send-veille-recap` (2026-07-08, SÉQUENCÉ après rm-auto-update/veille-zone-scan, pas dans le même Promise.all — dépend de leurs données fraîches)** |
-| `0 1 1 * *` | 1er du mois 1h UTC | export comptable CSV · article SEO long-tail · rappel rotation tokens · refresh avis (Apify) · **`seasonal-update`→`seasonal_memory`** |
+| `0 1 1 * *` | 1er du mois 1h UTC | export comptable CSV · article SEO long-tail · rappel rotation tokens · `runReviewRefresh` (import avis Apify) → **`runReviewDrafts`** (2026-07-08, enchaîné auto : classification+brouillon LLM sur les nouveaux avis, `action=draft`, jamais rebranché avant) → alerte ntfy+email si ≥1 avis escaladé (`notifyEscalatedReviews`) · `seasonal-update`→`seasonal_memory` |
 | `0 20 * * 7` | dimanche 20h UTC / 16h MTQ | **`runAccountability`** — accountability hebdo, prépare la Réunion Générale du lundi 11h (ajouté à cette table 2026-07-06, cron confirmé présent dans `wrangler.toml`) |
 
 **Total vérifié 2026-07-06 : 8 crons dans `wrangler.toml`** (`*/10 * * * *`, `0 9 * * *`, `0 11 * * 1`, `0 12 * * *`, `0 13 * * *`, `0 6 * * 1`, `0 1 1 * *`, `0 20 * * 7`) — cohérent avec §3.
