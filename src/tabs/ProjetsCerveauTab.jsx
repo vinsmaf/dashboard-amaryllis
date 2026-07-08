@@ -22,12 +22,13 @@ const VAGUES = [
   {
     num: 2,
     titre: "Veille concurrentielle autonome",
-    desc: "Scrape concurrents → signaux marché → reco RM préparée · interne only",
-    statut: "planned",
-    date: "28/06/2026",
+    desc: "Scrape concurrents (Firecrawl, lundi 6h UTC) → signaux marché (médian/p25/p75, D1 rm_market_signals) → rapport hebdo email + dashboard Concurrents (RevenueManagerPro.jsx) · interne only",
+    statut: "live",
+    date: "08/07/2026",
     autonomie: "AUTO complet",
-    gardeFou: "Interne uniquement · ne touche jamais un prix (RM = advisory)",
-    livrable: "Rapport hebdo concurrence + reco RM prête à appliquer",
+    gardeFou: "Interne uniquement · ne touche jamais un prix (RM = advisory) · rapport lecture seule",
+    livrable: "Rapport hebdo concurrence par email (send-veille-recap.js) + dashboard Concurrents + détection auto nouveaux listings",
+    note: "Complétée en 2 temps : la collecte/dashboard existaient déjà (jamais rattachés à Vague 2) ; seul le rapport hebdo manquait (veille-003), construit et vérifié par un envoi réel le 08/07.",
   },
   {
     num: 3,
@@ -92,13 +93,13 @@ const CRONS = [
   },
 ];
 
-// Vague 3 (livrée 04/07, dry-run) et Vague 4 (live, en avance sur le 12/07) retirées
-// des jalons — atteintes, cf. leur carte VAGUES respective. Les 2 restants sont
-// vérifiés en retard le 2026-07-08 (revue via .memory/ITERATIONS_LOG.md) : gardés
-// visibles à la demande de Vincent (accountability > masquer le retard).
+// Vague 2 (complétée 08/07, rapport hebdo veille-003), Vague 3 (livrée 04/07,
+// dry-run) et Vague 4 (live, en avance sur le 12/07) retirées des jalons —
+// atteintes, cf. leur carte VAGUES respective. Le seul restant est vérifié en
+// retard le 2026-07-08 (revue via .memory/ITERATIONS_LOG.md) : gardé visible à
+// la demande de Vincent (accountability > masquer le retard).
 const JALONS = [
   { date: "2026-06-27", label: "Revue 7j agent V1 — mesure temps gagné + incidents", urgent: true, projet: "V1" },
-  { date: "2026-06-28", label: "Lancement Vague 2 — veille concurrentielle (autonome)", projet: "V2" },
 ];
 
 const ENDPOINT = "https://villamaryllis.com/api/rapport-business";
