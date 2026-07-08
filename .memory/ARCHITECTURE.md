@@ -1,6 +1,6 @@
 # 🗺️ ARCHITECTURE — Locatif (villamaryllis.com)
 
-> **Date :** 2026-07-05 · **Statut :** carte de l'état actuel, à maintenir (pas un historique).
+> **Date :** 2026-07-08 · **Statut :** carte de l'état actuel, à maintenir (pas un historique).
 > But : ne plus jamais re-déduire le système depuis le code. Quand l'archi change, on met à jour ICI.
 > **Pointeurs :** état courant volatil → `.memory/CONTEXT.md` · décisions → `.memory/ADR.md` + `DECISIONS.md` ·
 > leçons → `.memory/LEARNINGS.md` · blocages → `.memory/BLOCKERS.md` · rappel par domaine → `.memory/RECALL.md` ·
@@ -331,7 +331,7 @@ flowchart TD
 - **CSP** : `public/_headers` (centralisé sur `/*`). Tout domaine tracking/tiers DOIT y être ajouté sinon silencieusement bloqué (vérifié par `audit-invariants.mjs` INV4).
 - **Tracking** : GA4 `G-N9BM709ZBL` (`index.html`, Consent Mode v2) + Meta Pixel `1648064656415946` client (`metaPixel.js`, consent-gated) + CAPI server (`_metaCapi.js` via `stripe-webhook.js`, dédup `event_id=pi.id`).
   - **Funnel (4 étapes, GA4)** : `view_item` → `begin_checkout` (clic dates+prix = intérêt) → `add_payment_info` (arrivée écran carte = vrai départ paiement) → `purchase`. Lu via `functions/api/analytics.js` (rapport `funnel`). **Outil CLI : `npm run funnel`** (`scripts/funnel.mjs`) = funnel live, source unique, jamais figé en mémoire (ADR-FUNNEL-LIVE-001).
-  - **Attribution purchase** : event client (`Merci.jsx`, attribution native) + failsafe server MP (`stripe-webhook.js` `ga4Event`) qui envoie param `bien_id` + le **vrai `client_id` GA4** (cookie `_ga` capturé par `trackingAttribution.js` → metadata Stripe) → évite "Unassigned"/"(not set)" (ADR-ATTR-001).
+  - **Attribution purchase** : event client (`Merci.jsx`, attribution native) + failsafe server MP (`stripe-webhook.js` `ga4Event`) qui envoie param `bien_id` + le **vrai `client_id`/`session_id` GA4** (cookies `_ga`/`_ga_N9BM709ZBL` capturés par `trackingAttribution.js` → metadata Stripe via `attribMeta()`) → évite "Unassigned"/"(not set)" (ADR-ATTR-001, étendu ADR-ATTR-002 2026-07-08). Capture en **localStorage 30j first-touch** (pas sessionStorage — survit à un retour multi-session). Persisté aussi en D1 `direct_bookings` (`channel`/`utm_*`/`gclid`/`fbclid`/`ga_client_id`). Payment Links (`create-payment-link.js`, devis WhatsApp) taggés `channel=whatsapp-devis`, propagés au PaymentIntent via `payment_intent_data[metadata]` (Stripe ne le fait PAS depuis le simple `metadata` du Payment Link — piège déjà géré côté Checkout Sessions dans `complement-checkout.js`/`caution-checkout.js`, manquant ici jusqu'à ce fix).
 - **Rate limiting** : helper partagé `_ratelimit.js` (`rateLimit(db, {key, limit, windowSec})`, D1 `rate_limits_v2`, fail-open) — consommé par `admin-auth`, `contact`, `chat`, `beds24-*`, `promo-codes`, `client-errors`, `send-custom-email`, `_skills`, etc. Non exposé en endpoint HTTP.
 
 ### INVENTAIRE D1 `revenue_manager` (~50 tables, base UNIQUE, par domaine)

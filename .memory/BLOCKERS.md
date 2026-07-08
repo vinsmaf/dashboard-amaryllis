@@ -4,6 +4,24 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
+## En cours → ✅ terminé le 2026-07-08 — Fix historique Sheet + attribution Stripe→GA4 réparée
+> Détail complet : ADR-HIST-ROWSEARCH-001, ADR-ATTR-002.
+- **Fix lecture historique Sheet** (row-search dynamique par bien, `readHist_`) — les onglets 2022-2025 avaient une ligne "Parking" en plus sous Nogent qui décalait de +2 la ligne TOTAL de tous les biens suivants. Déployé Apps Script @86, committé `ea1e005`.
+- **Attribution Stripe→GA4 réparée** (2 bugs racines derrière le "0 conversion attribuable au paid sur 90j" d'un rapport externe vérifié) : `attribMeta()` ne transmettait jamais `ga_client_id` ; les Payment Links WhatsApp ne propageaient AUCUNE metadata au PaymentIntent (Stripe : `payment_intent_data[metadata]` requis, pas le simple `metadata[...]`). Déployé `b40ba06`, vérifié en live.
+- **Décision actée avec Vincent** : ne PAS couper le budget pub — attendre que le tracking réparé produise des données fiables. Checkpoint réel : **2026-07-19** (AGENDA mis à jour) — ROAS par campagne (Google Ads C1 Groupe/C2 Brand/Canada/Géko-France, Meta C1 TOFU/C2 MOFU).
+
+## 🟡 Attribution Stripe/GA4 des 90 derniers jours (avant 2026-07-08) = définitivement invalide, ne jamais l'utiliser pour juger le ROAS par canal
+- **Statut** : les paiements antérieurs au fix `b40ba06` (2026-07-08) n'ont pas d'attribution fiable (bug de mapping + Payment Links cassés) — toute analyse ROAS/CAC portant sur cette période doit l'ignorer explicitement, pas juste la pondérer.
+- **Ce qui débloque** : rien à faire — les nouvelles résas (site + WhatsApp) portent une attribution correcte depuis le déploiement. Le check-in du 2026-07-19 (AGENDA) donnera la première lecture fiable.
+
+## 🟡 Payment Link de test sur Stripe prod — inerte, à ignorer si vu dans le Dashboard
+- **Statut** : `plink_1TqjRODstT3IRAj2EUIYviSs` (5€, "Zandoli — TEST attribution", checkin 2099-01-01) créé le 2026-07-08 pour vérifier en live que Stripe accepte `payment_intent_data[metadata]` sur l'API Payment Links. Jamais payé, ne le sera jamais (date de checkin fictive).
+- **Ce qui débloque** : rien — Vincent peut le désactiver dans le Dashboard Stripe s'il le croise et que ça le gêne visuellement, sinon aucune action requise.
+
+## 🟡 `CONTEXT.md` mentionne un cron `point-ads-hebdo` (créé 2026-06-10) qui n'existe plus en launchd
+- **Statut** : vérifié le 2026-07-08 (`launchctl list` — absent). Soit supprimé sans mise à jour de la doc, soit jamais réellement créé (documentation aspirationnelle). Le suivi ROAS par campagne se fait désormais au checkpoint ponctuel du 19/07 (AGENDA), pas via un cron hebdo automatique.
+- **Ce qui débloque** : corriger `CONTEXT.md` § Crons autonomes à la prochaine consolidation, ou recréer le cron si Vincent le veut vraiment récurrent plutôt que ponctuel.
+
 ## ✅ 2026-07-06 — Correctifs sécurité 1-3 tous fermés (commits `764f851`, `6291267`)
 - ✅ **`editorial-calendar.js`** : POST/PATCH/DELETE étaient sans AUCUNE auth (alimente l'auto-pub FB/IG). Corrigé : Bearer admin (`verifyBearer`) OU `?secret=POSTSTAY_SECRET`. GET reste public (contenu non sensible). Callers patchés : `EditorialCalendarTab.jsx` (3 sites `fetch` nu → `adminFetch`, déjà importé mais pas utilisé — bug latent), `workers/ical-sync/index.js` (6 PATCH de statut sans `?secret=` → ajouté partout).
 - ✅ **`sheets-proxy.js`** : public alors qu'il expose l'onglet "Toutes les Réservations" (noms/emails/montants). Callers vérifiés exhaustivement (grep global) : `src/App.jsx` (`syncFromSheets` + import résas) et `src/tabs/Beds24Admin.jsx` — **tous admin-only**, aucun flux public. Bearer admin requis + callers patchés pour l'envoyer (`fetchWithTimeout`/Authorization header manuel selon le style du fichier).
