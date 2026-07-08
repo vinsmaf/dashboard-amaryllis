@@ -16,9 +16,15 @@ export async function ensureCautionTable(db) {
 }
 
 // Crée une pré-autorisation (hold) off-session sur la carte enregistrée. capture_method=manual →
-// les fonds sont bloqués, jamais débités tant qu'on ne capture pas. request_extended_authorization
-// = bonus si le compte le supporte (sinon ignoré). expand=latest_charge pour lire capture_before
-// (date d'expiration réelle du hold) en une seule requête.
+// les fonds sont bloqués, jamais débités tant qu'on ne capture pas. expand=latest_charge pour lire
+// capture_before (date d'expiration réelle du hold) en une seule requête.
+// ⚠️ NE PAS ajouter payment_method_options[card][request_extended_authorization] : malgré la valeur
+// "if_available" qui suggère un comportement best-effort, Stripe fait échouer TOUTE la création du
+// PaymentIntent ("This account is not eligible for the requested card features") si le compte n'est
+// pas éligible à cette fonctionnalité — pas de dégradation gracieuse. Vécu en prod le 2026-07-08
+// (1re vraie pose de caution off-session, jamais testable avant faute de sandbox Stripe équivalent
+// pour l'éligibilité d'un compte réel). Le hold standard (~7j) + le re-blocage glissant existant
+// (place → reauth avant expiration) suffisent largement, cette option n'était qu'une optimisation.
 // `row` attend : amount(€), currency, customer_id, payment_method_id, booking_pi_id, bien_id,
 // prenom, checkin, checkout, email. `idemKey` (optionnel) = clé d'idempotence Stripe : Stripe lui-même
 // déduplique les appels concurrents/retries réseau portant la même clé → jamais 2 holds.
@@ -37,7 +43,6 @@ export async function createHold(sk, row, idemKey) {
       capture_method: "manual",
       off_session: "true",
       confirm: "true",
-      "payment_method_options[card][request_extended_authorization]": "if_available",
       "metadata[type]": "deposit",
       "metadata[kind]": "caution-auto",
       "metadata[booking_pi_id]": row.booking_pi_id || "",
