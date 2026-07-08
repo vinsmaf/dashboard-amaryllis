@@ -32,12 +32,13 @@ const VAGUES = [
   {
     num: 3,
     titre: "Réponses aux avis",
-    desc: "Auto-rédige · auto-publie ≥4★ positif · escalade négatif/litige",
-    statut: "planned",
-    date: "05/07/2026",
-    autonomie: "Semi-auto encadré",
-    gardeFou: "Dry-run avant activation · déclencheur strict (≥4★ + sentiment positif) · négatif → humain",
-    livrable: "Réponses publiées auto sur avis positifs, 0 intervention sur négatifs",
+    desc: "Brouillons LLM (classification ≥4★/≤3★) sur avis réels · validation humaine via AvisTab.jsx · DRY-RUN, aucune auto-publication branchée",
+    statut: "wip",
+    date: "04/07/2026",
+    autonomie: "Semi-auto (brouillons, jamais auto-publié)",
+    gardeFou: "Dry-run strict : aucune API d'écriture Google/Airbnb branchée · escalade négatif/litige reste manuelle",
+    livrable: "20 avis réels traités, brouillons vérifiés (bug prénom↔nom-du-bien trouvé et corrigé)",
+    note: "Scope réduit vs plan initial : pas d'auto-publication automatique sur ≥4★ (choix prudent) — brouillons prêts, publication reste un clic humain. ADR-AVIS-DELEGATION-VAGUE3-001.",
   },
   {
     num: 4,
@@ -91,11 +92,13 @@ const CRONS = [
   },
 ];
 
+// Vague 3 (livrée 04/07, dry-run) et Vague 4 (live, en avance sur le 12/07) retirées
+// des jalons — atteintes, cf. leur carte VAGUES respective. Les 2 restants sont
+// vérifiés en retard le 2026-07-08 (revue via .memory/ITERATIONS_LOG.md) : gardés
+// visibles à la demande de Vincent (accountability > masquer le retard).
 const JALONS = [
   { date: "2026-06-27", label: "Revue 7j agent V1 — mesure temps gagné + incidents", urgent: true, projet: "V1" },
   { date: "2026-06-28", label: "Lancement Vague 2 — veille concurrentielle (autonome)", projet: "V2" },
-  { date: "2026-07-05", label: "Lancement Vague 3 — réponses avis (dry-run first)", projet: "V3" },
-  { date: "2026-07-12", label: "Vague 4 cron quotidien — rapports business récurrents", projet: "V4" },
 ];
 
 const ENDPOINT = "https://villamaryllis.com/api/rapport-business";
@@ -308,14 +311,17 @@ export default function ProjetsCerveauTab() {
 
         {/* JALONS */}
         <div style={s.sec}>
-          <div style={s.sh}>Jalons à venir</div>
+          <div style={s.sh}>Jalons</div>
           {JALONS.map(j => {
             const d = daysUntil(j.date);
+            const overdue = d < 0;
             return (
-              <div key={j.date} style={s.jalon(j.urgent)}>
+              <div key={j.date} style={s.jalon(j.urgent || overdue)}>
                 <div style={{ flexShrink: 0, minWidth: 52, textAlign: "center" }}>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: d <= 7 ? "#f59e0b" : "#6366f1" }}>{d}j</div>
-                  <div style={{ fontSize: 9, color: "#475569" }}>{j.date.slice(5).replace("-", "/")}</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: overdue ? "#ef4444" : d <= 7 ? "#f59e0b" : "#6366f1" }}>
+                    {overdue ? Math.abs(d) : d}j
+                  </div>
+                  <div style={{ fontSize: 9, color: overdue ? "#ef4444" : "#475569" }}>{overdue ? "EN RETARD" : j.date.slice(5).replace("-", "/")}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: 12, color: "#e2e8f0", marginBottom: 2 }}>{j.label}</div>
