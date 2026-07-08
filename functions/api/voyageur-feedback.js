@@ -6,7 +6,15 @@
 //   • GET  /api/voyageur-feedback?action=stats   → agrégats (note moy, nb par bien)
 //   • POST /api/voyageur-feedback?action=ingest&secret=POSTSTAY_SECRET
 //          → DÉCLENCHE le scrape Apify (DÉPENSE DE CRÉDITS) puis stocke les avis.
-//            Réservé : nécessite le secret. Ne tourne JAMAIS tout seul (pas de cron).
+//            Réservé : nécessite le secret. Cron mensuel (Worker `runReviewRefresh`,
+//            1er du mois) — ce commentaire disait "jamais tout seul" jusqu'au 2026-07-08,
+//            périmé depuis que ce cron existe.
+//   • POST /api/voyageur-feedback?action=draft&secret=POSTSTAY_SECRET
+//          → génère classification + brouillon LLM sur les avis pas encore traités
+//            (dry-run : jamais publié, à copier-coller). Enchaîné automatiquement par
+//            le Worker après chaque ingestion réussie (`runReviewDrafts`, 2026-07-08).
+//            Alerte ntfy+email (`notifyEscalatedReviews`) si ≥1 avis classé "escalade"
+//            (≤3★ ou note absente) — garde-fou "répond aux faciles, remonte les compliqués".
 //
 // RGPD (minimisation, registre des traitements) : on ne stocke QUE
 //   prénom (tronqué), note, texte, date, langue, bien. Aucun nom complet,
@@ -31,6 +39,7 @@ import { classifyReview, buildReviewReplyPrompt } from "../../src/utils/reviewCl
 import { buildThemeCodingPrompt, parseThemeCodingResponse } from "../../src/utils/reviewThemes.js";
 import { PINNED_DOCS } from "./_docsDigest.js";
 import { BIENS } from "./_biens.js";
+import { sendEmail } from "./_sendEmail.js";
 
 const CORS = {
   "Content-Type": "application/json",
@@ -82,6 +91,48 @@ function firstNameOnly(name) {
   if (!name) return null;
   // "Marie D." / "Jean-Pierre" → garde le 1er token, retire initiales de nom
   return String(name).trim().split(/\s+/)[0].slice(0, 40);
+}
+
+// Alerte hôte (ntfy + email) quand un lot de brouillons contient au moins 1 avis
+// escaladé (≤3★ ou note absente — voir classifyReview). Best-effort : ne fait jamais
+// échouer la génération de brouillons si l'un des deux canaux est indisponible.
+async function notifyEscalatedReviews(env, escalated) {
+  const stars = (n) => (Number.isFinite(Number(n)) && Number(n) > 0 ? "★".repeat(Number(n)) + "☆".repeat(5 - Number(n)) : "note non renseignée");
+  const excerpt = (t) => String(t || "").trim().slice(0, 180);
+
+  const topic = env.NTFY_TOPIC || "amaryllis-alertes-7r4k9";
+  try {
+    const lines = escalated.slice(0, 5).map(e => `• ${e.bienNom} (${stars(e.rating)}) — "${excerpt(e.reviewText)}"`);
+    if (escalated.length > 5) lines.push(`… +${escalated.length - 5} autre(s)`);
+    await fetch(`https://ntfy.sh/${topic}`, {
+      method: "POST",
+      headers: {
+        Title: `⭐ ${escalated.length} avis nécessite${escalated.length > 1 ? "nt" : ""} votre réponse`,
+        Priority: "high",
+        Tags: "warning,star",
+      },
+      body: lines.join("\n").slice(0, 800),
+    });
+  } catch { /* ntfy best-effort */ }
+
+  try {
+    const rows = escalated.map(e => `
+      <tr><td style="padding:12px 0;border-top:1px solid #e5e5e5">
+        <div style="font-weight:700;color:#0e3b3a">${e.bienNom} — ${stars(e.rating)}${e.prenom ? ` · ${e.prenom}` : ""}</div>
+        <div style="color:#4a3f35;font-style:italic;margin:6px 0">"${excerpt(e.reviewText)}${(e.reviewText || "").length > 180 ? "…" : ""}"</div>
+        <div style="background:#f7f5f0;border-radius:8px;padding:10px 12px;font-size:13px;color:#333;white-space:pre-wrap">${e.draftReply}</div>
+      </td></tr>`).join("");
+    await sendEmail(env, {
+      to: env.NOTIFICATION_EMAIL || "vinsmaf@hotmail.com,contact@villamaryllis.com",
+      subject: `⭐ ${escalated.length} avis nécessite${escalated.length > 1 ? "nt" : ""} votre réponse — Amaryllis Locations`,
+      category: "internal",
+      html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto">
+        <h2 style="color:#0e3b3a">Avis à réponse compliquée (${escalated.length})</h2>
+        <p style="font-size:13px;color:#666">Note ≤3★ ou absente — jamais auto-répondu. Brouillon prêt ci-dessous, à adapter et publier vous-même sur Airbnb/Google (onglet ⭐ Avis de l'admin).</p>
+        <table style="width:100%;border-collapse:collapse">${rows}</table>
+      </div>`,
+    });
+  } catch { /* email best-effort */ }
 }
 
 export async function onRequestOptions() {
@@ -340,9 +391,14 @@ export async function onRequest(context) {
   // ── POST ?action=draft : génère les brouillons de réponse (Vague 3, DRY-RUN) ──
   // Aucune publication réelle (aucune API d'écriture Google/Airbnb branchée) :
   // remplit classification + draft_reply, à copier-coller manuellement par Vincent.
+  // Dual-auth (comme sheets-proxy.js) : ?secret= pour le cron Worker (serveur-à-serveur,
+  // pas de session admin), Bearer pour un déclenchement manuel depuis l'admin.
   if (request.method === "POST" && action === "draft") {
-    const { ok: adminOk } = await verifyBearer(request, env);
-    if (!adminOk) return json({ error: "Non autorisé" }, 401);
+    const secretOk = !!env.POSTSTAY_SECRET && url.searchParams.get("secret") === env.POSTSTAY_SECRET;
+    if (!secretOk) {
+      const { ok: adminOk } = await verifyBearer(request, env);
+      if (!adminOk) return json({ error: "Non autorisé" }, 401);
+    }
     const body = await request.json().catch(() => ({}));
     const ids = Array.isArray(body.ids) ? body.ids.slice(0, 20) : null;
 
@@ -353,6 +409,7 @@ export async function onRequest(context) {
 
     const generated = [];
     const failed = [];
+    const escalated = [];
     for (const r of results) {
       const classification = classifyReview(r.rating);
       const bienNom = BIENS[r.bien_id]?.nom || r.bien_id;
@@ -363,8 +420,16 @@ export async function onRequest(context) {
         "UPDATE voyageur_feedback SET classification=?, draft_reply=?, draft_status='pending', draft_generated_at=datetime('now') WHERE id=?"
       ).bind(classification, llm.text.trim(), r.id).run();
       generated.push(r.id);
+      if (classification === "escalade") {
+        escalated.push({ bienNom, rating: r.rating, prenom: r.prenom, reviewText: r.review_text, draftReply: llm.text.trim() });
+      }
     }
-    return json({ ok: true, generated: generated.length, failed: failed.length, ids: generated });
+    // Garde-fou "remonte quand c'est compliqué" : un avis ≤3★ (ou note absente) ne se
+    // publie JAMAIS seul (voir classifyReview) — mais jusqu'ici cette escalade était
+    // purement passive (juste un statut en base, personne n'était prévenu). Alerte
+    // groupée (1 seule notif même si plusieurs avis compliqués dans le même lot).
+    if (escalated.length) await notifyEscalatedReviews(env, escalated);
+    return json({ ok: true, generated: generated.length, failed: failed.length, escalated: escalated.length, ids: generated });
   }
 
   // ── POST ?action=code-themes : codage thématique batché (voyageur-002) ──────

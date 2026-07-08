@@ -3103,11 +3103,32 @@ async function runReviewRefresh(env) {
       await new Promise(r => setTimeout(r, 12000));
       const col = await fetch(`${siteUrl}/api/voyageur-feedback?action=collect&runId=${ij.runId}&secret=${encodeURIComponent(secret)}`);
       const cj = await col.json().catch(() => ({}));
-      if (cj.ok && typeof cj.stored === "number") { console.log(`[reviews] ✓ ${cj.stored} avis stockés (fetched ${cj.fetched})`); return; }
+      if (cj.ok && typeof cj.stored === "number") {
+        console.log(`[reviews] ✓ ${cj.stored} avis stockés (fetched ${cj.fetched})`);
+        await runReviewDrafts(env);
+        return;
+      }
       if (cj.status === "FAILED") { console.log("[reviews] run FAILED"); return; }
     }
     console.log(`[reviews] run pas encore terminé — collect manuel possible (runId ${ij.runId})`);
   } catch (e) { console.error("[reviews] erreur:", e.message); }
+}
+
+// Génère les brouillons de réponse (classification auto/escalade + LLM) sur les avis
+// fraîchement ingérés par runReviewRefresh — sans ça, action=draft ne tournait qu'au
+// déclenchement manuel (jamais rebranché depuis sa création le 2026-07-04), et le
+// garde-fou d'alerte sur les avis "escalade" (notifyEscalatedReviews) ne servait à rien.
+async function runReviewDrafts(env) {
+  const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+  const secret = env.POSTSTAY_SECRET || "";
+  if (!secret) { console.log("[reviews-draft] POSTSTAY_SECRET absent — skip"); return; }
+  try {
+    const r = await fetch(`${siteUrl}/api/voyageur-feedback?action=draft&secret=${encodeURIComponent(secret)}`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: "{}",
+    });
+    const j = await r.json().catch(() => ({}));
+    console.log(`[reviews-draft] générés=${j.generated ?? "?"} échoués=${j.failed ?? "?"} escaladés=${j.escalated ?? "?"}`);
+  } catch (e) { console.error("[reviews-draft] erreur:", e.message); }
 }
 
 // Santé du token Meta (META_PAGE_TOKEN, expire ~60j). Alerte email si invalide ou
