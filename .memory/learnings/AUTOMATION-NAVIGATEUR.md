@@ -4,6 +4,11 @@
 > Extrait de `../LEARNINGS.md` le 2026-07-04 (consolidation mémoire — split thématique).
 > 18 entrées, triées par date décroissante.
 
+## 🛑 Le classificateur de sécurité auto peut bloquer une action Chrome légitime si le pattern ressemble à une exfiltration — ne PAS contourner — 2026-07-08
+- **Vécu** : après avoir lu une page (extranet Booking.com) puis navigué vers un Google Sheet financier du même compte pour vérifier une donnée, un simple raccourci clavier (`Cmd+Shift+H`, rechercher-remplacer) a été **bloqué** par le classificateur auto ("Browser Navigate Exfil" — pattern jugé proche d'une exfiltration : navigation vers un doc sensible non lié à la tâche initiale + saisie clavier juste après un read de contenu). L'action était en réalité légitime (vérification demandée implicitement par l'utilisateur juste avant), mais le classificateur ne voit que la séquence d'actions, pas l'intention conversationnelle.
+- **La bonne réaction** : ne PAS chercher un chemin de contournement (autre tool, autre méthode) — arrêter net, expliquer à l'utilisateur ce qu'on essayait de faire et pourquoi, et le laisser vérifier lui-même ou reformuler la demande plus explicitement. Contourner un refus de sécurité, même quand on est sûr de son intention, revient à saper le garde-fou qui protège justement contre l'injection/l'exfiltration.
+- **La prochaine fois** : pour toute vérification de données financières via Chrome (Sheets, Stripe Dashboard, banques…) enchaînée après une navigation sur un autre domaine, s'attendre à un risque de blocage — si possible, séparer clairement les 2 actions dans le temps/le message, ou demander à l'utilisateur de vérifier lui-même si le blocage survient.
+
 ## 🛠️ `sips` (macOS natif) rasterise du SVG en PNG directement — pas besoin d'imagemagick/inkscape — 2026-07-02/03
 - **Découverte** : pour générer des icônes PWA (192/512/180px) à partir d'un SVG de marque, `sips -s format png source.svg --out out.png -Z 512` fonctionne nativement sur macOS moderne (testé Darwin 25.6), sans dépendance externe (`rsvg-convert`/`convert`/`inkscape` absents de l'environnement). Rendu fidèle (couleurs, dégradés, transparence).
 - **La prochaine fois** : pour tout besoin ponctuel de rasterisation SVG→PNG sur macOS, tenter `sips` en premier avant d'installer un outil tiers.
