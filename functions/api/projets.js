@@ -61,13 +61,18 @@ th{background:#0b1220;color:var(--acc)}tr:nth-child(even) td{background:#172033}
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
   if (!authed(env, url)) return new Response("Non autorisé", { status: 401 });
+  const wantsJson = url.searchParams.get("json") === "1";
   try {
     await env.revenue_manager.prepare(TABLE).run();
     const row = await env.revenue_manager.prepare("SELECT v, updated_at FROM brain_state WHERE k='projets'").first();
     const md = row?.v || "# Projets\n\n*(Aucun état synchronisé — lance la sync depuis le cerveau.)*";
     const upd = row?.updated_at ? new Date(row.updated_at * 1000).toLocaleString("fr-FR") : "—";
+    if (wantsJson) {
+      return Response.json({ ok: true, markdown: md, updated_at: upd, updated_at_epoch: row?.updated_at ?? null }, { headers: { "Cache-Control": "no-store" } });
+    }
     return new Response(PAGE(mdToHtml(md), upd), { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
   } catch (e) {
+    if (wantsJson) return Response.json({ ok: false, error: e.message }, { status: 500 });
     return new Response(PAGE(`<h1>Erreur</h1><p>${e.message}</p>`, "—"), { status: 500, headers: { "Content-Type": "text/html; charset=utf-8" } });
   }
 }
