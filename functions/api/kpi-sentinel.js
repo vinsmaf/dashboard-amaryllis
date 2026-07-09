@@ -43,6 +43,8 @@ function todayMTQ() {
   return new Date(now.getTime() - 4 * 3600 * 1000).toISOString().slice(0, 10)
 }
 
+const sleep = (ms) => new Promise(r => setTimeout(r, ms))
+
 function addDays(iso, n) {
   const [y, m, d] = iso.split('-').map(Number)
   const dt = new Date(Date.UTC(y, m - 1, d))
@@ -428,9 +430,15 @@ export async function onRequestGet({ request, env }) {
   }
 
   const ntfySent = []
+  // ntfy.sh rate-limite les envois rapprochés (429 vécu 2026-07-09 en enchaînant
+  // 🔴 puis 🟡 sans délai) — on espace chaque envoi suivant le premier.
+  let sentAny = false
+  const spaceNtfy = () => sentAny ? sleep(1200) : Promise.resolve()
 
   // ── 1 notification individuelle par 🔴 avec 3 boutons d'action ──────────
   for (const a of reds) {
+    await spaceNtfy()
+    sentAny = true
     const body = `${a.detail}\n→ ${a.suggestion}`
     const res = await fetch(`https://ntfy.sh/${ntfyTopic}`, {
       method: 'POST',
@@ -449,6 +457,8 @@ export async function onRequestGet({ request, env }) {
 
   // ── 1 notification groupée pour tous les 🟡 + bouton "Ignorer tout" ─────
   if (yellows.length > 0) {
+    await spaceNtfy()
+    sentAny = true
     const lines = yellows.map(a => `• ${a.signal} : ${a.detail}\n  → ${a.suggestion}`)
     lines.push('→ https://villamaryllis.com/admin')
     const res = await fetch(`https://ntfy.sh/${ntfyTopic}`, {
