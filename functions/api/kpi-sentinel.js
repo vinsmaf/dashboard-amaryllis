@@ -68,10 +68,13 @@ function ackUrl(base, id, status, signal) {
 }
 
 function ntfyActions(base, id, signal) {
+  // action "view" (ouvre le lien) plutôt que "http" (appel silencieux en fond) :
+  // http n'est pas fiable cross-plateforme (coupé par iOS avant la fin de l'appel,
+  // souvent ignoré par les clients web) et ne donne aucun retour visuel en cas d'échec.
   return [
-    `http, Fait ✅, ${ackUrl(base, id, 'done', signal)}, method=GET, clear=true`,
-    `http, Ignorer, ${ackUrl(base, id, 'ignore', signal)}, method=GET, clear=true`,
-    `http, Plus tard, ${ackUrl(base, id, 'later', signal)}, method=GET, clear=true`,
+    `view, Fait ✅, ${ackUrl(base, id, 'done', signal)}, clear=true`,
+    `view, Ignorer, ${ackUrl(base, id, 'ignore', signal)}, clear=true`,
+    `view, Plus tard, ${ackUrl(base, id, 'later', signal)}, clear=true`,
   ].join('; ')
 }
 
@@ -454,7 +457,7 @@ export async function onRequestGet({ request, env }) {
         Title: `🟡 ${yellows.length} signal${yellows.length > 1 ? 's' : ''} Watch`,
         Priority: '3',
         Tags: 'chart_with_downwards_trend',
-        Actions: `http, Ignorer tout 🟡, ${ackUrl(siteUrl, yellowGroupId, 'ignore', 'yellow-group')}, method=GET, clear=true`,
+        Actions: `view, Ignorer tout 🟡, ${ackUrl(siteUrl, yellowGroupId, 'ignore', 'yellow-group')}, clear=true`,
         'Content-Type': 'text/plain; charset=utf-8',
       },
       body: lines.join('\n\n'),
