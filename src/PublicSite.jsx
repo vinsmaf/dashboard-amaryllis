@@ -401,7 +401,6 @@ const BIENS = [
       "/photos/zandoli/06.webp",
       "/photos/zandoli/07.webp",
       "/photos/zandoli/08.webp",
-      "/photos/zandoli/09.webp",
       "/photos/zandoli/10.webp",
       "/photos/zandoli/11.webp",
       "/photos/zandoli/12.webp",
