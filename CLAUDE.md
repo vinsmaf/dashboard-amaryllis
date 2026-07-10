@@ -393,7 +393,19 @@ Le `<title>` / `<meta description>` / `og:*` / JSON-LD des **fiches villas et de
 curl -s https://villamaryllis.com/mabouya | grep -oE "<title>[^<]*</title>"
 ```
 - Cibles SEO : **title ≤ 60c**, **meta description ≤ 158c** (au-delà → tronqué en SERP).
-- ✅ **Plus de prix codés en dur (depuis 03/06)** : `functions/[slug].js`, `scripts/prerender.mjs`, `functions/api/_biens.js` et `PublicSite.jsx` lisent désormais **la source unique `src/data/biens.js`** (cf. section « Source unique des biens & filet qualité »). **Changer un fait d'un bien (prix/capacité/coords/note) = éditer `src/data/biens.js` uniquement.** Seul le contenu SEO riche (amenityFeature du rich snippet) reste dans la carte `RENTAL_CONTENT` de `prerender.mjs`.
+- ✅ **Plus de prix codés en dur (depuis 03/06)** : `functions/[slug].js`, `scripts/prerender.mjs`, `functions/api/_biens.js` et `PublicSite.jsx` lisent désormais **la source unique `src/data/biens.js`** (cf. section « Source unique des biens & filet qualité »). **Changer le prix DE BASE d'un bien (fallback, cf. §1bis ci-dessous) = éditer `src/data/biens.js` uniquement.** Seul le contenu SEO riche (amenityFeature du rich snippet) reste dans la carte `RENTAL_CONTENT` de `prerender.mjs`.
+
+### 1bis. Pricing — 3 notions à ne JAMAIS confondre (piège vécu plusieurs fois, 07/2026)
+
+Le mot « prix » recouvre 3 choses complètement différentes dans ce projet. Avant de répondre « le prix c'est X », identifier LAQUELLE est en jeu :
+
+| Notion | Où | Nature | Utilisé pour |
+|---|---|---|---|
+| **Prix de base** | `src/data/biens.js` → `bien.prix` | 1 seul chiffre statique par bien, committé dans le code | SEO (meta/JSON-LD), et **fallback** si aucun prix journalier n'est défini pour une date |
+| **Reco RM** | `/api/rm-recommendations` | Suggestion calculée (saisonnalité, occupation, règles) | **Advisory only** — n'est PAS le prix affiché tant que Vincent ne l'a pas appliqué à la main |
+| **Prix réel affiché** ⭐ | `/api/site-config?type=prices` (6 biens Martinique) · `/api/beds24-rates` (Nogent) | Prix journalier par date, éditable depuis l'onglet Tarifs admin (`CalendrierTarifs.jsx`) | **LE prix que voit le visiteur et qui sert au calcul du total** — seule source à utiliser pour comparer/auditer/alerter sur un « vrai prix » |
+
+**Le calcul exact que fait le site public** (`PublicSite.jsx`) : `dailyPricesMap[date] ?? bien.prix` — le prix journalier a toujours priorité, le prix de base n'est qu'un filet de sécurité pour les dates non couvertes. **Toute question du type « quel est le prix du bien X à la date Y » doit lire `/api/site-config?type=prices` (avec fallback `biens.js` si absent), jamais `rm-recommendations` ni le seul `biens.js`.**
 
 ### 2. Réservations — UN SEUL onglet Sheet : « Toutes les Réservations »
 
