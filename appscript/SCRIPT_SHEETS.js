@@ -459,14 +459,26 @@ function readAll_() {
 
   return json_({
     moisActifs,
-    biens: BIENS_MAP.map(b => ({
-      id: b.id,
-      revenus:  getVals(sheet, b.revRow,    3, 12),
-      occ:      getVals(sheet, b.occRow,    3, 12), // valeurs en % (0-100), pas divisées par 100
-      adr:      getVals(sheet, b.adrRow,    3, 12),
-      revpar:   getVals(sheet, b.revparRow, 3, 12),
-      cashflow: getVals(sheet, b.cfRow,     2, 12),
-    })),
+    biens: BIENS_MAP.map(b => {
+      // cashflow : recherche dynamique de la ligne "total X" du bloc dépenses (même mécanique que
+      // findChargesTotalRow_/readChargesBlock_ pour /api/revenue-summary), ligne cashflow = total+1,
+      // lecture à partir de la colonne 3 (janvier). Corrige un bug préexistant : BIENS_MAP.cfRow
+      // pointait sur la ligne "total X" (charges, pas cashflow) ET lisait depuis la colonne 2 (le
+      // libellé texte, pas janvier) — décalage d'1 mois + décembre jamais lu + charges affichées
+      // comme "cashflow" (toujours positif, jamais négatif hors-saison). Cf. CLAUDE.md §1ter,
+      // ADR-REVENUE-SUMMARY-002. Fallback (recherche échouée) : ancien cfRow+1, col 3 — au pire
+      // la ligne connue-correcte empiriquement, jamais pire que l'ancien comportement.
+      const chargesTotalRow = findChargesTotalRow_(sheet, HIST_HEADER_KEYWORDS[b.id] || []);
+      const cashflowRow = (chargesTotalRow || b.cfRow) + 1;
+      return {
+        id: b.id,
+        revenus:  getVals(sheet, b.revRow,    3, 12),
+        occ:      getVals(sheet, b.occRow,    3, 12), // valeurs en % (0-100), pas divisées par 100
+        adr:      getVals(sheet, b.adrRow,    3, 12),
+        revpar:   getVals(sheet, b.revparRow, 3, 12),
+        cashflow: getVals(sheet, cashflowRow, 3, 12),
+      };
+    }),
     hist: readHist_(),
     reservations: readReservations_(),
   });
