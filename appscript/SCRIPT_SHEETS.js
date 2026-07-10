@@ -617,12 +617,83 @@ function findHistNightsRow_(sheet, bienId) {
   return null;
 }
 
+// ── Recherche dynamique de la ligne "total" du bloc DÉPENSES (charges) par bien ──
+// Le bloc dépenses est un 5e endroit où le mot-clé bien apparaît (après les blocs
+// revenus/séjours/statistiques) — on restreint la recherche à partir de la ligne
+// CHARGES_MIN_ROW pour ne jamais retomber sur les "TOTAL X" des blocs précédents.
+// Vérifié en live 2026-07-10 : bloc dépenses commence row113/114 sur "revenus locatif
+// 2025" ET "revenus locatif 2026" (contrairement au bloc revenus, ce bloc n'a PAS le
+// décalage "Parking" — sauf la ligne "Muscade Amaryllis", présente sur 2026 seulement,
+// qui décale tout ce qui suit elle sur cet onglet — sans conséquence ici car on
+// cherche chaque bien par mot-clé, jamais par offset fixe). cashflow = total+1 sur
+// TOUS les biens vérifiés (7/7 + T4), les deux années.
+var CHARGES_MIN_ROW = 112;
+function findChargesTotalRow_(sheet, keywords) {
+  if (!keywords || !keywords.length) return null;
+  var lastRow = sheet.getLastRow();
+  if (lastRow < CHARGES_MIN_ROW) return null;
+  var colA = sheet.getRange(1, 1, lastRow, 1).getValues().map(function (r) { return stripDiacritics_(r[0]).toUpperCase(); }); // eslint-disable-line no-undef
+  var colB = sheet.getRange(1, 2, lastRow, 1).getValues().map(function (r) { return stripDiacritics_(r[0]).trim().toUpperCase(); }); // eslint-disable-line no-undef
+  for (var i = CHARGES_MIN_ROW - 1; i < colA.length; i++) {
+    if (!keywords.some(function (k) { return colA[i].indexOf(k) >= 0; })) continue;
+    for (var j = i; j < Math.min(i + 10, colB.length); j++) {
+      if (colB[j].indexOf("TOTAL") === 0) return j + 1; // 1-based
+    }
+  }
+  return null;
+}
+
+// Ligne unique par mot-clé (pas de bloc total/cashflow) — sert pour "Muscade Amaryllis",
+// carry-forward manuel représentant directement le cashflow net mensuel (pas de charges
+// décomposées disponibles pour cette entité, cf. ADR-REVENUE-SUMMARY-002).
+function findRowByKeyword_(sheet, keywords, minRow) {
+  if (!keywords || !keywords.length) return null;
+  var lastRow = sheet.getLastRow();
+  var start = minRow || 1;
+  if (lastRow < start) return null;
+  var colA = sheet.getRange(1, 1, lastRow, 1).getValues().map(function (r) { return stripDiacritics_(r[0]).toUpperCase(); }); // eslint-disable-line no-undef
+  for (var i = start - 1; i < colA.length; i++) {
+    if (keywords.some(function (k) { return colA[i].indexOf(k) >= 0; })) return i + 1;
+  }
+  return null;
+}
+
+// Charges/cashflow des 7 biens + 2 entités patrimoine hors location (Muscade Amaryllis
+// = bail long, T4 Amaryllis = résidence principale de Vincent — ni l'une ni l'autre
+// dans src/data/biens.js, confirmées par Vincent le 2026-07-10). ca=0 pour T4 (résidence
+// perso, jamais louée — 0 connu, pas absent) ; ca absent pour Muscade (non décomposé
+// dans cet onglet). N'utilise PAS BIENS_MAP.cfRow (pointe sur la ligne TOTAL charges,
+// pas cashflow, + désalignement de colonne — bug préexistant de readAll_(), non touché ici).
+function readChargesBlock_(sheet, getVals) {
+  var out = {};
+  BIENS_MAP.forEach(function (b) {
+    var totalRow = findChargesTotalRow_(sheet, HIST_HEADER_KEYWORDS[b.id] || []);
+    out[b.id] = {
+      charges: totalRow ? getVals(totalRow, 3, 12) : null,
+      cashflow: totalRow ? getVals(totalRow + 1, 3, 12) : null,
+    };
+  });
+  var muscadeRow = findRowByKeyword_(sheet, ["MUSCADE"], CHARGES_MIN_ROW);
+  out.muscade = {
+    charges: null,
+    cashflow: muscadeRow ? getVals(muscadeRow, 3, 12) : null,
+  };
+  var t4Row = findChargesTotalRow_(sheet, ["T4 AMARYLLIS"]);
+  out.t4_amaryllis = {
+    charges: t4Row ? getVals(t4Row, 3, 12) : null,
+    cashflow: t4Row ? getVals(t4Row + 1, 3, 12) : null,
+  };
+  return out;
+}
+
 // ── Source pour /api/revenue-summary (locatif → patrimoine-dashboard) ──────
-// CA + nuits par bien par mois, année courante (DST_SHEET, lignes BIENS_MAP déjà
-// fiables — mêmes lignes que readAll_) + année précédente (recherche dynamique,
-// layout différent — cf. ADR-HIST-ROWSEARCH-001, "Parking row" sous Nogent).
-// Aucune écriture. Année déduite de DST_SHEET (pas de la date système) pour rester
-// correct même si l'automation de l'année courante n'a pas encore été migrée.
+// CA + nuits + charges + cashflow par bien par mois, année courante (DST_SHEET, lignes
+// BIENS_MAP déjà fiables pour ca/nuits — mêmes lignes que readAll_) + année précédente
+// (recherche dynamique, layout différent — cf. ADR-HIST-ROWSEARCH-001, "Parking row"
+// sous Nogent). Charges/cashflow en recherche dynamique pour LES DEUX années (pas de
+// mapping fiable équivalent à BIENS_MAP pour ce bloc). Aucune écriture. Année déduite
+// de DST_SHEET (pas de la date système) pour rester correct même si l'automation de
+// l'année courante n'a pas encore été migrée.
 function revenueSummarySource_() {
   var yearMatch = /(\d{4})/.exec(DST_SHEET); // eslint-disable-line no-undef
   var curYear = yearMatch ? parseInt(yearMatch[1], 10) : new Date().getFullYear();
@@ -635,13 +706,18 @@ function revenueSummarySource_() {
       return curSheet.getRange(row, startCol, 1, numCols).getValues()[0]
         .map(function (v) { return typeof v === "number" ? Math.round(v * 100) / 100 : 0; });
     };
+    var curCharges = readChargesBlock_(curSheet, getValsCur);
     var curData = {};
     BIENS_MAP.forEach(function (b) {
       curData[b.id] = {
         ca: getValsCur(b.revRow, 3, 12),
         nuits: getValsCur(b.occRow - 1, 3, 12).map(function (v) { return Math.round(v); }),
+        charges: curCharges[b.id].charges,
+        cashflow: curCharges[b.id].cashflow,
       };
     });
+    curData.muscade = curCharges.muscade;
+    curData.t4_amaryllis = curCharges.t4_amaryllis;
     out.years[curYear] = curData;
   }
 
@@ -651,6 +727,7 @@ function revenueSummarySource_() {
       return prevSheet.getRange(row, startCol, 1, numCols).getValues()[0]
         .map(function (v) { return typeof v === "number" ? Math.round(v * 100) / 100 : 0; });
     };
+    var prevCharges = readChargesBlock_(prevSheet, getValsPrev);
     var prevData = {};
     BIENS_MAP.forEach(function (b) {
       var totalRow = findHistTotalRow_(prevSheet, b.id);
@@ -658,8 +735,12 @@ function revenueSummarySource_() {
       prevData[b.id] = {
         ca: totalRow ? getValsPrev(totalRow, 3, 12) : Array(12).fill(0),
         nuits: nightsRow ? getValsPrev(nightsRow, 3, 12).map(function (v) { return Math.round(v); }) : Array(12).fill(0),
+        charges: prevCharges[b.id].charges,
+        cashflow: prevCharges[b.id].cashflow,
       };
     });
+    prevData.muscade = prevCharges.muscade;
+    prevData.t4_amaryllis = prevCharges.t4_amaryllis;
     out.years[prevYear] = prevData;
   }
 
