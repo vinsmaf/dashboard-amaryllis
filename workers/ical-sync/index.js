@@ -3797,14 +3797,17 @@ export default {
         } catch (e) {
           console.error("[ai-ops] Cron error:", e.message);
         }
-        await runMonitor(env);
-        await runReminders(env, allEvents, allEvents);
-        await runArrivalsDigest(env, allEvents); // RM-16 — récap arrivées de demain à l'hôte
-        await runOccupancyAlerts(env, allAvailEvents);
-        await runOccupancySnapshot(env, allAvailEvents); // persiste l'occupation réelle → rm_kpi_snapshots
-        await runGapPricing(env, allAvailEvents);
-        await runYieldPricing(env, allAvailEvents);
-        await runCautionAutoRelease(env);
+        // Chaque sous-tâche isolée dans son propre try/catch : sans ça, un throw sur l'une
+        // d'elles fait sauter TOUTES les suivantes en silence — y compris runCautionAutoRelease
+        // en fin de chaîne (les cautions ne se libèrent plus) (SEC audit Fable 5 2026-07-09).
+        try { await runMonitor(env); } catch (e) { console.error("[monitor] Cron error:", e.message); }
+        try { await runReminders(env, allEvents, allEvents); } catch (e) { console.error("[reminders] Cron error:", e.message); }
+        try { await runArrivalsDigest(env, allEvents); } catch (e) { console.error("[arrivals-digest] Cron error:", e.message); } // RM-16 — récap arrivées de demain à l'hôte
+        try { await runOccupancyAlerts(env, allAvailEvents); } catch (e) { console.error("[occupancy-alerts] Cron error:", e.message); }
+        try { await runOccupancySnapshot(env, allAvailEvents); } catch (e) { console.error("[occupancy-snapshot] Cron error:", e.message); } // persiste l'occupation réelle → rm_kpi_snapshots
+        try { await runGapPricing(env, allAvailEvents); } catch (e) { console.error("[gap-pricing] Cron error:", e.message); }
+        try { await runYieldPricing(env, allAvailEvents); } catch (e) { console.error("[yield-pricing] Cron error:", e.message); }
+        try { await runCautionAutoRelease(env); } catch (e) { console.error("[caution-auto-release] Cron error:", e.message); }
         // Caution DIFFÉRÉE (résas lointaines) : pose ~2 j avant l'arrivée, re-bloque avant chaque
         // expiration (couvre tout séjour), libère 3 j après le départ — off-session sur la carte
         // enregistrée. Les résas proches (≤3 j) gardent leur caution prise au paiement (inline).

@@ -4,6 +4,12 @@
 // POST {agent,key,value,expires_in_days} → upsert une mémoire
 // DELETE ?agent=X&key=Y   → supprime une mémoire spécifique
 // D1 binding : revenue_manager
+//
+// GET public (lecture). POST/DELETE gated (Bearer admin ou ?secret=POSTSTAY_SECRET) —
+// sinon empoisonnement persistant possible des prompts de tous les agents
+// (SEC audit Fable 5 2026-07-09).
+
+import { verifyBearer } from "./_adminauth.js";
 
 const CORS = {
   "Content-Type": "application/json",
@@ -43,6 +49,12 @@ export async function onRequest(context) {
 
   // ── POST — upsert une mémoire ─────────────────────────────────────────────
   if (method === "POST") {
+    const secretOk = !!env.POSTSTAY_SECRET && url.searchParams.get("secret") === env.POSTSTAY_SECRET;
+    if (!secretOk) {
+      const { ok: adminOk } = await verifyBearer(request, env);
+      if (!adminOk) return json({ error: "Non autorisé" }, 401);
+    }
+
     const body = await request.json().catch(() => ({}));
     const { agent, key, value, expires_in_days } = body;
 
@@ -70,6 +82,12 @@ export async function onRequest(context) {
 
   // ── DELETE — supprime une mémoire spécifique ──────────────────────────────
   if (method === "DELETE") {
+    const secretOk = !!env.POSTSTAY_SECRET && url.searchParams.get("secret") === env.POSTSTAY_SECRET;
+    if (!secretOk) {
+      const { ok: adminOk } = await verifyBearer(request, env);
+      if (!adminOk) return json({ error: "Non autorisé" }, 401);
+    }
+
     const agent = url.searchParams.get("agent");
     const key   = url.searchParams.get("key");
 

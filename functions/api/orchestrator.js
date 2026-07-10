@@ -3,6 +3,12 @@
 // GET  : liste les 20 derniers runs d'orchestration
 // POST : déclenche une orchestration complète
 // D1 binding : revenue_manager
+//
+// GET public (lecture). POST gated (Bearer admin ou ?secret=POSTSTAY_SECRET) — sinon
+// un appel anonyme déclenche un run LLM à chaque fois (DoS par coût trivial,
+// SEC audit Fable 5 2026-07-09).
+
+import { verifyBearer } from "./_adminauth.js";
 
 const CORS = {
   "Content-Type": "application/json",
@@ -74,6 +80,13 @@ export async function onRequest(context) {
 
   // ── POST — déclenche une orchestration ────────────────────────────────────
   if (method === "POST") {
+    const url = new URL(request.url);
+    const secretOk = !!env.POSTSTAY_SECRET && url.searchParams.get("secret") === env.POSTSTAY_SECRET;
+    if (!secretOk) {
+      const { ok: adminOk } = await verifyBearer(request, env);
+      if (!adminOk) return json({ error: "Non autorisé" }, 401);
+    }
+
     const apiKey = env.GROQ_API_KEY;
     if (!apiKey) return json({ error: "GROQ_API_KEY not configured" }, 503);
 

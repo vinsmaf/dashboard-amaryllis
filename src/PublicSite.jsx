@@ -2285,6 +2285,25 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
     trackConversion("tunnel_step2_message_optionnel");
     setPaying(true); setPayError("");
     try {
+      // Re-check dispo juste avant paiement (anti double-résa) — le cache de dispo peut
+      // dater de plusieurs minutes ; sans ça, deux voyageurs peuvent payer les mêmes dates
+      // (pattern déjà utilisé par GroupPaymentModal, SEC audit Fable 5 2026-07-09).
+      try {
+        let bookingUrls = {}; try { bookingUrls = JSON.parse(localStorage.getItem("ical_urls_booking") || "{}"); } catch {}
+        let url = `/api/get-availability?bienId=${bien.id}`;
+        if (bookingUrls[bien.id]) url += `&bookingUrl=${encodeURIComponent(bookingUrls[bien.id])}`;
+        const r = await fetch(url);
+        const d = r.ok ? await r.json() : {};
+        const blocked = d.blockedDates || [];
+        let stillOk = true, cur = checkin;
+        for (let i = 0; i < nights; i++) { if (blocked.includes(cur)) { stillOk = false; break; } cur = addDays(cur, 1); }
+        if (!stillOk) {
+          setPayError("Ce logement vient d'être réservé sur ces dates. Revenez en arrière pour ajuster votre sélection.");
+          setPaying(false);
+          return;
+        }
+      } catch { /* re-check best-effort : une erreur réseau ne doit pas bloquer un paiement légitime */ }
+
       // Résumé des upsells sélectionnés
       const selectedUpsells = getUpsells(bien.id).filter(u => upsells[u.id]);
       const upsellsStr = selectedUpsells.length > 0

@@ -1,6 +1,11 @@
 // Cloudflare Pages Function — GET/POST /api/site-config
 // Proxy bidirectionnel vers Google Apps Script (PropertiesService)
 // Stocke la configuration du site : séjour minimum par bien et par période
+//
+// GET public (lecture, non sensible). POST gated (Bearer admin ou ?secret=POSTSTAY_SECRET) —
+// sinon n'importe qui peut réécrire les prix/séjour minimum publiés (SEC audit Fable 5 2026-07-09).
+
+import { verifyBearer } from "./_adminauth.js";
 
 function json(data) {
   return new Response(JSON.stringify(data), {
@@ -46,6 +51,12 @@ export async function onRequest(context) {
 
     // ── POST : sauvegarde de la config ────────────────────────────
     if (request.method === "POST") {
+      const secretOk = !!env.POSTSTAY_SECRET && new URL(request.url).searchParams.get("secret") === env.POSTSTAY_SECRET;
+      if (!secretOk) {
+        const { ok: adminOk } = await verifyBearer(request, env);
+        if (!adminOk) return json({ ok: false, error: "Non autorisé" });
+      }
+
       const body    = await request.json();
       const key     = body.type === "prices" ? "daily_prices" : body.type === "base_prices" ? "base_prices" : "min_nights_config";
       const cfg     = body.config || {};

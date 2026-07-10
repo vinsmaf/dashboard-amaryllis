@@ -12,6 +12,7 @@
 //   WHATSAPP_TOKEN      — access token permanent Meta
 //   WHATSAPP_PHONE_ID   — Phone Number ID (depuis Meta Business → WhatsApp)
 //   WHATSAPP_VERIFY_TOKEN — chaîne secrète choisie lors de la config webhook Meta
+//   META_APP_SECRET     — vérifie X-Hub-Signature-256 (même app Meta que social-webhook.js)
 //
 // Comportement :
 //   1. Détecte le bien mentionné (amaryllis / zandoli / geko / mabouya / schoelcher / nogent)
@@ -24,6 +25,21 @@ import { callLLM } from "./_llm.js";
 const json = (d, s = 200) => new Response(JSON.stringify(d), {
   status: s, headers: { "Content-Type": "application/json" },
 });
+
+// Vérifie X-Hub-Signature-256 = HMAC-SHA256(body brut, app secret) — même mécanique
+// que social-webhook.js. Sans ça, un payload forgé déclenche une réponse LLM + un
+// message WhatsApp sortant vers n'importe quel numéro, coût non borné (SEC Fable 5 2026-07-09).
+async function verifySignature(rawBody, header, appSecret) {
+  if (!header || !appSecret) return false;
+  const expected = String(header).replace(/^sha256=/, "");
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(appSecret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(rawBody));
+  const hex = Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  if (hex.length !== expected.length) return false;
+  let diff = 0;
+  for (let i = 0; i < hex.length; i++) diff |= hex.charCodeAt(i) ^ expected.charCodeAt(i);
+  return diff === 0;
+}
 
 // ─── 1. Détection du bien ────────────────────────────────────────────────────
 
@@ -293,8 +309,14 @@ export async function onRequestGet(context) {
 
 export async function onRequestPost(context) {
   const { request, env } = context;
+  const raw = await request.text();
+
+  if (!(await verifySignature(raw, request.headers.get("X-Hub-Signature-256"), env.META_APP_SECRET))) {
+    return json({ ok: false, error: "signature invalide" }, 401);
+  }
+
   let body;
-  try { body = await request.json(); }
+  try { body = JSON.parse(raw); }
   catch { return json({ ok: false, error: "body invalide" }, 400); }
 
   // Extraction du message entrant (structure Meta Cloud API)

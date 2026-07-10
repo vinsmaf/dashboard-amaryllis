@@ -1,5 +1,7 @@
 // Cloudflare Pages Function — POST /api/create-payment-intent
 
+import { lowAmountInfo } from "../../src/utils/priceGuard.js";
+
 // Enregistre un "panier" en D1 dès la création du PaymentIntent.
 // Sert à la relance panier abandonné (cron send-relance-panier) si le paiement
 // n'aboutit pas. Fail-silent : ne bloque jamais la création du PaymentIntent.
@@ -47,6 +49,24 @@ export async function onRequestPost(context) {
   if (!amount || amount < 50) return json({ error: "Montant invalide" }, 400);
   if (amount > 500000)
     return json({ error: "Montant hors limites" }, 400);
+
+  // Blocage préventif (pas seulement l'alerte post-paiement de priceGuard.js) : le montant
+  // vient du client, rien ne l'empêchait d'être altéré avant l'envoi. Même seuil que l'alerte
+  // existante (stripe-webhook.js) pour rester cohérent — accepté avec Vincent : risque de
+  // faux positif sur une TRÈS grosse promo manuelle, préféré à laisser passer une fraude
+  // (SEC audit Fable 5 2026-07-09).
+  const lowAmt = lowAmountInfo({
+    bienId: metadata.bienId, checkin: metadata.checkin, checkout: metadata.checkout,
+    amountEur: amount / 100, payPlan,
+  });
+  if (lowAmt.low) {
+    console.error(JSON.stringify({
+      level: "warning", fn: "create-payment-intent", msg: "montant bloqué (anormalement bas)",
+      bienId: metadata.bienId, checkin: metadata.checkin, checkout: metadata.checkout,
+      amountEur: amount / 100, refEur: lowAmt.refEur, ts: new Date().toISOString(),
+    }));
+    return json({ error: "Montant incohérent pour ce séjour — contactez-nous si vous pensez qu'il s'agit d'une erreur." }, 400);
+  }
 
   // Enregistrement de la carte (off-session) pour TOUTES les résas directes munies d'un email :
   // c'est ce qui permet de poser la CAUTION automatiquement avant l'arrivée (caution-cron) ET de
