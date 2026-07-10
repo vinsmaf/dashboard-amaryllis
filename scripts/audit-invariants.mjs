@@ -91,6 +91,59 @@ const add = (dim, status, evidence) => checks.push({ dim, status, evidence });
       : `${files.length} fichiers, toutes les routes référencées dans CLAUDE.md`);
 }
 
+// ── INV8 — tout endpoint d'écriture doit être authentifié (SEC audit Fable 5 2026-07-09, Lot 5)
+// Tout functions/api/*.js exposant POST/PUT/PATCH/DELETE doit référencer verifyBearer OU une
+// variable *_SECRET. Exceptions explicites : webhooks signés (vérif de signature, pas de Bearer)
+// et endpoints publics volontairement ouverts mais rate-limités.
+{
+  const EXCEPTIONS = new Set([
+    "functions/api/beds24-webhook.js",
+    "functions/api/stripe-webhook.js",
+    "functions/api/airbnb-email-import.js",
+    "functions/api/social-webhook.js",
+    "functions/api/contact.js",
+    "functions/api/chat.js",
+    "functions/api/sign-contract.js",
+    "functions/api/service-checkout.js",
+    "functions/api/newsletter-subscribe.js",
+    "functions/api/newsletter-confirm.js",
+    "functions/api/newsletter-unsubscribe.js",
+    "functions/api/client-errors.js",
+    "functions/api/reclamations.js",
+    "functions/api/create-payment-intent.js",
+    "functions/api/create-deposit-intent.js",
+    "functions/api/caution-checkout.js",
+    "functions/api/complement-checkout.js",
+    // Vague B (ERREURS-LOG.md 2026-06-01) : publics par design, protégés par rate-limit
+    // SEUL (jamais d'auth admin) — choix de sécurité déjà validé, pas un manque.
+    "functions/api/admin-auth.js",   // émet le token lui-même, ne peut pas en exiger un
+    "functions/api/ai-summary.js",
+    "functions/api/beds24-create.js",
+    "functions/api/beds24-manage.js",
+  ]);
+  const files = [];
+  const walk = (dir) => {
+    let entries;
+    try { entries = readdirSync(`${ROOT}/${dir}`, { withFileTypes: true }); } catch { return; }
+    for (const e of entries) {
+      const p = `${dir}/${e.name}`;
+      if (e.isDirectory()) walk(p);
+      else if (e.name.endsWith(".js") && !e.name.endsWith(".test.js")) files.push(p);
+    }
+  };
+  walk("functions/api");
+  const WRITE_METHOD = /onRequestPost|onRequestPut|onRequestPatch|onRequestDelete|method\s*===\s*["'](POST|PUT|PATCH|DELETE)["']/;
+  const PROTECTED = /verifyBearer|[A-Z][A-Z0-9_]*_(SECRET|TOKEN)\b/;
+  const offenders = files.filter((f) => {
+    if (EXCEPTIONS.has(f)) return false;
+    const src = read(f) || "";
+    return WRITE_METHOD.test(src) && !PROTECTED.test(src);
+  });
+  add("INV8 auth sur endpoints d'écriture", offenders.length ? "FAIL" : "PASS",
+    offenders.length ? `${offenders.length} endpoint(s) d'écriture sans verifyBearer/*_SECRET : ${offenders.slice(0, 8).join(", ")}${offenders.length > 8 ? "…" : ""}`
+      : `${files.length} fichiers scannés, tous les endpoints d'écriture sont protégés ou explicitement whitelistés (${EXCEPTIONS.size} exceptions)`);
+}
+
 // ── Verdict global = pire dimension
 const rank = { PASS: 0, RISK: 1, FAIL: 2 };
 const worst = checks.reduce((w, c) => (rank[c.status] > rank[w] ? c.status : w), "PASS");

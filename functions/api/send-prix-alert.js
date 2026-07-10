@@ -1,13 +1,19 @@
 import { resendFrom } from "./_email.js";
+import { verifyBearer } from "./_adminauth.js";
+import { sanitizeHtml } from "../../src/utils/sanitizeHtml.js";
 // Cloudflare Pages Function — POST /api/send-prix-alert
 // Envoie un email + push ntfy quand des prix sont sous le seuil minimum
-// Appelé depuis CalendrierTarifs (App.jsx) via useEffect
+// Appelé depuis CalendrierTarifs.jsx via useEffect
+//
+// Gate auth (SEC audit Fable 5 2026-07-09, Lot 5) : endpoint sans aucune protection
+// jusqu'ici — n'importe qui pouvait POST un bienId/bienNom arbitraire, déclenchant un
+// email + push ntfy vers Vincent avec du contenu non fiable, non échappé dans le HTML.
 
 const CORS = {
   "Content-Type": "application/json",
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "Content-Type,Authorization",
 };
 const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: CORS });
 
@@ -28,6 +34,12 @@ export async function onRequestOptions() {
 export async function onRequestPost(context) {
   const { request, env } = context;
 
+  const secretOk = !!env.POSTSTAY_SECRET && new URL(request.url).searchParams.get("secret") === env.POSTSTAY_SECRET;
+  if (!secretOk) {
+    const { ok: adminOk } = await verifyBearer(request, env);
+    if (!adminOk) return json({ error: "Non autorisé" }, 401);
+  }
+
   let body;
   try { body = await request.json(); } catch { return json({ error: "JSON invalide" }, 400); }
 
@@ -36,7 +48,7 @@ export async function onRequestPost(context) {
     return json({ error: "bienId, dates, minPrice requis" }, 400);
   }
 
-  const bienNom = BIEN_LABELS[bienId] || bienId;
+  const bienNom = sanitizeHtml(BIEN_LABELS[bienId] || bienId);
   const dateList = dates
     .sort((a, b) => a.date.localeCompare(b.date))
     .map(({ date, price }) => {
@@ -109,7 +121,7 @@ async function sendEmail(env, bienNom, dates, minPrice, year) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: resendFrom(context.env),
+        from: resendFrom(env),
         to: dest.split(",").map(s => s.trim()).filter(Boolean),
         subject: `⚠️ ${dates.length} prix sous seuil — ${bienNom}`,
         html,
