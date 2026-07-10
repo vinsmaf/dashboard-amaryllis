@@ -107,6 +107,7 @@ All server-side logic lives in `functions/api/` (Cloudflare Pages Functions form
 | Endpoint | Méthode | File | Purpose |
 |---|---|---|---|
 | `/api/sheets-proxy` | POST | `sheets-proxy.js` | Proxy vers Google Apps Script — contourne CORS + bug redirect POST d'Apps Script (tableaux envoyés en GET paginé). Header optionnel `X-Script-Url` pour URL dynamique. |
+| `/api/revenue-summary` | GET | `revenue-summary.js` | Endpoint stable/versionné `{version,generated_at,months[],ytd}` — CA/nuits/occupation par bien par mois (12 derniers mois + YTD), pour consommation externe (patrimoine-dashboard, tue le scraping interne). Source : action Apps Script `revenueSummarySource` (`SCRIPT_SHEETS.js` — `BIENS_MAP` pour l'année courante, `findHistTotalRow_`/`findHistNightsRow_` pour l'année précédente). Agrégation pure : `src/utils/revenueSummary.js`. Cache CDN 1h. Auth `?secret=POSTSTAY_SECRET` ou Bearer admin. |
 | `/api/site-config` | GET/POST | `site-config.js` | Proxy bidirectionnel vers Apps Script (PropertiesService) — lit/écrit la config du site (séjour minimum par bien et par période). |
 | `/api/analytics` | GET | `analytics.js` | Proxy vers Google Analytics Data API v1beta (GA4) — retourne 4 rapports en parallèle (overview, pages, pays, sources, devices) sur 30 jours. Auth Service Account. Cache CDN `s-maxage=60` (arch-011, était 5min) + `stale-while-revalidate=300`. |
 | `/api/google-reviews` | GET | `google-reviews.js` | Proxy sécurisé vers Google Places API v1 — récupère les avis Google pour Amaryllis ou Résidence. Param : `place=amaryllis\|residence`. |

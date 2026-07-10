@@ -341,6 +341,7 @@ function doGet(e) {
   if (action === "enrichReservation")  return enrichReservation_(e.parameter);
   if (action === "revenus2026FromMonth") return json_(revenus2026FromMonth_(parseInt(e.parameter.month||7), e.parameter.apply==="true", e.parameter.ignoreMemo==="true"));
   if (action === "revenus2026Inspect")   return json_(revenusInspect2026_()); // eslint-disable-line no-undef
+  if (action === "sheetInspect")         return json_(sheetInspectAny_(e.parameter.sheet, e.parameter.rows)); // eslint-disable-line no-undef
   if (action === "revenus2026Rebuild")   return json_(rebuildRevenus2026_(e.parameter.apply==="true", parseInt(e.parameter.fromMonth, 10))); // eslint-disable-line no-undef
   if (action === "cleanSlate2026")       return json_(cleanSlate2026_()); // eslint-disable-line no-undef
   if (action === "fixMontantsAberrants") return json_(fixMontantsAberrants_(parseInt(e.parameter.cap || 50000, 10)));
@@ -391,6 +392,8 @@ function doPost(e) {
   if (action === "revenus2026RebuildBienApply") return json_(rebuildRevenus2026_(true,  parseInt(body.fromMonth, 10), body.bien || "schoelcher"));
   if (action === "revenus2026ManualPatch")      return json_(revenus2026ManualPatch_(body)); // eslint-disable-line no-undef
   if (action === "revenus2026Inspect")    return json_(revenusInspect2026_());            // eslint-disable-line no-undef
+  if (action === "sheetInspect")          return json_(sheetInspectAny_(body.sheet, body.rows)); // eslint-disable-line no-undef
+  if (action === "revenueSummarySource")  return json_(revenueSummarySource_());
   if (action === "revenus2026Rebuild")    return json_(rebuildRevenus2026_(!!body.apply, body.fromMonth)); // eslint-disable-line no-undef
   if (action === "revenus2027RebuildBienApply") return json_(rebuildRevenus2027_(true, parseInt(body.fromMonth, 10) || 1));
   if (action === "revenus2027DryRun")     return json_({ ok: true, preview: testRevenus2027_dryRun() });
@@ -589,6 +592,78 @@ function findHistTotalRow_(sheet, bienId) {
     }
   }
   return null;
+}
+
+// ── Recherche dynamique de la ligne "jours occupés" (nuits réelles) par bien ──
+// Même stratégie que findHistTotalRow_, mais le nom du bien apparaît PLUSIEURS
+// fois sur la feuille (bloc revenus, bloc séjours, bloc statistiques) — on essaie
+// CHAQUE occurrence du mot-clé et on garde la 1ère où "jours occup*" apparaît dans
+// les 8 lignes suivantes (bloc stats confirmé = 6 lignes : dispos/occupés/taux/
+// ADR/RevPAR/Alos, vérifié en live sur "revenus locatif 2025" le 2026-07-10).
+function findHistNightsRow_(sheet, bienId) {
+  const keywords = HIST_HEADER_KEYWORDS[bienId] || [];
+  if (!keywords.length) return null;
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return null;
+  const colA = sheet.getRange(1, 1, lastRow, 1).getValues().map(r => stripDiacritics_(r[0]).toUpperCase());
+  const colB = sheet.getRange(1, 2, lastRow, 1).getValues().map(r => stripDiacritics_(r[0]).trim().toUpperCase());
+
+  for (let i = 0; i < colA.length; i++) {
+    if (!keywords.some(k => colA[i].includes(k))) continue;
+    for (let j = i; j < Math.min(i + 8, colB.length); j++) {
+      if (colB[j].indexOf("JOURS OCCUP") >= 0) return j + 1; // 1-based pour getRange
+    }
+  }
+  return null;
+}
+
+// ── Source pour /api/revenue-summary (locatif → patrimoine-dashboard) ──────
+// CA + nuits par bien par mois, année courante (DST_SHEET, lignes BIENS_MAP déjà
+// fiables — mêmes lignes que readAll_) + année précédente (recherche dynamique,
+// layout différent — cf. ADR-HIST-ROWSEARCH-001, "Parking row" sous Nogent).
+// Aucune écriture. Année déduite de DST_SHEET (pas de la date système) pour rester
+// correct même si l'automation de l'année courante n'a pas encore été migrée.
+function revenueSummarySource_() {
+  var yearMatch = /(\d{4})/.exec(DST_SHEET); // eslint-disable-line no-undef
+  var curYear = yearMatch ? parseInt(yearMatch[1], 10) : new Date().getFullYear();
+  var prevYear = curYear - 1;
+  var out = { ok: true, years: {} };
+
+  var curSheet = getSheet_(DST_SHEET); // eslint-disable-line no-undef
+  if (curSheet) {
+    var getValsCur = function (row, startCol, numCols) {
+      return curSheet.getRange(row, startCol, 1, numCols).getValues()[0]
+        .map(function (v) { return typeof v === "number" ? Math.round(v * 100) / 100 : 0; });
+    };
+    var curData = {};
+    BIENS_MAP.forEach(function (b) {
+      curData[b.id] = {
+        ca: getValsCur(b.revRow, 3, 12),
+        nuits: getValsCur(b.occRow - 1, 3, 12).map(function (v) { return Math.round(v); }),
+      };
+    });
+    out.years[curYear] = curData;
+  }
+
+  var prevSheet = getSheet_("revenus locatif " + prevYear);
+  if (prevSheet) {
+    var getValsPrev = function (row, startCol, numCols) {
+      return prevSheet.getRange(row, startCol, 1, numCols).getValues()[0]
+        .map(function (v) { return typeof v === "number" ? Math.round(v * 100) / 100 : 0; });
+    };
+    var prevData = {};
+    BIENS_MAP.forEach(function (b) {
+      var totalRow = findHistTotalRow_(prevSheet, b.id);
+      var nightsRow = findHistNightsRow_(prevSheet, b.id);
+      prevData[b.id] = {
+        ca: totalRow ? getValsPrev(totalRow, 3, 12) : Array(12).fill(0),
+        nuits: nightsRow ? getValsPrev(nightsRow, 3, 12).map(function (v) { return Math.round(v); }) : Array(12).fill(0),
+      };
+    });
+    out.years[prevYear] = prevData;
+  }
+
+  return out;
 }
 
 function readHist_() {

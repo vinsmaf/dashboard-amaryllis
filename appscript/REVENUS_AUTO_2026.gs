@@ -417,6 +417,36 @@ function revenus2026Undo_(idsCsv) {
   return { ok: true, undone: done };
 }
 
+// ── Inspection read-only GÉNÉRIQUE : structure des lignes (formule vs valeur) sur
+//   N'IMPORTE QUEL onglet (ex. "revenus locatif 2025"). Aucune écriture. Sert à vérifier
+//   si un onglet historique a la même disposition de lignes que "revenus locatif 2026"
+//   (colonnes canaux/total/counts/nuits/occ/adr/revpar) AVANT d'écrire la moindre logique
+//   qui en dépendrait — les onglets historiques ont déjà eu un décalage de lignes documenté
+//   (ligne "Parking" sous Nogent, cf. .memory/BLOCKERS.md 2026-07-08), donc ne jamais
+//   supposer que des numéros de ligne se transposent tels quels d'un onglet à l'autre.
+function sheetInspectAny_(sheetName, rowsCsv) {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sh = ss.getSheetByName(sheetName); if (!sh) return { ok:false, error:"onglet introuvable: " + sheetName };
+  var probe = String(rowsCsv || "1-20").split(",").reduce(function(acc, part) {
+    var m = part.match(/^(\d+)-(\d+)$/);
+    if (m) { for (var i = parseInt(m[1],10); i <= parseInt(m[2],10); i++) acc.push(i); }
+    else if (/^\d+$/.test(part)) acc.push(parseInt(part, 10));
+    return acc;
+  }, []);
+  var lastCol = Math.min(sh.getLastColumn() || 14, 14);
+  var out = [];
+  probe.forEach(function(r){
+    if (r < 1 || r > sh.getLastRow()) return;
+    var vals = sh.getRange(r,1,1,lastCol).getValues()[0];
+    var fmls = sh.getRange(r,1,1,lastCol).getFormulas()[0];
+    out.push({ row:r, colA:String(vals[0]).slice(0,32), colB:String(vals[1]).slice(0,32),
+      mai: fmls[6] ? fmls[6] : vals[6],
+      jui: fmls[7] ? fmls[7] : vals[7],
+      isFormula: !!(fmls[6] || fmls[7]) });
+  });
+  return { ok:true, sheet:sheetName, lastRow:sh.getLastRow(), rows:out };
+}
+
 // ── Inspection read-only : structure des lignes (formule vs valeur) avant rebuild ──
 //   probe = lignes data (canaux/counts/nuits) + lignes dérivées (total/occ/adr) pour
 //   Nogent. Sert à confirmer que les lignes data sont des VALEURS et les dérivées des
