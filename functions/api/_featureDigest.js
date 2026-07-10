@@ -3,7 +3,7 @@
 // sans accès repo live (impossible depuis un Worker) ni appel API externe (pas de nouveau secret).
 // Régénérer manuellement (node scripts/generate-feature-digest.mjs) quand le digest semble périmé —
 // un oubli dégrade juste la fraîcheur du signal, ne casse jamais le build (fichier committé).
-// Dernière génération : 2026-07-08
+// Dernière génération : 2026-07-10
 
 export const ENDPOINTS_DIGEST = [
   "/api/admin-auth (admin-auth.js) — Vérifie le mot de passe admin côté serveur (jamais exposé dans le bundle JS).",
@@ -63,7 +63,6 @@ export const ENDPOINTS_DIGEST = [
   "/api/llm-ping (llm-ping.js) — Health-check des fournisseurs LLM (Groq / Cloudflare AI / Mistral / Cerebras).",
   "/api/manage-deposit (manage-deposit.js) — action: \"capture\" | \"cancel\" | \"list\" | \"history\"",
   "/api/memory-distill (memory-distill.js) — Agent-mémoire (B2) : distille l'expérience du réseau (notes qualité llm_evals 7j +",
-  "/api/notify-booking (notify-booking.js) — Alerte fiable de NOUVELLE RÉSERVATION DIRECTE, déclenchée côté client juste",
   "/api/occupancy-stats (occupancy-stats.js) — Occupation réelle 30 jours glissants, un chiffre par bien actif.",
   "/api/orchestrator (orchestrator.js) — Orchestrateur multi-agents : utilise claude-sonnet pour coordonner les 28 agents",
   "/api/qa-run (qa-run.js) — Trigger manuel d'une session QA.",
