@@ -14,7 +14,7 @@ let _limitsCache = null;
 async function fetchPrixLimits() {
   if (_limitsCache) return _limitsCache;
   try {
-    const token = sessionStorage.getItem("admin_token") || localStorage.getItem("admin_token");
+    const token = sessionStorage.getItem("ldb_tok") || "";
     const r = await fetch("/api/rm-properties", { headers: token ? { Authorization: `Bearer ${token}` } : {} });
     if (!r.ok) return null;
     const data = await r.json();
@@ -92,7 +92,7 @@ export default function CalendrierTarifs({ reservations = [] }) {
   const getLimits = (id) => prixLimits[id] || PRIX_LIMITS[id] || [25, 900];
 
   async function saveLimits() {
-    const token = sessionStorage.getItem("admin_token") || localStorage.getItem("admin_token");
+    const token = sessionStorage.getItem("ldb_tok") || "";
     if (!token) return;
     setLimitsSaving(true);
     const updates = Object.entries(limitsEdit).filter(([, v]) => v.dirty);
@@ -400,9 +400,10 @@ export default function CalendrierTarifs({ reservations = [] }) {
     ntfyAlertSentRef.current = true;
     const [pMin] = getLimits(bienId);
     // Appel serveur : email Resend + push ntfy (via NTFY_TOPIC secret)
+    const alertToken = sessionStorage.getItem("ldb_tok") || "";
     fetch("/api/send-prix-alert", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(alertToken ? { Authorization: `Bearer ${alertToken}` } : {}) },
       body: JSON.stringify({ bienId, dates: belowMinDates, minPrice: pMin, year: calYear }),
     }).catch(() => {});
     // Push direct depuis le navigateur si topic configuré localement
