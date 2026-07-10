@@ -3737,6 +3737,9 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
   const { t, lang } = useLang();
   const [photoIdx, setPhotoIdx] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [zoomScale, setZoomScale] = useState(1);
+  const [zoomPan, setZoomPan] = useState({ x: 0, y: 0 });
+  const [zoomInteracting, setZoomInteracting] = useState(false); // désactive la transition CSS pendant pinch/pan actif
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [calCheckin, setCalCheckin] = useState(initialCheckin || null);
   const [calCheckout, setCalCheckout] = useState(initialCheckout || null);
@@ -3856,12 +3859,91 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
     } catch { return null; }
   }, [bien.id, blockedDates, loadingAvail]);
 
-  function onDetailTouchStart(e) { touchStartXDetail.current = e.touches[0].clientX; }
+  function onDetailTouchStart(e) {
+    if (zoomScale > 1 || e.touches.length > 1) return; // zoom/pinch géré par onImgTouch*
+    touchStartXDetail.current = e.touches[0].clientX;
+  }
   function onDetailTouchEnd(e) {
-    if (touchStartXDetail.current === null) return;
+    if (zoomScale > 1 || touchStartXDetail.current === null) return;
     const dx = e.changedTouches[0].clientX - touchStartXDetail.current;
     if (Math.abs(dx) > 40) { dx < 0 ? goNext() : goPrev(); }
     touchStartXDetail.current = null;
+  }
+
+  // ── Zoom lightbox : pinch (mobile) / molette+double-clic (desktop) / drag pour déplacer une fois zoomé.
+  // Zoom toujours depuis le centre (pas d'ancrage précis au point de pincement — simplification volontaire),
+  // le pan permet ensuite d'aller inspecter n'importe quel coin. Réinitialisé à chaque changement de photo.
+  const pinchStartRef = useRef(null); // { dist, scale }
+  const panDragRef = useRef(null);    // { x, y } — dernière position pointeur pendant un pan
+  const zoomDist = (t) => Math.hypot(t[1].clientX - t[0].clientX, t[1].clientY - t[0].clientY);
+  const clampZoom = (s) => Math.min(4, Math.max(1, s));
+
+  useEffect(() => { setZoomScale(1); setZoomPan({ x: 0, y: 0 }); }, [photoIdx, lightboxOpen]);
+
+  function resetZoom() { setZoomScale(1); setZoomPan({ x: 0, y: 0 }); }
+
+  function onImgTouchStart(e) {
+    if (e.touches.length === 2) {
+      e.stopPropagation();
+      // Le 1er doigt d'un pinch a pu démarrer un swipe (onDetailTouchStart) avant l'arrivée du
+      // 2e — l'invalider ici évite qu'un pinch avorté (retour à scale=1) ne se termine par une
+      // navigation accidentelle basée sur la position du 1er doigt (touchStartXDetail périmé).
+      touchStartXDetail.current = null;
+      pinchStartRef.current = { dist: zoomDist(e.touches), scale: zoomScale };
+      setZoomInteracting(true);
+    } else if (e.touches.length === 1 && zoomScale > 1) {
+      e.stopPropagation();
+      panDragRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      setZoomInteracting(true);
+    }
+  }
+  function onImgTouchMove(e) {
+    if (e.touches.length === 2 && pinchStartRef.current) {
+      e.preventDefault(); e.stopPropagation();
+      setZoomScale(clampZoom(pinchStartRef.current.scale * (zoomDist(e.touches) / pinchStartRef.current.dist)));
+    } else if (e.touches.length === 1 && panDragRef.current) {
+      e.preventDefault(); e.stopPropagation();
+      const dx = e.touches[0].clientX - panDragRef.current.x;
+      const dy = e.touches[0].clientY - panDragRef.current.y;
+      setZoomPan(p => ({ x: p.x + dx / zoomScale, y: p.y + dy / zoomScale }));
+      panDragRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+  }
+  function onImgTouchEnd(e) {
+    if (pinchStartRef.current || panDragRef.current) e.stopPropagation();
+    pinchStartRef.current = null;
+    panDragRef.current = null;
+    setZoomInteracting(false);
+    if (zoomScale < 1.05) resetZoom();
+  }
+  function onImgWheel(e) {
+    e.preventDefault(); e.stopPropagation();
+    const next = clampZoom(zoomScale - e.deltaY * 0.0015 * zoomScale);
+    if (next < 1.05) resetZoom(); else setZoomScale(next);
+  }
+  function onImgDoubleClick(e) {
+    e.stopPropagation();
+    zoomScale > 1 ? resetZoom() : setZoomScale(2.5);
+  }
+  function onImgMouseDown(e) {
+    if (zoomScale <= 1) return;
+    e.stopPropagation();
+    panDragRef.current = { x: e.clientX, y: e.clientY };
+    setZoomInteracting(true);
+    const onMove = (ev) => {
+      const dx = ev.clientX - panDragRef.current.x;
+      const dy = ev.clientY - panDragRef.current.y;
+      setZoomPan(p => ({ x: p.x + dx / zoomScale, y: p.y + dy / zoomScale }));
+      panDragRef.current = { x: ev.clientX, y: ev.clientY };
+    };
+    const onUp = () => {
+      panDragRef.current = null;
+      setZoomInteracting(false);
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
   }
 
   // Prix journaliers — réactifs (se mettent à jour si l'admin sync les prix)
@@ -4028,9 +4110,20 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
               src={photos[photoIdx]}
               alt={`${bien.nom} — ${bien.lieu} — photo ${photoIdx + 1}`}
               onClick={e => e.stopPropagation()}
+              onDoubleClick={onImgDoubleClick}
+              onWheel={onImgWheel}
+              onMouseDown={onImgMouseDown}
+              onTouchStart={onImgTouchStart}
+              onTouchMove={onImgTouchMove}
+              onTouchEnd={onImgTouchEnd}
               style={{
                 maxWidth: "100%", maxHeight: "100%", objectFit: "contain", display: "block", userSelect: "none",
-                animation: "lb-fadein 0.22s ease",
+                animation: zoomScale === 1 ? "lb-fadein 0.22s ease" : "none",
+                transform: `scale(${zoomScale}) translate(${zoomPan.x}px, ${zoomPan.y}px)`,
+                transformOrigin: "center center",
+                transition: zoomInteracting ? "none" : "transform 0.15s ease-out",
+                cursor: zoomScale > 1 ? "grab" : "zoom-in",
+                touchAction: zoomScale > 1 ? "none" : "pan-y",
               }}
             />
           )}
@@ -4046,6 +4139,20 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
               display: "flex", alignItems: "center", justifyContent: "center",
             }}
           >✕</button>
+          {/* Reset zoom (visible seulement si zoomé) */}
+          {zoomScale > 1 && (
+            <button
+              aria-label="Réinitialiser le zoom"
+              onClick={e => { e.stopPropagation(); resetZoom(); }}
+              style={{
+                position: "absolute", top: 18, right: 74,
+                background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.3)",
+                color: "#fff", width: 44, height: 44, borderRadius: "50%",
+                cursor: "pointer", fontSize: 16,
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}
+            >↺</button>
+          )}
           {/* Counter */}
           <div style={{
             position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)",
