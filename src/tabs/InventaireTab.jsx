@@ -33,6 +33,10 @@ const STATUS_LABELS = {
 // Nogent (géré par conciergerie externe) est exclu du système.
 const VIRTUAL_GENERAL = { id: "_general", emoji: "🏬", nom: "Stock général MQ" };
 
+function adminToken() {
+  return sessionStorage.getItem("ldb_tok") || localStorage.getItem("admin_token") || "";
+}
+
 export default function InventaireTab() {
   const { biens = [] } = useAppData();
   const [bienId, setBienId] = useState("_general");
@@ -67,7 +71,7 @@ export default function InventaireTab() {
     if (!confirm("Initialiser la base inventaire avec items par défaut (linge, hygiène, cuisine, entretien) sur les 7 biens ?")) return;
     setSeeding(true);
     try {
-      const r = await fetch(`/api/inventory?action=init`, { method: "POST" });
+      const r = await fetch(`/api/inventory?action=init`, { method: "POST", headers: { Authorization: `Bearer ${adminToken()}` } });
       const d = await r.json();
       if (d.error) alert("Erreur : " + d.error);
       else alert(d.alreadySeeded ? `Tables déjà initialisées (${d.existingItems} items existants)` : `✓ ${d.inserted} items créés sur 7 biens`);
@@ -79,7 +83,7 @@ export default function InventaireTab() {
   const recordMovement = async (item, delta, reason) => {
     const r = await fetch(`/api/inventory?action=movement&id=${item.id}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken()}` },
       body: JSON.stringify({ delta, reason }),
     });
     const d = await r.json();
@@ -95,7 +99,7 @@ export default function InventaireTab() {
 
   const deleteItem = async (item) => {
     if (!confirm(`Supprimer "${item.item_name}" ?`)) return;
-    await fetch(`/api/inventory?id=${item.id}`, { method: "DELETE" });
+    await fetch(`/api/inventory?id=${item.id}`, { method: "DELETE", headers: { Authorization: `Bearer ${adminToken()}` } });
     loadItems();
   };
 
@@ -328,7 +332,7 @@ function CreateItemForm({ bienId, onCreated }) {
     if (!form.item_name) return alert("Nom requis");
     const r = await fetch("/api/inventory", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken()}` },
       body: JSON.stringify({ ...form, bien_id: bienId, qty_current: parseInt(form.qty_current), qty_min: parseInt(form.qty_min), qty_max: parseInt(form.qty_max) }),
     });
     const d = await r.json();

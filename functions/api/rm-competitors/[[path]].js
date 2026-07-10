@@ -1,5 +1,9 @@
 // Cloudflare Pages Function — /api/rm-competitors
 // Competitor management, snapshots, and market signal recalculation
+//
+// Écriture (POST/PUT/PATCH/DELETE) gated : Bearer admin OU ?secret=POSTSTAY_SECRET
+// (SEC audit Fable 5 2026-07-09, Lot 1 — était totalement public). GET reste ouvert.
+import { verifyBearer } from "../_adminauth.js";
 
 const CORS = {
   "Content-Type": "application/json",
@@ -508,6 +512,14 @@ export async function onRequest(context) {
 
   const db = env.revenue_manager;
   if (!db) return json({ error: "D1 binding 'revenue_manager' not found" }, 503);
+
+  if (request.method !== "GET") {
+    const secretOk = !!env.POSTSTAY_SECRET && new URL(request.url).searchParams.get("secret") === env.POSTSTAY_SECRET;
+    if (!secretOk) {
+      const { ok: adminOk } = await verifyBearer(request, env);
+      if (!adminOk) return json({ error: "Non autorisé" }, 401);
+    }
+  }
 
   const url = new URL(request.url);
   const path = url.pathname;

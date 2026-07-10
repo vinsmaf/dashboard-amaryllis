@@ -30,7 +30,7 @@ export async function onRequest(context) {
     try {
       const res = await fetch(`${base}/api/rm-recommendations/calculate`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Authorization": adminBearer },
         body: JSON.stringify({ property_id, from: today, to: to30 }),
       });
       const data = await res.json().catch(() => ({}));

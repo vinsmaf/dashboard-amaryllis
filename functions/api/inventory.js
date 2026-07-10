@@ -16,7 +16,12 @@
  *   PATCH ?id=N                 — update qty/min/max/notes
  *   POST  ?action=movement&id=N — body: {delta, reason, notes?} enregistre mouvement
  *   DELETE ?id=N                — supprime item
+ *
+ * Écriture (POST/PATCH/DELETE) gated : Bearer admin OU ?secret=POSTSTAY_SECRET
+ * (SEC audit Fable 5 2026-07-09, Lot 1 — était totalement public). GET reste ouvert.
  */
+
+import { verifyBearer } from "./_adminauth.js";
 
 const CORS = {
   "Content-Type": "application/json",
@@ -181,6 +186,14 @@ export async function onRequest({ request, env }) {
   const method = request.method;
 
   if (method === "OPTIONS") return new Response(null, { headers: CORS });
+
+  if (method !== "GET") {
+    const secretOk = !!env.POSTSTAY_SECRET && url.searchParams.get("secret") === env.POSTSTAY_SECRET;
+    if (!secretOk) {
+      const { ok: adminOk } = await verifyBearer(request, env);
+      if (!adminOk) return json({ error: "Non autorisé" }, 401);
+    }
+  }
 
   // ── INIT — créer tables + seed par défaut ──────────────────────────────
   if (method === "POST" && action === "init") {
