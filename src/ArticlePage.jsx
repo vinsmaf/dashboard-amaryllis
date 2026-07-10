@@ -4,6 +4,7 @@ import NewsletterForm from "./NewsletterForm.jsx";
 import EncartActivite from "./components/EncartActivite.jsx";
 import LienAffilie from "./components/LienAffilie.jsx";
 import { ACTIVITES } from "./data/activites.js";
+import { sanitizeHtml } from "./utils/sanitizeHtml.js";
 
 const NAVY  = "#0e3b3a";
 const CORAL = "#c47254";
@@ -330,7 +331,7 @@ export default function ArticlePage() {
       <div style={{ maxWidth: 780, margin: "0 auto", padding: "40px 20px 20px" }}>
         <div
           className="article-content"
-          dangerouslySetInnerHTML={{ __html: autolink(article.content_html) }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(autolink(article.content_html)) }}
         />
       </div>
 
