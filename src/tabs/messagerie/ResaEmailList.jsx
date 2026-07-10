@@ -20,7 +20,7 @@ export default function ResaEmailList({ bookingId, email }) {
 
   useEffect(() => {
     if (!bookingId && !email) { setLoading(false); return; }
-    const token = sessionStorage.getItem("ldb_tok") || localStorage.getItem("admin_token") || "";
+    const token = sessionStorage.getItem("ldb_tok") || "";
     const query = bookingId
       ? `booking_id=${encodeURIComponent(bookingId)}`
       : `to=${encodeURIComponent(email)}`;

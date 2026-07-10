@@ -8,7 +8,7 @@ import { useAppData } from "../AppDataContext.jsx";
 import { PRESTATAIRES_KEY } from "../App.jsx";
 
 function adminToken() {
-  return sessionStorage.getItem("ldb_tok") || localStorage.getItem("admin_token") || "";
+  return sessionStorage.getItem("ldb_tok") || "";
 }
 
 /** Résout l'email d'un prestataire depuis l'annuaire localStorage (Prestataires.jsx),

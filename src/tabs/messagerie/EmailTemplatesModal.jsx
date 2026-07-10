@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 
 function adminToken() {
-  return sessionStorage.getItem("ldb_tok") || localStorage.getItem("admin_token") || "";
+  return sessionStorage.getItem("ldb_tok") || "";
 }
 
 // Variables d'exemple pour l'aperçu — mêmes noms que ceux réellement utilisés

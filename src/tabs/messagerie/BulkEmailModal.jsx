@@ -44,7 +44,7 @@ export default function BulkEmailModal({ isOpen, onClose }) {
   useEffect(() => {
     if (!isOpen || segment === "custom") { setPreview([]); return; }
     setPreviewLoading(true);
-    const token = sessionStorage.getItem("ldb_tok") || localStorage.getItem("admin_token") || "";
+    const token = sessionStorage.getItem("ldb_tok") || "";
     // dry_run=true : compte les destinataires sans envoyer
     fetch(`/api/send-bulk-email`, {
       method: "POST",
@@ -76,7 +76,7 @@ export default function BulkEmailModal({ isOpen, onClose }) {
 
   async function send() {
     setSending(true); setError(null); setResult(null);
-    const token = sessionStorage.getItem("ldb_tok") || localStorage.getItem("admin_token") || "";
+    const token = sessionStorage.getItem("ldb_tok") || "";
     const customList = customEmails.split(/[\n,;]+/).map(e => e.trim()).filter(e => e.includes("@"));
     try {
       const r = await fetch("/api/send-bulk-email", {

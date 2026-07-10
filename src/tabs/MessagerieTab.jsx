@@ -20,7 +20,7 @@ function formatDate(ts) {
 }
 
 function adminToken() {
-  return sessionStorage.getItem("ldb_tok") || localStorage.getItem("admin_token") || "";
+  return sessionStorage.getItem("ldb_tok") || "";
 }
 
 export default function MessagerieTab() {
@@ -94,7 +94,7 @@ export default function MessagerieTab() {
   }
 
   useEffect(() => {
-    const token = sessionStorage.getItem("ldb_tok") || localStorage.getItem("admin_token") || "";
+    const token = sessionStorage.getItem("ldb_tok") || "";
     fetch("/api/emails-log?group=clients", {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
@@ -109,7 +109,7 @@ export default function MessagerieTab() {
 
   useEffect(() => {
     const handler = () => {
-      const token = sessionStorage.getItem("ldb_tok") || localStorage.getItem("admin_token") || "";
+      const token = sessionStorage.getItem("ldb_tok") || "";
       fetch("/api/emails-log?group=clients", {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       })

@@ -113,7 +113,7 @@ export default function EmailComposer({ isOpen, onClose, defaultTo, defaultBooki
   async function send() {
     setSending(true);
     setError(null);
-    const token = sessionStorage.getItem("ldb_tok") || localStorage.getItem("admin_token") || "";
+    const token = sessionStorage.getItem("ldb_tok") || "";
     try {
       const r = await fetch("/api/send-custom-email", {
         method: "POST",

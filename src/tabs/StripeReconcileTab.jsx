@@ -6,7 +6,7 @@
 import { useState, useEffect } from "react";
 
 function adminToken() {
-  return sessionStorage.getItem("ldb_tok") || localStorage.getItem("admin_token") || "";
+  return sessionStorage.getItem("ldb_tok") || "";
 }
 
 function fmtEur(v) {

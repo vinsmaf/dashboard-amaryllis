@@ -9,8 +9,10 @@ import { installBugCapture } from './lib/bugCapture.js'
 import { initMetaPixelIfConsented } from './lib/metaPixel.js'
 import { captureAttribution } from './lib/trackingAttribution.js'
 
-// Tag de build (force un nouveau hash de bundle quand nécessaire — survit à la minification)
-if (typeof window !== "undefined") window.__BUILD__ = "meta-pixel-2026-06-03";
+// Build ID — exposé pour debug + force un nouveau hash d'asset à chaque déploiement
+// (évite le cache immutable empoisonné quand un asset 404 pendant la propagation ;
+// survit à la minification, contrairement à un commentaire que Vite strippe).
+if (typeof window !== "undefined") window.__BUILD__ = "2026-07-10-sec-lot4";
 
 // Auto-récupération des "chunks périmés" : après un déploiement, l'ancien index.html
 // (en cache navigateur) référence des bundles dont le hash n'est plus servi → l'import
@@ -162,10 +164,6 @@ const Links           = lazy(() => import('./Links.jsx'))
 const StoriesTemplate = lazy(() => import('./StoriesTemplate.jsx'))
 const MenageGuide       = lazy(() => import('./MenageGuide.jsx'))
 const ReclamationForm   = lazy(() => import('./ReclamationForm.jsx'))
-
-// Build ID — exposé pour debug + force un nouveau hash d'asset à chaque déploiement
-// (évite le cache immutable empoisonné quand un asset 404 pendant la propagation)
-window.__BUILD__ = "2026-05-28-1";
 
 // Normalise les chemins avec trailing slash (/amaryllis/ → /amaryllis)
 const path = window.location.pathname.replace(/\/$/, "") || "/";

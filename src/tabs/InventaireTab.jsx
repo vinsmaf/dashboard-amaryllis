@@ -34,7 +34,7 @@ const STATUS_LABELS = {
 const VIRTUAL_GENERAL = { id: "_general", emoji: "🏬", nom: "Stock général MQ" };
 
 function adminToken() {
-  return sessionStorage.getItem("ldb_tok") || localStorage.getItem("admin_token") || "";
+  return sessionStorage.getItem("ldb_tok") || "";
 }
 
 export default function InventaireTab() {

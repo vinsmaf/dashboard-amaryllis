@@ -29,7 +29,7 @@ export default function PromoCodeModal({ isOpen, onClose, defaultBienId, default
   async function generate() {
     setGenerating(true);
     setError(null);
-    const token = sessionStorage.getItem("ldb_tok") || localStorage.getItem("admin_token") || "";
+    const token = sessionStorage.getItem("ldb_tok") || "";
     try {
       const r = await fetch("/api/promo-codes", {
         method: "POST",

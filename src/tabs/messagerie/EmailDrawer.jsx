@@ -18,7 +18,7 @@ export default function EmailDrawer({ toEmail, onClose, onCompose }) {
   useEffect(() => {
     if (!toEmail) return;
     setLoading(true);
-    const token = sessionStorage.getItem("ldb_tok") || localStorage.getItem("admin_token") || "";
+    const token = sessionStorage.getItem("ldb_tok") || "";
     fetch(`/api/emails-log?to=${encodeURIComponent(toEmail)}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
@@ -30,7 +30,7 @@ export default function EmailDrawer({ toEmail, onClose, onCompose }) {
 
   async function loadBody(id) {
     if (bodyCache[id]) { setExpanded(id); return; }
-    const token = sessionStorage.getItem("ldb_tok") || localStorage.getItem("admin_token") || "";
+    const token = sessionStorage.getItem("ldb_tok") || "";
     try {
       const r = await fetch(`/api/emails-log?body=1&id=${encodeURIComponent(id)}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
