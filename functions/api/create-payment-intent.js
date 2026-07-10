@@ -1,6 +1,7 @@
 // Cloudflare Pages Function — POST /api/create-payment-intent
 
 import { lowAmountInfo } from "../../src/utils/priceGuard.js";
+import { rateLimit } from "./_ratelimit.js";
 
 // Enregistre un "panier" en D1 dès la création du PaymentIntent.
 // Sert à la relance panier abandonné (cron send-relance-panier) si le paiement
@@ -38,6 +39,13 @@ export async function onRequestPost(context) {
 
   const sk = env.STRIPE_SECRET_KEY;
   if (!sk) return json({ error: "STRIPE_SECRET_KEY manquante" }, 500);
+
+  // SEC audit Fable 5 2026-07-09, Lot 2 : rate-limit anti-abus (60/h/IP, fail-open comme ailleurs).
+  const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+  const rl = await rateLimit(env.revenue_manager, { key: `create-payment-intent:${ip}`, limit: 60, windowSec: 3600 });
+  if (!rl.ok) {
+    return json({ error: "Trop de requêtes — réessayez dans un instant", retryAfter: rl.retryAfter }, 429);
+  }
 
   let body;
   try { body = await request.json(); }

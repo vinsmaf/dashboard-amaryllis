@@ -21,8 +21,8 @@ const NOMS = {
   nogent:     "Appartement Nogent",
 };
 
-// Montants maximum autorisés par bien (en euros)
-const MAX_CAUTION = {
+// Montants maximum autorisés par bien (en euros) — réutilisé par create-deposit-intent.js
+export const MAX_CAUTION = {
   amaryllis:  1500,
   schoelcher: 1000,
   zandoli:    700,

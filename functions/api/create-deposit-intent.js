@@ -1,10 +1,20 @@
 // Cloudflare Pages Function — POST /api/create-deposit-intent
 // Creates a PaymentIntent with capture_method: "manual" (pre-authorization)
 
+import { MAX_CAUTION } from "./caution-checkout.js";
+import { rateLimit } from "./_ratelimit.js";
+
 export async function onRequestPost(context) {
   const { request, env } = context;
   const sk = env.STRIPE_SECRET_KEY;
   if (!sk) return json({ error: "STRIPE_SECRET_KEY manquante" }, 500);
+
+  // SEC audit Fable 5 2026-07-09, Lot 2 : rate-limit anti-abus (60/h/IP, fail-open).
+  const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+  const rl = await rateLimit(env.revenue_manager, { key: `create-deposit-intent:${ip}`, limit: 60, windowSec: 3600 });
+  if (!rl.ok) {
+    return json({ error: "Trop de requêtes — réessayez dans un instant", retryAfter: rl.retryAfter }, 429);
+  }
 
   let body;
   try { body = await request.json(); }
@@ -12,6 +22,13 @@ export async function onRequestPost(context) {
 
   const { amount, currency = "eur", metadata = {} } = body;
   if (!amount || amount < 50) return json({ error: "Montant invalide" }, 400);
+
+  // Plafond par bien (SEC audit Fable 5 2026-07-09, Lot 2 — aucune limite haute avant, contrairement
+  // à caution-checkout.js qui a la même finalité). Réutilise la même table.
+  const maxCaution = MAX_CAUTION[metadata.bienId] ?? 500;
+  if (amount / 100 > maxCaution) {
+    return json({ error: `Montant maximum autorisé pour ${metadata.bienId || "ce bien"}: ${maxCaution}€` }, 400);
+  }
 
   const payload = new URLSearchParams({
     amount: String(Math.round(amount)),
