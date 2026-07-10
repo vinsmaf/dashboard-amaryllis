@@ -2,9 +2,11 @@
 // POST /api/parity-check  { dry?: true } → lance le contrôle (admin ou ?secret=POSTSTAY_SECRET)
 //
 // Contrôle de parité tarifaire quotidien : compare le prix RÉELLEMENT affiché sur le site direct
-// (source /api/site-config?type=prices — celle éditée depuis l'onglet Tarifs, PAS le prix de base
-// biens.js ni la reco RM) au prix affiché sur la fiche Booking.com publique de chaque bien
-// (scrapé via Firecrawl, même mécanisme que fc-competitors-scan.js). Alerte ntfy si direct > OTA +5%.
+// à la date visée (override /api/site-config?type=prices si présent, sinon fallback prix de base
+// biens.js — exactement le calcul que fait PublicSite.jsx : dailyPricesMap[date] ?? bien.prix ;
+// jamais la reco RM, qui est juste une suggestion tant que Vincent ne l'a pas appliquée) au prix
+// affiché sur la fiche Booking.com publique de chaque bien (scrapé via Firecrawl, même mécanisme
+// que fc-competitors-scan.js). Alerte ntfy si direct > OTA +5%.
 //
 // Nogent exclu : son prix direct vient déjà de Beds24 (source unique avec Booking), parité
 // garantie par construction — pas de comparaison possible/utile.
@@ -12,6 +14,7 @@
 // jamais activé — secrets absents, nécessiterait de stocker le mot de passe Airbnb réel en secret).
 
 import { verifyBearer } from "./_adminauth.js";
+import { getBien } from "../../src/data/biens.js";
 
 const FIRECRAWL_SCRAPE = "https://api.firecrawl.dev/v1/scrape";
 const REF_OFFSET_DAYS = 14; // date de comparaison : J+14 (assez proche pour être défini, assez loin pour éviter le bruit dernière-minute)
@@ -165,7 +168,7 @@ export async function onRequestPost(context) {
       ok: true, dry: true, compare_date: compareDate,
       would_check: listings.map((l) => ({
         bien_id: l.bien_id, url: l.url,
-        direct_price: directPrices[l.bien_id]?.[compareDate] ?? null,
+        direct_price: directPrices[l.bien_id]?.[compareDate] ?? getBien(l.bien_id)?.prix ?? null,
       })),
     });
   }
@@ -179,7 +182,7 @@ export async function onRequestPost(context) {
       const extracted = await scrapePrice(apiKey, listing.url);
       const otaPrice = extracted?.price_per_night;
       const otaCents = otaPrice && otaPrice > 5 ? Math.round(otaPrice * 100) : null;
-      const directPrice = directPrices[listing.bien_id]?.[compareDate];
+      const directPrice = directPrices[listing.bien_id]?.[compareDate] ?? getBien(listing.bien_id)?.prix;
       const directCents = directPrice ? Math.round(directPrice * 100) : null;
 
       let ecartPct = null;
