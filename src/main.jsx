@@ -159,6 +159,7 @@ const ChatWidget   = lazy(() => import('./ChatWidget.jsx'))   // eslint-disable-
 const GuestGuide      = lazy(() => import('./GuestGuide.jsx'))
 const Services        = lazy(() => import('./Services.jsx'))
 const GuideSejour     = lazy(() => import('./GuideSejour.jsx'))
+const GuideSejourQR   = lazy(() => import('./GuideSejourQR.jsx'))
 const Merci           = lazy(() => import('./Merci.jsx'))
 const Links           = lazy(() => import('./Links.jsx'))
 const StoriesTemplate = lazy(() => import('./StoriesTemplate.jsx'))
@@ -281,6 +282,7 @@ const isKnown = KNOWN.includes(path)
   || path.startsWith("/landing")
   || path.startsWith("/bienvenue")
   || path.startsWith("/guide-sejour/")
+  || path === "/guide-sejour-qr"
   || path.startsWith("/services/")
   || path.startsWith("/api/")
   || path === "/stories-template"
@@ -389,6 +391,8 @@ if (!isKnown) {
   Component = GuestGuide;
 } else if (path.startsWith("/guide-sejour/")) {
   Component = GuideSejour;
+} else if (path === "/guide-sejour-qr") {
+  Component = GuideSejourQR;
 } else if (path.startsWith("/services/")) {
   Component = Services;
 } else if (path === "/stories-template") {

@@ -2,8 +2,10 @@
 // Enregistré uniquement depuis GuideSejour.jsx (scope: "/guide-sejour/"), jamais globalement.
 // Stratégie : network-first avec repli cache, pour ne servir du contenu périmé
 // que si le réseau est indisponible (voyageur en zone blanche/avion).
-const CACHE_NAME = "guide-sejour-v1";
-const SCOPED_PATHS = ["/guide-sejour/", "/api/guides"];
+const CACHE_NAME = "guide-sejour-v2";
+// /assets/ : bundle JS/CSS fingerprinté par le build Vite — sans ça, la page HTML pouvait être
+// servie hors-ligne mais restait blanche (le bundle qui l'hydrate n'était jamais mis en cache).
+const SCOPED_PATHS = ["/guide-sejour/", "/api/guides", "/assets/"];
 
 self.addEventListener("install", () => {
   self.skipWaiting();

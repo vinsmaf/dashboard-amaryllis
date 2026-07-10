@@ -2,7 +2,7 @@
 // Accessible via QR code dans le logement ou lien email pré-arrivée.
 // Charge le guide JSON depuis /api/guides?property_id=<bien>.
 // Mobile-first, surface "site" (IVORY/NAVY/CORAL).
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import NewsletterForm from "./NewsletterForm.jsx";
 import SEOMeta from "./SEOMeta.jsx";
 import { getReviewUrl, isGoogleReview } from "./data/googleReview.js";
@@ -46,29 +46,51 @@ function Card({ children, style, id }) {
 }
 
 function QuickNav({ items }) {
+  const scrollerRef = useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const update = () => {
+      setCanScrollLeft(el.scrollLeft > 4);
+      setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+    };
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => { el.removeEventListener("scroll", update); window.removeEventListener("resize", update); };
+  }, [items.length]);
+
   if (!items.length) return null;
+  const fadeBase = { position: "absolute", top: 0, bottom: 0, width: 28, pointerEvents: "none", transition: "opacity 0.2s", zIndex: 1 };
   return (
-    <div style={{
-      position: "sticky", top: 0, zIndex: 20,
-      background: "rgba(255,253,248,0.96)", backdropFilter: "blur(6px)",
-      borderBottom: `1px solid #ece6d9`,
-      overflowX: "auto", WebkitOverflowScrolling: "touch",
-      padding: "10px 14px", display: "flex", gap: 8,
-    }}>
-      {items.map(it => (
-        <button
-          key={it.id}
-          onClick={() => document.getElementById(it.id)?.scrollIntoView({ behavior: "smooth", block: "start" })}
-          style={{
-            flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6,
-            background: "#fff", border: `1px solid #ece6d9`, borderRadius: 20,
-            padding: "7px 14px", fontSize: 13, fontWeight: 500, color: NAVY,
-            cursor: "pointer", fontFamily: "'Jost',sans-serif", whiteSpace: "nowrap",
-          }}
-        >
-          <span>{it.icon}</span>{it.label}
-        </button>
-      ))}
+    <div style={{ position: "sticky", top: 0, zIndex: 20 }}>
+      <div ref={scrollerRef} style={{
+        background: "rgba(255,253,248,0.96)", backdropFilter: "blur(6px)",
+        borderBottom: `1px solid #ece6d9`,
+        overflowX: "auto", WebkitOverflowScrolling: "touch",
+        padding: "10px 14px", display: "flex", gap: 8,
+      }}>
+        {items.map(it => (
+          <button
+            key={it.id}
+            onClick={() => document.getElementById(it.id)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            style={{
+              flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 6,
+              background: "#fff", border: `1px solid #ece6d9`, borderRadius: 20,
+              padding: "7px 14px", fontSize: 13, fontWeight: 500, color: NAVY,
+              cursor: "pointer", fontFamily: "'Jost',sans-serif", whiteSpace: "nowrap",
+            }}
+          >
+            <span>{it.icon}</span>{it.label}
+          </button>
+        ))}
+      </div>
+      {/* Dégradés indiquant qu'il y a plus d'items à scroller — visibles seulement si pertinent */}
+      <div style={{ ...fadeBase, left: 0, background: "linear-gradient(to right, rgba(255,253,248,0.98), transparent)", opacity: canScrollLeft ? 1 : 0 }} />
+      <div style={{ ...fadeBase, right: 0, background: "linear-gradient(to left, rgba(255,253,248,0.98), transparent)", opacity: canScrollRight ? 1 : 0 }} />
     </div>
   );
 }
@@ -312,7 +334,9 @@ export default function GuideSejour() {
     const manifest = {
       name: `${nom} — Guide du séjour`,
       short_name: nom.length > 14 ? nom.split(" ").slice(-1)[0] : nom,
-      start_url: `/guide-sejour/${bien}`,
+      // ?source=pwa : distingue en analytics un lancement depuis l'icône installée d'une
+      // simple visite navigateur — remonte automatiquement dans GA4 via l'URL de la 1re pageview.
+      start_url: `/guide-sejour/${bien}?source=pwa`,
       scope: `/guide-sejour/${bien}`,
       display: "standalone",
       background_color: IVORY,
