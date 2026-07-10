@@ -810,7 +810,6 @@ function FAB({ onTab }) {
 // PASSWORD GATE
 // ============================================================================
 const PWD_KEY = "ldb_auth_v1";
-const VALID_HASH = "8e4b1a3d9f2c6e7b0a5d3f8c2e1b9a4d"; // sha-lite placeholder
 
 function PasswordGate({ onAuth, expired }) {
   const [val, setVal] = useState("");
@@ -831,10 +830,10 @@ function PasswordGate({ onAuth, expired }) {
       try { data = await res.json(); } catch { data = {}; }
       if (data.ok && data.role) {
         sessionStorage.setItem(PWD_KEY, "ok");
-        // arch-009 : on stocke le token de session signé (HMAC, expire) — plus
-        // jamais le mot de passe en clair. Fallback sur val pour rétro-compat
-        // si un ancien backend ne renvoie pas encore de token.
-        sessionStorage.setItem("ldb_tok", data.token || val);
+        // arch-009 : token de session signé (HMAC, expire) — jamais le mot de passe en
+        // clair. /api/admin-auth renvoie toujours token sur { ok:true, role } (SEC audit
+        // Fable 5 2026-07-09, Lot 4 — le fallback `|| val` était mort et un risque latent).
+        sessionStorage.setItem("ldb_tok", data.token);
         sessionStorage.setItem("admin_role", data.role);
         onAuth(data.role);
       } else {

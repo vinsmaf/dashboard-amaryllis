@@ -2,6 +2,16 @@ import { resendFrom } from "./_email.js";
 import { sendEmail as sendEmailHelper } from "./_sendEmail.js";
 import { sendGuestEmail } from "./send-guest-email.js";
 import { getBien } from "../../src/data/biens.js";
+
+// Échappement HTML (SEC audit Fable 5 2026-07-09, Lot 4) — voyageur/bienNom viennent du
+// body client, injectés bruts dans l'email HTML host sans échappement. Même pattern que
+// ack-suggestion.js.
+const esc = (s) => String(s)
+  .replace(/&/g, "&amp;")
+  .replace(/</g, "&lt;")
+  .replace(/>/g, "&gt;")
+  .replace(/"/g, "&quot;")
+  .replace(/'/g, "&#39;");
 // Cloudflare Pages Function — POST /api/notify-booking
 // Alerte fiable de NOUVELLE RÉSERVATION DIRECTE, déclenchée côté client juste
 // après un paiement Stripe réussi (indépendant de la config webhook Stripe).
@@ -171,9 +181,9 @@ export async function onRequest(context) {
   const ligne = `${voyageur || "Voyageur"} · ${fmtDate(checkin)} → ${fmtDate(checkout)} · ${fullTotal} €${depot ? ` (caution ${depot}€)` : ""}`;
   const html = `<div style="font-family:Georgia,serif;color:#2b2b2b;line-height:1.7">
     <h2 style="color:#0e3b3a">🎉 Nouvelle réservation directe</h2>
-    <p style="font-size:16px"><strong>${bienNom}</strong></p>
+    <p style="font-size:16px"><strong>${esc(bienNom)}</strong></p>
     <table style="font-size:15px;border-collapse:collapse">
-      <tr><td style="padding:3px 16px 3px 0">Voyageur</td><td><strong>${voyageur || "—"}</strong></td></tr>
+      <tr><td style="padding:3px 16px 3px 0">Voyageur</td><td><strong>${esc(voyageur || "—")}</strong></td></tr>
       <tr><td style="padding:3px 16px 3px 0">Dates</td><td>${fmtDate(checkin)} → ${fmtDate(checkout)}</td></tr>
       <tr><td style="padding:3px 16px 3px 0">Montant payé</td><td><strong>${fullTotal} €</strong></td></tr>
       ${depot ? `<tr><td style="padding:3px 16px 3px 0">Caution</td><td>${depot} € (pré-autorisée)</td></tr>` : ""}

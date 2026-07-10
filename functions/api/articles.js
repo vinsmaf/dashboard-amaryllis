@@ -63,16 +63,20 @@ export async function onRequest(context) {
       return json(row);
     }
 
-    // Liste
+    // Liste — requête paramétrée (SEC audit Fable 5 2026-07-09, Lot 4 : `category`
+    // était concaténé en SQL brut, juste échappé à la main plutôt que bindé).
     const adminOk = await verifyBearer(request, env).catch(() => ({ ok: false })).then(r => r?.ok);
-    const statusFilter = adminOk ? "" : "WHERE status = 'published'";
-    const catFilter = category ? (statusFilter ? ` AND category = '${category.replace(/'/g,"''")}'` : `WHERE category = '${category.replace(/'/g,"''")}'`) : "";
+    const conditions = [];
+    const binds = [];
+    if (!adminOk) conditions.push("status = 'published'");
+    if (category) { conditions.push("category = ?"); binds.push(category); }
+    const whereClause = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
 
     const rows = await db.prepare(
       `SELECT id, slug, title, meta_title, meta_desc, category, status, image_url, keywords, created_at, updated_at, views
-       FROM seo_articles ${statusFilter}${catFilter}
+       FROM seo_articles ${whereClause}
        ORDER BY created_at DESC LIMIT 200`
-    ).all();
+    ).bind(...binds).all();
     return json({ articles: rows.results || [] });
   }
 

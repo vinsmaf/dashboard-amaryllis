@@ -14,8 +14,9 @@
 //   Configurer le secret Cloudflare `BEDS24_WEBHOOK_SECRET`, puis dans Beds24
 //   ajouter le secret à l'URL du webhook : .../api/beds24-webhook?secret=XXXX
 //   (ou header X-Webhook-Secret, ou signature HMAC-SHA256 dans X-Signature).
-//   Tant que le secret n'est pas configuré → on log un warning mais on accepte
-//   (rétro-compatibilité, migration en douceur).
+//   FAIL-CLOSED (SEC audit Fable 5 2026-07-09, Lot 4) : secret absent → 401, jamais
+//   d'acceptation silencieuse. Le secret est déjà posé en prod, cette branche ne
+//   protégeait plus qu'un oubli de config, pas un cas d'usage réel.
 
 import { getActiveBeds24Token } from "./beds24-refresh.js";
 import { clog, timer } from "./_log.js";
@@ -45,8 +46,7 @@ async function hmacHex(secret, rawBody) {
 // Retourne { ok:true } si authentifié, sinon { ok:false, reason }
 async function verifyWebhook(request, url, rawBody, secret) {
   if (!secret) {
-    console.warn("[beds24-webhook] ⚠️ BEDS24_WEBHOOK_SECRET non configuré — webhook NON protégé");
-    return { ok: true, unprotected: true };
+    return { ok: false, reason: "BEDS24_WEBHOOK_SECRET non configuré" };
   }
   // 1. Secret en query param ?secret=
   const qSecret = url.searchParams.get("secret");

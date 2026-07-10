@@ -149,14 +149,12 @@ export async function onRequestPost(context) {
   const { request, env } = context;
 
   // ─── Auth ───────────────────────────────────────────────────────────────────
+  // FAIL-CLOSED (SEC audit Fable 5 2026-07-09, Lot 4) : secret absent ou invalide → 401,
+  // jamais d'acceptation silencieuse. Le secret est déjà posé en prod.
   const url    = new URL(request.url);
   const secret = url.searchParams.get("secret");
-  if (!secret || secret !== env.ZAPIER_WEBHOOK_SECRET) {
-    // Fail-open si le secret n'est pas encore configuré (migration douce)
-    if (env.ZAPIER_WEBHOOK_SECRET) {
-      return json({ error: "Secret invalide" }, 401);
-    }
-    console.warn("[airbnb-email-import] ⚠️ ZAPIER_WEBHOOK_SECRET non configuré — endpoint non protégé");
+  if (!env.ZAPIER_WEBHOOK_SECRET || !secret || secret !== env.ZAPIER_WEBHOOK_SECRET) {
+    return json({ error: "Secret invalide ou manquant" }, 401);
   }
 
   const db = env.revenue_manager;

@@ -120,6 +120,24 @@ const NOMS = {
   nogent:     "Appartement Nogent",
 };
 
+// Échappement HTML (SEC audit Fable 5 2026-07-09, Lot 4) — voyageur/bien_nom viennent du
+// client (PaymentIntent metadata), injectés bruts dans les emails HTML. Même pattern
+// qu'ack-suggestion.js.
+const esc = (s) => String(s ?? "")
+  .replace(/&/g, "&amp;")
+  .replace(/</g, "&lt;")
+  .replace(/>/g, "&gt;")
+  .replace(/"/g, "&quot;")
+  .replace(/'/g, "&#39;");
+
+// Comparaison à temps constant (anti timing-attack) — même pattern que beds24-webhook.js/_adminauth.js.
+function safeEqual(a, b) {
+  if (typeof a !== "string" || typeof b !== "string" || a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
 // Vérification signature Stripe (HMAC SHA-256)
 async function verifyStripeSignature(body, sigHeader, secret) {
   if (!sigHeader || !secret) return false;
@@ -148,7 +166,7 @@ async function verifyStripeSignature(body, sigHeader, secret) {
   const signatureBytes = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload));
   const expected = Array.from(new Uint8Array(signatureBytes))
     .map(b => b.toString(16).padStart(2, "0")).join("");
-  return expected === sig;
+  return safeEqual(expected, sig);
 }
 
 async function sendEmail(env, { subject, html, to, booking_id, bien_id, category = "internal", template = "stripe_confirmation" }) {
@@ -241,6 +259,10 @@ async function sendConfirmationToGuest(env, { bienNom, voyageur, email, checkin,
     console.log("[webhook] Pas d'email voyageur — confirmation non envoyée");
     return;
   }
+  // SEC audit Fable 5 2026-07-09, Lot 4 : voyageur/bienNom viennent du body client (via
+  // PaymentIntent metadata), injectés bruts dans l'email HTML sans échappement.
+  bienNom = esc(bienNom);
+  voyageur = esc(voyageur);
   // Paiement en 2 fois : on remplace la ligne « Montant payé » par le détail acompte/solde
   // et on ajoute un encart rappelant le prélèvement automatique du solde à J-30.
   const montantRows = twoX
@@ -324,6 +346,9 @@ async function sendConfirmationToGuest(env, { bienNom, voyageur, email, checkin,
 // garantit l'alerte. Dédup atomique via `host_notified` : un seul des deux flux émet (le
 // premier qui passe `0 → 1` gagne ; D1 sérialise les UPDATE → jamais de double notification).
 async function notifyHostOnce(env, { paymentIntentId, bienId, bienNom, voyageur, email, checkin, checkout, amount, twoX = null, amountEur = 0 }) {
+  // SEC audit Fable 5 2026-07-09, Lot 4 : voyageur/bienNom échappés avant injection HTML.
+  bienNom = esc(bienNom);
+  voyageur = esc(voyageur);
   const db = env.revenue_manager;
   if (db) {
     try {
@@ -561,17 +586,18 @@ export async function onRequestPost(context) {
     // (déjà en D1) NI une conversion publicitaire (la valeur a déjà été comptée à la résa initiale).
     if (meta.kind === "complement") {
       await storeCautionSchedule(env, pi).catch(() => {});
-      const cbienNom = NOMS[meta.bienId] || meta.bienId || "?";
+      const cbienNom = esc(NOMS[meta.bienId] || meta.bienId || "?");
+      const cvoyageur = esc(meta.voyageur || "voyageur");
       const cmontant = pi?.amount ? `${(pi.amount / 100).toFixed(0)} €` : "?";
       await sendEmail(env, {
-        subject: `💶 Complément payé — ${cbienNom} (${meta.voyageur || "voyageur"})`,
+        subject: `💶 Complément payé — ${cbienNom} (${cvoyageur})`,
         booking_id: pi.id,
         bien_id: meta.bienId || null,
         category: "internal",
         template: "stripe_complement_host",
         html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px">
           <h2 style="color:#0e3b3a">💶 Complément de réservation reçu</h2>
-          <p><strong>${cbienNom}</strong> — ${meta.voyageur || "voyageur"}<br>
+          <p><strong>${cbienNom}</strong> — ${cvoyageur}<br>
           ${meta.checkin || "?"} → ${meta.checkout || "?"}<br>
           Montant : <strong>${cmontant}</strong></p>
           <p style="font-size:13px;color:#0e7a5a">✅ Carte enregistrée — la caution sera pré-autorisée automatiquement ~2 j avant l'arrivée.</p></div>`,
@@ -606,7 +632,7 @@ export async function onRequestPost(context) {
             <p style="font-size:18px;font-weight:700;color:#0e3b3a">${logements}</p>
             <p style="font-size:13px;color:#0e7a5a">✅ Dates bloquées automatiquement sur Airbnb + Booking (sync iCal par bien).</p>
             <table style="font-size:14px;color:#4a3f35">
-              <tr><td style="padding:4px 0">Voyageur</td><td style="padding:4px 0;font-weight:700">${voyageur || "?"}</td></tr>
+              <tr><td style="padding:4px 0">Voyageur</td><td style="padding:4px 0;font-weight:700">${esc(voyageur || "?")}</td></tr>
               <tr><td style="padding:4px 0">Email</td><td style="padding:4px 0">${guestEmail || "?"}</td></tr>
               <tr><td style="padding:4px 0">Dates</td><td style="padding:4px 0;font-weight:700">${checkin} → ${checkout}</td></tr>
               <tr><td style="padding:4px 0">Voyageurs</td><td style="padding:4px 0">${guests}</td></tr>
@@ -781,12 +807,15 @@ export async function onRequestPost(context) {
         bien_id: meta.bienId || null,
         category: "internal",
         template: "stripe_service_host",
+        // Échappement HTML (SEC audit Fable 5 2026-07-09, Lot 4) — bienNom/contact viennent
+        // du client (meta.bienNom en particulier n'a AUCUN filtre). Uniquement dans le html:
+        // — sujet et ntfy sont du texte brut, pas du HTML, esc() y afficherait "&amp;" au lieu de "&".
         html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px">
           <h2 style="color:#0e3b3a">🛎️ Nouveau service payé</h2>
-          <p><strong>${label}</strong> — <strong>${amount}</strong><br>Logement : <strong>${bienNom}</strong>${contact ? `<br>Note du voyageur : ${contact}` : ""}${email ? `<br>Email : ${email}` : ""}</p>
+          <p><strong>${label}</strong> — <strong>${amount}</strong><br>Logement : <strong>${esc(bienNom)}</strong>${contact ? `<br>Note du voyageur : ${esc(contact)}` : ""}${email ? `<br>Email : ${email}` : ""}</p>
           <p style="font-size:13px;color:#7a6b5a">À honorer auprès du voyageur. Détails dans Stripe + admin.</p></div>`,
       }).catch(() => {});
-      // Push mobile instantané (ntfy)
+      // Push mobile instantané (ntfy) — texte brut, pas de HTML à échapper ici.
       try {
         if (env.NTFY_TOPIC) {
           await fetch(`https://ntfy.sh/${env.NTFY_TOPIC}`, {
@@ -810,15 +839,17 @@ export async function onRequestPost(context) {
             .bind(type === "acompte" ? "acompte_paye" : "solde_paye", devisId).run();
         } catch (e) { console.warn("[webhook] devis_paiements update:", e.message); }
       }
-      const bienNom = NOMS[meta.bienId] || meta.bienId || "?";
-      const montant = session.amount_total ? `${(session.amount_total / 100).toFixed(0)} €` : "?";
+      // SEC audit Fable 5 2026-07-09, Lot 4 : bienNom/voyageur échappés avant injection HTML.
+      const bienNom  = esc(NOMS[meta.bienId] || meta.bienId || "?");
+      const bvoyageur = esc(meta.voyageur || "voyageur");
+      const montant  = session.amount_total ? `${(session.amount_total / 100).toFixed(0)} €` : "?";
       await sendEmail(env, {
-        subject: `💶 ${type === "acompte" ? "Acompte" : "Solde"} payé — ${bienNom} (${meta.voyageur || "voyageur"})`,
+        subject: `💶 ${type === "acompte" ? "Acompte" : "Solde"} payé — ${bienNom} (${bvoyageur})`,
         booking_id: devisId || null,
         bien_id: meta.bienId || null,
         category: "internal",
         template: "stripe_acompte_solde_host",
-        html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px"><h2 style="color:#0e3b3a">💶 ${type === "acompte" ? "Acompte reçu" : "Solde reçu — séjour soldé ✅"}</h2><p><strong>${bienNom}</strong> — ${meta.voyageur || "voyageur"}<br>${meta.checkin || "?"} → ${meta.checkout || "?"}<br>Montant : <strong>${montant}</strong></p></div>`,
+        html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px"><h2 style="color:#0e3b3a">💶 ${type === "acompte" ? "Acompte reçu" : "Solde reçu — séjour soldé ✅"}</h2><p><strong>${bienNom}</strong> — ${bvoyageur}<br>${meta.checkin || "?"} → ${meta.checkout || "?"}<br>Montant : <strong>${montant}</strong></p></div>`,
       }).catch(() => {});
       return json({ ok: true, type, devis: devisId });
     }
@@ -826,11 +857,12 @@ export async function onRequestPost(context) {
     if (type !== "caution") return json({ ok: true, ignored: true });
 
     const bienId   = meta.bienId   || "?";
-    const voyageur = meta.voyageur || "voyageur";
+    // SEC audit Fable 5 2026-07-09, Lot 4 : voyageur/bienNom échappés avant injection HTML.
+    const voyageur = esc(meta.voyageur || "voyageur");
     const checkin  = meta.checkin  || "?";
     const checkout = meta.checkout || "?";
     const amount   = session.amount_total ? `${(session.amount_total / 100).toFixed(0)} €` : "?";
-    const bienNom  = NOMS[bienId] || bienId;
+    const bienNom  = esc(NOMS[bienId] || bienId);
 
     console.log(`[webhook] Caution sécurisée: ${bienNom} — ${voyageur} — ${amount}`);
 

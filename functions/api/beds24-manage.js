@@ -73,18 +73,6 @@ export async function onRequestPost(context) {
         return json({ error: "Réservation Beds24 non trouvée", tried: bookings.length }, 404);
       }
 
-      // Debug: log all price-related fields from Beds24 V2
-      const priceDebug = {
-        price:         match.price,
-        totalPrice:    match.totalPrice,
-        invoiceAmount: match.invoiceAmount,
-        guestPrice:    match.guestPrice,
-        subTotal:      match.subTotal,
-        numAdult:      match.numAdult,
-        numChild:      match.numChild,
-      };
-      console.log("[beds24-find] price fields:", JSON.stringify(priceDebug));
-
       // Use totalPrice (includes cleaning fee + taxes) if available, fallback to price
       const totalAmount = match.totalPrice ?? match.invoiceAmount ?? match.price;
 
@@ -95,7 +83,6 @@ export async function onRequestPost(context) {
         departure: match.departure,
         guestName: `${match.firstName || ""} ${match.lastName || ""}`.trim(),
         price:     totalAmount,
-        priceDebug,   // temporary — remove after confirming correct field
         status:    match.status,
       });
 
