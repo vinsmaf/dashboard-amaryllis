@@ -2609,7 +2609,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
                   { key: "early", label: "Early check-in", desc: "Arrivée avant 17h · selon disponibilité", icon: "🌅", val: earlyCheckin, set: setEarlyCheckin },
                   { key: "late",  label: "Late check-out",  desc: "Départ après 12h · selon disponibilité",  icon: "🌇", val: lateCheckout,  set: setLateCheckout  },
                 ].map(opt => (
-                  <label key={opt.key} style={{ display: "flex", alignItems: "center", gap: 14, background: opt.val ? `${CORAL}08` : CREAM, border: `1px solid ${opt.val ? CORAL : SAND}`, borderRadius: 12, padding: "13px 18px", cursor: "pointer" }}>
+                  <label key={opt.key} style={{ display: "flex", alignItems: "center", gap: 14, background: opt.val ? "rgba(196,114,84,0.03)" : CREAM, border: `1px solid ${opt.val ? CORAL : SAND}`, borderRadius: 12, padding: "13px 18px", cursor: "pointer" }}>
                     <input type="checkbox" checked={opt.val} onChange={e => opt.set(e.target.checked)} style={{ width: 16, height: 16, accentColor: CORAL, flexShrink: 0, cursor: "pointer" }} />
                     <span style={{ fontSize: 16, flexShrink: 0 }}>{opt.icon}</span>
                     <span style={{ flex: 1 }}>
@@ -2647,7 +2647,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
                         {availUpsells.map(u => (
                           <label key={u.id} style={{
                             display: "flex", alignItems: "center", gap: 14,
-                            background: upsells[u.id] ? `${CORAL}08` : IVORY,
+                            background: upsells[u.id] ? "rgba(196,114,84,0.03)" : IVORY,
                             border: `1px solid ${upsells[u.id] ? CORAL : SAND}`,
                             borderRadius: 10, padding: "12px 14px", cursor: "pointer",
                             transition: "all 0.15s",
@@ -4839,8 +4839,8 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                 )}
                 {detailPriceTrend && (
                   <span style={{
-                    background: `${detailPriceTrend.color}15`,
-                    border: `1px solid ${detailPriceTrend.color}35`,
+                    background: `color-mix(in srgb, ${detailPriceTrend.color} 15%, transparent)`,
+                    border: `1px solid color-mix(in srgb, ${detailPriceTrend.color} 35%, transparent)`,
                     color: detailPriceTrend.color,
                     fontSize: 11, fontWeight: 600, padding: "5px 12px",
                     borderRadius: 20, fontFamily: "'Jost', sans-serif",
