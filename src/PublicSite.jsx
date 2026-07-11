@@ -955,7 +955,7 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
               {ds && gapDates[ds] && !disabled && (
                 <div style={{
                   position: "absolute", top: 2, right: 2,
-                  background: gapDates[ds] < 0 ? "#d97706" : "#14b8a6", color: "#fff",
+                  background: gapDates[ds] < 0 ? "var(--c-warning)" : "#14b8a6", color: "#fff",
                   fontSize: 7, fontWeight: 800,
                   padding: "1px 3px", borderRadius: 3,
                   lineHeight: 1.2, pointerEvents: "none",
@@ -1688,7 +1688,7 @@ function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) 
                       <span>{rawTotal} €</span>
                     </div>
                     {discountAmt > 0 && (
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#10b981" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--c-success)" }}>
                         <span>Remise séjour (−{Math.round(discountRate * 100)}%)</span>
                         <span>−{discountAmt} €</span>
                       </div>
@@ -1699,7 +1699,7 @@ function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) 
                       </div>
                     )}
                     {promoDiscountAmt > 0 && (
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#10b981", fontWeight: 600 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--c-success)", fontWeight: 600 }}>
                         <span>Code promo ({promoData.code})</span>
                         <span>−{promoDiscountAmt} €</span>
                       </div>
@@ -1730,7 +1730,7 @@ function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) 
                     </button>
                   </div>
                   {promoData && (
-                    <div style={{ fontSize: 11, color: "#10b981", marginTop: 5, fontWeight: 600 }}>
+                    <div style={{ fontSize: 11, color: "var(--c-success)", marginTop: 5, fontWeight: 600 }}>
                       ✓ Code valide — {promoData.type === "percent" ? `−${promoData.value}%` : `−${promoData.value} €`} appliqué
                     </div>
                   )}
@@ -2626,7 +2626,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
             <div style={{ display: "flex", gap: 18, padding: "14px 0", borderTop: `1px solid ${SAND}`, borderBottom: `1px solid ${SAND}`, margin: "18px 0", flexWrap: "wrap" }}>
               {["Annulation gratuite J-14", "Aucun frais caché", "Réponse hôte < 1h"].map(t => (
                 <span key={t} style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: "'Jost', sans-serif", fontSize: 11, color: MUTED }}>
-                  <span style={{ color: "#16a34a", fontSize: 13 }}>✓</span>{t}
+                  <span style={{ color: "var(--c-success)", fontSize: 13 }}>✓</span>{t}
                 </span>
               ))}
             </div>
@@ -2686,20 +2686,20 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
                         onKeyDown={e => e.key === "Enter" && validatePromo()}
                         placeholder="Code promo (optionnel)"
                         maxLength={20}
-                        style={{ flex: 1, padding: "10px 14px", borderRadius: 8, border: `1px solid ${promoData ? "#10b981" : SAND}`, background: IVORY, fontFamily: "'Jost', sans-serif", fontSize: 13, letterSpacing: "0.05em", color: NAVY, outline: "none" }}
+                        style={{ flex: 1, padding: "10px 14px", borderRadius: 8, border: `1px solid ${promoData ? "var(--c-success)" : SAND}`, background: IVORY, fontFamily: "'Jost', sans-serif", fontSize: 13, letterSpacing: "0.05em", color: NAVY, outline: "none" }}
                       />
                       <button onClick={validatePromo} disabled={!promoInput.trim() || promoLoading}
                         style={{ padding: "10px 14px", borderRadius: 8, border: `1px solid ${SAND}`, background: IVORY, fontFamily: "'Jost', sans-serif", fontSize: 12, fontWeight: 600, color: NAVY, cursor: !promoInput.trim() || promoLoading ? "not-allowed" : "pointer", opacity: !promoInput.trim() || promoLoading ? 0.5 : 1, whiteSpace: "nowrap" }}>
                         {promoLoading ? "…" : "Appliquer"}
                       </button>
                     </div>
-                    {promoData && <div style={{ fontSize: 11, color: "#10b981", marginTop: 6, fontFamily: "'Jost', sans-serif" }}>✓ Code valide — −{promoDiscountAmt}€ appliqué</div>}
+                    {promoData && <div style={{ fontSize: 11, color: "var(--c-success)", marginTop: 6, fontFamily: "'Jost', sans-serif" }}>✓ Code valide — −{promoDiscountAmt}€ appliqué</div>}
                     {promoError && <div style={{ fontSize: 11, color: "#e53e3e", marginTop: 6, fontFamily: "'Jost', sans-serif" }}>{promoError}</div>}
                   </div>
                 )}
 
                 {belowMin && (
-                  <div style={{ fontSize: 13, color: "#ef4444", fontWeight: 600, marginBottom: 12 }}>
+                  <div style={{ fontSize: 13, color: "var(--c-danger)", fontWeight: 600, marginBottom: 12 }}>
                     ⚠ Séjour minimum : {minNights} nuits pour ce bien
                   </div>
                 )}
@@ -2783,7 +2783,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
             <div style={{ display: "flex", gap: 16, padding: "12px 0", borderTop: `1px solid ${SAND}`, margin: "18px 0 0", flexWrap: "wrap" }}>
               {["Données chiffrées RGPD", "Jamais de spam — promis"].map(t => (
                 <span key={t} style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: "'Jost', sans-serif", fontSize: 11, color: MUTED }}>
-                  <span style={{ color: "#16a34a", fontSize: 13 }}>✓</span>{t}
+                  <span style={{ color: "var(--c-success)", fontSize: 13 }}>✓</span>{t}
                 </span>
               ))}
             </div>
@@ -2797,8 +2797,8 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
                 Politique d'annulation
               </div>
               {[
-                ["✓", "#16a34a", "Annulation gratuite jusqu'à J−14 — remboursement intégral", false],
-                ["🌀", "#0ea5e9", "Vigilance cyclonique — 100 % remboursé", false],
+                ["✓", "var(--c-success)", "Annulation gratuite jusqu'à J−14 — remboursement intégral", false],
+                ["🌀", "var(--c-info)", "Vigilance cyclonique — 100 % remboursé", false],
                 ["◗", MUTED,     "J−14 à J−2 — 50 % remboursé", true],
                 ["✗", MUTED,     "Moins de 48 h — non remboursable (report possible)", true],
               ].map(([icon, color, text, muted]) => (
@@ -2873,7 +2873,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
             <div style={{ display: "flex", gap: 16, padding: "12px 0", borderTop: `1px solid ${SAND}`, borderBottom: `1px solid ${SAND}`, margin: "0 0 18px", flexWrap: "wrap" }}>
               {["Paiement Stripe · 256-bit", "Caution libérée auto J+3"].map(t => (
                 <span key={t} style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: "'Jost', sans-serif", fontSize: 11, color: MUTED }}>
-                  <span style={{ color: "#16a34a", fontSize: 13 }}>🔒</span>{t}
+                  <span style={{ color: "var(--c-success)", fontSize: 13 }}>🔒</span>{t}
                 </span>
               ))}
             </div>
@@ -3189,16 +3189,16 @@ function useAvailBadge(bienId) {
         const MOIS_COURT = ["Jan","Fév","Mar","Avr","Mai","Juin","Juil","Août","Sep","Oct","Nov","Déc"];
         let b = null;
         if (blocked30 === 0 && !blocked.has(ds(today))) {
-          b = { label: "Disponible cette semaine", color: "#10b981", bg: "rgba(16,185,129,0.92)" };
+          b = { label: "Disponible cette semaine", color: "var(--c-success)", bg: "rgba(16,185,129,0.92)" };
         } else if (blocked30 < 10) {
-          b = { label: "Quelques dates libres", color: "#f59e0b", bg: "rgba(245,158,11,0.92)" };
+          b = { label: "Quelques dates libres", color: "var(--c-warning)", bg: "rgba(245,158,11,0.92)" };
         } else if (nextFree) {
           const diff = Math.round((nextFree - today) / 86400000);
-          if (diff <= 7)       b = { label: "Libre dès cette semaine", color: "#10b981", bg: "rgba(16,185,129,0.92)" };
-          else if (diff <= 30) b = { label: `Libre dès le ${nextFree.getDate()} ${MOIS_COURT[nextFree.getMonth()]}`, color: "#0ea5e9", bg: "rgba(14,165,233,0.92)" };
-          else                 b = { label: `Libre en ${MOIS_COURT[nextFree.getMonth()]}`, color: "#0ea5e9", bg: "rgba(14,165,233,0.92)" };
+          if (diff <= 7)       b = { label: "Libre dès cette semaine", color: "var(--c-success)", bg: "rgba(16,185,129,0.92)" };
+          else if (diff <= 30) b = { label: `Libre dès le ${nextFree.getDate()} ${MOIS_COURT[nextFree.getMonth()]}`, color: "var(--c-info)", bg: "rgba(14,165,233,0.92)" };
+          else                 b = { label: `Libre en ${MOIS_COURT[nextFree.getMonth()]}`, color: "var(--c-info)", bg: "rgba(14,165,233,0.92)" };
         } else if (blockedNext / daysNext > 0.8) {
-          b = { label: `Très demandé en ${MOIS_COURT[nextMonthStart.getMonth()]}`, color: "#ef4444", bg: "rgba(239,68,68,0.92)" };
+          b = { label: `Très demandé en ${MOIS_COURT[nextMonthStart.getMonth()]}`, color: "var(--c-danger)", bg: "rgba(239,68,68,0.92)" };
         }
         // ── Nudge : week-ends libres dans les 90 prochains jours ─────────────
         // Un "week-end" = samedi + dimanche tous les deux libres
@@ -3594,7 +3594,7 @@ function BienCard({ bien, onDetail, onBook, onPrefetch, isFavorite = false, onTo
             </span>
             <span style={{
               fontSize: 10, fontFamily: "'Jost', sans-serif", fontWeight: 600,
-              color: "#16a34a", background: "rgba(22,163,74,0.08)",
+              color: "var(--c-success)", background: "rgba(22,163,74,0.08)",
               border: "1px solid rgba(22,163,74,0.2)",
               borderRadius: 4, padding: "2px 6px", letterSpacing: "0.03em", whiteSpace: "nowrap",
             }}>
@@ -4203,7 +4203,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
         </div>
         {isPage && !PRICE_HIDDEN.has(bien.id) && !isMobile && (
           <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.3)", borderRadius: 6, padding: "3px 10px", flexShrink: 0 }}>
-            <span style={{ fontSize: 9, color: "#10b981", fontWeight: 700, letterSpacing: "0.08em", whiteSpace: "nowrap" }}>✓ -15% DIRECT</span>
+            <span style={{ fontSize: 9, color: "var(--c-success)", fontWeight: 700, letterSpacing: "0.08em", whiteSpace: "nowrap" }}>✓ -15% DIRECT</span>
           </div>
         )}
         {typeof navigator !== "undefined" && (
@@ -5077,7 +5077,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                   </div>
 
                   {calBelowMinLocal && (
-                    <div style={{ marginTop: 12, fontSize: 12, color: "#ef4444", fontWeight: 600 }}>
+                    <div style={{ marginTop: 12, fontSize: 12, color: "var(--c-danger)", fontWeight: 600 }}>
                       ⚠ Séjour minimum : {minNights} nuits pour ce logement
                     </div>
                   )}
@@ -5140,7 +5140,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                         <div style={{ fontSize: 22, fontWeight: 800, color: NAVY, marginTop: 8, marginBottom: 6 }}>
                           Total : {calTotal}€
                         </div>
-                        <div style={{ fontSize: 11, color: "#16a34a", fontFamily: "'Jost', sans-serif", fontWeight: 600, marginBottom: 14, display: "flex", alignItems: "center", gap: 5 }}>
+                        <div style={{ fontSize: 11, color: "var(--c-success)", fontFamily: "'Jost', sans-serif", fontWeight: 600, marginBottom: 14, display: "flex", alignItems: "center", gap: 5 }}>
                           💰 Vous économisez ~{Math.round(calTotal * 0.15 / 5) * 5}€ vs Airbnb en réservant en direct
                         </div>
                         <button
@@ -5324,7 +5324,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                     <div style={{ background: "rgba(0,0,0,0.03)", border: "1px solid var(--c-sand)", borderRadius: 8, padding: "12px 16px" }}>
                       <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 10, color: MUTED, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 4 }}>Sur Airbnb</div>
                       <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 22, color: MUTED, lineHeight: 1, textDecoration: "line-through" }}>{airbnbPrice}€<span style={{ fontSize: 11, fontWeight: 300, marginLeft: 4 }}>/nuit</span></div>
-                      <div style={{ marginTop: 6, fontFamily: "'Jost', sans-serif", fontSize: 10, color: "#ef4444" }}>+ ~14% de frais service</div>
+                      <div style={{ marginTop: 6, fontFamily: "'Jost', sans-serif", fontSize: 10, color: "var(--c-danger)" }}>+ ~14% de frais service</div>
                     </div>
                   </div>
                   <p style={{ margin: "10px 0 0", fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 13, color: NAVY, textAlign: "center" }}>
@@ -5512,7 +5512,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                           minCheckin={minCheckinStr}
                         />
                         {calBelowMinLocal && (
-                          <div style={{ marginTop: 8, fontSize: 11, color: "#ef4444", fontWeight: 600, textAlign: "center" }}>
+                          <div style={{ marginTop: 8, fontSize: 11, color: "var(--c-danger)", fontWeight: 600, textAlign: "center" }}>
                             ⚠ Séjour min. {minNights} nuits
                           </div>
                         )}
@@ -5866,7 +5866,7 @@ function FaqChatbot({ bien }) {
           <div style={{ padding: "8px 16px", borderTop: "1px solid rgba(255,255,255,0.07)", display: "flex", gap: 8, justifyContent: "center" }}>
             <a href="https://wa.me/33610880772" target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, color: "#25D366", textDecoration: "none", fontWeight: 600 }}>💬 WhatsApp</a>
             <span style={{ fontSize: 10, color: "#334155" }}>·</span>
-            <a href="mailto:contact@villamaryllis.com" style={{ fontSize: 10, color: "#0ea5e9", textDecoration: "none" }}>✉ Email</a>
+            <a href="mailto:contact@villamaryllis.com" style={{ fontSize: 10, color: "var(--c-info)", textDecoration: "none" }}>✉ Email</a>
           </div>
         </div>
       )}
@@ -6390,7 +6390,7 @@ function SearchByDates({ biens, onBook, onDetail }) {
                     </div>
                     {groupCombos.length === 0 ? (
                       <div style={{ background: CREAM, border: `1px solid ${SAND}`, borderRadius: 10, padding: "14px 16px" }}>
-                        <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 12, color: "#ef4444", marginBottom: 10 }}>
+                        <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 12, color: "var(--c-danger)", marginBottom: 10 }}>
                           Aucune combinaison entièrement libre sur ces dates.
                         </div>
                         <button
@@ -6433,7 +6433,7 @@ function SearchByDates({ biens, onBook, onDetail }) {
                 <>
                 <div style={{ fontSize: 10, color: MUTED, fontFamily: "'Jost', sans-serif", marginBottom: 10, letterSpacing: "0.08em", textTransform: "uppercase" }}>
                   {availableCount === 0
-                    ? <span style={{ color: "#ef4444" }}>Aucun logement disponible pour ces critères</span>
+                    ? <span style={{ color: "var(--c-danger)" }}>Aucun logement disponible pour ces critères</span>
                     : `${availableCount} logement${availableCount > 1 ? "s" : ""} disponible${availableCount > 1 ? "s" : ""}`}
                 </div>
 
@@ -6463,7 +6463,7 @@ function SearchByDates({ biens, onBook, onDetail }) {
 
                         {!isAvailable ? (
                           <div>
-                            <div style={{ fontSize: 10, color: "#ef4444", fontFamily: "'Jost', sans-serif", marginBottom: 6 }}>Indisponible</div>
+                            <div style={{ fontSize: 10, color: "var(--c-danger)", fontFamily: "'Jost', sans-serif", marginBottom: 6 }}>Indisponible</div>
                             <button onClick={() => setAlerteTarget({ bien, checkin, checkout })} style={{ fontSize: 10, color: MUTED, fontFamily: "'Jost', sans-serif", background: "none", border: `1px solid ${SAND}`, borderRadius: 5, padding: "4px 8px", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
                               🔔 M'alerter
                             </button>
@@ -6482,7 +6482,7 @@ function SearchByDates({ biens, onBook, onDetail }) {
                               = {Math.round((rawTotal - (discAmt || 0)) / nights)}€/nuit moy.
                             </div>
                             {/* Badge économie Airbnb */}
-                            <div style={{ fontSize: 10, color: "#16a34a", fontFamily: "'Jost', sans-serif", fontWeight: 600, marginBottom: 8, display: "flex", alignItems: "center", gap: 4 }}>
+                            <div style={{ fontSize: 10, color: "var(--c-success)", fontFamily: "'Jost', sans-serif", fontWeight: 600, marginBottom: 8, display: "flex", alignItems: "center", gap: 4 }}>
                               <span>💰</span>
                               <span>−{Math.round(total * 0.15 / 5) * 5}€ vs Airbnb</span>
                             </div>
@@ -6620,7 +6620,7 @@ function GroupBookingBuilder({ biens }) {
               <div style={{ position: "relative", height: 110 }}>
                 <img src={`/photos/${b.id}/01.webp`} alt={b.nom} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                 <div style={{ position: "absolute", top: 8, right: 8, width: 24, height: 24, borderRadius: "50%", background: isSel ? NAVY : "rgba(255,255,255,0.85)", border: `1px solid ${isSel ? NAVY : SAND}`, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 13 }}>{isSel ? "✓" : ""}</div>
-                {unavailable && <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.55)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#ef4444", fontFamily: "'Jost', sans-serif" }}>Indisponible</div>}
+                {unavailable && <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.55)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "var(--c-danger)", fontFamily: "'Jost', sans-serif" }}>Indisponible</div>}
               </div>
               <div style={{ padding: "11px 14px 13px" }}>
                 <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 13.5, color: NAVY }}>{ICONS[b.id]} {b.nom}</div>
@@ -6647,7 +6647,7 @@ function GroupBookingBuilder({ biens }) {
             {nights > 0 && <span style={{ fontWeight: 300, fontSize: 12, color: MUTED, marginLeft: 6 }}>total · {nights} nuit{nights > 1 ? "s" : ""}</span>}
           </div>
           {!capOk && selectedBiens.length > 0 && (
-            <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, color: "#ef4444", marginTop: 4 }}>
+            <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, color: "var(--c-danger)", marginTop: 4 }}>
               Capacité insuffisante pour {guests} voyageurs — ajoutez un logement.
             </div>
           )}
@@ -8737,7 +8737,7 @@ function DevisPage() {
               <div id="dp-dep" />
             </div>
             {error && <div style={{ color: "#dc2626", fontSize: 13, marginBottom: 12 }}>⚠ {error}</div>}
-            <button onClick={handleDeposit} disabled={paying || !depElements} style={{ width: "100%", padding: "14px", borderRadius: 10, border: "none", background: paying ? "#94a3b8" : "#f59e0b", color: "#fff", fontSize: 15, fontWeight: 700, cursor: paying ? "default" : "pointer" }}>
+            <button onClick={handleDeposit} disabled={paying || !depElements} style={{ width: "100%", padding: "14px", borderRadius: 10, border: "none", background: paying ? "#94a3b8" : "var(--c-warning)", color: "#fff", fontSize: 15, fontWeight: 700, cursor: paying ? "default" : "pointer" }}>
               {paying ? "⏳ Traitement…" : `🔒 Valider le dépôt — ${fmtEur(data.depot)}`}
             </button>
           </>
