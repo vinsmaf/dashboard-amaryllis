@@ -4,6 +4,22 @@
 > Décisions d'archi détaillées (specs complets) → `../docs/superpowers/specs/README.md` (ADR-001→010). Ici = log curaté de session.
 > **Archive mensuelle** : les décisions antérieures au mois courant vivent dans `.memory/archive/ADR-YYYY-MM.md`. Archive actuelle : [`archive/ADR-2026-06.md`](./archive/ADR-2026-06.md) (114 entrées, juin 2026).
 
+## ADR-BACKLOG-TRIAGE-002 · 2026-07-11 · Réutiliser /api/maintenance pour "dernier contrôle qualité" plutôt qu'une fiche bien neuve
+
+1. **Choix** : reco backlog `log-034` ("ajouter un champ dernier contrôle qualité dans la fiche bien") — investigation a montré qu'**aucune fiche bien éditable n'existe** dans l'admin (les données bien sont éparpillées sur 4 emplacements : `src/data/biens.js` en dur, `PublicSite.jsx BIENS` en dur, `src/lib/rmConfig.js` en dur, table D1 `rm_properties` jamais exposée en UI hors `price_min/max`). Plutôt que construire une fiche neuve, ajout d'une 9ᵉ catégorie `"qualite"` au système `/api/maintenance` déjà complet (CRUD, UI `MaintenanceTab.jsx`, filtrable par bien) — "dernier contrôle qualité" par bien = `MAX(done_at)` sur cette catégorie, calculable sans code neuf.
+2. **Alternatives refusées** : nouvelle colonne `last_quality_check_at` sur `rm_properties` + nouvelle UI fiche bien — écarté, hors du périmètre "1h" de la reco et aurait dupliqué un système déjà existant pour un besoin structurellement identique (suivi d'une date de contrôle par bien).
+3. **Conséquences attendues** : zéro migration, zéro nouvel endpoint. Non vérifié visuellement (endpoint password-gated, mot de passe jamais saisi par Claude) — vérifié par pattern-matching exact avec les 8 catégories existantes.
+4. **Périmètre** : `functions/api/maintenance.js` (`VALID_CATEGORY`), `src/tabs/MaintenanceTab.jsx` (`CAT`).
+5. **Statut** : ✅ déployé (commit `f499532`).
+
+## ADR-ORG-SCHEMA-001 · 2026-07-11 · Enrichir le schema JSON-LD Organization (address + sameAs)
+
+1. **Choix** : reco backlog `cpw-108` était non actionnable telle que formulée ("métadonnées page Informations sur l'entreprise via Google Search Console" — GSC est en lecture seule, aucune page de ce nom n'existe), mais contenait un noyau réel : le nœud `Organization`/`LodgingBusiness` (`buildRentalsGraph()`) n'avait que `name`/`url`/`telephone`/`email`, sans adresse ni réseaux sociaux. Vincent, informé du plafond réel (n'aide QUE les recherches de marque, aucun effet sur le ranking concurrentiel) : "on le fait quand même". Ajouté `address` (Sainte-Luce/Martinique/97228, **sans rue** — même logique de confidentialité que le reste du schema, cf. footgun extension de lieu Ads) + `sameAs` (Facebook + Instagram, déjà publics ailleurs dans le code).
+2. **Alternatives refusées** : ne rien faire (reco à faible valeur) — écarté sur demande explicite de Vincent malgré le plafond annoncé.
+3. **Conséquences attendues** : éligibilité renforcée au Knowledge Panel Google sur les recherches "Amaryllis"/"Villa Amaryllis". Aucun effet sur `functions/[slug].js` (rewrite runtime title/desc, non concerné — JSON-LD non touché par ce mécanisme).
+4. **Périmètre** : `scripts/prerender.mjs` (`buildRentalsGraph`).
+5. **Statut** : ✅ déployé (commit `852e22f`), vérifié en live (JSON-LD `/mabouya` contient bien `address`+`sameAs`).
+
 ## ADR-CACHE-REVENUE-SUMMARY-001 · 2026-07-10 · Cache KV stale-while-revalidate sur /api/revenue-summary
 
 1. **Choix** : suite d'ADR-REVENUE-SUMMARY-001/002 — le B2 côté patrimoine signale l'endpoint mesuré à 15-24s systématiques (pas un cold-start isolé), bien au-delà du timeout 3s de `/api/locatif`, qui retombait donc toujours sur son fallback Sheet (B1 jamais réellement utilisé). Vérifié moi-même en live avant d'agir (15-16s confirmés) plutôt que de faire confiance au chiffre du prompt. Cause : chaque appel réexécute l'appel Apps Script + l'agrégation par bien × mois pour 2 années, sans aucun cache réel (le `Cache-Control` HTTP posé par B1 ne produisait pas de cache CDN effectif pour cette Function). Fix : cache applicatif dans `CROSS_BRAIN_KV` (namespace déjà bindé côté Pages, réutilisé avec une clé dédiée `cache:revenue-summary:v1` plutôt qu'un nouveau namespace à provisionner), stale-while-revalidate (sert le cache même expiré sous 24h, rafraîchit en arrière-plan via `waitUntil` dès 20min d'âge) — aucun appelant ne retombe sur le calcul synchrone après le tout premier appel.

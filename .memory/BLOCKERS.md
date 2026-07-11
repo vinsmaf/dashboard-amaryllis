@@ -4,6 +4,15 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
+## En cours → ✅ terminé le 2026-07-11 — Résas historiques clôturées + audit Google Ads + triage backlog agents (43 items) + 2 features
+> Détail complet : ADR-BACKLOG-TRIAGE-002, ADR-ORG-SCHEMA-001. Commits `852e22f` (schema Organization), `f499532` (préchargement lightbox + catégorie qualité).
+- **3 conflits résas historiques** (backlog `[2026-06-26]`) : Zandoli fév 2024 résolu (Philibert supprimé, non retrouvé par Vincent — vérifié safe : checkin 2024 < seuil 2026 du garde-fou rebuild) ; Nogent juin 2023 résolu "on laisse" (Beds24 confirme un vrai double-booking cross-canal historique, les 2 lignes sont réelles) ; **Nogent mai 2022 reste ouvert** (Beds24 n'a aucune donnée avant juin 2022, Vincent n'a pas l'historique perso).
+- **Audit Google Ads en direct** (Claude in Chrome, compte réel) : 6 campagnes actives (2 non documentées : Zandoli, Amaryllis — confirmées faites avec Claude, jamais journalisées), Géko active alors que notée "en veille", doublon "Groupe d'annonces 2" nettoyé (supprimé définitivement, vide depuis sa création). 30j : 24 154 impr., 895 clics, 417€ dépensés.
+- **Triage backlog `agent_actions`** (43 items en attente) : 2 déjà traitées (`cpw-112` Mabouya déjà conforme, `cpw-108` non actionnable → noyau réel enrichi séparément), 5 bloquées avec notes explicatives (`arch-063`/`rep-012`/`rep-011` génériques ou hors-mandat, `cm-071`/`cm-075` doublons de `cm-063`), 2 implémentées (`media-038` préchargement lightbox, `log-034` catégorie "qualite" maintenance — aucune fiche bien éditable n'existe, réutilisé le système existant plutôt qu'en construire une neuve).
+- 🟡 **`sc-013`** (docs de référence propriétaires/clients) laissée en l'état — Vincent : "je ne sais pas trop", scope à préciser avant toute action.
+- 🟡 **GA4 "Paid Search" toujours 0 achat attribué** (224 sessions/30j réelles, mais les 7 achats du funnel tombent en Direct/Unassigned) — trop tôt pour trancher résidu pré-fix (08/07) vs vrai trou résiduel. Checkpoint 2026-07-19 (AGENDA) tranchera.
+- **Gap mémoire résolu** : la découverte des 3 faits Ads non documentés a révélé que les sessions Google Ads 100% UI (sans commit) ne laissent aucune trace si l'entrée `ITERATIONS_LOG.md` n'est pas écrite en temps réel — nouvelle leçon dans `learnings/TRACKING-ANALYTICS-ADS.md` + `learnings/AUTOMATION-NAVIGATEUR.md`.
+
 ## En cours → ✅ terminé le 2026-07-10 — Chantier B1/B2 revenue-summary + zoom galerie + backlog PWA guide-sejour
 > Détail complet : ADR-REVENUE-SUMMARY-001/002, ADR-CACHE-REVENUE-SUMMARY-001, ADR-GUIDE-ZOOM-001, ADR-GUIDE-PWA-FINITIONS-002.
 - **`/api/revenue-summary`** (nouveau) créé pour patrimoine-dashboard : CA/nuits/occ (B1) puis charges/cashflow/adr + 2 entités patrimoine `muscade`/`t4_amaryllis` (B2, décisions prises avec Vincent via question structurée plutôt que deviné seul). Puis mesuré 15-24s en prod → cache KV (`CROSS_BRAIN_KV`, stale-while-revalidate) → <0.3s en cache chaud. Découverte collatérale corrigée le jour même sur demande explicite de Vincent : `BIENS_MAP.cfRow` (utilisé par `readAll_()`/`Cockpit.jsx` en prod) pointait sur la ligne charges au lieu de cashflow.
@@ -128,9 +137,8 @@
 - **Statut** : `Cockpit.jsx` affiche désormais l'occupation forward 30j par bien (nouvel endpoint `/api/occupancy-stats`) — lint/tests/build verts, endpoint vérifié en direct via curl, mais jamais cliqué dans le navigateur (admin password-gated).
 - **Ce qui débloque** : Vincent confirme visuellement à l'occasion, ou fournit un accès de test si ce genre de vérif doit devenir systématique.
 
-## 🟡 Backlog guide-sejour PWA — 4 améliorations identifiées, non traitées (voir SPRINT_2026_07.md #11-14)
-- **Statut** : offline fragile (SW ne cache pas `/assets/*`), aucun QR physique vers `/guide-sejour/<bien>` (seul chemin actuel = emails), pas de tracking d'adoption PWA (`?source=pwa`), fade visuel manquant sur la quick-nav.
-- **Ce qui débloque** : prochaine session, reprendre les tasks #40-43 (déjà détaillées, prêtes à l'emploi).
+## ✅ Backlog guide-sejour PWA — 4/4 traités le 2026-07-10 (ADR-GUIDE-PWA-FINITIONS-002)
+- **Statut** : SW cache désormais `/assets/*`, QR imprimables `/guide-sejour-qr` en place, marqueur `?source=pwa` sur le manifest, fade dynamique sur la quick-nav. Déployé et vérifié en live.
 
 ## 🟡 Exceptions Géko auto-expirantes (03→06/07/2026) — rien à faire, mais à savoir si le calendrier "change tout seul"
 - **Statut** : min-nights (D1 `min_nights_config`) + délai 24h (`SAME_DAY_BOOKING_BIENS`/`SAME_DAY_BOOKING_WINDOW` dans `PublicSite.jsx`) reviennent automatiquement à la normale après le 06/07 — aucune action requise.
@@ -164,10 +172,10 @@
 - **Fichiers ouverts** : aucun (travail 100% dans l'UI Google Ads, pas de code)
 - **Contexte critique** : (1) campaignId=23983721226. (2) Statut **doit rester En veille** tant que Vincent n'a pas explicitement validé l'activation (argent réel). (3) Toute republication/édition via le wizard Google Ads doit être réauditée ensuite — voir LEARNINGS.
 
-## 🟡 Géko Ads — 2 groupes d'annonces dupliqués à nettoyer
-- **Statut** : la campagne "Géko - Location Martinique" (campaignId=23983721226) a 2 groupes d'annonces quasi-identiques, créés lors d'un retry après crash du wizard de création.
-- **Action** : avant d'activer la campagne, comparer le contenu des 2 groupes et supprimer le doublon (garder le plus complet/cohérent).
-- **Ce qui débloque** : 5 minutes de vérification manuelle dans Google Ads.
+## ✅ Géko Ads — doublon supprimé, campagne réactivée (2026-07-11)
+- **Statut** : "Groupe d'annonces 2" (0 impr./0€ depuis sa création) supprimé définitivement dans Google Ads — ne reste que "Groupe d'annonces 1" (832 impr., 12,31€). Vincent confirme que la campagne a été réactivée directement avec Claude (pas de trace mémoire trouvée — cf. LEARNINGS METHODOLOGIE-PROCESS.md, session Ads UI-only jamais journalisée).
+- **Audit compte complet fait le même jour** (vérifié en direct dans Google Ads, pas juste mémoire) : **6 campagnes actives** au total, pas 3 — 2 non documentées jusqu'ici (`Zandoli - Appartement Martinique 5p`, `Amaryllis - Villa Martinique 8p`, confirmées par Vincent comme faites avec Claude). 30j glissants : 24 154 impr., 895 clics, 417€ dépensés, CPC moy. 0,47€. Détail par campagne dans ITERATIONS_LOG 2026-07-11.
+- 🟡 **Reste ouvert** : GA4 montre 224 sessions/30j sur le canal "Paid Search" mais **0 achat attribué à ce canal** (les 7 achats du funnel tombent en Direct/Unassigned) — trop tôt pour trancher si c'est du résidu pré-fix attribution (08/07) ou un vrai trou. Checkpoint 2026-07-19 (AGENDA) tranchera.
 
 ## En cours → ✅ terminé le 2026-06-30 (Veille concurrentielle RM — sélection + import 18 concurrents)
 
@@ -179,10 +187,9 @@
 
 ## En cours → ✅ terminé le 2026-06-29 (Session tracking + LLM + backlog agents)
 
-## 🟡 Perf pubs — attendre conversion purchase dans GA4 + Google Ads
-- **Statut** : fix `event_callback` déployé (commit `42d9ba9`, 2026-06-29). GA4 n'avait aucun event `purchase` depuis juin (race condition beacon vs redirect).
-- **Prochaine vérif** : 2026-07-07 → GA4 Events (purchase doit apparaître) + Google Ads `amaryllis (web) purchase` > 0.
-- **Si OK** : basculer campagnes Google en "Maximiser les conversions" + Meta en "Purchase". **Si toujours 0** : envisager Measurement Protocol server-side dans stripe-webhook.js (client_id GA4 via cookie `_ga`).
+## 🟡 Perf pubs — GA4 purchase confirmé, bascule stratégie d'enchères pas encore faite
+- **Statut** : fix `event_callback` (29/06) + fix attribution `b40ba06` (08/07) déployés. **Vérifié 2026-07-11** : GA4 funnel remonte bien `purchase: 7` events / `totalRevenue: 3881€` sur la fenêtre — le tracking fonctionne. Google Ads `amaryllis (web) purchase` non revérifié côté UI Ads (pas d'accès direct depuis ce repo).
+- **Ce qui débloque** : Vincent bascule les campagnes Google en "Maximiser les conversions" + Meta en "Purchase" quand il juge le volume suffisant (7 events = encore peu pour du smart bidding fiable, envisager d'attendre un peu plus de données). Checkpoint ROAS déjà prévu 2026-07-19 (AGENDA).
 
 ## En cours → ✅ terminé le 2026-06-27 (Session pipeline sécurité réservations — 4 gaps comblés)
 

@@ -2,7 +2,12 @@
 
 > GA4, Meta Pixel/CAPI, Google Ads/Meta Ads
 > Extrait de `../LEARNINGS.md` le 2026-07-04 (consolidation mémoire — split thématique).
-> 14 entrées, triées par date décroissante.
+> 15 entrées, triées par date décroissante.
+
+## 🕳️ Session Google Ads 100% UI (0 commit) = invisible en mémoire si `/cloture-session` n'est pas lancé — 2026-07-11
+- **Piège vécu** : 2 campagnes (`Zandoli - Appartement Martinique 5p`, `Amaryllis - Villa Martinique 8p`) créées avec Claude, et la réactivation de la campagne Géko (connue "en veille" depuis le 30/06), n'ont laissé AUCUNE trace — ni commit git (normal, aucun code touché), ni entrée `ITERATIONS_LOG.md`. Un audit complet du compte Ads (30/06→11/07) a découvert ces 3 faits en même temps, tous confirmés par Vincent après coup ("c'est bien avec toi qu'on l'a fait, bizarre que tu l'aies pas noté").
+- **Cause probable** : les sessions Ads sont typiquement "aucun code modifié, travail 100% Google Ads UI" (déjà vu pour la création Géko du 30/06) — sans diff à committer, le seul filet est l'entrée manuelle `ITERATIONS_LOG.md` en fin de session. Si la session se termine sans repasser par le rituel de clôture (Vincent enchaîne sur autre chose, ou ferme simplement), rien ne subsiste nulle part.
+- **La prochaine fois** : pour toute session à dominante UI externe (Google Ads, Meta Business Suite, tout dashboard tiers sans code) → écrire l'entrée `ITERATIONS_LOG.md` **au fil de l'eau**, pas en fin de session seulement (le filet git n'existe pas ici, contrairement au reste du repo). Corollaire : ne jamais présumer qu'une plateforme externe (Ads, Meta) est dans l'état décrit en mémoire sans revérifier en direct — ce cas montre que l'écart peut être total (3 faits marquants, 0 trace) et pas juste un détail périmé.
 
 ## 🔴 Attribution en sessionStorage = perdue à chaque retour multi-session ; server MP sans session_id = event mal rattaché — 2026-07-08
 - **Piège** : `trackingAttribution.js` capturait gclid/fbclid/utm en `sessionStorage` (modèle "premier clic de LA SESSION fait foi") — mais un visiteur qui clique une pub un jour et revient réserver 3 jours après (nouvel onglet/navigateur redémarré) perd totalement son attribution d'origine, retombe sur `channel:"direct"` par défaut. Sur un tunnel de réservation avec plusieurs jours de réflexion typique, c'est structurellement la majorité des conversions payantes qui se font passer pour du direct.
