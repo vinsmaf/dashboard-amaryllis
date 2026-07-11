@@ -385,8 +385,8 @@ export default function VillaAmaryllisReel({
   // ── prefers-reduced-motion: static first photo ──────────────────────────────
   if (reducedMotion) {
     const staticStyle = fillHeight
-      ? { width: "100%", height: "100%", borderRadius: 16, overflow: "hidden", position: "relative", background: "#050608" }
-      : { width: "100%", maxWidth, margin: "0 auto", aspectRatio: "9/16", borderRadius: 16, overflow: "hidden", position: "relative", background: "#050608" };
+      ? { width: "100%", height: "100%", borderRadius: 16, overflow: "hidden", position: "relative", background: "var(--c-void)" }
+      : { width: "100%", maxWidth, margin: "0 auto", aspectRatio: "9/16", borderRadius: 16, overflow: "hidden", position: "relative", background: "var(--c-void)" };
     return (
       <div className={`rc-page ${className}`} style={staticStyle} aria-label="Villa Amaryllis">
         <img

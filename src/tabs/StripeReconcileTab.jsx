@@ -51,7 +51,7 @@ function PayoutCard({ p }) {
         </div>
         <div style={{ textAlign: "right" }}>
           <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 }}>Net viré</div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: "#6ee7b7" }}>{fmtEur(p.amount)}</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "var(--c-success-light)" }}>{fmtEur(p.amount)}</div>
         </div>
         <span style={{ fontSize: 10, fontWeight: 700, color: st.color, background: `${st.color}18`, borderRadius: 6, padding: "3px 8px" }}>{st.label}</span>
         {p.unmatchedCount > 0 && (
@@ -79,7 +79,7 @@ function PayoutCard({ p }) {
               </div>
               <span style={{ fontSize: 11, color: "#94a3b8", width: 70, textAlign: "right" }}>{fmtEur(t.amount)}</span>
               <span style={{ fontSize: 11, color: "#f87171", width: 60, textAlign: "right" }}>{t.fee ? `−${fmtEur(t.fee)}` : "—"}</span>
-              <span style={{ fontSize: 11, color: "#6ee7b7", width: 70, textAlign: "right", fontWeight: 600 }}>{fmtEur(t.net)}</span>
+              <span style={{ fontSize: 11, color: "var(--c-success-light)", width: 70, textAlign: "right", fontWeight: 600 }}>{fmtEur(t.net)}</span>
             </div>
           ))}
         </div>
@@ -131,7 +131,7 @@ export default function StripeReconcileTab() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10, marginBottom: 20 }}>
           <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: "12px 14px" }}>
             <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Total net viré</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: "#6ee7b7" }}>{fmtEur(totalNet)}</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: "var(--c-success-light)" }}>{fmtEur(totalNet)}</div>
           </div>
           <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: "12px 14px" }}>
             <div style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Total frais Stripe</div>

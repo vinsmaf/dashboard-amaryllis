@@ -147,13 +147,13 @@ export default function MessagerieTab() {
           {gmail.checked && (
             gmail.connected ? (
               <>
-                <span style={{ fontSize: 11, color: "#6ee7b7", fontWeight: 600, whiteSpace: "nowrap" }}>
+                <span style={{ fontSize: 11, color: "var(--c-success-light)", fontWeight: 600, whiteSpace: "nowrap" }}>
                   ✓ Gmail connecté{gmail.accountEmail ? ` (${gmail.accountEmail})` : ""}
                 </span>
                 <button
                   onClick={syncGmailNow}
                   disabled={gmailSyncing}
-                  style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(110,231,183,0.3)", background: "rgba(16,185,129,0.08)", color: "#6ee7b7", fontSize: 12, fontWeight: 700, cursor: gmailSyncing ? "default" : "pointer", whiteSpace: "nowrap" }}
+                  style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(110,231,183,0.3)", background: "rgba(16,185,129,0.08)", color: "var(--c-success-light)", fontSize: 12, fontWeight: 700, cursor: gmailSyncing ? "default" : "pointer", whiteSpace: "nowrap" }}
                 >
                   {gmailSyncing ? "⏳ Sync…" : "🔄 Sync"}
                 </button>
@@ -195,7 +195,7 @@ export default function MessagerieTab() {
             marginBottom: 12, padding: "8px 14px", borderRadius: 8, fontSize: 12, cursor: "pointer",
             background: gmailBanner.type === "ok" ? "rgba(16,185,129,0.1)" : "rgba(239,68,68,0.1)",
             border: `1px solid ${gmailBanner.type === "ok" ? "rgba(16,185,129,0.25)" : "rgba(239,68,68,0.25)"}`,
-            color: gmailBanner.type === "ok" ? "#6ee7b7" : "#f87171",
+            color: gmailBanner.type === "ok" ? "var(--c-success-light)" : "#f87171",
           }}
         >
           {gmailBanner.text} <span style={{ opacity: 0.6 }}>(clic pour fermer)</span>

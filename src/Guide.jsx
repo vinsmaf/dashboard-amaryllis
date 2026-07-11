@@ -92,7 +92,7 @@ const CSS = `
   .g2-hero { position: relative; height: 520px; overflow: hidden; }
   .g2-hero .carousel-slide {
     position: absolute; inset: -24px; display: block;
-    background-color: #0e2020; background-size: cover; background-position: center;
+    background-color: var(--c-photo-bg); background-size: cover; background-position: center;
     opacity: 0; transition: opacity 1.4s ease-in-out; cursor: pointer;
   }
   .g2-hero .carousel-slide.active {
@@ -278,7 +278,7 @@ const CSS = `
   .g2-host { background: #0e3b3a; color: #faf5e9; padding: 96px 0; position: relative; overflow: hidden; }
   .g2-host::before { content: ""; position: absolute; inset: -40px; background: url('/photos/amaryllis/11.webp') center/cover; opacity: 0.12; filter: blur(2px); }
   .g2-host-grid { position: relative; z-index: 2; display: grid; grid-template-columns: 1fr 1.3fr; gap: 56px; align-items: center; }
-  .g2-host-portrait { aspect-ratio: 16/9; background: #0e2020 url('/photos/hosts.webp') center top/cover; border-radius: 18px; box-shadow: 0 24px 64px rgba(0,0,0,0.40); position: relative; }
+  .g2-host-portrait { aspect-ratio: 16/9; background: var(--c-photo-bg) url('/photos/hosts.webp') center top/cover; border-radius: 18px; box-shadow: 0 24px 64px rgba(0,0,0,0.40); position: relative; }
   .g2-host-portrait::after { content: ""; position: absolute; inset: 0; border-radius: 18px; border: 1px solid rgba(201,166,115,0.4); }
   .g2-host-text .pre { font-family: 'Jost', sans-serif; font-weight: 300; font-size: 11px; letter-spacing: 0.55em; text-transform: uppercase; color: #c9a673; margin-bottom: 22px; }
   .g2-host-text h3 { font-family: 'Jost', sans-serif; font-weight: 200; font-size: clamp(30px, 4.4vw, 50px); letter-spacing: 0.10em; text-transform: uppercase; color: #faf5e9; line-height: 1.05; margin: 0 0 28px; }

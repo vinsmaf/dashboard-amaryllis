@@ -44,6 +44,10 @@
   --c-warning: #d97706;
   --c-danger:  #ef4444;
   --c-info:    #0ea5e9;
+  --c-teal:    #14b8a6;  /* accent distinct du succès — "économies réservation directe" */
+  --c-success-light: #6ee7b7;  /* texte succès sur fond sombre/teinté (contraste) */
+  --c-photo-bg: #0e2020; /* fond d'attente photo/hero (avant chargement image) */
+  --c-void:    #050a09;  /* noir quasi-pur teinté navy (fond vidéo Reel), jamais #000 pur */
 
   /* Foregrounds */
   --fg-1: var(--c-navy);                /* primary text */

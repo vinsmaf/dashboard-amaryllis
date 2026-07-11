@@ -182,13 +182,13 @@ export default function MenageTab() {
         {calendar.checked && (
           calendar.connected ? (
             <>
-              <span style={{ fontSize: 11, color: "#6ee7b7", fontWeight: 600, whiteSpace: "nowrap" }}>
+              <span style={{ fontSize: 11, color: "var(--c-success-light)", fontWeight: 600, whiteSpace: "nowrap" }}>
                 ✓ Calendar connecté{calendar.accountEmail ? ` (${calendar.accountEmail})` : ""}
               </span>
               <button
                 onClick={syncCalendarNow}
                 disabled={calendarSyncing || menages.length === 0}
-                style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(110,231,183,0.3)", background: "rgba(16,185,129,0.08)", color: "#6ee7b7", fontSize: 12, fontWeight: 700, cursor: calendarSyncing ? "default" : "pointer", whiteSpace: "nowrap" }}
+                style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(110,231,183,0.3)", background: "rgba(16,185,129,0.08)", color: "var(--c-success-light)", fontSize: 12, fontWeight: 700, cursor: calendarSyncing ? "default" : "pointer", whiteSpace: "nowrap" }}
               >
                 {calendarSyncing ? "⏳ Sync…" : "📅 Sync calendrier"}
               </button>
@@ -210,7 +210,7 @@ export default function MenageTab() {
             marginBottom: 14, padding: "8px 14px", borderRadius: 8, fontSize: 12, cursor: "pointer",
             background: calendarBanner.type === "ok" ? "rgba(16,185,129,0.1)" : "rgba(239,68,68,0.1)",
             border: `1px solid ${calendarBanner.type === "ok" ? "rgba(16,185,129,0.25)" : "rgba(239,68,68,0.25)"}`,
-            color: calendarBanner.type === "ok" ? "#6ee7b7" : "#f87171",
+            color: calendarBanner.type === "ok" ? "var(--c-success-light)" : "#f87171",
           }}
         >
           {calendarBanner.text} <span style={{ opacity: 0.6 }}>(clic pour fermer)</span>

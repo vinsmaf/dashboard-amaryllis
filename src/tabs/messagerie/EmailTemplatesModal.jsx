@@ -148,7 +148,7 @@ export default function EmailTemplatesModal({ isOpen, onClose }) {
               >
                 <div style={{ fontSize: 12, fontWeight: 700, color: "#e2e8f0", display: "flex", alignItems: "center", gap: 6 }}>
                   {t.label}
-                  {t.custom && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 6, background: "rgba(16,185,129,0.15)", color: "#6ee7b7", fontWeight: 700 }}>PERSONNALISÉ</span>}
+                  {t.custom && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 6, background: "rgba(16,185,129,0.15)", color: "var(--c-success-light)", fontWeight: 700 }}>PERSONNALISÉ</span>}
                 </div>
                 <div style={{ fontSize: 10, color: "#64748b", marginTop: 3, lineHeight: 1.4 }}>{t.desc}</div>
               </button>
@@ -168,7 +168,7 @@ export default function EmailTemplatesModal({ isOpen, onClose }) {
             {selected && !loading && (
               <>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 11, color: hasCustom ? "#6ee7b7" : "#94a3b8" }}>
+                  <span style={{ fontSize: 11, color: hasCustom ? "var(--c-success-light)" : "#94a3b8" }}>
                     {hasCustom ? "✓ Version personnalisée active" : "Textes par défaut"}
                   </span>
                   <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
@@ -184,7 +184,7 @@ export default function EmailTemplatesModal({ isOpen, onClose }) {
                 </div>
 
                 {msg && (
-                  <div style={{ fontSize: 12, padding: "8px 12px", borderRadius: 8, background: msg.type === "ok" ? "rgba(16,185,129,0.1)" : "rgba(239,68,68,0.1)", color: msg.type === "ok" ? "#6ee7b7" : "#fca5a5" }}>
+                  <div style={{ fontSize: 12, padding: "8px 12px", borderRadius: 8, background: msg.type === "ok" ? "rgba(16,185,129,0.1)" : "rgba(239,68,68,0.1)", color: msg.type === "ok" ? "var(--c-success-light)" : "#fca5a5" }}>
                     {msg.text}
                   </div>
                 )}

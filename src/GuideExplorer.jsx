@@ -81,7 +81,7 @@ const CSS = `
   }
   .leaflet-popup-content { margin: 0 !important; width: 220px !important; }
   .leaflet-popup-tip-container { display: none; }
-  .leaflet-container { font-family: 'Jost', sans-serif !important; background: #0e2020 !important; }
+  .leaflet-container { font-family: 'Jost', sans-serif !important; background: var(--c-photo-bg) !important; }
   .leaflet-control-attribution { font-size: 10px !important; background: rgba(255,255,255,.7) !important; }
   .ge-map-wrap .leaflet-top.leaflet-left { top: 14px; left: 14px; }
   .leaflet-control-zoom { border: none !important; box-shadow: 0 4px 18px rgba(0,0,0,.25) !important; border-radius: 12px !important; overflow: hidden; }

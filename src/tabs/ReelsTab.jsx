@@ -281,7 +281,7 @@ function NewReelForm({ onCreated }) {
       </div>
 
       {result && !result.error && (
-        <div style={{ background: "rgba(16,185,129,0.1)", border: "1px solid #10b981", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "#6ee7b7" }}>
+        <div style={{ background: "rgba(16,185,129,0.1)", border: "1px solid #10b981", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "var(--c-success-light)" }}>
           ✅ Draft créé (score {result.score}/100 · {result.verdict === "approve" ? "auto-approuvé" : "à valider"})
         </div>
       )}

@@ -9,7 +9,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  background: radial-gradient(ellipse at center, #0c1219 0%, #050608 70%) #050608;
+  background: radial-gradient(ellipse at center, #0c1219 0%, var(--c-void) 70%) var(--c-void);
   border-radius: 16px;
   overflow: hidden;
 }

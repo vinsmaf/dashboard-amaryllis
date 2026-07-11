@@ -317,7 +317,7 @@ function ScenePrice({ t, coral, price, voyageurs }) {
           transform:`translateY(${lerp(14,0,sp)}px)`,
           background:"rgba(16,185,129,0.18)", border:"1px solid rgba(16,185,129,0.42)",
           borderRadius:12, padding:"12px 24px",
-          fontFamily:"'Jost',sans-serif", fontWeight:700, fontSize:24, color:"#6ee7b7", letterSpacing:"0.07em",
+          fontFamily:"'Jost',sans-serif", fontWeight:700, fontSize:24, color:"var(--c-success-light)", letterSpacing:"0.07em",
         }}>
           ✓ −15% · Réservez en direct et économisez
         </div>
@@ -522,7 +522,7 @@ export default function ReelPlayer({
 
   if (reducedMotion) {
     return (
-      <div className={`rc-page ${className}`} style={{ ...pageStyle, background:"#050608" }} aria-label={ariaLabel}>
+      <div className={`rc-page ${className}`} style={{ ...pageStyle, background:"var(--c-void)" }} aria-label={ariaLabel}>
         <img src={shots[0]?.src} alt={ariaLabel} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
         <div style={{ position:"absolute", inset:0, background:"linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 60%)" }} />
         <div style={{ position:"absolute", bottom:0, left:0, right:0, padding:"32px 24px", fontFamily:"'Jost',sans-serif", color:"#faf5e9", textAlign:"center" }}>

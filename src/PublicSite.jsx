@@ -907,7 +907,7 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
           else if (inRange) { bg = "var(--c-cream, #f4ecdc)"; color = NAVY; borderRadius = "0"; }
           if (isCI) borderRadius = "8px 0 0 8px";
           if (isCO) borderRadius = "0 8px 8px 0";
-          if (blocked) { bg = "repeating-linear-gradient(135deg, var(--c-cream), var(--c-cream) 3px, #e8dcc1 3px, #e8dcc1 6px)"; borderRadius = "6px"; }
+          if (blocked) { bg = "repeating-linear-gradient(135deg, var(--c-cream), var(--c-cream) 3px, var(--c-sand) 3px, var(--c-sand) 6px)"; borderRadius = "6px"; }
 
           const dayLabel = ds ? `${parseInt(ds.split("-")[2])} ${new Date(ds + "T12:00:00").toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}${disabled ? " (indisponible)" : ""}` : "";
           return (
@@ -955,7 +955,7 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
               {ds && gapDates[ds] && !disabled && (
                 <div style={{
                   position: "absolute", top: 2, right: 2,
-                  background: gapDates[ds] < 0 ? "var(--c-warning)" : "#14b8a6", color: "#fff",
+                  background: gapDates[ds] < 0 ? "var(--c-warning)" : "var(--c-teal)", color: "#fff",
                   fontSize: 7, fontWeight: 800,
                   padding: "1px 3px", borderRadius: 3,
                   lineHeight: 1.2, pointerEvents: "none",
@@ -1080,7 +1080,7 @@ function DateRangePicker({ checkin, checkout, blockedDates = [], onChange, daily
           Disponible
         </span>
         <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: MUTED, fontFamily: "'Jost', sans-serif" }}>
-          <span style={{ width: 22, height: 22, background: "repeating-linear-gradient(135deg, var(--c-cream), var(--c-cream) 3px, #e8dcc1 3px, #e8dcc1 6px)", border: `1px solid ${SAND}`, borderRadius: 5, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#a89878", fontWeight: 400 }}>8</span>
+          <span style={{ width: 22, height: 22, background: "repeating-linear-gradient(135deg, var(--c-cream), var(--c-cream) 3px, var(--c-sand) 3px, var(--c-sand) 6px)", border: `1px solid ${SAND}`, borderRadius: 5, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#a89878", fontWeight: 400 }}>8</span>
           Indisponible
         </span>
       </div>
@@ -1735,7 +1735,7 @@ function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) 
                     </div>
                   )}
                   {promoError && (
-                    <div style={{ fontSize: 11, color: "#e53e3e", marginTop: 5 }}>{promoError}</div>
+                    <div style={{ fontSize: 11, color: "var(--c-danger)", marginTop: 5 }}>{promoError}</div>
                   )}
                 </div>
               </>
@@ -1757,7 +1757,7 @@ function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) 
                   </div>
                 </div>
                 {localCheckin && localCheckout && nights <= 0 && (
-                  <div style={{ fontSize: 11, color: "#e53e3e", marginTop: 6 }}>La date de départ doit être après l'arrivée.</div>
+                  <div style={{ fontSize: 11, color: "var(--c-danger)", marginTop: 6 }}>La date de départ doit être après l'arrivée.</div>
                 )}
               </div>
             )}
@@ -1793,7 +1793,7 @@ function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) 
             </div>
 
             {createErr && (
-              <div role="alert" aria-live="polite" style={{ color: "#e53e3e", fontSize: 12, marginBottom: 14, background: "rgba(229,62,62,0.08)", borderRadius: 8, padding: "10px 14px" }}>
+              <div role="alert" aria-live="polite" style={{ color: "var(--c-danger)", fontSize: 12, marginBottom: 14, background: "rgba(239,68,68,0.08)", borderRadius: 8, padding: "10px 14px" }}>
                 {createErr}
               </div>
             )}
@@ -1829,7 +1829,7 @@ function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) 
             <div id="b24-spe" ref={spRef} style={{ marginBottom: 16 }} />
 
             {payError && (
-              <div role="alert" aria-live="polite" style={{ color: "#e53e3e", fontSize: 12, marginBottom: 14, background: "rgba(229,62,62,0.08)", borderRadius: 8, padding: "10px 14px" }}>
+              <div role="alert" aria-live="polite" style={{ color: "var(--c-danger)", fontSize: 12, marginBottom: 14, background: "rgba(239,68,68,0.08)", borderRadius: 8, padding: "10px 14px" }}>
                 {payError}
               </div>
             )}
@@ -2694,7 +2694,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
                       </button>
                     </div>
                     {promoData && <div style={{ fontSize: 11, color: "var(--c-success)", marginTop: 6, fontFamily: "'Jost', sans-serif" }}>✓ Code valide — −{promoDiscountAmt}€ appliqué</div>}
-                    {promoError && <div style={{ fontSize: 11, color: "#e53e3e", marginTop: 6, fontFamily: "'Jost', sans-serif" }}>{promoError}</div>}
+                    {promoError && <div style={{ fontSize: 11, color: "var(--c-danger)", marginTop: 6, fontFamily: "'Jost', sans-serif" }}>{promoError}</div>}
                   </div>
                 )}
 
@@ -2902,7 +2902,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
               <span style={{ fontFamily: "'Jost', sans-serif", fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(250,245,233,0.65)" }}>Total tout compris</span>
               <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 20, color: "var(--c-ivory)" }}>{total}€</span>
             </div>
-            <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, color: "#6ee7b7" }}>
+            <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, color: "var(--c-success-light)" }}>
               💰 ~−{Math.round(total * 0.15 / 5) * 5}€ vs Airbnb · 0 frais de service
             </div>
           </div>
@@ -2939,7 +2939,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <RatingBadge rating={bien.rating} count={bien.reviews} dark />
             <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 12, color: "rgba(250,245,233,0.6)", display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ color: "#6ee7b7" }}>✓</span> Hôte Amaryllis · répond en moins d'1h
+              <span style={{ color: "var(--c-success-light)" }}>✓</span> Hôte Amaryllis · répond en moins d'1h
             </div>
           </div>
         )}
@@ -3006,12 +3006,12 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
               <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 26, color: "var(--c-ivory)" }}>{total}€</span>
             </div>
             {total > 0 && (
-              <div style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: "'Jost', sans-serif", fontSize: 12, color: "#6ee7b7" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: "'Jost', sans-serif", fontSize: 12, color: "var(--c-success-light)" }}>
                 <span>💰</span> Économie vs Airbnb ~−{Math.round(total * 0.15 / 5) * 5}€ · 0 frais de service
               </div>
             )}
             {depositAmt > 0 && (
-              <div style={{ background: "rgba(16,185,129,0.10)", border: "1px solid rgba(16,185,129,0.30)", borderRadius: 8, padding: "10px 12px", fontFamily: "'Jost', sans-serif", fontSize: 11, color: "#6ee7b7", display: "flex", gap: 8, alignItems: "center" }}>
+              <div style={{ background: "rgba(16,185,129,0.10)", border: "1px solid rgba(16,185,129,0.30)", borderRadius: 8, padding: "10px 12px", fontFamily: "'Jost', sans-serif", fontSize: 11, color: "var(--c-success-light)", display: "flex", gap: 8, alignItems: "center" }}>
                 🔒 + {depositAmt.toLocaleString("fr-FR")}€ caution pré-autorisée avant l'arrivée (jamais débitée)
               </div>
             )}
@@ -3322,11 +3322,11 @@ function BienCard({ bien, onDetail, onBook, onPrefetch, isFavorite = false, onTo
     >
       {/* Photo section — aspect ratio 3:2 */}
       <div
-        style={{ position: "relative", paddingBottom: "66.6%", overflow: "hidden", background: "#0e2020" }}
+        style={{ position: "relative", paddingBottom: "66.6%", overflow: "hidden", background: "var(--c-photo-bg)" }}
         onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}
       >
         {/* Skeleton placeholder */}
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, #0e2020 0%, #193535 100%)" }} />
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, var(--c-photo-bg) 0%, #193535 100%)" }} />
 
         {currentPhoto ? (
           <img
@@ -4295,7 +4295,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                       <span style={{ color: MUTED, fontSize: 11, marginLeft: 4 }}>/nuit</span>
                     </div>
                     {isMobile && (
-                      <div style={{ fontSize: 9, color: "#14b8a6", fontWeight: 600, fontFamily: "'Jost', sans-serif", letterSpacing: "0.02em", marginTop: 2 }}>
+                      <div style={{ fontSize: 9, color: "var(--c-teal)", fontWeight: 600, fontFamily: "'Jost', sans-serif", letterSpacing: "0.02em", marginTop: 2 }}>
                         ✓ {lang === "fr" ? "Prix direct · paiement sécurisé" : "Direct price · secure payment"}
                       </div>
                     )}
@@ -4441,7 +4441,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                 {bien.id === "amaryllis" ? (
                   /* Reel cinématique plein-hauteur — Villa Amaryllis */
                   <Suspense fallback={
-                    <div style={{ width: "100%", height: "100%", background: "radial-gradient(ellipse at top, var(--c-navy) 0%, #050608 100%)" }} />
+                    <div style={{ width: "100%", height: "100%", background: "radial-gradient(ellipse at top, var(--c-navy) 0%, var(--c-void) 100%)" }} />
                   }>
                     <VillaAmaryllisReel
                       fillHeight={true}
@@ -4456,23 +4456,23 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                     />
                   </Suspense>
                 ) : bien.id === "geko" ? (
-                  <Suspense fallback={<div style={{ width:"100%", height:"100%", background:"radial-gradient(ellipse at top, var(--c-navy) 0%, #050608 100%)" }} />}>
+                  <Suspense fallback={<div style={{ width:"100%", height:"100%", background:"radial-gradient(ellipse at top, var(--c-navy) 0%, var(--c-void) 100%)" }} />}>
                     <GekoReel fillHeight={true} onCta={() => onBook(bien)} price={String(bien.prix ?? "110")} />
                   </Suspense>
                 ) : bien.id === "zandoli" ? (
-                  <Suspense fallback={<div style={{ width:"100%", height:"100%", background:"radial-gradient(ellipse at top, var(--c-navy) 0%, #050608 100%)" }} />}>
+                  <Suspense fallback={<div style={{ width:"100%", height:"100%", background:"radial-gradient(ellipse at top, var(--c-navy) 0%, var(--c-void) 100%)" }} />}>
                     <ZandoliReel fillHeight={true} onCta={() => onBook(bien)} price={String(bien.prix ?? "110")} />
                   </Suspense>
                 ) : bien.id === "mabouya" ? (
-                  <Suspense fallback={<div style={{ width:"100%", height:"100%", background:"radial-gradient(ellipse at top, var(--c-navy) 0%, #050608 100%)" }} />}>
+                  <Suspense fallback={<div style={{ width:"100%", height:"100%", background:"radial-gradient(ellipse at top, var(--c-navy) 0%, var(--c-void) 100%)" }} />}>
                     <MabouaReel fillHeight={true} onCta={() => onBook(bien)} price={String(bien.prix ?? "70")} />
                   </Suspense>
                 ) : bien.id === "schoelcher" ? (
-                  <Suspense fallback={<div style={{ width:"100%", height:"100%", background:"radial-gradient(ellipse at top, var(--c-navy) 0%, #050608 100%)" }} />}>
+                  <Suspense fallback={<div style={{ width:"100%", height:"100%", background:"radial-gradient(ellipse at top, var(--c-navy) 0%, var(--c-void) 100%)" }} />}>
                     <SchoelcherReel fillHeight={true} onCta={() => onBook(bien)} price={String(bien.prix ?? "90")} />
                   </Suspense>
                 ) : bien.id === "nogent" ? (
-                  <Suspense fallback={<div style={{ width:"100%", height:"100%", background:"radial-gradient(ellipse at top, var(--c-navy) 0%, #050608 100%)" }} />}>
+                  <Suspense fallback={<div style={{ width:"100%", height:"100%", background:"radial-gradient(ellipse at top, var(--c-navy) 0%, var(--c-void) 100%)" }} />}>
                     <NogentReel fillHeight={true} onCta={() => onBook(bien)} price={String(bien.prix ?? "90")} />
                   </Suspense>
                 ) : (
@@ -5156,7 +5156,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                     <div style={{ background: NAVY, borderRadius: 8, padding: "12px 16px" }}>
                       <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 10, color: "rgba(250,245,233,0.5)", letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 4 }}>Ici · Directement</div>
                       <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 22, color: "var(--c-ivory)", lineHeight: 1 }}>{bien.prix}€<span style={{ fontSize: 11, fontWeight: 300, marginLeft: 4, color: "rgba(250,245,233,0.6)" }}>/nuit</span></div>
-                      <div style={{ marginTop: 6, display: "inline-block", background: "rgba(20,184,166,0.2)", borderRadius: 4, padding: "2px 8px", fontFamily: "'Jost', sans-serif", fontSize: 10, fontWeight: 600, color: "#14b8a6" }}>✓ Zéro frais</div>
+                      <div style={{ marginTop: 6, display: "inline-block", background: "rgba(20,184,166,0.2)", borderRadius: 4, padding: "2px 8px", fontFamily: "'Jost', sans-serif", fontSize: 10, fontWeight: 600, color: "var(--c-teal)" }}>✓ Zéro frais</div>
                     </div>
                     <div style={{ background: "rgba(0,0,0,0.03)", border: "1px solid var(--c-sand)", borderRadius: 8, padding: "12px 16px" }}>
                       <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 10, color: MUTED, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 4 }}>Sur Airbnb</div>
@@ -5165,7 +5165,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                     </div>
                   </div>
                   <p style={{ margin: "10px 0 0", fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 13, color: NAVY, textAlign: "center" }}>
-                    Économisez <strong style={{ color: "#14b8a6" }}>~{saving}€/nuit</strong> en réservant directement
+                    Économisez <strong style={{ color: "var(--c-teal)" }}>~{saving}€/nuit</strong> en réservant directement
                   </p>
                 </div>
               );
@@ -5260,11 +5260,11 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                         <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 2 }}>
                           <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 30, color: NAVY, lineHeight: 1 }}>{bien.prix}€</span>
                           <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13, color: MUTED }}>/nuit</span>
-                          <span style={{ marginLeft: 4, fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 10, color: "#14b8a6", background: "rgba(20,184,166,0.1)", borderRadius: 4, padding: "2px 7px", letterSpacing: "0.05em" }}>DIRECT</span>
+                          <span style={{ marginLeft: 4, fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 10, color: "var(--c-teal)", background: "rgba(20,184,166,0.1)", borderRadius: 4, padding: "2px 7px", letterSpacing: "0.05em" }}>DIRECT</span>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
                           <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11, color: MUTED, textDecoration: "line-through" }}>{airbnbPrice}€ sur Airbnb</span>
-                          <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 11, color: "#14b8a6" }}>−{saving}€/nuit</span>
+                          <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 11, color: "var(--c-teal)" }}>−{saving}€/nuit</span>
                         </div>
                       </>
                     );
@@ -5436,7 +5436,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                 </div>
                 <ul style={{ listStyle: "none", margin: 0, padding: 0, fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13, color: NAVY, lineHeight: 1.75 }}>
                   <li style={{ display: "flex", gap: 8, marginBottom: 7 }}>
-                    <span style={{ color: "#14b8a6", flexShrink: 0, marginTop: 1 }}>✓</span>
+                    <span style={{ color: "var(--c-teal)", flexShrink: 0, marginTop: 1 }}>✓</span>
                     <span><strong>Annulation gratuite</strong> jusqu'à 14 jours avant l'arrivée — remboursement intégral sous 5–10 jours ouvrés.</span>
                   </li>
                   <li style={{ display: "flex", gap: 8, marginBottom: 7 }}>
@@ -5462,11 +5462,11 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                 </div>
                 <ul style={{ listStyle: "none", margin: 0, padding: 0, fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13, color: NAVY, lineHeight: 1.75 }}>
                   <li style={{ display: "flex", gap: 8, marginBottom: 7 }}>
-                    <span style={{ color: "#14b8a6", flexShrink: 0, marginTop: 1 }}>✓</span>
+                    <span style={{ color: "var(--c-teal)", flexShrink: 0, marginTop: 1 }}>✓</span>
                     <span>La caution est demandée en <strong>pré-autorisation Stripe</strong> — votre carte est enregistrée, <em>aucun montant n'est débité</em>.</span>
                   </li>
                   <li style={{ display: "flex", gap: 8, marginBottom: 7 }}>
-                    <span style={{ color: "#14b8a6", flexShrink: 0, marginTop: 1 }}>✓</span>
+                    <span style={{ color: "var(--c-teal)", flexShrink: 0, marginTop: 1 }}>✓</span>
                     <span>La pré-autorisation est <strong>libérée automatiquement 3 jours</strong> après votre départ, sans intervention de votre part.</span>
                   </li>
                   <li style={{ display: "flex", gap: 8, marginBottom: 7 }}>
@@ -7014,7 +7014,7 @@ function HeroBrand({ biens }) {
     <div style={{
       position: "relative",
       height: "clamp(480px, 72vh, 640px)",
-      background: `#0e2020 url('${heroPhoto}') center/cover no-repeat`,
+      background: `var(--c-photo-bg) url('${heroPhoto}') center/cover no-repeat`,
       overflow: "hidden",
     }}>
       {USE_VIDEO_BG && (
@@ -8518,8 +8518,8 @@ function DevisPage() {
 
         <div style={{ background: CREAM, borderRadius: 14, padding: "20px 24px", marginBottom: 24, border: "1px solid rgba(0,0,0,0.08)" }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>Récapitulatif</div>
-          {data.montantSejour > 0 && <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, color: "#44403c", marginBottom: 6 }}><span>Séjour</span><span>{fmtEur(data.montantSejour)}</span></div>}
-          {data.fraisMenage > 0 && <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, color: "#44403c", marginBottom: 6 }}><span>Frais de ménage</span><span>{fmtEur(data.fraisMenage)}</span></div>}
+          {data.montantSejour > 0 && <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, color: MUTED, marginBottom: 6 }}><span>Séjour</span><span>{fmtEur(data.montantSejour)}</span></div>}
+          {data.fraisMenage > 0 && <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, color: MUTED, marginBottom: 6 }}><span>Frais de ménage</span><span>{fmtEur(data.fraisMenage)}</span></div>}
           <div style={{ borderTop: "1px solid rgba(0,0,0,0.08)", marginTop: 10, paddingTop: 10, display: "flex", justifyContent: "space-between", fontSize: 16, fontWeight: 700, color: NAVY }}><span>Total</span><span>{fmtEur(data.total)}</span></div>
           {data.depot > 0 && <div style={{ marginTop: 10, padding: "8px 12px", background: "rgba(245,158,11,0.08)", borderRadius: 8, fontSize: 12, color: "#92400e" }}>🔒 Dépôt de garantie {fmtEur(data.depot)} — bloqué mais non débité</div>}
         </div>
@@ -8529,7 +8529,7 @@ function DevisPage() {
           <>
             <div style={{ background: CREAM, borderRadius: 14, padding: "20px 24px", marginBottom: 20, border: "1px solid rgba(0,0,0,0.08)" }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: NAVY, marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>Contrat de location</div>
-              <div style={{ fontSize: 13, color: "#44403c", lineHeight: 1.7, marginBottom: 14 }}>
+              <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.7, marginBottom: 14 }}>
                 En signant, vous confirmez votre réservation de <strong>{data.bienNom || data.bienId}</strong> du <strong>{data.checkin}</strong> au <strong>{data.checkout}</strong> pour <strong>{fmtEur(data.total)}</strong>{data.depot > 0 ? ` (+ dépôt de garantie ${fmtEur(data.depot)} pré-autorisé)` : ""}, et acceptez le contrat de location meublé de tourisme et les <a href="/conditions-generales" target="_blank" rel="noopener noreferrer" style={{ color: CORAL }}>conditions générales</a> (règlement intérieur, conditions d'annulation, dépôt de garantie).
               </div>
               <label htmlFor="sign-name" style={{ fontSize: 12, fontWeight: 700, color: NAVY, display: "block", marginBottom: 6 }}>Nom et prénom du signataire</label>
@@ -8537,7 +8537,7 @@ function DevisPage() {
                 style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid rgba(0,0,0,0.15)", fontSize: 14, boxSizing: "border-box", marginBottom: 12, fontFamily: "Georgia,serif" }} />
               <label htmlFor="sign-pad" style={{ fontSize: 12, fontWeight: 700, color: NAVY, display: "block", marginBottom: 6 }}>Signature manuscrite</label>
               <SignaturePad onChange={setSigData} />
-              <label style={{ display: "flex", alignItems: "flex-start", gap: 8, marginTop: 14, fontSize: 13, color: "#44403c", cursor: "pointer" }}>
+              <label style={{ display: "flex", alignItems: "flex-start", gap: 8, marginTop: 14, fontSize: 13, color: MUTED, cursor: "pointer" }}>
                 <input type="checkbox" checked={accepted} onChange={e => setAccepted(e.target.checked)} style={{ marginTop: 3 }} />
                 <span>J'ai lu et j'accepte le contrat de location et les conditions générales.</span>
               </label>
@@ -9475,7 +9475,7 @@ export default function PublicSite() {
         </header>
 
         {/* Hero */}
-        <section style={{ position: "relative", background: `#0e2020 url('/photos/zandoli/01.webp') center/cover no-repeat`, padding: "90px 24px 96px" }}>
+        <section style={{ position: "relative", background: `var(--c-photo-bg) url('/photos/zandoli/01.webp') center/cover no-repeat`, padding: "90px 24px 96px" }}>
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(14,59,58,0.35) 0%, rgba(14,59,58,0.78) 100%)" }} />
           <div style={{ position: "relative", maxWidth: 820, margin: "0 auto", textAlign: "center" }}>
             <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, letterSpacing: "0.4em", textTransform: "uppercase", color: "rgba(250,245,233,0.7)", marginBottom: 16 }}>Résidence Amaryllis · Sainte-Luce</div>
@@ -9550,7 +9550,7 @@ export default function PublicSite() {
           <a href="/" style={{ color: "rgba(250,245,233,0.75)", textDecoration: "none", fontFamily: "'Jost', sans-serif", fontSize: 12, letterSpacing: "0.1em", textTransform: "uppercase" }}>← Tous nos logements</a>
         </header>
 
-        <section style={{ position: "relative", background: `#0e2020 url('/photos/schoelcher/16.webp') center/cover no-repeat`, padding: "90px 24px 96px" }}>
+        <section style={{ position: "relative", background: `var(--c-photo-bg) url('/photos/schoelcher/16.webp') center/cover no-repeat`, padding: "90px 24px 96px" }}>
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(14,59,58,0.35) 0%, rgba(14,59,58,0.78) 100%)" }} />
           <div style={{ position: "relative", maxWidth: 820, margin: "0 auto", textAlign: "center" }}>
             <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, letterSpacing: "0.4em", textTransform: "uppercase", color: "rgba(250,245,233,0.7)", marginBottom: 16 }}>Schœlcher · Martinique</div>
@@ -9649,7 +9649,7 @@ export default function PublicSite() {
           <a href="/explorer" style={{ color: "rgba(250,245,233,0.75)", textDecoration: "none", fontFamily: "'Jost', sans-serif", fontSize: 12, letterSpacing: "0.1em", textTransform: "uppercase" }}>Carte des activités →</a>
         </header>
 
-        <section style={{ position: "relative", background: `#0e2020 url('/photos/amaryllis/05.webp') center/cover no-repeat`, padding: "90px 24px 96px" }}>
+        <section style={{ position: "relative", background: `var(--c-photo-bg) url('/photos/amaryllis/05.webp') center/cover no-repeat`, padding: "90px 24px 96px" }}>
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(14,59,58,0.35) 0%, rgba(14,59,58,0.78) 100%)" }} />
           <div style={{ position: "relative", maxWidth: 840, margin: "0 auto", textAlign: "center" }}>
             <div style={{ fontFamily: "'Jost', sans-serif", fontSize: 11, letterSpacing: "0.4em", textTransform: "uppercase", color: "rgba(250,245,233,0.7)", marginBottom: 16 }}>Guide d'initiés · Sud Martinique</div>

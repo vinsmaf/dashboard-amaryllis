@@ -95,7 +95,7 @@ export default function EmailDrawer({ toEmail, onClose, onCompose }) {
               marginLeft: inbound ? 0 : 24, marginRight: inbound ? 24 : 0,
             }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
-                <span style={{ fontSize: 9, background: inbound ? "rgba(59,130,246,0.2)" : "rgba(16,185,129,0.15)", color: inbound ? "#93c5fd" : "#6ee7b7", borderRadius: 4, padding: "1px 6px", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                <span style={{ fontSize: 9, background: inbound ? "rgba(59,130,246,0.2)" : "rgba(16,185,129,0.15)", color: inbound ? "#93c5fd" : "var(--c-success-light)", borderRadius: 4, padding: "1px 6px", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>
                   {inbound ? "📩 Voyageur" : "📤 Vous"}
                 </span>
                 {!inbound && (

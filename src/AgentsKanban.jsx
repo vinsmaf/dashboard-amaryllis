@@ -590,7 +590,7 @@ export default function AgentsKanban({ mob }) {
               style={{
                 padding: "8px 16px", borderRadius: 8, border: "1px solid rgba(16,185,129,0.4)",
                 background: running ? "rgba(16,185,129,0.08)" : "rgba(16,185,129,0.18)",
-                color: running ? "#64748b" : "#6ee7b7", fontSize: 12, cursor: running ? "not-allowed" : "pointer",
+                color: running ? "#64748b" : "var(--c-success-light)", fontSize: 12, cursor: running ? "not-allowed" : "pointer",
                 fontWeight: 600, display: "flex", alignItems: "center", gap: 6,
               }}
             >
@@ -623,7 +623,7 @@ export default function AgentsKanban({ mob }) {
           padding: "10px 14px", borderRadius: 8, marginBottom: 16, fontSize: 12,
           background: runResult.error ? "rgba(239,68,68,0.1)" : "rgba(16,185,129,0.1)",
           border: `1px solid ${runResult.error ? "rgba(239,68,68,0.3)" : "rgba(16,185,129,0.3)"}`,
-          color: runResult.error ? "#f87171" : "#6ee7b7",
+          color: runResult.error ? "#f87171" : "var(--c-success-light)",
         }}>
           {runResult.error
             ? `⚠️ ${runResult.error}`
@@ -644,7 +644,7 @@ export default function AgentsKanban({ mob }) {
           </span>
         </div>
         <div style={{ height: 6, background: "rgba(255,255,255,0.06)", borderRadius: 3, overflow: "hidden", display: "flex" }}>
-          <div style={{ height: "100%", width: `${pct}%`, background: "linear-gradient(90deg, #10b981, #6ee7b7)", transition: "width 0.5s ease" }} />
+          <div style={{ height: "100%", width: `${pct}%`, background: "linear-gradient(90deg, #10b981, var(--c-success-light))", transition: "width 0.5s ease" }} />
           <div style={{ height: "100%", width: `${pctPlanned - pct}%`, background: "linear-gradient(90deg, #8b5cf6, #a78bfa)", transition: "width 0.5s ease" }} />
         </div>
         <div style={{ display: "flex", gap: 16, marginTop: 8, flexWrap: "wrap" }}>

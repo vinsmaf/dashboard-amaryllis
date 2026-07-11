@@ -291,10 +291,10 @@ export default function AvisTab() {
           {r.draft_status && r.draft_status !== "none" && (
             <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px dashed rgba(255,255,255,0.1)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-                <span style={{ ...chip, background: r.classification === "auto" ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)", color: r.classification === "auto" ? "#6ee7b7" : "#fca5a5" }}>
+                <span style={{ ...chip, background: r.classification === "auto" ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)", color: r.classification === "auto" ? "var(--c-success-light)" : "#fca5a5" }}>
                   {r.classification === "auto" ? "🟢 éligible auto (futur)" : "🔴 à traiter toi-même"}
                 </span>
-                {r.draft_status === "sent" && <span style={{ ...chip, background: "rgba(16,185,129,0.15)", color: "#6ee7b7" }}>✅ envoyée</span>}
+                {r.draft_status === "sent" && <span style={{ ...chip, background: "rgba(16,185,129,0.15)", color: "var(--c-success-light)" }}>✅ envoyée</span>}
                 {r.draft_status === "dismissed" && <span style={{ ...chip, color: "#64748b" }}>ignoré</span>}
               </div>
               <div style={{ color: "#e2e8f0", fontSize: 13, lineHeight: 1.5, background: "rgba(255,255,255,0.03)", borderRadius: 8, padding: 10, whiteSpace: "pre-wrap" }}>
