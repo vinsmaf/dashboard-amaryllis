@@ -1231,12 +1231,29 @@ function importAllReservations_(input) {
         var s = String(inc == null ? "" : inc).trim();
         return (!s || PLACEHOLDER_VOY[s.toLowerCase()]) ? old : inc;
       }
-      row[2]  = keepText_(row[2],  cur[2]);                              // Voyageur
-      row[7]  = (Number(row[7]) > 0) ? row[7] : cur[7];                  // Montant
-      row[9]  = (Number(row[9]) > 1) ? row[9] : (Number(cur[9]) > 0 ? cur[9] : row[9]); // Voyageurs
-      row[10] = keepText_(row[10], cur[10]);                            // Notes
-      row[13] = keepText_(row[13], cur[13]);                            // Téléphone
-      row[14] = keepText_(row[14], cur[14]);                            // Email
+      // Verrou "Manuel" : une ligne saisie à la main (addReservation_, Source="Manuel")
+      // ne doit JAMAIS être écrasée par un sync automatique, même si le canal renvoie
+      // un nom non vide (ex. "Louer Premium" = nom du canal Beds24, pas un placeholder
+      // connu de PLACEHOLDER_VOY, mais pas un vrai nom de voyageur non plus — trouvé
+      // 2026-07-11, résa Nogent Ines Dali écrasée par le sync Beds24 malgré la garde
+      // ci-dessus). Les dates/nuits/statut restent fiables et continuent de se
+      // synchroniser normalement (seul le nom/montant/contact sont verrouillés).
+      if (String(cur[11] || "").trim() === "Manuel") {
+        row[2]  = cur[2];   // Voyageur
+        row[7]  = cur[7];   // Montant
+        row[9]  = cur[9];   // Voyageurs
+        row[10] = cur[10];  // Notes
+        row[11] = cur[11];  // Source (reste "Manuel")
+        row[13] = cur[13];  // Téléphone
+        row[14] = cur[14];  // Email
+      } else {
+        row[2]  = keepText_(row[2],  cur[2]);                              // Voyageur
+        row[7]  = (Number(row[7]) > 0) ? row[7] : cur[7];                  // Montant
+        row[9]  = (Number(row[9]) > 1) ? row[9] : (Number(cur[9]) > 0 ? cur[9] : row[9]); // Voyageurs
+        row[10] = keepText_(row[10], cur[10]);                            // Notes
+        row[13] = keepText_(row[13], cur[13]);                            // Téléphone
+        row[14] = keepText_(row[14], cur[14]);                            // Email
+      }
       sheet.getRange(existingRow, 1, 1, NCOLS).setValues([row]);
       existingIds[id] = existingRow;
       if (contentK && contentK !== "||") existingByContent[contentK] = existingRow;

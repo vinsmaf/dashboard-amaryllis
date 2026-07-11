@@ -4,6 +4,16 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
+## ✅ Résolu le 2026-07-11 — Bloc Beds24 Nogent `beds24-87233283` obsolète, supprimé
+> Résa Nogent Ines Dali (06→15 juillet 2026, 490€) corrigée + écrasement Beds24 (nom/montant)
+> fixé durablement dans `appscript/SCRIPT_SHEETS.js` (verrou colonne Source "Manuel", déployé
+> v92, vérifié par simulation d'un sync hostile). Le bloc Sheet séparé `beds24-87233283`
+> (04/07→25/07, 21 nuits, "Bloqué") s'est avéré **obsolète** : requête live Beds24 confirme
+> qu'il n'existe plus côté Beds24 (seul `beds24-89292637`, 06→15/07, exactement le séjour réel,
+> est actif) — probablement resserré/recréé côté Beds24 le 10/07 sans que le Sheet suive.
+> Supprimé sur confirmation de Vincent après vérification live, aucun risque de double-booking
+> (le vrai bloc protecteur `89292637` reste intact).
+
 ## En cours → ✅ terminé le 2026-07-11 (suite) — Backlog agents entièrement trié (36→0), 4 propositions substantielles en attente de Vincent
 > Commit `426aac7` (event GA4 booking_cancelled). Vincent : "traiter et trier tout le backlog des agents pour qu'il arrive à 0" — 36 items, tous re-triés (aucun laissé en `backlog` brut) : ~14 marqués `fait` (dont 2 features codées : cpw-110 tracking annulations GA4, log-034/media-038 déjà faits avant), ~7 `bloqué` (externe : Meta hack, ou déjà substantiellement couvert), ~15 `a-planifier` (nécessitent un shooting réel/vraies photos clients/décision budget-pricing de Vincent — jamais fabriqués).
 - 🟡 **4 propositions substantielles livrées par des agents spécialisés, en attente de décision Vincent** (rien appliqué automatiquement) :
