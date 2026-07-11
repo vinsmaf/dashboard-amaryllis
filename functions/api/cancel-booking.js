@@ -12,7 +12,8 @@
 //   3. Libère la caution pré-autorisée si une existe (caution_schedule → cancelHold).
 //   4. Annule côté Beds24 si Nogent (seul bien synchronisé Beds24 — cf. règle absolue).
 //   5. Marque direct_bookings.status='cancelled' (libère les dates côté get-availability).
-//   6. Envoie l'email d'annulation au voyageur.
+//   6. Événement GA4 "booking_cancelled" (Measurement Protocol, même client_id que le purchase).
+//   7. Envoie l'email d'annulation au voyageur.
 //
 // Chaque étape est best-effort et rapportée dans la réponse — un échec partiel (ex. Beds24
 // injoignable) ne doit pas bloquer le reste ni cacher l'information à l'admin.
@@ -20,6 +21,7 @@
 import { verifyBearer } from "./_adminauth.js";
 import { cancelHold } from "./_caution.js";
 import { sendGuestEmail } from "./send-guest-email.js";
+import { ga4Event } from "./_ga4event.js";
 
 const json = (d, s = 200) => new Response(JSON.stringify(d), {
   status: s,
@@ -145,7 +147,18 @@ export async function onRequestPost(context) {
     "UPDATE direct_bookings SET status='cancelled', cancelled_at=unixepoch(), refund_amount=?, refund_id=? WHERE payment_intent_id=?"
   ).bind(Math.round(refundAmount) || 0, result.refund?.refundId || null, paymentIntentId).run();
 
-  // 5. Email d'annulation au voyageur
+  // 5. Événement de suivi GA4 — même client_id que le purchase d'origine (booking.ga_client_id)
+  // pour permettre l'analyse "quel canal d'acquisition annule le plus" à côté des achats.
+  await ga4Event(env, "booking_cancelled", {
+    bien_id: booking.bien_id,
+    booking_id: paymentIntentId,
+    value: Math.round(refundAmount) || 0,
+    currency: "EUR",
+    channel: booking.channel || "direct",
+    refunded: refundAmount > 0,
+  }, booking.ga_client_id || `booking-${paymentIntentId}`);
+
+  // 6. Email d'annulation au voyageur
   if (booking.email) {
     const refundLine = refundAmount > 0
       ? `Un remboursement de <strong>${Math.round(refundAmount)}&nbsp;€</strong> a été initié sur votre moyen de paiement (délai bancaire habituel : 5 à 10 jours).`
