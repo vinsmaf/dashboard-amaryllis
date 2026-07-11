@@ -34,7 +34,7 @@ export default function MaillageCluster({ currentSlug = null, bienId = null, bie
     <nav aria-label="Liens utiles" style={{ maxWidth: 1100, margin: "24px auto 4px", padding: "16px 20px 0", borderTop: "1px solid #e0d4bc" }}>
       <style>{`
         /* Mobile : accordéon replié (1 ligne). Desktop : tout déplié, résumé masqué. */
-        .mc-summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;font-family:'Jost',sans-serif;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.14em;color:#9a8a74;padding:4px 0}
+        .mc-summary{list-style:none;cursor:pointer;display:flex;align-items:center;min-height:44px;gap:8px;font-family:'Jost',sans-serif;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.14em;color:#9a8a74}
         .mc-summary::-webkit-details-marker{display:none}
         .mc-summary::before{content:"";width:18px;height:1px;background:#c47254;display:inline-block;flex-shrink:0}
         .mc-summary::after{content:"\\25BE";margin-left:auto;color:#9a8a74;font-size:10px;transition:transform .2s ease}

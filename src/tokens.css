@@ -361,3 +361,11 @@
 }
 [data-surface="admin"] code,
 [data-surface="admin"] .mono { font-family: var(--font-mono); }
+
+/* Leaflet zoom controls — cibles tactiles 30px par défaut, sous les 44px recommandés */
+.leaflet-control-zoom-in,
+.leaflet-control-zoom-out {
+  width: 44px !important;
+  height: 44px !important;
+  line-height: 44px !important;
+}

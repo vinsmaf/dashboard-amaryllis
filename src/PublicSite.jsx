@@ -926,7 +926,7 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
               onMouseLeave={() => { if (!readOnly) setHoveredCell(null); }}
               onClick={() => { if (!readOnly && !disabled) onSelect(ds); }}
               style={{
-                height: 30,
+                height: 44,
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
@@ -1301,7 +1301,7 @@ const iconBtn = {
   background: "var(--c-cream, #f4ecdc)",
   border: `1px solid ${SAND}`,
   color: NAVY,
-  width: 32, height: 32, borderRadius: 8, cursor: "pointer",
+  width: 44, height: 44, borderRadius: 8, cursor: "pointer",
   fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center",
   fontFamily: "'Jost', sans-serif",
 };
@@ -3362,8 +3362,8 @@ function BienCard({ bien, onDetail, onBook, onPrefetch, isFavorite = false, onTo
         {/* Carousel nav — toujours visibles */}
         {photos.length > 1 && (
           <>
-            <button aria-label="Photo précédente" onClick={prev} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.85)", backdropFilter: "blur(8px)", border: "none", color: NAVY, width: 32, height: 32, borderRadius: "50%", cursor: "pointer", fontSize: 18, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 4, lineHeight: 1 }}>←</button>
-            <button aria-label="Photo suivante" onClick={next} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.85)", backdropFilter: "blur(8px)", border: "none", color: NAVY, width: 32, height: 32, borderRadius: "50%", cursor: "pointer", fontSize: 18, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 4, lineHeight: 1 }}>→</button>
+            <button aria-label="Photo précédente" onClick={prev} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.85)", backdropFilter: "blur(8px)", border: "none", color: NAVY, width: 44, height: 44, borderRadius: "50%", cursor: "pointer", fontSize: 18, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 4, lineHeight: 1 }}>←</button>
+            <button aria-label="Photo suivante" onClick={next} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.85)", backdropFilter: "blur(8px)", border: "none", color: NAVY, width: 44, height: 44, borderRadius: "50%", cursor: "pointer", fontSize: 18, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 4, lineHeight: 1 }}>→</button>
           </>
         )}
 
@@ -3419,7 +3419,7 @@ function BienCard({ bien, onDetail, onBook, onPrefetch, isFavorite = false, onTo
             aria-label={isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
             style={{
               position: "absolute", top: 14, left: 14, zIndex: 4,
-              width: 34, height: 34, borderRadius: "50%",
+              width: 44, height: 44, borderRadius: "50%",
               background: isFavorite ? "rgba(232,89,138,0.92)" : "rgba(255,255,255,0.82)",
               backdropFilter: "blur(8px)",
               border: "none", cursor: "pointer",
@@ -3534,7 +3534,7 @@ function BienCard({ bien, onDetail, onBook, onPrefetch, isFavorite = false, onTo
               title={isCompared ? "Retirer de la comparaison" : compareDisabled ? "Maximum 3 logements atteint" : "Ajouter à la comparaison"}
               disabled={compareDisabled && !isCompared}
               style={{
-                flexShrink: 0, width: 36, height: 36,
+                flexShrink: 0, width: 44, height: 44,
                 background: isCompared ? NAVY : "transparent",
                 border: `1px solid ${isCompared ? NAVY : compareDisabled ? "#e0d4bc55" : SAND}`,
                 borderRadius: 6, cursor: compareDisabled && !isCompared ? "not-allowed" : "pointer",
@@ -4229,7 +4229,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                 } catch {}
               }
             }}
-            style={{ background: "none", border: `1px solid rgba(250,245,233,0.22)`, borderRadius: 8, padding: isMobile ? "6px 8px" : "7px 14px", fontFamily: "'Jost', sans-serif", fontSize: 11, color: "rgba(250,245,233,0.7)", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, flexShrink: 0, whiteSpace: "nowrap", transition: "border-color 0.2s" }}
+            style={{ background: "none", border: `1px solid rgba(250,245,233,0.22)`, borderRadius: 8, padding: isMobile ? "6px 8px" : "7px 14px", minHeight: isMobile ? 44 : undefined, minWidth: isMobile ? 44 : undefined, fontFamily: "'Jost', sans-serif", fontSize: 11, color: "rgba(250,245,233,0.7)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4, flexShrink: 0, whiteSpace: "nowrap", transition: "border-color 0.2s" }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(250,245,233,0.5)"; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(250,245,233,0.22)"; }}
           >
@@ -7379,14 +7379,14 @@ function HeroCarousel({ biens, onDetail, onBook }) {
           <button
             aria-label="Photo précédente"
             onClick={() => goTo((idx - 1 + biens.length) % biens.length)}
-            style={{ background: "rgba(250,245,233,0.08)", border: "1px solid rgba(250,245,233,0.18)", color: "var(--c-ivory)", width: 38, height: 38, borderRadius: "50%", cursor: "pointer", fontSize: 17, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)", transition: "background 0.2s" }}
+            style={{ background: "rgba(250,245,233,0.08)", border: "1px solid rgba(250,245,233,0.18)", color: "var(--c-ivory)", width: 44, height: 44, borderRadius: "50%", cursor: "pointer", fontSize: 17, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)", transition: "background 0.2s" }}
             onMouseEnter={e => { e.currentTarget.style.background = "rgba(250,245,233,0.16)"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "rgba(250,245,233,0.08)"; }}
           >‹</button>
           <button
             aria-label="Photo suivante"
             onClick={() => goTo((idx + 1) % biens.length)}
-            style={{ background: "rgba(250,245,233,0.08)", border: "1px solid rgba(250,245,233,0.18)", color: "var(--c-ivory)", width: 38, height: 38, borderRadius: "50%", cursor: "pointer", fontSize: 17, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)", transition: "background 0.2s" }}
+            style={{ background: "rgba(250,245,233,0.08)", border: "1px solid rgba(250,245,233,0.18)", color: "var(--c-ivory)", width: 44, height: 44, borderRadius: "50%", cursor: "pointer", fontSize: 17, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(8px)", transition: "background 0.2s" }}
             onMouseEnter={e => { e.currentTarget.style.background = "rgba(250,245,233,0.16)"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "rgba(250,245,233,0.08)"; }}
           >›</button>
@@ -7805,7 +7805,7 @@ function FooterSection() {
               href="https://www.instagram.com/amaryllislocations/"
               target="_blank" rel="noopener noreferrer"
               title="Instagram — @amaryllislocations"
-              style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 38, height: 38, borderRadius: "50%", border: "1px solid rgba(250,245,233,0.15)", background: "rgba(250,245,233,0.06)", color: "rgba(250,245,233,0.55)", transition: "all 0.2s", textDecoration: "none" }}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 44, height: 44, borderRadius: "50%", border: "1px solid rgba(250,245,233,0.15)", background: "rgba(250,245,233,0.06)", color: "rgba(250,245,233,0.55)", transition: "all 0.2s", textDecoration: "none" }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(250,245,233,0.4)"; e.currentTarget.style.color = "rgba(250,245,233,0.9)"; e.currentTarget.style.background = "rgba(250,245,233,0.1)"; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(250,245,233,0.15)"; e.currentTarget.style.color = "rgba(250,245,233,0.55)"; e.currentTarget.style.background = "rgba(250,245,233,0.06)"; }}
             >
@@ -7820,7 +7820,7 @@ function FooterSection() {
               href="https://www.facebook.com/Amaryllis.villa"
               target="_blank" rel="noopener noreferrer"
               title="Facebook — Amaryllis Locations"
-              style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 38, height: 38, borderRadius: "50%", border: "1px solid rgba(250,245,233,0.15)", background: "rgba(250,245,233,0.06)", color: "rgba(250,245,233,0.55)", transition: "all 0.2s", textDecoration: "none" }}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 44, height: 44, borderRadius: "50%", border: "1px solid rgba(250,245,233,0.15)", background: "rgba(250,245,233,0.06)", color: "rgba(250,245,233,0.55)", transition: "all 0.2s", textDecoration: "none" }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(250,245,233,0.4)"; e.currentTarget.style.color = "rgba(250,245,233,0.9)"; e.currentTarget.style.background = "rgba(250,245,233,0.1)"; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(250,245,233,0.15)"; e.currentTarget.style.color = "rgba(250,245,233,0.55)"; e.currentTarget.style.background = "rgba(250,245,233,0.06)"; }}
             >
@@ -7833,7 +7833,7 @@ function FooterSection() {
               href="https://www.youtube.com/@AmaryllisLocations"
               target="_blank" rel="noopener noreferrer"
               title="YouTube — Amaryllis Locations"
-              style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 38, height: 38, borderRadius: "50%", border: "1px solid rgba(250,245,233,0.15)", background: "rgba(250,245,233,0.06)", color: "rgba(250,245,233,0.55)", transition: "all 0.2s", textDecoration: "none" }}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 44, height: 44, borderRadius: "50%", border: "1px solid rgba(250,245,233,0.15)", background: "rgba(250,245,233,0.06)", color: "rgba(250,245,233,0.55)", transition: "all 0.2s", textDecoration: "none" }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(250,245,233,0.4)"; e.currentTarget.style.color = "rgba(250,245,233,0.9)"; e.currentTarget.style.background = "rgba(250,245,233,0.1)"; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(250,245,233,0.15)"; e.currentTarget.style.color = "rgba(250,245,233,0.55)"; e.currentTarget.style.background = "rgba(250,245,233,0.06)"; }}
             >
@@ -7933,7 +7933,7 @@ function FooterSection() {
           <div key={col.titre}>
             <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 10, letterSpacing: "0.25em", textTransform: "uppercase", color: "rgba(250,245,233,0.35)", marginBottom: 14 }}>{col.titre}</div>
             {col.liens.map(([label, href]) => (
-              <a key={href} href={href} style={{ display: "block", fontFamily: "'Jost', sans-serif", fontSize: 13, color: "rgba(250,245,233,0.6)", textDecoration: "none", padding: "5px 0", transition: "color 0.2s" }}
+              <a key={href} href={href} style={{ display: "flex", alignItems: "center", minHeight: 44, fontFamily: "'Jost', sans-serif", fontSize: 13, color: "rgba(250,245,233,0.6)", textDecoration: "none", transition: "color 0.2s" }}
                 onMouseEnter={e => { e.currentTarget.style.color = "rgba(250,245,233,0.95)"; }}
                 onMouseLeave={e => { e.currentTarget.style.color = "rgba(250,245,233,0.6)"; }}>{label}</a>
             ))}
