@@ -4,6 +4,16 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
+## En cours → ✅ terminé le 2026-07-11 (suite) — Backlog agents entièrement trié (36→0), 4 propositions substantielles en attente de Vincent
+> Commit `426aac7` (event GA4 booking_cancelled). Vincent : "traiter et trier tout le backlog des agents pour qu'il arrive à 0" — 36 items, tous re-triés (aucun laissé en `backlog` brut) : ~14 marqués `fait` (dont 2 features codées : cpw-110 tracking annulations GA4, log-034/media-038 déjà faits avant), ~7 `bloqué` (externe : Meta hack, ou déjà substantiellement couvert), ~15 `a-planifier` (nécessitent un shooting réel/vraies photos clients/décision budget-pricing de Vincent — jamais fabriqués).
+- 🟡 **4 propositions substantielles livrées par des agents spécialisés, en attente de décision Vincent** (rien appliqué automatiquement) :
+  1. **`rev-020`** (Revenue Manager) — 3 mécaniques chiffrées pour booster Amaryllis/Géko/Mabouya en basse saison (paliers durée doublés / pack cluster Sainte-Luce -12% / early-bird -8% à J-90).
+  2. **`ebiz-104`** (Consultant e-biz) — offre "Cluster Entreprise" B2B séminaires (970€HT/nuit, 3 paliers) — **mais l'agent a trouvé que docs/strategie/plan-ceo-2026-06.md ET PLAYBOOK-LOCATIF.md classent déjà le B2B en "différé/hypothèse non testée"** → recommandé de garder au tiroir, tester sur Ary Augustin (2A Consulting) plutôt que publier.
+  3. **`fisc-004`** (Fiscaliste) — analyse TVA parahôtelière sourcée (BOFiP + CE 12/11/2025) : probablement NON assujetti, mais point ajouté au RDV comptable déjà prévu 2026-09-01 (AGENDA mis à jour par l'agent lui-même).
+  4. **`log-036`** (Resp. Logistique) — conception complète d'un rapport mensuel SLA Exploitation (maintenance+stock), formules exactes sur les tables existantes, zéro nouvelle table nécessaire — prêt à coder si Vincent valide.
+- Autres livrables prêts à l'emploi : template avis négatif WiFi (`sc-025`, Zandoli+Mabouya), Story Instagram consolidée (`cm-063`, Mabouya jacuzzi).
+- 🟡 **2 chantiers réels scopés mais non codés** (jugés trop volumineux pour un ajout de plus dans cette session) : `sc-026` (relance résas annulées Mabouya, ~2h, design trouvé : distinct de `abandoned_carts`), `sc-027` (rappel J-7 Nogent + fidélité repeat-guest, ~1h30-2h, design trouvé : réutiliser `crm_clients.nb_sejours` — **attention, la prémisse "Booking.com désactivé pour Nogent" de la reco originale était fausse**, Nogent dépend au contraire à 79% de Booking.com).
+
 ## En cours → ✅ terminé le 2026-07-11 — Résas historiques clôturées + audit Google Ads + triage backlog agents (43 items) + 2 features
 > Détail complet : ADR-BACKLOG-TRIAGE-002, ADR-ORG-SCHEMA-001. Commits `852e22f` (schema Organization), `f499532` (préchargement lightbox + catégorie qualité).
 - **3 conflits résas historiques** (backlog `[2026-06-26]`) : Zandoli fév 2024 résolu (Philibert supprimé, non retrouvé par Vincent — vérifié safe : checkin 2024 < seuil 2026 du garde-fou rebuild) ; Nogent juin 2023 résolu "on laisse" (Beds24 confirme un vrai double-booking cross-canal historique, les 2 lignes sont réelles) ; **Nogent mai 2022 reste ouvert** (Beds24 n'a aucune donnée avant juin 2022, Vincent n'a pas l'historique perso).
