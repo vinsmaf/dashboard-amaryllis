@@ -16,7 +16,7 @@ const CORS = {
 const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: CORS });
 
 const VALID_STATUS   = ["a_planifier", "planifie", "fait"];
-const VALID_CATEGORY = ["clim", "piscine", "jacuzzi", "jardin", "plomberie", "electricite", "structure", "autre"];
+const VALID_CATEGORY = ["clim", "piscine", "jacuzzi", "jardin", "plomberie", "electricite", "structure", "qualite", "autre"];
 
 // db.exec() (D1) découpe l'entrée par saut de ligne : un template literal multi-lignes
 // classique casse la requête en fragments invalides. Toujours construire le DDL en une

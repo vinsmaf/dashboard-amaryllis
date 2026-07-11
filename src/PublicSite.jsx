@@ -3880,6 +3880,14 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
 
   useEffect(() => { setZoomScale(1); setZoomPan({ x: 0, y: 0 }); }, [photoIdx, lightboxOpen]);
 
+  // Précharge la photo suivante et précédente pendant la navigation lightbox (évite le flash au clic).
+  useEffect(() => {
+    if (!lightboxOpen || photos.length <= 1) return;
+    const next = photos[(photoIdx + 1) % photos.length];
+    const prev = photos[(photoIdx - 1 + photos.length) % photos.length];
+    [next, prev].forEach((src) => { if (src) new Image().src = src; });
+  }, [photoIdx, lightboxOpen, photos]);
+
   function resetZoom() { setZoomScale(1); setZoomPan({ x: 0, y: 0 }); }
 
   function onImgTouchStart(e) {

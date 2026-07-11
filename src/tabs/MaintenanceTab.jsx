@@ -14,6 +14,7 @@ const CAT = [
   { id: "plomberie",   label: "Plomberie",      icon: "🚰" },
   { id: "electricite", label: "Électricité",    icon: "⚡" },
   { id: "structure",   label: "Structure",      icon: "🏗️" },
+  { id: "qualite",     label: "Contrôle qualité", icon: "✅" },
   { id: "autre",       label: "Autre",          icon: "🔧" },
 ];
 const CAT_MAP = Object.fromEntries(CAT.map(c => [c.id, c]));
