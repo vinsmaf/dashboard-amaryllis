@@ -5,7 +5,7 @@
  *   "0 * * * *"   → sync iCal toutes les heures
  *   "0 9 * * *"   → audit + rappels J-7conseils/J-3/J-1/J+1/J+2/J+3/J-7direct + alertes + gap pricing + yield pricing
  *   "0 6 * * 1"   → rapport hebdomadaire (lundi matin)
- *   "0 1 1 * *"   → export comptable mensuel (1er du mois)
+ *   "0 1 1 * *"   → export comptable mensuel (1er du mois) + rapport SLA Exploitation (maintenance+stock)
  *
  * Fonctions principales :
  *   runSync            — Fetch iCal Airbnb + Booking, détecte nouvelles réservations
@@ -3745,6 +3745,18 @@ export default {
             console.log(`[seasonal-update] ✓ total=${data.total ?? "?"} upserted=${data.upserted ?? "?"}`);
           } catch (e) {
             console.error("[seasonal-update] Cron error:", e.message);
+          }
+        })(),
+        (async () => {
+          // Rapport mensuel SLA Exploitation (maintenance + stock) — log-036. Calcule le
+          // mois calendaire qui vient de se terminer (défaut de l'endpoint si ?month= absent).
+          try {
+            const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+            const res = await fetch(`${siteUrl}/api/ops-sla-report?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`);
+            const data = await res.json().catch(() => ({}));
+            console.log(`[ops-sla-report] ✓ mois=${data.month ?? "?"} email=${data.email?.ok ?? "?"} ntfy=${data.ntfy?.ok ?? "?"}`);
+          } catch (e) {
+            console.error("[ops-sla-report] Cron error:", e.message);
           }
         })(),
       ]));
