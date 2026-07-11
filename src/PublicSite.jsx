@@ -228,7 +228,7 @@ if (typeof document !== "undefined" && !document.getElementById("__site_styles")
     @keyframes fadeUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
     @keyframes slideUpFull { from { opacity:0; transform:translateY(40px); } to { opacity:1; transform:translateY(0); } }
     @keyframes shimmer { 0% { background-position:-400px 0; } 100% { background-position:400px 0; } }
-    .skeleton { background: linear-gradient(90deg,#e8e0d4 25%,#f4ecdc 50%,#e8e0d4 75%); background-size:800px 100%; animation:shimmer 1.4s infinite linear; border-radius:6px; }
+    .skeleton { background: linear-gradient(90deg,#e8e0d4 25%,var(--c-cream) 50%,#e8e0d4 75%); background-size:800px 100%; animation:shimmer 1.4s infinite linear; border-radius:6px; }
     @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
     @keyframes lb-fadein { from { opacity:0; transform:scale(0.97); } to { opacity:1; transform:scale(1); } }
     @keyframes slideInRight { from { opacity:0; clip-path:inset(0); transform:translateX(28px); } to { opacity:1; transform:translateX(0); } }
@@ -244,16 +244,16 @@ if (typeof document !== "undefined" && !document.getElementById("__site_styles")
     @keyframes carouselProgress { from { transform:scaleX(0); } to { transform:scaleX(1); } }
     @keyframes ctaPulse { 0%,100% { box-shadow:0 4px 22px rgba(196,114,84,0.4); } 50% { box-shadow:0 6px 36px rgba(196,114,84,0.7); } }
 .map-grid { display:grid; grid-template-columns:1fr 300px; gap:20px; align-items:start; }
-    .map-grid-map { border-radius:16px; overflow:hidden; border:1px solid #e0d4bc; height:480px; box-shadow:0 4px 20px rgba(0,0,0,0.07); }
+    .map-grid-map { border-radius:16px; overflow:hidden; border:1px solid var(--c-sand); height:480px; box-shadow:0 4px 20px rgba(0,0,0,0.07); }
     @media (max-width:700px) {
       .map-grid { grid-template-columns:1fr; }
       .map-grid-map { height:300px; }
     }
     input[type="date"]::-webkit-calendar-picker-indicator { opacity:0.55; cursor:pointer; filter:invert(0.25) sepia(0.3); }
     input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity:0.9; }
-    ::selection { background:rgba(196,114,84,0.2); color:#0e3b3a; }
+    ::selection { background:rgba(196,114,84,0.2); color:var(--c-navy); }
     ::-webkit-scrollbar { width:4px; }
-    ::-webkit-scrollbar-track { background:#faf5e9; }
+    ::-webkit-scrollbar-track { background:var(--c-ivory); }
     ::-webkit-scrollbar-thumb { background:rgba(196,114,84,0.3); border-radius:2px; }
   `;
   document.head.appendChild(s);
@@ -907,7 +907,7 @@ function CalendarMonth({ year, month, checkin, checkout, hovered, blockedDates, 
           else if (inRange) { bg = "var(--c-cream, #f4ecdc)"; color = NAVY; borderRadius = "0"; }
           if (isCI) borderRadius = "8px 0 0 8px";
           if (isCO) borderRadius = "0 8px 8px 0";
-          if (blocked) { bg = "repeating-linear-gradient(135deg, #f4ecdc, #f4ecdc 3px, #e8dcc1 3px, #e8dcc1 6px)"; borderRadius = "6px"; }
+          if (blocked) { bg = "repeating-linear-gradient(135deg, var(--c-cream), var(--c-cream) 3px, #e8dcc1 3px, #e8dcc1 6px)"; borderRadius = "6px"; }
 
           const dayLabel = ds ? `${parseInt(ds.split("-")[2])} ${new Date(ds + "T12:00:00").toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}${disabled ? " (indisponible)" : ""}` : "";
           return (
@@ -1070,7 +1070,7 @@ function DateRangePicker({ checkin, checkout, blockedDates = [], onChange, daily
         Besoin pour <strong>aujourd'hui</strong> ?{" "}
         <a href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(`Bonjour, je souhaite réserver ${bienNom || "un logement"} pour cette nuit. Est-ce possible ?`)}`} style={{ color: "#25d366", fontWeight: 600, textDecoration: "none" }}>WhatsApp</a>
         {" "}ou{" "}
-        <a href="mailto:contact@villamaryllis.com" style={{ color: "#0e3b3a", fontWeight: 600, textDecoration: "none" }}>email</a>.
+        <a href="mailto:contact@villamaryllis.com" style={{ color: "var(--c-navy)", fontWeight: 600, textDecoration: "none" }}>email</a>.
       </div>
       )}
       {/* Légende disponibilité */}
@@ -1080,7 +1080,7 @@ function DateRangePicker({ checkin, checkout, blockedDates = [], onChange, daily
           Disponible
         </span>
         <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: MUTED, fontFamily: "'Jost', sans-serif" }}>
-          <span style={{ width: 22, height: 22, background: "repeating-linear-gradient(135deg, #f4ecdc, #f4ecdc 3px, #e8dcc1 3px, #e8dcc1 6px)", border: `1px solid ${SAND}`, borderRadius: 5, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#a89878", fontWeight: 400 }}>8</span>
+          <span style={{ width: 22, height: 22, background: "repeating-linear-gradient(135deg, var(--c-cream), var(--c-cream) 3px, #e8dcc1 3px, #e8dcc1 6px)", border: `1px solid ${SAND}`, borderRadius: 5, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#a89878", fontWeight: 400 }}>8</span>
           Indisponible
         </span>
       </div>
@@ -1105,7 +1105,7 @@ const PC_TIERS = {
   low:  { bg: "rgba(148,163,184,0.13)", text: "#64748b", border: "#94a3b820", label: "Basse saison" },
   mid:  { bg: "rgba(20,184,166,0.11)",  text: "#0d9488", border: "#14b8a620", label: "Moyenne saison" },
   high: { bg: "rgba(245,158,11,0.15)",  text: "#b45309", border: "#f59e0b25", label: "Haute saison" },
-  peak: { bg: "rgba(196,114,84,0.20)",  text: "#c47254", border: "#c4725430", label: "Pic de saison" },
+  peak: { bg: "rgba(196,114,84,0.20)",  text: "var(--c-coral)", border: "#c4725430", label: "Pic de saison" },
 };
 
 function PricingCalendar({ bien, isMobile = false, large = false }) {
@@ -2494,7 +2494,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
             {stepLabels.map((_, i) => (
               <div key={i} style={{
                 flex: 1, height: 3, borderRadius: 2,
-                background: step > i + 1 ? "#0e3b3a" : step === i + 1 ? CORAL : SAND,
+                background: step > i + 1 ? "var(--c-navy)" : step === i + 1 ? CORAL : SAND,
                 transition: "background 0.3s",
               }} />
             ))}
@@ -2858,7 +2858,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
             </div>
 
             {/* Card mock */}
-            <div style={{ background: "linear-gradient(135deg, #0e3b3a 0%, #1a4a48 100%)", color: "var(--c-ivory)", borderRadius: 12, padding: "20px 24px", marginBottom: 18, position: "relative", overflow: "hidden" }}>
+            <div style={{ background: "linear-gradient(135deg, var(--c-navy) 0%, #1a4a48 100%)", color: "var(--c-ivory)", borderRadius: 12, padding: "20px 24px", marginBottom: 18, position: "relative", overflow: "hidden" }}>
               <div style={{ position: "absolute", top: -20, right: -20, width: 80, height: 80, borderRadius: "50%", background: "radial-gradient(circle, rgba(201,166,115,0.4) 0%, transparent 70%)" }} />
               <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: 15, color: "var(--c-gold)", marginBottom: 14 }}>Stripe Secure</div>
               <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 16, letterSpacing: "0.18em", color: "rgba(250,245,233,0.92)", marginBottom: 14 }}>•••• •••• •••• ••••</div>
@@ -2893,7 +2893,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
           <div className="bm-mob-recap" style={{
             position: "sticky", bottom: 0, marginTop: 16,
             display: "none", flexDirection: "column", gap: 2,
-            background: "#0e3b3a", color: "var(--c-ivory)",
+            background: "var(--c-navy)", color: "var(--c-ivory)",
             borderRadius: 12, padding: "12px 16px",
             boxShadow: "0 -6px 20px rgba(0,0,0,0.18)",
             paddingBottom: "calc(12px + env(safe-area-inset-bottom))",
@@ -2912,7 +2912,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
 
       {/* ── RIGHT — panneau récap navy ── */}
       <aside className="bm-summary" style={{
-        background: "#0e3b3a", color: "var(--c-ivory)",
+        background: "var(--c-navy)", color: "var(--c-ivory)",
         padding: 32, display: "flex", flexDirection: "column", gap: 16,
         overflowY: "auto",
       }}>
@@ -4377,7 +4377,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                     display: "flex", alignItems: "baseline", gap: 4,
                     pointerEvents: "none",
                   }}>
-                    <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 18, color: "#faf5e9", letterSpacing: "-0.01em" }}>{bien.prix}€</span>
+                    <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 18, color: "var(--c-ivory)", letterSpacing: "-0.01em" }}>{bien.prix}€</span>
                     <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11, color: "rgba(255,255,255,0.65)", letterSpacing: "0.05em" }}>/nuit</span>
                   </div>
                 )}
@@ -4433,7 +4433,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                 {bien.id === "amaryllis" ? (
                   /* Reel cinématique plein-hauteur — Villa Amaryllis */
                   <Suspense fallback={
-                    <div style={{ width: "100%", height: "100%", background: "radial-gradient(ellipse at top, #0e3b3a 0%, #050608 100%)" }} />
+                    <div style={{ width: "100%", height: "100%", background: "radial-gradient(ellipse at top, var(--c-navy) 0%, #050608 100%)" }} />
                   }>
                     <VillaAmaryllisReel
                       fillHeight={true}
@@ -4448,23 +4448,23 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                     />
                   </Suspense>
                 ) : bien.id === "geko" ? (
-                  <Suspense fallback={<div style={{ width:"100%", height:"100%", background:"radial-gradient(ellipse at top, #0e3b3a 0%, #050608 100%)" }} />}>
+                  <Suspense fallback={<div style={{ width:"100%", height:"100%", background:"radial-gradient(ellipse at top, var(--c-navy) 0%, #050608 100%)" }} />}>
                     <GekoReel fillHeight={true} onCta={() => onBook(bien)} price={String(bien.prix ?? "110")} />
                   </Suspense>
                 ) : bien.id === "zandoli" ? (
-                  <Suspense fallback={<div style={{ width:"100%", height:"100%", background:"radial-gradient(ellipse at top, #0e3b3a 0%, #050608 100%)" }} />}>
+                  <Suspense fallback={<div style={{ width:"100%", height:"100%", background:"radial-gradient(ellipse at top, var(--c-navy) 0%, #050608 100%)" }} />}>
                     <ZandoliReel fillHeight={true} onCta={() => onBook(bien)} price={String(bien.prix ?? "110")} />
                   </Suspense>
                 ) : bien.id === "mabouya" ? (
-                  <Suspense fallback={<div style={{ width:"100%", height:"100%", background:"radial-gradient(ellipse at top, #0e3b3a 0%, #050608 100%)" }} />}>
+                  <Suspense fallback={<div style={{ width:"100%", height:"100%", background:"radial-gradient(ellipse at top, var(--c-navy) 0%, #050608 100%)" }} />}>
                     <MabouaReel fillHeight={true} onCta={() => onBook(bien)} price={String(bien.prix ?? "70")} />
                   </Suspense>
                 ) : bien.id === "schoelcher" ? (
-                  <Suspense fallback={<div style={{ width:"100%", height:"100%", background:"radial-gradient(ellipse at top, #0e3b3a 0%, #050608 100%)" }} />}>
+                  <Suspense fallback={<div style={{ width:"100%", height:"100%", background:"radial-gradient(ellipse at top, var(--c-navy) 0%, #050608 100%)" }} />}>
                     <SchoelcherReel fillHeight={true} onCta={() => onBook(bien)} price={String(bien.prix ?? "90")} />
                   </Suspense>
                 ) : bien.id === "nogent" ? (
-                  <Suspense fallback={<div style={{ width:"100%", height:"100%", background:"radial-gradient(ellipse at top, #0e3b3a 0%, #050608 100%)" }} />}>
+                  <Suspense fallback={<div style={{ width:"100%", height:"100%", background:"radial-gradient(ellipse at top, var(--c-navy) 0%, #050608 100%)" }} />}>
                     <NogentReel fillHeight={true} onCta={() => onBook(bien)} price={String(bien.prix ?? "90")} />
                   </Suspense>
                 ) : (
@@ -5054,7 +5054,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                     Besoin pour <strong>aujourd'hui</strong> ?{" "}
                     <a href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(`Bonjour, je souhaite réserver ${bien.nom} pour cette nuit. Est-ce possible ?`)}`} style={{ color: "#25d366", fontWeight: 600, textDecoration: "none" }}>WhatsApp</a>
                     {" "}ou{" "}
-                    <a href="mailto:contact@villamaryllis.com" style={{ color: "#0e3b3a", fontWeight: 600, textDecoration: "none" }}>email</a>.
+                    <a href="mailto:contact@villamaryllis.com" style={{ color: "var(--c-navy)", fontWeight: 600, textDecoration: "none" }}>email</a>.
                   </div>
 
                   {/* Légende disponibilité */}
@@ -8251,14 +8251,14 @@ function LogoDropdown() {
       {open && (
         <div style={{
           position: "absolute", top: "calc(100% + 14px)", left: 0,
-          background: "#0e3b3a",
+          background: "var(--c-navy)",
           border: "1px solid rgba(250,245,233,0.1)",
           borderRadius: 14, padding: "8px",
           zIndex: 500, minWidth: 220,
           boxShadow: "0 20px 56px rgba(0,0,0,0.45)",
           animation: "fadeUp 0.18s ease both",
         }}>
-          <div style={{ position: "absolute", top: -5, left: 24, transform: "rotate(45deg)", width: 10, height: 10, background: "#0e3b3a", borderTop: "1px solid rgba(250,245,233,0.1)", borderLeft: "1px solid rgba(250,245,233,0.1)" }} />
+          <div style={{ position: "absolute", top: -5, left: 24, transform: "rotate(45deg)", width: 10, height: 10, background: "var(--c-navy)", borderTop: "1px solid rgba(250,245,233,0.1)", borderLeft: "1px solid rgba(250,245,233,0.1)" }} />
           {NAV.map(({ label, href }) => (
             <a
               key={label}
@@ -8402,7 +8402,7 @@ function HoverContact({ light = false, direction = "up", pill = false }) {
             : { bottom: "calc(100% + 10px)" }),
           left: "50%",
           transform: "translateX(-50%)",
-          background: "#0e3b3a",
+          background: "var(--c-navy)",
           border: "1px solid rgba(250,245,233,0.1)",
           borderRadius: 12, padding: "14px 16px",
           minWidth: 210, zIndex: 600,
@@ -8412,10 +8412,10 @@ function HoverContact({ light = false, direction = "up", pill = false }) {
         }}>
           {/* Arrow */}
           {direction === "up" && (
-            <div style={{ position: "absolute", bottom: -5, left: "50%", transform: "translateX(-50%) rotate(45deg)", width: 10, height: 10, background: "#0e3b3a", borderRight: "1px solid rgba(250,245,233,0.1)", borderBottom: "1px solid rgba(250,245,233,0.1)" }} />
+            <div style={{ position: "absolute", bottom: -5, left: "50%", transform: "translateX(-50%) rotate(45deg)", width: 10, height: 10, background: "var(--c-navy)", borderRight: "1px solid rgba(250,245,233,0.1)", borderBottom: "1px solid rgba(250,245,233,0.1)" }} />
           )}
           {direction === "down" && (
-            <div style={{ position: "absolute", top: -5, left: "50%", transform: "translateX(-50%) rotate(45deg)", width: 10, height: 10, background: "#0e3b3a", borderTop: "1px solid rgba(250,245,233,0.1)", borderLeft: "1px solid rgba(250,245,233,0.1)" }} />
+            <div style={{ position: "absolute", top: -5, left: "50%", transform: "translateX(-50%) rotate(45deg)", width: 10, height: 10, background: "var(--c-navy)", borderTop: "1px solid rgba(250,245,233,0.1)", borderLeft: "1px solid rgba(250,245,233,0.1)" }} />
           )}
 
           <a
@@ -8918,12 +8918,12 @@ function MapSection({ biens, onDetail }) {
         const popup = L.popup({ maxWidth: 220, className: "amaryllis-popup" }).setContent(`
           <div style="font-family:'Jost',system-ui,sans-serif;padding:4px 0;">
             <img src="${b.photos[0]}" style="width:100%;height:100px;object-fit:cover;border-radius:8px;display:block;margin-bottom:8px;" />
-            <div style="font-weight:700;font-size:14px;color:#0e3b3a;margin-bottom:2px;">${b.nom}</div>
-            <div style="font-size:11px;color:#7a6b5a;margin-bottom:6px;">${b.lieu}</div>
-            <div style="font-size:13px;color:#c47254;font-weight:700;margin-bottom:8px;">${PRICE_HIDDEN.has(b.id) ? "Location longue durée" : `À partir de ${b.prix}€ / nuit`}</div>
+            <div style="font-weight:700;font-size:14px;color:var(--c-navy);margin-bottom:2px;">${b.nom}</div>
+            <div style="font-size:11px;color:var(--c-muted);margin-bottom:6px;">${b.lieu}</div>
+            <div style="font-size:13px;color:var(--c-coral);font-weight:700;margin-bottom:8px;">${PRICE_HIDDEN.has(b.id) ? "Location longue durée" : `À partir de ${b.prix}€ / nuit`}</div>
             <button onclick="window.__mapOpenDetail('${b.id}')" style="
               width:100%;padding:8px;border:none;border-radius:7px;
-              background:#0e3b3a;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">
+              background:var(--c-navy);color:#fff;font-size:12px;font-weight:600;cursor:pointer;">
               Voir le logement →
             </button>
           </div>
@@ -9632,7 +9632,7 @@ export default function PublicSite() {
         <CookieBanner />
 
         {/* Header minimal */}
-        <header style={{ position: "sticky", top: 0, zIndex: 200, background: "#0e3b3a", height: 58, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px" }}>
+        <header style={{ position: "sticky", top: 0, zIndex: 200, background: "var(--c-navy)", height: 58, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px" }}>
           <a href="/" style={{ color: IVORY, textDecoration: "none", fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 22, letterSpacing: "0.04em" }}>Amaryllis</a>
           <a href="/" style={{ color: "rgba(250,245,233,0.75)", textDecoration: "none", fontFamily: "'Jost', sans-serif", fontSize: 12, letterSpacing: "0.1em", textTransform: "uppercase" }}>← Tous nos logements</a>
         </header>
@@ -9708,7 +9708,7 @@ export default function PublicSite() {
           image="https://villamaryllis.com/photos/schoelcher/16.webp"
         />
         <CookieBanner />
-        <header style={{ position: "sticky", top: 0, zIndex: 200, background: "#0e3b3a", height: 58, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px" }}>
+        <header style={{ position: "sticky", top: 0, zIndex: 200, background: "var(--c-navy)", height: 58, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px" }}>
           <a href="/" style={{ color: IVORY, textDecoration: "none", fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 22, letterSpacing: "0.04em" }}>Amaryllis</a>
           <a href="/" style={{ color: "rgba(250,245,233,0.75)", textDecoration: "none", fontFamily: "'Jost', sans-serif", fontSize: 12, letterSpacing: "0.1em", textTransform: "uppercase" }}>← Tous nos logements</a>
         </header>
@@ -9807,7 +9807,7 @@ export default function PublicSite() {
           image="https://villamaryllis.com/photos/amaryllis/05.webp"
         />
         <CookieBanner />
-        <header style={{ position: "sticky", top: 0, zIndex: 200, background: "#0e3b3a", height: 58, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px" }}>
+        <header style={{ position: "sticky", top: 0, zIndex: 200, background: "var(--c-navy)", height: 58, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px" }}>
           <a href="/" style={{ color: IVORY, textDecoration: "none", fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 22, letterSpacing: "0.04em" }}>Amaryllis</a>
           <a href="/explorer" style={{ color: "rgba(250,245,233,0.75)", textDecoration: "none", fontFamily: "'Jost', sans-serif", fontSize: 12, letterSpacing: "0.1em", textTransform: "uppercase" }}>Carte des activités →</a>
         </header>
@@ -9935,7 +9935,7 @@ export default function PublicSite() {
         `}</style>
         <div style={{
           height: 62,
-          background: "#0e3b3a",
+          background: "var(--c-navy)",
           padding: "0 28px",
           display: "flex", alignItems: "center",
           borderBottom: scrolled ? "1px solid rgba(250,245,233,0.07)" : "none",
