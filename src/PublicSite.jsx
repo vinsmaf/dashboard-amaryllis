@@ -7029,6 +7029,9 @@ function HeroBrand({ biens }) {
       )}
       {/* gradient overlay */}
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(14,59,58,0.18) 0%, rgba(14,59,58,0.72) 100%)", pointerEvents: "none" }} />
+      {/* Lueur corail discrète derrière le texte/CTA — réchauffe le point de décision
+          sans repeindre tout le hero (stratégie couleur "restrained", pas "committed"). */}
+      <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 60% 55% at 22% 100%, rgba(196,114,84,0.22) 0%, transparent 70%)", pointerEvents: "none" }} />
 
       {/* bottom content */}
       <div style={{ position: "absolute", bottom: 52, left: 32, right: 32, zIndex: 2 }}>

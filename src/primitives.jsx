@@ -97,9 +97,15 @@ export function Button({ variant = "primary", size = "md", children, onClick, hr
     primary:   { background: "var(--c-coral)", color: "#fff", boxShadow: "var(--shadow-cta, 0 4px 18px rgba(196,114,84,0.3))" },
     secondary: { background: "var(--c-navy)", color: "var(--c-ivory)" },
     ghost:     { background: "transparent", color: "var(--c-navy)", border: "1px solid var(--c-sand)", fontWeight: 300 },
-    onDark:    { background: "transparent", color: "var(--c-ivory)", border: "1px solid rgba(250,245,233,0.3)", fontWeight: 400 },
+    // Fond corail à peine perceptible au repos (au lieu de transparent pur) : le bouton
+    // hero lit comme une action de marque plutôt qu'un ghost-button générique.
+    onDark:    { background: "rgba(196,114,84,0.14)", color: "var(--c-ivory)", border: "1px solid rgba(196,114,84,0.45)", fontWeight: 400 },
   };
-  const props = { onClick, style: { ...base, ...sizes[size], ...variants[variant], ...style }, ...rest };
+  const onDarkHover = variant === "onDark" ? {
+    onMouseEnter: e => { e.currentTarget.style.background = "rgba(196,114,84,0.26)"; e.currentTarget.style.borderColor = "rgba(196,114,84,0.7)"; },
+    onMouseLeave: e => { e.currentTarget.style.background = "rgba(196,114,84,0.14)"; e.currentTarget.style.borderColor = "rgba(196,114,84,0.45)"; },
+  } : null;
+  const props = { onClick, style: { ...base, ...sizes[size], ...variants[variant], ...style }, ...onDarkHover, ...rest };
   return href ? <a href={href} {...props}>{children}</a> : <button {...props}>{children}</button>;
 }
 
@@ -107,7 +113,7 @@ export function Button({ variant = "primary", size = "md", children, onClick, hr
 export function Chip({ children, variant = "default", style }) {
   const variants = {
     default: { background: "var(--c-cream)", border: "1px solid var(--c-sand)", color: "var(--c-text)" },
-    onPhoto: { background: "rgba(255,255,255,0.15)", backdropFilter: "blur(6px)", color: "#fff", border: "none" },
+    onPhoto: { background: "rgba(255,255,255,0.15)", backdropFilter: "blur(6px)", color: "#fff", border: "1px solid rgba(201,166,115,0.35)" },
     success: { background: "rgba(16,163,74,0.12)", border: "1px solid rgba(16,163,74,0.3)", color: "#16a34a" },
   };
   const isPill = variant === "onPhoto" || variant === "success";
