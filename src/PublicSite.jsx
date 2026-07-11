@@ -3773,6 +3773,14 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
     return () => ctrl.abort();
   }, [reboundReq, bien.id]);
   const [showStickyBar, setShowStickyBar] = useState(false);
+  // Pont CSS var (cross-arbre) : FaqChatbot (ici) ET ChatWidget (monté séparément dans
+  // main.jsx, hors de cet arbre) lisent --sticky-cta-h pour se décaler au-dessus de la
+  // barre CTA sticky mobile — sinon "Ouvrir l'assistant" la recouvre (trouvé 2026-07-11).
+  useEffect(() => {
+    const active = isMobile && showStickyBar && !BOOKING_DISABLED.has(bien.id);
+    document.documentElement.style.setProperty("--sticky-cta-h", active ? "98px" : "0px");
+    return () => { document.documentElement.style.setProperty("--sticky-cta-h", "0px"); };
+  }, [isMobile, showStickyBar, bien.id]);
   const [googleRevs, setGoogleRevs] = useState(null); // null = pas encore chargé
   const [voyageurRevs, setVoyageurRevs] = useState(null); // vrais avis Airbnb (D1, non masqués)
   const infoPanelRef = useRef(null);
@@ -5634,7 +5642,7 @@ function FaqChatbot({ bien }) {
         onClick={() => setOpen(o => !o)}
         aria-label="Questions fréquentes"
         style={{
-          position: "fixed", bottom: 90, right: 20, zIndex: 200,
+          position: "fixed", bottom: "calc(160px + var(--sticky-cta-h, 0px))", right: 20, zIndex: 200,
           width: 52, height: 52, borderRadius: "50%",
           background: open ? CORAL : NAVY,
           border: `2px solid ${open ? CORAL : "rgba(250,245,233,0.3)"}`,
@@ -5649,7 +5657,7 @@ function FaqChatbot({ bien }) {
       {/* Panneau FAQ */}
       {open && (
         <div style={{
-          position: "fixed", bottom: 155, right: 14, zIndex: 200,
+          position: "fixed", bottom: "calc(228px + var(--sticky-cta-h, 0px))", right: 14, zIndex: 200,
           width: Math.min(window.innerWidth - 28, 370),
           maxHeight: "55vh", borderRadius: 16,
           background: "rgba(14,24,35,0.97)",
