@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-11T00:00:00.000Z",
+  "title": "Design System: Amaryllis Locations",
+  "extensions": {
+    "colorMeta": {
+      "coral": { "role": "primary", "displayName": "Muted Terracotta", "canonical": "#c47254" },
+      "coral-deep": { "role": "primary-hover", "displayName": "Deep Terracotta", "canonical": "#a85a3f" },
+      "navy": { "role": "secondary", "displayName": "Antillean Ink", "canonical": "#0e3b3a" },
+      "gold": { "role": "tertiary", "displayName": "Sunbaked Gold", "canonical": "#c9a673" },
+      "ivory": { "role": "neutral", "displayName": "Warm Ivory Paper", "canonical": "#faf5e9" },
+      "cream": { "role": "neutral", "displayName": "Soft Cream", "canonical": "#f4ecdc" },
+      "sand": { "role": "neutral", "displayName": "Sand Border", "canonical": "#e0d4bc" },
+      "muted": { "role": "neutral", "displayName": "Muted Clay", "canonical": "#7a6b5a" },
+      "admin-bg-ink": { "role": "neutral", "displayName": "Deep Slate Night", "canonical": "#0a0f1e" },
+      "admin-bg-panel": { "role": "neutral", "displayName": "Slate Panel", "canonical": "#0f172a" },
+      "admin-bg-elevated": { "role": "neutral", "displayName": "Slate Elevated", "canonical": "#1e293b" }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display (Jost)", "purpose": "H1/H2 du site, majuscules, tracking large." },
+      "body": { "displayName": "Body (Cormorant italic)", "purpose": "Paragraphes éditoriaux, voix humaine." },
+      "label": { "displayName": "Label (Jost)", "purpose": "Eyebrows site, labels admin." },
+      "admin-numeral": { "displayName": "Admin Numeral (JetBrains Mono)", "purpose": "Valeurs KPI admin uniquement." }
+    },
+    "shadows": [
+      { "name": "card-resting", "value": "0 2px 16px rgba(14, 59, 58, 0.06)", "purpose": "Carte au repos, site." },
+      { "name": "card-hover", "value": "0 12px 32px rgba(14, 59, 58, 0.10)", "purpose": "Survol de carte, site." },
+      { "name": "cta-glow", "value": "0 4px 18px rgba(196, 114, 84, 0.30)", "purpose": "Halo sous le bouton primaire corail." },
+      { "name": "admin-resting", "value": "0 1px 3px rgba(0,0,0,0.4)", "purpose": "Ancrage minimal, admin." }
+    ],
+    "motion": [
+      { "name": "ease-out", "value": "cubic-bezier(0.23, 1, 0.32, 1)", "purpose": "Easing par défaut, généreux, jamais bounce." },
+      { "name": "dur-fast", "value": "150ms", "purpose": "Transitions hover/focus." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "480px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "CTA principal du site (Réserver, etc.) — corail, majuscules, halo.",
+      "html": "<button class=\"ds-btn-primary\">RÉSERVER</button>",
+      "css": ".ds-btn-primary { font-family: 'Jost', sans-serif; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; padding: 12px 28px; font-size: 12px; border-radius: 6px; background: var(--c-coral, #c47254); color: #fff; box-shadow: 0 4px 18px rgba(196,114,84,0.3); transition: transform 150ms cubic-bezier(0.23,1,0.32,1), box-shadow 150ms, background 150ms; } .ds-btn-primary:hover { background: var(--c-coral-deep, #a85a3f); transform: translateY(-1px); } .ds-btn-primary:focus-visible { outline: 2px solid var(--c-coral, #c47254); outline-offset: 2px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Bouton secondaire — fond encre, même forme que primary.",
+      "html": "<button class=\"ds-btn-secondary\">DÉCOUVRIR</button>",
+      "css": ".ds-btn-secondary { font-family: 'Jost', sans-serif; font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase; border: none; cursor: pointer; padding: 12px 28px; font-size: 12px; border-radius: 6px; background: var(--c-navy, #0e3b3a); color: var(--c-ivory, #faf5e9); transition: transform 150ms cubic-bezier(0.23,1,0.32,1); } .ds-btn-secondary:hover { transform: translateY(-1px); } .ds-btn-secondary:focus-visible { outline: 2px solid var(--c-navy, #0e3b3a); outline-offset: 2px; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "CTA de second plan — bordure sand, transparent.",
+      "html": "<button class=\"ds-btn-ghost\">EN SAVOIR PLUS</button>",
+      "css": ".ds-btn-ghost { font-family: 'Jost', sans-serif; font-weight: 300; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; padding: 12px 28px; font-size: 12px; border-radius: 6px; background: transparent; color: var(--c-navy, #0e3b3a); border: 1px solid var(--c-sand, #e0d4bc); transition: background 150ms; } .ds-btn-ghost:hover { background: var(--c-cream, #f4ecdc); } .ds-btn-ghost:focus-visible { outline: 2px solid var(--c-navy, #0e3b3a); outline-offset: 2px; }"
+    },
+    {
+      "name": "Default Chip",
+      "kind": "chip",
+      "refersTo": "chip-default",
+      "description": "Badge factuel (équipement, catégorie) — carré, pas pilule.",
+      "html": "<span class=\"ds-chip-default\">Piscine</span>",
+      "css": ".ds-chip-default { display: inline-flex; align-items: center; gap: 6px; font-family: 'Jost', sans-serif; font-weight: 300; font-size: 12px; letter-spacing: 0.04em; padding: 6px 14px; border-radius: 4px; background: var(--c-cream, #f4ecdc); border: 1px solid var(--c-sand, #e0d4bc); color: var(--c-text, #0e3b3a); }"
+    },
+    {
+      "name": "Success Chip",
+      "kind": "chip",
+      "refersTo": "chip-success",
+      "description": "Confirmation / disponibilité — pilule verte.",
+      "html": "<span class=\"ds-chip-success\">Disponible</span>",
+      "css": ".ds-chip-success { display: inline-flex; align-items: center; gap: 6px; font-family: 'Jost', sans-serif; font-weight: 700; font-size: 10px; letter-spacing: 0.08em; padding: 5px 14px; border-radius: 999px; background: rgba(16,163,74,0.12); border: 1px solid rgba(16,163,74,0.3); color: #16a34a; }"
+    },
+    {
+      "name": "Admin KPI Value",
+      "kind": "custom",
+      "refersTo": "admin-numeral",
+      "description": "Chiffre clé admin — seul usage du mono en grande taille, signale une donnée mesurée.",
+      "html": "<div class=\"ds-kpi\"><span class=\"ds-kpi-value\">6 400 €</span><span class=\"ds-kpi-label\">Revenu net / mois</span></div>",
+      "css": ".ds-kpi { display: flex; flex-direction: column; gap: 4px; } .ds-kpi-value { font-family: 'JetBrains Mono', ui-monospace, Consolas, monospace; font-weight: 700; font-size: 22px; color: #f1f5f9; } .ds-kpi-label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Island Ledger",
+    "overview": "Amaryllis Locations tient deux registres à la fois : une vitrine chaleureuse qui vend le rêve antillais (le site public), et un poste de pilotage précis qui fait tourner l'exploitation derrière (l'admin). Une seule typographie (Jost + Cormorant Garamond + JetBrains Mono) traverse les deux mondes sans jamais les confondre. Ce système rejette explicitement l'esthétique OTA générique, les gradients criards, les drop-shadows empilées et les icônes Material Design sur la partie publique.",
+    "keyCharacteristics": [
+      "Deux palettes, un seul système typographique (data-surface=\"site\" vs \"admin\")",
+      "Site : chaleureux, éditorial, photo-forward, italique Cormorant pour la voix humaine",
+      "Admin : sombre, mono pour les chiffres, bordures plutôt qu'ombres, zéro décoration",
+      "Le prix et la disponibilité restent toujours visibles — moteur de conversion, pas portfolio"
+    ],
+    "rules": [
+      { "name": "The One Accent Rule", "body": "Sur le site, le corail est le SEUL accent chaud — jamais un second orange/rouge ne rentre en compétition avec lui pour l'attention.", "section": "colors" },
+      { "name": "The Semantic-Only Rule", "body": "Sur l'admin, la couleur ne décore jamais : vert/orange/rouge = statut, bleu/violet/rose = identité de canal ou de bien.", "section": "colors" },
+      { "name": "The No-Serif-On-Admin Rule", "body": "Cormorant Garamond n'apparaît jamais sur l'admin — l'italique éditorial est réservé à la voix humaine du site.", "section": "typography" },
+      { "name": "The Border-Over-Shadow Rule", "body": "En dark mode/admin, une bordure rgba(255,255,255,0.08) remplace l'ombre pour séparer les surfaces.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do utiliser les variables CSS (var(--c-coral), etc.) — jamais de hex codé en dur.",
+      "Do utiliser de vraies photos par bien — jamais de placeholder SVG, la marque est photo-forward.",
+      "Do garder le corail comme accent unique sur le site.",
+      "Do utiliser les bordures plutôt que les ombres en dark mode/admin.",
+      "Do garder le mono JetBrains réservé aux chiffres admin uniquement."
+    ],
+    "donts": [
+      "Don't utiliser de gradients criards.",
+      "Don't empiler des drop-shadows multi-couches.",
+      "Don't utiliser des icônes Material Design sur le site marketing.",
+      "Don't déclencher d'animations au scroll.",
+      "Don't inventer une couleur hors tokens.",
+      "Don't utiliser un border-radius incohérent dans une même vue.",
+      "Don't faire ressembler le site public à un template Airbnb/OTA générique."
+    ]
+  }
+}

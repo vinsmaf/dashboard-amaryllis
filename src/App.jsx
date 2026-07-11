@@ -869,7 +869,7 @@ function PasswordGate({ onAuth, expired }) {
         <button
           onClick={check}
           disabled={loading}
-          style={{ width: "100%", padding: "11px", borderRadius: 10, border: "none", background: loading ? "#334155" : "linear-gradient(135deg,#0ea5e9,#6366f1)", color: "#fff", fontSize: 14, fontWeight: 700, cursor: loading ? "default" : "pointer", transition: "background 0.2s" }}
+          style={{ width: "100%", padding: "11px", borderRadius: 10, border: "none", background: loading ? "#334155" : "#0ea5e9", color: "#fff", fontSize: 14, fontWeight: 700, cursor: loading ? "default" : "pointer", transition: "background 0.2s" }}
         >{loading ? "Connexion..." : "Entrer"}</button>
         <div style={{ fontSize: 10, color: "#334155", marginTop: 16 }}>villamaryllis.com/admin</div>
       </div>

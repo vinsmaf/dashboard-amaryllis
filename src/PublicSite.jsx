@@ -2192,7 +2192,8 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
   const earlyLateFee    = EARLY_LATE_FEE[bien.id] ?? 50;
   const earlySuppl      = earlyCheckin  ? earlyLateFee : 0;
   const lateSuppl       = lateCheckout  ? earlyLateFee : 0;
-  const baseTotal = rawTotal - discountAmount + fraisMenage + extraGuestSuppl + petSuppl + earlySuppl + lateSuppl;
+  // Pas de dates valides = pas de total à afficher (le forfait ménage seul donnait un faux total > 0 avant sélection).
+  const baseTotal = nights > 0 ? (rawTotal - discountAmount + fraisMenage + extraGuestSuppl + petSuppl + earlySuppl + lateSuppl) : 0;
   const promoDiscountAmt = promoData
     ? promoData.type === "percent"
       ? Math.round(baseTotal * promoData.value / 100)
@@ -4063,14 +4064,19 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
     return () => { document.body.style.overflow = ""; };
   }, [isPage]);
 
-  // Sticky bar scroll listener
+  // Sticky bar scroll listener — isPage : scroll natif de la fenêtre ; modal : scroll du panneau interne
   useEffect(() => {
+    if (isPage) {
+      const handler = () => setShowStickyBar(window.scrollY > 120);
+      window.addEventListener("scroll", handler, { passive: true });
+      return () => window.removeEventListener("scroll", handler);
+    }
     const panel = infoPanelRef.current;
     if (!panel) return;
     const handler = () => setShowStickyBar(panel.scrollTop > 120);
     panel.addEventListener("scroll", handler, { passive: true });
     return () => panel.removeEventListener("scroll", handler);
-  }, []);
+  }, [isPage]);
 
   // Auto-scroll on page load: scroll just enough to show the full booking widget
   // Disable Chrome scroll restoration so the page always starts at top.
@@ -4093,8 +4099,8 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
   return (
     <div style={{
       ...(isPage
-        ? { position: "relative", height: "100dvh" }
-        : { position: "fixed", inset: 0, zIndex: 900, animation: "slideUpFull 0.38s cubic-bezier(0.23,1,0.32,1) both" }
+        ? { position: "relative" }
+        : { position: "fixed", inset: 0, zIndex: 900, height: "100dvh", animation: "slideUpFull 0.38s cubic-bezier(0.23,1,0.32,1) both" }
       ),
       background: IVORY,
       display: "flex", flexDirection: "column",
@@ -4185,6 +4191,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
         height: 56, background: NAVY, flexShrink: 0,
         display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "0 20px", gap: 12,
+        ...(isPage ? { position: "sticky", top: 0, zIndex: 200 } : {}),
       }}>
         {isPage ? (
           <a href="/" style={{ display: "flex", alignItems: "center", gap: 8, color: "rgba(250,245,233,0.7)", fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13, letterSpacing: "0.1em", textDecoration: "none", flexShrink: 0 }}>← Accueil</a>
@@ -4244,8 +4251,8 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
         )}
       </div>
 
-      {/* ── Scrollable body ── */}
-      <div ref={infoPanelRef} style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+      {/* ── Scrollable body ── (isPage: flux de document natif ; modal: scroll interne au panneau) */}
+      <div ref={infoPanelRef} style={isPage ? undefined : { flex: 1, overflowY: "auto", minHeight: 0 }}>
 
         {/* ── Sticky mini-bar — top (desktop) / fixed bottom (mobile) ── */}
         {/* design-008 : bottom bar fixe sur mobile, sticky top sur desktop */}
@@ -4314,7 +4321,10 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                   src={photos[photoIdx]}
                   alt={`${bien.nom} — ${bien.lieu} — photo ${photoIdx + 1}`}
                   sizes="100vw"
-                  loading={photoIdx === 0 ? "eager" : "lazy"}
+                  // eager toujours : une seule photo montée à la fois (le slide actif),
+                  // "lazy" ici ne défère rien de futur — ça ne faisait que retarder l'affichage
+                  // de la photo déjà à l'écran après navigation (flash noir observé en audit).
+                  loading="eager"
                   fetchPriority={photoIdx === 0 ? "high" : undefined}
                   style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                 />
@@ -4375,7 +4385,8 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                 {/* Overlay bas : titre + rating + capacité */}
                 <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "18px 24px", pointerEvents: "none" }}>
                   <Eyebrow style={{ color: "rgba(255,255,255,0.65)", marginBottom: 4 }}>{bien.lieu}</Eyebrow>
-                  <Display as="h2" size="md" color="#fff" style={{ marginBottom: 8 }}>{bien.nom}</Display>
+                  {/* h1 seulement sur desktop isPage — sur mobile le titre h1 est celui du bloc "masqué sur desktop" plus bas, pour éviter un doublon de h1 */}
+                  <Display as={isPage && !isMobile ? "h1" : "h2"} size="md" color="#fff" style={{ marginBottom: 8 }}>{bien.nom}</Display>
                   {bien.rating && (
                     <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
                       <a href={`/avis?bien=${bien.id}`} style={{ textDecoration: "none" }}><RatingBadge rating={bien.rating} count={bien.reviews} dark /></a>
@@ -4551,7 +4562,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
               <p style={{
                 fontFamily: "'Cormorant Garamond', Georgia, serif",
                 fontStyle: "italic", fontSize: isMobile ? 18 : 24,
-                color: "#5a5248", lineHeight: 1.5,
+                color: "var(--c-muted, #5a5248)", lineHeight: 1.5,
                 margin: "0 0 32px", textAlign: "center",
               }}>
                 {lang === "fr"
@@ -4763,7 +4774,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
             {isMobile && (
               <>
                 <Eyebrow style={{ marginBottom: 10 }}>{bien.lieu}</Eyebrow>
-                <Display as="h2" size="lg" style={{ margin: "0 0 14px" }}>{bien.nom}</Display>
+                <Display as={isPage ? "h1" : "h2"} size="lg" style={{ margin: "0 0 14px" }}>{bien.nom}</Display>
               </>
             )}
 
