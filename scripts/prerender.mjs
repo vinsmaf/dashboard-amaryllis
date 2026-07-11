@@ -99,6 +99,17 @@ function buildRentalsGraph() {
     "url": BASE,
     "telephone": "+33610880772",
     "email": "contact@villamaryllis.com",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Sainte-Luce",
+      "addressRegion": "Martinique",
+      "postalCode": "97228",
+      "addressCountry": "MQ",
+    },
+    "sameAs": [
+      "https://www.facebook.com/Amaryllis.villa",
+      "https://www.instagram.com/amaryllislocations/",
+    ],
     ...(weightedRating && totalReviews ? {
       "aggregateRating": {
         "@type": "AggregateRating",
