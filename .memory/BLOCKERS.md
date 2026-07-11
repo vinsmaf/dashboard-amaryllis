@@ -4,6 +4,13 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
+## En cours → ✅ terminé le 2026-07-11 (soir 2) — Session design : photos, boutons flottants, tactile, couleurs, colorize
+> Détail complet : ADR-STICKY-CTA-BRIDGE-001, ADR-DESIGN-TOKENS-CONSOLIDATION-001. Commits `2a2a25e`→`ec2c625` (6 déploiements CI verts).
+- Liste ordonnée de Vincent (5 items) traitée en séquence : footer déjà résolu (side-effect d'un fix antérieur), gros calendrier redondant Amaryllis supprimé, 2 photos à colorimétrie cassée retouchées (06 cast cyan, 08 cast néon bleu/vert), boutons flottants FAQ+chat repositionnés (chevauchaient la barre CTA sticky mobile — root cause réelle, pas le calendrier déjà supprimé), 35 cibles tactiles <44px corrigées (scan Playwright réel, 705 éléments bruts sur ~146 patterns distincts, corrigé les plus gros contributeurs : calendrier ~372 occurrences, footer ~180).
+- Puis sur question ouverte de Vincent ("quoi d'autre pour le design ?") suivi de "oui les 2" : 7 couleurs hex orphelines tokenisées (scope réel étendu à 16 fichiers après sweep) + colorize ciblé hero/CTA (bouton `onDark`, lueur corail, liseré or chips).
+- 🟡 **Laissé volontairement de côté** (triage explicite, pas un oubli) : audit `#fff` en dur (mérite un tri fichier par fichier, pas un remplacement automatique — `#fff` est légitime dans plein de cas comme texte sur bouton corail) ; liens texte courts inline (`.mc-guide`, WhatsApp/email dans une phrase) — exemptés WCAG 2.5.5 (cible dans un bloc de texte), les grossir aurait cassé l'esthétique "lien" voulue ; contrôles zoom carte Leaflet (30px, override CSS ajouté mais markers de pins 26x26/34x34 non touchés, composant tiers, enjeu faible) ; cas limite rare pile-résa/comparateur (2 propriétés en comparaison + widget de reprise de session affichés en même temps, chevauchement possible avec le stack de boutons flottants — non traité, fréquence très faible).
+- **Ce qui débloquerait la suite si besoin** : rien de bloquant, tout est déployé et vérifié en live. Le `#fff` audit reste candidat pour une session dédiée si Vincent le redemande.
+
 ## ✅ Résolu le 2026-07-11 — Bloc Beds24 Nogent `beds24-87233283` obsolète, supprimé
 > Résa Nogent Ines Dali (06→15 juillet 2026, 490€) corrigée + écrasement Beds24 (nom/montant)
 > fixé durablement dans `appscript/SCRIPT_SHEETS.js` (verrou colonne Source "Manuel", déployé
