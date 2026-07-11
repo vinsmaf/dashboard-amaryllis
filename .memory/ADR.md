@@ -4,6 +4,14 @@
 > Décisions d'archi détaillées (specs complets) → `../docs/superpowers/specs/README.md` (ADR-001→010). Ici = log curaté de session.
 > **Archive mensuelle** : les décisions antérieures au mois courant vivent dans `.memory/archive/ADR-YYYY-MM.md`. Archive actuelle : [`archive/ADR-2026-06.md`](./archive/ADR-2026-06.md) (114 entrées, juin 2026).
 
+## ADR-PACK-FULL-AMARYLLIS-001 · 2026-07-11 · Pack "Full Amaryllis" — nom validé, mécanique manuelle sans dev
+
+1. **Choix** : nom validé par Vincent pour la proposition rev-020 (pack cluster Sainte-Luce). Mécanique : Villa Amaryllis (280€) + Zandoli (110€) + Géko (110€) + Mabouya (70€) = 570€/nuit cumulé standard, réservés ensemble/mêmes dates/≥4 nuits/direct uniquement/basse saison (mai-juin, sept-oct hors vacances scolaires) → **-12% soit 501,60€/nuit**, jusqu'à 19 couchages.
+2. **Alternatives refusées** : automatiser une UI de réservation combinée — écarté pour l'instant, activable en manuel via devis WhatsApp + `/api/create-payment-link` (aucun dev nécessaire), cohérent avec le statut "à tester avant d'investir" du reco original.
+3. **Conséquences attendues** : Vincent peut proposer ce pack dès maintenant à tout prospect groupe. Non encore tranché : variante 2-3 villas (pas juste les 4) autorisée sous le même nom ou nom distinct — à préciser si le cas se présente.
+4. **Périmètre** : aucun code — mécanique commerciale documentée uniquement (message WhatsApp fourni à Vincent).
+5. **Statut** : acté, prêt à l'usage manuel. Jamais publié/automatisé sans nouvelle décision.
+
 ## ADR-BACKLOG-TRIAGE-002 · 2026-07-11 · Réutiliser /api/maintenance pour "dernier contrôle qualité" plutôt qu'une fiche bien neuve
 
 1. **Choix** : reco backlog `log-034` ("ajouter un champ dernier contrôle qualité dans la fiche bien") — investigation a montré qu'**aucune fiche bien éditable n'existe** dans l'admin (les données bien sont éparpillées sur 4 emplacements : `src/data/biens.js` en dur, `PublicSite.jsx BIENS` en dur, `src/lib/rmConfig.js` en dur, table D1 `rm_properties` jamais exposée en UI hors `price_min/max`). Plutôt que construire une fiche neuve, ajout d'une 9ᵉ catégorie `"qualite"` au système `/api/maintenance` déjà complet (CRUD, UI `MaintenanceTab.jsx`, filtrable par bien) — "dernier contrôle qualité" par bien = `MAX(done_at)` sur cette catégorie, calculable sans code neuf.
