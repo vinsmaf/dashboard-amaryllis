@@ -46,13 +46,17 @@ function pct(num, den) {
 function computeMaintenanceStats(closedRows, backlogRows, pipelineRows) {
   const withSchedule = closedRows.filter((r) => r.scheduled_at);
   const onTime = withSchedule.filter((r) => r.done_at <= r.scheduled_at).length;
+  // Exclut les délais négatifs : une intervention saisie rétroactivement (created_at
+  // = date d'enregistrement en base, postérieure au done_at réel) donnerait un délai
+  // négatif absurde — pas une vraie mesure de résolution, juste un artefact de saisie.
   const delays = closedRows
     .filter((r) => r.created_at && r.done_at)
     .map((r) => {
       const created = new Date(r.created_at * 1000);
       const done = new Date(r.done_at + "T12:00:00Z");
       return (done - created) / 86400000;
-    });
+    })
+    .filter((d) => d >= 0);
 
   const byCategory = {};
   const byProvider = {};
