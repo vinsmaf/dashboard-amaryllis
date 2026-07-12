@@ -374,17 +374,11 @@ flowchart TD
 
 **Total vérifié 2026-07-06 : 8 crons dans `wrangler.toml`** (`*/10 * * * *`, `0 9 * * *`, `0 11 * * 1`, `0 12 * * *`, `0 13 * * *`, `0 6 * * 1`, `0 1 1 * *`, `0 20 * * 7`) — cohérent avec §3.
 
-### Crons cron-job.org (déclencheurs HTTP `?secret=`)
+### Crons cron-job.org — locatif n'en a PLUS aucun actif (vérifié 2026-07-12 via API)
 
-| Job | Horaire | Endpoint |
-|---|---|---|
-| `7703775` | ~9h UTC | `/api/send-prearrivee` (J-3) |
-| `7777262` | ~11h UTC | `/api/send-j1-acces` (J-1 codes) |
-| `7669753` | ~10h UTC | `/api/send-poststay` (J+1/J+3) |
-| `7703942` | horaire | `/api/send-relance-panier` — ⚠️ le Worker appelle AUSSI `/api/send-relance-panier` dans sa branche `*/10 * * * *` (voir table Worker ci-dessus) ; pas de commentaire "migré" dans le code contrairement à charge-balance, mais l'exécution est de facto redondante (dédup par `relance_sent` côté endpoint = pas de double-envoi, juste du travail en double) — à vérifier/couper si confirmé inutile |
-| `7669734` | ~8h UTC | `/api/send-menage-alert` (Nogent J-2) |
-| `7669686` | lundi | `/api/send-prix-recap` |
-| `7798126` | 13h UTC | `/api/charge-balance` (solde 2× J-30) — **migré Worker** (le code `workers/ical-sync/index.js` cron `0 13 * * *` l'appelle avec le commentaire explicite "migré depuis cron-job.org 7798126") — vérifier/couper ce job cron-job.org (risque double-run) |
+⚠️ **Corrigé 2026-07-12** : la table ci-dessous listait encore 7 jobs (`7703775`/`7777262`/`7669753`/`7703942`/`7669734`/`7669686`/`7798126`) comme si actifs sur cron-job.org — **stale**. Vérification live via l'API cron-job.org (`GET https://api.cron-job.org/jobs`, clé documentée plus haut dans ce fichier) : **aucun de ces 6 premiers IDs n'existe plus sur le compte**, seul `7798126` (charge-balance) subsiste et il est **`enabled:false`** (confirmé désactivé, pas de risque double-run). Tous les emails/alertes cron locatif (prearrivee, j1-acces, poststay, relance-panier, menage-alert, prix-recap) tournent désormais **exclusivement** via le Worker `amaryllis-ical-sync` (table "Worker cron" ci-dessus — `*/10 * * * *` pour relance-panier, `0 9 * * *` pour prearrivee/j1-acces/poststay, `0 12 * * *` pour menage-alert, `0 6 * * 1` pour prix-recap), cohérent avec la migration du 2026-06-21 (`ITERATIONS_LOG.md`).
+
+⚠️ **Le compte cron-job.org est PARTAGÉ avec patrimoine-dashboard** (même clé API, même login Vincent) : les jobs qui y restent (`7760750` push-cron patrimoine, `7994015` intraday-alert patrimoine, `7798246` morning-brief patrimoine — désactivé 2026-07-11, `7684358` weekly-brief patrimoine — désactivé 2026-07-11, `7994199` reminder-check patrimoine — désactivé) n'ont **rien à voir avec locatif**. Si un futur `GET /jobs` sur ce compte montre un job inattendu, vérifier côté patrimoine avant de supposer un lien avec ce repo.
 | — | lundi 9h | `/api/send-vacancy-alert` |
 | — | 9h UTC | `/api/beds24-refresh` (rotation token) |
 | — | 7h UTC | `/api/beds24-token-watch` (watch expiration token, alerte email Resend si <7j — AVANT le refresh 9h) |
