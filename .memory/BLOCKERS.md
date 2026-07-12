@@ -4,6 +4,45 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
+## En cours → ✅ terminé le 2026-07-12 — Bugs contact dark mode + coords Résidence + diagnostic Google Ads
+> Détail complet : ADR-CONTACT-DARKMODE-001, ADR-COORDS-RESIDENCE-001, ADR-NEWSLETTER-FICHES-001. Commits `52fc4ae`→`78ddd8d`.
+- Contact footer illisible en dark mode (`--fg-on-ink` corrigé), popup WhatsApp/Email qui disparaissait (hover-intent 300ms), coordonnées GPS Résidence Amaryllis unifiées + Villa Amaryllis corrigée séparément (pins Google Maps fournis par Vincent), qa-004+traf-051 clos (0 bug, CWV bons), 2 bugs signalés triés (recharts=bruit bot, removeChild=outil externe), NewsletterForm ajoutée aux fiches biens, ratio funnel trompeur corrigé, vérification Google Ads en direct (conversion déjà Principale, audience remarketing ajoutée par Vincent).
+
+## 🟡 2026-07-12 — Sync AGENDA→KV (brief matinal) probablement cassée par Cloudflare Access sur patrimoine-dashboard.pages.dev
+> Tentative de clôture standard (`POST /api/agenda-sync` avec `CRON_SECRET` Bearer) — réponse **HTTP 302 vers `sparkling-snow-4d37.cloudflareaccess.com` (login Cloudflare Access)**, pas un succès applicatif malgré un exit code curl à 0. Cohérent avec le rollout Cloudflare Access déjà identifié le 07-11 côté cron-job.org (headers manquants sur plusieurs endpoints patrimoine) — probablement le MÊME rollout qui affecte aussi cet endpoint, `Authorization: Bearer` seul ne suffit plus si Access est activé devant. Non corrigé (domaine patrimoine, pas locatif). **Débloque** : vérifier côté patrimoine si Access est censé s'appliquer à `/api/agenda-sync` (probablement pas, c'est un endpoint service-to-service) — ajouter un bypass Access pour ce chemin, ou remplacer par un header `CF-Access-Client-Id`/`CF-Access-Client-Secret` (service token) si l'exemption de chemin n'est pas possible.
+
+## 🟡 2026-07-12 — Migration D1 direct_bookings (gclid/utm/channel/ga_client_id) jamais exécutée en prod
+> Repéré par l'agent `traffic-manager` lors du diagnostic Ads : le commit du 07/07 (`b40ba06`, ADR-ATTR-002) devait ajouter 7 colonnes d'attribution à `direct_bookings`, mais `PRAGMA table_info` confirme que **le schéma live n'a que les 30 colonnes d'origine** — la migration n'a jamais pu s'exécuter faute de nouvelle transaction Stripe depuis le déploiement (0 réservation directe depuis le 03/07). Pas bloquant pour l'attribution GA4/Ads elle-même (le webhook lit `ga_client_id` directement depuis les metadata Stripe, pas depuis D1) — juste `functions/api/direct-bookings.js` (SELECT) qui reste aveugle sur l'attribution par résa dans l'admin. **Débloque** : soit exécuter la migration proactivement (`ALTER TABLE`, ~20 min), soit attendre la prochaine vraie vente pour vérifier qu'elle s'exécute au bon moment.
+
+## 🟡 2026-07-12 — Segment "add_payment_info" mélangé avec "purchase" sous le même objectif Ads "Achats"
+> Dans Google Ads, l'objectif "Achats" compte 2 actions de conversion en Principale : l'import GA4 réel ("amaryllis (web) purchase") ET un event "add_payment_info" (écran carte affiché, pas forcément payé). Pas un blocage — mais si les chiffres "Achats" dans Google Ads paraissent un jour gonflés par rapport aux vraies réservations Stripe, c'est la 1ère cause à vérifier. **Débloque** : décision de Vincent seul (retirer add_payment_info du même objectif, ou le laisser tel quel) — pas une action Claude.
+
+## 🟡 2026-07-12 — Boutons flottants FAQ+chat chevauchent la ligne stats sur iPhone SE (pré-existant, mineur)
+> Trouvé pendant qa-004 : sur 375px (iPhone SE), avant tout scroll, les boutons "?" et chat recouvrent partiellement la fin de la ligne stats ("3,5 sdb") des fiches biens. Rien de bloquant (aucun clic empêché), esthétique seulement. Signalé à Vincent avec 2 pistes (apparition différée après scroll, ou réduction de taille sur mobile) — pas encore tranché. **Débloque** : décision de Vincent sur la piste à suivre, si il veut la traiter.
+
+## 🟡 2026-07-12 — Bail Iguana (Joël Bailleul) : risque de requalification judiciaire en bail meublé
+> Vincent a fourni les 3 vrais contrats Rentila (PDF) après correction du loyer 3400€→1800€/mois.
+> Loyer confirmé exact sur pièce : 21 600€/an = 1 800€/mois pile (contrat nov2025→oct2026) ; année
+> précédente 21 090€ (nov2024→oct2025, +2,5% d'une année à l'autre). Les 3 recos juriste fleet
+> vérifiées contre le texte réel :
+> - **Art. 1731 (état des lieux)** : clause présente et conforme dans les 3 contrats (citée mot
+>   pour mot). Pas d'ack posté — cette reco n'était plus dans le tirage fleet du jour, pas d'ID fiable à cibler.
+> - **Art. 2284 (solidarité)** : sans objet — un seul locataire nommé « au singulier », aucun
+>   garant. Ack posté `fleet:juriste:ymqhlr` (status=done).
+> - **IRL (révision loyer)** : absente mais cohérent — ce sont des contrats "location saisonnière"
+>   à prix fixe, pas des baux d'habitation loi 89-462. Ack posté `fleet:juriste:105oag6` (status=done).
+> - 🟡 **Le vrai sujet, plus large que les 3 recos posées** : 3 contrats "saisonniers" successifs
+>   sur ~21 mois consécutifs (oct 2024→oct 2026), logement MEUBLÉ (inventaire mobilier annexé),
+>   adresse déclarée de Joël = le bien loué lui-même (résidence habituelle, pas un pied-à-terre
+>   vacances). La jurisprudence regarde l'usage réel, pas l'étiquette du contrat — risque de
+>   requalification en bail meublé loi 89-462 si jamais contesté (préavis, motifs de résiliation,
+>   plafond dépôt de garantie tous différents de ce que prévoit le contrat actuel). Pas bloquant
+>   tant que la relation est paisible ; **à sécuriser avec un vrai avocat/notaire si Vincent veut
+>   fermer ce risque avant la prochaine reconduction annuelle (~oct 2026)**.
+> - Écart mineur noté en passant, non creusé : le contrat indique 87 m² / "villaT3 duplex" —
+>   la mémoire patrimoine avait Iguana à ~95 m² (répartition Complexe Amaryllis). Probablement
+>   juste un arrondi/périmètre de mesure différent, pas vérifié plus loin (hors scope de la demande).
+
 ## En cours → ✅ terminé le 2026-07-11 (soir 2) — Session design : photos, boutons flottants, tactile, couleurs, colorize
 > Détail complet : ADR-STICKY-CTA-BRIDGE-001, ADR-DESIGN-TOKENS-CONSOLIDATION-001. Commits `2a2a25e`→`ec2c625` (6 déploiements CI verts).
 - Liste ordonnée de Vincent (5 items) traitée en séquence : footer déjà résolu (side-effect d'un fix antérieur), gros calendrier redondant Amaryllis supprimé, 2 photos à colorimétrie cassée retouchées (06 cast cyan, 08 cast néon bleu/vert), boutons flottants FAQ+chat repositionnés (chevauchaient la barre CTA sticky mobile — root cause réelle, pas le calendrier déjà supprimé), 35 cibles tactiles <44px corrigées (scan Playwright réel, 705 éléments bruts sur ~146 patterns distincts, corrigé les plus gros contributeurs : calendrier ~372 occurrences, footer ~180).

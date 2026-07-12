@@ -4,6 +4,30 @@
 > Décisions d'archi détaillées (specs complets) → `../docs/superpowers/specs/README.md` (ADR-001→010). Ici = log curaté de session.
 > **Archive mensuelle** : les décisions antérieures au mois courant vivent dans `.memory/archive/ADR-YYYY-MM.md`. Archive actuelle : [`archive/ADR-2026-06.md`](./archive/ADR-2026-06.md) (114 entrées, juin 2026).
 
+## ADR-COORDS-RESIDENCE-001 · 2026-07-12 · Unifier les coordonnées GPS de la Résidence Amaryllis (Zandoli/Géko/Mabouya/Iguana), Villa Amaryllis distincte
+
+1. **Choix** : `src/data/biens.js` avait 5 coordonnées GPS différentes pour les biens Sainte-Luce, dispersées sur 90-200m sans raison (chacune probablement géocodée indépendamment à la création). Vincent a fourni 2 liens Google Maps de partage faisant autorité : Zandoli/Géko/Mabouya/Iguana alignés sur le pin "Résidence Amaryllis" (14.4948561,-60.9259617) ; Villa Amaryllis sur son adresse propre "5 Le Clos de Bellevue" (14.4786714,-60.9409604) — confirmée à ~2,4km de distance, un lieu réellement séparé malgré le nom partagé.
+2. **Alternatives refusées** : moyenner/deviner une coordonnée médiane à partir des 5 existantes — écarté, ce sont des coordonnées réelles de propriétés qui alimentent aussi le lien "Voir sur Google Maps" des fiches et l'email J-1 d'accès voyageur (navigation réelle d'un voyageur en approche), pas seulement l'affichage carte — une coordonnée fausse pourrait égarer un vrai visiteur.
+3. **Conséquences attendues** : la carte "Où nous trouver" affiche maintenant 2 clusters distincts (résidence à 4 biens + Villa Amaryllis isolée) au lieu de 5 points dispersés sans cohérence. Toute future correction de coordonnée doit passer par la même méthode (lien Google Maps fourni par Vincent, résolu en navigant + lisant `window.location.href`), jamais une estimation.
+4. **Périmètre** : `src/data/biens.js` (`coords` de `zandoli`/`geko`/`mabouya`/`iguana`/`amaryllis`).
+5. **Statut** : ✅ déployé (commits `1775a74`, `6761456`, `5e60151`), vérifié en live (lien Google Maps de chaque fiche).
+
+## ADR-CONTACT-DARKMODE-001 · 2026-07-12 · --fg-on-ink au lieu de --c-ivory pour le texte sur fond figé
+
+1. **Choix** : la section Contact du footer (fond CSS figé `#072626`, ne suit pas le thème clair/sombre) utilisait `var(--c-ivory)` pour son texte — or `--c-ivory` s'inverse avec le thème (clair en light, quasi-noir en dark, car conçu comme alias de "fond de page"), rendant le texte invisible en dark mode. Remplacé par `--fg-on-ink`, le token conçu pour rester clair dans les deux thèmes.
+2. **Alternatives refusées** : créer un nouveau token dédié — écarté, `--fg-on-ink` existait déjà et couvre exactement ce cas d'usage (texte clair garanti sur fond sombre, quel que soit le thème global).
+3. **Conséquences attendues** : tout futur usage de couleur de texte sur une section à fond FIXE (qui ne suit pas le thème clair/sombre) doit utiliser `--fg-on-ink` (ou équivalent theme-invariant), jamais `--c-ivory`/`--c-navy` directement — ces deux tokens sont conçus pour s'inverser ENSEMBLE avec un fond qui suit le même thème, pas pour un fond figé.
+4. **Périmètre** : `src/PublicSite.jsx` (footer Contact, `HoverContact`).
+5. **Statut** : ✅ déployé (commit `e72d865` + fix dark-mode initial), vérifié en live (dark mode forcé, texte visible).
+
+## ADR-NEWSLETTER-FICHES-001 · 2026-07-12 · Ajouter la capture email (NewsletterForm) aux 7 fiches biens
+
+1. **Choix** : `NewsletterForm` existait déjà sur ~34 pages guides mais jamais sur `PublicSite.jsx` (les fiches biens elles-mêmes) — or c'est là que tombe TOUT le trafic publicitaire payant. Pour un achat à décision lente (3-7 semaines observées), un visiteur froid pas prêt à réserver n'avait aucun palier intermédiaire : soit il réserve, soit il repart sans laisser de trace. Ajoutée juste après la section "Nos conseils", même composant/pattern que les guides (`source="bien-<id>"` pour tracer l'origine).
+2. **Alternatives refusées** : construire un nouveau composant de capture spécifique aux fiches biens — écarté, `NewsletterForm` déjà éprouvé (RGPD double opt-in, séquence email J+7) couvre le besoin sans dupliquer de la logique.
+3. **Conséquences attendues** : nouvelle source de leads `bien-<id>` va apparaître dans `newsletter_subscribers` — distincte des sources `guide-*` déjà existantes, permet de mesurer si le trafic pub froid convertit mieux en email qu'en réservation directe immédiate.
+4. **Périmètre** : `src/PublicSite.jsx` (import + rendu dans `PropertyDetail`, après `ArticlesSection`).
+5. **Statut** : ✅ déployé (commit `1535154`), vérifié en live (7 fiches, mobile).
+
 ## ADR-PACK-FULL-AMARYLLIS-001 · 2026-07-11 · Pack "Full Amaryllis" — nom validé, mécanique manuelle sans dev
 
 1. **Choix** : nom validé par Vincent pour la proposition rev-020 (pack cluster Sainte-Luce). Mécanique : Villa Amaryllis (280€) + Zandoli (110€) + Géko (110€) + Mabouya (70€) = 570€/nuit cumulé standard, réservés ensemble/mêmes dates/≥4 nuits/direct uniquement/basse saison (mai-juin, sept-oct hors vacances scolaires) → **-12% soit 501,60€/nuit**, jusqu'à 19 couchages.
