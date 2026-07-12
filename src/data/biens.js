@@ -12,7 +12,7 @@ export const BIENS = {
   amaryllis: {
     id: "amaryllis", nom: "Villa Amaryllis", type: "villa",
     prix: 280, capacite: 8, chambres: 3, lieu: "Sainte-Luce", postal: "97228",
-    coords: { lat: 14.4732, lng: -60.9196 }, rating: 4.94, reviews: 33, bookable: true,
+    coords: { lat: 14.4786714, lng: -60.9409604 }, rating: 4.94, reviews: 33, bookable: true,
     photos: ["/photos/amaryllis/01.webp","/photos/amaryllis/02.webp","/photos/amaryllis/03.webp","/photos/amaryllis/04.webp","/photos/amaryllis/05.webp","/photos/amaryllis/06.webp","/photos/amaryllis/07.webp","/photos/amaryllis/08.webp","/photos/amaryllis/17.webp","/photos/amaryllis/23.webp","/photos/amaryllis/10.webp","/photos/amaryllis/12.webp","/photos/amaryllis/19.webp","/photos/amaryllis/18.webp","/photos/amaryllis/14.webp","/photos/amaryllis/11.webp","/photos/amaryllis/13.webp","/photos/amaryllis/21.webp","/photos/amaryllis/20.webp"],
     seoTitle: "Villa Amaryllis Sainte-Luce — piscine vue mer Martinique",
     seoDesc: "Villa Amaryllis à Sainte-Luce : piscine à débordement, vue Caraïbes 180°, 3 chambres, 8 personnes. Dès 280€/nuit en direct, sans frais Airbnb.",
