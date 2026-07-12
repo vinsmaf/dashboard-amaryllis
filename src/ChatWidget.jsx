@@ -100,7 +100,7 @@ export default function ChatWidget() {
       {/* ── Panel ── */}
       {open && (
         <div style={{
-          position: "fixed", bottom: "calc(158px + var(--sticky-cta-h, 0px))", right: 24, zIndex: 9990,
+          position: "fixed", bottom: "calc(88px + var(--sticky-cta-h, 0px))", right: 24, zIndex: 9990,
           width: "min(380px, calc(100vw - 32px))",
           background: IVORY,
           borderRadius: 20,
@@ -301,7 +301,7 @@ export default function ChatWidget() {
         onClick={() => setOpen(o => !o)}
         aria-label={open ? "Fermer l'assistant" : "Ouvrir l'assistant"}
         style={{
-          position: "fixed", bottom: "calc(92px + var(--sticky-cta-h, 0px))", right: 24, zIndex: 9991,
+          position: "fixed", bottom: "calc(24px + var(--sticky-cta-h, 0px))", right: 24, zIndex: 9991,
           width: 58, height: 58, borderRadius: "50%", border: "none",
           background: open ? NAVY : `linear-gradient(135deg, ${CORAL} 0%, #b56344 100%)`,
           color: "#fff", cursor: "pointer",

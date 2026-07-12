@@ -5642,7 +5642,7 @@ function FaqChatbot({ bien }) {
         onClick={() => setOpen(o => !o)}
         aria-label="Questions fréquentes"
         style={{
-          position: "fixed", bottom: "calc(160px + var(--sticky-cta-h, 0px))", right: 20, zIndex: 200,
+          position: "fixed", bottom: "calc(90px + var(--sticky-cta-h, 0px))", right: 20, zIndex: 200,
           width: 52, height: 52, borderRadius: "50%",
           background: open ? CORAL : NAVY,
           border: `2px solid ${open ? CORAL : "rgba(250,245,233,0.3)"}`,
@@ -5657,7 +5657,7 @@ function FaqChatbot({ bien }) {
       {/* Panneau FAQ */}
       {open && (
         <div style={{
-          position: "fixed", bottom: "calc(228px + var(--sticky-cta-h, 0px))", right: 14, zIndex: 200,
+          position: "fixed", bottom: "calc(155px + var(--sticky-cta-h, 0px))", right: 14, zIndex: 200,
           width: Math.min(window.innerWidth - 28, 370),
           maxHeight: "55vh", borderRadius: 16,
           background: "rgba(14,24,35,0.97)",
