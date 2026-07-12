@@ -113,8 +113,16 @@ export default function Beds24Admin() {
 
   function syncToPlanning() {
     if (!bookings.length) return;
+    // "Bloqué" (statusCode 90) = un blocage manuel d'indisponibilité côté Beds24, pas une
+    // vraie réservation — Beds24 n'a alors ni nom de voyageur ni montant réels pour cet id.
+    // Le remplacer aveuglément écrase une résa saisie à la main (nom+montant réels) par
+    // "—"/0€ dès que Beds24 et le Sheet partagent le même id (cf. incident Ines Dali, Nogent,
+    // même correction que syncBeds24InPlanning dans Planning.jsx).
+    const blockedIds = new Set(
+      bookings.filter(b => b.statusLabel === "Bloqué").map(b => "beds24-" + b.bookingId)
+    );
     const beds24Converted = bookings
-      .filter(b => b.status !== 2 && b.statusLabel !== "Annulé") // exclure annulés
+      .filter(b => b.status !== 2 && b.statusLabel !== "Annulé" && b.statusLabel !== "Bloqué")
       .map(b => ({
         id:               "beds24-" + b.bookingId,
         bienId:           "nogent",
@@ -134,8 +142,9 @@ export default function Beds24Admin() {
         menage_done:      false,
         assigne:          "",
       }));
-    // Remplacer toutes les réservations beds24 existantes, garder les autres
-    const autres = reservations.filter(r => !String(r.id).startsWith("beds24-"));
+    // Remplacer les réservations beds24 existantes SAUF celles bloquées (préservées telles
+    // quelles), garder les autres.
+    const autres = reservations.filter(r => !String(r.id).startsWith("beds24-") || blockedIds.has(r.id));
     saveRes([...autres, ...beds24Converted]);
     setPlanningStatus("ok");
     addToast(`📅 ${beds24Converted.length} réservation(s) Beds24 injectée(s) dans le planning`, "success");
