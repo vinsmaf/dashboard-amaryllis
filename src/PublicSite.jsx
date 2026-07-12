@@ -7777,7 +7777,7 @@ function FooterSection() {
           </svg>
 
           <Eyebrow style={{ marginBottom: 10 }}>Contact</Eyebrow>
-          <Display size="lg" color="var(--c-ivory)" style={{ margin: "0 0 14px" }}>
+          <Display size="lg" color="var(--fg-on-ink)" style={{ margin: "0 0 14px" }}>
             Parlons de<br />votre séjour
           </Display>
           <Editorial style={{ color: "rgba(250,245,233,0.5)", margin: "0 0 32px", maxWidth: 300 }}>
@@ -7799,7 +7799,7 @@ function FooterSection() {
               <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
               <polyline points="22,6 12,13 2,6"/>
             </svg>
-            <HoverContact light />
+            <HoverContact />
           </div>
 
           {/* ── Réseaux sociaux ── */}
@@ -7858,7 +7858,7 @@ function FooterSection() {
           {sent ? (
             <div style={{ background: "rgba(250,245,233,0.04)", border: "1px solid rgba(250,245,233,0.1)", borderRadius: 16, padding: "48px 36px", textAlign: "center" }}>
               <div style={{ fontSize: 32, marginBottom: 16 }}>✓</div>
-              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 20, letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--c-ivory)", marginBottom: 10 }}>Message envoyé</div>
+              <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: 20, letterSpacing: "0.15em", textTransform: "uppercase", color: "var(--fg-on-ink)", marginBottom: 10 }}>Message envoyé</div>
               <Editorial style={{ color: "rgba(250,245,233,0.5)", margin: "0 0 24px" }}>
                 Nous vous répondrons dans les 24h.
               </Editorial>
