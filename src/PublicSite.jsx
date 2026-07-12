@@ -14,6 +14,7 @@ import { getDiscount, discountLabel } from "./utils/pricing.js";
 import { mpTrack } from "./lib/metaPixel.js";
 import { ssGet, ssSet } from "./lib/safeStorage.js";
 import MaillageCluster from "./components/seo/MaillageCluster.jsx";
+import NewsletterForm from "./NewsletterForm.jsx";
 import { BIENS as CANON, isMartinique as isMartiniqueCanon } from "./data/biens.js";
 import { GUIDES_INDEX } from "./data/guidesIndex.js";
 
@@ -5494,6 +5495,11 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
       )}
       {/* ── Nos conseils — articles SEO pertinents (tous biens, Nogent inclus) ── */}
       <ArticlesSection bienId={bien.id} bienNom={BIEN_NAMES[bien.id]} isMobile={isMobile} />
+
+      {/* ── Capture lead — palier intermédiaire pour le trafic froid pas prêt à réserver ── */}
+      <div style={{ borderTop: `1px solid ${SAND}`, margin: "0 20px 48px", paddingTop: 40 }}>
+        <NewsletterForm source={`bien-${bien.id}`} theme="light" />
+      </div>
       </div>
       {showAlerte && <AlerteDispoModal bien={bien} checkin={calCheckin} checkout={calCheckout} onClose={() => setShowAlerte(false)} />}
 

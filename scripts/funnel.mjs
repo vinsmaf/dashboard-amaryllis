@@ -48,7 +48,13 @@ console.log(`          │  ${pct(bc, vi)}   (intérêt : clic dates+prix)`);
 console.log(`   begin_checkout    ${String(bc).padStart(5)}`);
 console.log(`          │  ${pct(api, bc)}   (formulaire + technique)`);
 console.log(`   add_payment_info  ${String(api).padStart(5)}   ${api === 0 ? "(nouveau event — données à venir)" : "(écran carte affiché)"}`);
-console.log(`          │  ${pct(pu, api)}   (saisie CB / 3DS)  ◀── fuite paiement réelle`);
+// pu > api = mathématiquement impossible pour un vrai tunnel — signe que des achats
+// (ex: liens de paiement WhatsApp) contournent le checkout on-site et ne déclenchent
+// jamais add_payment_info. Le ratio n'est alors pas un taux de fuite interprétable.
+const apiRatioLabel = api > 0 && pu > api
+  ? "◀── ratio non interprétable (achats hors tunnel on-site, ex: lien WhatsApp)"
+  : "◀── fuite paiement réelle";
+console.log(`          │  ${pct(pu, api)}   (saisie CB / 3DS)  ${apiRatioLabel}`);
 console.log(`   purchase          ${String(pu).padStart(5)}   (${pct(pu, vi)} global)`);
 console.log(`   generate_lead     ${String(lead).padStart(5)}\n`);
 
