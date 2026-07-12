@@ -8200,15 +8200,23 @@ function PropertyDropdown({ onSelect }) {
 // ── Hover Contact Preview ─────────────────────────────────────────
 function HoverContact({ light = false, direction = "up", pill = false }) {
   const [show, setShow] = useState(false);
+  const closeTimer = useRef(null);
   const waMsg = encodeURIComponent("Bonjour, je souhaite obtenir des informations sur une location Amaryllis.");
   const baseColor = light ? "rgba(14,59,58,0.75)" : "rgba(250,245,233,0.6)";
   const dotColor  = light ? "rgba(14,59,58,0.35)" : "rgba(250,245,233,0.25)";
 
+  // Délai avant fermeture (annulable) : le popup est séparé du déclencheur par un
+  // gap de 10px — fermer au onMouseLeave instantané ne laisse pas le temps de
+  // traverser ce gap pour atteindre WhatsApp/Email en dessous (signalé inutilisable).
+  const openNow = () => { if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null; } setShow(true); };
+  const closeSoon = () => { closeTimer.current = setTimeout(() => setShow(false), 300); };
+  useEffect(() => () => { if (closeTimer.current) clearTimeout(closeTimer.current); }, []);
+
   return (
     <div
       style={{ position: "relative", display: "inline-block" }}
-      onMouseEnter={() => setShow(true)}
-      onMouseLeave={() => setShow(false)}
+      onMouseEnter={openNow}
+      onMouseLeave={closeSoon}
     >
       {pill ? (
         <span style={{
