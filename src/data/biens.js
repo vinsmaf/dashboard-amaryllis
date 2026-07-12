@@ -20,7 +20,7 @@ export const BIENS = {
   zandoli: {
     id: "zandoli", nom: "Zandoli", type: "logement",
     prix: 110, capacite: 5, chambres: 2, lieu: "Sainte-Luce", postal: "97228",
-    coords: { lat: 14.4725, lng: -60.9201 }, rating: 4.5, reviews: 16, bookable: true,
+    coords: { lat: 14.4948561, lng: -60.9259617 }, rating: 4.5, reviews: 16, bookable: true,
     photos: ["/photos/zandoli/01.webp","/photos/zandoli/02.webp","/photos/zandoli/03.webp","/photos/zandoli/04.webp","/photos/zandoli/12.webp","/photos/zandoli/06.webp","/photos/zandoli/07.webp","/photos/zandoli/05.webp","/photos/zandoli/10.webp","/photos/zandoli/14.webp","/photos/zandoli/15.webp"],
     seoTitle: "Zandoli Sainte-Luce — logement piscine cascade Martinique",
     seoDesc: "Zandoli à Sainte-Luce : piscine privative à cascade, mezzanine, jardin tropical. 5 personnes. Dès 110€/nuit en réservation directe.",
@@ -38,7 +38,7 @@ export const BIENS = {
   geko: {
     id: "geko", nom: "Géko", type: "cocon",
     prix: 110, capacite: 4, chambres: 1, lieu: "Sainte-Luce", postal: "97228",
-    coords: { lat: 14.4729, lng: -60.9194 }, rating: 4.83, reviews: 24, bookable: true,
+    coords: { lat: 14.4948561, lng: -60.9259617 }, rating: 4.83, reviews: 24, bookable: true,
     photos: ["/photos/geko/01.webp","/photos/geko/02.webp","/photos/geko/03.webp","/photos/geko/04.webp","/photos/geko/15.webp","/photos/geko/08.webp","/photos/geko/18.webp","/photos/geko/23.webp","/photos/geko/05.webp","/photos/geko/07.webp","/photos/geko/14.webp","/photos/geko/13.webp"],
     seoTitle: "Géko Sainte-Luce — cocon piscine cascade Martinique",
     seoDesc: "Cocon Géko à Sainte-Luce : piscine privative à cascade, jardin tropical, sur les hauteurs. 4 personnes. Dès 110€/nuit en réservation directe.",
@@ -46,7 +46,7 @@ export const BIENS = {
   mabouya: {
     id: "mabouya", nom: "Mabouya", type: "studio",
     prix: 70, capacite: 2, chambres: 1, lieu: "Sainte-Luce", postal: "97228",
-    coords: { lat: 14.4741, lng: -60.9209 }, rating: 4.55, reviews: 11, bookable: true,
+    coords: { lat: 14.4948561, lng: -60.9259617 }, rating: 4.55, reviews: 11, bookable: true,
     photos: ["/photos/mabouya/13.webp","/photos/mabouya/02.webp","/photos/mabouya/14.webp","/photos/mabouya/15.webp","/photos/mabouya/12.webp","/photos/mabouya/16.webp","/photos/mabouya/03.webp","/photos/mabouya/09.webp","/photos/mabouya/17.webp","/photos/mabouya/11.webp","/photos/mabouya/10.webp","/photos/mabouya/18.webp","/photos/mabouya/04.webp","/photos/mabouya/08.webp","/photos/mabouya/05.webp","/photos/mabouya/01.webp","/photos/mabouya/07.webp","/photos/mabouya/06.webp"],
     seoTitle: "Mabouya Martinique — jacuzzi privatif vue mer",
     seoDesc: "Mabouya à Sainte-Luce : seul jacuzzi privatif vue mer de la résidence. Idéal couple, terrasse privée, plages à 7 min. Dès 70€/nuit.",
