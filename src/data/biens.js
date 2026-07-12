@@ -30,7 +30,7 @@ export const BIENS = {
   iguana: {
     id: "iguana", nom: "Villa Iguana", type: "villa",
     prix: 180, capacite: 6, chambres: 2, lieu: "Sainte-Luce", postal: "97228",
-    coords: { lat: 14.4718, lng: -60.9188 }, rating: 4.75, reviews: 4, bookable: false,
+    coords: { lat: 14.4948561, lng: -60.9259617 }, rating: 4.75, reviews: 4, bookable: false,
     photos: ["/photos/iguana/04.webp","/photos/iguana/06.webp","/photos/iguana/05.webp","/photos/iguana/10.webp"],
     seoTitle: "Villa Iguana Martinique — vue Rocher du Diamant",
     seoDesc: "Villa Iguana à Sainte-Luce : piscine eau salée, vue panoramique sur le Rocher du Diamant. 6 personnes. Réservation directe propriétaire.",
