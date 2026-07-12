@@ -357,6 +357,9 @@ function channelLabel(r) {
   if (s.includes("expedia")) return "Expedia";
   if (s.includes("vrbo"))    return "VRBO";
   if (s.includes("direct"))  return "Direct";
+  // "Louer Premium" = nom du compte Beds24 de Vincent, pas un vrai canal OTA (cf. miroir
+  // dans beds24-bookings.js pour le détail).
+  if (s.includes("louer premium")) return "Direct";
   return r;
 }
 

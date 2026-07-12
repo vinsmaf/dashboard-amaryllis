@@ -228,5 +228,11 @@ function channelLabel(referer) {
   if (r.includes("vrbo"))    return "VRBO";
   if (r.includes("beds24"))  return "Beds24 Direct";
   if (r.includes("direct"))  return "Direct";
+  // "Louer Premium" = nom du compte Beds24 de Vincent (louerpremium@gmail.com), pas un
+  // vrai canal OTA — Beds24 le renvoie comme referer pour toute résa créée manuellement
+  // dans son propre compte. Sans ce cas, ces résas manuelles s'affichent sous un nom de
+  // compte confus au lieu de "Direct" (confondu avec le bug de sync écrasant nom/montant,
+  // qui lui est déjà corrigé côté Sheet — cf. SCRIPT_SHEETS.js).
+  if (r.includes("louer premium")) return "Direct";
   return referer;
 }

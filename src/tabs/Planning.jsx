@@ -315,8 +315,16 @@ export default function Planning() {
       if (!res.ok) { setBeds24SyncStatus("error"); return currentResas; }
       const data = await res.json();
       if (data.error || !data.bookings) { setBeds24SyncStatus("error"); return currentResas; }
+      // "Bloqué" (statusCode 90) = un blocage manuel d'indisponibilité côté Beds24, pas une
+      // vraie réservation — Beds24 n'a alors ni nom de voyageur ni montant réels pour cet id.
+      // Le remplacer aveuglément écrase une résa saisie à la main (nom+montant réels) par
+      // "—"/0€ dès que Beds24 et le Sheet partagent le même id (cf. incident Ines Dali, Nogent,
+      // 2026-07-11/12 : Beds24 n'a qu'un bloc pour ces dates, la vraie résa vit dans le Sheet).
+      const blockedIds = new Set(
+        data.bookings.filter(b => b.statusLabel === "Bloqué").map(b => "beds24-" + b.bookingId)
+      );
       const beds24 = data.bookings
-        .filter(b => b.statusLabel !== "Annulé")
+        .filter(b => b.statusLabel !== "Annulé" && b.statusLabel !== "Bloqué")
         .map(b => ({
           id:               "beds24-" + b.bookingId,
           bienId:           "nogent",
@@ -336,7 +344,10 @@ export default function Planning() {
           menage_done:      false,
           assigne:          "",
         }));
-      const merged = [...(currentResas || reservations).filter(r => !String(r.id).startsWith("beds24-")), ...beds24];
+      const merged = [
+        ...(currentResas || reservations).filter(r => !String(r.id).startsWith("beds24-") || blockedIds.has(r.id)),
+        ...beds24,
+      ];
       saveRes(merged);
       setBeds24SyncStatus("ok");
       return merged;
