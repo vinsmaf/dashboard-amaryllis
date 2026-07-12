@@ -517,7 +517,7 @@ export default function NetRevParTab({ hist = {}, biens: biensArr = [] }) {
 
       <p style={{ color:"#475569", fontSize:11, marginTop:16 }}>
         {year===2025
-          ? "Iguana exclu (bail long 3 400€/mois) · Parking inclus dans le brut mais hors commission"
+          ? "Iguana exclu (bail long 1 800€/mois) · Parking inclus dans le brut mais hors commission"
           : year===CY
           ? "Iguana exclu (bail long depuis oct 2024) · Données YTD Jan–"+(MONTHS[CM])
           : "Iguana inclus (court terme avant bail oct 2024)"}
