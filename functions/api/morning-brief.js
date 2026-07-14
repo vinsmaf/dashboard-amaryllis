@@ -81,12 +81,12 @@ export async function onRequestGet({ request, env }) {
 
   // ── Arrivées du jour ─────────────────────────────────────────────────────
   const arrivals = await db.prepare(
-    `SELECT prenom, bien_nom, bien_id, nb_guests, total FROM direct_bookings WHERE checkin = ? ORDER BY bien_id`
+    `SELECT prenom, bien_nom, bien_id, nb_guests, total FROM direct_bookings WHERE checkin = ? AND (status IS NULL OR status != 'cancelled') ORDER BY bien_id`
   ).bind(today).all().then(r => r.results ?? []).catch(e => { clog('morning-brief', 'warn', { step: 'arrivals', err: e?.message }); errors.push('arrivals'); dbErrors++; return [] })
 
   // ── Départs du jour ──────────────────────────────────────────────────────
   const departures = await db.prepare(
-    `SELECT prenom, bien_nom, bien_id FROM direct_bookings WHERE checkout = ? ORDER BY bien_id`
+    `SELECT prenom, bien_nom, bien_id FROM direct_bookings WHERE checkout = ? AND (status IS NULL OR status != 'cancelled') ORDER BY bien_id`
   ).bind(today).all().then(r => r.results ?? []).catch(e => { clog('morning-brief', 'warn', { step: 'departures', err: e?.message }); errors.push('departures'); dbErrors++; return [] })
 
   // ── Cautions en attente / échouées ───────────────────────────────────────
@@ -96,12 +96,12 @@ export async function onRequestGet({ request, env }) {
 
   // ── Occupation forward 7j (nb jours-biens occupés) ───────────────────────
   const occupiedRows = await db.prepare(
-    `SELECT DISTINCT bien_id FROM direct_bookings WHERE checkin < ? AND checkout > ?`
+    `SELECT DISTINCT bien_id FROM direct_bookings WHERE checkin < ? AND checkout > ? AND (status IS NULL OR status != 'cancelled')`
   ).bind(weekEnd, today).all().then(r => r.results ?? []).catch(e => { clog('morning-brief', 'warn', { step: 'occupiedRows', err: e?.message }); errors.push('occupancy'); dbErrors++; return [] })
 
   // ── Revenus résas directes — mois en cours ────────────────────────────────
   const monthRevenue = await db.prepare(
-    `SELECT SUM(total) as total, COUNT(*) as nb FROM direct_bookings WHERE checkin >= ? AND checkin <= ?`
+    `SELECT SUM(total) as total, COUNT(*) as nb FROM direct_bookings WHERE checkin >= ? AND checkin <= ? AND (status IS NULL OR status != 'cancelled')`
   ).bind(monthStart, monthEnd).first().catch(e => { clog('morning-brief', 'warn', { step: 'monthRevenue', err: e?.message }); errors.push('revenue'); dbErrors++; return null })
 
   // ── Posts éditoriaux du jour ─────────────────────────────────────────────

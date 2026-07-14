@@ -217,7 +217,7 @@ export async function onRequestGet({ request, env }) {
   // ── 4. Semaine sans résa directe ────────────────────────────────────────
   try {
     const recent = await db.prepare(
-      `SELECT COUNT(*) as n FROM direct_bookings WHERE created_at >= ?`
+      `SELECT COUNT(*) as n FROM direct_bookings WHERE created_at >= ? AND (status IS NULL OR status != 'cancelled')`
     ).bind(ago7).first().catch(() => null)
     if ((recent?.n ?? 1) === 0) {
       anomalies.push({

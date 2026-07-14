@@ -73,6 +73,7 @@ export async function onRequestGet(context) {
          WHERE (bien_id = ? OR (bien_id = 'groupe' AND (',' || group_biens || ',') LIKE '%,' || ? || ',%'))
            AND checkin  IS NOT NULL
            AND checkout IS NOT NULL
+           AND (status IS NULL OR status != 'cancelled')
          ORDER BY checkin ASC`
       )
       .bind(bienId, bienId)
