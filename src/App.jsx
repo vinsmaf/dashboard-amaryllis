@@ -318,9 +318,14 @@ async function syncFromSheets(biens, scriptUrl) {
   // script.google.com renvoie un 302 cross-origin (→ googleusercontent.com) qui
   // casse le CORS côté navigateur. Le proxy fait le fetch côté serveur (no CORS)
   // et renvoie le JSON tel quel. (action "read" = forwarding POST classique.)
+  // 50s (était 20s) : l'action "read" calcule revenus/occ/adr/revpar/cashflow pour 9 entités
+  // × 12 mois + relit "Toutes les Réservations" (706+ lignes) — mesuré à 35,7s en conditions
+  // de charge le 2026-07-14 (quota Apps Script sous tension), 20s abandonnait systématiquement
+  // avant la réponse malgré un calcul qui aboutissait bien côté serveur. Le Sheet ne fera que
+  // grossir → marge volontairement large plutôt qu'un ajustement au plus juste.
   const res = await fetchWithTimeout("/api/sheets-proxy", {
     method: "POST",
-    timeout: 20000,
+    timeout: 50000,
     headers: { "Content-Type": "application/json", "X-Script-Url": scriptUrl },
     body: JSON.stringify({ action: "read" }),
   });
