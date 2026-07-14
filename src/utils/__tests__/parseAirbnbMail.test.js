@@ -99,6 +99,70 @@ describe("parseAirbnbMail — corps brut Outlook/Zapier (markdown collé)", () =
   });
 });
 
+// Exemple RÉEL reçu en prod le 2026-07-14 (Gwenaelle Decloux/Géko) — nouveau format Airbnb SANS
+// année sur Check-in/Checkout, transféré via Hotmail (en-tête « Envoyé : »). A révélé que
+// parseEnDate exigeait toujours une année → checkin/checkout ressortaient null (dry-run confirmé
+// en prod : "skip": "parse incomplet").
+const AIRBNB_GEKO_SANS_ANNEE = `
+________________________________
+De : Airbnb <automated@airbnb.com>
+Envoyé : mardi 14 juillet 2026 13:36:06 (UTC+01:00) Brussels, Copenhagen, Madrid, Paris
+À : vinsmaf@hotmail.com <vinsmaf@hotmail.com>
+Sujet : Reservation confirmed - Gwenaelle Decloux arrives Oct 31
+
+New booking confirmed! Gwenaelle arrives Oct 31.
+Send a message to confirm check-in details or welcome Gwenaelle.
+
+Gwenaelle Decloux
+Identity verified · 14 reviews
+
+Géko, détente, zen,  piscine & jardin tropical
+Entire home/apt
+Check-in
+Sat, Oct 31
+5:00 PM
+Checkout
+Fri, Nov 13
+12:00 PM
+Guests
+2 adults, 1 infant
+Confirmation code
+HM29D5Q9ZH
+Guest paid
+€109.62 x 13 nights
+€1,425.00
+Total (EUR)
+€1,753.74
+Host payout
+You earn
+€1,440.45`;
+
+describe("parseAirbnbMail — nouveau format Airbnb sans année (forward Hotmail)", () => {
+  const r = parseAirbnbMail({ subject: "TR : Reservation confirmed - Gwenaelle Decloux arrives Oct 31", body: AIRBNB_GEKO_SANS_ANNEE });
+
+  it("déduit l'année depuis l'en-tête « Envoyé : » du forward", () => {
+    expect(r.checkin).toBe("2026-10-31");
+    expect(r.checkout).toBe("2026-11-13");
+  });
+
+  it("gère le rollover d'année (mois cible avant le mois d'envoi → année+1)", () => {
+    const janvier = AIRBNB_GEKO_SANS_ANNEE
+      .replace("Sat, Oct 31", "Sat, Jan 3")
+      .replace("Fri, Nov 13", "Fri, Jan 10");
+    const r2 = parseAirbnbMail({ subject: "x", body: janvier });
+    expect(r2.checkin).toBe("2027-01-03");
+    expect(r2.checkout).toBe("2027-01-10");
+  });
+
+  it("reste correct sur le reste des champs", () => {
+    expect(r.bienId).toBe("geko");
+    expect(r.guestName).toBe("Gwenaelle Decloux");
+    expect(r.montantTotal).toBe(1753.74);
+    expect(r.montantPayout).toBe(1440.45);
+    expect(r.confirmationCode).toBe("HM29D5Q9ZH");
+  });
+});
+
 describe("parseAirbnbMail — robustesse", () => {
   it("renvoie null sur les champs absents (jamais de valeur devinée)", () => {
     const r = parseAirbnbMail({ subject: "Bonjour", body: "rien d'utile ici" });

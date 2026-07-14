@@ -22,15 +22,33 @@ const LISTING_RULES = [
 ];
 
 const EN_MONTHS = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+const FR_MONTHS = { janvier: 1, février: 2, mars: 3, avril: 4, mai: 5, juin: 6, juillet: 7, août: 8, septembre: 9, octobre: 10, novembre: 11, décembre: 12 };
 
-// « Mon, Feb 1, 2027 » / « Feb 1, 2027 » → « 2027-02-01 »
-function parseEnDate(s) {
+// Le nouveau format Airbnb (vu en prod le 2026-07-14) n'affiche plus l'année sur Check-in/Checkout
+// (« Sat, Oct 31 » au lieu de « Mon, Feb 1, 2027 »). On la déduit alors de l'en-tête du forward
+// Hotmail (« Envoyé : mardi 14 juillet 2026 13:36:06 »), toujours présent sur ce pipeline
+// (Zapier : Hotmail → Sheet) — reste une fonction pure (l'année vient du texte, pas de l'horloge).
+function findRefDate(text) {
+  const m = text.match(/Envoy[ée]\s*:\s*\S+\s+\d{1,2}\s+([a-zA-Zàâéèêëîïôùûüÿœ]+)\s+(\d{4})/);
+  if (!m) return null;
+  const month = FR_MONTHS[m[1].toLowerCase()];
+  return month ? { year: parseInt(m[2], 10), month } : null;
+}
+
+// « Mon, Feb 1, 2027 » / « Feb 1, 2027 » → « 2027-02-01 ». Année absente (nouveau format, « Sat,
+// Oct 31 ») → déduite de `ref` (voir findRefDate), avec rollover si le mois cible précède
+// nettement le mois d'envoi (résa reçue en décembre pour janvier → année+1).
+function parseEnDate(s, ref = null) {
   if (!s) return null;
-  const m = s.match(/([A-Za-z]{3})[a-z]*\.?\s+(\d{1,2}),?\s+(\d{4})/);
+  const m = s.match(/([A-Za-z]{3})[a-z]*\.?\s+(\d{1,2})(?:,?\s+(\d{4}))?/);
   if (!m) return null;
   const mon = EN_MONTHS[m[1].toLowerCase().slice(0, 3)];
   if (!mon) return null;
-  return `${m[3]}-${String(mon).padStart(2, "0")}-${String(parseInt(m[2], 10)).padStart(2, "0")}`;
+  let year;
+  if (m[3]) year = parseInt(m[3], 10);
+  else if (ref) year = ref.year + (mon < ref.month - 2 ? 1 : 0);
+  else return null; // pas d'année dans le texte ni de référence → jamais deviné
+  return `${year}-${String(mon).padStart(2, "0")}-${String(parseInt(m[2], 10)).padStart(2, "0")}`;
 }
 
 // « €1,440.24 » / « € 1 440,24 » / « 1440.24 » → 1440.24 (Number) ou null
@@ -89,8 +107,10 @@ export function parseAirbnbMail({ subject = "", body = "" } = {}) {
   for (const r of LISTING_RULES) { if (r.re.test(scope)) { bienId = r.bienId; break; } }
 
   // ── Dates ──
-  const checkin = parseEnDate(afterLabel(text, "Check-?in", "[A-Za-z]{3}[a-z]*\\.?\\s+\\d{1,2},?\\s+\\d{4}"));
-  const checkout = parseEnDate(afterLabel(text, "Check-?out", "[A-Za-z]{3}[a-z]*\\.?\\s+\\d{1,2},?\\s+\\d{4}"));
+  const refDate = findRefDate(text);
+  const dateValueRe = "[A-Za-z]{3}[a-z]*\\.?\\s+\\d{1,2}(?:,?\\s+\\d{4})?"; // année optionnelle (nouveau format Airbnb)
+  const checkin = parseEnDate(afterLabel(text, "Check-?in", dateValueRe), refDate);
+  const checkout = parseEnDate(afterLabel(text, "Check-?out", dateValueRe), refDate);
 
   // ── Nom du voyageur ──
   // Priorité 1 : le SUJET « Reservation confirmed - <Nom complet> arrives … » — source la plus
