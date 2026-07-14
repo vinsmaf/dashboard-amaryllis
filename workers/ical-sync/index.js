@@ -4030,13 +4030,6 @@ export default {
       // immédiate (PAS un rewrite des docs légaux/stratégie, cf. docs-refresh.js).
       ctx.waitUntil(runDocsRefresh(env));
 
-    } else if (cron === "0 * * * *") {
-      // Chaque heure — complète nom+payout des résas Airbnb depuis les mails (onglet « Emails »).
-      // Trouvé le 2026-07-14 : tournait avant seulement 1×/jour (branche 9h) malgré le
-      // commentaire "cron horaire" d'origine — jusqu'à ~22h de latence avant qu'une résa Airbnb
-      // apparaisse avec nom/prix dans le Planning.
-      ctx.waitUntil(runEnrichFromEmails(env));
-
     } else if (cron === "0 20 * * 7") {
       // Dimanche 20h UTC (16h Martinique) — accountability hebdo (prépare réunion générale lundi)
       ctx.waitUntil(runAccountability(env));
@@ -4046,6 +4039,10 @@ export default {
       ctx.waitUntil((async () => {
         await runSync(env);
         await runCancelUnpaidBeds24Bookings(env);
+        // Enrichissement résas Airbnb (nom+prix+voyageurs depuis les mails) — replié ici depuis
+        // son propre cron horaire (2026-07-14) pour matcher la cadence de la sync iCal elle-même
+        // (10 min) plutôt qu'attendre jusqu'à 1h avant qu'une résa apparaisse enrichie.
+        await runEnrichFromEmails(env);
         await runEditorialRetry(env);
         // Gate horaire (top of hour) AVANT l'auto-publish : donne une 2e chance aux drafts
         // escaladés à 12h UTC (réévaluation TTL 4h + réécriture) le jour même, au lieu de
