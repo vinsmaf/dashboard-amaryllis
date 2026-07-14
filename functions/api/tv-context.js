@@ -124,7 +124,7 @@ export async function onRequestGet(context) {
     let rows = [];
     try {
       const res = await db
-        .prepare("SELECT bien_nom, voyageur, checkin, checkout FROM direct_bookings WHERE checkin <= ? AND checkout >= ? ORDER BY checkin DESC")
+        .prepare("SELECT bien_nom, voyageur, checkin, checkout FROM direct_bookings WHERE checkin <= ? AND checkout >= ? AND (status IS NULL OR status != 'cancelled') ORDER BY checkin DESC")
         .bind(today, today)
         .all();
       rows = (res && res.results) || [];

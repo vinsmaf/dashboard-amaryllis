@@ -4,9 +4,12 @@
 // par Zapier : Hotmail → Sheet), parse chaque mail de confirmation Airbnb (parseAirbnbMail),
 // et enrichit la résa iCal correspondante dans « Toutes les Réservations » via l'action GAS
 // enrichReservation (matching bien+nuits+check-in±1j, écriture NON destructive : ne remplit
-// que les cases nom/prix vides). L'iCal Airbnb ne transmet ni nom ni prix → le mail les apporte.
+// que les cases nom/prix/voyageurs vides). L'iCal Airbnb ne transmet ni nom ni prix → le mail
+// les apporte. Le montant écrit n'était jusqu'ici JAMAIS répercuté dans « revenus locatif 2026 »
+// (enrichReservation ne fait que poser des cellules, sans rebuild) → on déclenche ici le rebuild
+// du bon bien/mois quand un montant vient d'être écrit (trouvé + corrigé le 2026-07-14).
 //
-// `?dry=1` : prévisualise (parse) sans rien écrire. Déclencheur prévu : cron horaire/quotidien.
+// `?dry=1` : prévisualise (parse) sans rien écrire. Déclencheur : cron horaire (Worker).
 import { parseAirbnbMail } from "../../src/utils/parseAirbnbMail.js";
 
 const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { "Content-Type": "application/json" } });
@@ -36,11 +39,20 @@ export async function onRequestGet(context) {
     if (!p.bienId || !p.checkin || !p.checkout || !p.guestName) {
       ignores++; results.push({ subject: (m.Subject || "").slice(0, 60), skip: "parse incomplet", parsed: p }); continue;
     }
-    const entry = { bienId: p.bienId, checkin: p.checkin, checkout: p.checkout, voyageur: p.guestName, montant: p.montantPayout };
+    const entry = { bienId: p.bienId, checkin: p.checkin, checkout: p.checkout, voyageur: p.guestName, montant: p.montantPayout, nbGuests: p.nbGuests };
     if (dry) { results.push({ ...entry, dry: true }); continue; }
     const er = await proxy({ action: "enrichReservation", ...entry });
-    if (er?.matched && Object.keys(er.wrote || {}).length) enrichis++;
-    results.push({ ...entry, matched: !!er?.matched, wrote: er?.wrote || {}, ambigu: er?.ambigu });
+    const wrote = er?.wrote || {};
+    if (er?.matched && Object.keys(wrote).length) {
+      enrichis++;
+      // Le montant vient d'apparaître pour la 1ère fois → sans rebuild, il reste à 0 dans
+      // « revenus locatif 2026 » indéfiniment (la sync initiale iCal l'avait déjà compté à 0€).
+      if (wrote.montant) {
+        const month = parseInt(String(p.checkin).slice(5, 7), 10);
+        await proxy({ action: "revenus2026RebuildBienApply", fromMonth: month, bien: p.bienId });
+      }
+    }
+    results.push({ ...entry, matched: !!er?.matched, wrote, ambigu: er?.ambigu });
   }
 
   return json({ ok: true, dry, emails: rows.length, airbnbMails: airbnb.length, enrichis, ignores, results });

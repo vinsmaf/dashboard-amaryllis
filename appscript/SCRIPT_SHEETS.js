@@ -303,6 +303,10 @@ function enrichReservation_(p) {
   if (p.montant && (force || curM <= 0)) { sheet.getRange(rowNum, 8).setValue(parseFloat(p.montant)); wrote.montant = parseFloat(p.montant); }
   if (p.phone && (force || !String(r[13] || "").trim())) { sheet.getRange(rowNum, 14).setValue(p.phone); wrote.phone = p.phone; }
   if (p.email && (force || !String(r[14] || "").trim())) { sheet.getRange(rowNum, 15).setValue(p.email); wrote.email = p.email; }
+  // nb_guests (col J) : le placeholder iCal vaut toujours 1 (Airbnb ne transmet pas ce champ par
+  // iCal) → on écrase tant que la valeur courante n'est que ce défaut, jamais au-delà (non destructif).
+  var curGuests = parseInt(r[9], 10) || 1;
+  if (p.nbGuests && (force || curGuests <= 1)) { sheet.getRange(rowNum, 10).setValue(parseInt(p.nbGuests, 10)); wrote.nbGuests = parseInt(p.nbGuests, 10); }
   return json_({ ok: true, matched: true, row: rowNum, dayDiff: bestDiff, before: before, wrote: wrote });
 }
 

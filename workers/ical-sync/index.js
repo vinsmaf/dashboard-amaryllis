@@ -3859,7 +3859,8 @@ export default {
           console.error("[send-poststay] Cron error:", e.message);
         }
         await runDevisSoldeCron(env); // C2 — solde devis 2 fois : lien J-30 + relances J-25/J-20 + annulation J-15
-        await runEnrichFromEmails(env); // complète nom+payout des résas Airbnb depuis les mails (onglet « Emails ») AVANT le contrôle de cohérence
+        // runEnrichFromEmails déplacé sur son propre cron horaire (0 * * * *, cf. ci-dessous) —
+        // tournait ici seulement 1×/jour malgré le commentaire "cron horaire" d'origine (trouvé 2026-07-14).
         // pré-départ J-1 = géré uniquement par /api/send-pre-depart (voir Promise.all plus haut) —
         // doublon runPredepart()/send-predepart supprimé le 2026-07-04 (envoyait le même email 2×,
         // chaque fonction suivant sa propre colonne pre_depart_sent/predepart_sent).
@@ -4028,6 +4029,13 @@ export default {
       // Snapshots factuels (trafic SEO + signaux marché) → D1 → ré-ingestion RAG
       // immédiate (PAS un rewrite des docs légaux/stratégie, cf. docs-refresh.js).
       ctx.waitUntil(runDocsRefresh(env));
+
+    } else if (cron === "0 * * * *") {
+      // Chaque heure — complète nom+payout des résas Airbnb depuis les mails (onglet « Emails »).
+      // Trouvé le 2026-07-14 : tournait avant seulement 1×/jour (branche 9h) malgré le
+      // commentaire "cron horaire" d'origine — jusqu'à ~22h de latence avant qu'une résa Airbnb
+      // apparaisse avec nom/prix dans le Planning.
+      ctx.waitUntil(runEnrichFromEmails(env));
 
     } else if (cron === "0 20 * * 7") {
       // Dimanche 20h UTC (16h Martinique) — accountability hebdo (prépare réunion générale lundi)
