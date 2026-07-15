@@ -6,6 +6,7 @@
 
 import { sendGuestEmail } from "./send-guest-email.js";
 import { getBien } from "../../src/data/biens.js";
+import { redactEmail } from "./_log.js";
 
 const json = (d, s = 200) => new Response(JSON.stringify(d), {
   status: s, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
@@ -105,7 +106,7 @@ export async function onRequestGet(context) {
         await db.prepare("UPDATE direct_bookings SET j1_acces_sent = 1 WHERE rowid = ?").bind(b.rid).run();
         sent++;
       } else {
-        console.error(`[j1-acces] échec ${b.email}: ${r.error}`);
+        console.error(`[j1-acces] échec ${redactEmail(b.email)}: ${r.error}`);
         failed++;
       }
     }

@@ -4,7 +4,7 @@ import { capiPurchase } from "./_metaCapi.js";
 import { lowAmountInfo } from "../../src/utils/priceGuard.js";
 import { cautionAmountFor, placeDateFor, leadDays, isISODate } from "../../src/utils/caution.js";
 import { ensureCautionTable, createHold } from "./_caution.js";
-import { clog, timer } from "./_log.js";
+import { clog, timer, redactName, redactEmail } from "./_log.js";
 import { randomSuffix, buildPrefix } from "../../src/utils/promoCodeGen.js";
 import { REFERRAL_PARRAIN_REWARD, referralNote } from "../../src/utils/referralReward.js";
 import { ga4Event } from "./_ga4event.js";
@@ -209,7 +209,7 @@ async function creditReferralParrain(env, db, promoCode) {
       category: "client",
       template: "referral_reward",
     });
-    console.log(`[webhook] parrainage : ${promoCode} → récompense ${rewardCode} pour ${parrain.email}`);
+    console.log(`[webhook] parrainage : ${promoCode} → récompense ${rewardCode} pour ${redactEmail(parrain.email)}`);
   } catch (e) {
     console.error("[webhook] erreur crédit parrainage:", e.message);
   }
@@ -302,7 +302,7 @@ async function sendConfirmationToGuest(env, { bienNom, voyageur, email, checkin,
       </div>
     `,
   });
-  console.log(`[webhook] Email confirmation envoyé → ${email}`);
+  console.log(`[webhook] Email confirmation envoyé → ${redactEmail(email)}`);
 }
 
 // Alerte hôte (email + ntfy) — FALLBACK fiable côté serveur. Le front-end `notify-booking`
@@ -829,7 +829,7 @@ export async function onRequestPost(context) {
     const amount   = session.amount_total ? `${(session.amount_total / 100).toFixed(0)} €` : "?";
     const bienNom  = esc(NOMS[bienId] || bienId);
 
-    console.log(`[webhook] Caution sécurisée: ${bienNom} — ${voyageur} — ${amount}`);
+    console.log(`[webhook] Caution sécurisée: ${bienNom} — ${redactName(voyageur)} — ${amount}`);
 
     await sendEmail(env, {
       subject: `🔒 Caution sécurisée — ${bienNom} (${voyageur})`,

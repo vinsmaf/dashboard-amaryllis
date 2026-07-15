@@ -15,6 +15,7 @@
 // La fenêtre étendue à 72h évite de rater les paniers si le cron saute une heure.
 
 import { sendGuestEmail } from "./send-guest-email.js";
+import { redactEmail } from "./_log.js";
 
 const json = (d, s = 200) => new Response(JSON.stringify(d), {
   status: s, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
@@ -169,18 +170,18 @@ export async function onRequestGet(context) {
         await db.prepare("UPDATE abandoned_carts SET relance_sent = ? WHERE rowid = ?").bind(nextStatus, c.rid).run();
         sent++;
       } else {
-        console.error(`[relance-panier] R${relanceNum} échec ${c.email}: ${r.error}`);
+        console.error(`[relance-panier] R${relanceNum} échec ${redactEmail(c.email)}: ${r.error}`);
         failed++;
       }
     }
 
     for (const c of cands1 || []) {
       try { await envoyerRelance(c, 1); }
-      catch (e) { console.error(`[relance-panier] R1 exception ${c.email || c.rid}: ${e.message}`); failed++; }
+      catch (e) { console.error(`[relance-panier] R1 exception ${c.email ? redactEmail(c.email) : c.rid}: ${e.message}`); failed++; }
     }
     for (const c of cands2 || []) {
       try { await envoyerRelance(c, 2); }
-      catch (e) { console.error(`[relance-panier] R2 exception ${c.email || c.rid}: ${e.message}`); failed++; }
+      catch (e) { console.error(`[relance-panier] R2 exception ${c.email ? redactEmail(c.email) : c.rid}: ${e.message}`); failed++; }
     }
 
     return json({

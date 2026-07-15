@@ -16,6 +16,7 @@ import { sendEmail as sendEmailHelper } from "./_sendEmail.js";
 
 import { getActiveBeds24Token } from "./beds24-refresh.js";
 import { sendGuestEmail } from "./send-guest-email.js";
+import { redactEmail } from "./_log.js";
 
 const BEDS24_V2_URL = "https://beds24.com/api/v2/bookings";
 const PROP_ID       = "158192"; // Appartement Nogent — seul bien Beds24
@@ -233,7 +234,7 @@ async function sendDirectPostStay(env, origin, touch, dryRun) {
       });
       const col = touch === "ask" ? "poststay_sent" : "poststay_reminder_sent";
       if (r.ok) { await db.prepare(`UPDATE direct_bookings SET ${col} = 1 WHERE rowid = ?`).bind(b.rid).run(); sent++; }
-      else { console.error(`[poststay-direct-${touch}] échec ${b.email}: ${r.error}`); failed++; }
+      else { console.error(`[poststay-direct-${touch}] échec ${redactEmail(b.email)}: ${r.error}`); failed++; }
     }
     return { sent, failed, skipped, candidats: (results || []).length, targetCheckout };
   } catch (e) {

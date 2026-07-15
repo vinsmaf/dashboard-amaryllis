@@ -1,5 +1,6 @@
 import { resendFrom } from "./_email.js";
 import { rateLimit } from './_ratelimit.js';
+import { redactEmail } from './_log.js';
 
 const ALLOWED_ORIGINS = ["https://villamaryllis.com", "https://www.villamaryllis.com", "https://dashboard-amaryllis.pages.dev"];
 function corsHeaders(request) {
@@ -77,7 +78,7 @@ export async function onRequestPost(context) {
         await db.prepare(
           "INSERT INTO contacts (nom, email, message, source, bien) VALUES (?, ?, ?, ?, ?)"
         ).bind(nom, email, message, source || "formulaire", bien || null).run();
-        console.log(`[contact] Lead persisté en D1: ${email}`);
+        console.log(`[contact] Lead persisté en D1: ${redactEmail(email)}`);
       } catch (dbErr) {
         // Ne pas bloquer l'envoi d'email si D1 échoue
         console.error("[contact] D1 erreur:", dbErr.message);

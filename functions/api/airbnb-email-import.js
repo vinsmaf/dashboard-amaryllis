@@ -1,4 +1,5 @@
 // functions/api/airbnb-email-import.js
+import { redactName } from "./_log.js";
 // POST /api/airbnb-email-import
 // Reçoit un webhook Zapier contenant les données structurées d'un email
 // de confirmation Airbnb (ou Booking.com) et les insère dans D1 direct_bookings.
@@ -219,7 +220,7 @@ export async function onRequestPost(context) {
       d.rawSubject,
     ).run();
 
-    console.log(`[airbnb-email-import] ✅ ${paymentIntentId} — ${d.guestName} — ${d.bienId} ${d.checkin}→${d.checkout}`);
+    console.log(`[airbnb-email-import] ✅ ${paymentIntentId} — ${redactName(d.guestName)} — ${d.bienId} ${d.checkin}→${d.checkout}`);
 
     return json({
       ok: true,
