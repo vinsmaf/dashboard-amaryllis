@@ -92,6 +92,29 @@ export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
   const limit = Math.min(50, Math.max(1, parseInt(url.searchParams.get("limit"), 10) || 10));
 
+  // ?inspect=pi_xxx : détail complet d'un PaymentIntent (au-delà de la balance_transaction)
+  // pour élucider une charge non rattachée à une résa (description/metadata/receipt_email).
+  const inspect = url.searchParams.get("inspect");
+  if (inspect) {
+    try {
+      const pi = await stripeFetch(env, `/payment_intents/${inspect}`);
+      return json({
+        ok: true,
+        id: pi.id,
+        amount: centsToEuros(pi.amount),
+        status: pi.status,
+        description: pi.description,
+        receipt_email: pi.receipt_email,
+        metadata: pi.metadata,
+        customer: pi.customer,
+        shipping: pi.shipping || null,
+        created: pi.created ? pi.created * 1000 : null,
+      });
+    } catch (e) {
+      return json({ error: e.message }, 502);
+    }
+  }
+
   try {
     const payoutsData = await stripeFetch(env, `/payouts?limit=${limit}`);
     const payouts = payoutsData.data || [];
