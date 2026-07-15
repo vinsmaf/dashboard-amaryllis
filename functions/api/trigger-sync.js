@@ -36,7 +36,7 @@ export async function onRequest(context) {
   } else {
     try {
       const rows = await env.revenue_manager.prepare(
-        `SELECT payment_intent_id, bien_id, bien_nom, voyageur, total, checkin, checkout
+        `SELECT payment_intent_id, bien_id, bien_nom, voyageur, total, checkin, checkout, canal
          FROM direct_bookings
          WHERE checkout >= date('now', '-90 days')`
       ).all();
@@ -46,7 +46,9 @@ export async function onRequest(context) {
           id:       "direct-" + r.payment_intent_id,
           bienId:   r.bien_id,
           voyageur: r.voyageur || "—",
-          canal:    "Direct",
+          // Canal réel (cf. workers/ical-sync/index.js fetchDirectBookingsAsEvents, même fix) :
+          // les résas importées via airbnb-email-import.js gardent leur vrai canal en D1.
+          canal:    r.canal || "Direct",
           checkin:  r.checkin,
           checkout: r.checkout,
           montant:  Math.round(r.total || 0),

@@ -461,6 +461,9 @@ function readAll_() {
   }
   if (!moisActifs) moisActifs = new Date().getMonth() + 1;
 
+  // Fetch UNE SEULE FOIS (pas 9×, cf. fetchNameCols_) — réutilisé pour les 9 biens ci-dessous.
+  const chargesCols = fetchNameCols_(sheet);
+
   return json_({
     moisActifs,
     biens: BIENS_MAP.map(b => {
@@ -472,7 +475,7 @@ function readAll_() {
       // comme "cashflow" (toujours positif, jamais négatif hors-saison). Cf. CLAUDE.md §1ter,
       // ADR-REVENUE-SUMMARY-002. Fallback (recherche échouée) : ancien cfRow+1, col 3 — au pire
       // la ligne connue-correcte empiriquement, jamais pire que l'ancien comportement.
-      const chargesTotalRow = findChargesTotalRow_(sheet, HIST_HEADER_KEYWORDS[b.id] || []);
+      const chargesTotalRow = findChargesTotalRow_(sheet, HIST_HEADER_KEYWORDS[b.id] || [], chargesCols);
       const cashflowRow = (chargesTotalRow || b.cfRow) + 1;
       return {
         id: b.id,
@@ -592,13 +595,27 @@ function stripDiacritics_(s) {
 // contrairement à l'onglet 2026 qui n'a pas ce décalage. Un numéro de ligne unique
 // partagé entre toutes les années lisait donc des cellules vides/hors-sujet → 0€
 // partout pour certains mois, alors que la vraie donnée existait bien dans le Sheet.
-function findHistTotalRow_(sheet, bienId) {
+// Fetch UNE SEULE FOIS les colonnes A/B (libellés) d'un sheet — findHistTotalRow_/
+// findHistNightsRow_/findChargesTotalRow_/findRowByKeyword_ sont appelées une fois PAR
+// BIEN (×9, parfois ×4 années) sur le MÊME sheet ; sans ce cache partagé (param `cols`
+// optionnel), chaque appel re-télécharge tout seul les mêmes colonnes depuis Google
+// Sheets — jusqu'à 100+ lectures réseau redondantes par requête `read`, identifié comme
+// cause du timeout systématique de /api/sheets-proxy (action read) le 2026-07-14.
+function fetchNameCols_(sheet) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 1) return { colA: [], colB: [] };
+  const colA = sheet.getRange(1, 1, lastRow, 1).getValues().map(r => stripDiacritics_(r[0]).toUpperCase());
+  const colB = sheet.getRange(1, 2, lastRow, 1).getValues().map(r => stripDiacritics_(r[0]).trim().toUpperCase());
+  return { colA, colB };
+}
+
+function findHistTotalRow_(sheet, bienId, cols) {
   const keywords = HIST_HEADER_KEYWORDS[bienId] || [];
   if (!keywords.length) return null;
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return null;
-  const colA = sheet.getRange(1, 1, lastRow, 1).getValues().map(r => stripDiacritics_(r[0]).toUpperCase());
-  const colB = sheet.getRange(1, 2, lastRow, 1).getValues().map(r => stripDiacritics_(r[0]).trim().toUpperCase());
+  const colA = (cols && cols.colA) || sheet.getRange(1, 1, lastRow, 1).getValues().map(r => stripDiacritics_(r[0]).toUpperCase());
+  const colB = (cols && cols.colB) || sheet.getRange(1, 2, lastRow, 1).getValues().map(r => stripDiacritics_(r[0]).trim().toUpperCase());
 
   for (let i = 0; i < colA.length; i++) {
     if (!keywords.some(k => colA[i].includes(k))) continue;
@@ -616,13 +633,13 @@ function findHistTotalRow_(sheet, bienId) {
 // CHAQUE occurrence du mot-clé et on garde la 1ère où "jours occup*" apparaît dans
 // les 8 lignes suivantes (bloc stats confirmé = 6 lignes : dispos/occupés/taux/
 // ADR/RevPAR/Alos, vérifié en live sur "revenus locatif 2025" le 2026-07-10).
-function findHistNightsRow_(sheet, bienId) {
+function findHistNightsRow_(sheet, bienId, cols) {
   const keywords = HIST_HEADER_KEYWORDS[bienId] || [];
   if (!keywords.length) return null;
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return null;
-  const colA = sheet.getRange(1, 1, lastRow, 1).getValues().map(r => stripDiacritics_(r[0]).toUpperCase());
-  const colB = sheet.getRange(1, 2, lastRow, 1).getValues().map(r => stripDiacritics_(r[0]).trim().toUpperCase());
+  const colA = (cols && cols.colA) || sheet.getRange(1, 1, lastRow, 1).getValues().map(r => stripDiacritics_(r[0]).toUpperCase());
+  const colB = (cols && cols.colB) || sheet.getRange(1, 2, lastRow, 1).getValues().map(r => stripDiacritics_(r[0]).trim().toUpperCase());
 
   for (let i = 0; i < colA.length; i++) {
     if (!keywords.some(k => colA[i].includes(k))) continue;
@@ -644,12 +661,12 @@ function findHistNightsRow_(sheet, bienId) {
 // cherche chaque bien par mot-clé, jamais par offset fixe). cashflow = total+1 sur
 // TOUS les biens vérifiés (7/7 + T4), les deux années.
 var CHARGES_MIN_ROW = 112;
-function findChargesTotalRow_(sheet, keywords) {
+function findChargesTotalRow_(sheet, keywords, cols) {
   if (!keywords || !keywords.length) return null;
   var lastRow = sheet.getLastRow();
   if (lastRow < CHARGES_MIN_ROW) return null;
-  var colA = sheet.getRange(1, 1, lastRow, 1).getValues().map(function (r) { return stripDiacritics_(r[0]).toUpperCase(); }); // eslint-disable-line no-undef
-  var colB = sheet.getRange(1, 2, lastRow, 1).getValues().map(function (r) { return stripDiacritics_(r[0]).trim().toUpperCase(); }); // eslint-disable-line no-undef
+  var colA = (cols && cols.colA) || sheet.getRange(1, 1, lastRow, 1).getValues().map(function (r) { return stripDiacritics_(r[0]).toUpperCase(); }); // eslint-disable-line no-undef
+  var colB = (cols && cols.colB) || sheet.getRange(1, 2, lastRow, 1).getValues().map(function (r) { return stripDiacritics_(r[0]).trim().toUpperCase(); }); // eslint-disable-line no-undef
   for (var i = CHARGES_MIN_ROW - 1; i < colA.length; i++) {
     if (!keywords.some(function (k) { return colA[i].indexOf(k) >= 0; })) continue;
     for (var j = i; j < Math.min(i + 10, colB.length); j++) {
@@ -662,12 +679,12 @@ function findChargesTotalRow_(sheet, keywords) {
 // Ligne unique par mot-clé (pas de bloc total/cashflow) — sert pour "Muscade Amaryllis",
 // carry-forward manuel représentant directement le cashflow net mensuel (pas de charges
 // décomposées disponibles pour cette entité, cf. ADR-REVENUE-SUMMARY-002).
-function findRowByKeyword_(sheet, keywords, minRow) {
+function findRowByKeyword_(sheet, keywords, minRow, cols) {
   if (!keywords || !keywords.length) return null;
   var lastRow = sheet.getLastRow();
   var start = minRow || 1;
   if (lastRow < start) return null;
-  var colA = sheet.getRange(1, 1, lastRow, 1).getValues().map(function (r) { return stripDiacritics_(r[0]).toUpperCase(); }); // eslint-disable-line no-undef
+  var colA = (cols && cols.colA) || sheet.getRange(1, 1, lastRow, 1).getValues().map(function (r) { return stripDiacritics_(r[0]).toUpperCase(); }); // eslint-disable-line no-undef
   for (var i = start - 1; i < colA.length; i++) {
     if (keywords.some(function (k) { return colA[i].indexOf(k) >= 0; })) return i + 1;
   }
@@ -682,19 +699,21 @@ function findRowByKeyword_(sheet, keywords, minRow) {
 // pas cashflow, + désalignement de colonne — bug préexistant de readAll_(), non touché ici).
 function readChargesBlock_(sheet, getVals) {
   var out = {};
+  // Fetch UNE SEULE FOIS (pas 11×, cf. fetchNameCols_) — réutilisé pour les 9 biens + Muscade + T4.
+  var cols = fetchNameCols_(sheet);
   BIENS_MAP.forEach(function (b) {
-    var totalRow = findChargesTotalRow_(sheet, HIST_HEADER_KEYWORDS[b.id] || []);
+    var totalRow = findChargesTotalRow_(sheet, HIST_HEADER_KEYWORDS[b.id] || [], cols);
     out[b.id] = {
       charges: totalRow ? getVals(totalRow, 3, 12) : null,
       cashflow: totalRow ? getVals(totalRow + 1, 3, 12) : null,
     };
   });
-  var muscadeRow = findRowByKeyword_(sheet, ["MUSCADE"], CHARGES_MIN_ROW);
+  var muscadeRow = findRowByKeyword_(sheet, ["MUSCADE"], CHARGES_MIN_ROW, cols);
   out.muscade = {
     charges: null,
     cashflow: muscadeRow ? getVals(muscadeRow, 3, 12) : null,
   };
-  var t4Row = findChargesTotalRow_(sheet, ["T4 AMARYLLIS"]);
+  var t4Row = findChargesTotalRow_(sheet, ["T4 AMARYLLIS"], cols);
   out.t4_amaryllis = {
     charges: t4Row ? getVals(t4Row, 3, 12) : null,
     cashflow: t4Row ? getVals(t4Row + 1, 3, 12) : null,
@@ -744,10 +763,12 @@ function revenueSummarySource_() {
         .map(function (v) { return typeof v === "number" ? Math.round(v * 100) / 100 : 0; });
     };
     var prevCharges = readChargesBlock_(prevSheet, getValsPrev);
+    // Fetch UNE SEULE FOIS (pas 18×, cf. fetchNameCols_) — réutilisé pour les 9 biens ci-dessous.
+    var prevCols = fetchNameCols_(prevSheet);
     var prevData = {};
     BIENS_MAP.forEach(function (b) {
-      var totalRow = findHistTotalRow_(prevSheet, b.id);
-      var nightsRow = findHistNightsRow_(prevSheet, b.id);
+      var totalRow = findHistTotalRow_(prevSheet, b.id, prevCols);
+      var nightsRow = findHistNightsRow_(prevSheet, b.id, prevCols);
       prevData[b.id] = {
         ca: totalRow ? getValsPrev(totalRow, 3, 12) : Array(12).fill(0),
         nuits: nightsRow ? getValsPrev(nightsRow, 3, 12).map(function (v) { return Math.round(v); }) : Array(12).fill(0),
@@ -786,9 +807,11 @@ function readHist_() {
         sheet.getRange(row, startCol, 1, numCols).getValues()[0]
           .map(v => (typeof v === "number" ? Math.round(v * 100) / 100 : 0));
 
+      // Fetch UNE SEULE FOIS par année (pas 9×, cf. fetchNameCols_) — réutilisé pour les 9 biens.
+      const histCols = fetchNameCols_(sheet);
       const yearData = {};
       for (const b of BIENS_MAP) {
-        const totalRow = findHistTotalRow_(sheet, b.id) || b.revRow; // fallback si jamais trouvé
+        const totalRow = findHistTotalRow_(sheet, b.id, histCols) || b.revRow; // fallback si jamais trouvé
         yearData[b.id] = getVals(totalRow, 3, 12);
       }
       yearData.total = BIENS_MAP.reduce((totals, b) => {

@@ -1492,7 +1492,7 @@ async function fetchDirectBookingsAsEvents(env) {
     // Exclut les résas annulées : sans ce filtre, ce sync (15 min) re-poussait vers le
     // Sheet une résa qu'on venait juste de supprimer manuellement (résurrection silencieuse).
     const rows = await env.revenue_manager.prepare(
-      `SELECT payment_intent_id, bien_id, bien_nom, voyageur, total, depot, checkin, checkout
+      `SELECT payment_intent_id, bien_id, bien_nom, voyageur, total, depot, checkin, checkout, canal
        FROM direct_bookings
        WHERE checkout >= date('now', '-90 days') AND (status IS NULL OR status != 'cancelled')`
     ).all();
@@ -1500,7 +1500,13 @@ async function fetchDirectBookingsAsEvents(env) {
       uid:      "direct-" + r.payment_intent_id,  // pushToSheets utilise e.uid comme id
       bienId:   r.bien_id,
       voyageur: r.voyageur || "—",
-      canal:    "Direct",
+      // canal réel (Airbnb/Booking.com/Direct) : les résas importées via airbnb-email-import.js
+      // (webhook Zapier confirmations Airbnb/Booking) vivent dans direct_bookings avec leur vrai
+      // canal posé en colonne — jusqu'ici ignoré ici et forcé à "Direct" pour TOUTES les lignes,
+      // faussant le canal affiché dans le Sheet/Planning pour ces résas (trouvé 2026-07-15,
+      // Stéphane Alves/Amaryllis/Booking affiché "Direct"). Les vraies résas Stripe gardent
+      // "Direct" via le défaut de colonne (DEFAULT 'Direct', jamais NULL en pratique).
+      canal:    r.canal || "Direct",
       checkin:  r.checkin,
       checkout: r.checkout,
       montant:  Math.round(r.total || 0),

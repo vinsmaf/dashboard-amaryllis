@@ -83,6 +83,7 @@ async function main() {
     }
 
     let enrichis = 0, ignores = 0, expired = false;
+    const enrichedDetails = []; // succès de ce run → notif ✅ (parité avec enrich-from-emails.js, Airbnb)
     for (const [resId, hotelId] of pairs) {
       await page.goto(detailUrl(resId, hotelId), { waitUntil: "domcontentloaded" }).catch(() => {});
       await page.waitForTimeout(2500);
@@ -95,6 +96,7 @@ async function main() {
       const res = await enrich(parsed);
       if (res?.matched && Object.keys(res.wrote || {}).length) {
         enrichis++;
+        enrichedDetails.push(parsed);
         console.log(`✅ ${resId} → ${parsed.bienId} · ${parsed.voyageur} · ${parsed.montant}€`, res.wrote);
       } else if (res?.matched) {
         console.log(`➖ ${resId} → ${parsed.bienId} : déjà complet (rien écrit)`);
@@ -111,6 +113,15 @@ async function main() {
     }
     if (ignores) {
       await ntfy("⚠️ Booking : résa(s) à saisir à la main", `${ignores} réservation(s) non parsée(s)/non matchée(s). Vérifie le Sheet.`, "high");
+    }
+    if (enrichedDetails.length > 0) {
+      const lines = enrichedDetails.map(p => `• ${p.voyageur} — ${p.bienId} — ${p.checkin}→${p.checkout}${p.montant ? ` — ${p.montant}€` : ""}`);
+      await ntfy(
+        `✅ ${enrichedDetails.length} résa${enrichedDetails.length > 1 ? "s" : ""} Booking enrichie${enrichedDetails.length > 1 ? "s" : ""}`,
+        lines.join("\n"),
+        "default",
+        "white_check_mark"
+      );
     }
     console.log(`\nBilan : ${enrichis} enrichie(s), ${ignores} à vérifier.`);
     return 0;
