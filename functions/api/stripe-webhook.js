@@ -572,7 +572,9 @@ export async function onRequestPost(context) {
 
     const bookingId = meta.bookingId || meta.beds24Id || "";
     const bienId    = meta.bienId    || "";
-    const bienNom   = NOMS[bienId]   || bienId || "Amaryllis Locations";
+    // meta.logements (résa groupée, create-payment-link.js bienId="groupe") prioritaire sur
+    // NOMS[bienId] qui ne connaît que les logements individuels, pas "groupe".
+    const bienNom   = meta.logements || NOMS[bienId] || bienId || "Amaryllis Locations";
     const voyageur  = meta.voyageur  || meta.nom || "";
     const guestEmail = meta.email    || "";
     const checkin   = meta.checkin   || "?";
@@ -652,14 +654,25 @@ export async function onRequestPost(context) {
       total: parseInt(meta.full_total || "0", 10) || (Math.round((pi.amount || 0) / 100) + parseInt(meta.balance_amount || "0", 10)),
       dueDate: meta.due_date || "",
     } : null;
+    // Acompte via Payment Link devis (create-payment-link.js, PAS le tunnel 2× du site — pas de
+    // carte enregistrée pour prélèvement auto, cf. devis_paiements + devis-solde-cron.js) : le
+    // total réel du séjour est dans meta.total (centimes), différent de meta.full_total/pay_plan.
+    const linkTotalEur = (meta.type === "acompte" || meta.type === "solde") && meta.total
+      ? Math.round(parseInt(meta.total, 10) / 100)
+      : null;
+    const bookingTotal = twoX ? twoX.total : (linkTotalEur ?? Math.round((pi.amount || 0) / 100));
 
     // 2. Email de confirmation au voyageur
     await sendConfirmationToGuest(env, { bienNom, voyageur, email: guestEmail, checkin, checkout, amount, bookingId, twoX });
 
     // 2b. Stocke la résa DIRECTE en D1 → permet les emails pré-arrivée (J-3) et post-séjour (J+1)
     //     + total du séjour (full_total si 2×, sinon montant payé) pour le CA Sheet.
+    // groupBiens (CSV bien_ids) : réservation groupée multi-logements (create-payment-link.js
+    // avec bienIds="zandoli,geko" etc.) — bloque le calendrier iCal des DEUX logements, pas
+    // seulement bienId. undefined pour toute résa mono-logement (comportement inchangé).
     await storeDirectBooking(env, {
-      paymentIntentId: pi.id, email: guestEmail, voyageur, bienId, bienNom, checkin, checkout, total: twoX ? twoX.total : Math.round((pi.amount || 0) / 100), phone: meta.phone,
+      paymentIntentId: pi.id, email: guestEmail, voyageur, bienId, bienNom, checkin, checkout, total: bookingTotal, phone: meta.phone,
+      groupBiens: meta.bienIds || null,
       channel: meta.channel, utmSource: meta.utm_source, utmMedium: meta.utm_medium, utmCampaign: meta.utm_campaign, gclid: meta.gclid, fbclid: meta.fbclid, gaClientId: meta.ga_client_id,
     });
 

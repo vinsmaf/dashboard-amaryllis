@@ -14,7 +14,11 @@
 //   email     : string? — email voyageur (pré-remplit le formulaire Stripe)
 //   nights    : number? — nombre de nuits
 //   beds24Id  : string? — bookingId Beds24 pour confirmer après paiement
-//   type      : "acompte"|"solde"|"total" (défaut: "total")
+//   type      : "acompte"|"solde"|"total"|"group" (défaut: "total")
+//   bienId    : "groupe" pour une résa multi-logements (Résidence) — dans ce cas fournir aussi :
+//   bienIds   : string?  — CSV des logements ("zandoli,geko") pour bloquer leurs calendriers iCal
+//   logements : string?  — libellé affiché ("Zandoli + Géko"), utilisé comme bienNom par défaut
+//   guests    : string?  — nombre de voyageurs
 //
 // Réponse : { ok, url, paymentLinkId, amount }
 //
@@ -74,18 +78,23 @@ export async function onRequestPost(context) {
   const {
     amount,                        // centimes
     bienId    = "",
-    bienNom   = BIEN_LABELS[bienId] || bienId,
+    bienNom   = "",
     checkin   = "",
     checkout  = "",
     voyageur  = "",
     email     = "",
     nights    = null,
     beds24Id  = "",
-    type      = "total",           // "acompte" | "solde" | "total"
+    type      = "total",           // "acompte" | "solde" | "total" | "group"
     totalAmount = null,            // centimes — total du séjour (si acompte/solde)
     soldeAmount = null,            // centimes — solde restant dû (si acompte)
     pct         = null,            // % de l'acompte (ex: 40) — affichage
+    bienIds     = "",              // "zandoli,geko" — résa groupée multi-logements (bienId="groupe")
+    logements   = "",              // "Zandoli + Géko" — libellé affiché (résa groupée)
+    guests      = "",              // nombre de voyageurs (résa groupée)
   } = body;
+
+  const resolvedBienNom = bienNom || logements || BIEN_LABELS[bienId] || bienId;
 
   if (!amount || amount < 500)    return json({ error: "Montant minimum 5€ (500 centimes)" }, 400);
   if (amount > 1500000)           return json({ error: "Montant maximum 15 000€" }, 400);
@@ -100,7 +109,7 @@ export async function onRequestPost(context) {
 
   // ── Description du produit affichée sur la page Stripe ───────────────────
   const nightsStr = nights ? ` · ${nights} nuit${nights > 1 ? "s" : ""}` : "";
-  const productName = `${bienNom}`;
+  const productName = `${resolvedBienNom}`;
   const productDesc = `${typeLabel} — ${fmt(checkin)} → ${fmt(checkout)}${nightsStr}${voyageur ? ` · ${voyageur}` : ""}`;
 
   // ── 1. Créer le Product Stripe (one-time) ────────────────────────────────
@@ -113,6 +122,9 @@ export async function onRequestPost(context) {
         name:                    productName,
         description:             productDesc,
         "metadata[bienId]":      bienId,
+        "metadata[bienIds]":     bienIds,
+        "metadata[logements]":   logements,
+        "metadata[guests]":      String(guests || ""),
         "metadata[checkin]":     checkin,
         "metadata[checkout]":    checkout,
         "metadata[voyageur]":    voyageur,
@@ -152,8 +164,14 @@ export async function onRequestPost(context) {
     "line_items[0][quantity]": "1",
     "payment_method_types[0]": "card",
     "after_completion[type]":  "redirect",
-    "after_completion[redirect][url]": `https://villamaryllis.com/${bienId}?payment=success`,
+    // Résa groupée (bienId="groupe") : pas de route /groupe — renvoyer vers la page dédiée.
+    "after_completion[redirect][url]": bienId === "groupe"
+      ? `https://villamaryllis.com/location-groupe-sainte-luce?payment=success`
+      : `https://villamaryllis.com/${bienId}?payment=success`,
     "metadata[bienId]":    bienId,
+    "metadata[bienIds]":   bienIds,
+    "metadata[logements]": logements,
+    "metadata[guests]":    String(guests || ""),
     "metadata[checkin]":   checkin,
     "metadata[checkout]":  checkout,
     "metadata[voyageur]":  voyageur,
@@ -166,7 +184,12 @@ export async function onRequestPost(context) {
     // JAMAIS automatiquement au PaymentIntent résultant. stripe-webhook.js lit pi.metadata,
     // donc sans payment_intent_data[metadata][...] la résa est invisible au pipeline auto
     // (nécessitait jusqu'ici une réconciliation manuelle à chaque paiement par lien).
-    "payment_intent_data[metadata][bienId]":   bienId,
+    // bienIds/logements/guests : lus par stripe-webhook.js pour bloquer le calendrier iCal de
+    // CHAQUE logement de la résa groupée (group_biens), pas seulement bienId="groupe".
+    "payment_intent_data[metadata][bienId]":    bienId,
+    "payment_intent_data[metadata][bienIds]":   bienIds,
+    "payment_intent_data[metadata][logements]": logements,
+    "payment_intent_data[metadata][guests]":    String(guests || ""),
     "payment_intent_data[metadata][checkin]":  checkin,
     "payment_intent_data[metadata][checkout]": checkout,
     "payment_intent_data[metadata][voyageur]": voyageur,
