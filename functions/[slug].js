@@ -438,8 +438,11 @@ export async function onRequest(context) {
       }
     }
 
-    // Iguana = bail long, non bookable → noindex runtime (survit au remplacement injectMeta)
-    if (slug === "iguana") {
+    // Iguana = bail long, non bookable → noindex runtime (survit au remplacement injectMeta).
+    // Garde anti-doublon (même pattern que le bloc FAQ ci-dessus) : prerender.mjs pose déjà
+    // cette même balise au build — sans la garde, la page se retrouvait avec 2 balises
+    // noindex identiques (cosmétique, mais trouvé par audit 2026-07-15).
+    if (slug === "iguana" && !modified.includes('name="robots"')) {
       modified = modified.replace("</head>", `<meta name="robots" content="noindex, nofollow" />\n</head>`);
     }
 

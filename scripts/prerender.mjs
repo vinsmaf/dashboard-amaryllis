@@ -967,8 +967,11 @@ const ARTICLE_ROUTES = (() => {
 })();
 
 // Toutes les routes prérendues + articles D1 (dédup par path — ROUTES inclut déjà "/")
+// Exclut les routes noindex (ex. /iguana, bail long non réservable) : soumettre une URL
+// noindex dans le sitemap génère un avertissement permanent en Search Console
+// ("URL envoyée signalée noindex") — trouvé par audit 2026-07-15.
 const _rawSitemapEntries = [
-  ...ROUTES.map(r => ({
+  ...ROUTES.filter(r => !r.noindex).map(r => ({
     path: r.path,
     ...(SITEMAP_META[r.path] ?? { priority: "0.7", changefreq: "monthly" }),
   })),

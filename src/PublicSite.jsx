@@ -2541,7 +2541,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
                 Vos <em style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontWeight: 400, color: CORAL, letterSpacing: 0, textTransform: "none" }}>dates</em>
               </h2>
               <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: 15, color: MUTED }}>
-                Annulation gratuite jusqu'à 7 jours avant l'arrivée.
+                Annulation gratuite jusqu'à 14 jours avant l'arrivée.
               </div>
             </div>
 
@@ -4217,9 +4217,9 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
         ...(isPage ? { position: "sticky", top: 0, zIndex: 200 } : {}),
       }}>
         {isPage ? (
-          <a href="/" style={{ display: "flex", alignItems: "center", gap: 8, color: "rgba(250,245,233,0.7)", fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13, letterSpacing: "0.1em", textDecoration: "none", flexShrink: 0 }}>← Accueil</a>
+          <a href="/" style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--fg-on-ink)", opacity: 0.7, fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13, letterSpacing: "0.1em", textDecoration: "none", flexShrink: 0 }}>← Accueil</a>
         ) : (
-          <button onClick={onClose} style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", color: "rgba(250,245,233,0.7)", cursor: "pointer", fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13, letterSpacing: "0.1em", padding: 0, flexShrink: 0 }}>← Retour</button>
+          <button onClick={onClose} style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", color: "var(--fg-on-ink)", opacity: 0.7, cursor: "pointer", fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13, letterSpacing: "0.1em", padding: 0, flexShrink: 0 }}>← Retour</button>
         )}
         <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: isMobile ? 11 : 13, letterSpacing: isMobile ? "0.2em" : "0.45em", color: "var(--c-ivory)", textTransform: "uppercase", flex: 1, textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {bien.nom}
@@ -4244,7 +4244,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                 } catch {}
               }
             }}
-            style={{ background: "none", border: `1px solid rgba(250,245,233,0.22)`, borderRadius: 8, padding: isMobile ? "6px 8px" : "7px 14px", minHeight: isMobile ? 44 : undefined, minWidth: isMobile ? 44 : undefined, fontFamily: "'Jost', sans-serif", fontSize: 11, color: "rgba(250,245,233,0.7)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4, flexShrink: 0, whiteSpace: "nowrap", transition: "border-color 0.2s" }}
+            style={{ background: "none", border: `1px solid rgba(250,245,233,0.22)`, borderRadius: 8, padding: isMobile ? "6px 8px" : "7px 14px", minHeight: isMobile ? 44 : undefined, minWidth: isMobile ? 44 : undefined, fontFamily: "'Jost', sans-serif", fontSize: 11, color: "var(--fg-on-ink)", opacity: 0.7, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4, flexShrink: 0, whiteSpace: "nowrap", transition: "border-color 0.2s" }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(250,245,233,0.5)"; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(250,245,233,0.22)"; }}
           >
