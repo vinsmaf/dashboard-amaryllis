@@ -1334,10 +1334,11 @@ export default function App() {
 
   const menageBadge = (() => { const today = new Date(); today.setHours(0,0,0,0); return reservations.filter(r => { const co = new Date(r.checkout + "T12:00:00"); co.setHours(0,0,0,0); return co >= today && co <= new Date(today.getTime()+21*86400000) && !r.menage_done; }).length; })();
 
-  // Épinglé à la racine du menu (hors groupes) — Planning est l'onglet le plus utilisé
-  // au quotidien, un accès direct sans même le repère visuel d'un groupe.
+  // Épinglé à la racine du menu (hors groupes) — Réservations (= vue "list" de Planning)
+  // est la vue la plus utilisée au quotidien, un accès direct sans passer par Planning
+  // puis re-cliquer sur son sous-onglet "📋 Réservations".
   const ROOT_ITEMS = [
-    { id: "planning", icon: "📅", label: "Planning", badge: planningAlerts > 0 ? planningAlerts : null, badgeColor: "#f59e0b" },
+    { id: "reservations", icon: "📋", label: "Réservations", badge: planningAlerts > 0 ? planningAlerts : null, badgeColor: "#f59e0b" },
   ];
 
   const NAV_GROUPS = [
@@ -1345,6 +1346,7 @@ export default function App() {
       id: "quotidien", label: "⚡ Quotidien",
       items: [
         { id: "cockpit",   icon: "🎯", label: "Cockpit",     badge: cockpitAlerts > 0 ? "⚠" : null, badgeColor: "#ef4444" },
+        { id: "planning",  icon: "📅", label: "Planning",    badge: planningAlerts > 0 ? planningAlerts : null, badgeColor: "#f59e0b" },
         { id: "menage",    icon: "🧹", label: "Ménage",      badge: menageBadge > 0 ? menageBadge : null, badgeColor: "#f59e0b" },
         { id: "revenue",   icon: "💡", label: "Revenue Mgr" },
         { id: "tarifs",    icon: "🏷️", label: "Tarifs" },
@@ -1422,8 +1424,8 @@ export default function App() {
   ];
 
   // Filtrer la nav selon le rôle (ménage = planning + ménage uniquement)
-  // "planning" est toujours affiché (ROOT_ITEMS, hors filtre de rôle) — reste pertinent au ménage.
-  const MENAGE_TABS = new Set(["menage"]);
+  // "reservations" est toujours affiché (ROOT_ITEMS, hors filtre de rôle) — reste pertinent au ménage.
+  const MENAGE_TABS = new Set(["planning", "menage"]);
   const visibleGroups = role === "menage"
     ? [{ id: "ops", label: "Opérations", items: NAV_GROUPS[0].items.filter(i => MENAGE_TABS.has(i.id)) }]
     : NAV_GROUPS;
@@ -1615,7 +1617,7 @@ export default function App() {
           <div style={{ padding: mob ? "12px" : "18px 24px", flex: 1, paddingBottom: "calc(76px + env(safe-area-inset-bottom))" }}>
             {/* key={tab} : un crash isole l'onglet courant et se réinitialise au changement d'onglet */}
             <LocalErrorBoundary key={tab}>
-            {tab === "planning" && <Planning />}
+            {(tab === "planning" || tab === "reservations") && <Planning initialView={tab === "reservations" ? "list" : "todo"} />}
             {tab === "cockpit" && <Cockpit />}
             {tab === "previsionnel" && <Previsionnel />}
             {tab === "charges" && <Charges />}

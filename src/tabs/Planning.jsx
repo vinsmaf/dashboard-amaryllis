@@ -142,7 +142,7 @@ function parseICS(text, bienId, canal = "airbnb") {
 // ── Planning — composant principal ──────────────────────────────────────────
 const EMPTY_FORM = { bienId: "amaryllis", voyageur: "", canal: "booking", checkin: "", checkout: "", checkin_time: "", checkout_time: "", nb_guests: "", montant: "", notes: "", menage: "", reservation_code: "", phone: "", email: "", assigne: "" };
 
-export default function Planning() {
+export default function Planning({ initialView = "todo" }) {
   const { biens, mob, reservations, saveRes, icalUrls, saveUrls, icalUrlsBooking, saveUrlsBooking, scriptUrl, onApplyRevenusFromResas, pushReservationsToScript } = useAppData();
   const reservationsRef = useRef(reservations);
   useEffect(() => { reservationsRef.current = reservations; }, [reservations]);
@@ -155,7 +155,7 @@ export default function Planning() {
   const [viewYear, setViewYear] = useState(new Date().getFullYear());
   const [icalStatus, setIcalStatus] = useState({});
   const [lastIcalSync, setLastIcalSync] = useState(null);
-  const [view, setView] = useState("todo");
+  const [view, setView] = useState(initialView);
   const [ganttBienFilter, setGanttBienFilter] = useState(null); // null = all
   const [searchQuery, setSearchQuery] = useState("");
   const [onlyDirect, setOnlyDirect] = useState(false);
