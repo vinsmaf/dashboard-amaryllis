@@ -73,6 +73,16 @@ Sentry.init({
     Sentry.browserTracingIntegration(),
   ],
   tracesSampleRate: 0.1,
+  // Filet supplémentaire pour les chunks périmés post-déploiement que les regex
+  // ignoreErrors ci-dessous ne couvrent pas (message générique ".default", cf.
+  // src/lib/staleChunk.js — même détection que bugCapture.js, gardée en un seul endroit).
+  beforeSend(event, hint) {
+    const err = hint?.originalException;
+    const msg = (err && err.message) || event.message || "";
+    const stack = (err && err.stack) || "";
+    if (isStaleChunkError(msg, stack)) return null;
+    return event;
+  },
   ignoreErrors: [
     "ResizeObserver loop limit exceeded",
     "Non-Error promise rejection",
