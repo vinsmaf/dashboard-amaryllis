@@ -96,9 +96,10 @@ export async function onRequestGet({ request, env }) {
   // s'arrêtent d'apparaître — distingue "Stripe ne vire plus" de "aucun nouveau paiement").
   if (url.searchParams.get("balance")) {
     try {
-      const [balance, account] = await Promise.all([
+      const [balance, account, txns] = await Promise.all([
         stripeFetch(env, "/balance"),
         stripeFetch(env, "/account"),
+        stripeFetch(env, "/balance_transactions?limit=20"),
       ]);
       return json({
         ok: true,
@@ -109,6 +110,14 @@ export async function onRequestGet({ request, env }) {
         requirements_disabled_reason: account.requirements?.disabled_reason || null,
         requirements_currently_due: account.requirements?.currently_due || [],
         requirements_past_due: account.requirements?.past_due || [],
+        recentTransactions: (txns.data || []).map(t => ({
+          id: t.id,
+          type: t.type,
+          amount: centsToEuros(t.amount),
+          status: t.status,
+          created: t.created ? t.created * 1000 : null,
+          available_on: t.available_on ? t.available_on * 1000 : null,
+        })),
       });
     } catch (e) {
       return json({ error: e.message }, 502);
