@@ -3865,8 +3865,10 @@ export default {
           console.error("[send-poststay] Cron error:", e.message);
         }
         await runDevisSoldeCron(env); // C2 — solde devis 2 fois : lien J-30 + relances J-25/J-20 + annulation J-15
-        // runEnrichFromEmails déplacé sur son propre cron horaire (0 * * * *, cf. ci-dessous) —
-        // tournait ici seulement 1×/jour malgré le commentaire "cron horaire" d'origine (trouvé 2026-07-14).
+        // runEnrichFromEmails tournait ici seulement 1×/jour malgré le commentaire "cron horaire"
+        // d'origine (trouvé 2026-07-14) — déplacé un temps sur un cron dédié 0 * * * *, puis replié
+        // dans la sync */10 elle-même le même jour (cadence encore meilleure, cf. son propre appel
+        // dans la branche else ci-dessous).
         // pré-départ J-1 = géré uniquement par /api/send-pre-depart (voir Promise.all plus haut) —
         // doublon runPredepart()/send-predepart supprimé le 2026-07-04 (envoyait le même email 2×,
         // chaque fonction suivant sa propre colonne pre_depart_sent/predepart_sent).

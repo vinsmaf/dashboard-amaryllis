@@ -4,6 +4,31 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
+## 🔴 2026-07-15 (nuit) — Audit complet site+dashboard (8 agents parallèles) : 3 failles sécurité actives + 1 bug conversion silencieux site-wide
+> Demandé par Vincent avant de dormir ("audit complet et total... pour demain matin"). 8 audits read-only en parallèle (QA fonctionnel, infra, sécurité, SEO, données D1, finances, design, complétude admin) + mes propres checks (secrets/lint/tests). Détail complet + tous les findings mineurs → rapport Artifact + `docs/_audits/AUDIT-COMPLET-2026-07-15.md`. Ici : uniquement ce qui nécessite une décision/action de Vincent.
+
+**Sécurité — à traiter en premier, touche le tunnel de paiement réel (donc PAS corrigé cette nuit sans pouvoir tester avec toi) :**
+- `functions/api/beds24-manage.js` action `confirm` : aucune vérification de paiement Stripe — 2 requêtes publiques (`beds24-create` puis `beds24-manage confirm`) suffisent à confirmer une résa Nogent gratuite qui bloque les vraies dates.
+- Même fichier, action `cancel` : aucune vérification de propriété (IDOR) — un `bookingId` valide (obtenu via l'action `find`) suffit à annuler n'importe quelle résa Nogent réelle et payée.
+- `functions/api/tv-context.js` : fuite sans auth du prénom + dates du séjour en cours, **confirmée exploitable en live cette nuit** (`?p=nogent` a renvoyé le vrai prénom d'un vrai voyageur présent). RGPD + risque "détection de logement vacant".
+- **Débloque** : session dédiée avec toi pour patcher + tester une vraie réservation Nogent avant de déployer (risque de casser le tunnel de paiement si fait à la légère).
+
+**Conversion/argent — bugs de code réels, pas juste des constats :**
+- `src/PublicSite.jsx` `openBien()` (~L9301) appelle `openDetail(null)` qui réinitialise l'URL vers `/` et le `<title>` vers celui de la home à CHAQUE ouverture du récap réservation, sur TOUTES les fiches biens — casse l'attribution GA4/Meta par bien (impacte directement le checkpoint ROAS du 19/07 déjà prévu dans AGENDA) et fait perdre la progression si le voyageur rafraîchit. Fix identifié : ne pas appeler `openDetail(null)` depuis `openBien()`, juste fermer l'overlay localement.
+- `src/index.css:72-75` `overflow-x:hidden` sur `<body>` casse silencieusement le header sticky sur TOUT le site (mesuré : `top:-301px` au scroll au lieu de `0`) — le CTA réservation disparaît dès qu'on scroll sur une fiche bien. Fix identifié : `overflow-x:clip` au lieu de `hidden`, ou déplacer sur un wrapper.
+- Bouton WhatsApp flottant n'apparaît JAMAIS sur les fiches biens chargées directement (`/amaryllis` etc. — donc tout visiteur venant de Google/pub/réseaux), seulement après scroll sur la home. `PublicSite.jsx` ~L10360.
+- Nogent affiche 3 totaux différents pour le même séjour (145€ dans le header vs 135€ dans la modale ET sur le bouton payer) — écart de 10€, à re-tester sur d'autres dates/biens pour voir l'ampleur.
+- Politique d'annulation contradictoire dans le MÊME flow de réservation (Amaryllis) : "7 jours" affiché en step 1, "J-14" (le vrai) affiché juste en dessous et en step 2 — risque de litige voyageur.
+- **628€ reçus (Francois Cambier, Zandoli, lien WhatsApp, séjour EN COURS 05→20/07) jamais enregistré dans `direct_bookings`** — calendrier vérifié SAIN (pas de risque de double-booking, probablement bloqué à la main par toi sur Airbnb/Booking), mais revenus + automatisations voyageur (écran TV, email code d'accès) aveugles à ce séjour. + 2 autres virements Stripe non expliqués (695€ le 03/07, 5€ le 17/05) — à vérifier dans le dashboard Stripe (la clé locale est en mode test, je n'ai pas pu confirmer côté Stripe moi-même).
+- Traduction EN très incomplète : les descriptions de logement (chambres/espaces de vie/extérieurs) restent quasi 100% en français même avec le switch EN activé.
+
+**Fiabilité des données — dette memoire trouvée pendant l'audit, déjà corrigée cette nuit :**
+- `ARCHITECTURE.md` affirmait à tort un 9ᵉ cron `0 * * * *` (mon propre edit de ce soir, contredit par un commit antérieur du même jour que je n'avais pas vu) — corrigé après détection par l'audit infra. Nouvelle leçon dans `learnings/METHODOLOGIE-PROCESS.md` : toujours revérifier contre le fichier réel, jamais contre son propre résumé de session.
+- `ARCHITECTURE.md` §13 citait un vieux trou sécurité (`rm-*`/`agent-memory.js` sans auth) déjà corrigé lors d'audits antérieurs — remplacé par les 3 vrais trous actuels ci-dessus.
+- `ARCHITECTURE.md` décrivait `GuestContactsTab.jsx` comme un onglet admin vivant — retiré du menu le 24/06 (délibéré), mais l'API + 88 fiches contacts restent actives sans AUCUNE UI pour les consulter. À trancher : fusionner dans `crm_clients`, rétablir un accès lecture, ou assumer.
+
+**🟡 Dette notable (non urgent, détail dans le rapport complet)** : 3 onglets admin (Interventions/Travaux/Prestataires) tournent en `localStorage` pur sans aucune synchro serveur (perte de données possible, `InterventionsTab` fait doublon avec `MaintenanceTab` qui lui est D1-backed) · logs PII en clair dans 12 lignes/8 fichiers `functions/api/*.js` (le fix du 04/07 n'a couvert que le Worker) · CSP bloque 2 des 5 fallbacks iCal admin, qui envoient en plus des tokens iCal privés à des proxies tiers (à retirer, pas à whitelister) · Iguana double noindex + reste dans le sitemap + JSON-LD contradictoire · robots.txt bloque GPTBot/ClaudeBot/CCBot (probablement un défaut Cloudflare non voulu, contredit le `llms.txt` publié) · lint 738 erreurs (vs ~600 documenté, dette en hausse).
+
 ## En cours
 - **Tâche** : Restaurer la résa Ines Dali (Nogent, Beds24 `89292637`) — nom+prix+statut confirmé, actuellement en statut `black`/Bloqué (nom vide, 0€) malgré des dates correctement prolongées (06→20/07) et 764€+ déjà reçus (Vincent : au moins 1 virement encore manquant, total pas encore final).
 - **Étape** : Action admin `restoreGuest` construite et déployée (`functions/api/beds24-manage.js`, commit `0cdcf32`) mais **jamais exécutée avec succès** — l'API PUT Beds24 était en panne au moment du test (confirmé : `confirm`, code non touché, échoue identiquement ; GET fonctionne, token valide).
