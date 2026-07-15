@@ -92,6 +92,29 @@ export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
   const limit = Math.min(50, Math.max(1, parseInt(url.searchParams.get("limit"), 10) || 10));
 
+  // ?balance=1 : solde Stripe + statut des virements (diagnostic quand les payouts
+  // s'arrêtent d'apparaître — distingue "Stripe ne vire plus" de "aucun nouveau paiement").
+  if (url.searchParams.get("balance")) {
+    try {
+      const [balance, account] = await Promise.all([
+        stripeFetch(env, "/balance"),
+        stripeFetch(env, "/account"),
+      ]);
+      return json({
+        ok: true,
+        available: (balance.available || []).map(b => ({ amount: centsToEuros(b.amount), currency: b.currency })),
+        pending: (balance.pending || []).map(b => ({ amount: centsToEuros(b.amount), currency: b.currency })),
+        payouts_enabled: account.payouts_enabled,
+        payout_schedule: account.settings?.payouts?.schedule || null,
+        requirements_disabled_reason: account.requirements?.disabled_reason || null,
+        requirements_currently_due: account.requirements?.currently_due || [],
+        requirements_past_due: account.requirements?.past_due || [],
+      });
+    } catch (e) {
+      return json({ error: e.message }, 502);
+    }
+  }
+
   // ?inspect=pi_xxx : détail complet d'un PaymentIntent (au-delà de la balance_transaction)
   // pour élucider une charge non rattachée à une résa (description/metadata/receipt_email).
   const inspect = url.searchParams.get("inspect");
