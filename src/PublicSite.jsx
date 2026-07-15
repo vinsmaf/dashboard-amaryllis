@@ -6145,7 +6145,13 @@ function SearchByDates({ biens, onBook, onDetail }) {
         for (let i = 0; i < nights; i++) { sum += map[c2] ?? b.prix; c2 = addDays(c2, 1); }
         const discAmt = disc > 0 ? Math.round(sum * disc) : 0;
         const frais = FRAIS_MENAGE[id] ?? 0;
-        info[id] = { bien: b, avail, total: sum - discAmt + frais, cap: b.capacite };
+        // Offre groupée = logement occupé à sa pleine capacité (RM confirmé 2026-07-15) :
+        // le supplément voyageur au-delà de BASE_GUESTS s'applique toujours, pas seulement
+        // en réservation solo.
+        const baseGuests = BASE_GUESTS[id];
+        const extraGuests = baseGuests != null ? Math.max(0, b.capacite - baseGuests) : 0;
+        const extraFee = extraGuests * (EXTRA_GUEST_RATE[id] || 0) * nights;
+        info[id] = { bien: b, avail, total: sum - discAmt + frais + extraFee, cap: b.capacite };
       });
       const ids = RES.filter(id => info[id]);
       for (let mask = 1; mask < (1 << ids.length); mask++) {
@@ -6452,7 +6458,12 @@ function GroupBookingBuilder({ biens }) {
     for (let i = 0; i < nights; i++) { sum += map[cur] ?? b.prix; cur = addDays(cur, 1); }
     const disc = getDiscount(nights); const discAmt = disc > 0 ? Math.round(sum * disc) : 0;
     const frais = FRAIS_MENAGE[b.id] ?? 0;
-    return sum - discAmt + frais;
+    // Offre groupée = logement occupé à sa pleine capacité (RM confirmé 2026-07-15) :
+    // le supplément voyageur au-delà de BASE_GUESTS s'applique toujours.
+    const baseGuests = BASE_GUESTS[b.id];
+    const extraGuests = baseGuests != null ? Math.max(0, b.capacite - baseGuests) : 0;
+    const extraFee = extraGuests * (EXTRA_GUEST_RATE[b.id] || 0) * nights;
+    return sum - discAmt + frais + extraFee;
   }
 
   function toggle(id) {
