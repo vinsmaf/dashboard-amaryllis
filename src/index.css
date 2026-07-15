@@ -71,7 +71,11 @@
 
 body {
   margin: 0;
-  overflow-x: hidden;
+  /* clip (pas hidden) : évite qu'un seul axe déclaré force l'autre en overflow "auto"
+     (spec CSS overflow), ce qui transformait body en scroll container et cassait le
+     header sticky sur tout le site — trouvé par audit + vérifié empiriquement 2026-07-15,
+     cf. src/PublicSite.jsx (même correctif sur les wrappers racine de page). */
+  overflow-x: clip;
 }
 
 #root {

@@ -107,9 +107,30 @@ function json(data, status = 200) {
   });
 }
 
+// Sécurité (audit 2026-07-15) : endpoint public sans authentification qui exposait
+// prénom + dates du séjour en cours de n'importe quel bien à quiconque appelait
+// ?p=<bien> directement (curl, scan des 7 slugs) — RGPD + risque de repérage de
+// logement vacant. Fix minimal et sans risque pour les écrans TV déjà déployés
+// (aucun changement client requis) : n'accepter que les requêtes dont le Referer
+// vient bien de villamaryllis.com/bienvenue (page réelle de l'écran d'accueil TV) —
+// bloque le scan direct par script/curl sans toucher au comportement normal du
+// navigateur, qui envoie ce header sur un fetch same-origin (Referrer-Policy du
+// site = strict-origin-when-cross-origin, ne le supprime pas en same-origin).
+function isLegitReferer(request) {
+  const ref = request.headers.get("Referer") || "";
+  try {
+    const u = new URL(ref);
+    return u.hostname === "villamaryllis.com" && u.pathname.startsWith("/bienvenue");
+  } catch {
+    return false;
+  }
+}
+
 export async function onRequestGet(context) {
   const { request, env } = context;
   try {
+    if (!isLegitReferer(request)) return json({});
+
     const url = new URL(request.url);
     const pid = (url.searchParams.get("p") || "").trim().toLowerCase();
     if (!pid) return json({});

@@ -1461,22 +1461,28 @@ function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) 
   const [createErr,  setCreateErr]  = useState("");
   const paymentDoneRef = useRef(false);
   const bookingIdRef   = useRef(null);
+  // Identité du voyageur au moment de la création — utilisée pour prouver la
+  // propriété de la résa à l'annulation (cf. cancelBeds24 ci-dessous). Des refs
+  // (pas juste `form`) pour rester à jour même dans la closure figée du cleanup
+  // useEffect(..., []) ci-dessous.
+  const guestEmailRef    = useRef(null);
+  const guestLastNameRef = useRef(null);
 
-  const cancelBeds24 = async (id) => {
+  const cancelBeds24 = async (id, email, lastName) => {
     if (!id) return;
     try {
       await fetch("/api/beds24-manage", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "cancel", bookingId: id }),
+        body: JSON.stringify({ action: "cancel", bookingId: id, email, lastName }),
       });
     } catch {}
   };
-  const confirmBeds24 = async (id) => {
+  const confirmBeds24 = async (id, paymentIntentId) => {
     if (!id) return;
     try {
       await fetch("/api/beds24-manage", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "confirm", bookingId: id }),
+        body: JSON.stringify({ action: "confirm", bookingId: id, paymentIntentId }),
       });
     } catch {}
   };
@@ -1484,7 +1490,7 @@ function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) 
   useEffect(() => {
     return () => {
       if (!paymentDoneRef.current && bookingIdRef.current) {
-        cancelBeds24(bookingIdRef.current);
+        cancelBeds24(bookingIdRef.current, guestEmailRef.current, guestLastNameRef.current);
       }
     };
   }, []);
@@ -1516,6 +1522,8 @@ function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) 
 
       setBookingId(cd.bookingId);
       bookingIdRef.current = cd.bookingId;
+      guestEmailRef.current = form.email.trim();
+      guestLastNameRef.current = form.nom.trim();
 
       // 2. Prix confirmé : Beds24 si Nogent (cd.price > 0), sinon calcul local Martinique
       //    Beds24 = Nogent UNIQUEMENT — pour les biens Martinique cd.price = 0, fallback = amount
@@ -1581,7 +1589,7 @@ function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) 
     });
     if (error) {
       if (bookingIdRef.current) {
-        await cancelBeds24(bookingIdRef.current);
+        await cancelBeds24(bookingIdRef.current, guestEmailRef.current, guestLastNameRef.current);
         bookingIdRef.current = null;
         setBookingId(null);
         setPayError(error.message + " — Votre réservation a été annulée. Vous pouvez recommencer.");
@@ -1593,7 +1601,7 @@ function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) 
     }
     if (paymentIntent?.status === "succeeded") {
       paymentDoneRef.current = true;
-      await confirmBeds24(bookingIdRef.current);
+      await confirmBeds24(bookingIdRef.current, paymentIntent.id);
       // Stocker pi dans pending_purchase pour que Merci.jsx fire l'event avec retry
       // (failsafe : si page-unload tue le beacon gtag inline ci-dessous)
       try {
@@ -5503,6 +5511,41 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
       </div>
       {showAlerte && <AlerteDispoModal bien={bien} checkin={calCheckin} checkout={calCheckout} onClose={() => setShowAlerte(false)} />}
 
+      {/* ── WhatsApp flottant — fiche bien chargée directement uniquement (isPage) ──
+          Le bouton flottant équivalent du mode aperçu rapide (PublicSite, plus bas dans
+          ce fichier) n'est jamais rendu sur ces routes directes (/amaryllis etc. — le
+          trafic Google/pub/réseaux) : sans ça, aucun bouton WhatsApp flottant n'apparaissait
+          nulle part sur la page qui compte le plus pour la conversion — trouvé par audit
+          2026-07-15. Pas affiché en mode modal (isPage=false) pour éviter un doublon avec
+          celui de PublicSite. */}
+      {isPage && (
+        <a
+          href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(`Bonjour, j'ai une question sur ${bien.nom} à Sainte-Luce. `)}`}
+          target="_blank" rel="noopener noreferrer"
+          title="Nous contacter sur WhatsApp"
+          style={{
+            // left (pas right) : le côté droit est déjà occupé par ChatWidget (zIndex 9990-9991,
+            // même bottom) + FaqChatbot (90-155px) — un right:22 mettait ce bouton visuellement
+            // caché sous la bulle chat (vérifié en live : invisible malgré une présence DOM
+            // correcte, zIndex 950 < 9991). Trouvé et corrigé pendant l'audit du 2026-07-15.
+            position: "fixed", bottom: "calc(24px + var(--sticky-cta-h, 0px))", left: 22, zIndex: 950,
+            width: 54, height: 54, borderRadius: "50%",
+            background: "#25D366",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: "0 4px 18px rgba(37,211,102,0.45)",
+            textDecoration: "none",
+            animation: "fadeIn 0.4s ease",
+            transition: "transform 0.2s",
+          }}
+          onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.1)"; }}
+          onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; }}
+        >
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+          </svg>
+        </a>
+      )}
+
       {/* ── FAQ chatbot flottant ── */}
       <FaqChatbot bien={bien} />
 
@@ -9304,8 +9347,13 @@ export default function PublicSite() {
     // Funnel GA4 — step 1 (event nommé explicitement pour l'exploration funnel)
     if (window.gtag) window.gtag("event", "booking_modal_open", { bien_id: bien.id, bien_nom: bien.nom, has_dates: !!(initialCheckin && initialCheckout) });
     saveSession(bien.id, initialCheckin, initialCheckout);
+    // Ferme un éventuel aperçu rapide (quick-view) déjà ouvert — SANS passer par
+    // openDetail(null), qui réinitialise aussi l'URL/title/meta/JSON-LD vers la home
+    // (effet de bord voulu pour fermer un aperçu isolément, mais qui cassait ici
+    // l'attribution GA4/Meta par bien à CHAQUE ouverture du récap réservation, sur
+    // toutes les fiches biens — trouvé par audit 2026-07-15).
     if (bien.useBeds24) {
-      openDetail(null);
+      setDetailBien(null);
       // Fallback : lire les dates depuis l'URL si non fournies par le calendrier
       const _p = new URLSearchParams(window.location.search);
       setBeds24Bien(bien);
@@ -9315,7 +9363,7 @@ export default function PublicSite() {
       });
       return;
     }
-    openDetail(null);
+    setDetailBien(null);
     setBookingInitialDates({ checkin: initialCheckin, checkout: initialCheckout });
     setSelectedBien(bien);
     await fetchAvailability(bien.id);
@@ -9435,7 +9483,7 @@ export default function PublicSite() {
     const _directCheckin  = _directParams.get("checkin")  || null;
     const _directCheckout = _directParams.get("checkout") || null;
     return (
-      <div style={{ background: IVORY, fontFamily: "'Jost', system-ui, -apple-system, sans-serif", overflowX: "hidden" }}>
+      <div style={{ background: IVORY, fontFamily: "'Jost', system-ui, -apple-system, sans-serif", overflowX: "clip" }}>
         <SEOMeta
           title={`${_directBien.nom} — ${_directBien.lieu} — Réservation directe`}
           description={`Réservez ${_directBien.nom} à ${_directBien.lieu}. ${_directBien.capacite} voyageurs. À partir de ${directBienWithPrice.prix}€/nuit. Réservation directe sans commission Airbnb.`}
@@ -9476,7 +9524,7 @@ export default function PublicSite() {
       { q: "Comment se passe la réservation et le paiement ?", a: "Sélectionnez vos dates et vos logements ci-dessus : la disponibilité est vérifiée en direct et le prix total s'affiche automatiquement. Vous recevez un devis et un paiement unique sécurisé pour l'ensemble du séjour." },
     ];
     return (
-      <div style={{ background: IVORY, fontFamily: "'Jost', system-ui, -apple-system, sans-serif", color: TEXT, overflowX: "hidden" }}>
+      <div style={{ background: IVORY, fontFamily: "'Jost', system-ui, -apple-system, sans-serif", color: TEXT, overflowX: "clip" }}>
         <SEOMeta
           title="Location grand groupe Martinique — jusqu'à 11 personnes, Sainte-Luce"
           description="Réunissez jusqu'à 11 proches en réservant Zandoli, Géko et Mabouya ensemble à Sainte-Luce. Résidence privée, piscines, réservation directe sans frais. Devis et paiement rapides."
@@ -9554,7 +9602,7 @@ export default function PublicSite() {
       { q: "Schœlcher est-il bien situé en Martinique ?", a: "Oui — Schœlcher jouxte Fort-de-France (centre à ~10 min), avec plages, université et commerces à proximité. Un bon camp de base pour rayonner sur toute l'île." },
     ];
     return (
-      <div style={{ background: IVORY, fontFamily: "'Jost', system-ui, -apple-system, sans-serif", color: TEXT, overflowX: "hidden" }}>
+      <div style={{ background: IVORY, fontFamily: "'Jost', system-ui, -apple-system, sans-serif", color: TEXT, overflowX: "clip" }}>
         <SEOMeta
           title="Location appartement vue mer Schœlcher — Martinique"
           description="Appartement de standing à Schœlcher : vue panoramique sur la baie de Fort-de-France, dernier étage, 2 personnes, à 10 min du centre. Réservation directe sans frais."
@@ -9653,7 +9701,7 @@ export default function PublicSite() {
       ["Guide du Diamant", "/guide-le-diamant"], ["Carte interactive du Sud", "/explorer"], ["Séjourner à Sainte-Luce", "/sainte-luce-martinique"],
     ];
     return (
-      <div style={{ background: IVORY, fontFamily: "'Jost', system-ui, -apple-system, sans-serif", color: TEXT, overflowX: "hidden" }}>
+      <div style={{ background: IVORY, fontFamily: "'Jost', system-ui, -apple-system, sans-serif", color: TEXT, overflowX: "clip" }}>
         <SEOMeta
           title="Plus belles plages du Sud de la Martinique"
           description="Sable blanc, eau turquoise, tortues : découvrez les plus belles plages du Sud de la Martinique, toutes à moins de 40 min de Sainte-Luce."
@@ -9767,7 +9815,7 @@ export default function PublicSite() {
   const _metaBien = _pathId ? BIENS.find(b => b.id === _pathId) : null;
 
   return (
-    <div id="top" style={{ minHeight: "100vh", background: IVORY, color: TEXT, fontFamily: "'Jost', system-ui, -apple-system, sans-serif", overflowX: "hidden" }}>
+    <div id="top" style={{ minHeight: "100vh", background: IVORY, color: TEXT, fontFamily: "'Jost', system-ui, -apple-system, sans-serif", overflowX: "clip" }}>
       <SEOMeta
         title={_metaBien ? `${_metaBien.nom} — Villa Martinique, piscine vue mer | Amaryllis` : undefined}
         description={_metaBien ? `Réservez ${_metaBien.nom} à ${_metaBien.lieu}. Piscine, vue mer, jacuzzi privatif. ${_metaBien.capacite} voyageurs. À partir de ${_metaBien.prix}€/nuit. Réservation directe sans frais Airbnb.` : undefined}
@@ -10356,7 +10404,11 @@ export default function PublicSite() {
         );
       })()}
 
-      {/* ── WHATSAPP FLOTTANT ── visible homepage (après scroll) ET sur la fiche villa */}
+      {/* ── WHATSAPP FLOTTANT ── visible homepage (après scroll) ET sur l'aperçu rapide.
+          Sur une fiche bien chargée directement (/amaryllis etc.), c'est PropertyDetail
+          (isPage=true) qui a son propre bouton flottant — cf. plus bas dans ce fichier —
+          car ce bloc-ci n'est jamais atteint pour ces routes (branche _directBien plus haut
+          retourne avant, trouvé par audit 2026-07-15 via instrumentation window.__DEBUG). */}
       {!selectedBien && !beds24Bien && (scrolled || detailBien) && (
         <a
           href={`https://wa.me/${WA_NUMBER}?text=${detailBien ? encodeURIComponent(`Bonjour, j'ai une question sur ${detailBien.nom} à Sainte-Luce. `) : WA_MSG_DEFAULT}`}

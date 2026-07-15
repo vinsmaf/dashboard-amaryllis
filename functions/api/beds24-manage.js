@@ -93,9 +93,61 @@ export async function onRequestPost(context) {
   }
 
   // ── CONFIRM / CANCEL ─────────────────────────────────────────────────────
+  // Sécurité (audit 2026-07-15) : ces 2 actions publiques ne vérifiaient RIEN d'autre
+  // qu'un bookingId — confirm pouvait valider une résa Nogent sans paiement Stripe réel
+  // (2 requêtes publiques suffisaient), cancel pouvait annuler n'importe quelle résa
+  // réelle avec juste un bookingId trouvé via find() (IDOR). Les 2 vérifications
+  // ci-dessous ferment ces trous sans changer le comportement du tunnel légitime.
   if (action === "confirm" || action === "cancel") {
     const { bookingId } = body;
     if (!bookingId) return json({ error: "bookingId requis" }, 400);
+
+    if (action === "confirm") {
+      const { paymentIntentId } = body;
+      if (!paymentIntentId) return json({ error: "paymentIntentId requis" }, 400);
+      const sk = env.STRIPE_SECRET_KEY;
+      if (!sk) return json({ error: "STRIPE_SECRET_KEY manquante" }, 500);
+
+      try {
+        const piRes = await fetch(`https://api.stripe.com/v1/payment_intents/${paymentIntentId}`, {
+          headers: { Authorization: `Bearer ${sk}` },
+        });
+        const pi = await piRes.json();
+        if (!piRes.ok || pi.error) return json({ error: "PaymentIntent introuvable" }, 403);
+        if (pi.status !== "succeeded") return json({ error: "Paiement non confirmé" }, 403);
+        const tiedBookingId = pi.metadata?.beds24Id || pi.metadata?.bookingId;
+        if (String(tiedBookingId) !== String(bookingId)) {
+          return json({ error: "Ce paiement ne correspond pas à cette réservation" }, 403);
+        }
+      } catch (e) {
+        return json({ error: `Vérification Stripe échouée: ${e.message}` }, 502);
+      }
+    }
+
+    if (action === "cancel") {
+      const { email, lastName } = body;
+      if (!email && !lastName) return json({ error: "email ou lastName requis" }, 400);
+
+      try {
+        // Même fenêtre/forme que l'action find() ci-dessus — cancel() n'est appelé que
+        // juste après la création de la résa dans ce tunnel (échec paiement / fermeture
+        // sans payer), donc "modifiée dans les 6 dernières heures" couvre le cas réel.
+        const since = new Date(Date.now() - 6 * 3600 * 1000).toISOString().slice(0, 10);
+        const qp = new URLSearchParams({ propId: PROP_ID, numId: "50", modifiedFrom: since });
+        const res = await fetch(`${BEDS24_V2_BOOKINGS}?${qp}`, { headers: { token } });
+        const data = await res.json();
+        if (!data.success) return json({ error: "Erreur Beds24 (vérification annulation)", raw: data }, 502);
+
+        const match = (data.data || []).find(b => String(b.id) === String(bookingId));
+        if (!match) return json({ error: "Réservation introuvable ou trop ancienne pour vérification" }, 404);
+
+        const emailOk = email && match.email && match.email.toLowerCase() === email.toLowerCase();
+        const nameOk  = lastName && match.lastName && match.lastName.toLowerCase() === lastName.toLowerCase();
+        if (!emailOk && !nameOk) return json({ error: "Vérification d'identité échouée" }, 403);
+      } catch (e) {
+        return json({ error: `Vérification échouée: ${e.message}` }, 502);
+      }
+    }
 
     const newStatus = action === "confirm" ? "confirmed" : "cancelled";
 
