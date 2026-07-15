@@ -1,8 +1,9 @@
 // Cloudflare Pages Function — POST /api/beds24-manage
-// Actions : find | confirm | cancel
+// Actions : find | confirm | cancel (publiques, tunnel voyageur) | restoreGuest (admin)
 // Sécurisé : token Beds24 jamais exposé côté navigateur.
 
 import { rateLimit } from "./_ratelimit.js";
+import { verifyBearer } from "./_adminauth.js";
 
 const BEDS24_V2_BOOKINGS = "https://beds24.com/api/v2/bookings";
 const PROP_ID = "158192";
@@ -123,6 +124,44 @@ export async function onRequestPost(context) {
       }
 
       return json({ ok: true, bookingId, status: newStatus });
+
+    } catch (e) {
+      return json({ error: e.message }, 502);
+    }
+  }
+
+  // ── RESTORE GUEST (admin) ────────────────────────────────────────────────
+  // Repose nom + prix + statut confirmé sur une résa Beds24 — ex. quand un bloc
+  // calendrier manuel ("black"/Bloqué, sans nom ni prix) doit redevenir une vraie
+  // résa voyageur (cf. incident 2026-07-15, Ines Dali/Nogent, dates prolongées mais
+  // nom/prix perdus). Distinct de confirm/cancel (publics) : celui-ci écrit des
+  // données arbitraires sur une résa → réservé admin.
+  if (action === "restoreGuest") {
+    const auth = await verifyBearer(request, env);
+    if (!auth.ok) return json({ error: "Accès refusé" }, 401);
+
+    const { bookingId, firstName, lastName, price } = body;
+    if (!bookingId || !firstName || !lastName || price == null) {
+      return json({ error: "Champs requis : bookingId, firstName, lastName, price" }, 400);
+    }
+
+    const payload = [{ id: String(bookingId), status: "confirmed", firstName, lastName, price: Number(price) }];
+
+    try {
+      const res = await fetch(BEDS24_V2_BOOKINGS, {
+        method: "PUT",
+        headers: { token, "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { data = { raw: text }; }
+
+      if (!res.ok || data.success === false) {
+        return json({ error: "Beds24 restoreGuest échoué", raw: data }, 502);
+      }
+
+      return json({ ok: true, bookingId, firstName, lastName, price: Number(price), status: "confirmed" });
 
     } catch (e) {
       return json({ error: e.message }, 502);
