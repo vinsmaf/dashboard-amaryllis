@@ -8557,6 +8557,180 @@ function SignaturePad({ onChange }) {
   );
 }
 
+// ── Devis groupé avec paiement (multi-logements, page publique villamaryllis.com) ──
+// Contrairement à DevisPage (1 logement, Stripe Elements embarqué + signature contrat),
+// une résa groupée se paie via un Payment Link Stripe déjà créé côté admin
+// (create-payment-link.js, type="group"/"acompte") — cette page se contente d'afficher
+// le devis (même gabarit visuel que generateGroupDevis) + les boutons vers ces liens.
+// Payload : ?d=<base64 JSON> { ref, issuedLabel, checkin, checkout, nights, guests,
+// logements, breakdowns:[{nom,lieu,photo,rawTotal,discAmt,discLabel,frais,extraFee,
+// extraGuests,extraRate,total}], total, depositTotal, validUntil,
+// payment:{fullUrl,acompteUrl,acompte,solde} }
+function DevisGroupePaiement() {
+  const params = new URLSearchParams(window.location.search);
+  const [data] = useState(() => {
+    try { return JSON.parse(atob(params.get("d") || "")); } catch { return null; }
+  });
+
+  if (!data) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#f4ecdc", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI', system-ui, sans-serif", color: "#0e3b3a", padding: 20, textAlign: "center" }}>
+        Devis introuvable ou lien invalide.
+      </div>
+    );
+  }
+
+  const fmtDateLong = (iso) => {
+    if (!iso) return "?";
+    const d = new Date(iso + "T12:00:00");
+    return d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  };
+
+  const card = { background: "#fff", borderRadius: 12, padding: 20, marginBottom: 20 };
+  const tableTitle = { fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.5px", color: "#7a6b5a", marginBottom: 10 };
+  const th = { background: "#0e3b3a", color: "#fff", padding: "9px 14px", textAlign: "left", fontSize: 12, fontWeight: 600 };
+  const td = { padding: "10px 14px", fontSize: 13 };
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#f4ecdc", fontFamily: "'Segoe UI', system-ui, sans-serif", color: "#0e3b3a", fontSize: 14 }}>
+      <div style={{ maxWidth: 720, margin: "0 auto", padding: "40px 20px 60px" }}>
+
+        <div style={{ background: "#0e3b3a", color: "#fff", borderRadius: 12, padding: "28px 32px", marginBottom: 28, display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 22, fontWeight: 200, letterSpacing: "0.25em", textTransform: "uppercase" }}>Amaryllis</div>
+            <div style={{ fontSize: 11, opacity: 0.6, marginTop: 3, letterSpacing: "1px", textTransform: "uppercase" }}>Locations de prestige · Martinique &amp; Île-de-France</div>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-0.5px" }}>DEVIS GROUPÉ</div>
+            {data.ref && <div style={{ fontSize: 11, opacity: 0.55, marginTop: 4 }}>Réf. {data.ref}</div>}
+            {data.issuedLabel && <div style={{ fontSize: 11, opacity: 0.55, marginTop: 2 }}>Émis le {data.issuedLabel}</div>}
+          </div>
+        </div>
+
+        <div style={{ marginBottom: 20, fontSize: 13, background: "#fff", border: "1px solid #e0d4bc", borderRadius: 7, padding: "10px 14px" }}>
+          <strong style={{ color: "#c47254" }}>Arrivée :</strong> {fmtDateLong(data.checkin)} &nbsp;→&nbsp; <strong style={{ color: "#c47254" }}>Départ :</strong> {fmtDateLong(data.checkout)}
+          &nbsp;·&nbsp; <strong>{data.nights} nuit{data.nights > 1 ? "s" : ""}</strong> &nbsp;·&nbsp; <strong>{data.guests} voyageur{data.guests > 1 ? "s" : ""}</strong> &nbsp;·&nbsp; {data.logements}
+        </div>
+
+        <div style={card}>
+          <div style={tableTitle}>Détail par logement</div>
+          {Array.isArray(data.breakdowns) && data.breakdowns.map((b, i) => (
+            <div key={i} style={{ marginTop: i > 0 ? 20 : 0 }}>
+              <div style={{ display: "flex", gap: 20, marginBottom: 12, alignItems: "flex-start" }}>
+                {b.photo && <img src={b.photo} alt={b.nom} style={{ width: 110, height: 74, objectFit: "cover", borderRadius: 8, flexShrink: 0, border: "1px solid #e0d4bc" }} />}
+                <div>
+                  <div style={{ fontSize: 17, fontWeight: 700 }}>{b.nom}</div>
+                  {b.lieu && <div style={{ fontSize: 12, color: "#7a6b5a", marginTop: 3 }}>📍 {b.lieu}</div>}
+                </div>
+              </div>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    <th style={th}>Description</th>
+                    <th style={th}>Détail</th>
+                    <th style={{ ...th, textAlign: "right" }}>Montant</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style={{ borderBottom: "1px solid #e0d4bc" }}>
+                    <td style={td}>Hébergement</td>
+                    <td style={{ ...td, fontSize: 12, color: "#7a6b5a" }}>{data.nights} nuit{data.nights > 1 ? "s" : ""} · {Math.round(b.rawTotal / data.nights)}€/nuit moy.</td>
+                    <td style={{ ...td, textAlign: "right", fontWeight: 600 }}>{b.rawTotal}€</td>
+                  </tr>
+                  {b.discAmt > 0 && (
+                    <tr style={{ borderBottom: "1px solid #e0d4bc" }}>
+                      <td style={{ ...td, color: "#c47254" }}>{b.discLabel || "Remise séjour"}</td>
+                      <td style={{ ...td, fontSize: 12, color: "#c47254" }}>Remise séjour</td>
+                      <td style={{ ...td, textAlign: "right", fontWeight: 600, color: "#c47254" }}>−{b.discAmt}€</td>
+                    </tr>
+                  )}
+                  {b.frais > 0 && (
+                    <tr style={{ borderBottom: "1px solid #e0d4bc" }}>
+                      <td style={td}>Frais de ménage</td>
+                      <td style={{ ...td, fontSize: 12, color: "#7a6b5a" }}>Nettoyage fin de séjour</td>
+                      <td style={{ ...td, textAlign: "right", fontWeight: 600 }}>{b.frais}€</td>
+                    </tr>
+                  )}
+                  {b.extraFee > 0 && (
+                    <tr style={{ borderBottom: "1px solid #e0d4bc" }}>
+                      <td style={td}>Supplément voyageurs</td>
+                      <td style={{ ...td, fontSize: 12, color: "#7a6b5a" }}>{b.extraGuests} pers. suppl. × {data.nights} nuits × {b.extraRate || 30}€</td>
+                      <td style={{ ...td, textAlign: "right", fontWeight: 600 }}>{b.extraFee}€</td>
+                    </tr>
+                  )}
+                  <tr style={{ background: "#faf5e9" }}>
+                    <td colSpan={2} style={{ padding: "11px 14px", fontSize: 13, fontWeight: 700 }}>Sous-total {b.nom}</td>
+                    <td style={{ padding: "11px 14px", fontSize: 13, fontWeight: 700, textAlign: "right", color: "#c47254" }}>{b.total}€</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ background: "#0e3b3a", color: "#fff", borderRadius: 10, padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <div style={{ fontSize: 14, fontWeight: 600 }}>TOTAL SÉJOUR GROUPÉ</div>
+          <div style={{ fontSize: 22, fontWeight: 800 }}>{data.total}€</div>
+        </div>
+
+        {data.depositTotal > 0 && (
+          <div style={{ background: "#fffbeb", border: "1px solid rgba(245,158,11,0.3)", borderRadius: 10, padding: "14px 18px", marginBottom: 20 }}>
+            <div style={{ fontWeight: 700, color: "#92400e", fontSize: 13, marginBottom: 4 }}>🔒 Dépôt de garantie total — {data.depositTotal}€</div>
+            <div style={{ fontSize: 12, color: "#78350f", lineHeight: 1.5 }}>Pré-autorisé sur carte bancaire avant l'arrivée (un montant par logement), jamais débité — libéré automatiquement après le départ si aucun dommage n'est constaté.</div>
+          </div>
+        )}
+
+        {data.payment && (
+          <div style={card}>
+            <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 4 }}>💳 Choisissez votre mode de paiement</div>
+            <div style={{ fontSize: 12, color: "#7a6b5a", marginBottom: 16 }}>Paiement 100% sécurisé par carte bancaire via Stripe.</div>
+
+            {data.payment.fullUrl && (
+              <a href={data.payment.fullUrl} style={{ display: "block", background: "#c47254", color: "#fff", borderRadius: 10, padding: "18px 20px", textDecoration: "none", marginBottom: 12 }}>
+                <div style={{ fontSize: 16, fontWeight: 800 }}>Payer {data.total}€ en une fois →</div>
+                <div style={{ fontSize: 12, opacity: 0.9, marginTop: 3 }}>Réservation confirmée immédiatement</div>
+              </a>
+            )}
+            {data.payment.acompteUrl && (
+              <a href={data.payment.acompteUrl} style={{ display: "block", background: "#fff", border: "2px solid #0e3b3a", color: "#0e3b3a", borderRadius: 10, padding: "18px 20px", textDecoration: "none" }}>
+                <div style={{ fontSize: 16, fontWeight: 800 }}>Payer {data.payment.acompte}€ maintenant (acompte 30%) →</div>
+                <div style={{ fontSize: 12, opacity: 0.85, marginTop: 3, lineHeight: 1.5 }}>Solde de {data.payment.solde}€ : un lien de paiement vous sera envoyé automatiquement par email 30 jours avant l'arrivée.</div>
+              </a>
+            )}
+          </div>
+        )}
+
+        <div style={{ background: "#f0fdf4", border: "1px solid rgba(34,197,94,0.25)", borderRadius: 10, padding: "14px 18px", marginBottom: 20 }}>
+          <div style={{ fontWeight: 700, color: "#166534", fontSize: 13, marginBottom: 4 }}>✅ Validité du devis — 48 heures</div>
+          <div style={{ fontSize: 12, color: "#15803d" }}>Ce devis est valable jusqu'au {data.validUntil}. Les disponibilités et tarifs ne sont garantis qu'au moment de la réservation.</div>
+        </div>
+
+        <div style={tableTitle}>Nous contacter</div>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
+          <div style={{ background: "#fff", borderRadius: 7, padding: "10px 14px", fontSize: 12, flex: 1, minWidth: 150 }}>
+            <div style={{ fontWeight: 700, fontSize: 10, textTransform: "uppercase", letterSpacing: "1px", color: "#7a6b5a", marginBottom: 3 }}>WhatsApp / Téléphone</div>
+            +33 6 10 88 07 72
+          </div>
+          <div style={{ background: "#fff", borderRadius: 7, padding: "10px 14px", fontSize: 12, flex: 1, minWidth: 150 }}>
+            <div style={{ fontWeight: 700, fontSize: 10, textTransform: "uppercase", letterSpacing: "1px", color: "#7a6b5a", marginBottom: 3 }}>Email</div>
+            contact@villamaryllis.com
+          </div>
+          <div style={{ background: "#fff", borderRadius: 7, padding: "10px 14px", fontSize: 12, flex: 1, minWidth: 150 }}>
+            <div style={{ fontWeight: 700, fontSize: 10, textTransform: "uppercase", letterSpacing: "1px", color: "#7a6b5a", marginBottom: 3 }}>Site web</div>
+            villamaryllis.com
+          </div>
+        </div>
+
+        <div style={{ textAlign: "center", fontSize: 11, color: "#7a6b5a", marginTop: 28, lineHeight: 1.6 }}>
+          <span style={{ display: "inline-block", background: "#0e3b3a", color: "#fff", borderRadius: 20, padding: "4px 12px", fontSize: 10, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", marginBottom: 6 }}>Réservation directe · Zéro frais Airbnb</span><br />
+          Amaryllis Locations · villamaryllis.com · contact@villamaryllis.com<br />
+          Tarifs indicatifs. Le total définitif est confirmé au moment de la réservation.
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DevisPage() {
   const params = new URLSearchParams(window.location.search);
   // Décodage direct du payload ?d= (lien long)
@@ -9658,6 +9832,7 @@ export default function PublicSite() {
   const path = window.location.pathname;
   if (path === "/merci") return <MerciPage />;
   if (path === "/devis" || path.startsWith("/r/")) return <DevisPage />;
+  if (path === "/devis-groupe") return <DevisGroupePaiement />;
 
   // ── Mode page propriété directe ──────────────────────────────
   // Normalise le chemin : /amaryllis/ → amaryllis (trailing slash compatible redirects Cloudflare)
