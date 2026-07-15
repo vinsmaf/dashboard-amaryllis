@@ -13,6 +13,68 @@
 
 import { verifyBearer } from "./_adminauth.js";
 
+// Cache KV sur action="read" (trouvé 2026-07-15 : cette action calcule revenus/occ/adr/
+// revpar/cashflow pour 9 entités × 12 mois + relit "Toutes les Réservations" (706+ lignes) —
+// 15-35s+ par appel, déclenchée automatiquement à CHAQUE ouverture du dashboard (App.jsx
+// autoSyncDone, aucun debounce). Volume cumulé épuise le quota Apps Script du compte
+// (déjà corrigé une fois côté GAS le jour même — fetchNameCols_, commit 44479b3 — mais le vrai
+// problème est le VOLUME d'appels, pas seulement leur coût unitaire). Stale-while-revalidate
+// identique à /api/revenue-summary (même KV CROSS_BRAIN_KV) : sert le cache immédiatement même
+// expiré (sous HARD_TTL), rafraîchit en tâche de fond dès que SOFT_TTL est dépassé. Si l'appel
+// Apps Script échoue (quota épuisé) ET qu'un cache existe (même hors HARD_TTL), on sert quand
+// même ce cache plutôt que de remonter l'erreur — c'est ce qui empêchait le fallback "⚠ Seed
+// local" côté client de ne jamais se déclencher qu'au tout premier appel à froid.
+const READ_CACHE_KEY = "cache:sheets-read:v1";
+const READ_SOFT_TTL_MS = 3 * 60 * 1000;   // au-delà : servir le cache mais rafraîchir en fond
+const READ_HARD_TTL_MS = 24 * 60 * 60 * 1000; // au-delà (et refresh en fond jamais retenté avec succès) : calcul synchrone
+
+async function fetchReadLive(scriptUrl) {
+  const res = await fetch(scriptUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "read" }),
+    redirect: "follow",
+  });
+  const text = await res.text();
+  const data = JSON.parse(text); // throws si HTML/erreur — traité par l'appelant
+  if (data.error) throw new Error("Apps Script: " + data.error);
+  return data;
+}
+
+async function refreshReadCache(scriptUrl, env) {
+  const data = await fetchReadLive(scriptUrl);
+  await env.CROSS_BRAIN_KV.put(READ_CACHE_KEY, JSON.stringify({ data, cachedAt: Date.now() }), { expirationTtl: 172800 });
+  return data;
+}
+
+async function handleReadAction(scriptUrl, env, context) {
+  let cached = null;
+  if (env.CROSS_BRAIN_KV) {
+    try {
+      const raw = await env.CROSS_BRAIN_KV.get(READ_CACHE_KEY);
+      if (raw) cached = JSON.parse(raw);
+    } catch { /* cache corrompu — traité comme absent */ }
+  }
+
+  const age = cached ? Date.now() - cached.cachedAt : Infinity;
+  if (cached && age < READ_HARD_TTL_MS) {
+    if (age > READ_SOFT_TTL_MS) {
+      context.waitUntil(refreshReadCache(scriptUrl, env).catch(() => {})); // échec silencieux, on retente au prochain appel
+    }
+    return json(cached.data, 200, { "X-Cache": age > READ_SOFT_TTL_MS ? "STALE" : "HIT" });
+  }
+
+  try {
+    const data = env.CROSS_BRAIN_KV ? await refreshReadCache(scriptUrl, env) : await fetchReadLive(scriptUrl);
+    return json(data, 200, { "X-Cache": "MISS" });
+  } catch (e) {
+    // Apps Script injoignable/quota épuisé : dernier recours, servir le cache même périmé
+    // plutôt que de renvoyer une erreur (le client retomberait sur le seed local).
+    if (cached) return json(cached.data, 200, { "X-Cache": "STALE-FALLBACK" });
+    return json({ error: `Apps Script injoignable: ${e.message}` }, 502);
+  }
+}
+
 export async function onRequestPost(context) {
   const { request, env } = context;
 
@@ -45,6 +107,11 @@ export async function onRequestPost(context) {
 
   let parsed;
   try { parsed = JSON.parse(body); } catch { parsed = null; }
+
+  // ── Lecture principale du dashboard (coûteuse, appelée à chaque ouverture) → cache KV
+  if (parsed && parsed.action === "read") {
+    return handleReadAction(scriptUrl, env, context);
+  }
 
   // ── Actions qui écrivent des tableaux → chunked GET (Apps Script redirect bug)
   if (parsed && parsed.action === "importAllReservations" && Array.isArray(parsed.reservations)) {
@@ -143,9 +210,9 @@ export async function onRequestOptions() {
   });
 }
 
-function json(data, status = 200) {
+function json(data, status = 200, extraHeaders = {}) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+    headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*", ...extraHeaders },
   });
 }
