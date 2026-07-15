@@ -1334,12 +1334,17 @@ export default function App() {
 
   const menageBadge = (() => { const today = new Date(); today.setHours(0,0,0,0); return reservations.filter(r => { const co = new Date(r.checkout + "T12:00:00"); co.setHours(0,0,0,0); return co >= today && co <= new Date(today.getTime()+21*86400000) && !r.menage_done; }).length; })();
 
+  // Épinglé à la racine du menu (hors groupes) — Planning est l'onglet le plus utilisé
+  // au quotidien, un accès direct sans même le repère visuel d'un groupe.
+  const ROOT_ITEMS = [
+    { id: "planning", icon: "📅", label: "Planning", badge: planningAlerts > 0 ? planningAlerts : null, badgeColor: "#f59e0b" },
+  ];
+
   const NAV_GROUPS = [
     {
       id: "quotidien", label: "⚡ Quotidien",
       items: [
         { id: "cockpit",   icon: "🎯", label: "Cockpit",     badge: cockpitAlerts > 0 ? "⚠" : null, badgeColor: "#ef4444" },
-        { id: "planning",  icon: "📅", label: "Planning",    badge: planningAlerts > 0 ? planningAlerts : null, badgeColor: "#f59e0b" },
         { id: "menage",    icon: "🧹", label: "Ménage",      badge: menageBadge > 0 ? menageBadge : null, badgeColor: "#f59e0b" },
         { id: "revenue",   icon: "💡", label: "Revenue Mgr" },
         { id: "tarifs",    icon: "🏷️", label: "Tarifs" },
@@ -1417,13 +1422,51 @@ export default function App() {
   ];
 
   // Filtrer la nav selon le rôle (ménage = planning + ménage uniquement)
-  const MENAGE_TABS = new Set(["planning", "menage"]);
+  // "planning" est toujours affiché (ROOT_ITEMS, hors filtre de rôle) — reste pertinent au ménage.
+  const MENAGE_TABS = new Set(["menage"]);
   const visibleGroups = role === "menage"
     ? [{ id: "ops", label: "Opérations", items: NAV_GROUPS[0].items.filter(i => MENAGE_TABS.has(i.id)) }]
     : NAV_GROUPS;
 
-  const allNavItems = visibleGroups.flatMap(g => g.items);
+  const allNavItems = [...ROOT_ITEMS, ...visibleGroups.flatMap(g => g.items)];
   const currentNavItem = allNavItems.find(i => i.id === tab);
+
+  function renderNavItem(item) {
+    const active = tab === item.id;
+    const navStyle = {
+      display: "flex", alignItems: "center", gap: 10,
+      margin: "1px 8px",
+      padding: "7px 10px",
+      borderRadius: 8,
+      background: active ? "rgba(14,165,233,0.13)" : "transparent",
+      border: "none",
+      cursor: "pointer", textAlign: "left",
+      color: active ? "#e0f2fe" : item.badgeColor && item.badge ? item.badgeColor : "#64748b",
+      fontSize: 13, fontWeight: active ? 600 : 400,
+      transition: "background .15s, color .15s",
+      textDecoration: "none",
+      width: "calc(100% - 16px)",
+    };
+    const navContent = (
+      <>
+        <span style={{ fontSize: 14, width: 18, textAlign: "center", flexShrink: 0, opacity: active ? 1 : 0.75 }}>{item.icon}</span>
+        <span style={{ flex: 1, fontSize: 13 }}>{item.label}</span>
+        {item.href && <span style={{ fontSize: 9, opacity: 0.35 }}>↗</span>}
+        {item.badge && (
+          <span style={{ background: item.badgeColor, color: "#fff", fontSize: 9, fontWeight: 800, borderRadius: 10, padding: "1px 5px", minWidth: 16, textAlign: "center" }}>{item.badge}</span>
+        )}
+      </>
+    );
+    return item.href ? (
+      <a key={item.id} href={item.href} target="_blank" rel="noopener noreferrer" style={navStyle}>
+        {navContent}
+      </a>
+    ) : (
+      <button key={item.id} onClick={() => { setTab(item.id); if (mob) setSidebarOpen(false); }} style={navStyle}>
+        {navContent}
+      </button>
+    );
+  }
 
   /* ── boutons d'action communs (sync, settings…) ── */
   const ActionBtns = () => {
@@ -1517,55 +1560,24 @@ export default function App() {
 
           {/* Groupes de navigation */}
           <nav style={{ flex: 1, padding: "6px 0 16px" }}>
-            {visibleGroups.map((group, gi) => (
-              <div key={group.id} style={{ marginTop: gi === 0 ? 10 : 4 }}>
+            {/* Épinglés à la racine, hors groupe (cf. ROOT_ITEMS) */}
+            <div style={{ marginTop: 10 }}>
+              {ROOT_ITEMS.map(item => renderNavItem(item))}
+            </div>
+            {visibleGroups.map((group) => (
+              <div key={group.id} style={{ marginTop: 4 }}>
                 {/* Header de groupe */}
                 <div style={{
                   display: "flex", alignItems: "center", gap: 6,
                   padding: "6px 16px 4px",
-                  margin: gi === 0 ? 0 : "8px 0 0",
+                  margin: "8px 0 0",
                 }}>
                   <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.05)" }} />
                   <span style={{ fontSize: 10, fontWeight: 700, color: "#475569", letterSpacing: "0.08em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{group.label}</span>
                   <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.05)" }} />
                 </div>
                 {/* Items */}
-                {group.items.map(item => {
-                  const active = tab === item.id;
-                  const navStyle = {
-                    display: "flex", alignItems: "center", gap: 10,
-                    margin: "1px 8px",
-                    padding: "7px 10px",
-                    borderRadius: 8,
-                    background: active ? "rgba(14,165,233,0.13)" : "transparent",
-                    border: "none",
-                    cursor: "pointer", textAlign: "left",
-                    color: active ? "#e0f2fe" : item.badgeColor && item.badge ? item.badgeColor : "#64748b",
-                    fontSize: 13, fontWeight: active ? 600 : 400,
-                    transition: "background .15s, color .15s",
-                    textDecoration: "none",
-                    width: "calc(100% - 16px)",
-                  };
-                  const navContent = (
-                    <>
-                      <span style={{ fontSize: 14, width: 18, textAlign: "center", flexShrink: 0, opacity: active ? 1 : 0.75 }}>{item.icon}</span>
-                      <span style={{ flex: 1, fontSize: 13 }}>{item.label}</span>
-                      {item.href && <span style={{ fontSize: 9, opacity: 0.35 }}>↗</span>}
-                      {item.badge && (
-                        <span style={{ background: item.badgeColor, color: "#fff", fontSize: 9, fontWeight: 800, borderRadius: 10, padding: "1px 5px", minWidth: 16, textAlign: "center" }}>{item.badge}</span>
-                      )}
-                    </>
-                  );
-                  return item.href ? (
-                    <a key={item.id} href={item.href} target="_blank" rel="noopener noreferrer" style={navStyle}>
-                      {navContent}
-                    </a>
-                  ) : (
-                    <button key={item.id} onClick={() => { setTab(item.id); if (mob) setSidebarOpen(false); }} style={navStyle}>
-                      {navContent}
-                    </button>
-                  );
-                })}
+                {group.items.map(item => renderNavItem(item))}
               </div>
             ))}
           </nav>
