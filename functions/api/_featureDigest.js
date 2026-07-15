@@ -3,7 +3,7 @@
 // sans accès repo live (impossible depuis un Worker) ni appel API externe (pas de nouveau secret).
 // Régénérer manuellement (node scripts/generate-feature-digest.mjs) quand le digest semble périmé —
 // un oubli dégrade juste la fraîcheur du signal, ne casse jamais le build (fichier committé).
-// Dernière génération : 2026-07-10
+// Dernière génération : 2026-07-15
 
 export const ENDPOINTS_DIGEST = [
   "/api/admin-auth (admin-auth.js) — Vérifie le mot de passe admin côté serveur (jamais exposé dans le bundle JS).",
@@ -25,7 +25,7 @@ export const ENDPOINTS_DIGEST = [
   "/api/analytics (analytics.js) — Proxy vers Google Analytics Data API v1beta (GA4)",
   "/api/beds24-bookings (beds24-bookings.js) — Proxy sécurisé vers l'API Beds24 V2 — token jamais exposé au navigateur",
   "/api/beds24-create (beds24-create.js) — Crée une réservation Beds24 V2 directement via API (remplace l'iframe).",
-  "/api/beds24-manage (beds24-manage.js) — Actions : find | confirm | cancel",
+  "/api/beds24-manage (beds24-manage.js) — Actions : find | confirm | cancel (publiques, tunnel voyageur) | restoreGuest (admin)",
   "/api/beds24-prices (beds24-prices.js) — Dérive les tarifs journaliers de Nogent (propId 158192) depuis les réservations Beds24.",
   "/api/beds24-rates (beds24-rates.js) — Récupère les tarifs journaliers Beds24 pour Nogent (propId=158192, roomId=348880)",
   "/api/beds24-refresh (beds24-refresh.js) — arch-009 : Rotation automatique du token Beds24 V2.",
@@ -64,6 +64,7 @@ export const ENDPOINTS_DIGEST = [
   "/api/manage-deposit (manage-deposit.js) — action: \"capture\" | \"cancel\" | \"list\" | \"history\"",
   "/api/memory-distill (memory-distill.js) — Agent-mémoire (B2) : distille l'expérience du réseau (notes qualité llm_evals 7j +",
   "/api/occupancy-stats (occupancy-stats.js) — Occupation réelle 30 jours glissants, un chiffre par bien actif.",
+  "/api/ops-sla-report (ops-sla-report.js) — Rapport mensuel SLA Exploitation (maintenance + stock) — log-036.",
   "/api/orchestrator (orchestrator.js) — Orchestrateur multi-agents : utilise claude-sonnet pour coordonner les 28 agents",
   "/api/qa-run (qa-run.js) — Trigger manuel d'une session QA.",
   "/api/rag-ingest (rag-ingest.js) — #2 RAG — alimente l'index vectoriel avec les VRAIES données : faits biens,",

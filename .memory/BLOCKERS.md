@@ -4,6 +4,19 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
+## En cours
+- **Tâche** : Restaurer la résa Ines Dali (Nogent, Beds24 `89292637`) — nom+prix+statut confirmé, actuellement en statut `black`/Bloqué (nom vide, 0€) malgré des dates correctement prolongées (06→20/07) et 764€+ déjà reçus (Vincent : au moins 1 virement encore manquant, total pas encore final).
+- **Étape** : Action admin `restoreGuest` construite et déployée (`functions/api/beds24-manage.js`, commit `0cdcf32`) mais **jamais exécutée avec succès** — l'API PUT Beds24 était en panne au moment du test (confirmé : `confirm`, code non touché, échoue identiquement ; GET fonctionne, token valide).
+- **Prochaine action** : (1) demander à Vincent si le dernier virement est arrivé + le total final exact, (2) retester `POST /api/beds24-manage {"action":"restoreGuest","bookingId":89292637,"firstName":"Ines","lastName":"Dali","price":<TOTAL_FINAL>}` avec le Bearer CLAUDE_SECRET — si ça échoue encore en 502, vérifier si l'API PUT Beds24 est remontée avant de re-creuser le code.
+- **Fichiers ouverts** : aucun (tout commité/déployé, seule l'exécution de l'action reste à faire).
+- **Contexte critique** : ne PAS deviner le montant final — Vincent a explicitement dit qu'il manque encore un virement. Ne jamais recréer une nouvelle réservation Beds24 pour ce bien (Nogent uniquement, déjà le cas) — `restoreGuest` modifie la résa EXISTANTE `89292637`, ne pas en créer une autre.
+
+## 🟡 2026-07-15 — Scraper Booking.com (`scripts/booking-sync.mjs`) : session Playwright fragile, pas de mode découverte
+> Le profil persistant (`~/.amaryllis-booking-profile`) n'existait plus au moment d'en avoir besoin (dernière fois testé avec succès mi-juin, "NINA GRUBO") — Vincent a dû refaire le login interactif. Une fois refait, le scraper a fonctionné sur un deep-link direct (`booking.html?res_id=X&hotel_id=Y`) mais a ensuite semblé se dégrader après quelques navigations automatisées rapprochées (probable anti-bot Booking, cf. `learnings/AUTOMATION-NAVIGATEUR.md`). Autre limite structurelle : `beds24-manage.js`/`booking-sync.mjs` n'ont aucun moyen de LISTER les réservations récentes pour trouver un `res_id` — il faut que Vincent l'ouvre lui-même dans l'extranet et lise l'URL (ou que Claude regarde son écran via computer-use read-only). **Débloque** : rien d'urgent — contournement (lecture d'écran + écriture directe via `enrichReservation`) déjà utilisé avec succès une fois. Si ça revient souvent, envisager une action de recherche par date d'arrivée dans `beds24-manage.js` (mirroring l'action `find` existante côté Beds24 V2, à vérifier si Booking.com V2 propose un équivalent liste).
+
+## 🟡 2026-07-15 — 1 résa historique (Bruno Lebeau, Schœlcher) toujours étiquetée canal "Direct" malgré le fix
+> Le fix `ADR-CANAL-DIRECT-FORCE-001` a corrigé 4/5 résas historiques mal étiquetées, mais `direct-booking.com-5034337630` (Bruno Lebeau) reste affichée "Direct" — sa ligne D1 `direct_bookings.canal` n'a probablement jamais été renseignée du tout (NULL, pas juste ignorée par l'ancien code), donc le fallback `r.canal || "Direct"` retombe légitimement sur "Direct" faute de vraie valeur à lire. **Débloque** : vérifier directement `SELECT canal FROM direct_bookings WHERE payment_intent_id='booking.com-5034337630'` — si NULL confirmé, poser la vraie valeur ("Booking.com") à la main comme fait pour Ines Dali/Stéphane Alves, pas un bug de code à chasser plus loin.
+
 ## En cours → ✅ terminé le 2026-07-14 — Pipeline enrichissement Airbnb : bug de fond + durcissement
 > Déclenché par une vraie résa Géko (Gwenaelle Decloux) que Vincent voulait vérifier de bout en bout.
 > Commits `9478f55`→`53495c5`.

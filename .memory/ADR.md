@@ -4,6 +4,30 @@
 > Décisions d'archi détaillées (specs complets) → `../docs/superpowers/specs/README.md` (ADR-001→010). Ici = log curaté de session.
 > **Archive mensuelle** : les décisions antérieures au mois courant vivent dans `.memory/archive/ADR-YYYY-MM.md`. Archive actuelle : [`archive/ADR-2026-06.md`](./archive/ADR-2026-06.md) (114 entrées, juin 2026).
 
+## ADR-CANAL-DIRECT-FORCE-001 · 2026-07-15 · Canal réel (Airbnb/Booking) au lieu de "Direct" forcé pour les résas importées par email
+
+1. **Choix** : `fetchDirectBookingsAsEvents()` (Worker) et `trigger-sync.js` (Function) — les 2 chemins qui poussent `direct_bookings` D1 vers le Sheet — forçaient `canal:"Direct"` en dur pour CHAQUE ligne, ignorant la vraie colonne `canal` que `airbnb-email-import.js` (webhook Zapier confirmations Airbnb/Booking) pose pourtant correctement à l'insertion. Corrigé : les 2 lisent maintenant `r.canal || "Direct"` (le défaut de colonne couvre les vraies résas Stripe).
+2. **Alternatives refusées** : corriger uniquement le cas signalé (Stéphane Alves) sans toucher au code — écarté, le bug est systémique (2 chemins identiques, ≥5 résas historiques déjà mal étiquetées trouvées en 1 requête).
+3. **Conséquences attendues** : le canal affiché dans Planning/revenus redevient fiable pour toute résa importée par email (pas juste iCal) — impacte le mix de canaux, la lecture des commissions, et le filtre "🟢 Directes" de l'admin (qui incluait à tort des résas OTA à commission). Se corrige automatiquement sur les résas déjà en base au prochain sync (upsert full-overwrite par id).
+4. **Périmètre** : `workers/ical-sync/index.js` (`fetchDirectBookingsAsEvents`), `functions/api/trigger-sync.js`.
+5. **Statut** : ✅ déployé (commit `a200520`), vérifié en live (4/5 résas historiques corrigées ; Bruno Lebeau reste "Direct" — sa ligne D1 n'a jamais eu de canal renseigné du tout, pas un échec du fix).
+
+## ADR-GAS-COLCACHE-PERF-001 · 2026-07-14/15 · Cache colA/colB par Sheet dans les recherches dynamiques GAS (findChargesTotalRow_ & co.)
+
+1. **Choix** : `findChargesTotalRow_`/`findHistTotalRow_`/`findHistNightsRow_`/`findRowByKeyword_` re-téléchargeaient chacune les colonnes A/B entières du Sheet à CHAQUE appel — appelées 9× par bien (parfois ×4 années via `readHist_`) dans une seule requête `read()`, soit 100+ lectures réseau redondantes vers Google Sheets. Nouveau helper `fetchNameCols_(sheet)` calcule colA/colB UNE FOIS par sheet, passé en paramètre optionnel `cols` (rétro-compatible, fallback sur l'ancien comportement si omis).
+2. **Alternatives refusées** : augmenter seulement le timeout client sans toucher à la cause — fait EN PLUS (20s→50s, marge pour la croissance future du Sheet) mais pas à la place, le vrai gain de vitesse vient du cache.
+3. **Conséquences attendues** : `read()` redevient rapide et fiable même sous charge/quota tendu — root cause du "dashboard n'affiche jamais les nouvelles résas" (badge "⚠ Seed local" rouge = `doSync()` en échec silencieux). Toute nouvelle fonction de recherche dynamique sur ces sheets doit réutiliser ce pattern (accepter `cols` en paramètre) plutôt que refaire un fetch.
+4. **Périmètre** : `appscript/SCRIPT_SHEETS.js` (`fetchNameCols_`, 4 fonctions de recherche, `readAll_`, `readHist_`, `readChargesBlock_`).
+5. **Statut** : ✅ déployé (Apps Script @95, commit `44479b3`), vérifié en live (`read()` répond 200 avec toutes les résas, ~35-55s selon charge — encore loin d'être instantané, la vraie limite semble être le quota Google du jour plus que le code désormais).
+
+## ADR-BEDS24-RESTOREGUEST-001 · 2026-07-15 · Nouvelle action admin `restoreGuest` pour reposer nom+prix+statut sur une résa Beds24
+
+1. **Choix** : incident Ines Dali/Nogent — une résa payante (764€+ reçus, virements confirmés par Vincent) s'est retrouvée en statut `black`/Bloqué côté Beds24 (nom vide, prix 0€) après extension des dates. Aucune action existante ne permettait de reposer nom+prix+statut (`confirm`/`cancel` ne touchent que le statut) → nouvelle action `restoreGuest` dans `beds24-manage.js`, réservée admin (`verifyBearer`, contrairement aux 3 actions publiques du tunnel voyageur).
+2. **Alternatives refusées** : étendre `confirm` pour accepter des champs optionnels — écarté, `confirm`/`cancel` sont des actions PUBLIQUES (tunnel voyageur, rate-limitées mais non authentifiées) ; mélanger une capacité d'écriture arbitraire dans ce chemin aurait été un vrai risque de sécurité.
+3. **Conséquences attendues** : capacité réutilisable pour tout futur incident similaire (résa convertie en bloc calendrier par erreur). Non exécutée à la clôture de session — l'API PUT de Beds24 est tombée en panne pendant le diagnostic (confirmé : `confirm`, code non touché, échoue identiquement ; GET fonctionne, token valide) et le montant final (764€ + 1 virement encore manquant) n'est pas encore connu.
+4. **Périmètre** : `functions/api/beds24-manage.js`.
+5. **Statut** : 🟡 déployé (commit `0cdcf32`) mais **jamais exécuté** — bloqué par (a) Beds24 PUT API indisponible, (b) montant final pas encore confirmé par Vincent. Cf. BLOCKERS `## En cours`.
+
 ## ADR-COORDS-RESIDENCE-001 · 2026-07-12 · Unifier les coordonnées GPS de la Résidence Amaryllis (Zandoli/Géko/Mabouya/Iguana), Villa Amaryllis distincte
 
 1. **Choix** : `src/data/biens.js` avait 5 coordonnées GPS différentes pour les biens Sainte-Luce, dispersées sur 90-200m sans raison (chacune probablement géocodée indépendamment à la création). Vincent a fourni 2 liens Google Maps de partage faisant autorité : Zandoli/Géko/Mabouya/Iguana alignés sur le pin "Résidence Amaryllis" (14.4948561,-60.9259617) ; Villa Amaryllis sur son adresse propre "5 Le Clos de Bellevue" (14.4786714,-60.9409604) — confirmée à ~2,4km de distance, un lieu réellement séparé malgré le nom partagé.

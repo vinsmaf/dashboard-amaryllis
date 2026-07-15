@@ -1,6 +1,6 @@
 # 🗺️ ARCHITECTURE — Locatif (villamaryllis.com)
 
-> **Date :** 2026-07-10 · **Statut :** carte de l'état actuel, à maintenir (pas un historique).
+> **Date :** 2026-07-15 · **Statut :** carte de l'état actuel, à maintenir (pas un historique).
 > But : ne plus jamais re-déduire le système depuis le code. Quand l'archi change, on met à jour ICI.
 > **Pointeurs :** état courant volatil → `.memory/CONTEXT.md` · décisions → `.memory/ADR.md` + `DECISIONS.md` ·
 > leçons → `.memory/LEARNINGS.md` · blocages → `.memory/BLOCKERS.md` · rappel par domaine → `.memory/RECALL.md` ·
@@ -72,7 +72,7 @@ graph TD
     end
 
     subgraph Worker["⏰ Worker amaryllis-ical-sync"]
-        CRON["8 crons (wrangler.toml, vérifié 2026-07-06)<br/>sync · rappels · pricing · agents · éditorial · accountability"]
+        CRON["9 crons (wrangler.toml, vérifié 2026-07-15)<br/>sync · rappels · pricing · agents · éditorial · accountability"]
     end
 
     subgraph Ext["🔌 Intégrations externes"]
@@ -332,7 +332,7 @@ flowchart TD
 - **CSP** : `public/_headers` (centralisé sur `/*`). Tout domaine tracking/tiers DOIT y être ajouté sinon silencieusement bloqué (vérifié par `audit-invariants.mjs` INV4).
 - **Tracking** : GA4 `G-N9BM709ZBL` (`index.html`, Consent Mode v2) + Meta Pixel `1648064656415946` client (`metaPixel.js`, consent-gated) + CAPI server (`_metaCapi.js` via `stripe-webhook.js`, dédup `event_id=pi.id`).
   - **Funnel (4 étapes, GA4)** : `view_item` → `begin_checkout` (clic dates+prix = intérêt) → `add_payment_info` (arrivée écran carte = vrai départ paiement) → `purchase`. Lu via `functions/api/analytics.js` (rapport `funnel`). **Outil CLI : `npm run funnel`** (`scripts/funnel.mjs`) = funnel live, source unique, jamais figé en mémoire (ADR-FUNNEL-LIVE-001).
-  - **Attribution purchase** : event client (`Merci.jsx`, attribution native) + failsafe server MP (`stripe-webhook.js` `ga4Event`) qui envoie param `bien_id` + le **vrai `client_id`/`session_id` GA4** (cookies `_ga`/`_ga_N9BM709ZBL` capturés par `trackingAttribution.js` → metadata Stripe via `attribMeta()`) → évite "Unassigned"/"(not set)" (ADR-ATTR-001, étendu ADR-ATTR-002 2026-07-08). Capture en **localStorage 30j first-touch** (pas sessionStorage — survit à un retour multi-session). Persisté aussi en D1 `direct_bookings` (`channel`/`utm_*`/`gclid`/`fbclid`/`ga_client_id`). Payment Links (`create-payment-link.js`, devis WhatsApp) taggés `channel=whatsapp-devis`, propagés au PaymentIntent via `payment_intent_data[metadata]` (Stripe ne le fait PAS depuis le simple `metadata` du Payment Link — piège déjà géré côté Checkout Sessions dans `complement-checkout.js`/`caution-checkout.js`, manquant ici jusqu'à ce fix).
+  - **Attribution purchase** : event client (`Merci.jsx`, attribution native) + failsafe server MP (`stripe-webhook.js` `ga4Event`) qui envoie param `bien_id` + le **vrai `client_id`/`session_id` GA4** (cookies `_ga`/`_ga_N9BM709ZBL` capturés par `trackingAttribution.js` → metadata Stripe via `attribMeta()`) → évite "Unassigned"/"(not set)" (ADR-ATTR-001, étendu ADR-ATTR-002 2026-07-08). Capture en **localStorage 30j first-touch** (pas sessionStorage — survit à un retour multi-session). Persisté aussi en D1 `direct_bookings` (`channel`/`utm_*`/`gclid`/`fbclid`/`ga_client_id` — 7 colonnes réellement migrées le 2026-07-15, absentes avant cette date malgré cette phrase déjà rédigée telle quelle). Payment Links (`create-payment-link.js`, devis WhatsApp) taggés `channel=whatsapp-devis`, propagés au PaymentIntent via `payment_intent_data[metadata]` (Stripe ne le fait PAS depuis le simple `metadata` du Payment Link — piège déjà géré côté Checkout Sessions dans `complement-checkout.js`/`caution-checkout.js`, manquant ici jusqu'à ce fix).
 - **Rate limiting** : helper partagé `_ratelimit.js` (`rateLimit(db, {key, limit, windowSec})`, D1 `rate_limits_v2`, fail-open) — consommé par `admin-auth`, `contact`, `chat`, `beds24-*`, `promo-codes`, `client-errors`, `send-custom-email`, `_skills`, etc. Non exposé en endpoint HTTP.
 
 ### INVENTAIRE D1 `revenue_manager` (~50 tables, base UNIQUE, par domaine)
@@ -364,7 +364,8 @@ flowchart TD
 | Cron | Horaire | Ce qu'il fait |
 |---|---|---|
 | `*/10 * * * *` | toutes 10 min | `runSync` (iCal+directes→Sheet, dédup KV) · `runCancelUnpaidBeds24Bookings` · `runEditorialAutoPublish` (posts `approved` dus → FB+IG) · `send-relance-panier` |
-| `0 9 * * *` | 9h UTC / 5h MTQ | **`morning-brief` (brief matinal ntfy)** · **`kpi-sentinel` (9 signaux + watchdog ntfy)** · ai-ops refresh · monitor · rappels hôte J-7..J+3 · digest arrivées · alertes occupation · `runOccupancySnapshot`→`rm_kpi_snapshots` · gap/yield pricing · `caution-cron` + caution auto-release · inventaire · `devis-solde-cron` · `runEnrichFromEmails`→`enrich-from-emails.js` (complète nom+payout des résas Airbnb depuis l'onglet « Emails », **AVANT** coherence-check) · coherence-check · agents-run(all) + orchestrator + eval + digest IA |
+| `0 * * * *` | horaire (nouveau 2026-07-15) | **`runEnrichFromEmails`→`enrich-from-emails.js`** — complète nom+prix+`nb_guests` des résas Airbnb/OTA depuis l'onglet « Emails », déclenche le rebuild revenus si un prix est posé, ntfy succès + alerte "jamais enrichi >6h". Sorti du cron 9h où il tournait en réalité 1×/jour malgré un commentaire de code affirmant "horaire" (jusqu'à 22h de latence) — ADR-AIRBNB-ENRICH-CRON-001. |
+| `0 9 * * *` | 9h UTC / 5h MTQ | **`morning-brief` (brief matinal ntfy)** · **`kpi-sentinel` (9 signaux + watchdog ntfy)** · ai-ops refresh · monitor · rappels hôte J-7..J+3 · digest arrivées · alertes occupation · `runOccupancySnapshot`→`rm_kpi_snapshots` · gap/yield pricing · `caution-cron` + caution auto-release · inventaire · `devis-solde-cron` · coherence-check · agents-run(all) + orchestrator + eval + digest IA |
 | `0 11 * * 1` | lundi 11h UTC / 7h MTQ | **`runReunioneGenerale`** — accountability D1 (`category=reunion`) + backlog locatif (critique/haute) + fleet patrimoine HTTP + synthèse LLM (`/api/ai-summary`) + top 3 actions créées D1 (`rg-YYYYMMDD-N`, `category=reunion`) + mémoire delta (`rg-memory-last`) + ntfy · `FLEET_SECRET` Worker requis |
 | `0 12 * * *` | 12h UTC / 8h MTQ | `runEditorialReseed` (30j) + `runEditorialDraftGen` (drafts J+2 → gate) |
 | `0 13 * * *` | 13h UTC / 9h MTQ | `charge-balance` (soldes 2× J-30 — migré cron-job.org 7798126) · **`docs-refresh` → `rag-ingest`** (2026-07-04, snapshot factuel quotidien SEO+pricing → D1 `docs_snapshots` → réingestion RAG immédiate) |
@@ -372,7 +373,7 @@ flowchart TD
 | `0 1 1 * *` | 1er du mois 1h UTC | export comptable CSV · article SEO long-tail · rappel rotation tokens · `runReviewRefresh` (import avis Apify) → **`runReviewDrafts`** (2026-07-08, enchaîné auto : classification+brouillon LLM sur les nouveaux avis, `action=draft`, jamais rebranché avant) → alerte ntfy+email si ≥1 avis escaladé (`notifyEscalatedReviews`) · `seasonal-update`→`seasonal_memory` |
 | `0 20 * * 7` | dimanche 20h UTC / 16h MTQ | **`runAccountability`** — accountability hebdo, prépare la Réunion Générale du lundi 11h (ajouté à cette table 2026-07-06, cron confirmé présent dans `wrangler.toml`) |
 
-**Total vérifié 2026-07-06 : 8 crons dans `wrangler.toml`** (`*/10 * * * *`, `0 9 * * *`, `0 11 * * 1`, `0 12 * * *`, `0 13 * * *`, `0 6 * * 1`, `0 1 1 * *`, `0 20 * * 7`) — cohérent avec §3.
+**Total vérifié 2026-07-15 : 9 crons dans `wrangler.toml`** (`*/10 * * * *`, **`0 * * * *`** nouveau, `0 9 * * *`, `0 11 * * 1`, `0 12 * * *`, `0 13 * * *`, `0 6 * * 1`, `0 1 1 * *`, `0 20 * * 7`) — cohérent avec §3.
 
 ### Crons cron-job.org — locatif n'en a PLUS aucun actif (vérifié 2026-07-12 via API)
 
