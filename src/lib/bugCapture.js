@@ -6,17 +6,22 @@
 //
 // Dédoublonnage + throttle côté client pour ne pas spammer l'endpoint.
 
+import { isStaleChunkError } from "./staleChunk.js";
+
 const ENDPOINT = "/api/client-errors";
 const seen = new Set();        // empreintes déjà envoyées dans cette session
 let sentCount = 0;             // plafond dur par session
 const MAX_PER_SESSION = 25;
 
 // Bruit navigateur connu — on ne remonte pas (doublon du filtre serveur, évite le trafic).
+// Testé sur le message ET la stack (ex: MetaMask ne mentionne "chrome-extension" que dans
+// sa stack, jamais dans son message "Failed to connect to MetaMask" — trouvé en creusant
+// pourquoi ce bruit revenait sans cesse en "new" malgré ce filtre, cf. bug-f653d82ddd9acf0d).
 const NOISE = [
   /ResizeObserver loop/i,
   /Non-Error promise rejection/i,
   /^Script error\.?$/i,
-  /chrome-extension|moz-extension|safari-extension/i,
+  /chrome-extension|moz-extension|safari-extension|safari-web-extension/i,
   /Load failed$/i,
   /fbav|fb_iab|instagram/i,
 ];
@@ -53,7 +58,9 @@ function report(kind, message, stack) {
   if (sentCount >= MAX_PER_SESSION) return;
   const msg = String(message || "").slice(0, 600);
   if (!msg) return;
-  if (NOISE.some(re => re.test(msg))) return;
+  const stackStr = stack ? String(stack) : "";
+  if (NOISE.some(re => re.test(msg) || re.test(stackStr))) return;
+  if (isStaleChunkError(msg, stackStr)) return; // faux positif connu (bot crawlers, chunk périmé)
   const key = kind + "|" + fp(msg) + "|" + location.pathname;
   if (seen.has(key)) return;
   seen.add(key);
