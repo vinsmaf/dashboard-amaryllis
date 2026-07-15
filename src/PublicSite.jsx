@@ -3742,7 +3742,7 @@ function ReboundSuggestions({ rebound, currentNom, onDismiss }) {
 }
 
 // ── Property Detail (full-screen) ───────────────────────────────
-function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail = false, isPage = false, initialCheckin = null, initialCheckout = null }) {
+function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail = false, isPage = false, initialCheckin = null, initialCheckout = null, beds24RatesMap = {} }) {
   useMinNights(); // re-render when admin changes min nights
   const { t, lang } = useLang();
   const [photoIdx, setPhotoIdx] = useState(0);
@@ -4033,13 +4033,19 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
   }, []);
 
   // ── Calcul prix sélection calendrier (utilisé top bar + corps) ──
+  // Nogent (bien.useBeds24) : dailyPricesMap est le système de prix Martinique
+  // (site-config, non pertinent ici) — la vraie source de vérité est beds24RatesMap
+  // (fetchée par le parent depuis /api/beds24-rates, déjà utilisée par Beds24Modal).
+  // Sans ça, ce header/cette estimation affichait un montant différent du total réel
+  // du modal de paiement (ex. 145€ ici vs 135€ dans Beds24Modal) — trouvé par audit 2026-07-15.
+  const effectivePricesMap = bien.useBeds24 ? beds24RatesMap : dailyPricesMap;
   const calNights = calCheckin && calCheckout ? dateDiff(calCheckin, calCheckout) : 0;
   const calRawTotal = useMemo(() => {
     if (!calNights || !calCheckin) return 0;
     let sum = 0, cur = calCheckin;
-    for (let i = 0; i < calNights; i++) { sum += dailyPricesMap[cur] ?? bien.prix; cur = addDays(cur, 1); }
+    for (let i = 0; i < calNights; i++) { sum += effectivePricesMap[cur] ?? bien.prix; cur = addDays(cur, 1); }
     return sum;
-  }, [calNights, calCheckin, dailyPricesMap, bien.prix]);
+  }, [calNights, calCheckin, effectivePricesMap, bien.prix]);
   const calDiscountRate   = getDiscount(calNights);
   const calDiscountAmount = calDiscountRate > 0 ? Math.round(calRawTotal * calDiscountRate) : 0;
   const calFrais  = FRAIS_MENAGE[bien.id] ?? 0;
@@ -4254,7 +4260,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
             style={{ flexShrink: 0 }}
           >
             {calCheckin && calCheckout && !calBelowMin
-              ? `${calNights} nuits · ${calTotal}€ →`
+              ? `${calNights} nuit${calNights > 1 ? "s" : ""} · ${calTotal}€ →`
               : lang === "fr" ? `${CTA_LABEL_FR} · ${bien.prix}€/nuit` : `BOOK · €${bien.prix}/night`}
           </Button>
         ) : (
@@ -9499,6 +9505,7 @@ export default function PublicSite() {
           loadingAvail={loadingAvail}
           initialCheckin={_directCheckin || bookingInitialDates.checkin}
           initialCheckout={_directCheckout || bookingInitialDates.checkout}
+          beds24RatesMap={beds24RatesMap}
         />
         {selectedBien && (
           <BookingModal
@@ -10276,7 +10283,7 @@ export default function PublicSite() {
 
       {/* ── PROPERTY DETAIL ── */}
       {detailBien && !selectedBien && (
-        <PropertyDetail bien={detailBien} onClose={() => openDetail(null)} onBook={openBien} blockedDates={blockedDates} loadingAvail={loadingAvail} initialCheckin={bookingInitialDates.checkin} initialCheckout={bookingInitialDates.checkout} />
+        <PropertyDetail bien={detailBien} onClose={() => openDetail(null)} onBook={openBien} blockedDates={blockedDates} loadingAvail={loadingAvail} initialCheckin={bookingInitialDates.checkin} initialCheckout={bookingInitialDates.checkout} beds24RatesMap={beds24RatesMap} />
       )}
 
       {/* ── BEDS24 MODAL (Nogent) ── */}
