@@ -2057,6 +2057,160 @@ function generateDevis({ bien, checkin, checkout, nights, rawTotal, discountRate
   }
 }
 
+// ── Devis PDF groupé (résidence multi-logements) ────────────────────
+// Même mécanique que generateDevis() (HTML imprimable, aucun serveur/persistance),
+// étendue à plusieurs logements — un bloc tarifaire par bien + un total consolidé.
+function generateGroupDevis({ biens, checkin, checkout, nights, guests, breakdowns, total, depositTotal }) {
+  if (!biens?.length) return;
+  const validUntil = new Date(Date.now() + 48 * 3600 * 1000).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
+  const today = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
+  const ref = `AMR-GRP-${Date.now().toString(36).toUpperCase().slice(-6)}`;
+  const logementsLabel = biens.map(b => b.nom).join(" + ");
+  const discPct = Math.round((getDiscount(nights) || 0) * 100);
+  const discLabel = discPct > 0 ? `Remise ${discountLabel(nights)} (−${discPct}%)` : "Aucune remise";
+
+  const propertyBlocks = breakdowns.map(({ bien, rawTotal, discAmt, frais, extraGuests, extraFee, total: subtotal }) => `
+  <div class="property-section">
+    <img class="property-photo" src="https://villamaryllis.com${bien.photos[0]}" alt="${bien.nom}" />
+    <div class="property-info">
+      <div class="name">${bien.nom}</div>
+      <div class="location">📍 ${bien.lieu}</div>
+    </div>
+  </div>
+  <table>
+    <thead><tr><th>Description</th><th>Détail</th><th>Montant</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Hébergement</td>
+        <td style="color:#7a6b5a;font-size:12px;">${nights} nuit${nights > 1 ? "s" : ""} · ${Math.round(rawTotal / nights)}€/nuit moy.</td>
+        <td>${rawTotal}€</td>
+      </tr>
+      ${discAmt > 0 ? `<tr class="discount"><td>${discLabel}</td><td style="color:#c47254;font-size:12px;">Remise séjour</td><td>−${discAmt}€</td></tr>` : ""}
+      ${frais > 0 ? `<tr><td>Frais de ménage</td><td style="color:#7a6b5a;font-size:12px;">Nettoyage fin de séjour</td><td>${frais}€</td></tr>` : ""}
+      ${extraFee > 0 ? `<tr><td>Supplément voyageurs</td><td style="color:#7a6b5a;font-size:12px;">${extraGuests} pers. suppl. × ${nights} nuit${nights > 1 ? "s" : ""} × ${EXTRA_GUEST_RATE[bien.id] ?? 30}€</td><td>${extraFee}€</td></tr>` : ""}
+      <tr class="total-row"><td colspan="2">Sous-total ${bien.nom}</td><td>${subtotal}€</td></tr>
+    </tbody>
+  </table>`).join("");
+
+  const html = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Devis — ${logementsLabel}</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background:#fff; color:#0e3b3a; font-size:14px; }
+    .page { max-width:720px; margin:0 auto; padding:40px 40px 60px; }
+    .header { background:#0e3b3a; color:#fff; border-radius:12px; padding:28px 32px; margin-bottom:28px; display:flex; justify-content:space-between; align-items:flex-start; }
+    .header-brand .logo { font-size:22px; font-weight:200; letter-spacing:0.25em; text-transform:uppercase; }
+    .header-brand .tagline { font-size:11px; opacity:0.6; margin-top:3px; letter-spacing:1px; text-transform:uppercase; }
+    .header-doc { text-align:right; }
+    .header-doc .doc-title { font-size:26px; font-weight:800; letter-spacing:-0.5px; }
+    .header-doc .doc-ref { font-size:11px; opacity:0.55; margin-top:4px; }
+    .header-doc .doc-date { font-size:11px; opacity:0.55; margin-top:2px; }
+    .trip-dates { margin-bottom:20px; font-size:13px; color:#0e3b3a; background:#f4ecdc; border-radius:7px; padding:10px 14px; }
+    .trip-dates strong { color:#c47254; }
+    .property-section { display:flex; gap:20px; margin-bottom:12px; align-items:flex-start; }
+    .property-photo { width:110px; height:74px; object-fit:cover; border-radius:8px; flex-shrink:0; border:1px solid #e0d4bc; }
+    .property-info .name { font-size:17px; font-weight:700; color:#0e3b3a; }
+    .property-info .location { font-size:12px; color:#7a6b5a; margin-top:3px; }
+    table { width:100%; border-collapse:collapse; margin-bottom:22px; }
+    thead th { background:#0e3b3a; color:#fff; padding:9px 14px; text-align:left; font-size:12px; font-weight:600; }
+    thead th:last-child { text-align:right; }
+    tbody tr { border-bottom:1px solid #e0d4bc; }
+    tbody tr:last-child { border-bottom:none; }
+    tbody td { padding:10px 14px; font-size:13px; color:#0e3b3a; }
+    tbody td:last-child { text-align:right; font-weight:600; }
+    tbody tr.discount td { color:#c47254; }
+    tbody tr.total-row { background:#faf5e9; }
+    tbody tr.total-row td { font-size:13px; font-weight:700; padding:11px 14px; }
+    tbody tr.total-row td:last-child { color:#c47254; }
+    .grand-total { background:#0e3b3a; color:#fff; border-radius:10px; padding:16px 20px; display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; }
+    .grand-total .label { font-size:14px; font-weight:600; }
+    .grand-total .amount { font-size:22px; font-weight:800; }
+    .deposit-box { background:#fffbeb; border:1px solid rgba(245,158,11,0.3); border-radius:10px; padding:14px 18px; margin-bottom:24px; }
+    .deposit-box .dep-title { font-weight:700; color:#92400e; font-size:13px; margin-bottom:4px; }
+    .deposit-box .dep-desc { font-size:12px; color:#78350f; line-height:1.5; }
+    .validity-box { background:#f0fdf4; border:1px solid rgba(34,197,94,0.25); border-radius:10px; padding:14px 18px; margin-bottom:24px; }
+    .validity-box .val-title { font-weight:700; color:#166534; font-size:13px; margin-bottom:4px; }
+    .validity-box .val-desc { font-size:12px; color:#15803d; }
+    .table-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:#7a6b5a; margin-bottom:10px; }
+    .contact-section { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:28px; }
+    .contact-item { background:#f4ecdc; border-radius:7px; padding:10px 14px; font-size:12px; color:#0e3b3a; flex:1; min-width:160px; }
+    .contact-item .label { font-weight:700; font-size:10px; text-transform:uppercase; letter-spacing:1px; color:#7a6b5a; margin-bottom:3px; }
+    .footer { border-top:1px solid #e0d4bc; padding-top:16px; font-size:11px; color:#7a6b5a; text-align:center; line-height:1.6; }
+    .badge { display:inline-block; background:#0e3b3a; color:#fff; border-radius:20px; padding:4px 12px; font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px; }
+    @media print { body { print-color-adjust:exact; -webkit-print-color-adjust:exact; } .page { padding:20px; } .no-print { display:none !important; } }
+  </style>
+</head>
+<body>
+<div class="page">
+  <div class="no-print" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+    <div style="font-size:13px;color:#7a6b5a;">Devis prêt — enregistrez-le en PDF ou imprimez-le.</div>
+    <button onclick="window.print()" style="background:#0e3b3a;color:#fff;border:none;border-radius:8px;padding:10px 22px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:0.04em;">
+      🖨 Enregistrer en PDF
+    </button>
+  </div>
+
+  <div class="header">
+    <div class="header-brand">
+      <div class="logo">Amaryllis</div>
+      <div class="tagline">Locations de prestige · Martinique &amp; Île-de-France</div>
+    </div>
+    <div class="header-doc">
+      <div class="doc-title">DEVIS GROUPÉ</div>
+      <div class="doc-ref">Réf. ${ref}</div>
+      <div class="doc-date">Émis le ${today}</div>
+    </div>
+  </div>
+
+  <div class="trip-dates">
+    <strong>Arrivée :</strong> ${formatDateLong(checkin)} &nbsp;→&nbsp; <strong>Départ :</strong> ${formatDateLong(checkout)}
+    &nbsp;·&nbsp; <strong>${nights} nuit${nights > 1 ? "s" : ""}</strong> &nbsp;·&nbsp; <strong>${guests} voyageur${guests > 1 ? "s" : ""}</strong> &nbsp;·&nbsp; ${logementsLabel}
+  </div>
+
+  <div class="table-title">Détail par logement</div>
+  ${propertyBlocks}
+
+  <div class="grand-total">
+    <div class="label">TOTAL SÉJOUR GROUPÉ</div>
+    <div class="amount">${total}€</div>
+  </div>
+
+  ${depositTotal > 0 ? `<div class="deposit-box">
+    <div class="dep-title">🔒 Dépôt de garantie total — ${depositTotal}€</div>
+    <div class="dep-desc">Pré-autorisé sur carte bancaire avant l'arrivée (un montant par logement), jamais débité — libéré automatiquement après le départ si aucun dommage n'est constaté.</div>
+  </div>` : ""}
+
+  <div class="validity-box">
+    <div class="val-title">✅ Validité du devis — 48 heures</div>
+    <div class="val-desc">Ce devis est valable jusqu'au ${validUntil}. Les disponibilités et tarifs ne sont garantis qu'au moment de la réservation.</div>
+  </div>
+
+  <div class="table-title">Nous contacter</div>
+  <div class="contact-section">
+    <div class="contact-item"><div class="label">WhatsApp / Téléphone</div>+33 6 10 88 07 72</div>
+    <div class="contact-item"><div class="label">Email</div>contact@villamaryllis.com</div>
+    <div class="contact-item"><div class="label">Site web</div>villamaryllis.com</div>
+    <div class="contact-item"><div class="label">Réservation directe</div>Sans frais de service Airbnb</div>
+  </div>
+
+  <div class="footer">
+    <div class="badge">Réservation directe · Zéro frais Airbnb</div><br/>
+    Amaryllis Locations · villamaryllis.com · contact@villamaryllis.com<br/>
+    Tarifs indicatifs. Le total définitif est confirmé au moment de la réservation.
+  </div>
+</div>
+</body>
+</html>`;
+
+  const win = window.open("", "_blank", "width=820,height=920");
+  if (win) {
+    win.document.write(html);
+    win.document.close();
+  }
+}
+
 // ── Booking Modal ────────────────────────────────────────────────
 // ── Upsells par propriété ──────────────────────────────────────────────────
 const UPSELL_CATALOG = {
@@ -6451,8 +6605,8 @@ function GroupBookingBuilder({ biens }) {
   }, [checkin, checkout, nights]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const allPrices = loadDailyPrices();
-  function bienTotal(b) {
-    if (!nights) return 0;
+  function bienBreakdown(b) {
+    if (!nights) return { rawTotal: 0, discAmt: 0, frais: 0, extraGuests: 0, extraFee: 0, total: 0 };
     const map = allPrices[b.id] || {};
     let sum = 0, cur = checkin;
     for (let i = 0; i < nights; i++) { sum += map[cur] ?? b.prix; cur = addDays(cur, 1); }
@@ -6463,8 +6617,9 @@ function GroupBookingBuilder({ biens }) {
     const baseGuests = BASE_GUESTS[b.id];
     const extraGuests = baseGuests != null ? Math.max(0, b.capacite - baseGuests) : 0;
     const extraFee = extraGuests * (EXTRA_GUEST_RATE[b.id] || 0) * nights;
-    return sum - discAmt + frais + extraFee;
+    return { rawTotal: sum, discAmt, frais, extraGuests, extraFee, total: sum - discAmt + frais + extraFee };
   }
+  function bienTotal(b) { return bienBreakdown(b).total; }
 
   function toggle(id) {
     if (nights && avail[id] === false) return; // indispo → non sélectionnable
@@ -6476,6 +6631,7 @@ function GroupBookingBuilder({ biens }) {
   const totalPrice = nights ? selectedBiens.reduce((s, b) => s + bienTotal(b), 0) : 0;
   const capOk      = totalCap >= guests;
   const canQuote   = nights > 0 && selectedBiens.length > 0 && capOk;
+  const depositTotal = selectedBiens.reduce((s, b) => s + (DEPOSIT_AMOUNTS[b.id] ?? 0), 0);
 
   const mailto = `mailto:contact@villamaryllis.com?subject=${encodeURIComponent(`Réservation groupée Résidence Amaryllis — ${guests} pers`)}&body=${encodeURIComponent(`Bonjour,\n\nJe souhaite réserver la formule groupée suivante (paiement unique) :\n${selectedBiens.map(b => "• " + b.nom).join("\n")}\n\nArrivée : ${checkin ? formatDateLong(checkin) : "—"}\nDépart : ${checkout ? formatDateLong(checkout) : "—"}\nNuits : ${nights}\nVoyageurs : ${guests}\nCapacité totale : ${totalCap} personnes\nTotal estimé : ${totalPrice}€\n\nMerci de me confirmer la disponibilité et de m'envoyer le lien de paiement.`)}`;
 
@@ -6556,13 +6712,26 @@ function GroupBookingBuilder({ biens }) {
           )}
         </div>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
-          <button
-            onClick={() => { if (canQuote) setShowPay(true); }}
-            disabled={!canQuote}
-            style={{ background: canQuote ? CORAL : SAND, color: canQuote ? "#fff" : MUTED, border: "none", padding: "13px 26px", borderRadius: 8, fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: "0.1em", textTransform: "uppercase", whiteSpace: "nowrap", cursor: canQuote ? "pointer" : "not-allowed" }}
-          >
-            Réserver et payer →
-          </button>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button
+              onClick={() => canQuote && generateGroupDevis({
+                biens: selectedBiens, checkin, checkout, nights, guests,
+                breakdowns: selectedBiens.map(b => ({ bien: b, ...bienBreakdown(b) })),
+                total: totalPrice, depositTotal,
+              })}
+              disabled={!canQuote}
+              style={{ background: "transparent", border: `1px solid ${SAND}`, color: MUTED, borderRadius: 8, padding: "13px 16px", fontSize: 12, fontWeight: 600, cursor: canQuote ? "pointer" : "not-allowed", fontFamily: "'Jost', sans-serif", letterSpacing: "0.04em", whiteSpace: "nowrap", opacity: canQuote ? 1 : 0.5 }}
+            >
+              📄 Devis PDF
+            </button>
+            <button
+              onClick={() => { if (canQuote) setShowPay(true); }}
+              disabled={!canQuote}
+              style={{ background: canQuote ? CORAL : SAND, color: canQuote ? "#fff" : MUTED, border: "none", padding: "13px 26px", borderRadius: 8, fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: "0.1em", textTransform: "uppercase", whiteSpace: "nowrap", cursor: canQuote ? "pointer" : "not-allowed" }}
+            >
+              Réserver et payer →
+            </button>
+          </div>
           <a href={canQuote ? mailto : undefined} target={canQuote ? "_blank" : undefined} rel="noopener noreferrer"
             onClick={e => { if (!canQuote) e.preventDefault(); }}
             style={{ fontSize: 11, color: MUTED, fontFamily: "'Jost', sans-serif", textDecoration: "underline", pointerEvents: canQuote ? "auto" : "none", opacity: canQuote ? 1 : 0.5 }}>
