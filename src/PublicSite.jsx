@@ -8568,9 +8568,35 @@ function SignaturePad({ onChange }) {
 // payment:{fullUrl,acompteUrl,acompte,solde} }
 function DevisGroupePaiement() {
   const params = new URLSearchParams(window.location.search);
-  const [data] = useState(() => {
+  // Décodage direct du payload ?d= (lien long)
+  const [data, setData] = useState(() => {
     try { return JSON.parse(atob(params.get("d") || "")); } catch { return null; }
   });
+  // Lien court /rg/{code} (même mécanisme que /r/{code} pour DevisPage) : payload résolu côté serveur
+  const [shortLoading, setShortLoading] = useState(() => !data && /^\/rg\/[^/]+/.test(window.location.pathname));
+
+  useEffect(() => {
+    if (data) return;
+    const m = window.location.pathname.match(/^\/rg\/([^/]+)/);
+    if (!m) return;
+    fetch(`/api/shorten?code=${encodeURIComponent(m[1])}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.ok && d.d) {
+          try { setData(JSON.parse(atob(d.d))); } catch { /* payload corrompu */ }
+        }
+        setShortLoading(false);
+      })
+      .catch(() => setShortLoading(false));
+  }, []); // eslint-disable-line
+
+  if (shortLoading) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#f4ecdc", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI', system-ui, sans-serif", color: "#0e3b3a" }}>
+        Chargement du devis…
+      </div>
+    );
+  }
 
   if (!data) {
     return (
@@ -9832,7 +9858,7 @@ export default function PublicSite() {
   const path = window.location.pathname;
   if (path === "/merci") return <MerciPage />;
   if (path === "/devis" || path.startsWith("/r/")) return <DevisPage />;
-  if (path === "/devis-groupe") return <DevisGroupePaiement />;
+  if (path === "/devis-groupe" || path.startsWith("/rg/")) return <DevisGroupePaiement />;
 
   // ── Mode page propriété directe ──────────────────────────────
   // Normalise le chemin : /amaryllis/ → amaryllis (trailing slash compatible redirects Cloudflare)

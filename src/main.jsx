@@ -277,6 +277,7 @@ const isKnown = KNOWN.includes(path)
   || path === "/stories-template"
   || path === "/guide-menage"
   || path.startsWith("/r/")
+  || path.startsWith("/rg/")
   || BIEN_IDS.some(id => path === `/${id}`);
 
 let Component;
