@@ -7,6 +7,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { DEFAULT_PRIX, BIEN_LABELS, BIEN_IDS, PRIX_LIMITS, MOIS_CAL, CAL_BIEN_IDS, N } from "../App.jsx";
 import { loadDailyPrices, saveDailyPrices, applyServerPriceOverrides, loadPriceOverrides, SEED_DAILY_PRICES } from "../seedPrices.js";
+import { adminFetch } from "../lib/apiFetch.js";
 
 // ── Prix min/max dynamiques depuis D1 rm_properties ──────────────────────────
 // Cache en mémoire pour éviter les rechargements répétés
@@ -131,7 +132,7 @@ export default function CalendrierTarifs({ reservations = [] }) {
       if (!pendingSync.current) return;
       try {
         const overrides = JSON.parse(localStorage.getItem("amaryllis_daily_prices_v2") || "{}");
-        fetch("/api/site-config", {
+        adminFetch("/api/site-config", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ type: "prices", config: overrides }),
@@ -239,7 +240,7 @@ export default function CalendrierTarifs({ reservations = [] }) {
       // ⚠️ PAS de keepalive ici : keepalive plafonne le corps à 64 Ko et
       //    rejette les gros catalogues de prix (beaucoup de dates éditées).
       //    keepalive reste uniquement pour le flush au démontage (best-effort).
-      const r = await fetch("/api/site-config", {
+      const r = await adminFetch("/api/site-config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type: "prices", config: overrides }),
