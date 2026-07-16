@@ -32,6 +32,7 @@ export const TR = {
     // Card villa
     guests:         "pers.",
     rooms:          "ch.",
+    bathrooms:      "sdb",
     from:           "À partir de",
     perNight:       "/nuit",
     book:           "Réserver",
@@ -133,6 +134,7 @@ export const TR = {
     // Card villa
     guests:         "guests",
     rooms:          "bd.",
+    bathrooms:      "ba.",
     from:           "From",
     perNight:       "/night",
     book:           "Book now",

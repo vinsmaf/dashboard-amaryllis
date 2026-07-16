@@ -4262,7 +4262,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
   }, []);
 
   const arrowBtn = (label, fn) => (
-    <button key={label} aria-label={label === "←" ? "Photo précédente" : "Photo suivante"} onClick={e => { e.stopPropagation(); fn(); }} style={{
+    <button key={label} aria-label={label === "←" ? (lang === "fr" ? "Photo précédente" : "Previous photo") : (lang === "fr" ? "Photo suivante" : "Next photo")} onClick={e => { e.stopPropagation(); fn(); }} style={{
       pointerEvents: "auto",
       background: "rgba(250,245,233,0.18)", backdropFilter: "blur(8px)",
       border: "1px solid rgba(250,245,233,0.35)", color: "var(--c-ivory)",
@@ -4320,7 +4320,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
           )}
           {/* Close */}
           <button
-            aria-label="Fermer"
+            aria-label={lang === "fr" ? "Fermer" : "Close"}
             onClick={() => setLightboxOpen(false)}
             style={{
               position: "absolute", top: 18, right: 20,
@@ -4333,7 +4333,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
           {/* Reset zoom (visible seulement si zoomé) */}
           {zoomScale > 1 && (
             <button
-              aria-label="Réinitialiser le zoom"
+              aria-label={lang === "fr" ? "Réinitialiser le zoom" : "Reset zoom"}
               onClick={e => { e.stopPropagation(); resetZoom(); }}
               style={{
                 position: "absolute", top: 18, right: 74,
@@ -4356,8 +4356,8 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
           {/* Arrows */}
           {photos.length > 1 && (
             <>
-              <button aria-label="Photo précédente" onClick={e => { e.stopPropagation(); goPrev(); }} style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", width: 52, height: 52, borderRadius: "50%", cursor: "pointer", fontSize: 22, display: "flex", alignItems: "center", justifyContent: "center" }}>←</button>
-              <button aria-label="Photo suivante" onClick={e => { e.stopPropagation(); goNext(); }} style={{ position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", width: 52, height: 52, borderRadius: "50%", cursor: "pointer", fontSize: 22, display: "flex", alignItems: "center", justifyContent: "center" }}>→</button>
+              <button aria-label={lang === "fr" ? "Photo précédente" : "Previous photo"} onClick={e => { e.stopPropagation(); goPrev(); }} style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", width: 52, height: 52, borderRadius: "50%", cursor: "pointer", fontSize: 22, display: "flex", alignItems: "center", justifyContent: "center" }}>←</button>
+              <button aria-label={lang === "fr" ? "Photo suivante" : "Next photo"} onClick={e => { e.stopPropagation(); goNext(); }} style={{ position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", width: 52, height: 52, borderRadius: "50%", cursor: "pointer", fontSize: 22, display: "flex", alignItems: "center", justifyContent: "center" }}>→</button>
             </>
           )}
         </div>
@@ -4371,9 +4371,9 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
         ...(isPage ? { position: "sticky", top: 0, zIndex: 200 } : {}),
       }}>
         {isPage ? (
-          <a href="/" style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--fg-on-ink)", opacity: 0.7, fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13, letterSpacing: "0.1em", textDecoration: "none", flexShrink: 0 }}>← Accueil</a>
+          <a href="/" style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--fg-on-ink)", opacity: 0.7, fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13, letterSpacing: "0.1em", textDecoration: "none", flexShrink: 0 }}>← {lang === "fr" ? "Accueil" : "Home"}</a>
         ) : (
-          <button onClick={onClose} style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", color: "var(--fg-on-ink)", opacity: 0.7, cursor: "pointer", fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13, letterSpacing: "0.1em", padding: 0, flexShrink: 0 }}>← Retour</button>
+          <button onClick={onClose} style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", color: "var(--fg-on-ink)", opacity: 0.7, cursor: "pointer", fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13, letterSpacing: "0.1em", padding: 0, flexShrink: 0 }}>← {lang === "fr" ? "Retour" : "Back"}</button>
         )}
         <div style={{ fontFamily: "'Jost', sans-serif", fontWeight: 200, fontSize: isMobile ? 11 : 13, letterSpacing: isMobile ? "0.2em" : "0.45em", color: "var(--c-ivory)", textTransform: "uppercase", flex: 1, textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {bien.nom}
@@ -4385,7 +4385,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
         )}
         {typeof navigator !== "undefined" && (
           <button
-            aria-label="Partager"
+            aria-label={lang === "fr" ? "Partager" : "Share"}
             onClick={async () => {
               const url = `https://villamaryllis.com/${bien.id}`;
               if (navigator.share) {
@@ -4402,7 +4402,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
             onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(250,245,233,0.5)"; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(250,245,233,0.22)"; }}
           >
-            {shareCopied ? "✓" : isMobile ? "📤" : "📤 Partager"}
+            {shareCopied ? "✓" : isMobile ? "📤" : `📤 ${lang === "fr" ? "Partager" : "Share"}`}
           </button>
         )}
         {!isMobile && <ThemeToggle inline />}
@@ -4414,7 +4414,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
             style={{ flexShrink: 0 }}
           >
             {calCheckin && calCheckout && !calBelowMin
-              ? `${calNights} nuit${calNights > 1 ? "s" : ""} · ${calTotal}€ →`
+              ? `${t("nights", calNights)} · ${calTotal}€ →`
               : lang === "fr" ? `${CTA_LABEL_FR} · ${bien.prix}€/nuit` : `BOOK · €${bien.prix}/night`}
           </Button>
         ) : (
@@ -4570,7 +4570,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                       <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "rgba(255,255,255,0.6)", fontFamily: "'Jost', sans-serif" }}>
                         <Icon name="users" size={13} color="rgba(255,255,255,0.6)" />{bien.capacite}
                         <span style={{ opacity: 0.4 }}>·</span>
-                        <Icon name="bed" size={13} color="rgba(255,255,255,0.6)" />{bien.chambres} ch.
+                        <Icon name="bed" size={13} color="rgba(255,255,255,0.6)" />{bien.chambres} {t("rooms")}
                       </span>
                       {bien.tag && <Chip variant="onPhoto">{bien.tag}</Chip>}
                     </div>
@@ -4738,18 +4738,20 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                 <span style={{ fontSize: 22, flexShrink: 0 }}>🏡</span>
                 <div>
                   <p style={{ margin: "0 0 6px", fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 14, color: NAVY }}>
-                    Villa disponible en location longue durée uniquement
+                    {t("longTermOnly")}
                   </p>
                   <p style={{ margin: 0, fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13, color: MUTED, lineHeight: 1.6 }}>
-                    Cette villa n'est pas proposée à la nuitée. Pour un séjour mensuel ou saisonnier, contactez-nous sur{" "}
+                    {lang === "fr"
+                      ? <>Cette villa n'est pas proposée à la nuitée. Pour un séjour mensuel ou saisonnier, contactez-nous sur{" "}</>
+                      : <>This villa is not offered for short stays. For a monthly or seasonal stay, contact us on{" "}</>}
                     <a
                       href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(`Bonjour, je suis intéressé(e) par ${bien.nom} pour une location longue durée.`)}`}
                       target="_blank" rel="noopener noreferrer"
                       style={{ color: NAVY, fontWeight: 500, textDecoration: "underline" }}
                     >WhatsApp</a>{" "}
-                    ou par email —{" "}
-                    <a href="mailto:contact@villamaryllis.com" style={{ color: NAVY, fontWeight: 500, textDecoration: "underline" }}>contact@villamaryllis.com</a>.
-                    Nous répondons sous 24h.
+                    {lang === "fr" ? "ou par email —" : "or by email —"}{" "}
+                    <a href="mailto:contact@villamaryllis.com" style={{ color: NAVY, fontWeight: 500, textDecoration: "underline" }}>contact@villamaryllis.com</a>.{" "}
+                    {lang === "fr" ? "Nous répondons sous 24h." : "We reply within 24h."}
                   </p>
                 </div>
               </div>
@@ -4764,14 +4766,14 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
               }}>
                 <span style={{ fontSize: 15 }}>💰</span>
                 <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 500, fontSize: 12, color: NAVY, letterSpacing: "0.03em" }}>
-                  Réservation directe propriétaire — Économisez jusqu'à 15% vs Airbnb
+                  {lang === "fr" ? "Réservation directe propriétaire — Économisez jusqu'à 15% vs Airbnb" : "Direct owner booking — Save up to 15% vs Airbnb"}
                 </span>
                 <a
                   href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(`Bonjour, je souhaite réserver ${bien.nom} en direct. Pouvez-vous me confirmer les disponibilités et le tarif ?`)}`}
                   target="_blank" rel="noopener noreferrer"
                   style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, color: CORAL, textDecoration: "none", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 5 }}
                 >
-                  💬 Nous contacter →
+                  💬 {t("contactUs")} →
                 </a>
               </div>
             )}
@@ -4796,7 +4798,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                 </a>
                 <span>· {bien.capacite} {t("guests")}</span>
                 <span>· {bien.chambres} {t("rooms")}</span>
-                <span>· {bien.sdb} sdb</span>
+                <span>· {bien.sdb} {t("bathrooms")}</span>
               </div>
             )}
 
@@ -4811,8 +4813,8 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                   {bien.reviews && <span>· {bien.reviews} {t("reviewsLabel")}</span>}
                 </a>
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>· <Icon name="users" size={13} color={MUTED} />{bien.capacite}</span>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Icon name="bed" size={13} color={MUTED} />{bien.chambres} ch.</span>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Icon name="bath" size={13} color={MUTED} />{bien.sdb} sdb</span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Icon name="bed" size={13} color={MUTED} />{bien.chambres} {t("rooms")}</span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Icon name="bath" size={13} color={MUTED} />{bien.sdb} {t("bathrooms")}</span>
               </div>
             )}
 
@@ -5023,16 +5025,18 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                   {/* Instruction / résumé dates */}
                   <div style={{ fontSize: 12, color: MUTED, fontFamily: "'Jost', sans-serif", marginBottom: 12 }}>
                     {!calCheckin
-                      ? `Cliquez sur une date d'arrivée${minNights > 1 ? ` (séjour min. ${minNights} nuits)` : ""}`
+                      ? lang === "fr"
+                        ? `Cliquez sur une date d'arrivée${minNights > 1 ? ` (séjour min. ${minNights} nuits)` : ""}`
+                        : `Click a check-in date${minNights > 1 ? ` (min. stay ${minNights} nights)` : ""}`
                       : !calCheckout
-                        ? "Cliquez sur une date de départ"
+                        ? (lang === "fr" ? "Cliquez sur une date de départ" : "Click a check-out date")
                         : `${formatDateShort(calCheckin)} → ${formatDateShort(calCheckout)}`}
                   </div>
 
                   {/* Navigation ‹ › */}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                    <button aria-label="Mois précédent" onClick={() => setCalOffset(o => Math.max(0, o - 1))} style={{ ...iconBtn, opacity: calOffset > 0 ? 1 : 0.2 }}>‹</button>
-                    <button aria-label="Mois suivant" onClick={() => setCalOffset(o => Math.min(o + 1, 20))} style={iconBtn}>›</button>
+                    <button aria-label={lang === "fr" ? "Mois précédent" : "Previous month"} onClick={() => setCalOffset(o => Math.max(0, o - 1))} style={{ ...iconBtn, opacity: calOffset > 0 ? 1 : 0.2 }}>‹</button>
+                    <button aria-label={lang === "fr" ? "Mois suivant" : "Next month"} onClick={() => setCalOffset(o => Math.min(o + 1, 20))} style={iconBtn}>›</button>
                   </div>
 
                   {/* Calendriers */}
@@ -5056,10 +5060,11 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
 
                   {/* Notice 24h */}
                   <div style={{ marginTop: 10, padding: "8px 12px", background: "#fef9f0", border: "1px solid #f0e0c0", borderRadius: 8, fontSize: 12, color: "#7a5c2e", fontFamily: "'Jost', sans-serif", lineHeight: 1.5 }}>
-                    ⏱ Réservation en ligne : minimum 24h à l'avance.{" "}
-                    Besoin pour <strong>aujourd'hui</strong> ?{" "}
+                    {lang === "fr"
+                      ? <>⏱ Réservation en ligne : minimum 24h à l'avance.{" "}Besoin pour <strong>aujourd'hui</strong> ?{" "}</>
+                      : <>⏱ Online booking: minimum 24h in advance.{" "}Need it for <strong>today</strong>?{" "}</>}
                     <a href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(`Bonjour, je souhaite réserver ${bien.nom} pour cette nuit. Est-ce possible ?`)}`} style={{ color: "#25d366", fontWeight: 600, textDecoration: "none" }}>WhatsApp</a>
-                    {" "}ou{" "}
+                    {" "}{lang === "fr" ? "ou" : "or"}{" "}
                     <a href="mailto:contact@villamaryllis.com" style={{ color: "var(--c-navy)", fontWeight: 600, textDecoration: "none" }}>email</a>.
                   </div>
 
@@ -5067,24 +5072,24 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                   <div style={{ marginTop: 12, display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
                     <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: MUTED, fontFamily: "'Jost', sans-serif" }}>
                       <span style={{ width: 22, height: 22, background: IVORY, border: `1px solid ${SAND}`, borderRadius: 5, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: NAVY, fontWeight: 500 }}>8</span>
-                      Disponible
+                      {lang === "fr" ? "Disponible" : "Available"}
                     </span>
                     <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: MUTED, fontFamily: "'Jost', sans-serif" }}>
                       <span style={{ width: 22, height: 22, background: "#f0ebe3", border: `1px solid ${SAND}`, borderRadius: 5, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#bbb", fontWeight: 400, textDecoration: "line-through" }}>8</span>
-                      Indisponible
+                      {lang === "fr" ? "Indisponible" : "Unavailable"}
                     </span>
                   </div>
 
                   {/* Alerte disponibilité */}
                   <div style={{ marginTop: 14 }}>
                     <button onClick={() => setShowAlerte(true)} style={{ background: "none", border: "none", color: MUTED, fontSize: 11, fontFamily: "'Jost', sans-serif", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, padding: 0, textDecoration: "underline", textDecorationColor: SAND }}>
-                      🔔 Être alerté des disponibilités
+                      🔔 {lang === "fr" ? "Être alerté des disponibilités" : "Get notified of availability"}
                     </button>
                   </div>
 
                   {calBelowMinLocal && (
                     <div style={{ marginTop: 12, fontSize: 12, color: "var(--c-danger)", fontWeight: 600 }}>
-                      ⚠ Séjour minimum : {minNights} nuits pour ce logement
+                      ⚠ {lang === "fr" ? `Séjour minimum : ${minNights} nuits pour ce logement` : `Minimum stay: ${minNights} nights for this property`}
                     </div>
                   )}
                   <ReboundSuggestions rebound={rebound} currentNom={bien.nom} onDismiss={() => setRebound(null)} />
@@ -5133,34 +5138,34 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                     {isMobile && calCheckin && calCheckout && !calBelowMinLocal && (
                       <div style={{ marginTop: 18, background: CREAM, border: `1px solid ${SAND}`, borderRadius: 12, padding: "16px 20px" }}>
                         <div style={{ fontSize: 13, color: MUTED, marginBottom: 6 }}>
-                          {calNights} nuit{calNights > 1 ? "s" : ""} — sous-total {calRawTotal}€
+                          {t("nights", calNights)} — {lang === "fr" ? "sous-total" : "subtotal"} {calRawTotal}€
                         </div>
                         {calFrais > 0 && (
-                          <div style={{ fontSize: 13, color: MUTED, marginBottom: 4 }}>🧹 Frais de ménage {calFrais}€</div>
+                          <div style={{ fontSize: 13, color: MUTED, marginBottom: 4 }}>🧹 {lang === "fr" ? "Frais de ménage" : "Cleaning fee"} {calFrais}€</div>
                         )}
                         {calDiscountRate > 0 && (
                           <div style={{ fontSize: 13, color: CORAL, fontWeight: 600, marginBottom: 4 }}>
-                            🎁 Réduction {discountLabel(calNights)} −{calDiscountAmount}€ (−{Math.round(calDiscountRate * 100)}%)
+                            🎁 {lang === "fr" ? "Réduction" : "Discount"} {discountLabel(calNights)} −{calDiscountAmount}€ (−{Math.round(calDiscountRate * 100)}%)
                           </div>
                         )}
                         <div style={{ fontSize: 22, fontWeight: 800, color: NAVY, marginTop: 8, marginBottom: 6 }}>
-                          Total : {calTotal}€
+                          {lang === "fr" ? "Total" : "Total"} : {calTotal}€
                         </div>
                         <div style={{ fontSize: 11, color: "var(--c-success)", fontFamily: "'Jost', sans-serif", fontWeight: 600, marginBottom: 14, display: "flex", alignItems: "center", gap: 5 }}>
-                          💰 Vous économisez ~{Math.round(calTotal * 0.15 / 5) * 5}€ vs Airbnb en réservant en direct
+                          💰 {lang === "fr" ? `Vous économisez ~${Math.round(calTotal * 0.15 / 5) * 5}€ vs Airbnb en réservant en direct` : `You save ~€${Math.round(calTotal * 0.15 / 5) * 5} vs Airbnb by booking direct`}
                         </div>
                         <button
                           data-cta-reservation data-cta-position="calendar-inline"
                           onClick={() => onBook(bien, calCheckin, calCheckout)}
                           style={{ width: "100%", background: CORAL, border: "none", color: "#fff", borderRadius: 8, padding: "12px 0", fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 13, letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer", boxShadow: "0 4px 14px rgba(196,114,84,0.3)" }}
                         >
-                          Réserver ces dates →
+                          {lang === "fr" ? "Réserver ces dates →" : "Book these dates →"}
                         </button>
                         <button
                           onClick={() => { setCalCheckin(null); setCalCheckout(null); }}
                           style={{ display: "block", margin: "10px auto 0", fontSize: 11, color: MUTED, background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
                         >
-                          Effacer les dates
+                          {lang === "fr" ? "Effacer les dates" : "Clear dates"}
                         </button>
                       </div>
                     )}
@@ -5174,13 +5179,13 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
               <>
                 <div style={{ height: 1, background: SAND, marginBottom: 26 }} />
                 <div style={{ marginBottom: 32 }}>
-                  <SectionTitle>Localisation</SectionTitle>
+                  <SectionTitle>{lang === "fr" ? "Localisation" : "Location"}</SectionTitle>
                   <div style={{ fontSize: 13, color: TEXT, fontFamily: "'Jost', sans-serif", fontWeight: 300, marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
                     <span style={{ color: CORAL }}>📍</span> {bien.lieu}
-                    <span style={{ color: SAND, fontSize: 11, marginLeft: 4 }}>· Position approximative</span>
+                    <span style={{ color: SAND, fontSize: 11, marginLeft: 4 }}>· {lang === "fr" ? "Position approximative" : "Approximate location"}</span>
                   </div>
                   <div style={{ borderRadius: 10, overflow: "hidden", border: `1px solid ${SAND}` }}>
-                    <Suspense fallback={<div style={{ height: isMobile ? 220 : 280, background: "#f0ebe0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: "#9a8f82" }}>Chargement de la carte…</div>}>
+                    <Suspense fallback={<div style={{ height: isMobile ? 220 : 280, background: "#f0ebe0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: "#9a8f82" }}>{lang === "fr" ? "Chargement de la carte…" : "Loading map…"}</div>}>
                       <PropertyMap bien={bien} height={isMobile ? 220 : 280} />
                     </Suspense>
                   </div>
@@ -5192,7 +5197,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                     onMouseEnter={e => { e.currentTarget.style.opacity = "0.75"; }}
                     onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
                   >
-                    Voir sur Google Maps →
+                    {lang === "fr" ? "Voir sur Google Maps →" : "View on Google Maps →"}
                   </a>
                   {PROXIMITE[bien.id] && PROXIMITE[bien.id].length > 0 && (
                     <div style={{ marginTop: 18, background: CREAM, border: `1px solid ${SAND}`, borderRadius: 12, padding: "16px 18px" }}>
@@ -5387,20 +5392,24 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
               }}>
                 <div style={{ padding: "28px 28px 24px" }}>
                   <div style={{ display: "inline-block", background: "rgba(14,59,58,0.08)", borderRadius: 6, padding: "4px 10px", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", fontFamily: "'Jost', sans-serif", color: NAVY, marginBottom: 16 }}>
-                    Location longue durée
+                    {t("longTermShort")}
                   </div>
                   <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 14, color: NAVY, lineHeight: 1.7, margin: "0 0 20px" }}>
-                    Cette villa est disponible <strong>uniquement en location longue durée</strong> (mensuelle ou saisonnière étendue). Elle n'est pas proposée à la nuitée.
+                    {lang === "fr"
+                      ? <>Cette villa est disponible <strong>uniquement en location longue durée</strong> (mensuelle ou saisonnière étendue). Elle n'est pas proposée à la nuitée.</>
+                      : <>This villa is available <strong>for long-term rental only</strong> (monthly or extended seasonal). It is not offered for short stays.</>}
                   </p>
                   <p style={{ fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13, color: MUTED, lineHeight: 1.6, margin: "0 0 24px" }}>
-                    Pour connaître les tarifs et disponibilités, contactez-nous directement — nous répondons sous 24h.
+                    {lang === "fr"
+                      ? "Pour connaître les tarifs et disponibilités, contactez-nous directement — nous répondons sous 24h."
+                      : "For rates and availability, contact us directly — we reply within 24h."}
                   </p>
                   <a
                     href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(`Bonjour, je suis intéressé(e) par ${bien.nom} pour une location longue durée. Pouvez-vous m'indiquer vos conditions et disponibilités ? Merci.`)}`}
                     target="_blank" rel="noopener noreferrer"
                     style={{ display: "block", textAlign: "center", background: NAVY, color: "var(--c-ivory)", borderRadius: 8, padding: "13px 20px", fontFamily: "'Jost', sans-serif", fontWeight: 400, fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", textDecoration: "none", marginBottom: 10 }}
                   >
-                    📱 Nous contacter sur WhatsApp
+                    📱 {lang === "fr" ? "Nous contacter sur WhatsApp" : "Contact us on WhatsApp"}
                   </a>
                   <a
                     href="mailto:contact@villamaryllis.com"
@@ -5494,15 +5503,17 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                         {/* Instruction */}
                         <div style={{ fontSize: 11, color: MUTED, fontFamily: "'Jost', sans-serif", marginBottom: 6, textAlign: "center" }}>
                           {!calCheckin
-                            ? `Choisissez vos dates${minNights > 1 ? ` (min. ${minNights} nuits)` : ""}`
+                            ? lang === "fr"
+                              ? `Choisissez vos dates${minNights > 1 ? ` (min. ${minNights} nuits)` : ""}`
+                              : `Choose your dates${minNights > 1 ? ` (min. ${minNights} nights)` : ""}`
                             : !calCheckout
-                              ? "Date de départ ?"
+                              ? (lang === "fr" ? "Date de départ ?" : "Check-out date?")
                               : `${formatDateShort(calCheckin)} → ${formatDateShort(calCheckout)}`}
                         </div>
                         {/* Nav */}
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                          <button aria-label="Mois précédent" onClick={() => setCalOffset(o => Math.max(0, o - 1))} style={{ ...iconBtn, opacity: calOffset > 0 ? 1 : 0.2 }}>‹</button>
-                          <button aria-label="Mois suivant" onClick={() => setCalOffset(o => Math.min(o + 1, 20))} style={iconBtn}>›</button>
+                          <button aria-label={lang === "fr" ? "Mois précédent" : "Previous month"} onClick={() => setCalOffset(o => Math.max(0, o - 1))} style={{ ...iconBtn, opacity: calOffset > 0 ? 1 : 0.2 }}>‹</button>
+                          <button aria-label={lang === "fr" ? "Mois suivant" : "Next month"} onClick={() => setCalOffset(o => Math.min(o + 1, 20))} style={iconBtn}>›</button>
                         </div>
                         {/* Single month in widget */}
                         <CalendarMonth
@@ -5519,7 +5530,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                         />
                         {calBelowMinLocal && (
                           <div style={{ marginTop: 8, fontSize: 11, color: "var(--c-danger)", fontWeight: 600, textAlign: "center" }}>
-                            ⚠ Séjour min. {minNights} nuits
+                            ⚠ {lang === "fr" ? `Séjour min. ${minNights} nuits` : `Min. stay ${minNights} nights`}
                           </div>
                         )}
                         <ReboundSuggestions rebound={rebound} currentNom={bien.nom} onDismiss={() => setRebound(null)} />
@@ -5538,12 +5549,12 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                       <div style={{ height: 1, background: SAND }} />
                       <div style={{ padding: "16px 24px" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: MUTED, marginBottom: 6 }}>
-                          <span>{calNights} nuit{calNights > 1 ? "s" : ""}{calNights > 0 ? ` · ${Math.round(calRawTotal / calNights)}€/nuit moy.` : ""}</span>
+                          <span>{t("nights", calNights)}{calNights > 0 ? ` · ${Math.round(calRawTotal / calNights)}€${lang === "fr" ? "/nuit moy." : "/night avg."}` : ""}</span>
                           <span>{calRawTotal}€</span>
                         </div>
                         {calFrais > 0 && (
                           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: MUTED, marginBottom: 6 }}>
-                            <span>🧹 Ménage</span><span>{calFrais}€</span>
+                            <span>🧹 {lang === "fr" ? "Ménage" : "Cleaning"}</span><span>{calFrais}€</span>
                           </div>
                         )}
                         {calDiscountRate > 0 && (
@@ -5575,14 +5586,14 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
                     onMouseEnter={e => { e.currentTarget.style.opacity = "0.88"; }}
                     onMouseLeave={e => { e.currentTarget.style.opacity = "1"; }}
                   >
-                    {calCheckin && calCheckout ? "Réserver ces dates →" : (lang === "fr" ? `${CTA_LABEL_FR} →` : "BOOK →")}
+                    {calCheckin && calCheckout ? (lang === "fr" ? "Réserver ces dates →" : "Book these dates →") : (lang === "fr" ? `${CTA_LABEL_FR} →` : "BOOK →")}
                   </button>
                   {calCheckin && calCheckout && (
                     <button
                       onClick={() => { setCalCheckin(null); setCalCheckout(null); }}
                       style={{ display: "block", margin: "10px auto 0", fontSize: 11, color: MUTED, background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
                     >
-                      Effacer les dates
+                      {lang === "fr" ? "Effacer les dates" : "Clear dates"}
                     </button>
                   )}
                 </div>
@@ -5594,31 +5605,39 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
         {/* ── Conditions & Garanties — jur-005 + jur-006 ─────────────────────── */}
         {!BOOKING_DISABLED.has(bien.id) && (
           <div style={{ borderTop: `1px solid ${SAND}`, margin: "48px 20px 48px", paddingTop: 40 }}>
-            <SectionTitle>Conditions &amp; Garanties</SectionTitle>
+            <SectionTitle>{lang === "fr" ? "Conditions & Garanties" : "Terms & Guarantees"}</SectionTitle>
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
 
               {/* Politique d'annulation */}
               <div style={{ background: IVORY, border: `1px solid ${SAND}`, borderRadius: 12, padding: "20px 24px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
                   <span style={{ fontSize: 18 }}>📋</span>
-                  <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 14, color: NAVY, letterSpacing: "0.02em" }}>Politique d'annulation</span>
+                  <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 14, color: NAVY, letterSpacing: "0.02em" }}>{lang === "fr" ? "Politique d'annulation" : "Cancellation policy"}</span>
                 </div>
                 <ul style={{ listStyle: "none", margin: 0, padding: 0, fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13, color: NAVY, lineHeight: 1.75 }}>
                   <li style={{ display: "flex", gap: 8, marginBottom: 7 }}>
                     <span style={{ color: "var(--c-teal)", flexShrink: 0, marginTop: 1 }}>✓</span>
-                    <span><strong>Annulation gratuite</strong> jusqu'à 14 jours avant l'arrivée — remboursement intégral sous 5–10 jours ouvrés.</span>
+                    <span>{lang === "fr"
+                      ? <><strong>Annulation gratuite</strong> jusqu'à 14 jours avant l'arrivée — remboursement intégral sous 5–10 jours ouvrés.</>
+                      : <><strong>Free cancellation</strong> up to 14 days before arrival — full refund within 5–10 business days.</>}</span>
                   </li>
                   <li style={{ display: "flex", gap: 8, marginBottom: 7 }}>
                     <span style={{ color: CORAL, flexShrink: 0, marginTop: 1 }}>◗</span>
-                    <span><strong>Entre 7 et 14 jours avant</strong> — 50 % du montant total retenu.</span>
+                    <span>{lang === "fr"
+                      ? <><strong>Entre 7 et 14 jours avant</strong> — 50 % du montant total retenu.</>
+                      : <><strong>Between 7 and 14 days before</strong> — 50% of the total amount retained.</>}</span>
                   </li>
                   <li style={{ display: "flex", gap: 8, marginBottom: 7 }}>
                     <span style={{ color: CORAL, flexShrink: 0, marginTop: 1 }}>◗</span>
-                    <span><strong>Moins de 7 jours</strong> ou réservation de dernière minute — acompte non remboursable.</span>
+                    <span>{lang === "fr"
+                      ? <><strong>Moins de 7 jours</strong> ou réservation de dernière minute — acompte non remboursable.</>
+                      : <><strong>Less than 7 days before</strong>, or last-minute booking — deposit non-refundable.</>}</span>
                   </li>
                   <li style={{ display: "flex", gap: 8 }}>
                     <span style={{ color: MUTED, flexShrink: 0, marginTop: 1 }}>ℹ</span>
-                    <span style={{ color: MUTED }}>Force majeure (catastrophe naturelle, cyclone) : remboursement intégral sur justificatif officiel.</span>
+                    <span style={{ color: MUTED }}>{lang === "fr"
+                      ? "Force majeure (catastrophe naturelle, cyclone) : remboursement intégral sur justificatif officiel."
+                      : "Force majeure (natural disaster, hurricane): full refund with official supporting documentation."}</span>
                   </li>
                 </ul>
               </div>
@@ -5627,32 +5646,40 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
               <div style={{ background: IVORY, border: `1px solid ${SAND}`, borderRadius: 12, padding: "20px 24px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
                   <span style={{ fontSize: 18 }}>🔒</span>
-                  <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 14, color: NAVY, letterSpacing: "0.02em" }}>Dépôt de garantie</span>
+                  <span style={{ fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 14, color: NAVY, letterSpacing: "0.02em" }}>{lang === "fr" ? "Dépôt de garantie" : "Security deposit"}</span>
                 </div>
                 <ul style={{ listStyle: "none", margin: 0, padding: 0, fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 13, color: NAVY, lineHeight: 1.75 }}>
                   <li style={{ display: "flex", gap: 8, marginBottom: 7 }}>
                     <span style={{ color: "var(--c-teal)", flexShrink: 0, marginTop: 1 }}>✓</span>
-                    <span>La caution est demandée en <strong>pré-autorisation Stripe</strong> — votre carte est enregistrée, <em>aucun montant n'est débité</em>.</span>
+                    <span>{lang === "fr"
+                      ? <>La caution est demandée en <strong>pré-autorisation Stripe</strong> — votre carte est enregistrée, <em>aucun montant n'est débité</em>.</>
+                      : <>The deposit is requested as a <strong>Stripe pre-authorization</strong> — your card is registered, <em>no amount is charged</em>.</>}</span>
                   </li>
                   <li style={{ display: "flex", gap: 8, marginBottom: 7 }}>
                     <span style={{ color: "var(--c-teal)", flexShrink: 0, marginTop: 1 }}>✓</span>
-                    <span>La pré-autorisation est <strong>libérée automatiquement 3 jours</strong> après votre départ, sans intervention de votre part.</span>
+                    <span>{lang === "fr"
+                      ? <>La pré-autorisation est <strong>libérée automatiquement 3 jours</strong> après votre départ, sans intervention de votre part.</>
+                      : <>The pre-authorization is <strong>automatically released 3 days</strong> after your departure, with nothing needed on your part.</>}</span>
                   </li>
                   <li style={{ display: "flex", gap: 8, marginBottom: 7 }}>
                     <span style={{ color: CORAL, flexShrink: 0, marginTop: 1 }}>◗</span>
-                    <span>En cas de dommages constatés à l'état des lieux, le montant correspondant peut être capturé dans un délai de 48 h après le départ.</span>
+                    <span>{lang === "fr"
+                      ? "En cas de dommages constatés à l'état des lieux, le montant correspondant peut être capturé dans un délai de 48 h après le départ."
+                      : "If damage is noted at check-out, the corresponding amount may be captured within 48 hours of departure."}</span>
                   </li>
                   <li style={{ display: "flex", gap: 8 }}>
                     <span style={{ color: MUTED, flexShrink: 0, marginTop: 1 }}>ℹ</span>
-                    <span style={{ color: MUTED }}>Conforme au droit français (art. L 324-2 Code du tourisme) et à la réglementation Stripe / PSD2.</span>
+                    <span style={{ color: MUTED }}>{lang === "fr"
+                      ? "Conforme au droit français (art. L 324-2 Code du tourisme) et à la réglementation Stripe / PSD2."
+                      : "Compliant with French law (Art. L 324-2 of the Tourism Code) and Stripe / PSD2 regulations."}</span>
                   </li>
                 </ul>
               </div>
             </div>
             <p style={{ marginTop: 14, fontFamily: "'Jost', sans-serif", fontWeight: 300, fontSize: 11, color: MUTED, textAlign: "center" }}>
-              Questions ? <a href="mailto:contact@villamaryllis.com" style={{ color: CORAL, textDecoration: "none" }}>contact@villamaryllis.com</a>
+              {lang === "fr" ? "Questions ?" : "Questions?"} <a href="mailto:contact@villamaryllis.com" style={{ color: CORAL, textDecoration: "none" }}>contact@villamaryllis.com</a>
               {" · "}
-              <a href="/conditions-generales" style={{ color: CORAL, textDecoration: "none" }}>Conditions générales</a>
+              <a href="/conditions-generales" style={{ color: CORAL, textDecoration: "none" }}>{lang === "fr" ? "Conditions générales" : "Terms & Conditions"}</a>
             </p>
           </div>
         )}
@@ -5682,7 +5709,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
         <a
           href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(`Bonjour, j'ai une question sur ${bien.nom} à Sainte-Luce. `)}`}
           target="_blank" rel="noopener noreferrer"
-          title="Nous contacter sur WhatsApp"
+          title={lang === "fr" ? "Nous contacter sur WhatsApp" : "Contact us on WhatsApp"}
           style={{
             // left (pas right) : le côté droit est déjà occupé par ChatWidget (zIndex 9990-9991,
             // même bottom) + FaqChatbot (90-155px) — un right:22 mettait ce bouton visuellement
