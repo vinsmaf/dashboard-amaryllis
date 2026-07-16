@@ -864,7 +864,21 @@ function resaSheet_() {
 const RESA_BIEN_LABELS = { nogent:"T2 Nogent", amaryllis:"Villa Amaryllis", iguana:"Villa Iguana", geko:"Geko", zandoli:"Zandoli", mabouya:"Mabouya", schoelcher:"T2 Schoelcher" };
 const RESA_CANAL_LABELS = { airbnb:"Airbnb", booking:"Booking.com", direct:"Direct", beds24:"Beds24" };
 
+// LockService (2026-07-16, audit) : le Sheet "Toutes les Réservations" est écrit en concurrence
+// par plusieurs sources (cron Worker 10min, webhook Beds24 temps réel, bouton Sync manuel admin,
+// patch-booking.js) sans AUCUNE protection jusqu'ici (0 occurrence LockService dans tout ce
+// fichier). tryLock (pas waitLock) + retour explicite {locked:true} : ne bloque jamais longtemps
+// côté appelant, jamais de throw non catché qui ferait échouer une sync en silence.
 function addReservation_(p) {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) return json_({ ok: false, locked: true, error: "Sheet verrouillé par un autre processus, réessayer" });
+  try {
+    return addReservation_locked_(p);
+  } finally {
+    lock.releaseLock();
+  }
+}
+function addReservation_locked_(p) {
   const sheet = resaSheet_();
   const id = String(p.id || Utilities.getUuid());
   let nights = 0;
@@ -910,7 +924,17 @@ function addReservation_(p) {
 }
 
 // ?action=deleteReservation&id=xxx  (suppression dans "Toutes les Réservations", id comparé en String)
+// LockService : cf. commentaire addReservation_ ci-dessus (protection ajoutée 2026-07-16).
 function deleteReservation_(p) {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) return json_({ ok: false, locked: true, error: "Sheet verrouillé par un autre processus, réessayer" });
+  try {
+    return deleteReservation_locked_(p);
+  } finally {
+    lock.releaseLock();
+  }
+}
+function deleteReservation_locked_(p) {
   var sheet = getSheet_("Toutes les Réservations");
   if (!sheet || !p.id) return json_({ ok: true, action: "noop" });
 
@@ -1120,7 +1144,19 @@ function updateContactsById_(params) {
   return json_({ ok: true, updated: updated, total: raw.length });
 }
 
+// LockService : cf. commentaire addReservation_ plus haut (protection ajoutée 2026-07-16).
+// Action la PLUS exposée à la concurrence (cron Worker 10min + webhook Beds24 + bouton Sync
+// admin peuvent tous l'appeler en parallèle sur le même onglet).
 function importAllReservations_(input) {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) return json_({ ok: false, locked: true, error: "Sheet verrouillé par un autre processus, réessayer" });
+  try {
+    return importAllReservations_locked_(input);
+  } finally {
+    lock.releaseLock();
+  }
+}
+function importAllReservations_locked_(input) {
   // Accepte :
   //   – un tableau direct (appel interne)
   //   – un objet params GET { data: "[{...}]" } (via doGet → chunks)
@@ -1473,7 +1509,19 @@ function importFromAirbnbSheet_() {
 // input : soit un tableau direct (appel interne / doPost {annulations:[...]}),
 // soit un objet params GET {data:"[...]"} (via doGet → contourne le bug redirect
 // POST d'Apps Script, même pattern dual-mode que importAllReservations_ ci-dessus).
+// LockService : cf. commentaire addReservation_ plus haut (protection ajoutée 2026-07-16).
+// Retourne un objet PLAIN (pas json_()-wrappé) — même contrat que la fonction d'origine,
+// doPost/doGet se chargent eux-mêmes du wrap.
 function cancelReservations_(input) {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) return { ok: false, locked: true, error: "Sheet verrouillé par un autre processus, réessayer" };
+  try {
+    return cancelReservations_locked_(input);
+  } finally {
+    lock.releaseLock();
+  }
+}
+function cancelReservations_locked_(input) {
   var annulations;
   if (Array.isArray(input)) {
     annulations = input;
