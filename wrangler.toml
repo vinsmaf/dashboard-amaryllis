@@ -27,6 +27,12 @@ preview_id = "75d715c5f2f5492f975c86c7995738d4"
 binding = "CROSS_BRAIN_KV"
 id = "fc2f8d9276ab433093c993baed19e529"
 
+# Même namespace "avail-cache" que côté Pages (get-availability.js/beds24-webhook.js) —
+# permet au Worker de purger le cache dispo à la détection d'une résa/annulation iCal.
+[[kv_namespaces]]
+binding = "AVAIL_CACHE"
+id = "a6bcfe4247d24169b65471ad6bc35f66"
+
 # Variables d'environnement publiques
 [vars]
 NOTIFICATION_EMAIL = "vinsmaf@hotmail.com,celine.hartog@hotmail.fr"

@@ -147,6 +147,18 @@ export async function onRequestPost(context) {
     "UPDATE direct_bookings SET status='cancelled', cancelled_at=unixepoch(), refund_amount=?, refund_id=? WHERE payment_intent_id=?"
   ).bind(Math.round(refundAmount) || 0, result.refund?.refundId || null, paymentIntentId).run();
 
+  // 4b. ⚡ Anti double-réservation : purge le cache dispo (KV AVAIL_CACHE) des biens libérés —
+  // même mécanisme que la création de résa (stripe-webhook.js) et que beds24-webhook.js pour
+  // Nogent. Sans ça, get-availability.js peut rester "indisponible" jusqu'à 6h après l'annulation.
+  if (env.AVAIL_CACHE) {
+    const ids = booking.bien_id === "groupe"
+      ? String(booking.group_biens || "").split(",").map(s => s.trim()).filter(Boolean)
+      : [booking.bien_id].filter(Boolean);
+    await Promise.all(ids.map(id =>
+      env.AVAIL_CACHE.delete(`avail_${id}`).catch(e => console.warn(`[cancel-booking] purge cache avail_${id}:`, e.message))
+    ));
+  }
+
   // 5. Événement de suivi GA4 — même client_id que le purchase d'origine (booking.ga_client_id)
   // pour permettre l'analyse "quel canal d'acquisition annule le plus" à côté des achats.
   await ga4Event(env, "booking_cancelled", {

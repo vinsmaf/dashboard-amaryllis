@@ -1591,6 +1591,14 @@ async function syncFeed(env, bienId, url, canal, allEvents, nouvelles, annulatio
       cancelledUids.forEach(e => annulations.push({ uid: e.uid, bienId, canal }));
       console.log(`[sync] ${bienId}/${canal}: ${cancelledUids.length} annulation(s) détectée(s)`);
     }
+    // ⚡ Anti double-réservation : purge IMMÉDIATE du cache dispo (même mécanisme que
+    // beds24-webhook.js pour Nogent) dès qu'une vraie nouvelle résa ou annulation est
+    // détectée — sans ça le calendrier public/le re-check pré-paiement Stripe peuvent
+    // rester périmés jusqu'à 6h (TTL get-availability.js) sur les 6 biens non-Nogent.
+    if ((newForFeed.length > 0 && !isFirstRun) || cancelledUids.length > 0) {
+      try { if (env.AVAIL_CACHE) await env.AVAIL_CACHE.delete(`avail_${bienId}`); }
+      catch (e) { console.warn(`[sync] purge cache avail_${bienId}:`, e.message); }
+    }
     // Stocker {uid, checkout} pour filtrer les faux positifs futurs
     await env.ICAL_STORE.put(kvKey, JSON.stringify(events.map(e => ({ uid: e.uid, checkout: e.checkout }))), { expirationTtl: 60 * 60 * 24 * 90 });
     allEvents.push(...events);
