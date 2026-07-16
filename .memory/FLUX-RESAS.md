@@ -1,25 +1,32 @@
 # FLUX RÉSERVATIONS & ANNULATIONS — Amaryllis Locations
-> Référence technique du pipeline complet. MAJ : 2026-06-27. **Testé et validé le 2026-06-27.**
+> Référence technique du pipeline complet. MAJ : 2026-07-16 (audit multi-agents 24 agents,
+> vérification adversariale — plusieurs affirmations ci-dessous datées 2026-06-27 se sont
+> révélées fausses en creusant le code réel ; corrigées ce jour, 10 fixes déployés).
 
-## ✅ Statut validé (test bout-en-bout 2026-06-27)
+> ⚠️ **Secret retiré 2026-07-16** : ce fichier contenait un `CLAUDE_SECRET` en clair, committé
+> en git depuis plusieurs commits (historique, pas juste ce fichier) — signalé à Vincent comme
+> finding sécurité, **à faire tourner** (rotation) indépendamment du nettoyage de ce doc. Ne
+> plus jamais coller de secret réel dans `.memory/` (versionné) — toujours `grep .dev.vars`
+> à la demande, ou pointer vers la variable d'env sans révéler sa valeur.
 
-| Canal | Ajout Sheet | Dashboard | Revenus | Annulation auto | Notif email+ntfy |
-|---|---|---|---|---|---|
-| **Airbnb** | ✅ via Worker hourly | ✅ | ✅ rebuild | ✅ (cancelReservations_) | ✅ Worker direct |
-| **Booking.com** | ✅ via Worker hourly | ✅ | ✅ rebuild | ✅ (cancelReservations_) | ✅ Worker direct |
-| **Direct Stripe** | ✅ stripe-webhook+auto-sync | ✅ | ✅ rebuild | ✅ **`deleteReservation` (1 appel)** | ✅ notify-booking |
-| **Beds24 Nogent** | ✅ webhook temps réel | ✅ | ✅ rebuild | ✅ (status=Annulé → rebuild auto) | — |
+## ✅ Statut réel (vérifié en live 2026-07-16, pas juste lu dans le code)
 
-**Preuve test :** résa fictive `airbnb-TEST-20260627` Zandoli Août 330€ → ajoutée (+330€), supprimée (−330€), revenus 2144→1814€ exactement.
+| Canal | Ajout Sheet | Annulation → Sheet | Cache dispo purgé |
+|---|---|---|---|
+| **Airbnb** | ✅ Worker */10min | ✅ **fixé 2026-07-16** — était cassé depuis toujours (POST direct hors sheets-proxy + `LBL2ID` non déclaré = ReferenceError certain, ne faisait RIEN en pratique) | ✅ fixé 2026-07-16 |
+| **Booking.com** | ✅ Worker */10min (scrape auto nom/prix, cf. `docs/booking-sync.md`) | ✅ **fixé 2026-07-16** (même bug qu'Airbnb) | ✅ fixé 2026-07-16 |
+| **Direct Stripe** | ✅ push immédiat au paiement (`context.waitUntil`, fixé 2026-07-16 — avant : jusqu'à 10min via cron seul) | ✅ **fixé 2026-07-16** — `cancel-booking.js` ne touchait jamais le Sheet (ligne restait "Confirmé" pour toujours, revenus gonflés en permanence). Mécanisme : upsert status="Annulé" (PAS un delete, contrairement à ce que ce doc affirmait avant), puis rebuild revenus idempotent | ✅ fixé 2026-07-16 |
+| **Beds24 Nogent** | ✅ webhook temps réel | ✅ déjà fonctionnel avant l'audit | ✅ déjà fonctionnel (seul canal protégé avant l'audit) |
 
-**Règle proxy vs Worker :** `cancelReservations_` (delete + rebuild en 1 appel GAS) **timeout via /api/sheets-proxy** (CF Pages Function). Le Worker l'appelle directement via `APPS_SCRIPT_URL` → pas de timeout. `deleteReservation_` = 1 seul appel suffisant (rebuild intégré depuis 2026-06-27 @74). Pour les appels manuels Claude via curl : séparer en `deleteReservation` + `revenus2026RebuildBienApply` uniquement si `deleteReservation` timeout (rare).
+**Cadence réelle du cron Worker : `*/10 * * * *` (10 minutes), pas "hourly"/"15min"** — ce doc
+affirmait les deux à différents endroits avant sa correction ; source de vérité = `wrangler.toml`.
 
-## Trigger sync manuel (CLAUDE_SECRET requis)
+## Trigger sync manuel (CLAUDE_SECRET requis — voir .dev.vars, jamais coller la valeur ici)
 
 ```bash
-SECRET="0e091781cd00c38efa118d36f46e6bccbb0d713a6918e23e"
+SECRET=$(grep -m1 '^CLAUDE_SECRET' .dev.vars | cut -d= -f2- | tr -d '"')
 
-# Force re-sync D1 direct_bookings → GAS Sheet (sans attendre le cron 15min)
+# Force re-sync D1 direct_bookings → GAS Sheet (sans attendre le cron 10min)
 curl -s -X POST "https://villamaryllis.com/api/trigger-sync" \
   -H "Authorization: Bearer $SECRET" \
   -H "Content-Type: application/json" \
@@ -32,94 +39,61 @@ curl -s -X POST "https://villamaryllis.com/api/trigger-sync" \
   -d '{"type":"full"}'
 ```
 
-**Quand utiliser :** après une résa Stripe pour vérifier qu'elle est bien dans le Sheet sans attendre 15min. L'iCal Airbnb/Booking = Worker-only (cron 10min, pas de trigger manuel sans WORKER_SYNC_URL).
-
-## Commandes de vérification rapide (CLAUDE_SECRET requis)
-
-```bash
-SECRET="0e091781cd00c38efa118d36f46e6bccbb0d713a6918e23e"
-
-# Vérifier une résa précise + revenus d'un bien
-curl -s -X POST "https://villamaryllis.com/api/sheets-proxy" \
-  -H "Authorization: Bearer $SECRET" \
-  -H "Content-Type: application/json" \
-  -d '{"action":"read"}' | python3 -c "
-import json,sys; d=json.load(sys.stdin)
-resas=d.get('reservations',[])
-print(f'{len(resas)} résas totales')
-# Chercher une résa spécifique :
-# next((r for r in resas if 'NOM' in str(r.get('voyageur',''))), None)
-z=next((b for b in d.get('biens',[]) if b.get('id')=='zandoli'),None)
-if z: print('Zandoli rev jan-déc:',[round(v) for v in z.get('revenus',[])[:12]])
-"
-
-# Supprimer une ligne + rebuild revenus (2 appels séparés)
-curl -s -X POST "https://villamaryllis.com/api/sheets-proxy" \
-  -H "Authorization: Bearer $SECRET" \
-  -H "Content-Type: application/json" \
-  -d '{"action":"deleteReservation","id":"<ID-SHEET>"}'
-
-curl -s -X POST "https://villamaryllis.com/api/sheets-proxy" \
-  -H "Authorization: Bearer $SECRET" \
-  -H "Content-Type: application/json" \
-  -d '{"action":"revenus2026RebuildBienApply","fromMonth":<MOIS>,"bien":"<bienId>"}'
-```
+**Quand utiliser :** dépannage/vérification manuelle uniquement — depuis 2026-07-16, une résa
+Stripe pousse déjà immédiatement au Sheet au moment du paiement (best-effort), ce trigger n'est
+plus indispensable pour ce cas précis. Reste utile si le push immédiat a échoué (le cron */10min
+rattrape aussi automatiquement).
 
 ## 4 canaux d'entrée
 
 ### 1. Airbnb (Martinique, 6 biens)
-- **Source** : iCal URL secret `AIRBNB_URL_<bienId>` (Worker)
-- **Détection** : Worker cron horaire → `syncFeed()` → KV `ICAL_STORE` `{uid, checkout}`
-- **Nouveau** : nouvel UID détecté → `sendNouvellesResas()` (email+ntfy) → `pushToSheets()` → GAS `addReservation_` → Sheet "Toutes les Réservations"
-- **⚠️ LIMITE** : iCal Airbnb = **pas de nom, pas de prix** → row créée avec voyageur="Airbnb Guest"
-- **Action requise** : bouton ✎ admin Planning → `PATCH /api/patch-booking` → `addReservation_` (update) + `rebuildRevenus2026_`
-- **Annulation** : UID disparu de l'iCal + checkout futur → `sendCancellations()` → GAS `cancelReservations_` → delete row + `rebuildRevenus2026_(true, month, bienId)` → email+ntfy
+- **Source** : iCal URL secret `ICAL_AIRBNB_<bienId>` / `ICAL_<bienId>` (Worker)
+- **Détection** : Worker cron */10min → `syncFeed()` → KV `ICAL_STORE` `{uid, checkout}`
+- **Nouveau** : nouvel UID détecté → `sendNouvellesResas()` (email+ntfy) → `pushToSheets()` → GAS `importAllReservations_` → Sheet "Toutes les Réservations". Cache dispo (`avail_<bienId>`) purgé au passage (2026-07-16).
+- **⚠️ LIMITE** : iCal Airbnb = **pas de nom, pas de prix** → row créée avec voyageur placeholder, enrichie ensuite via `enrich-from-emails.js` (parse les confirmations email)
+- **Annulation** : UID disparu de l'iCal + checkout futur → `sendCancellations()` → `/api/sheets-proxy` (GET paginé, PAS un POST direct) → GAS `cancelReservations_` → delete row + `rebuildRevenus2026_/2027_` par bien/mois affecté → email+ntfy. **Fonctionnel depuis 2026-07-16** (cassé avant, cf. tableau ci-dessus).
 
 ### 2. Booking.com (Martinique, 6 biens)
-- **Source** : iCal URL secret `BOOKING_URL_<bienId>` (Worker)
-- **Flux** : identique Airbnb
-- **⚠️ LIMITE** : iCal Booking = "CLOSED - Not available" ou "RESERVED" → même patch manuel ✎ requis
+- **Source** : iCal URL secret `ICAL_BOOKING_<bienId>` (Worker) — bloque uniquement les dates, jamais nom/prix
+- **Enrichissement nom+prix** : scrape automatique serveur (`scrapeBookingDetails()`, timeout 12s depuis 2026-07-16), voir `docs/booking-sync.md` pour le détail complet et le rafraîchissement du token de session
 - **Annulation** : identique Airbnb
 
 ### 3. Direct Stripe (Martinique, tous biens sauf Iguana)
 - **Source** : `villamaryllis.com` BookingModal → `/api/create-payment-intent` → Stripe
-- **Paiement confirmé** : `/api/stripe-webhook` → `/api/notify-booking` → D1 `direct_bookings` + GAS `addReservation_` → Sheet + email/ntfy
-- **Auto-sync Worker** : toutes les heures `fetchDirectBookingsAsEvents()` → `pushToSheets()` (idempotent, dedup par id)
-- **✅ Complet** : nom, montant, email voyageur disponibles dès la résa
-- **Annulation** : **MANUELLE UNIQUEMENT** — bouton ✕ admin Planning → GAS `deleteReservation_` → rebuild revenus. Remboursement Stripe = séparé (Manuel ou Stripe Dashboard)
-- **Pas d'iCal** pour les résas directes → pas de détection automatique d'annulation
+- **Paiement confirmé** : `/api/stripe-webhook` → D1 `direct_bookings` (`storeDirectBooking`) + push Sheet immédiat (`context.waitUntil`, best-effort) + purge cache dispo
+- **Auto-sync Worker (filet de sécurité)** : `*/10 * * * *` → `fetchDirectBookingsAsEvents()` → `pushToSheets()` (idempotent, dedup par id `direct-<pi>`)
+- **Annulation** : `/api/cancel-booking` (admin) → remboursement Stripe optionnel + libération caution + annulation Beds24 si Nogent + D1 `status='cancelled'` + purge cache dispo + **push Sheet status="Annulé"** (upsert via `importAllReservations`, PAS un delete) + rebuild revenus. Tout depuis 2026-07-16 — avant, seul le D1 était mis à jour, le Sheet restait "Confirmé" indéfiniment.
 
 ### 4. Beds24 (Nogent UNIQUEMENT — propId 158192)
-- **Source** : webhook Beds24 temps réel → `/api/beds24-webhook`
-- **Flux** : webhook reçu → purge cache dispo KV Nogent → fetch Beds24 API (résas modifiées 48h) → normalize → GAS `addReservation_` (id=`beds24-<bookingId>`) → Sheet
-- **Annulation** : webhook status=`cancelled` → `addReservation_` avec statut "Annulé" (pas de delete, marqué annulé) + rebuild
-- **Cron Worker** (toutes les 10 min) : `runCancelUnpaidBeds24Bookings()` → annule les résas non payées restées trop longtemps
+- **Source** : webhook Beds24 temps réel → `/api/beds24-webhook` — SEUL chemin d'écriture Sheet pour Nogent (pas d'iCal, pas de polling de secours)
+- **Flux** : webhook reçu → purge cache dispo KV Nogent → fetch Beds24 API (résas modifiées 48h) → normalize → `/api/sheets-proxy` (`importAllReservations`) → Sheet
+- **Annulation** : webhook status=`cancelled` → statut "Annulé" (pas de delete) + rebuild
+- **Cron Worker (*/10min)** : `runCancelUnpaidBeds24Bookings()` annule les résas Beds24 `status="new"` âgées ≥4h — **protégé depuis 2026-07-16** contre l'annulation d'une résa réellement payée (croise `direct_bookings.beds24_booking_id`, alerte ntfy si une résa payée est trouvée "new")
 
-## Pipeline GAS (Apps Script)
+## Pipeline GAS (Apps Script) — toutes les écritures protégées par LockService depuis 2026-07-16
 
 ```
-POST /api/sheets-proxy → APPS_SCRIPT_URL
-  addReservation_({id, bienId, voyageur, canal, checkin, checkout, montant, statut})
-    → upsert sur Sheet "Toutes les Réservations" (dedup par id String)
-    → syncRevenus2026() si nouveau (mémo-based)
+POST /api/sheets-proxy → GET paginé vers APPS_SCRIPT_URL (contourne le bug redirect Google,
+                          bug RESA-001 : un POST direct perd son body, doGet() tombe sur son
+                          action par défaut "read" — piège qui a cassé cancelReservations_
+                          côté Airbnb/Booking pendant des mois, jamais détecté avant l'audit)
+
+  importAllReservations_({id, bienId, voyageur, canal, checkin, checkout, montant, status})
+    → LockService.tryLock(10s) → upsert sur Sheet "Toutes les Réservations" (dedup par id String)
+    → statut "Annulé" = juste une valeur de champ (PAS un delete) → colore la ligne en rose
 
   cancelReservations_([{uid, bienId, canal}])
-    → lit cols A+B+E pour capturer bien+mois AVANT suppression
-    → delete row(s)
-    → rebuildRevenus2026_(true, month, bienId) par bien/mois affecté ✅
+    → LockService.tryLock(10s) → lit cols A+B+E pour capturer bien+mois AVANT suppression
+    → delete row(s) → rebuildRevenus2026_/2027_(true, month, bienId) par bien/mois affecté
 
   deleteReservation_({id})
-    → lit cols A+B+E AVANT suppression (bienId + mois)
-    → delete row
-    → rebuildRevenus2026_(true, month, bienId) automatiquement ✅ (depuis @74, 2026-06-27)
+    → LockService.tryLock(10s) → lit cols A+B+E AVANT suppression (bienId + mois)
+    → delete row → rebuildRevenus2026_(true, month, bienId) automatiquement
     → retourne { ok, action, rebuilt:{bienId,year,month} }
 
-  revenus2026RebuildBienApply({fromMonth, bien})
+  revenus2026RebuildBienApply({fromMonth, bien}) / revenus2027RebuildBienApply({fromMonth})
     → zero + recalcul idempotent depuis "Toutes les Réservations"
-    → SEULE fonction sûre pour recalculer les revenus
-
-  revenus2027RebuildBienApply({fromMonth})
-    → zero + recalcul idempotent 2027 (sans filtre bienId — tous biens)
+    → SEULE fonction sûre pour recalculer les revenus — jamais ignoreMemo:true (additif, double-compte)
 ```
 
 ## Garde-fous
@@ -127,11 +101,13 @@ POST /api/sheets-proxy → APPS_SCRIPT_URL
 | Garde-fou | Statut | Détail |
 |---|---|---|
 | `revenus2026FromMonth(ignoreMemo:true)` | 🔴 BLOQUÉ GAS | Retourne erreur 400 — additif = double-compte |
-| `cancelReservations_` utilise rebuild | ✅ ACTIF | Capture bien+mois avant delete, rebuild après |
-| `patch-booking.js` utilise rebuild | ✅ ACTIF | `revenus2026RebuildBienApply`, jamais `ignoreMemo` |
+| `cancelReservations_`/`deleteReservation_`/`importAllReservations_` utilisent rebuild | ✅ ACTIF | Capture bien+mois avant écriture, rebuild après |
 | KV `{uid, checkout}` anti-faux-positifs | ✅ ACTIF | Filtre rotation UID (même préfixe) + checkout passé |
-| Dedup iCal par id String | ✅ ACTIF | `beds24-<id>` stable, conversion String() côté GAS |
-| `CLAUDE_SECRET` accès admin | ✅ ACTIF | Bearer token machine Claude, `_adminauth.js` prio 2 |
+| Dedup Sheet par id String | ✅ ACTIF | `beds24-<id>`/`direct-<pi>` stable, conversion String() côté GAS |
+| Cache dispo purgé à chaque résa/annulation | ✅ ACTIF (2026-07-16) | Les 4 canaux purgent `avail_<bienId>` (KV) — avant, seul Nogent le faisait |
+| LockService sur les 4 écritures Sheet | ✅ ACTIF (2026-07-16) | `tryLock(10s)`, jamais de throw non catché, `{locked:true}` explicite si contention |
+| `direct_bookings.beds24_booking_id` | ✅ ACTIF (2026-07-16) | Empêche l'annulation auto d'une résa Nogent réellement payée |
+| `CLAUDE_SECRET` accès admin | ✅ ACTIF | Bearer token machine Claude — **jamais coller sa valeur dans un fichier versionné**, toujours `grep .dev.vars` |
 
 ## Anti-patterns à ne jamais faire
 
@@ -140,19 +116,5 @@ POST /api/sheets-proxy → APPS_SCRIPT_URL
 - ❌ Créer une résa Beds24 pour un bien autre que Nogent
 - ❌ Modifier les revenus via `revenus2026ManualPatch_` sans avoir vérifié le Sheet d'abord
 - ❌ Forcer une suppression iCal sans vérifier si c'est une rotation d'UID
-
-## Vérification rapide (Claude peut appeler)
-
-```bash
-# Vérifier les résas D1 direct_bookings
-curl -s "https://villamaryllis.com/api/sheets-proxy" \
-  -H "Authorization: Bearer <CLAUDE_SECRET>" \
-  -H "Content-Type: application/json" \
-  -d '{"action":"getReservations","limit":20}'
-
-# Rebuild revenus un bien / un mois
-curl -s "https://villamaryllis.com/api/sheets-proxy" \
-  -H "Authorization: Bearer <CLAUDE_SECRET>" \
-  -H "Content-Type: application/json" \
-  -d '{"action":"revenus2026RebuildBienApply","fromMonth":6,"bien":"geko"}'
-```
+- ❌ POSTer directement vers `APPS_SCRIPT_URL` (bug RESA-001) — toujours passer par `/api/sheets-proxy`
+- ❌ Coller un secret réel (CLAUDE_SECRET, POSTSTAY_SECRET...) en clair dans un fichier `.memory/` versionné

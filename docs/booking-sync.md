@@ -1,64 +1,56 @@
-# Booking.com — récupération auto nom + prix (scraper local)
+# Booking.com — récupération auto nom + prix
+
+> Mis à jour 2026-07-16 (audit) — ce doc décrivait un pipeline local Playwright qui n'est plus
+> le chemin actif en prod depuis le commit `18adc63` (2026-06-30, "feat: auto-import Booking.com
+> sur détection iCal"). Voir « Historique » en bas pour l'ancien mécanisme (orphelin).
 
 Booking ne transmet **ni nom ni prix** par iCal ni par email (le mail « Nouvelle réservation »
 ne contient qu'un n° de résa + un lien extranet). Seule la **fiche extranet** porte ces données.
-Pas de Beds24 hors Nogent (décision Vincent). → On lit l'extranet dans **ta session connectée**,
-sur **ton Mac** (aucun cloud ne peut s'authentifier : login + 2FA + anti-bot + token `ses=`).
+Pas de Beds24 hors Nogent (décision Vincent) — jamais de Beds24 pour Booking.com.
 
-## Pipeline
+## Pipeline actuel (automatique, serveur)
 
 ```
-Nouvelle résa Booking  →  arrive déjà via iCal dans le Sheet (bien + dates, SANS nom/prix = ligne "à compléter")
-     └─→ scripts/booking-sync.mjs (TA session, profil Playwright persistant)
-           └─→ ouvre la fiche extranet de la résa  →  lit nom + dates + NET (total − commission)
-                 └─→ enrichReservation_ (GAS, NON destructif, ±1 j de tolérance)  →  ligne complétée
-                       └─→ si session expirée / parse KO  →  ntfy "à re-loguer / saisir à la main"
+Nouvelle résa Booking détectée dans l'iCal (cron Worker, toutes les 10 min)
+  └─→ autoImportNewBookings() (workers/ical-sync/index.js)
+        └─→ scrapeBookingDetails() : GET admin.booking.com (session ses= stockée en D1,
+            timeout 12s) → parseBookingAdminHtml() extrait nom + prix + bookingId
+              └─→ upsertBookingReservation() : écrit direct_bookings (D1), id
+                  "booking.com-<bookingId>" (ou "booking.com-ical-<uid>" si pas encore scrapé)
+                    └─→ pushToSheets() (même cycle) → Sheet "Toutes les Réservations"
 ```
 
-Réutilise **tout** l'aval déjà construit et testé pour Airbnb : `enrichReservation_`, la détection
-« à compléter », la sync iCal. Nouveau : juste le parseur (`src/utils/parseBookingReservation.js`,
-19 tests) + ce script local.
+Si la session `ses=` est expirée/absente : la résa est quand même créée (nom="Voyageur Booking",
+montant=0€) et une alerte ntfy urgente prévient qu'il faut rafraîchir le token. Le prochain cycle
+`*/10 * * * *` retentera automatiquement — pas besoin d'intervention manuelle pour relancer le
+scrape, seulement pour renouveler le token si besoin.
+
+## Rafraîchir le token de session (bookmarklet)
+
+Le token `ses=` n'est jamais vérifié proactivement contre son vrai TTL — seulement découvert
+expiré réactivement (401/403/redirect signin) au moment d'un scrape. `GET /api/booking-session`
+donne un indicateur (`valid`, `days_since`) basé sur la dernière fois qu'il a été enregistré, pas
+sur un test réel de validité.
+
+```
+1. Ouvrir admin.booking.com (être connecté)
+2. Copier le token ses=XXXX depuis l'URL
+3. POST /api/booking-session?secret=<POSTSTAY_SECRET>  { "ses": "XXXX" }
+```
+
+Stocké en D1 `app_config` (clé `booking_ses`). `hotel_id` connus : Zandoli `9438450` ·
+Nogent `8741457` · Amaryllis `8227852` (les autres se lisent dans l'URL extranet de chaque bien).
 
 ## Convention montant
 
 `montant = Montant total − Commission et frais` (= le **virement net** que Booking te fait).
-Ex. NINA GRUBO : 830,68 − 134,20 = **696,48 €**.
 
-## Setup (1 fois)
+## Historique — ancien pipeline local (orphelin, non branché en prod)
 
-```bash
-# 1) Se connecter à l'extranet UNE fois (ouvre un navigateur ; email + mot de passe + 2FA — toi seul) :
-node scripts/booking-sync.mjs --login
-#    → quand ton tableau de bord Booking s'affiche, reviens au terminal et appuie sur Entrée.
-#    La session est mémorisée dans ~/.amaryllis-booking-profile (re-login quand elle expire).
-```
-
-## Usage
-
-```bash
-# Enrichir une (ou plusieurs) réservation(s) — format res_id:hotel_id :
-node scripts/booking-sync.mjs 6191917019:9438450
-
-# Debug (voir le navigateur) :
-HEADED=1 node scripts/booking-sync.mjs 6191917019:9438450
-```
-
-Codes de sortie : `0` OK · `2` session expirée (ntfy envoyé, refaire `--login`) · `1` erreur.
-
-hotel_id connus : Zandoli `9438450` · Nogent `8741457` · Amaryllis `8227852` (les autres se lisent
-dans l'URL extranet de chaque bien ; le parseur mappe aussi par nom d'établissement).
-
-## Reste à brancher (déclenchement automatique)
-
-Aujourd'hui le script prend les `res_id:hotel_id` en argument. Pour l'auto :
-1. **Source des res_id** : capter le `res_id` du mail Booking « Nouvelle réservation » (déjà dans
-   le lien extranet) OU matcher les lignes « à compléter » (bien+dates) à la liste extranet.
-2. **Déclencheur** : le Worker pousse un ntfy quand l'iCal crée une ligne Booking incomplète → un
-   petit agent local lance `booking-sync.mjs` (ntfy n'ouvre Booking **que** sur une vraie résa).
-3. **Planif** : `launchd` (Mac forcé allumé) en filet de sécurité.
-
-## Limites assumées (Vincent OK)
-
-- Session Booking **fragile** : expire souvent → re-login manuel (ntfy prévient).
-- **Anti-bot / CGU** : zone grise, mais ce sont **tes** données, à la demande, dans ta session.
-- Fragile aux changements d'UI Booking → le parseur a 19 tests calés sur le format réel 06/2026.
+Avant le 2026-06-30, l'enrichissement passait par un script Playwright local
+(`scripts/booking-sync.mjs` + `src/utils/parseBookingReservation.js`, 19 tests), déclenché
+manuellement (`node scripts/booking-sync.mjs <res_id>:<hotel_id>`), lisant la session Booking
+directement sur le Mac de Vincent (profil persistant `~/.amaryllis-booking-profile`). Ce script
+existe toujours dans le repo mais n'est plus référencé par le chemin critique — gardé pour
+référence/dépannage si le scrape serveur venait à casser durablement (anti-bot Booking renforcé,
+etc.), pas pour un usage courant.

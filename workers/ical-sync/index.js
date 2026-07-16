@@ -1,33 +1,38 @@
-/**
- * Amaryllis — Cloudflare Worker : automatisation complète
- *
- * Crons :
- *   "0 * * * *"   → sync iCal toutes les heures
- *   "0 9 * * *"   → audit + rappels J-7conseils/J-3/J-1/J+1/J+2/J+3/J-7direct + alertes + gap pricing + yield pricing
- *   "0 6 * * 1"   → rapport hebdomadaire (lundi matin)
- *   "0 1 1 * *"   → export comptable mensuel (1er du mois) + rapport SLA Exploitation (maintenance+stock)
- *
- * Fonctions principales :
- *   runSync            — Fetch iCal Airbnb + Booking, détecte nouvelles réservations
- *   runReminders       — Rappels J-7conseils, J-3, J-1 (+ ntfy ménage), J+1, J+2 avis, J+3 Google, J-7 direct
- *   runOccupancyAlerts — Alertes sous-occupation 30j + urgence 0 résa 14j
- *   runGapPricing      — Remises automatiques sur trous de calendrier 1-4 nuits
- *   runYieldPricing    — Yield management : -20%/-15% si occ < 30% sur 14j
- *   runMonitor         — Audit HTTP + alerte expiration token Beds24
- *   runWeeklyReport    — Rapport hebdomadaire (occupation, revenus, arrivées)
- *   runPrixRecap       — Rappel lundi : vérifier/synchroniser les prix Airbnb
- *   runMonthlyExport   — Export CSV comptable mensuel
- *   runCautionAutoRelease — Libération automatique des cautions Stripe J+3
- *
- * Secrets requis :
- *   RESEND_API_KEY        — Resend (email)
- *   APPS_SCRIPT_URL       — Google Apps Script
- *   NTFY_TOPIC            — Topic ntfy.sh pour notifs ménage (ex: menage-amaryllis-2025)
- *   NOTIFICATION_EMAIL    — Email hôte (défaut: contact@villamaryllis.com)
- *   BEDS24_TOKEN          — Token API Beds24 V2 (optionnel, alerte expiration)
- *   STRIPE_SECRET_KEY     — Stripe (caution + auto-release)
- *   WORKER_SECRET         — Token de sécurité pour les endpoints déclencheurs
- */
+// Amaryllis — Cloudflare Worker : automatisation complète
+//
+// Crons (source de vérité : wrangler.toml [triggers] crons — corrigé 2026-07-16, cette liste
+// était périmée depuis la migration de 15 à 10 minutes) :
+//   toutes les 10 min   → sync iCal + annulations Beds24 non payées + publication éditoriale
+//                         + relance panier + enrichissement résas Airbnb/Booking.com
+//   "0 9 * * *"         → audit + rappels J-7conseils/J-3/J-1/J+1/J+2/J+3/J-7direct + alertes
+//                         + gap pricing + yield pricing + agents + orchestrateur + poststay
+//   "0 11 * * 1"        → Réunion Générale cross-fleet (lundi 11h UTC)
+//   "0 12 * * *"        → drafts éditoriaux J+2 + alerte ménage
+//   "0 13 * * *"        → charge-balance (soldes 2x J-30) + docs-refresh
+//   "0 6 * * 1"         → rapport hebdomadaire (lundi matin) + prix-recap + QA hebdo
+//   "0 1 1 * *"         → export comptable mensuel (1er du mois) + article SEO + QA mensuel
+//   "0 20 * * 7"        → accountability hebdo (dimanche soir, avant la Réunion Générale)
+//
+// Fonctions principales :
+//   runSync            — Fetch iCal Airbnb + Booking, détecte nouvelles réservations
+//   runReminders       — Rappels J-7conseils, J-3, J-1 (+ ntfy ménage), J+1, J+2 avis, J+3 Google, J-7 direct
+//   runOccupancyAlerts — Alertes sous-occupation 30j + urgence 0 résa 14j
+//   runGapPricing      — Remises automatiques sur trous de calendrier 1-4 nuits
+//   runYieldPricing    — Yield management : -20%/-15% si occ < 30% sur 14j
+//   runMonitor         — Audit HTTP + alerte expiration token Beds24
+//   runWeeklyReport    — Rapport hebdomadaire (occupation, revenus, arrivées)
+//   runPrixRecap       — Rappel lundi : vérifier/synchroniser les prix Airbnb
+//   runMonthlyExport   — Export CSV comptable mensuel
+//   runCautionAutoRelease — Libération automatique des cautions Stripe J+3
+//
+// Secrets requis :
+//   RESEND_API_KEY        — Resend (email)
+//   APPS_SCRIPT_URL       — Google Apps Script
+//   NTFY_TOPIC            — Topic ntfy.sh pour notifs ménage (ex: menage-amaryllis-2025)
+//   NOTIFICATION_EMAIL    — Email hôte (défaut: contact@villamaryllis.com)
+//   BEDS24_TOKEN          — Token API Beds24 V2 (optionnel, alerte expiration)
+//   STRIPE_SECRET_KEY     — Stripe (caution + auto-release)
+//   WORKER_SECRET         — Token de sécurité pour les endpoints déclencheurs
 
 import { clog, redactName } from "./_logger.js";
 
@@ -1489,7 +1494,7 @@ async function fetchDirectBookingsAsEvents(env) {
   try {
     // Migration idempotente — colonne ajoutée par functions/api/cancel-booking.js.
     try { await env.revenue_manager.prepare(`ALTER TABLE direct_bookings ADD COLUMN status TEXT DEFAULT 'confirmed'`).run(); } catch { /* déjà présente */ }
-    // Exclut les résas annulées : sans ce filtre, ce sync (15 min) re-poussait vers le
+    // Exclut les résas annulées : sans ce filtre, ce sync (10 min) re-poussait vers le
     // Sheet une résa qu'on venait juste de supprimer manuellement (résurrection silencieuse).
     const rows = await env.revenue_manager.prepare(
       `SELECT payment_intent_id, bien_id, bien_nom, voyageur, total, depot, checkin, checkout, canal
@@ -1837,7 +1842,8 @@ async function runSync(env) {
   }
 
   // ── Ajouter les résas DIRECTES Stripe (D1) à allEvents avant push Sheets ──
-  // Auto-sync : toutes les 15 min, les direct_bookings remontent dans
+  // Auto-sync : toutes les 10 min (filet de sécurité, cf. aussi le push immédiat au
+  // paiement dans stripe-webhook.js), les direct_bookings remontent dans
   // « Toutes les Réservations » → Revenus 2026 → admin Planning.
   const directs = await fetchDirectBookingsAsEvents(env);
   if (directs.length > 0) {
@@ -4148,7 +4154,7 @@ export default {
         } catch (e) {
           console.error("[gmail-sync] Cron error:", e.message);
         }
-        // ── Relance panier abandonné (horaire — D1 de-dup dans l'endpoint) ────────────────────────
+        // ── Relance panier abandonné (10 min — D1 de-dup dans l'endpoint) ────────────────────────
         try {
           const siteUrl = env.SITE_URL || "https://villamaryllis.com";
           const rpRes = await fetch(`${siteUrl}/api/send-relance-panier?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`);
@@ -4249,7 +4255,7 @@ export default {
     }
     return new Response(JSON.stringify({
       name: "amaryllis-ical-sync",
-      crons: ["0 * * * * (sync)", "0 9 * * * (rappels+alertes+yield)", "0 6 * * 1 (hebdo)", "0 1 1 * * (mensuel)"],
+      crons: ["*/10 * * * * (sync+annulations+éditorial+relance panier)", "0 9 * * * (rappels+alertes+yield)", "0 11 * * 1 (réunion générale)", "0 12 * * * (drafts éditoriaux+alerte ménage)", "0 13 * * * (charge-balance+docs-refresh)", "0 6 * * 1 (hebdo)", "0 1 1 * * (mensuel)", "0 20 * * 7 (accountability hebdo)"],
       endpoints: ["/sync", "/reminders", "/weekly", "/monthly", "/occupancy", "/monitor", "/test-ntfy", "/gap-prices", "/gap-prices/refresh", "/yield", "/yield/refresh"],
     }), { headers: { "Content-Type": "application/json" } });
   },

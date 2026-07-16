@@ -7,7 +7,8 @@
 // réservation a finalement été payée (présence dans direct_bookings).
 //
 // Auth : ?secret=<POSTSTAY_SECRET>
-// Cron-job.org : GET https://villamaryllis.com/api/send-relance-panier?secret=<SECRET> toutes les heures.
+// Appelé par le Worker (workers/ical-sync/index.js, branche */10 * * * *) toutes les 10 min —
+// pas un cron-job.org externe (corrigé 2026-07-16, ce commentaire disait "toutes les heures").
 //
 // Séquence 2 relances :
 //   Relance 1 (30 min) : relance_sent=0 + panier âgé 30min–72h  → relance_sent=1

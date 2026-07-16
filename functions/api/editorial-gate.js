@@ -284,7 +284,8 @@ Retourne UNIQUEMENT : {"score":0-100,"verdict":"approve"|"reject"|"needs_edits",
       await notify(env, `👁 SHADOW — aurait publié (${e.bien_id})`, `${short}…\n\nEn mode live, ce post serait parti seul. Vérifie qu'il est bon.`, "low");
     } else {
       // FAIL → escalade à valider à la main. Re-notifie seulement si l'escalade a
-      // CHANGÉ depuis la dernière évaluation (le gate repasse toutes les heures).
+      // CHANGÉ depuis la dernière évaluation (le gate repasse toutes les 10 min, cf. cron
+      // */10 * * * * du Worker — corrigé 2026-07-16, ce commentaire disait "toutes les heures").
       out.escalated++;
       const sameAsBefore = prevGate?.decision === "escalated"
         && JSON.stringify(prevGate.fails || []) === JSON.stringify(verdict.fails);
