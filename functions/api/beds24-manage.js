@@ -197,31 +197,60 @@ export async function onRequestPost(context) {
       return json({ error: "Champs requis : bookingId, firstName, lastName, price" }, 400);
     }
 
-    const payload = [{ id: String(bookingId), status: "confirmed", firstName, lastName, price: Number(price) }];
-
+    // 500 (jamais 502/503/504) sur tout le bloc : Cloudflare intercepte cette famille de
+    // statuts et les remplace par SA PROPRE page d'erreur HTML avant qu'ils n'atteignent le
+    // navigateur — masquant le vrai message JSON (trouvé en direct 2026-07-16 via wrangler
+    // pages deployment tail sur une tentative réelle de Vincent).
     try {
-      const res = await fetch(BEDS24_V2_BOOKINGS, {
+      // Étape 1 — nom + statut. Le champ `price` à plat n'est documenté par Beds24 QUE pour
+      // la création ("New bookings only") : l'envoyer avec un `id` (mode update) fait
+      // échouer TOUTE la requête côté Beds24 ("Could not process request", confirmé en
+      // direct). Le prix d'une résa existante passe par invoiceItems (étape 2).
+      const step1 = [{ id: String(bookingId), status: "confirmed", firstName, lastName }];
+      const res1 = await fetch(BEDS24_V2_BOOKINGS, {
         method: "PUT",
         headers: { token, "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(step1),
       });
-      const text = await res.text();
-      let data;
-      try { data = JSON.parse(text); } catch { data = { raw: text }; }
+      const text1 = await res1.text();
+      let data1; try { data1 = JSON.parse(text1); } catch { data1 = { raw: text1 }; }
+      if (!res1.ok || data1.success === false) {
+        console.error("[restoreGuest] étape 1 (nom+statut) refusée par Beds24", { httpStatus: res1.status, payload: step1, response: data1 });
+        return json({ error: "Beds24 restoreGuest échoué (nom/statut)", raw: data1 }, 500);
+      }
 
-      // 500 et non 502 : Cloudflare intercepte les 502/503/504 émis par le Worker et les
-      // remplace par SA PROPRE page d'erreur HTML (comportement par défaut de la zone,
-      // famille "Bad Gateway") — le JSON ci-dessous n'atteignait jamais le navigateur,
-      // d'où "Unexpected token '<', <!DOCTYPE" côté admin (trouvé en direct 2026-07-16,
-      // via wrangler pages deployment tail sur une tentative réelle de Vincent).
-      if (!res.ok || data.success === false) {
-        console.error("[restoreGuest] Beds24 a refusé la mise à jour", { httpStatus: res.status, payload, response: data });
-        return json({ error: "Beds24 restoreGuest échoué", raw: data }, 500);
+      // Étape 2 — prix via invoiceItems. On relit la résa pour savoir si un invoiceItem
+      // existe déjà (à mettre à jour) ou s'il faut en ajouter un (résa jusqu'ici à 0€).
+      const qp = new URLSearchParams({ propId: PROP_ID, arrivalFrom: "2000-01-01", numId: "1", includeInvoiceItems: "true" });
+      qp.set("id", String(bookingId));
+      const getRes = await fetch(`${BEDS24_V2_BOOKINGS}?${qp}`, { headers: { token } });
+      const getData = await getRes.json().catch(() => ({}));
+      const bookingNow = (getData.data || [])[0];
+      const existingItem = bookingNow?.invoiceItems?.[0];
+
+      // Forme confirmée via la doc officielle Beds24 (apiV2.yaml, exemple invoiceItems) :
+      // {type:"charge", qty, amount} — pas de champ `description` documenté, on colle à l'exemple exact.
+      const invoiceItems = existingItem
+        ? [{ id: existingItem.id, amount: Number(price) }]
+        : [{ type: "charge", qty: 1, amount: Number(price) }];
+
+      const step2 = [{ id: String(bookingId), invoiceItems }];
+      const res2 = await fetch(BEDS24_V2_BOOKINGS, {
+        method: "PUT",
+        headers: { token, "Content-Type": "application/json" },
+        body: JSON.stringify(step2),
+      });
+      const text2 = await res2.text();
+      let data2; try { data2 = JSON.parse(text2); } catch { data2 = { raw: text2 }; }
+      if (!res2.ok || data2.success === false) {
+        console.error("[restoreGuest] étape 2 (prix/invoiceItems) refusée par Beds24", { httpStatus: res2.status, payload: step2, response: data2, bookingNow });
+        return json({ error: "Nom/statut corrigés, mais le prix a échoué — voir logs serveur", raw: data2 }, 500);
       }
 
       return json({ ok: true, bookingId, firstName, lastName, price: Number(price), status: "confirmed" });
 
     } catch (e) {
+      console.error("[restoreGuest] exception", e.message);
       return json({ error: e.message }, 500);
     }
   }
