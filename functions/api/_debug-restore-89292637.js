@@ -37,6 +37,15 @@ export async function onRequestPost(context) {
       return new Response(JSON.stringify({ error: "Échange refreshToken échoué: " + e.message }), { status: 200 });
     }
   }
+  if (body.checkDetails) {
+    const detailsRes = await fetch("https://beds24.com/api/v2/authentication/details", { headers: { token } });
+    const details = await detailsRes.json().catch(() => ({}));
+    return new Response(JSON.stringify({ tokenSource, httpStatus: detailsRes.status, details }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
   const fields = body.fields || {};
   // targetId : override diagnostic ponctuel (test idempotent sur une résa normale
   // pour isoler si le problème est spécifique aux blocs "Bloqué") — même secret
