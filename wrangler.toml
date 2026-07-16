@@ -1,7 +1,21 @@
 name = "amaryllis-ical-sync"
 main = "workers/ical-sync/index.js"
-compatibility_date = "2024-09-23"
+# Bumpé 2026-07-16 (était 2024-09-23) — changelog compat_flags vérifié entre les 2 dates :
+# seuls 2 changements potentiellement pertinents pour ce Worker (strip Authorization sur
+# redirect cross-origin ; request.cf prioritaire sur les Cache Rules), aucun ne s'applique
+# en pratique (Stripe/Resend/Apify ne redirigent jamais cross-origin ; le seul usage de
+# cf:{} ici est déjà un "ne jamais cacher" que le nouveau comportement ne fait que renforcer).
+compatibility_date = "2026-07-16"
 compatibility_flags = ["nodejs_compat"]
+
+# Workers Logs (ajouté 2026-07-16) — seule visibilité auparavant : console.log en direct via
+# `wrangler tail`, rien ne persiste après coup. head_sampling_rate=1 (100%) volontaire : ce
+# Worker n'a aucun trafic HTTP public (8 crons + quelques endpoints internes déclenchés
+# manuellement), volume largement sous le palier gratuit (200k events/jour) — pas de raison
+# d'échantillonner en dessous et de risquer de rater exactement le run qu'on veut relire.
+[observability]
+enabled = true
+head_sampling_rate = 1
 
 [triggers]
 crons = [
