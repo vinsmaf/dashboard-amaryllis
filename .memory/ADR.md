@@ -4,6 +4,54 @@
 > Décisions d'archi détaillées (specs complets) → `../docs/superpowers/specs/README.md` (ADR-001→010). Ici = log curaté de session.
 > **Archive mensuelle** : les décisions antérieures au mois courant vivent dans `.memory/archive/ADR-YYYY-MM.md`. Archive actuelle : [`archive/ADR-2026-06.md`](./archive/ADR-2026-06.md) (114 entrées, juin 2026).
 
+## ADR-DEVIS-GROUPE-PAIEMENT-001 · 2026-07-15 · Page publique `/devis-groupe` + lien court `/rg/` pour devis multi-logements avec choix de paiement
+
+1. **Choix** : nouvelle route publique `/devis-groupe` (composant `DevisGroupePaiement`, `PublicSite.jsx`) reprenant le gabarit visuel exact du devis PDF déjà généré/approuvé par le client (pas un nouveau design), affichant 2 boutons vers des Payment Links Stripe déjà créés côté admin (total vs acompte 30%). Lien court via `/rg/<code>` réutilisant tel quel `/api/shorten` (déjà générique, payload base64 opaque) plutôt que construire un mécanisme dédié.
+2. **Alternatives refusées** : (a) Artifact Claude.ai externe — 1er essai, rejeté explicitement par Vincent ("je ne veux pas ça, je veux une page web sur le domaine"). (b) Réutiliser `DevisPage` existante (`/devis`) — écarté, elle est mono-logement + Stripe Elements embarqué (crée un PaymentIntent), un format et un mécanisme de paiement différents de "2 Payment Links déjà créés à choisir".
+3. **Conséquences attendues** : pattern réutilisable pour tout futur devis groupé (payload `?d=` générique : breakdowns par bien, total, dépôt, 2 URLs Stripe) — mais nécessite de construire le payload à la main à chaque fois (pas encore de bouton "générer" côté admin GroupBookingBuilder). `main.jsx` `KNOWN` whitelist a dû être étendue (`/devis-groupe`, `/rg/`) — tout nouveau slug/préfixe futur doit y penser aussi (piège déjà documenté).
+4. **Périmètre** : `src/PublicSite.jsx` (nouveau composant + routing), `src/main.jsx` (`KNOWN`).
+5. **Statut** : ✅ déployé (`ded7998`, `a0b0aef`), vérifié en live (montants/dates/liens Stripe corrects sur `/rg/cambier-zandoli-geko`).
+
+## ADR-SENTRY-STALE-CHUNK-001 · 2026-07-15 · Sentry `beforeSend` réutilise `isStaleChunkError` au lieu d'une regex séparée
+
+1. **Choix** : ajout d'un hook `beforeSend` dans `Sentry.init()` (`main.jsx`) qui appelle `isStaleChunkError(msg, stack)` (déjà écrite le même jour pour `bugCapture.js`) et retourne `null` (drop l'event) si le pattern matche.
+2. **Alternatives refusées** : dupliquer une regex dédiée dans le tableau `ignoreErrors` de Sentry (déjà présent mais incomplet — ne couvrait que les patterns explicites type `ChunkLoadError`, pas le message générique `.default` + condition sur la stack) — écarté pour ne pas avoir 2 définitions du même pattern à maintenir en synchro.
+3. **Conséquences attendues** : élimine les faux positifs Sentry "high priority" causés par un déploiement normal (chunk JS périmé chez un visiteur qui avait déjà la page ouverte) — se reproduira à CHAQUE déploiement sinon. Découverte au passage : Sentry est un pipeline de monitoring totalement indépendant de `bugCapture.js`/`client_errors`/dashboard 🐞 Bugs — un fix sur l'un ne couvre jamais l'autre.
+4. **Périmètre** : `src/main.jsx` (`Sentry.init`), réutilise `src/lib/staleChunk.js` (inchangé).
+5. **Statut** : ✅ déployé (`08fd789`), vérifié (build + tests, pas d'erreur console au chargement).
+
+## ADR-AGENTS-TRIAGE-STATUS-001 · 2026-07-15 · Statut `bloqué` (pas `ignoré`) pour rejeter une reco `agent_actions`
+
+1. **Choix** : lors du tri du backlog agents, utiliser `status='bloqué'` + `notes` factuelles pour toute reco à ne pas exécuter (hallucination, doublon, déjà obsolète, doute juridique) — jamais `'ignoré'`.
+2. **Alternatives refusées** : `status='ignoré'`, prescrit par la memory `feedback_agent_recos.md` (20 jours, périmée) — vérifié dans le code actuel (`functions/api/agents-actions.js`, validateur PATCH) : ce statut n'est PLUS accepté (`["backlog","en-cours","fait","bloqué","a-planifier"]`). Les 25 lignes historiques `status='ignoré'` en D1 viennent d'une version antérieure du endpoint, jamais nettoyée.
+3. **Conséquences attendues** : `agents-triage.js` (cron hebdo) utilise déjà `bloqué` pour ses propres détections automatiques — cette décision aligne le tri manuel sur le même vocabulaire, évite une divergence future. Memory `feedback_agent_recos.md` corrigée en conséquence (append, pas réécrite).
+4. **Périmètre** : aucun code changé (constat + alignement de pratique) ; memory `~/.claude/projects/.../memory/feedback_agent_recos.md` corrigée.
+5. **Statut** : ✅ acté, 16 items du backlog triés selon cette règle, 5 agents notifiés via `agents-run` (brief explicite du pourquoi, demande explicite de Vincent après une 1ère tentative de tri silencieux interrompue).
+
+## ADR-WATCHDOG-SCHEDULED-TASKS-001 · 2026-07-15 · Watchdog quotidien pour tâches planifiées Claude Code bloquées silencieusement
+
+1. **Choix** : nouvelle scheduled task `watchdog-taches-planifiees` (cron 21h/jour, `notifyOnCompletion:false`) qui liste toutes les tâches planifiées + sessions associées, détecte une session restée `isRunning:true` >2h après son dernier `lastRunAt`, et pousse une alerte ntfy (`amaryllis-alertes-7r4k9`) uniquement si anomalie confirmée (jamais de fausse alerte sur donnée manquante).
+2. **Alternatives refusées** : compter sur `notifyOnCompletion` natif (défaut `true`) — ne se déclenche QUE si la tâche termine proprement ; ne couvre pas le cas réel observé (`revue-seo-articles-amaryllis` bloquée après 1 message, jamais terminée, invisible pendant des heures).
+3. **Conséquences attendues** : mécanisme cross-projets (patrimoine/trading-bot/life-os inclus, pas scopé à locatif) — vit dans `~/.claude/scheduled-tasks/`, pas dans ce repo. Risque résiduel assumé : le watchdog lui-même pourrait se bloquer (pas de méta-watchdog récursif). Vincent doit cliquer "Run now" une fois pour pré-approuver `curl`/lecture de sessions, sinon le 1er run cron risque de rester en pause sur un prompt de permission.
+4. **Périmètre** : `~/.claude/scheduled-tasks/watchdog-taches-planifiees/SKILL.md` (hors repo locatif-dashboard, mécanisme Claude Code global).
+5. **Statut** : ✅ créé, 1er run programmé 21h le 2026-07-15 — pas encore vérifié en conditions réelles (à confirmer après un run complet).
+
+## ADR-SEO-ARTICLES-SITEMAP-DECOUVERTE-001 · 2026-07-15 · Resoumission manuelle du sitemap — cause racine des 37 articles à 0 impression
+
+1. **Choix** : diagnostiquer via Inspection d'URL Google Search Console (2 articles-échantillon) plutôt que de supposer un problème de contenu/qualité — a révélé "Google ne reconnaît pas cette URL" + "aucun sitemap référent détecté" pour les 2. Cause : le sitemap n'avait été lu par Google qu'une seule fois (23/06, jour du déploiement), jamais depuis. Resoumis manuellement `sitemap.xml` dans Search Console (action bénigne, gratuite) → pages découvertes 64→99 immédiatement.
+2. **Alternatives refusées** : enrichir le contenu des 7 articles les plus courts (<3500c) en 1ère intention (plan initial de la tâche cloud) — écarté une fois le vrai diagnostic posé : enrichir du contenu que Google n'a jamais vu n'aurait rien débloqué. Renforcer le maillage interne (repéré comme piste secondaire) — pas nécessaire en 1er, la cause racine était plus en amont (découverte, pas distribution).
+3. **Conséquences attendues** : pas d'effet instantané — indexation + classement prennent plusieurs jours à quelques semaines après une redécouverte de sitemap. Re-vérification programmée (AGENDA 2026-07-30) : si toujours 0 impression à cette date, creuser plus profond (contenu/maillage). Le mécanisme de resoumission manuelle n'est pas automatisé — si un futur lot de contenu subit le même sort (sitemap jamais relu), il faudra repenser un déclencheur automatique (ping Google au déploiement ?).
+4. **Périmètre** : aucun code changé — action opérationnelle dans Google Search Console (compte Vincent).
+5. **Statut** : ✅ fait, effet immédiat confirmé (64→99 pages découvertes) ; effet sur les impressions à confirmer le 2026-07-30.
+
+## ADR-STRIPE-BALANCE-DIAGNOSTIC-001 · 2026-07-15 · `?balance=1` sur `/api/stripe-reconcile` — diagnostic solde/schedule + garde contre les clés locales non fiables
+
+1. **Choix** : ajout d'un paramètre `?balance=1` (même pattern que `?inspect=`) exposant solde Stripe (available/pending), `payouts_enabled`, `payout_schedule`, `requirements`, et les 20 dernières `balance_transactions` avec `available_on` — pour distinguer "Stripe ne vire plus" (compte/schedule cassé) de "aucun nouveau paiement" (rien à virer, normal).
+2. **Alternatives refusées** : tester directement avec la clé `STRIPE_SECRET_KEY` de `.dev.vars` local — piège rencontré en direct : cette clé locale a renvoyé des résultats totalement différents (1 seul payout, daté du 17/06) de la vraie clé de prod utilisée par le Worker Cloudflare — `.dev.vars` n'est pas garanti synchronisé avec les secrets Cloudflare Pages, ne jamais s'y fier pour un diagnostic de production.
+3. **Conséquences attendues** : diagnostic confirmé bénin — 12 jours sans nouveau paiement direct (03/07→15/07), le dernier payout (8/07) correspond exactement (au centime) aux transactions disponibles à cette date. Pas un bug ; signal business à surveiller si le creux persiste. Outil de diagnostic gardé en permanence pour la prochaine fois qu'un doute similaire se présente.
+4. **Périmètre** : `functions/api/stripe-reconcile.js` (nouveau bloc `?balance=`).
+5. **Statut** : ✅ déployé (`86ad7fe`, `0701558`), 9 tests existants toujours verts, diagnostic exécuté et concluant.
+
 ## ADR-CANAL-DIRECT-FORCE-001 · 2026-07-15 · Canal réel (Airbnb/Booking) au lieu de "Direct" forcé pour les résas importées par email
 
 1. **Choix** : `fetchDirectBookingsAsEvents()` (Worker) et `trigger-sync.js` (Function) — les 2 chemins qui poussent `direct_bookings` D1 vers le Sheet — forçaient `canal:"Direct"` en dur pour CHAQUE ligne, ignorant la vraie colonne `canal` que `airbnb-email-import.js` (webhook Zapier confirmations Airbnb/Booking) pose pourtant correctement à l'insertion. Corrigé : les 2 lisent maintenant `r.canal || "Direct"` (le défaut de colonne couvre les vraies résas Stripe).
