@@ -215,6 +215,7 @@ export async function onRequestPost(context) {
       // d'où "Unexpected token '<', <!DOCTYPE" côté admin (trouvé en direct 2026-07-16,
       // via wrangler pages deployment tail sur une tentative réelle de Vincent).
       if (!res.ok || data.success === false) {
+        console.error("[restoreGuest] Beds24 a refusé la mise à jour", { httpStatus: res.status, payload, response: data });
         return json({ error: "Beds24 restoreGuest échoué", raw: data }, 500);
       }
 
