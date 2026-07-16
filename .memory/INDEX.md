@@ -17,6 +17,7 @@
 | **[DECISIONS.md](./DECISIONS.md)** | Moteur de décision : critères déterministes par type de décision (niv.3) | Avant de trancher |
 | **[FLUX-RESAS.md](./FLUX-RESAS.md)** | 📡 Pipeline complet des 4 canaux (Airbnb/Booking/Direct/Beds24) + annulations + garde-fous | Avant de toucher aux réservations ou revenus |
 | **[ITERATIONS_LOG.md](./ITERATIONS_LOG.md)** | Journal des sessions (rolling) | Pour retracer l'historique récent |
+| **[ROADMAP-INNOVATIONS.md](./ROADMAP-INNOVATIONS.md)** | 🚀 10 chantiers innovation validés par Vincent (2026-07-16) — à traiter **UN PAR UN** à partir du 2026-07-17. Intention + ancrage + questions ouvertes par chantier (pas de specs). | **Avant de démarrer un nouveau chantier de fond** |
 | **[METRICS_H1_2026.md](./METRICS_H1_2026.md)** | Revue de performance H1 2026 — scorecard 7 biens, alertes P0, canal mix, chantiers H2 | En début de session ou avant tout conseil pricing/locatif |
 | **[SPRINT_2026_07.md](./SPRINT_2026_07.md)** | Sprint plan 01–14 juillet 2026 — P0/P1/stretch, statuts, dates clés | En début de session pour savoir quoi faire en priorité |
 | **[whatsapp-contacts-collecte.md](./whatsapp-contacts-collecte.md)** | Détail de la collecte de contacts WhatsApp (88 contacts, recoupement téléphone/email) | Si besoin du détail contacts voyageurs |
