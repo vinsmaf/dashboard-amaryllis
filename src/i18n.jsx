@@ -15,6 +15,7 @@ export const TR = {
     filterFav:      "Favoris",
     filterGuests:   "👥 Voyageurs :",
     guestAll:       "Tous",
+    filterPrix:     "💶 Budget :",
     addFav:         "Cliquez sur ♡ sur une villa pour l'ajouter",
 
     // Section villas
@@ -115,6 +116,7 @@ export const TR = {
     filterFav:      "Favorites",
     filterGuests:   "👥 Guests:",
     guestAll:       "All",
+    filterPrix:     "💶 Budget:",
     addFav:         "Click ♡ on a villa to save it",
 
     // Section villas

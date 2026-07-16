@@ -9320,6 +9320,7 @@ export default function PublicSite() {
   const [filterLieu, setFilterLieu] = useState("all");
   const [showFavorites, setShowFavorites] = useState(false);
   const [filterGuests, setFilterGuests] = useState(0);
+  const [filterPrix, setFilterPrix] = useState(0);
   const [themeFilter, setThemeFilter] = useState("tout");
   const [favorites, setFavorites] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem("amaryllis_favorites") || "[]")); }
@@ -10190,6 +10191,7 @@ export default function PublicSite() {
     .filter(b => filterLieu === "all" || b.lieu.includes(filterLieu))
     .filter(b => !showFavorites || favorites.has(b.id))
     .filter(b => filterGuests === 0 || b.capacite >= filterGuests)
+    .filter(b => filterPrix === 0 || b.prix <= filterPrix)
     .filter(b => (THEME_FILTERS[themeFilter] || (() => true))(b))
     // Géo-personnalisation : Nogent en tête pour visiteurs IDF (France métro sans IDF = Martinique en tête)
     .sort((a, b) => {
@@ -10328,7 +10330,7 @@ export default function PublicSite() {
               (pile verticale déjà chargée sous la barre de recherche hero), toujours
               visibles sur desktop (une seule ligne, coût quasi nul). */}
           {isMobile && (() => {
-            const activeCount = (themeFilter !== "tout" ? 1 : 0) + (filterLieu !== "all" ? 1 : 0) + (showFavorites ? 1 : 0) + (filterGuests > 0 ? 1 : 0);
+            const activeCount = (themeFilter !== "tout" ? 1 : 0) + (filterLieu !== "all" ? 1 : 0) + (showFavorites ? 1 : 0) + (filterGuests > 0 ? 1 : 0) + (filterPrix > 0 ? 1 : 0);
             return (
               <button
                 type="button"
@@ -10487,6 +10489,40 @@ export default function PublicSite() {
                 {t("nResults", filtered.length)}
               </span>
             )}
+          </div>
+
+          {/* ── Filtre budget ── */}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 32 }}>
+            <span style={{ fontSize: 12, color: MUTED, fontFamily: "'Jost',sans-serif", fontWeight: 500, letterSpacing: "0.06em", marginRight: 4 }}>
+              {t("filterPrix")}
+            </span>
+            {[
+              { key: 0,   label: t("guestAll") },
+              { key: 100, label: "≤100€" },
+              { key: 150, label: "≤150€" },
+            ].map(({ key, label }) => {
+              const active = filterPrix === key;
+              return (
+                <button
+                  key={key}
+                  onClick={() => setFilterPrix(key)}
+                  style={{
+                    padding: "6px 16px",
+                    borderRadius: 20,
+                    border: `1px solid ${active ? "rgba(14,59,58,0.6)" : SAND}`,
+                    background: active ? NAVY : "transparent",
+                    color: active ? IVORY : MUTED,
+                    cursor: "pointer",
+                    fontSize: 12,
+                    fontFamily: "'Jost',sans-serif",
+                    fontWeight: active ? 600 : 400,
+                    transition: "all 0.2s",
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
           </div>
           </>
           )}
