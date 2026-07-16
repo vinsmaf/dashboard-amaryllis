@@ -3958,6 +3958,22 @@ export default {
         } catch (e) {
           console.error("[coherence] Cron error:", e.message);
         }
+        // ── Parité tarifaire direct vs Booking.com (2026-07-16) — codé depuis le 10/07, jamais
+        //    branché à un cron avant. Alerte ntfy intégrée à l'endpoint (direct > OTA de +5%).
+        if (env.FIRECRAWL_API_KEY) {
+          try {
+            const siteParity = env.SITE_URL || "https://villamaryllis.com";
+            const parRes = await fetch(`${siteParity}/api/parity-check?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({}),
+            });
+            const parData = await parRes.json().catch(() => ({}));
+            console.log(`[parity-check] ✓ scanned=${parData.scanned ?? 0} errors=${parData.errors ?? 0} alerts=${parData.alerts ?? 0}`);
+          } catch (e) {
+            console.error("[parity-check] Cron error:", e.message);
+          }
+        }
         // ── Analyse autonome des 17 agents (GROQ_API_KEY requis dans les secrets CF Pages) ──
         if (env.GROQ_API_KEY) {
           const siteUrl = env.SITE_URL || "https://villamaryllis.com";
