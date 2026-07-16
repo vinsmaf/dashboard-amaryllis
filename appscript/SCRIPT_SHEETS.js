@@ -320,6 +320,7 @@ function doGet(e) {
   if (action === "fetchIcal") return fetchIcal_(e.parameter);
   if (action === "syncReservations") return syncReservations_(e.parameter);
   if (action === "importAllReservations") return importAllReservations_(e.parameter);
+  if (action === "cancelReservations")    return json_(cancelReservations_(e.parameter));
   if (action === "updateContactsById") return updateContactsById_(e.parameter);
   if (action === "revenus2026DryRun") return json_({ ok: true, preview: testRevenus2026_dryRun() });
   if (action === "revenus2026Setup")  return json_(setupRevenus2026());
@@ -1469,8 +1470,24 @@ function importFromAirbnbSheet_() {
 // ── Annulations automatiques iCal ────────────────────────────────────────────
 // Appelé par le Worker quand un UID disparaît de l'iCal Airbnb/Booking.
 // Supprime la ligne du Sheet + retire l'ID du memo revenus + re-synchro.
-function cancelReservations_(annulations) {
+// input : soit un tableau direct (appel interne / doPost {annulations:[...]}),
+// soit un objet params GET {data:"[...]"} (via doGet → contourne le bug redirect
+// POST d'Apps Script, même pattern dual-mode que importAllReservations_ ci-dessus).
+function cancelReservations_(input) {
+  var annulations;
+  if (Array.isArray(input)) {
+    annulations = input;
+  } else {
+    if (!input || !input.data) return { ok: true, cancelled: 0, ids: [] };
+    try { annulations = JSON.parse(input.data); }
+    catch(e) { return { error: "JSON invalide: " + e.message }; }
+  }
   if (!Array.isArray(annulations) || annulations.length === 0) return { ok: true, cancelled: 0, ids: [] };
+
+  // Bug trouvé 2026-07-16 (audit) : LBL2ID était référencé plus bas (ligne ~1501) sans jamais
+  // être déclaré dans la portée de cette fonction (seulement local à addReservation_/
+  // deleteReservation_) → ReferenceError certain dès qu'une vraie annulation atteignait ce code.
+  var LBL2ID = { "T2 Nogent":"nogent","Villa Amaryllis":"amaryllis","Villa Iguana":"iguana","Geko":"geko","Zandoli":"zandoli","Mabouya":"mabouya","T2 Schoelcher":"schoelcher" };
 
   var ss = SpreadsheetApp.openById("1xuhU0KraEMxF9NAWO5MKEt23JI_V8mnNnWktzHy6q2U");
   var sheet = ss.getSheetByName("Toutes les Réservations");

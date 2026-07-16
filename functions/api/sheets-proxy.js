@@ -113,9 +113,18 @@ export async function onRequestPost(context) {
     return handleReadAction(scriptUrl, env, context);
   }
 
-  // ── Actions qui écrivent des tableaux → chunked GET (Apps Script redirect bug)
+  // ── Actions qui écrivent des tableaux → chunked GET (Apps Script redirect bug) ──
+  // ⚠️ Le "forwarding POST classique" ci-dessous (branche générique) suffit pour la plupart
+  // des actions (vérifié en live 2026-07-16 sur revenus2026RebuildBienDry), MAIS PAS pour les
+  // actions qui écrivent des TABLEAUX/payloads — bug RESA-001 (redirect Apps Script → POST
+  // perd le body) déjà connu pour importAllReservations, et confirmé aussi pour
+  // cancelReservations (utilisé par le Worker via sendCancellations, jusqu'ici toujours
+  // silencieusement no-op côté Airbnb/Booking.com — trouvé par audit 2026-07-16).
   if (parsed && parsed.action === "importAllReservations" && Array.isArray(parsed.reservations)) {
     return forwardChunked(scriptUrl, "importAllReservations", parsed.reservations);
+  }
+  if (parsed && parsed.action === "cancelReservations" && Array.isArray(parsed.annulations)) {
+    return forwardChunked(scriptUrl, "cancelReservations", parsed.annulations);
   }
 
   // ── Toutes les autres actions → forwarding POST classique ──
@@ -165,7 +174,9 @@ async function forwardChunked(scriptUrl, action, items) {
   }
   if (current.length > 0) chunks.push(current);
 
-  let totalAdded = 0, totalUpdated = 0, errors = [];
+  // Accumulateurs génériques : added/updated (importAllReservations), cancelled/ids/rebuilt
+  // (cancelReservations) — chaque action ne peuple que ses propres champs, les autres restent 0/[].
+  let totalAdded = 0, totalUpdated = 0, totalCancelled = 0, allIds = [], allRebuilt = [], errors = [];
 
   for (let ci = 0; ci < chunks.length; ci++) {
     const params = new URLSearchParams({
@@ -178,8 +189,11 @@ async function forwardChunked(scriptUrl, action, items) {
       const t = await r.text();
       try {
         const d = JSON.parse(t);
-        totalAdded   += d.added   || 0;
-        totalUpdated += d.updated || 0;
+        totalAdded     += d.added     || 0;
+        totalUpdated   += d.updated   || 0;
+        totalCancelled += d.cancelled || 0;
+        if (Array.isArray(d.ids))     allIds.push(...d.ids);
+        if (Array.isArray(d.rebuilt)) allRebuilt.push(...d.rebuilt);
         if (d.error) errors.push(`chunk ${ci}: ${d.error}`);
       } catch (_) {
         errors.push(`chunk ${ci}: non-JSON response`);
@@ -193,6 +207,7 @@ async function forwardChunked(scriptUrl, action, items) {
     ok:      errors.length === 0,
     added:   totalAdded,
     updated: totalUpdated,
+    ...(action === "cancelReservations" ? { cancelled: totalCancelled, ids: allIds, rebuilt: allRebuilt } : {}),
     total:   items.length,
     chunks:  chunks.length,
   };

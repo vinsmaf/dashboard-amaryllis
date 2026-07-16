@@ -1614,17 +1614,29 @@ async function sendCancellations(env, annulations) {
   const BIEN_LABELS = { amaryllis: "Villa Amaryllis", iguana: "Villa Iguana", zandoli: "Zandoli",
     geko: "Géko", mabouya: "Mabouya", schoelcher: "T2 Schœlcher", nogent: "T2 Nogent" };
 
-  // 1. Push à Apps Script pour retirer du Sheet + recalcul revenus
-  try {
-    const r = await fetch(env.APPS_SCRIPT_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "cancelReservations", annulations }),
-    });
-    const data = await r.json().catch(() => ({}));
-    console.log(`[annulation] Apps Script: cancelled=${data.cancelled}, ids=${JSON.stringify(data.ids)}`);
-  } catch (e) {
-    console.error("[annulation] Apps Script erreur:", e.message);
+  // 1. Push à Apps Script pour retirer du Sheet + recalcul revenus — via /api/sheets-proxy
+  // (GET paginé), PAS un POST direct vers APPS_SCRIPT_URL. Bug RESA-001 (2026-06-13) :
+  // Apps Script redirige les POST et supprime le body → fetch repasse en GET sans payload,
+  // doGet() tombe sur son action par défaut ("read") au lieu de cancelReservations — ce POST
+  // direct n'a donc JAMAIS réellement annulé une seule ligne côté Airbnb/Booking.com depuis sa
+  // création, malgré le log de succès trompeur (trouvé par audit 2026-07-16). Même mécanisme
+  // déjà en prod pour pushToSheets()/beds24-webhook.js.
+  if (!env.APPS_SCRIPT_URL) {
+    console.error("[annulation] APPS_SCRIPT_URL manquante — sync Sheet sautée");
+  } else {
+    try {
+      const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+      const r = await fetch(`${siteUrl}/api/sheets-proxy?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Script-Url": env.APPS_SCRIPT_URL },
+        body: JSON.stringify({ action: "cancelReservations", annulations }),
+      });
+      const data = await r.json().catch(() => ({}));
+      console.log(`[annulation] sheets-proxy: ok=${data.ok} cancelled=${data.cancelled}, ids=${JSON.stringify(data.ids)}`);
+      if (data.errors) console.error("[annulation] erreurs chunks:", JSON.stringify(data.errors));
+    } catch (e) {
+      console.error("[annulation] sheets-proxy erreur:", e.message);
+    }
   }
 
   // 2. Notif email + ntfy par annulation
