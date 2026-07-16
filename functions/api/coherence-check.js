@@ -185,7 +185,7 @@ export async function onRequestGet({ request, env }) {
     // annulation ne doit plus déclencher de faux positif double-booking.
     try { await db.prepare(`ALTER TABLE direct_bookings ADD COLUMN status TEXT DEFAULT 'confirmed'`).run(); } catch { /* déjà présente */ }
     const { results } = await db.prepare(
-      "SELECT payment_intent_id AS id, bien_nom AS bien, bien_id, group_biens, voyageur, total, depot, checkin, checkout FROM direct_bookings WHERE status IS NULL OR status != 'cancelled'"
+      "SELECT payment_intent_id AS id, bien_nom AS bien, bien_id, group_biens, voyageur, total, depot, checkin, checkout, canal FROM direct_bookings WHERE status IS NULL OR status != 'cancelled'"
     ).all();
     reservations = results || [];
   } catch (e) {

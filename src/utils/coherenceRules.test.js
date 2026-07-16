@@ -21,11 +21,30 @@ describe("checkReservations", () => {
     const f = checkReservations([{ ...ok, checkin: "", checkout: "" }], { validBiens: BIENS });
     expect(f.some((x) => x.rule === "dates_invalides")).toBe(true);
   });
-  it("total <= 0 -> total_aberrant", () => {
-    expect(checkReservations([{ ...ok, total: 0 }], { validBiens: BIENS }).some((x) => x.rule === "total_aberrant")).toBe(true);
+  it("total <= 0 sans canal connu -> total_aberrant sévérité haute", () => {
+    const f = checkReservations([{ ...ok, total: 0 }], { validBiens: BIENS });
+    expect(f.some((x) => x.rule === "total_aberrant")).toBe(true);
+    expect(f.find((x) => x.rule === "total_aberrant").severity).toBe("haute");
+  });
+  it("total <= 0 sur canal Direct -> total_aberrant reste sévérité haute (vrai bug, pas transitoire)", () => {
+    const f = checkReservations([{ ...ok, total: 0, canal: "Direct" }], { validBiens: BIENS });
+    expect(f.find((x) => x.rule === "total_aberrant").severity).toBe("haute");
+  });
+  it("total <= 0 sur import OTA-email (canal != Direct) -> total_aberrant dégradé en moyenne", () => {
+    const f = checkReservations([{ ...ok, total: 0, canal: "Email Airbnb" }], { validBiens: BIENS });
+    expect(f.some((x) => x.rule === "total_aberrant")).toBe(true); // jamais exclu, juste dégradé
+    expect(f.find((x) => x.rule === "total_aberrant").severity).toBe("moyenne");
   });
   it("total absurde (> borne)", () => {
     expect(checkReservations([{ ...ok, total: 99999 }], { validBiens: BIENS }).some((x) => x.rule === "total_aberrant")).toBe(true);
+  });
+  it("total absurde sur canal OTA -> reste sévérité haute (dépasse la borne, pas un cas transitoire)", () => {
+    const f = checkReservations([{ ...ok, total: 99999, canal: "Email Booking.com" }], { validBiens: BIENS });
+    expect(f.find((x) => x.rule === "total_aberrant").severity).toBe("haute");
+  });
+  it("dépôt négatif sur canal OTA -> reste sévérité haute (vrai signal, pas un cas transitoire)", () => {
+    const f = checkReservations([{ ...ok, depot: -50, canal: "Email Airbnb" }], { validBiens: BIENS });
+    expect(f.find((x) => x.rule === "total_aberrant").severity).toBe("haute");
   });
   it("bien inconnu", () => {
     expect(checkReservations([{ ...ok, bien: "Chalet Mystère" }], { validBiens: BIENS }).some((x) => x.rule === "bien_inconnu")).toBe(true);
