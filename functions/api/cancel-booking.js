@@ -60,6 +60,70 @@ async function releaseCaution(db, sk, bookingPiId) {
   return { ok: true, previousStatus: row.status };
 }
 
+// ⚡ Propage l'annulation au Google Sheet "Toutes les Réservations" + déclenche le rebuild
+// des revenus. Sans ça, la ligne restait "Confirmé" pour toujours (importAllReservations_
+// est un upsert pur, jamais un delete) et les revenus calculés (Cockpit/Prévisionnel)
+// restaient gonflés — déjà vécu en prod (contournement manuel documenté dans FLUX-RESAS.md).
+// Vérifié en live (2026-07-16) que le POST générique via /api/sheets-proxy atteint bien
+// doPost() côté Apps Script (pas de perte de body) — même chemin que beds24-webhook.js.
+async function propagateCancellationToSheet(origin, env, booking, paymentIntentId) {
+  const secret = `secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`;
+  const out = { sheet: null, rebuild: null };
+
+  // 1. Marque la ligne "Annulé" dans le Sheet (upsert par id="direct-<pi>" — voyageur/montant
+  //    non envoyés donc préservés tels quels côté Apps Script, cf. keepText_/garde montant).
+  try {
+    const r = await fetch(`${origin}/api/sheets-proxy?${secret}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "importAllReservations",
+        reservations: [{
+          id: "direct-" + paymentIntentId,
+          bienId: booking.bien_id,
+          status: "Annulé",
+          checkin: booking.checkin,
+          checkout: booking.checkout,
+        }],
+      }),
+    });
+    const d = await r.json().catch(() => ({}));
+    out.sheet = { ok: !!d.ok, updated: d.updated ?? null };
+  } catch (e) {
+    out.sheet = { ok: false, error: e.message };
+  }
+
+  // 2. Rebuild revenus — uniquement pour les résas mono-logement (bien_id="groupe" n'est
+  //    pas rattaché à un bien dans le moteur de revenus actuel : une résa groupée n'a jamais
+  //    contribué aux revenus par bien via ce mécanisme, rien à soustraire ici — hors scope).
+  if (booking.bien_id && booking.bien_id !== "groupe" && booking.checkin) {
+    const year = booking.checkin.slice(0, 4);
+    const month = parseInt(booking.checkin.slice(5, 7), 10);
+    if ((year === "2026" || year === "2027") && month >= 1 && month <= 12) {
+      const action = year === "2026" ? "revenus2026RebuildBienApply" : "revenus2027RebuildBienApply";
+      try {
+        const r2 = await fetch(`${origin}/api/sheets-proxy?${secret}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          // Jamais ignoreMemo:true (additif, double-compte) — RebuildBienApply est idempotent
+          // (zéro puis ré-applique tout depuis fromMonth), le pattern sûr documenté au projet.
+          body: JSON.stringify({ action, fromMonth: month, bien: booking.bien_id }),
+        });
+        const d2 = await r2.json().catch(() => ({}));
+        out.rebuild = { ok: !!d2.ok, year, fromMonth: month, appliedBookings: d2.appliedBookings ?? null };
+      } catch (e) {
+        out.rebuild = { ok: false, error: e.message };
+      }
+    } else {
+      out.rebuild = { ok: true, skipped: `année hors 2026/2027 (${year})` };
+    }
+  } else {
+    out.rebuild = { ok: true, skipped: booking.bien_id === "groupe" ? "résa groupée — non trackée par bien" : "bien_id/checkin manquant" };
+  }
+
+  return out;
+}
+
 // Beds24 = Nogent UNIQUEMENT (règle absolue) — les biens Martinique ne sont jamais poussés
 // vers Beds24, donc rien à annuler côté Beds24 pour eux.
 async function cancelBeds24IfNogent(origin, bienId, email, checkin) {
@@ -116,7 +180,7 @@ export async function onRequestPost(context) {
   if (!booking) return json({ error: "Réservation introuvable" }, 404);
   if (booking.status === "cancelled") return json({ error: "Réservation déjà annulée" }, 409);
 
-  const result = { refund: null, caution: null, beds24: null, email: null };
+  const result = { refund: null, caution: null, beds24: null, sheet: null, rebuild: null, email: null };
 
   // 1. Remboursement Stripe (si demandé)
   if (refundAmount > 0) {
@@ -157,6 +221,15 @@ export async function onRequestPost(context) {
     await Promise.all(ids.map(id =>
       env.AVAIL_CACHE.delete(`avail_${id}`).catch(e => console.warn(`[cancel-booking] purge cache avail_${id}:`, e.message))
     ));
+  }
+
+  // 4c. Propagation Sheet + rebuild revenus (voir propagateCancellationToSheet ci-dessus).
+  try {
+    const { sheet, rebuild } = await propagateCancellationToSheet(url.origin, env, booking, paymentIntentId);
+    result.sheet = sheet;
+    result.rebuild = rebuild;
+  } catch (e) {
+    result.sheet = { ok: false, error: e.message };
   }
 
   // 5. Événement de suivi GA4 — même client_id que le purchase d'origine (booking.ga_client_id)
