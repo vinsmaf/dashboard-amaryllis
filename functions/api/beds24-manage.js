@@ -209,14 +209,19 @@ export async function onRequestPost(context) {
       let data;
       try { data = JSON.parse(text); } catch { data = { raw: text }; }
 
+      // 500 et non 502 : Cloudflare intercepte les 502/503/504 émis par le Worker et les
+      // remplace par SA PROPRE page d'erreur HTML (comportement par défaut de la zone,
+      // famille "Bad Gateway") — le JSON ci-dessous n'atteignait jamais le navigateur,
+      // d'où "Unexpected token '<', <!DOCTYPE" côté admin (trouvé en direct 2026-07-16,
+      // via wrangler pages deployment tail sur une tentative réelle de Vincent).
       if (!res.ok || data.success === false) {
-        return json({ error: "Beds24 restoreGuest échoué", raw: data }, 502);
+        return json({ error: "Beds24 restoreGuest échoué", raw: data }, 500);
       }
 
       return json({ ok: true, bookingId, firstName, lastName, price: Number(price), status: "confirmed" });
 
     } catch (e) {
-      return json({ error: e.message }, 502);
+      return json({ error: e.message }, 500);
     }
   }
 
