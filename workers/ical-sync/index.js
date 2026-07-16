@@ -1888,9 +1888,10 @@ async function runMonitor(env) {
 }
 
 // ── Annulation des réservations Beds24 non payées (Nogent) ───────────────────
-// Toutes les heures : cherche les réservations avec status="new" créées il y a
-// plus de 4h et les annule (l'utilisateur n'a pas finalisé le paiement).
-// Les réservations confirmées (status="confirmed") sont épargnées.
+// Toutes les 10 min (cron */10 * * * *, branche else) : cherche les réservations
+// avec status="new" créées il y a plus de 4h et les annule (l'utilisateur n'a pas
+// finalisé le paiement). Les réservations confirmées (status="confirmed") sont
+// épargnées, ainsi que celles payées en direct via Stripe (cf. protection ci-dessous).
 async function runCancelUnpaidBeds24Bookings(env) {
   const token = env.BEDS24_TOKEN;
   if (!token) return;
@@ -1908,7 +1909,7 @@ async function runCancelUnpaidBeds24Bookings(env) {
     if (!data.success || !Array.isArray(data.data)) return;
 
     const now = Date.now();
-    const toCancel = data.data.filter(b => {
+    const candidates = data.data.filter(b => {
       if (b.status !== "new") return false; // garder: confirmed, cancelled, etc.
       // bookingTime format : "2026-05-22 14:35:00" ou ISO
       const created = b.bookingTime ? new Date(b.bookingTime.replace(" ", "T") + "Z").getTime() : 0;
@@ -1916,6 +1917,41 @@ async function runCancelUnpaidBeds24Bookings(env) {
       const ageHours = (now - created) / 3600000;
       return ageHours >= THRESHOLD_HOURS;
     });
+
+    if (candidates.length === 0) return;
+
+    // ⚡ Protection : ne JAMAIS annuler une résa dont le paiement Stripe est confirmé en D1
+    // (direct_bookings.beds24_booking_id) même si Beds24 la voit encore "new" — ce cas signale
+    // un échec silencieux de confirmBeds24Booking() (stripe-webhook.js, alerte ntfy ajoutée
+    // 2026-07-16) plutôt qu'un vrai abandon de panier. Un voyageur ayant réellement payé ne
+    // doit jamais voir sa résa annulée à son insu.
+    let paidIds = new Set();
+    if (env.revenue_manager) {
+      try {
+        await env.revenue_manager.prepare(`ALTER TABLE direct_bookings ADD COLUMN beds24_booking_id TEXT`).run();
+      } catch { /* déjà présente */ }
+      try {
+        const rows = await env.revenue_manager.prepare(
+          `SELECT beds24_booking_id FROM direct_bookings WHERE beds24_booking_id IS NOT NULL AND (status IS NULL OR status != 'cancelled')`
+        ).all();
+        paidIds = new Set((rows?.results || []).map(r => String(r.beds24_booking_id)));
+      } catch (e) {
+        console.error("[beds24-cleanup] lecture direct_bookings:", e.message);
+      }
+    }
+
+    const toCancel = candidates.filter(b => !paidIds.has(String(b.id)));
+    const protectedBookings = candidates.filter(b => paidIds.has(String(b.id)));
+    if (protectedBookings.length > 0) {
+      console.warn(`[beds24-cleanup] ${protectedBookings.length} résa(s) "new" mais payée(s) en D1 — annulation SAUTÉE, à confirmer à la main sur Beds24 :`, protectedBookings.map(b => b.id).join(","));
+      if (env.NTFY_TOPIC) {
+        await fetch(`https://ntfy.sh/${env.NTFY_TOPIC}`, {
+          method: "POST",
+          headers: { Title: "⚠️ Résa Nogent payée mais 'new' sur Beds24", Priority: "urgent", Tags: "warning,beds24" },
+          body: `Booking(s) ${protectedBookings.map(b => b.id).join(", ")} — paiement Stripe confirmé en D1 mais Beds24 les voit "new" depuis ≥4h. Confirmation Beds24 probablement échouée. À confirmer à la main.`,
+        }).catch(() => {});
+      }
+    }
 
     if (toCancel.length === 0) return;
 

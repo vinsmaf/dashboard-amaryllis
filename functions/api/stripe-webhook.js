@@ -378,7 +378,7 @@ async function notifyHostOnce(env, { paymentIntentId, bienId, bienNom, voyageur,
 
 // Stocke une réservation DIRECTE en D1 (pour emails pré-arrivée / post-séjour).
 // Fail-silent : ne casse jamais le webhook.
-async function storeDirectBooking(env, { paymentIntentId, email, voyageur, bienId, bienNom, checkin, checkout, total = null, groupBiens = null, phone = null, channel = null, utmSource = null, utmMedium = null, utmCampaign = null, gclid = null, fbclid = null, gaClientId = null }) {
+async function storeDirectBooking(env, { paymentIntentId, email, voyageur, bienId, bienNom, checkin, checkout, total = null, groupBiens = null, phone = null, channel = null, utmSource = null, utmMedium = null, utmCampaign = null, gclid = null, fbclid = null, gaClientId = null, beds24BookingId = null }) {
   const db = env.revenue_manager;
   if (!db || !email || !email.includes("@") || !checkin) return;
   try {
@@ -398,6 +398,10 @@ async function storeDirectBooking(env, { paymentIntentId, email, voyageur, bienI
     for (const col of ["channel TEXT", "utm_source TEXT", "utm_medium TEXT", "utm_campaign TEXT", "gclid TEXT", "fbclid TEXT", "ga_client_id TEXT"]) {
       try { await db.prepare(`ALTER TABLE direct_bookings ADD COLUMN ${col}`).run(); } catch { /* colonne déjà présente */ }
     }
+    // Migration idempotente : beds24_booking_id (Nogent uniquement) — permet à
+    // runCancelUnpaidBeds24Bookings (Worker) de reconnaître une résa RÉELLEMENT payée avant
+    // de l'annuler côté Beds24 pour "non-paiement" (protection ajoutée 2026-07-16).
+    try { await db.prepare(`ALTER TABLE direct_bookings ADD COLUMN beds24_booking_id TEXT`).run(); } catch { /* colonne déjà présente */ }
     const prenom = String(voyageur || "").trim().split(/\s+/)[0] || "";
     // Clé stable : pi.id si dispo, sinon fallback déterministe (évite les doublons).
     const pid = paymentIntentId || `direct-${email}-${checkin}`;
@@ -409,8 +413,8 @@ async function storeDirectBooking(env, { paymentIntentId, email, voyageur, bienI
     // Idem attribution : first-touch déjà posé par le front (localStorage 30j) fait foi, on ne
     // l'écrase pas si une valeur existe déjà (ex. webhook rejoué, ou 2e appel storeDirectBooking).
     await db.prepare(`INSERT INTO direct_bookings
-        (payment_intent_id, email, prenom, bien_id, bien_nom, voyageur, checkin, checkout, total, group_biens, phone, channel, utm_source, utm_medium, utm_campaign, gclid, fbclid, ga_client_id)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        (payment_intent_id, email, prenom, bien_id, bien_nom, voyageur, checkin, checkout, total, group_biens, phone, channel, utm_source, utm_medium, utm_campaign, gclid, fbclid, ga_client_id, beds24_booking_id)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
       ON CONFLICT(payment_intent_id) DO UPDATE SET
         email=excluded.email, prenom=excluded.prenom, bien_id=excluded.bien_id,
         bien_nom=excluded.bien_nom, checkout=excluded.checkout,
@@ -423,9 +427,10 @@ async function storeDirectBooking(env, { paymentIntentId, email, voyageur, bienI
         utm_campaign=COALESCE(direct_bookings.utm_campaign, excluded.utm_campaign),
         gclid=COALESCE(direct_bookings.gclid, excluded.gclid),
         fbclid=COALESCE(direct_bookings.fbclid, excluded.fbclid),
-        ga_client_id=COALESCE(direct_bookings.ga_client_id, excluded.ga_client_id)`)
+        ga_client_id=COALESCE(direct_bookings.ga_client_id, excluded.ga_client_id),
+        beds24_booking_id=COALESCE(direct_bookings.beds24_booking_id, excluded.beds24_booking_id)`)
       .bind(pid, email, prenom, bienId || "", bienNom || "", voyageur || "", checkin, checkout || "", total != null ? Math.round(total) : null, groupBiens || null, String(phone || "").trim() || null,
-            channel || null, utmSource || null, utmMedium || null, utmCampaign || null, gclid || null, fbclid || null, gaClientId || null).run();
+            channel || null, utmSource || null, utmMedium || null, utmCampaign || null, gclid || null, fbclid || null, gaClientId || null, beds24BookingId || null).run();
   } catch (e) {
     console.error("[direct-booking] D1:", e.message);
   }
@@ -647,15 +652,34 @@ export async function onRequestPost(context) {
       return json({ received: true, group: true });
     }
 
-    // 1. Confirmer la réservation Beds24
+    // 1. Confirmer la réservation Beds24 — 1 retry immédiat (blip API), puis alerte ntfy en cas
+    // d'échec persistant : sans ça, une résa RÉELLEMENT payée reste "new" côté Beds24 en silence
+    // (seul console.error, jamais vu) jusqu'à ce que runCancelUnpaidBeds24Bookings (Worker, seuil
+    // 4h) la découvre — désormais protégée d'une annulation à tort par beds24_booking_id (cf.
+    // workers/ical-sync/index.js), mais reste "new" côté Beds24 tant que non résolue à la main.
     if (bookingId) {
-      try {
-        await confirmBeds24Booking(bookingId, env);
-        console.log(`[webhook] Réservation Beds24 ${bookingId} confirmée via webhook`);
-      } catch (e) {
-        // On logue l'erreur mais on retourne 200 pour éviter les retries Stripe infinis
-        console.error(`[webhook] Erreur confirmation Beds24 ${bookingId}:`, e.message);
+      let confirmed = false, lastErr = null;
+      for (let attempt = 1; attempt <= 2 && !confirmed; attempt++) {
+        try {
+          await confirmBeds24Booking(bookingId, env);
+          console.log(`[webhook] Réservation Beds24 ${bookingId} confirmée via webhook (essai ${attempt})`);
+          confirmed = true;
+        } catch (e) {
+          lastErr = e;
+          console.error(`[webhook] Erreur confirmation Beds24 ${bookingId} (essai ${attempt}):`, e.message);
+        }
       }
+      if (!confirmed && env.NTFY_TOPIC) {
+        try {
+          await fetch(`https://ntfy.sh/${env.NTFY_TOPIC}`, {
+            method: "POST",
+            headers: { Title: `⚠️ Confirmation Beds24 échouée — ${bienNom}`, Priority: "urgent", Tags: "warning,beds24" },
+            body: `Paiement Stripe reçu (${pi.id}) mais Beds24 ${bookingId} reste "new" (2 tentatives échouées : ${lastErr?.message || "?"}). Confirmer à la main sur Beds24.`,
+          });
+        } catch { /* fail-silent */ }
+      }
+      // On retourne 200 dans tous les cas pour éviter les retries Stripe infinis — l'alerte
+      // ci-dessus est le filet de sécurité, pas un retry Stripe.
     } else {
       console.log("[webhook] payment_intent.succeeded sans bookingId — Beds24 ignoré");
     }
@@ -687,6 +711,7 @@ export async function onRequestPost(context) {
       paymentIntentId: pi.id, email: guestEmail, voyageur, bienId, bienNom, checkin, checkout, total: bookingTotal, phone: meta.phone,
       groupBiens: meta.bienIds || null,
       channel: meta.channel, utmSource: meta.utm_source, utmMedium: meta.utm_medium, utmCampaign: meta.utm_campaign, gclid: meta.gclid, fbclid: meta.fbclid, gaClientId: meta.ga_client_id,
+      beds24BookingId: bookingId || null,
     });
     await purgeAvailCache(env, meta.bienIds ? String(meta.bienIds).split(",").map(s => s.trim()) : bienId);
 
