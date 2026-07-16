@@ -1927,6 +1927,33 @@ async function runSync(env) {
   if (allEvents.length > 0) await pushToSheets(env, allEvents);
 
   console.log(`[amaryllis-sync] Terminé — ${allEvents.length} evt (dont ${directs.length} direct), ${nouvelles.length} nouveaux, ${annulations.length} annulations`);
+
+  // Heartbeat D1 (2026-07-16) — même base que revenue_manager (déjà bindée ici ET côté
+  // Pages), lu par /api/sync-health pour le nouvel onglet admin "Santé synchro". Choix D1
+  // plutôt que KV ICAL_STORE : ICAL_STORE n'est bindé QUE sur ce Worker (vérifié — aucune
+  // Function functions/api/*.js ne le référence), donc illisible depuis l'admin sans ajouter
+  // un binding KV côté Pages (dashboard Cloudflare). D1 revenue_manager est déjà partagé.
+  try {
+    await env.revenue_manager.prepare(`
+      CREATE TABLE IF NOT EXISTS sync_heartbeat (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        last_run_at INTEGER NOT NULL,
+        events_count INTEGER,
+        new_count INTEGER,
+        cancelled_count INTEGER,
+        direct_count INTEGER,
+        failed_feeds TEXT
+      )
+    `).run();
+    await env.revenue_manager.prepare(`
+      INSERT INTO sync_heartbeat (id, last_run_at, events_count, new_count, cancelled_count, direct_count, failed_feeds)
+      VALUES (1, unixepoch(), ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET last_run_at=excluded.last_run_at, events_count=excluded.events_count,
+        new_count=excluded.new_count, cancelled_count=excluded.cancelled_count, direct_count=excluded.direct_count,
+        failed_feeds=excluded.failed_feeds
+    `).bind(allEvents.length, nouvelles.length, annulations.length, directs.length, JSON.stringify(failedFeeds)).run();
+  } catch (e) { console.error("[sync-heartbeat] écriture D1:", e.message); }
+
   return { allEvents, allAvailEvents, total: allEvents.length, nouvelles: nouvelles.length, annulations: annulations.length };
 }
 

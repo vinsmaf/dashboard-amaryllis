@@ -50,6 +50,7 @@ import BugsTab from "./tabs/BugsTab.jsx";
 import ReclamationsTab from "./tabs/ReclamationsTab.jsx";
 import ProjetsCerveauTab from "./tabs/ProjetsCerveauTab.jsx";
 import DevStatusTab from "./tabs/DevStatusTab.jsx";
+import SyncHealthTab from "./tabs/SyncHealthTab.jsx";
 import NewsletterTab from "./tabs/NewsletterTab.jsx";
 import ArticlesTab from "./tabs/ArticlesTab.jsx";
 import LeadsTab from "./tabs/LeadsTab.jsx";
@@ -1419,6 +1420,7 @@ export default function App() {
         { id: "bugs",            icon: "🐞", label: "Bugs", badge: bugsBadge > 0 ? bugsBadge : null, badgeColor: "#ef4444" },
         { id: "projets-cerveau", icon: "🧩", label: "Projets cerveau" },
         { id: "deploy-status",   icon: "⚙️", label: "Déploiement" },
+        { id: "sync-health",     icon: "🔄", label: "Santé synchro" },
       ],
     },
   ];
@@ -1653,6 +1655,7 @@ export default function App() {
             {tab === "orchestrateur" && <OrchestratorTab />}
             {tab === "projets-cerveau" && <ProjetsCerveauTab />}
             {tab === "deploy-status" && <DevStatusTab />}
+            {tab === "sync-health" && <SyncHealthTab />}
             {tab === "maintenance"   && <MaintenanceTab />}
             {tab === "interventions" && <InterventionsTab />}
             {tab === "inventaire"    && <InventaireTab />}
