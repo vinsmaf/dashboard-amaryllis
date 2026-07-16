@@ -217,7 +217,14 @@ export async function onRequestPost(context) {
   }
 
   // ── Normaliser → format unifié "Toutes les Réservations" et envoyer à Apps Script ──
-  const normalized = bookings.map(normalizeBooking);
+  // "Bloqué" (statusLabel "Bloqué", cf. statusLabel() ci-dessous) = blocage calendrier
+  // manuel côté Beds24, sans nom ni prix réels pour cet id — pousser ça écraserait une
+  // résa réelle déjà corrigée à la main (nom+montant) dès que Beds24 renvoie ce même id
+  // en "Bloqué" (ex: une simple édition de dates peut faire perdre nom/prix côté Beds24
+  // sans changer la réalité du séjour payant). Même garde-fou que syncToPlanning dans
+  // Beds24Admin.jsx (incident Ines Dali/Nogent, résa 89292637, 2026-07-15/16) : on ne
+  // pousse simplement PAS ces lignes, ce qui préserve la version déjà présente au Sheet.
+  const normalized = bookings.map(normalizeBooking).filter(b => b.status !== "Bloqué");
   // id "beds24-<bookingId>" identique au sync principal → upsert sans doublon, un seul onglet.
   const reservations = normalized.map((b) => ({
     id:         "beds24-" + b.bookingId,

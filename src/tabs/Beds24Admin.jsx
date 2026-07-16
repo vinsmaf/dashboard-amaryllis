@@ -23,6 +23,38 @@ export default function Beds24Admin() {
   });
   const [fetchInfo, setFetchInfo]  = useState(null); // { total, fetchedAt, pages }
   const [expanded,  setExpanded]   = useState(null); // bookingId en cours
+  // ── Réparer une résa "Bloqué" (nom + prix perdus) — incident Ines Dali/Nogent ──
+  const [restoreForm,   setRestoreForm]   = useState(null); // { bookingId, firstName, lastName, price } | null
+  const [restoreStatus, setRestoreStatus] = useState(null); // null | "saving" | "ok" | "error"
+
+  async function submitRestore() {
+    if (!restoreForm) return;
+    const { bookingId, firstName, lastName, price } = restoreForm;
+    if (!firstName.trim() || !lastName.trim() || price === "" || isNaN(Number(price))) {
+      addToast("Prénom, nom et prix (nombre) requis", "error");
+      return;
+    }
+    setRestoreStatus("saving");
+    try {
+      const res = await fetch("/api/beds24-manage", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + (sessionStorage.getItem("ldb_tok") || ""),
+        },
+        body: JSON.stringify({ action: "restoreGuest", bookingId, firstName: firstName.trim(), lastName: lastName.trim(), price: Number(price) }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      setRestoreStatus("ok");
+      addToast(`✓ Résa #${bookingId} réparée — ${firstName} ${lastName}, ${price}€`, "success");
+      setRestoreForm(null);
+      fetchBookings();
+    } catch (e) {
+      setRestoreStatus("error");
+      addToast(`Réparation échouée — ${e.message}`, "error");
+    }
+  }
 
   // ── Fetch bookings ──────────────────────────────────────────────
   async function fetchBookings() {
@@ -70,7 +102,12 @@ export default function Beds24Admin() {
     try {
       // Beds24 (Nogent) → format unifié "Toutes les Réservations".
       // id "beds24-<bookingId>" identique au sync principal → upsert sans doublon.
-      const reservations = bookings.map(b => ({
+      // "Bloqué" exclu : même garde-fou que syncToPlanning ci-dessous (incident Ines
+      // Dali/Nogent) — un blocage calendrier Beds24 n'a ni nom ni prix réels, le pousser
+      // écraserait une résa déjà corrigée à la main dans le Sheet.
+      const reservations = bookings
+        .filter(b => b.statusLabel !== "Bloqué")
+        .map(b => ({
         id:         "beds24-" + b.bookingId,
         bienId:     "nogent",
         voyageur:   b.guestName,
@@ -440,6 +477,49 @@ export default function Beds24Admin() {
                               </div>
                             )}
                           </div>
+
+                          {/* ── Réparer (nom + prix perdus) — uniquement si "Bloqué" ── */}
+                          {b.statusLabel === "Bloqué" && (
+                            <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid rgba(239,68,68,0.15)" }}>
+                              {restoreForm?.bookingId !== b.bookingId ? (
+                                <button
+                                  onClick={() => setRestoreForm({ bookingId: b.bookingId, firstName: "", lastName: "", price: "" })}
+                                  style={{ padding: "6px 14px", borderRadius: 6, border: "1px solid #f59e0b", background: "rgba(245,158,11,0.1)", color: "#f59e0b", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+                                >
+                                  🔧 Réparer (statut "Bloqué" — nom/prix probablement perdus)
+                                </button>
+                              ) : (
+                                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end" }}>
+                                  <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                                    <span style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase" }}>Prénom</span>
+                                    <input value={restoreForm.firstName} onChange={e => setRestoreForm(f => ({ ...f, firstName: e.target.value }))} style={{ background: "#1e293b", border: "1px solid #334155", borderRadius: 6, color: "#e2e8f0", padding: "5px 9px", fontSize: 12, width: 110 }} />
+                                  </label>
+                                  <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                                    <span style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase" }}>Nom</span>
+                                    <input value={restoreForm.lastName} onChange={e => setRestoreForm(f => ({ ...f, lastName: e.target.value }))} style={{ background: "#1e293b", border: "1px solid #334155", borderRadius: 6, color: "#e2e8f0", padding: "5px 9px", fontSize: 12, width: 110 }} />
+                                  </label>
+                                  <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                                    <span style={{ fontSize: 9, color: "#64748b", textTransform: "uppercase" }}>Prix (€)</span>
+                                    <input type="number" value={restoreForm.price} onChange={e => setRestoreForm(f => ({ ...f, price: e.target.value }))} style={{ background: "#1e293b", border: "1px solid #334155", borderRadius: 6, color: "#e2e8f0", padding: "5px 9px", fontSize: 12, width: 90 }} />
+                                  </label>
+                                  <button
+                                    onClick={submitRestore}
+                                    disabled={restoreStatus === "saving"}
+                                    style={{ padding: "6px 14px", borderRadius: 6, border: "none", background: "#10b981", color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+                                  >
+                                    {restoreStatus === "saving" ? "⟳ Envoi…" : "✓ Confirmer"}
+                                  </button>
+                                  <button
+                                    onClick={() => setRestoreForm(null)}
+                                    style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid #334155", background: "transparent", color: "#64748b", fontSize: 11, cursor: "pointer" }}
+                                  >Annuler</button>
+                                </div>
+                              )}
+                              <div style={{ fontSize: 10, color: "#64748b", marginTop: 6 }}>
+                                Repose le nom + prix réels sur cette résa et la repasse en "Confirmé" — à utiliser quand une vraie résa voyageur apparaît comme un simple blocage calendrier.
+                              </div>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     )}

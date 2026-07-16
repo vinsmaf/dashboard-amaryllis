@@ -76,6 +76,7 @@ export async function onRequestGet(context) {
   pick("departureTo");
   pick("modifiedFrom");
   pick("modifiedTo");
+  pick("includeInvoiceItems"); // diagnostic ponctuel — voir les invoiceItems avant une correction de prix
 
   const statusFilter = params.get("status");
 
@@ -141,6 +142,7 @@ export async function onRequestGet(context) {
     channelLabel: channelLabel(b.referer || b.channel),
     price:        parseFloat(b.price)   || 0,
     currency:     "EUR",
+    invoiceItems: b.invoiceItems || undefined, // présent seulement si ?includeInvoiceItems=true
     notes:        b.comments    || b.notes || "",
     createdOn:    b.bookingTime  || "",
     modifiedOn:   b.modifiedTime || "",
