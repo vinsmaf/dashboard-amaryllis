@@ -932,6 +932,47 @@ async function runWeeklyReport(env, allEvents) {
   const directColor = directCount >= 3 ? "#1a6e3c" : directCount >= 1 ? "#b45309" : "#dc2626";
   const directEmoji = directCount >= 3 ? "🟢" : directCount >= 1 ? "🟡" : "🔴";
 
+  // ── Annulations cette semaine (2026-07-16) — 3 canaux, 3 sources ──
+  // Direct : D1 direct_bookings (montant réel connu). Nogent : API Beds24 elle-même (source
+  // de vérité, montant réel) — pas de journal local nécessaire. Airbnb/Booking : journal KV
+  // cancel_log (comptage seul, montant structurellement inconnu — iCal ne le transmet pas).
+  let cancelDirectCount = 0, cancelDirectEur = 0;
+  if (env.revenue_manager) {
+    try {
+      const row = await env.revenue_manager.prepare(
+        `SELECT COUNT(*) as cnt, COALESCE(SUM(CAST(total AS REAL) / 100.0), 0) as rev
+         FROM direct_bookings WHERE status='cancelled' AND cancelled_at >= unixepoch('now', '-7 days')`
+      ).first();
+      cancelDirectCount = row?.cnt || 0;
+      cancelDirectEur = Math.round(row?.rev || 0);
+    } catch (e) { console.error("[weekly] cancel direct:", e.message); }
+  }
+
+  let cancelNogentCount = 0, cancelNogentEur = 0;
+  try {
+    const since = addDays(todayStr, -7);
+    const r = await fetch(`${siteUrl}/api/beds24-bookings?modifiedFrom=${since}&status=2&secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`);
+    const data = await r.json().catch(() => ({}));
+    const list = Array.isArray(data.bookings) ? data.bookings : [];
+    cancelNogentCount = list.length;
+    cancelNogentEur = Math.round(list.reduce((s, b) => s + (b.price || 0), 0));
+  } catch (e) { console.error("[weekly] cancel nogent:", e.message); }
+
+  let cancelOtaCount = 0;
+  const cancelOtaByBien = {};
+  try {
+    const raw = await env.ICAL_STORE.get("cancel_log", "json");
+    const log = Array.isArray(raw) ? raw : [];
+    const since = addDays(todayStr, -7);
+    log.filter(e => e.date >= since).forEach(e => {
+      cancelOtaCount++;
+      cancelOtaByBien[e.bienId] = (cancelOtaByBien[e.bienId] || 0) + 1;
+    });
+  } catch (e) { console.warn("[weekly] cancel_log:", e.message); }
+
+  const cancelTotalCount = cancelDirectCount + cancelNogentCount + cancelOtaCount;
+  const cancelKnownEur = cancelDirectEur + cancelNogentEur;
+
   await sendEmail(env, {
     subject: `📊 Rapport semaine — ${globalPct7}% occ. · ~${totalRev7.toLocaleString("fr-FR")}€`,
     html: emailWrapper(`
@@ -959,6 +1000,15 @@ async function runWeeklyReport(env, allEvents) {
         <strong style="color:${directColor};">${directEmoji} Résas directes 30j : ${directCount} résa · ${directNights} nuits · ~${directRevEur.toLocaleString("fr-FR")}€</strong>
         <span style="color:#9a8a7a;font-size:12px;display:block;margin-top:4px;">Indicateur santé projet — viser ≥3 résas/mois. Ratio direct/OTA à comparer dans le dashboard.</span>
       </div>
+
+      ${cancelTotalCount > 0 ? `
+      <div style="background:#fef2f2;border-radius:8px;padding:12px 16px;margin-bottom:20px;border-left:3px solid #dc2626;">
+        <strong style="color:#b91c1c;">🚫 ${cancelTotalCount} annulation${cancelTotalCount > 1 ? "s" : ""} cette semaine</strong>
+        <span style="color:#9a8a7a;font-size:12px;display:block;margin-top:4px;">
+          Direct : ${cancelDirectCount} (~${cancelDirectEur.toLocaleString("fr-FR")}€) · Nogent : ${cancelNogentCount} (~${cancelNogentEur.toLocaleString("fr-FR")}€)${cancelOtaCount > 0 ? ` · Airbnb/Booking : ${cancelOtaCount} (${Object.entries(cancelOtaByBien).map(([id, n]) => `${NOMS[id] || id} ×${n}`).join(", ")}, montant non transmis par iCal)` : ""}
+          ${cancelKnownEur > 0 ? `<br>Manque à gagner connu (Direct + Nogent) : ~${cancelKnownEur.toLocaleString("fr-FR")}€` : ""}
+        </span>
+      </div>` : ""}
 
       ${gapCount > 0 ? `
       <div style="background:#e0f8f4;border-radius:8px;padding:12px 16px;margin-bottom:20px;border-left:3px solid #14b8a6;">
@@ -1661,6 +1711,22 @@ async function sendCancellations(env, annulations) {
       }).catch(() => {});
     }
   }
+
+  // 3. Journal léger pour le digest hebdo "annulations de la semaine" (2026-07-16) — même
+  // namespace KV que gap_prices, pas de nouvelle table D1 pour un simple compteur. Airbnb/
+  // Booking ne transmettent jamais le montant via iCal (limitation structurelle, cf.
+  // .memory/booking-ical-pas-de-nom-ni-montant.md) : on ne journalise donc que le comptage
+  // par bien/canal ici. Direct et Nogent ont leur propre source fiable AVEC montant (D1
+  // direct_bookings et l'API Beds24 elle-même) et sont lus directement par runWeeklyReport.
+  try {
+    const raw = await env.ICAL_STORE.get("cancel_log", "json");
+    const log = Array.isArray(raw) ? raw : [];
+    const todayStr = today();
+    annulations.forEach(a => log.push({ date: todayStr, bienId: a.bienId, canal: a.canal }));
+    const cutoff = addDays(todayStr, -60);
+    const trimmed = log.filter(e => e.date >= cutoff);
+    await env.ICAL_STORE.put("cancel_log", JSON.stringify(trimmed), { expirationTtl: 60 * 60 * 24 * 90 });
+  } catch (e) { console.warn("[annulation] journal cancel_log:", e.message); }
 }
 
 // ── Auto-import Booking.com ──────────────────────────────────────────────────

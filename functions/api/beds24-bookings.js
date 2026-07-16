@@ -11,8 +11,13 @@ const PROP_ID = "158192";
 const PAGE_SIZE = 100; // max raisonnable pour V2
 
 // arch-009 : accepte un token de session signé OU le mot de passe brut (rétro-compat)
+// 2026-07-16 : + ?secret=POSTSTAY_SECRET pour les appels serveur-à-serveur (Worker cron
+// runWeeklyReport → digest annulations Nogent) — même idiome que parity-check.js authOk(),
+// jamais ADMIN_PASSWORD dans le Worker.
 async function checkAuth(request, env) {
   if (!env.ADMIN_PASSWORD && !env.ADMIN_PWD) return true; // dev local sans secret configuré
+  const secretOk = !!env.POSTSTAY_SECRET && new URL(request.url).searchParams.get("secret") === env.POSTSTAY_SECRET;
+  if (secretOk) return true;
   const { ok } = await verifyBearer(request, env);
   return ok;
 }
