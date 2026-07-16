@@ -13,7 +13,8 @@ export async function onRequestPost(context) {
   const token = env.BEDS24_TOKEN;
   const body = await request.json().catch(() => ({}));
   const fields = body.fields || {};
-  const payload = [{ id: BOOKING_ID, ...fields }];
+  const idValue = body.idAsInt ? Number(BOOKING_ID) : BOOKING_ID;
+  const payload = [{ id: idValue, ...fields }];
 
   const res = await fetch(BEDS24_V2_BOOKINGS, {
     method: "PUT",
