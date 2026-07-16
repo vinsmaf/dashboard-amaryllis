@@ -1715,6 +1715,12 @@ async function scrapeBookingDetails(env, bienId, checkin) {
   const url = `https://admin.booking.com/hotel/hoteladmin/groups/reservations/index.html`
     + `?lang=fr&ses=${ses}&dateType=ARRIVAL&dateFrom=${checkin}&dateTo=${checkin}`;
   let html;
+  // Timeout explicite (12s, même borne que fetchICS) — sans ça, une lenteur/panne côté
+  // admin.booking.com peut geler tout le cycle de sync 10min (Airbnb inclus, ce fetch est
+  // awaited avant pushToSheets dans runSync). Seul fetch externe de ce fichier qui n'en avait
+  // aucun (trouvé par audit 2026-07-16).
+  const controller = new AbortController();
+  const tid = setTimeout(() => controller.abort(), 12000);
   try {
     const resp = await fetch(url, {
       headers: {
@@ -1723,6 +1729,7 @@ async function scrapeBookingDetails(env, bienId, checkin) {
         "Accept-Language": "fr-FR,fr;q=0.9",
       },
       redirect: "follow",
+      signal: controller.signal,
     });
     const finalUrl = resp.url || "";
     if (resp.status === 401 || resp.status === 403 || finalUrl.includes("signin") || finalUrl.includes("login")) {
@@ -1736,7 +1743,12 @@ async function scrapeBookingDetails(env, bienId, checkin) {
     }
     if (!resp.ok) { console.error(`[booking-scrape] HTTP ${resp.status}`); return null; }
     html = await resp.text();
-  } catch (e) { console.error("[booking-scrape] fetch:", e.message); return null; }
+  } catch (e) {
+    console.error("[booking-scrape] fetch:", e.name === "AbortError" ? "Timeout (>12000ms)" : e.message);
+    return null;
+  } finally {
+    clearTimeout(tid);
+  }
 
   const details = parseBookingAdminHtml(html, checkin);
   if (details) clog("booking-scrape", "info", { bienId, checkin, guest: redactName(details.voyageur), total: details.total, bookingId: details.bookingId });
