@@ -40,8 +40,9 @@ export async function onRequestPost(context) {
   const idValue = body.idAsInt ? Number(rawId) : String(rawId);
   const payload = [{ id: idValue, ...fields }];
 
+  const httpMethod = body.method || "PUT";
   const res = await fetch(BEDS24_V2_BOOKINGS, {
-    method: "PUT",
+    method: httpMethod,
     headers: { token, "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
