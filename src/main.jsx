@@ -164,6 +164,7 @@ const Links           = lazy(() => import('./Links.jsx'))
 const StoriesTemplate = lazy(() => import('./StoriesTemplate.jsx'))
 const MenageGuide       = lazy(() => import('./MenageGuide.jsx'))
 const ReclamationForm   = lazy(() => import('./ReclamationForm.jsx'))
+const EtatDesLieux      = lazy(() => import('./EtatDesLieux.jsx'))
 
 // Normalise les chemins avec trailing slash (/amaryllis/ → /amaryllis)
 const path = window.location.pathname.replace(/\/$/, "") || "/";
@@ -272,7 +273,7 @@ document.addEventListener("change", (e) => {
 })();
 
 const BIEN_IDS = ["amaryllis", "zandoli", "iguana", "geko", "mabouya", "schoelcher", "nogent"];
-const KNOWN = ["/", "/reclamation", "/links", "/merci", "/devis", "/devis-groupe", "/guide", "/guide-hub", "/explorer", "/guide-le-diamant", "/guide-sainte-anne", "/villa-rental-martinique", "/activites-sainte-luce", "/guide-proximite", "/guide-arlet", "/guide-trois-ilets", "/guide-plongee-martinique", "/guide-saint-pierre-martinique", "/guide-francois-martinique", "/guide-distilleries-martinique", "/guide-randonnees-martinique", "/guide-gastronomie-martinique", "/avis", "/faq", "/mentions-legales", "/politique-confidentialite", "/conditions-generales", "/sainte-luce-martinique", "/reservation-directe-martinique", "/meilleure-saison-martinique", "/seminaires", "/guide-nogent-sur-marne", "/location-villa-martinique-piscine", "/location-groupe-sainte-luce", "/location-appartement-vue-mer-schoelcher", "/plus-belles-plages-sud-martinique", "/nos-partenaires", "/articles", "/location-voiture-martinique-pas-cher", "/que-faire-martinique", "/guide-martinique-en-famille-sud", "/guide-martinique-en-couple-sud", "/guide-snorkeling-tortues-martinique", "/guide-se-deplacer-martinique-sud", "/guide-itineraire-une-semaine-sud-martinique", "/guide-budget-vacances-martinique", "/guide-sainte-luce-jour-de-pluie", "/guide-ou-loger-martinique-secteur", "/guide-que-faire-nogent-sur-marne", "/guide-ou-dormir-est-paris-nogent", "/guide-nogent-guinguettes-bord-de-marne"];
+const KNOWN = ["/", "/reclamation", "/etat-des-lieux", "/links", "/merci", "/devis", "/devis-groupe", "/guide", "/guide-hub", "/explorer", "/guide-le-diamant", "/guide-sainte-anne", "/villa-rental-martinique", "/activites-sainte-luce", "/guide-proximite", "/guide-arlet", "/guide-trois-ilets", "/guide-plongee-martinique", "/guide-saint-pierre-martinique", "/guide-francois-martinique", "/guide-distilleries-martinique", "/guide-randonnees-martinique", "/guide-gastronomie-martinique", "/avis", "/faq", "/mentions-legales", "/politique-confidentialite", "/conditions-generales", "/sainte-luce-martinique", "/reservation-directe-martinique", "/meilleure-saison-martinique", "/seminaires", "/guide-nogent-sur-marne", "/location-villa-martinique-piscine", "/location-groupe-sainte-luce", "/location-appartement-vue-mer-schoelcher", "/plus-belles-plages-sud-martinique", "/nos-partenaires", "/articles", "/location-voiture-martinique-pas-cher", "/que-faire-martinique", "/guide-martinique-en-famille-sud", "/guide-martinique-en-couple-sud", "/guide-snorkeling-tortues-martinique", "/guide-se-deplacer-martinique-sud", "/guide-itineraire-une-semaine-sud-martinique", "/guide-budget-vacances-martinique", "/guide-sainte-luce-jour-de-pluie", "/guide-ou-loger-martinique-secteur", "/guide-que-faire-nogent-sur-marne", "/guide-ou-dormir-est-paris-nogent", "/guide-nogent-guinguettes-bord-de-marne"];
 const isKnown = KNOWN.includes(path)
   || GUIDES_POI_SLUGS.includes(path)
   || path === "/articles"
@@ -401,6 +402,8 @@ if (!isKnown) {
   Component = MenageGuide;
 } else if (path === "/reclamation") {
   Component = ReclamationForm;
+} else if (path === "/etat-des-lieux") {
+  Component = EtatDesLieux;
 } else {
   Component = PublicSite;
 }

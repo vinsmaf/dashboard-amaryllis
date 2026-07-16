@@ -5,7 +5,7 @@
   ============================================================
   OBJET : {{prenom}}, votre départ de {{bien_nom}} est demain
   PRÉHEADER : Départ à 12h00. Besoin de rester un peu plus ? On s'arrange.
-  VARIABLES : prenom, bien_nom, bien_id, checkout, wa_hote, late_checkout_url
+  VARIABLES : prenom, bien_nom, bien_id, checkout, wa_hote, late_checkout_url, lien_etat_lieux
   ============================================================
 -->
 <html lang="fr" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
@@ -115,6 +115,22 @@
                         <td style="font-size:15px;line-height:24px;color:#3a4658;">Déposer le linge utilisé dans le bac prévu, pas besoin de faire les lits</td>
                       </tr>
                     </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- État des lieux de sortie (sc-023) -->
+          <tr>
+            <td class="px" style="padding:28px 40px 0 40px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#fffdf8;border:1px solid #ece6d9;border-radius:12px;">
+                <tr>
+                  <td style="padding:22px 24px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;color:#3a4658;">
+                    📸 <strong>Avant de partir</strong>, prenez quelques photos du logement — cela protège votre caution en cas de doute sur l'état des lieux.
+                    <div style="margin-top:14px;">
+                      <a href="{{lien_etat_lieux}}" style="background-color:#1f2a3d;color:#ffffff;display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;text-decoration:none;padding:11px 22px;border-radius:10px;">Faire l'état des lieux de sortie</a>
+                    </div>
                   </td>
                 </tr>
               </table>

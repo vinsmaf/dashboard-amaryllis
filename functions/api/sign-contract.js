@@ -5,8 +5,16 @@ import { rateLimit } from "./_ratelimit.js";
 // signature manuscrite (PNG dataURL), le nom, l'acceptation, + horodatage et IP
 // (valeur probante simple). Pas de signature qualifiée eIDAS.
 //
-// Body : { bienId, bienNom, checkin, checkout, voyageur, email, total, nom, signature(dataURL), accepted }
+// Body : { bienId, bienNom, checkin, checkout, voyageur, email, total, nom, signature(dataURL), accepted, type? }
+// type: "contract" (défaut, signature manuscrite requise) | "etat_lieux_entree" |
+//       "etat_lieux_sortie" (sc-023, 2026-07-16 — photos requises au lieu de la
+//       signature ; même table, réutilisée plutôt qu'un nouvel endpoint séparé).
+// photos: [dataURL, ...] — requis pour les types etat_lieux_*, max 8, 400Ko/photo.
 // Réponse : { ok, id, signed_at }
+
+const ETAT_LIEUX_TYPES = new Set(["etat_lieux_entree", "etat_lieux_sortie"]);
+const MAX_PHOTOS = 8;
+const MAX_PHOTO_BYTES = 400_000;
 
 const CORS = {
   "Content-Type": "application/json",
@@ -27,12 +35,22 @@ export async function onRequestPost(context) {
   try { body = await request.json(); } catch { return json({ error: "JSON invalide" }, 400); }
 
   const { bienId = "", bienNom = "", checkin = "", checkout = "", voyageur = "", email = "",
-          total = 0, nom = "", signature = "", accepted = false } = body;
+          total = 0, nom = "", signature = "", accepted = false, type = "contract", photos = [] } = body;
 
-  if (!accepted)  return json({ error: "Vous devez accepter le contrat" }, 400);
-  if (!nom || nom.trim().length < 2) return json({ error: "Nom complet requis" }, 400);
-  if (!signature || !signature.startsWith("data:image/")) return json({ error: "Signature manuscrite requise" }, 400);
-  if (signature.length > 300000) return json({ error: "Signature trop lourde" }, 413);
+  const isEtatLieux = ETAT_LIEUX_TYPES.has(type);
+
+  if (isEtatLieux) {
+    if (!nom || nom.trim().length < 2) return json({ error: "Nom complet requis" }, 400);
+    if (!Array.isArray(photos) || photos.length < 1) return json({ error: "Au moins une photo requise" }, 400);
+    if (photos.length > MAX_PHOTOS) return json({ error: `Maximum ${MAX_PHOTOS} photos` }, 400);
+    if (photos.some(p => typeof p !== "string" || !p.startsWith("data:image/"))) return json({ error: "Format photo invalide" }, 400);
+    if (photos.some(p => p.length > MAX_PHOTO_BYTES)) return json({ error: "Une photo dépasse la taille maximale" }, 413);
+  } else {
+    if (!accepted)  return json({ error: "Vous devez accepter le contrat" }, 400);
+    if (!nom || nom.trim().length < 2) return json({ error: "Nom complet requis" }, 400);
+    if (!signature || !signature.startsWith("data:image/")) return json({ error: "Signature manuscrite requise" }, 400);
+    if (signature.length > 300000) return json({ error: "Signature trop lourde" }, 413);
+  }
 
   const db = env.revenue_manager;
   if (!db) return json({ error: "DB indisponible" }, 500);
@@ -51,22 +69,33 @@ export async function onRequestPost(context) {
       signature_png TEXT, ip TEXT, user_agent TEXT,
       signed_at INTEGER NOT NULL DEFAULT (unixepoch())
     )`).run();
+    await db.prepare(`ALTER TABLE contracts_signed ADD COLUMN type TEXT DEFAULT 'contract'`).run().catch(() => {});
+    await db.prepare(`ALTER TABLE contracts_signed ADD COLUMN photos TEXT`).run().catch(() => {});
 
     const res = await db.prepare(`INSERT INTO contracts_signed
-      (bien_id, bien_nom, voyageur, email, nom_signature, checkin, checkout, total, signature_png, ip, user_agent)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?)`
-    ).bind(bienId, bienNom, voyageur, email, nom.trim(), checkin, checkout, Math.round(total) || 0, signature, ip, ua).run();
+      (bien_id, bien_nom, voyageur, email, nom_signature, checkin, checkout, total, signature_png, ip, user_agent, type, photos)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`
+    ).bind(bienId, bienNom, voyageur, email, nom.trim(), checkin, checkout, Math.round(total) || 0,
+      signature || null, ip, ua, type, isEtatLieux ? JSON.stringify(photos) : null).run();
 
     // Alerte hôte (best-effort)
     if (env.RESEND_API_KEY) {
+      const etapeLabel = type === "etat_lieux_entree" ? "État des lieux d'ENTRÉE" : type === "etat_lieux_sortie" ? "État des lieux de SORTIE" : null;
+      const subject = etapeLabel
+        ? `📸 ${etapeLabel} — ${bienNom || bienId} (${nom.trim()})`
+        : `✍️ Contrat signé — ${bienNom || bienId} (${nom.trim()})`;
+      const photosHtml = isEtatLieux
+        ? `<p><strong>${photos.length} photo${photos.length > 1 ? "s" : ""}</strong></p>` +
+          photos.map(p => `<img src="${p}" style="max-width:280px;border-radius:8px;margin:4px;">`).join("")
+        : "";
       fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           from: resendFrom(env),
           to: [(env.NOTIFICATION_EMAIL || "contact@villamaryllis.com").split(",")[0].trim()],
-          subject: `✍️ Contrat signé — ${bienNom || bienId} (${nom.trim()})`,
-          html: `<div style="font-family:sans-serif"><h3>Contrat de location signé</h3><p><strong>${bienNom || bienId}</strong><br>Signataire : ${nom.trim()}<br>Voyageur : ${voyageur || "—"} · ${email || "—"}<br>Séjour : ${checkin} → ${checkout}<br>IP : ${ip}</p></div>`,
+          subject,
+          html: `<div style="font-family:sans-serif"><h3>${etapeLabel || "Contrat de location signé"}</h3><p><strong>${bienNom || bienId}</strong><br>Signataire : ${nom.trim()}<br>Voyageur : ${voyageur || "—"} · ${email || "—"}<br>Séjour : ${checkin} → ${checkout}<br>IP : ${ip}</p>${photosHtml}</div>`,
         }),
       }).catch(() => {});
     }

@@ -67,6 +67,9 @@ export async function onRequestGet(context) {
           photo_url: photoPath ? `${url.origin}${photoPath}` : `${url.origin}/photos/amaryllis/01.webp`,
           wa_hote: "33610880772",
           lien_avis_google: GOOGLE_REVIEW[b.bien_id] || GOOGLE_REVIEW.default,
+          // sc-023 (2026-07-16) : lien état des lieux de sortie — protège le voyageur
+          // en cas de litige sur la caution.
+          lien_etat_lieux: `https://villamaryllis.com/etat-des-lieux?bien=${encodeURIComponent(b.bien_id || "")}&type=sortie&checkin=${encodeURIComponent(b.checkin || "")}&checkout=${encodeURIComponent(b.checkout || target)}&voyageur=${encodeURIComponent(b.prenom || "")}&email=${encodeURIComponent(b.email || "")}`,
         },
       });
 

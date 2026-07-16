@@ -99,6 +99,9 @@ export async function onRequestGet(context) {
             : "Vos codes d'accès vous seront communiqués directement par votre hôte.",
           guide_url: `https://villamaryllis.com/guide-sejour/${b.bien_id || "amaryllis"}?utm_source=email&utm_medium=email&utm_campaign=j1-acces`,
           wa_hote: "33610880772",
+          // sc-023 (2026-07-16) : lien état des lieux d'entrée — protège le voyageur
+          // en cas de litige sur la caution au départ.
+          lien_etat_lieux: `https://villamaryllis.com/etat-des-lieux?bien=${encodeURIComponent(b.bien_id || "")}&type=entree&checkin=${encodeURIComponent(b.checkin || "")}&checkout=${encodeURIComponent(b.checkout || "")}&voyageur=${encodeURIComponent(b.prenom || "")}&email=${encodeURIComponent(b.email || "")}`,
         },
       });
 
