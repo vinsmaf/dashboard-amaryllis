@@ -1739,7 +1739,9 @@ async function scrapeBookingDetails(env, bienId, checkin) {
     const finalUrl = resp.url || "";
     if (resp.status === 401 || resp.status === 403 || finalUrl.includes("signin") || finalUrl.includes("login")) {
       console.warn("[booking-scrape] ⚠️ Session expirée");
-      fetch(`https://ntfy.sh/${env.NTFY_TOPIC || "amaryllis-alertes-7r4k9"}`, {
+      // await (pas une promesse flottante) : sans ça, rien ne garantit que l'alerte parte
+      // avant le return — cf. workers-best-practices, règle "toujours await/waitUntil".
+      await fetch(`https://ntfy.sh/${env.NTFY_TOPIC || "amaryllis-alertes-7r4k9"}`, {
         method: "POST",
         headers: { "Content-Type": "text/plain; charset=utf-8", "Title": "⚠️ Session Booking.com expirée", "Priority": "high", "Tags": "warning,booking" },
         body: `Résa ${bienId} ${checkin} importée SANS nom/prix.\nOuvre admin.booking.com → lance le bookmarklet "Booking→Admin"`,
