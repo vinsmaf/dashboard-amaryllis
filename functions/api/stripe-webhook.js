@@ -22,6 +22,27 @@ import { ga4Event } from "./_ga4event.js";
 // qu'une résa directe est créée — même mécanisme que beds24-webhook.js pour Nogent. Sans ça,
 // get-availability.js peut rester périmé jusqu'à 6h (TTL) et laisser passer un double-booking
 // Stripe. bienIds : un id unique ("zandoli") ou un tableau (résa groupée, "groupe" exclu).
+// Pousse la résa directe au Sheet "Toutes les Réservations" IMMÉDIATEMENT au paiement, au lieu
+// d'attendre le prochain cron Worker (*/10min, jusqu'à ~10min de latence — cf. FLUX-RESAS.md qui
+// affirmait à tort que ce push était déjà synchrone). Même id ("direct-<pi>") et même action
+// (importAllReservations, dédup upsert déjà idempotent côté Apps Script) que le Worker — appel
+// best-effort en arrière-plan (context.waitUntil), ne doit jamais retarder la réponse au voyageur.
+async function pushDirectBookingToSheet(context, { paymentIntentId, bienId, bienNom, voyageur, checkin, checkout, montant, canal = "Direct" }) {
+  const { env, request } = context;
+  if (!env.APPS_SCRIPT_URL) return;
+  const origin = new URL(request.url).origin;
+  const push = fetch(`${origin}/api/sheets-proxy?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: "importAllReservations",
+      reservations: [{ id: "direct-" + paymentIntentId, bienId, voyageur, canal, checkin, checkout, montant: Math.round(montant || 0) }],
+    }),
+  }).then(r => r.json()).then(d => console.log(`[webhook] push Sheet immédiat: ok=${d.ok} updated=${d.updated ?? "?"} added=${d.added ?? "?"}`))
+    .catch(e => console.error("[webhook] push Sheet immédiat erreur:", e.message));
+  context.waitUntil(push);
+}
+
 async function purgeAvailCache(env, bienIds) {
   if (!env.AVAIL_CACHE) return;
   const ids = (Array.isArray(bienIds) ? bienIds : [bienIds]).filter(id => id && id !== "groupe");
@@ -644,6 +665,9 @@ export async function onRequestPost(context) {
         channel: meta.channel, utmSource: meta.utm_source, utmMedium: meta.utm_medium, utmCampaign: meta.utm_campaign, gclid: meta.gclid, fbclid: meta.fbclid, gaClientId: meta.ga_client_id,
       });
       await purgeAvailCache(env, String(meta.bienIds || "").split(",").map(s => s.trim()));
+      await pushDirectBookingToSheet(context, {
+        paymentIntentId: pi.id, bienId: "groupe", bienNom: logements, voyageur, checkin, checkout, montant: grpValue,
+      });
       await capiPurchase(env, {
         eventId: pi.id, value: grpValue, email: guestEmail, bienId: "groupe", bienNom: logements || "Réservation groupe",
         phone: meta.phone, firstName: meta.prenom, lastName: meta.nom,
@@ -714,6 +738,9 @@ export async function onRequestPost(context) {
       beds24BookingId: bookingId || null,
     });
     await purgeAvailCache(env, meta.bienIds ? String(meta.bienIds).split(",").map(s => s.trim()) : bienId);
+    await pushDirectBookingToSheet(context, {
+      paymentIntentId: pi.id, bienId, bienNom, voyageur, checkin, checkout, montant: bookingTotal,
+    });
 
     // 2b-bis. Alerte hôte fiable (relais serveur, dédup atomique avec le front-end notify-booking)
     await notifyHostOnce(env, { paymentIntentId: pi.id, bienId, bienNom, voyageur, email: guestEmail, checkin, checkout, amount, twoX, amountEur: Math.round((pi.amount || 0) / 100) });
