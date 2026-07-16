@@ -97,25 +97,32 @@ async function checkCrossCanal(env, directBookings) {
   const activeDirects = directBookings.filter((r) => r.checkin && r.checkout && r.checkin >= today);
 
   if (activeDirects.length === 0) {
-    return { findings: crossFindings };
+    return { findings: crossFindings, biensChecked: 0, icalEventsParsed: 0 };
   }
 
-  // Grouper les résas directes par bien_id canonique
-  // (bien_nom peut valoir "bellevue" ou "schoelcher" selon la saisie)
+  // Grouper les résas directes par bien_id canonique. Décompose les résas groupées (offre
+  // résidence, bien_id="groupe") en un enregistrement par bien du groupe (group_biens = CSV
+  // "zandoli,geko") — sans ça, une résa groupée n'apparaissait jamais dans directsByBien sous
+  // une clé qui matche icalUrls (bien_id="groupe" ne correspond à aucun bien réel), la rendant
+  // invisible à ce check anti-double-booking cross-canal. Même logique déjà en prod côté
+  // ical-export.js (flux sortant qui bloque ces dates chez les OTA).
   const directsByBien = {};
   for (const r of activeDirects) {
-    // Normalise le bien : on mappe depuis bien_nom (champ renvoyé par la requête SQL)
-    const raw = (r.bien || "").toLowerCase().trim();
-    const bienId = raw === "bellevue" ? "schoelcher" : raw;
-    if (!directsByBien[bienId]) directsByBien[bienId] = [];
-    directsByBien[bienId].push(r);
+    const bienIds = r.bien_id === "groupe"
+      ? String(r.group_biens || "").split(",").map((s) => s.trim()).filter(Boolean)
+      : [String(r.bien_id || "").toLowerCase().trim()];
+    for (const bienId of bienIds) {
+      if (!bienId) continue;
+      if (!directsByBien[bienId]) directsByBien[bienId] = [];
+      directsByBien[bienId].push(r);
+    }
   }
 
   // Fetch tous les iCal en parallèle pour les biens qui ont des résas directes actives
   const biensToCheck = Object.keys(directsByBien).filter((id) => icalUrls[id]);
 
   if (biensToCheck.length === 0) {
-    return { findings: crossFindings };
+    return { findings: crossFindings, biensChecked: 0, icalEventsParsed: 0 };
   }
 
   const fetchPromises = biensToCheck.map(async (bienId) => {
@@ -128,6 +135,7 @@ async function checkCrossCanal(env, directBookings) {
   });
 
   const icalResults = await Promise.all(fetchPromises);
+  const icalEventsParsed = icalResults.reduce((sum, r) => sum + r.airbnb.length + r.booking.length, 0);
 
   // Comparer les résas directes vs les événements iCal par bien
   for (const { bienId, airbnb, booking } of icalResults) {
@@ -159,7 +167,7 @@ async function checkCrossCanal(env, directBookings) {
     }
   }
 
-  return { findings: crossFindings };
+  return { findings: crossFindings, biensChecked: biensToCheck.length, icalEventsParsed };
 }
 
 export async function onRequestGet({ request, env }) {
@@ -177,7 +185,7 @@ export async function onRequestGet({ request, env }) {
     // annulation ne doit plus déclencher de faux positif double-booking.
     try { await db.prepare(`ALTER TABLE direct_bookings ADD COLUMN status TEXT DEFAULT 'confirmed'`).run(); } catch { /* déjà présente */ }
     const { results } = await db.prepare(
-      "SELECT payment_intent_id AS id, bien_nom AS bien, voyageur, total, depot, checkin, checkout FROM direct_bookings WHERE status IS NULL OR status != 'cancelled'"
+      "SELECT payment_intent_id AS id, bien_nom AS bien, bien_id, group_biens, voyageur, total, depot, checkin, checkout FROM direct_bookings WHERE status IS NULL OR status != 'cancelled'"
     ).all();
     reservations = results || [];
   } catch (e) {
@@ -187,13 +195,13 @@ export async function onRequestGet({ request, env }) {
   const findings = checkReservations(reservations, { validBiens: VALID_BIENS });
 
   // ── Check 4 : double-booking cross-canaux (D1 directes vs iCal) ──
-  let crossCanalResult = { findings: [], warning: null };
+  let crossCanalResult = { findings: [], warning: null, biensChecked: 0, icalEventsParsed: 0 };
   try {
     crossCanalResult = await checkCrossCanal(env, reservations);
     findings.push(...crossCanalResult.findings);
   } catch (e) {
     console.warn("[coherence/cross-canal] Erreur non bloquante:", e.message);
-    crossCanalResult = { findings: [], warning: "error: " + e.message };
+    crossCanalResult = { findings: [], warning: "error: " + e.message, biensChecked: 0, icalEventsParsed: 0 };
   }
 
   const critical = findings.filter((f) => f.severity === "critique");
@@ -230,8 +238,13 @@ export async function onRequestGet({ request, env }) {
     }
   }
 
+  // biensChecked/icalEventsParsed permettent de distinguer "rien trouvé" (check actif, 0
+  // chevauchement) de "le check n'a rien pu comparer" (secrets ICAL_* absents/cassés, aucune
+  // résa directe active) — avant ce fix, `checked` était toujours mathématiquement égal à
+  // `overlaps`, rendant les deux cas indiscernables (trouvé en vérification live 2026-07-16).
   const cross_canal = {
-    checked: crossCanalResult.findings.length + (crossCanalResult.warning ? 0 : 0),
+    biensChecked: crossCanalResult.biensChecked ?? 0,
+    icalEventsParsed: crossCanalResult.icalEventsParsed ?? 0,
     overlaps: crossCanalResult.findings.length,
     ...(crossCanalResult.warning ? { warning: crossCanalResult.warning } : {}),
     ...(dry ? { items: crossCanalResult.findings } : {}),
