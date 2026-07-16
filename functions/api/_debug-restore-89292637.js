@@ -13,7 +13,11 @@ export async function onRequestPost(context) {
   const token = env.BEDS24_TOKEN;
   const body = await request.json().catch(() => ({}));
   const fields = body.fields || {};
-  const idValue = body.idAsInt ? Number(BOOKING_ID) : BOOKING_ID;
+  // targetId : override diagnostic ponctuel (test idempotent sur une résa normale
+  // pour isoler si le problème est spécifique aux blocs "Bloqué") — même secret
+  // que les crons d'écriture existants (caution-cron etc.), rien de nouveau niveau confiance.
+  const rawId = body.targetId || BOOKING_ID;
+  const idValue = body.idAsInt ? Number(rawId) : String(rawId);
   const payload = [{ id: idValue, ...fields }];
 
   const res = await fetch(BEDS24_V2_BOOKINGS, {
