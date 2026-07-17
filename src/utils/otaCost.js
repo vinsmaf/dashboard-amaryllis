@@ -65,10 +65,54 @@ export function segmentClients(clients) {
   return seg;
 }
 
+// Normalise un libellé de canal du Sheet vers airbnb/booking/direct/autre.
+// « Louer Premium », « beds24 » = direct Nogent, pas une OTA facturant une commission.
+export function normCanal(raw) {
+  const c = String(raw || "").toLowerCase();
+  if (c.includes("airbnb")) return "airbnb";
+  if (c.includes("booking")) return "booking";
+  if (c.includes("direct") || c.includes("louer premium") || c.includes("beds24")) return "direct";
+  return "autre";
+}
+
+/**
+ * Commission OTA depuis les RÉSERVATIONS RÉELLES du Sheet (FAIT vivant — remplace le seed statique
+ * `REVENUS_CANAL_2025` qui sous-estimait Booking de ~21%, cf. 2026-07-18). Agrège par canal pour
+ * une année donnée, et applique le taux Airbnb PAR BIEN (3% ou 15% selon le logement).
+ * `reservations` : [{ bienId, canal, montant, checkin }]. `year` : "2025" | "2026".
+ */
+export function commissionFromReservations(reservations, year, { airbnbComm, bookingComm }) {
+  let airbnb = 0, booking = 0, caAirbnb = 0, caBooking = 0, caDirect = 0;
+  for (const r of reservations || []) {
+    if (String(r?.checkin || "").slice(0, 4) !== String(year)) continue;
+    const canal = normCanal(r?.canal);
+    const m = Number(r?.montant) || 0;
+    if (m <= 0) continue;
+    if (canal === "airbnb")  { caAirbnb += m; airbnb  += m * airbnbComm(r?.bienId); }
+    else if (canal === "booking") { caBooking += m; booking += m * bookingComm; }
+    else if (canal === "direct")  { caDirect += m; }
+    // 'autre' (canal inconnu) : ignoré du calcul de commission, pour ne pas inventer un taux.
+  }
+  const total = airbnb + booking;
+  const caOta = caAirbnb + caBooking;
+  const caTotal = caOta + caDirect;
+  return {
+    airbnb: Math.round(airbnb),
+    booking: Math.round(booking),
+    total: Math.round(total),
+    caAirbnb: Math.round(caAirbnb), caBooking: Math.round(caBooking), caDirect: Math.round(caDirect),
+    partOtaPct: caTotal > 0 ? Math.round((caOta / caTotal) * 100) : 0,
+    tauxMoyenOta: caOta > 0 ? total / caOta : 0,
+    source: "reservations", year: String(year),
+  };
+}
+
 /**
  * Commission OTA réelle sur un CA ventilé par canal (FAIT).
  * `revenusCanal` : { bienId: { airbnb, booking, direct, ... } } en euros.
  * `rates` : { airbnbComm(bienId) → taux, bookingComm } — injecté depuis canauxCommissions.
+ * @deprecated depuis 2026-07-18 : le seed statique sous-estimait Booking. Préférer
+ *   commissionFromReservations (données vivantes). Gardé pour compat/fallback.
  */
 export function commissionOta(revenusCanal, { airbnbComm, bookingComm }) {
   let airbnb = 0, booking = 0, caAirbnb = 0, caBooking = 0, caDirect = 0;

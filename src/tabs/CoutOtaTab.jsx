@@ -18,15 +18,16 @@ export default function CoutOtaTab() {
   const [facts, setFacts] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [year, setYear] = useState(null); // null = laisse le serveur choisir la dernière année
 
   // Hypothèses réglables (curseurs). Pré-remplies depuis les données réelles une fois chargées.
   const [tauxReactivation, setTauxReactivation] = useState(0.15);
   const [valeurSejourMoyen, setValeurSejourMoyen] = useState(600);
   const [tauxCommissionOta, setTauxCommissionOta] = useState(0.17);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (y) => {
     try {
-      const r = await adminFetch("/api/ota-cost");
+      const r = await adminFetch(`/api/ota-cost${y ? `?year=${y}` : ""}`);
       const d = await r.json();
       if (!d.version) throw new Error(d.error || `HTTP ${r.status}`);
       setFacts(d);
@@ -40,7 +41,7 @@ export default function CoutOtaTab() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(year); }, [load, year]);
 
   const result = useMemo(() => {
     if (!facts) return null;
@@ -64,12 +65,27 @@ export default function CoutOtaTab() {
 
   return (
     <div style={{ padding: "24px 28px", maxWidth: 1000, margin: "0 auto" }}>
-      <div style={{ marginBottom: 6 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.25em", textTransform: "uppercase", color: MUTED }}>Finance · désintermédiation</div>
-        <div style={{ fontSize: 22, fontWeight: 700, color: FG }}>Le vrai coût des OTA</div>
-        <div style={{ fontSize: 12, color: MUTED, marginTop: 4 }}>
-          Photo <strong>{facts.annee_reference}</strong> (seule année ventilée par canal). Bleu = fait réel · <span style={{ color: AMBER }}>ambre = estimé, dépend des curseurs</span>.
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12, marginBottom: 6 }}>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.25em", textTransform: "uppercase", color: MUTED }}>Finance · désintermédiation</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: FG }}>Le vrai coût des OTA</div>
+          <div style={{ fontSize: 12, color: MUTED, marginTop: 4 }}>
+            Commission calculée sur tes <strong>réservations réelles {facts.annee_reference}</strong>. Bleu = fait réel · <span style={{ color: AMBER }}>ambre = estimé, dépend des curseurs</span>.
+          </div>
         </div>
+        {facts.annees_disponibles?.length > 1 && (
+          <div style={{ display: "flex", gap: 6 }}>
+            {facts.annees_disponibles.map((y) => (
+              <button key={y} onClick={() => setYear(y)}
+                style={{
+                  background: String(facts.annee_reference) === String(y) ? INDIGO : "transparent",
+                  border: `1px solid ${String(facts.annee_reference) === String(y) ? INDIGO : BORDER}`,
+                  color: String(facts.annee_reference) === String(y) ? "#fff" : MUTED,
+                  borderRadius: 8, padding: "5px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                }}>{y}</button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ── FAITS ── */}

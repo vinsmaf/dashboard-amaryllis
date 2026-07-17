@@ -1,7 +1,62 @@
 import { describe, it, expect } from "vitest";
 import {
-  isReactivableEmail, segmentClients, commissionOta, projectionReactivation, computeOtaCost,
+  isReactivableEmail, segmentClients, commissionOta, commissionFromReservations, normCanal,
+  projectionReactivation, computeOtaCost,
 } from "./otaCost.js";
+
+describe("normCanal — libellés du Sheet → canal normalisé", () => {
+  it("mappe les variantes réelles", () => {
+    expect(normCanal("Airbnb")).toBe("airbnb");
+    expect(normCanal("Booking.com")).toBe("booking");
+    expect(normCanal("Direct")).toBe("direct");
+    expect(normCanal("Louer Premium")).toBe("direct");   // Nogent direct
+    expect(normCanal("beds24")).toBe("direct");
+    expect(normCanal("")).toBe("autre");
+    expect(normCanal(null)).toBe("autre");
+  });
+});
+
+describe("commissionFromReservations — FAIT vivant (remplace le seed statique)", () => {
+  const rates = { airbnbComm: (bien) => (bien === "amaryllis" ? 0.15 : 0.03), bookingComm: 0.17 };
+  const resas = [
+    { bienId: "amaryllis", canal: "Airbnb",      montant: 10000, checkin: "2025-06-01" }, // 15%
+    { bienId: "geko",      canal: "Airbnb",      montant: 5000,  checkin: "2025-07-01" }, // 3%
+    { bienId: "zandoli",   canal: "Booking.com", montant: 20000, checkin: "2025-08-01" }, // 17%
+    { bienId: "geko",      canal: "Direct",      montant: 8000,  checkin: "2025-09-01" }, // 0%
+    { bienId: "nogent",    canal: "Louer Premium", montant: 1000, checkin: "2025-05-01" }, // direct
+    { bienId: "geko",      canal: "Airbnb",      montant: 3000,  checkin: "2026-01-01" }, // autre année
+    { bienId: "geko",      canal: "Booking.com", montant: 0,     checkin: "2025-03-01" }, // montant 0 ignoré
+  ];
+
+  it("agrège par canal et applique le taux Airbnb PAR BIEN, pour la bonne année", () => {
+    const c = commissionFromReservations(resas, "2025", rates);
+    expect(c.airbnb).toBe(Math.round(10000 * 0.15 + 5000 * 0.03)); // 1500 + 150 = 1650
+    expect(c.booking).toBe(Math.round(20000 * 0.17));              // 3400
+    expect(c.total).toBe(1650 + 3400);
+    expect(c.caAirbnb).toBe(15000);
+    expect(c.caBooking).toBe(20000);
+    expect(c.caDirect).toBe(9000);  // 8000 direct + 1000 louer premium
+    expect(c.year).toBe("2025");
+  });
+
+  it("filtre bien par année (2026 séparé)", () => {
+    const c = commissionFromReservations(resas, "2026", rates);
+    expect(c.caAirbnb).toBe(3000);
+    expect(c.airbnb).toBe(Math.round(3000 * 0.03));
+    expect(c.caBooking).toBe(0);
+  });
+
+  it("ignore les montants nuls et les canaux inconnus (pas de taux inventé)", () => {
+    const c = commissionFromReservations(
+      [{ bienId: "x", canal: "Mystère", montant: 5000, checkin: "2025-01-01" }], "2025", rates);
+    expect(c.total).toBe(0);
+    expect(c.partOtaPct).toBe(0);
+  });
+
+  it("gère une liste vide", () => {
+    expect(commissionFromReservations([], "2025", rates).total).toBe(0);
+  });
+});
 
 describe("isReactivableEmail — recontactable en direct ?", () => {
   it("accepte un email réel", () => {
