@@ -217,8 +217,19 @@ export async function onRequest(context) {
 
   const merged = new Set([...airbnbBlocked, ...bookingBlocked, ...directBlocked]);
 
+  // ⚠️ Une source CONFIGURÉE qui échoue (feed injoignable, réponse non-iCal, format changé)
+  // retombe sur un Set VIDE ci-dessus : ses dates réservées disparaissent purement et simplement
+  // de blockedDates. Le résultat reste un 200 parfaitement normal — « aucune date bloquée » est
+  // indistinguable de « tout est libre ». `degraded` rend cette différence lisible.
+  // (Le Worker ical-sync alerte déjà Vincent quand un feed tombe, mais ça ne protège PAS ce
+  // chemin-ci : le site continuerait à vendre pendant l'incident.)
+  const degraded = (!!airbnbUrl && !airbnbText) || (!!bookingUrl && !bookingText);
+
   const result = {
     blockedDates: Array.from(merged).sort(),
+    // Additif : permet au re-check pré-paiement de refuser de conclure « c'est libre » sur une
+    // vue incomplète (cf. PublicSite.jsx, anti double-résa).
+    degraded,
     sources: {
       airbnb:  { ok: !!airbnbText,  count: airbnbBlocked.size },
       booking: { ok: !!bookingText, count: bookingBlocked.size, fromParam: !maps.booking[bienId] && !!bookingUrl },
@@ -228,7 +239,12 @@ export async function onRequest(context) {
 
   // Store in KV cache only when using env-configured URLs (not dynamic param)
   // TTL 6 h — économise les écritures KV (quota gratuit partagé avec patrimoine-dashboard).
-  if (env.AVAIL_CACHE && !bookingUrlSafe) {
+  // ⚠️ JAMAIS de mise en cache d'un résultat dégradé : figer 6 h une liste de dates bloquées
+  // amputée d'un canal, c'est afficher « libre » sur des nuits déjà vendues pendant tout ce
+  // temps — surbooking (Stripe est en LIVE). Un résultat dégradé est quand même SERVI (les
+  // résas directes D1 y sont, mieux que rien), simplement jamais figé : l'appel suivant
+  // retentera le feed et re-remplira le cache dès qu'il répond.
+  if (env.AVAIL_CACHE && !bookingUrlSafe && !degraded) {
     // Non bloquant (cf. Nogent) : un échec d'écriture KV ne doit pas faire planter l'endpoint.
     await env.AVAIL_CACHE.put(cacheKey, JSON.stringify(result), { expirationTtl: 21600 }).catch(() => {});
   }

@@ -2460,6 +2460,16 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
         if (bookingUrls[bien.id]) url += `&bookingUrl=${encodeURIComponent(bookingUrls[bien.id])}`;
         const r = await fetch(url);
         const d = r.ok ? await r.json() : {};
+        // `degraded` = un canal (Airbnb/Booking) n'a pas répondu → ses nuits réservées sont
+        // ABSENTES de blockedDates. On ne peut donc pas conclure « c'est libre » : conclure ici
+        // reviendrait à encaisser un paiement sur des dates peut-être déjà vendues (Stripe LIVE).
+        // Arbitrage tranché par Vincent (2026-07-17) : perdre une vente pendant un incident
+        // Airbnb > surbooker (voyageur à reloger + remboursement + réputation OTA = irréversible).
+        if (d.degraded) {
+          setPayError("Vérification des disponibilités momentanément impossible. Merci de réessayer dans quelques minutes — nous préférons vérifier plutôt que risquer une double réservation.");
+          setPaying(false);
+          return;
+        }
         const blocked = d.blockedDates || [];
         let stillOk = true, cur = checkin;
         for (let i = 0; i < nights; i++) { if (blocked.includes(cur)) { stillOk = false; break; } cur = addDays(cur, 1); }
@@ -6829,12 +6839,17 @@ function GroupPaymentModal({ biens, checkin, checkout, guests, nights, total, on
           let url = `/api/get-availability?bienId=${b.id}`;
           if (bookingUrls[b.id]) url += `&bookingUrl=${encodeURIComponent(bookingUrls[b.id])}`;
           const r = await fetch(url); const d = r.ok ? await r.json() : {};
+          // Vue incomplète (un canal muet) → on ne conclut pas. Cf. BookingModal : mieux vaut
+          // reporter la vente que surbooker. Ici l'enjeu est multiplié : une résa groupée
+          // engage plusieurs logements d'un coup.
+          if (d.degraded) return "degraded";
           const blocked = d.blockedDates || [];
           let ok = true, cur = checkin;
           for (let i = 0; i < nights; i++) { if (blocked.includes(cur)) { ok = false; break; } cur = addDays(cur, 1); }
           return ok;
         } catch { return true; }
       }));
+      if (checks.some(c => c === "degraded")) { setErr("Vérification des disponibilités momentanément impossible. Merci de réessayer dans quelques minutes — nous préférons vérifier plutôt que risquer une double réservation."); setPaying(false); return; }
       if (checks.some(ok => !ok)) { setErr("Un des logements vient d'être réservé sur ces dates. Revenez en arrière pour ajuster votre sélection."); setPaying(false); return; }
 
       const res = await fetch("/api/create-payment-intent", {
