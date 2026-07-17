@@ -14,6 +14,29 @@
 - **Trouvé au passage, hors scope initial** : `CLAUDE_SECRET` en clair dans `.memory/FLUX-RESAS.md`, committé en git depuis plusieurs commits — retiré du fichier, signalé à Vincent (entrée friction dédiée ci-dessous).
 - 11 commits déployés (Pages CI + Worker + Apps Script selon le fichier), 491/493 tests verts tout du long, chaque mécanisme vérifié en live SANS toucher de vraie donnée à risque (UID/id inexistants, ou donnée déjà idempotente re-écrite avec la même valeur).
 
+## 🟡 2026-07-17 — La lecture Sheet (`action:"read"`) prend ~32s : aucun refresh de cache en fond ne peut aboutir
+
+> **Noté à la demande de Vincent** (« ça vaudrait un chantier à part — note-le »), après l'incident CACHE-001 (cache figé 17,5h, `docs/ERREURS-LOG.md`).
+
+**Le fait, mesuré** : `POST /api/sheets-proxy {action:"read"}` prend **~32 s** en live (Apps Script `readAll_` : revenus/occ/adr/revpar/cashflow pour 9 entités × 12 mois + relecture des 706+ lignes de « Toutes les Réservations »). C'est la **cause racine** de CACHE-001 : `context.waitUntil(refreshReadCache(...))` ne peut pas terminer un fetch de 32 s, donc le rafraîchissement en tâche de fond échouait **systématiquement** et le cache restait servi jusqu'au HARD_TTL de 24 h.
+
+**Ce qui est déjà fait (2026-07-17, `7977d0f` + `246c5b0`)** — le symptôme est traité, pas la cause :
+- Toute écriture réelle purge le cache (`WRITE_ACTIONS`) → la fraîcheur suit les vrais changements, plus une horloge.
+- `purgeReadCache` exposé + appelé par `Planning.jsx` (qui écrit vers Apps Script en direct, hors proxy).
+- Purge **conditionnelle** sur le sync (`added > 0` / `cancelled > 0`) : le Worker rejoue tout le catalogue toutes les 10 min, purger à chaque passage rendrait le cache froid en permanence (= 32 s à chaque ouverture — régression rattrapée avant qu'elle ne se voie).
+- Échecs de refresh loggués (fini le `.catch(() => {})` muet) + en-tête `X-Cache-Age-Min`.
+
+**Ce qui reste (le chantier)** : tant que la lecture coûte 32 s, deux limites subsistent —
+1. après une purge légitime, **le prochain lecteur attend 32 s** ;
+2. une simple MAJ de montant par le sync (scrape Booking) n'invalide rien → visible seulement à la purge suivante.
+
+**Pistes non tranchées** (à cadrer avec Vincent, aucune n'est engagée) :
+- **Découper l'action `read`** : séparer les résas (rapide) des KPI calculés (lourds) → 2 appels, le dashboard affiche l'essentiel vite.
+- **Réchauffer le cache depuis le Worker cron** (pas soumis au budget `waitUntil` d'une Pages Function). ⚠️ **Attention quota Apps Script** — déjà épuisé une fois en testant trop (LEARNINGS 2026-07-15) : une cadence trop agressive casserait la synchro pour tout le monde.
+- **Optimiser `readAll_` côté GAS** (lectures groupées plutôt que cellule à cellule).
+
+**⚠️ Vérifier avant de coder** : je n'ai **pas confirmé** que le budget `waitUntil` est bien la cause de l'échec du refresh — c'est une déduction (32 s + échec systématique). Le log ajouté le 2026-07-17 (`msg:"refresh cache en fond échoué"`, avec `cache_age_min` + l'erreur réelle) donnera la **vraie** raison. **Le lire avant d'optimiser quoi que ce soit** — si c'est en fait un quota Apps Script ou un timeout côté GAS, les pistes ci-dessus visent à côté.
+
 ## 🟡 2026-07-16 — Nogent : le webhook Beds24 reste le SEUL chemin d'entrée pour une nouvelle résa, sans filet de rattrapage
 > Trouvé pendant l'audit synchro (P1.3/vérification adversariale) : si le webhook Beds24 casse un jour (config, panne, secret expiré → 401 fail-closed), rien ne détecte/rattrape automatiquement une nouvelle résa Nogent — Nogent est volontairement exclu du sync iCal du Worker (pas d'iCal côté Beds24). Piste identifiée mais PAS implémentée (la vérification adversariale a montré que le fix initialement proposé visait le mauvais endpoint) : faire appeler par le Worker `/api/beds24-webhook` lui-même (sans body) toutes les 10 min — réutilise le rattrapage 48h déjà écrit dans ce endpoint, sans dupliquer de logique. **Débloque** : nécessite un nouveau secret Worker (`BEDS24_WEBHOOK_SECRET`, store séparé des secrets Pages) — pas codé, en attente que Vincent demande d'y toucher.
 
