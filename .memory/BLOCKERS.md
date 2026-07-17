@@ -77,12 +77,23 @@
 - 37 articles SEO à 0 impression après 3 semaines : cause trouvée (sitemap jamais relu par Google depuis sa 1ère lecture le 23/06), resoumis manuellement, pages découvertes 64→99. Suivi programmé AGENDA 2026-07-30.
 - "Rapprochement Stripe cassé depuis le 07/07" : diagnostiqué comme un non-bug (12 jours sans nouveau paiement direct, compte Stripe sain) — `?balance=1` ajouté à `/api/stripe-reconcile` comme outil de diagnostic permanent.
 
-## En cours
-- **Tâche** : Restaurer la résa Ines Dali (Nogent, Beds24 `89292637`) — nom+prix+statut confirmé, actuellement en statut `black`/Bloqué (nom vide, 0€) malgré des dates correctement prolongées (06→20/07) et 764€+ déjà reçus (Vincent : au moins 1 virement encore manquant, total pas encore final).
-- **Étape** : Action admin `restoreGuest` construite et déployée (`functions/api/beds24-manage.js`, commit `0cdcf32`) mais **jamais exécutée avec succès** — l'API PUT Beds24 était en panne au moment du test (confirmé : `confirm`, code non touché, échoue identiquement ; GET fonctionne, token valide).
-- **Prochaine action** : (1) demander à Vincent si le dernier virement est arrivé + le total final exact, (2) retester `POST /api/beds24-manage {"action":"restoreGuest","bookingId":89292637,"firstName":"Ines","lastName":"Dali","price":<TOTAL_FINAL>}` avec le Bearer CLAUDE_SECRET — si ça échoue encore en 502, vérifier si l'API PUT Beds24 est remontée avant de re-creuser le code.
-- **Fichiers ouverts** : aucun (tout commité/déployé, seule l'exécution de l'action reste à faire).
-- **Contexte critique** : ne PAS deviner le montant final — Vincent a explicitement dit qu'il manque encore un virement. Ne jamais recréer une nouvelle réservation Beds24 pour ce bien (Nogent uniquement, déjà le cas) — `restoreGuest` modifie la résa EXISTANTE `89292637`, ne pas en créer une autre.
+## En cours → ✅ terminé le 2026-07-17 — I-09 (délégation) + I-10 (concierge) livrés, fix cache, 2 corrections de résas Nogent
+
+> Session « on essait de faire 9 et 10 » (2 des 10 chantiers innovation). Détail complet : `ROADMAP-INNOVATIONS.md` + 3 ADR (`ADR-I09-DELEGATION-001`, `ADR-I10-CONCIERGE-001`, `ADR-CACHE-SHEETS-001`).
+
+- **I-09 livré** (`dc1b28d`) : `/api/delegation-stats` mesure ce que Vincent fait à la main. **Verdict réel : 317 actes/8sem, PLAT, 61% = cocher des actions agents** → re-vérifier dans 4 semaines.
+- **I-10 livré** (`e7ccc17`+`b674d43`) : concierge en **shadow** (garde-fous testés en prod). Prérequis prestataires migrés localStorage→D1. Bug WhatsApp corrigé (devinait le bien par mots-clés). **En attente Vincent : bascule `CONCIERGE_MODE=live`.**
+- **Fix cache** (`7977d0f`+`246c5b0`+`6c3c292`) : incident CACHE-001 (cache figé 17,5h, chiffres faux). Refresh en fond retiré (Cloudflare l'annule, prouvé), invalidation à l'écriture à la place.
+- **Données** : Ines Dali corrigée (1124€ net, 06→20/07) · nouvelle résa Nogent 20-24/07 288€ net espèces (400 brut −40 ménage −20% conciergerie).
+- **Résidus non bloquants** (voir frictions ci-dessous) : token Beds24 read-only · concierge en shadow · prestataires pas encore importés côté Vincent · chantier lecture Sheet 32s.
+
+## 🔴 2026-07-17 — `BEDS24_TOKEN` est READ-ONLY + `BEDS24_REFRESH_TOKEN` invalide → aucune écriture Beds24 possible (et création de résa Nogent en danger)
+
+> **Cause racine PROUVÉE** (session 2026-07-17, via endpoint diag temporaire `authentication/details`, depuis supprimé) : le token Beds24 renvoie `scopes: [read:bookings, read:bookings-personal, read:bookings-financial, read:inventory, read:properties, read:accounts, read:channels]` — **7 scopes, tous en lecture, ZÉRO écriture**. Le `restoreGuest` de Vincent (bouton « 🔧 Réparer ») échouait donc quel que soit le payload/la méthode (PUT comme POST) — ce n'était jamais un bug de code. La résa Ines Dali reste affichée « Bloqué/0€ » côté Beds24 (sans impact dashboard/revenus : corrigée côté Sheet).
+
+**Plus grave, à vérifier** : `beds24-create.js` (crée les VRAIES résas Nogent après paiement Stripe) préfère `BEDS24_REFRESH_TOKEN` — **prouvé invalide** (`401 Token not valid` à l'échange). Son code ne bascule PAS sur le token statique en cas d'échec, il retourne une erreur 500. **Si ce refreshToken est bien celui configuré en prod, toute création de résa directe Nogent via Stripe échouerait côté Beds24** (paiement pris, résa non créée). Pas de preuve d'un échec réel récent (aucune nouvelle résa Stripe Nogent depuis, pour confirmer en conditions réelles), donc non affirmé à 100% — mais code + token pointent dans cette direction.
+
+**Débloque (action Vincent, Claude ne se connecte jamais à Beds24)** : régénérer sur beds24.com un token avec les scopes **write:bookings** (+ refreshToken valide), puis mettre à jour les secrets Cloudflare Pages `BEDS24_TOKEN` et `BEDS24_REFRESH_TOKEN`. Une fois fait : le bouton « Réparer » fonctionnera, et la création de résa directe Nogent sera fiabilisée. Vincent a indiqué le 2026-07-17 ne plus avoir ses accès Beds24 sous la main → en attente.
 
 ## 🟡 2026-07-15 — 12 jours sans paiement Stripe direct (03/07→15/07) : signal business à surveiller, pas un bug
 > Diagnostic complet fait (cf ADR-STRIPE-BALANCE-DIAGNOSTIC-001) : le compte Stripe est sain, ce n'est pas un problème technique. Mais 12 jours sans une seule nouvelle résa payée en direct reste un vrai creux (avant le paiement de Gwenaelle Decloux le jour même de l'investigation). **Débloque** : si ce creux se reproduit/s'installe, croiser avec le funnel GA4 (`npm run funnel`) et les campagnes Ads — pourrait indiquer un problème de conversion plutôt qu'une simple fluctuation normale. Pas d'action immédiate requise, juste à garder en tête au prochain point Stripe/revenus.

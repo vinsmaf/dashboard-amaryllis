@@ -1,0 +1,62 @@
+{
+  "_meta": {
+    "initialized": "2026-07-04",
+    "note": "104e run 2026-07-13 : pré-check vs état stocké (2026-07-10) : amaryllis 184 bookings/198 dates (+1/+1), zandoli 202/230 (+4/+4), mabouya 184/226 (+1/+4), geko 190/214 (+3 dates, hash modifié), schoelcher 197/237 (+4 bookings vs 193 — encore +1 depuis le 103e run qui voyait 196, hash modifié). Les changements s'ACCUMULENT depuis le 2026-07-10 sans lecture extranet possible : session Booking EXPIRÉE → arrêt sans saisie, 33e relance à Vincent. Compteurs/hashes NON mis à jour volontairement (re-détection au prochain run). Rappel actif : résa geko 6923369391 (Beauval, 10-17 août, net ~€915,59) à saisir dans le Sheet.",
+    "hashFormat": "sha256 de ','.join(sorted(blockedDates)) — format normalisé le 2026-07-04 (2e run)",
+    "lastRun": "2026-07-13 (104e run)",
+    "pendingChange": "amaryllis (+1 booking/+1 date), zandoli (+4 bookings/+4 dates), mabouya (+1 booking/+4 dates), geko (+3 dates), schoelcher (+4 bookings) vs état 2026-07-10 — probablement plusieurs NOUVELLES RÉSAS Booking non vues (et ça continue de progresser : schoelcher 196→197 entre les runs 103 et 104 du 13/07). Extranet non lisible (session expirée depuis 2026-07-10T23:55Z, 33 tentatives), à vérifier dès reconnexion",
+    "lastExtranetCheck": "2026-07-10T15:15:00Z (dernier succès). Tentatives suivantes (dont 104e run 2026-07-13) : session expirée."
+  },
+  "amaryllis": {
+    "bookingCount": 183,
+    "bookingOk": true,
+    "blockedDatesHash": "fdc2c988255bb60e63ba39c5cdb7ef64718ce755aceca25284f7ed9ddfdea55a",
+    "blockedDatesCount": 197,
+    "resasSignalees": {},
+    "lastChecked": "2026-07-10T23:10:50Z"
+  },
+  "zandoli": {
+    "bookingCount": 198,
+    "bookingOk": true,
+    "blockedDatesHash": "4753a0cc6fa4990255c6ee6d931f1c3eb3e1a025c4aed25e06dca8aae16044eb",
+    "blockedDatesCount": 226,
+    "resasSignalees": {
+      "5356938564": "Jabez Dolly, 27-29 juin 2026, statut Annulée, €0 — vue extranet 2026-07-05, non actionnable (déjà annulée, pas de valeur), signalée pour éviter re-détection"
+    },
+    "lastChecked": "2026-07-10T23:10:50Z"
+  },
+  "mabouya": {
+    "bookingCount": 183,
+    "bookingOk": true,
+    "blockedDatesHash": "c4fc3033f1ab03349b2408f5afa40eaac211515f1805df5a6f0c34c0aa2634aa",
+    "blockedDatesCount": 222,
+    "resasSignalees": {},
+    "lastChecked": "2026-07-10T23:10:50Z"
+  },
+  "geko": {
+    "bookingCount": 190,
+    "bookingOk": true,
+    "blockedDatesHash": "43259f110e535c6a2490dd17168dc670904b7581f52006f5e0c2516e820a62f7",
+    "blockedDatesCount": 211,
+    "resasSignalees": {
+      "6923369391": "Marc-henri Beauval, 2 adultes + 2 enfants (4,8 ans), 10-17 août 2026, statut OK, tarif €1094,55, commission+frais €178,96 (net estimé ~€915,59), virement bancaire, réservé le 26 juin 2026 — vue extranet 2026-07-05 (reconfirmée extranet 2026-07-10), à saisir dans le Sheet « Toutes les Réservations »"
+    },
+    "lastChecked": "2026-07-10T23:10:50Z"
+  },
+  "schoelcher": {
+    "bookingCount": 193,
+    "bookingOk": true,
+    "blockedDatesHash": "de94a41f184eaed2b59a85df033edca53db8f85d02bdc3292c2a6aefb6ba0500",
+    "blockedDatesCount": 237,
+    "resasSignalees": {},
+    "lastChecked": "2026-07-10T23:10:50Z"
+  },
+  "iguana": {
+    "bookingCount": 0,
+    "bookingOk": false,
+    "blockedDatesHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "blockedDatesCount": 0,
+    "resasSignalees": {},
+    "lastChecked": "2026-07-10T23:10:50Z"
+  }
+}

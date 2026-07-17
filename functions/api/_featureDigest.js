@@ -3,7 +3,7 @@
 // sans accès repo live (impossible depuis un Worker) ni appel API externe (pas de nouveau secret).
 // Régénérer manuellement (node scripts/generate-feature-digest.mjs) quand le digest semble périmé —
 // un oubli dégrade juste la fraîcheur du signal, ne casse jamais le build (fichier committé).
-// Dernière génération : 2026-07-15
+// Dernière génération : 2026-07-17
 
 export const ENDPOINTS_DIGEST = [
   "/api/admin-auth (admin-auth.js) — Vérifie le mot de passe admin côté serveur (jamais exposé dans le bundle JS).",
@@ -40,11 +40,13 @@ export const ENDPOINTS_DIGEST = [
   "/api/client-errors (client-errors.js) — Inbox auto-hébergée des bugs : erreurs JS captées en prod (site + admin)",
   "/api/code-review (code-review.js) — Revue de code LLM ciblée sur un DIFF (pas tout le code) : signale les bugs",
   "/api/complement-checkout (complement-checkout.js) — Crée une Stripe Checkout Session de PAIEMENT (capture immédiate) pour un COMPLÉMENT de prix",
+  "/api/concierge (concierge.js) — I-10 — Concierge IA qui AGIT (pas qui répond).",
   "/api/contacts-alert (contacts-alert.js) — crm-007 : alerte ntfy pour les leads > 24h sans réponse.",
   "/api/contacts-purge (contacts-purge.js) — jur-008 : RGPD — purge des contacts de plus de 2 ans (durée légale maximale).",
   "/api/create-deposit-intent (create-deposit-intent.js) — Creates a PaymentIntent with capture_method: \"manual\" (pre-authorization)",
   "/api/create-payment-intent (create-payment-intent.js) — Enregistre un \"panier\" en D1 dès la création du PaymentIntent.",
   "/api/create-payment-link (create-payment-link.js) — ebiz-005 : Crée un Stripe Payment Link pour devis WhatsApp",
+  "/api/delegation-stats (delegation-stats.js) — I-09 — Runbook de délégation auto-mesuré.",
   "/api/devis-solde-cron (devis-solde-cron.js) — Cron quotidien (cron-job.org) : gère le SOLDE des devis payés en 2 fois.",
   "/api/docs-refresh (docs-refresh.js)",
   "/api/editorial-calendar (editorial-calendar.js) — Planning éditorial Facebook + Instagram pour Amaryllis Locations.",
@@ -66,6 +68,7 @@ export const ENDPOINTS_DIGEST = [
   "/api/occupancy-stats (occupancy-stats.js) — Occupation réelle 30 jours glissants, un chiffre par bien actif.",
   "/api/ops-sla-report (ops-sla-report.js) — Rapport mensuel SLA Exploitation (maintenance + stock) — log-036.",
   "/api/orchestrator (orchestrator.js) — Orchestrateur multi-agents : utilise claude-sonnet pour coordonner les 28 agents",
+  "/api/prestataires (prestataires.js) — I-10 (prérequis) — Carnet de prestataires en D1.",
   "/api/qa-run (qa-run.js) — Trigger manuel d'une session QA.",
   "/api/rag-ingest (rag-ingest.js) — #2 RAG — alimente l'index vectoriel avec les VRAIES données : faits biens,",
   "/api/rag-search (rag-search.js) — #2 RAG — test/démo du retrieval : renvoie les passages les plus proches.",
@@ -93,6 +96,7 @@ export const ENDPOINTS_DIGEST = [
   "/api/social-draft (social-draft.js) — Reçoit un texte libre (un post de groupe Facebook capté par la veille locale group-watch.mjs)",
   "/api/social-poll (social-poll.js) — Détecteur de leads SANS webhook (marche en mode développement, AUCUN App Review requis) :",
   "/api/social-webhook (social-webhook.js) — Bot social Amaryllis : répond AUTOMATIQUEMENT aux commentaires (Facebook Page + pubs, Instagram)",
+  "/api/sync-health (sync-health.js) — Agrège la santé du pipeline de synchro résas (4 canaux) pour l'onglet admin",
   "/api/tv-context (tv-context.js) — Renvoie le contexte de séjour EN COURS pour l'écran d'accueil TV : { guest?, du?, au? }.",
   "/api/veille-zone-scan (veille-zone-scan.js) — veille-005 : détecte les NOUVEAUX listings apparus dans la zone (diff snapshot",
   "/api/voyageur-feedback (voyageur-feedback.js) — voyageur-001 : extraction + stockage des avis Airbnb des biens en D1.",
@@ -150,6 +154,7 @@ export const ADMIN_TABS_DIGEST = [
   "SocialTab",
   "StockTrackerTab",
   "StripeReconcileTab",
+  "SyncHealthTab",
   "Tarifs",
   "Travaux",
   "WhatsAppTab"
