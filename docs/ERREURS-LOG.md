@@ -4,6 +4,16 @@
 > **Règle** : à chaque erreur commise, ajouter une entrée ici (symptôme → cause → solution → garde-fou).
 > Lire ce fichier **au début de chaque session** (en plus de `PROJECT_MEMORY.md` + `CLAUDE.md`).
 
+## 🏠 DISPO — Un feed iCal muet vendait « libre » pendant 6 h (surbooking)
+
+**DISPO-001 (2026-07-17)** — `get-availability.js` mettait en cache KV 6 h un résultat où un canal (Airbnb/Booking) n'avait pas répondu.
+- **Symptôme** : aucun. C'est tout le problème — HTTP 200, réponse bien formée, `blockedDates` juste... amputée des nuits du canal muet. Le calendrier public et le re-check pré-paiement affichaient « libre » sur des nuits déjà vendues, pendant 6 h après un incident de 2 min. Stripe est en LIVE → surbooking payé.
+- **Cause** : `airbnbText ? parseIcal(airbnbText) : new Set()` — un feed KO retombe sur un Set VIDE, indistinguable de « ce canal n'a rien de réservé ». Le résultat partait ensuite au cache comme n'importe quel résultat sain. Le discriminant existait déjà (`sources.airbnb.ok`) mais **aucun appelant ne le lisait**.
+- **Piège de diagnostic** : le Worker `ical-sync` alerte DÉJÀ (ntfy + heartbeat D1 `failed_feeds`) quand un feed tombe — on pouvait donc croire le sujet couvert. Il ne l'était pas : l'alerte prévient Vincent, elle n'empêche pas le site de vendre. **Deux chemins lisent les mêmes feeds** (Worker sync ET Function dispo) ; celui qui a l'alerte n'est pas celui qui porte le risque.
+- **Solution** : `get-availability` expose `degraded` (un canal configuré est muet) et **ne met JAMAIS en cache un résultat dégradé** — il le sert quand même (les résas directes D1 y sont) mais sans le figer, donc l'appel suivant retente. Les 2 tunnels de paiement (BookingModal + GroupPaymentModal) refusent de conclure si `degraded` (arbitrage Vincent : perdre une vente pendant un incident > surbooker).
+- **Garde-fou** : `functions/api/get-availability.test.js` (4 tests) fige les 2 invariants — un résultat dégradé n'est jamais caché, et 2 feeds KO donnent `blockedDates:[]` **avec** `degraded:true` (≠ « tout est libre »).
+- **Règle générale** : ne jamais cacher un résultat dont une source a échoué — le cache transforme une panne de quelques minutes en mensonge de la durée du TTL. Cf. `~/.claude/memory/CROSS-LEARNINGS.md` (2026-07-16 et 2026-07-17).
+
 ## 🚀 DEPLOY — Agent déploie en direct hors-git (drift prod≠origin)
 
 **DEPLOY-001 (2026-06-24)** — Une 2e session Claude (agent locatif) a committé une feature en local puis lancé `npm run deploy:pages` directement (×2) **sans `git push`**.
