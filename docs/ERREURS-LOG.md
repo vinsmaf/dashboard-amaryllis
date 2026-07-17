@@ -4,6 +4,16 @@
 > **Règle** : à chaque erreur commise, ajouter une entrée ici (symptôme → cause → solution → garde-fou).
 > Lire ce fichier **au début de chaque session** (en plus de `PROJECT_MEMORY.md` + `CLAUDE.md`).
 
+## 📊 CACHE — Le dashboard a affiché des chiffres périmés pendant 17,5 h, sans le dire
+
+**CACHE-001 (2026-07-17)** — Le cache KV de `sheets-proxy` (`action:"read"`) est resté figé 17,5 h sur des données obsolètes.
+- **Symptôme** : aucun, encore une fois. HTTP 200, JSON bien formé, chiffres crédibles… mais faux. Trouvé par accident en corrigeant une résa réelle (Ines Dali/Nogent) : après correction, la relecture renvoyait toujours l'ANCIEN montant (490 € au lieu de 1008 €). Réflexe initial — et faux — : « un cron a écrasé ma correction ». Le Sheet était juste depuis le début ; c'est le cache qui mentait.
+- **Diagnostic qui tranche** : ne pas se fier à la lecture (elle passe par le cache). Le **delta d'un rebuild revenus** lit le Sheet en direct : `revenus2026RebuildBienApply` a montré juillet Nogent 5113,48 → 5229,48 = **+116 € = 1124 − 1008**, prouvant que la valeur réelle était bien 1008 € et non 490 €. L'en-tête `X-Cache: STALE` + `wrangler kv key get` ont confirmé un `cachedAt` vieux de 17,5 h.
+- **Cause** : `context.waitUntil(refreshReadCache(...))` **ne peut pas aboutir**. L'action `read` prend **~32 s** (mesuré en live : 9 entités × 12 mois + 706 lignes de résas), au-delà du budget de tâche de fond de Cloudflare. Chaque lecture relançait un refresh qui se faisait tuer → cache jamais mis à jour → servi tel quel jusqu'au HARD_TTL de **24 h**. Le `.catch(() => {})` rendait l'échec **totalement muet** : un mécanisme conçu pour être tolérant (« mieux vaut du cache qu'un dashboard vide ») s'était mué en mensonge silencieux.
+- **Le vrai danger** (au-delà de l'affichage) : `App.jsx` traite le Sheet comme **source autoritaire** et écrase le localStorage avec ce qu'il lit. Une correction faite dans l'onglet Planning pouvait donc être **annulée** au rechargement suivant par la valeur périmée du cache — la donnée juste écrasée par la fausse.
+- **Solution** : (1) **toute écriture purge le cache** (`WRITE_ACTIONS` dans `sheets-proxy.js`) — la fraîcheur suit les VRAIS changements, pas une horloge ; (2) action `purgeReadCache` exposée, appelée par `Planning.jsx` qui écrit en direct vers Apps Script **sans passer par le proxy** (flux historique laissé intact) ; (3) l'échec du refresh est **loggué** (plus de `.catch` muet) ; (4) en-tête `X-Cache-Age-Min` exposé. HARD_TTL 24 h **conservé** : servir du cache reste mieux qu'un dashboard vide quand Apps Script est en quota.
+- **Garde-fou / leçon** : **un `.catch(() => {})` sur un rafraîchissement de cache est un piège** — il transforme une panne en donnée fausse crédible. Si un refresh en fond peut échouer, il DOIT être loggué et son âge exposé. Et plus généralement : **quand une correction « semble » avoir été écrasée, vérifier la source réelle avant d'accuser un cron** (ici : un rebuild lit en direct, la lecture normale non).
+
 ## 🏠 DISPO — Un feed iCal muet vendait « libre » pendant 6 h (surbooking)
 
 **DISPO-001 (2026-07-17)** — `get-availability.js` mettait en cache KV 6 h un résultat où un canal (Airbnb/Booking) n'avait pas répondu.

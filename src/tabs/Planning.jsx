@@ -25,6 +25,7 @@ import MinNightsConfig from "./MinNightsConfig.jsx";
 import Beds24Admin from "./Beds24Admin.jsx";
 import ResaEmailList from "./messagerie/ResaEmailList.jsx";
 import { sumN, avgN, addDays, diffDays, todayStr } from "../utils/calculations.js";
+import { adminFetch } from "../lib/apiFetch.js";
 import { loadDailyPrices } from "../seedPrices.js";
 import { useAppData } from "../AppDataContext.jsx";
 
@@ -450,6 +451,19 @@ export default function Planning({ initialView = "todo" }) {
     setShowForm(true);
   };
 
+  // Ces écritures tapent Apps Script en direct (sans passer par /api/sheets-proxy), donc le
+  // cache de lecture du proxy ne se purge pas tout seul. Sans ça : la correction part bien
+  // dans le Sheet, mais le prochain chargement relit le cache périmé et — « Sheet = source
+  // autoritaire » — ÉCRASE la correction avec l'ancienne valeur. Incident réel du 2026-07-17
+  // (cache figé 17,5h). Best-effort : ne doit jamais bloquer l'enregistrement.
+  const purgeSheetCache = () => {
+    adminFetch("/api/sheets-proxy", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "purgeReadCache" }),
+    }).catch(() => {});
+  };
+
   const saveForm = () => {
     if (!form.checkin || !form.checkout || !form.voyageur) return;
     const data = { ...form, montant: parseFloat(form.montant) || 0 };
@@ -459,6 +473,7 @@ export default function Planning({ initialView = "todo" }) {
       if (scriptUrl) {
         const p = new URLSearchParams({ action: "addReservation", id: String(editId), bienId: data.bienId, voyageur: data.voyageur, canal: data.canal, checkin: data.checkin, checkout: data.checkout, montant: String(data.montant), notes: data.notes || "", phone: data.phone || "", email: data.email || "" });
         fetch(`${scriptUrl}?${p}`, { redirect: "follow" }).catch(() => {});
+        purgeSheetCache();
       }
     } else {
       const newR = { id: Date.now(), ...data, menage_done: false, checkin_done: false };
@@ -466,6 +481,7 @@ export default function Planning({ initialView = "todo" }) {
       if (scriptUrl) {
         const p = new URLSearchParams({ action: "addReservation", id: String(newR.id), bienId: newR.bienId, voyageur: newR.voyageur, canal: newR.canal, checkin: newR.checkin, checkout: newR.checkout, montant: String(newR.montant), notes: newR.notes || "", phone: newR.phone || "", email: newR.email || "" });
         fetch(`${scriptUrl}?${p}`, { redirect: "follow" }).catch(() => {});
+        purgeSheetCache();
       }
     }
     setForm(EMPTY_FORM);
@@ -476,6 +492,7 @@ export default function Planning({ initialView = "todo" }) {
     saveRes(reservations.filter(r => r.id !== id));
     if (scriptUrl) {
       fetch(`${scriptUrl}?action=deleteReservation&id=${id}`, { redirect: "follow" }).catch(() => {});
+      purgeSheetCache();
     }
   };
   const togRes = (id, field) => saveRes(reservations.map(r => r.id === id ? { ...r, [field]: !r[field] } : r));
