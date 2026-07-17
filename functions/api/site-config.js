@@ -13,6 +13,35 @@ function json(data) {
   });
 }
 
+// I-09 (runbook de délégation) : cette config part dans Apps Script (PropertiesService),
+// qui n'horodate rien et ne garde aucun historique — l'édition des prix journaliers était
+// donc le geste manuel le plus fréquent de Vincent ET le seul totalement invisible.
+// On journalise le FAIT qu'une édition a eu lieu (pas un diff : comparer à l'état
+// précédent imposerait un GET Apps Script supplémentaire par écriture, or le quota
+// Apps Script du compte a déjà été épuisé une fois — cf. LEARNINGS 2026-07-15).
+// Strictement fail-open : ce log ne doit JAMAIS empêcher une écriture de prix.
+async function logConfigEdit(env, { configType, config, via }) {
+  const db = env.revenue_manager;
+  if (!db) return;
+  try {
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS config_edits (
+        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+        config_type  TEXT    NOT NULL,
+        keys_count   INTEGER,
+        payload_size INTEGER,
+        via          TEXT,
+        created_at   INTEGER NOT NULL DEFAULT (unixepoch())
+      )
+    `).run();
+    await db.prepare("CREATE INDEX IF NOT EXISTS idx_config_edits_created ON config_edits(created_at)").run();
+    const keysCount = config && typeof config === "object" ? Object.keys(config).length : 0;
+    await db.prepare(
+      "INSERT INTO config_edits (config_type, keys_count, payload_size, via) VALUES (?,?,?,?)"
+    ).bind(configType, keysCount, JSON.stringify(config || {}).length, via).run();
+  } catch { /* fail-open : jamais bloquer une écriture de prix pour une mesure */ }
+}
+
 export async function onRequest(context) {
   const { request, env } = context;
 
@@ -62,6 +91,13 @@ export async function onRequest(context) {
       const cfg     = body.config || {};
       const cfgStr  = JSON.stringify(cfg);
       const ok = (h) => new Response(h, { headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } });
+
+      // I-09 : trace de l'acte manuel (waitUntil → zéro latence ajoutée sur le flux prix).
+      context.waitUntil(logConfigEdit(env, {
+        configType: body.type || "min_nights",
+        config: cfg,
+        via: secretOk ? "secret" : "admin",
+      }));
 
       // 1) Voie principale : POST du body à Apps Script (doPost lit
       //    e.postData.contents) → AUCUNE limite de longueur d'URL.

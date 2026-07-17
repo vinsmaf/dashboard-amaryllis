@@ -304,6 +304,91 @@ function StatsPanel({ stats }) {
   );
 }
 
+// ── Panneau délégation (/api/delegation-stats) — I-09 ─────────────────────────
+// Pendant humain de StatsPanel : celui-ci mesure la MACHINE (coût/qualité LLM),
+// celui-là mesure l'OPÉRATEUR (ce que Vincent fait encore à la main). Cap 2028 :
+// la seule courbe qui compte ici est celle qui descend.
+function DelegationPanel({ data }) {
+  if (!data) return null;
+  const { thisWeek, total, byKind, trend, candidates, labels = {}, window_weeks: weeks, blind_spots: blindSpots = [] } = data;
+
+  const dirColor = trend.direction === "down" ? "#10b981" : trend.direction === "up" ? "#ef4444" : "#94a3b8";
+  const dirIcon = trend.direction === "down" ? "↓" : trend.direction === "up" ? "↑" : "→";
+  const dirText = trend.deltaPct == null
+    ? (trend.direction === "unknown" ? "historique trop court" : "pas de base de comparaison")
+    : `${trend.deltaPct > 0 ? "+" : ""}${Math.round(trend.deltaPct)}% vs ${weeks / 2} semaines avant`;
+
+  const ranked = Object.entries(byKind).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  const maxKind = ranked[0]?.[1] || 1;
+
+  return (
+    <div style={{ background: "rgba(15,23,42,0.6)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: "12px 16px", marginBottom: 16 }}>
+      <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, marginBottom: 10 }}>
+        🧍 Dépendance opérationnelle — ce que tu fais encore à la main
+      </div>
+
+      <div style={{ display: "flex", gap: 20, flexWrap: "wrap", marginBottom: 12 }}>
+        <div>
+          <div style={{ fontSize: 10, color: "#64748b" }}>Cette semaine</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: "#e2e8f0" }}>{thisWeek} <span style={{ fontSize: 10, color: "#475569", fontWeight: 400 }}>actes</span></div>
+        </div>
+        <div>
+          <div style={{ fontSize: 10, color: "#64748b" }}>Tendance</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: dirColor }}>
+            {dirIcon} <span style={{ fontSize: 11, fontWeight: 500 }}>{dirText}</span>
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: 10, color: "#64748b" }}>Total ({weeks} sem.)</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: "#e2e8f0" }}>{total}</div>
+        </div>
+      </div>
+
+      {ranked.length > 0 && (
+        <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 10, marginBottom: candidates.length ? 10 : 0 }}>
+          {ranked.map(([kind, n]) => (
+            <div key={kind} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+              <span style={{ fontSize: 10, color: "#94a3b8", width: 190, flexShrink: 0 }} title={labels[kind]?.hint || ""}>
+                {labels[kind]?.label || kind}
+              </span>
+              <div style={{ flex: 1, height: 6, background: "rgba(255,255,255,0.05)", borderRadius: 3, overflow: "hidden" }}>
+                <div style={{ width: `${(n / maxKind) * 100}%`, height: "100%", background: "#6366f1", borderRadius: 3 }} />
+              </div>
+              <span style={{ fontSize: 10, color: "#e2e8f0", width: 28, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{n}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {candidates.length > 0 && (
+        <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 10 }}>
+          <div style={{ fontSize: 10, color: "#64748b", marginBottom: 6 }}>🎯 Assez fréquent ET régulier pour être automatisé</div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {candidates.map((c) => (
+              <span key={c.kind} title={labels[c.kind]?.hint || ""} style={{ fontSize: 10, padding: "3px 8px", borderRadius: 5, background: "rgba(245,158,11,0.14)", color: "#fcd34d" }}>
+                {labels[c.kind]?.label || c.kind} · {c.perWeek}/sem.
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {blindSpots.length > 0 && (
+        <details style={{ marginTop: 10, borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 8 }}>
+          <summary style={{ fontSize: 10, color: "#64748b", cursor: "pointer" }}>
+            ⚠️ Angles morts de la mesure ({blindSpots.length}) — le total est un plancher, pas un total réel
+          </summary>
+          <ul style={{ margin: "6px 0 0", paddingLeft: 16 }}>
+            {blindSpots.map((b, i) => (
+              <li key={i} style={{ fontSize: 10, color: "#64748b", marginBottom: 3 }}>{b}</li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </div>
+  );
+}
+
 // ── Composant principal ───────────────────────────────────────────────────────
 export default function AgentsKanban({ mob }) {
   const [actions, setActions]         = useState([]);
@@ -322,6 +407,7 @@ export default function AgentsKanban({ mob }) {
   const [outcomes, setOutcomes]       = useState({});
   const [userNotes, setUserNotes]     = useState({});
   const [agentStats, setAgentStats]   = useState(null);
+  const [delegation, setDelegation]   = useState(null);
   const [statsOpen, setStatsOpen]     = useState(false);
   const runTimeout  = useRef(null);
   const pollRef     = useRef(null);
@@ -394,10 +480,22 @@ export default function AgentsKanban({ mob }) {
     }
   }, []);
 
+  // ── I-09 : dépendance opérationnelle (/api/delegation-stats) ──
+  const loadDelegation = useCallback(async () => {
+    try {
+      const r = await adminFetch("/api/delegation-stats");
+      const d = await r.json();
+      if (d.version) setDelegation(d);
+    } catch {
+      // silencieux — même contrat que loadAgentStats : panneau optionnel
+    }
+  }, []);
+
   useEffect(() => {
     load();
     schedulePoll();
     loadAgentStats();
+    loadDelegation();
     const statsInterval = setInterval(loadAgentStats, 120_000);
     const onVisible = () => { if (document.visibilityState === "visible") { load(true); schedulePoll(); } };
     document.addEventListener("visibilitychange", onVisible);
@@ -407,7 +505,7 @@ export default function AgentsKanban({ mob }) {
       clearInterval(statsInterval);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [load, schedulePoll, loadAgentStats]);
+  }, [load, schedulePoll, loadAgentStats, loadDelegation]);
 
   // Re-schedule poll chaque fois que les actions changent (adapte la fréquence)
   useEffect(() => { schedulePoll(); }, [actions, schedulePoll]);
@@ -632,8 +730,9 @@ export default function AgentsKanban({ mob }) {
         </div>
       )}
 
-      {/* ── Panneau stats (observabilité LLM) ── */}
+      {/* ── Panneaux stats : machine (LLM) puis opérateur (délégation, I-09) ── */}
       {statsOpen && <StatsPanel stats={agentStats} />}
+      {statsOpen && <DelegationPanel data={delegation} />}
 
       {/* ── Progress global ── */}
       <div style={{ background: "rgba(15,23,42,0.6)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 10, padding: "12px 16px", marginBottom: 20 }}>
