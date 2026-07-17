@@ -60,3 +60,6 @@ graphify-out/
 
 # Profil Chrome Booking.com scraper (hors repo, dans $HOME)
 # Le répertoire ~/.booking-scraper-profile est géré par booking-login.mjs
+
+# État runtime du watcher Booking.com (compteurs/hashes, régénéré à chaque run) — pas de la mémoire curatée
+.memory/booking-extranet-vues.json
