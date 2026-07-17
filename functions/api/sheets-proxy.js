@@ -190,14 +190,25 @@ export async function onRequestPost(context) {
   // Un DELETE KV est instantané, contrairement au refresh : waitUntil suffit largement.
   const isWrite = parsed && WRITE_ACTIONS.has(parsed.action);
 
+  // ⚠️ importAllReservations = le sync du Worker, toutes les 10 min, et il rejoue
+  // TOUT le catalogue (`allEvents`), pas seulement les nouveautés. Purger à chaque
+  // passage laisserait le cache froid en permanence → 32s à CHAQUE ouverture du
+  // dashboard. On ne purge donc que si de vraies lignes ont été AJOUTÉES.
+  // Trade-off assumé : une simple mise à jour de montant par le sync (ex. scrape
+  // Booking) n'invalide pas le cache — elle deviendra visible à la prochaine purge
+  // (nouvelle résa ou édition manuelle). Reste très supérieur à l'état antérieur,
+  // où absolument rien n'invalidait le cache.
   if (parsed && parsed.action === "importAllReservations" && Array.isArray(parsed.reservations)) {
     const res = await forwardChunked(scriptUrl, "importAllReservations", parsed.reservations);
-    context.waitUntil(purgeReadCache(env));
+    const body = await res.clone().json().catch(() => ({}));
+    if ((body.added || 0) > 0) context.waitUntil(purgeReadCache(env));
     return res;
   }
   if (parsed && parsed.action === "cancelReservations" && Array.isArray(parsed.annulations)) {
     const res = await forwardChunked(scriptUrl, "cancelReservations", parsed.annulations);
-    context.waitUntil(purgeReadCache(env));
+    const body = await res.clone().json().catch(() => ({}));
+    // Une annulation change les revenus → purge dès qu'au moins une a été traitée.
+    if ((body.cancelled || 0) > 0) context.waitUntil(purgeReadCache(env));
     return res;
   }
 
