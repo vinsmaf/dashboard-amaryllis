@@ -59,3 +59,17 @@ ICAL_BOOKING_NOGENT=
 # My Profile → API Tokens → Create Token → permission "Zone.Cache Purge".
 CLOUDFLARE_API_TOKEN=
 CLOUDFLARE_ZONE_ID=
+
+# ── I-10 · Concierge IA (concierge.js) ────────────────────────────────────────
+# Défaut PRUDENT : sans ces variables, le concierge tourne en "shadow" — il analyse,
+# décide ce qu'il FERAIT, pousse la proposition en ntfy, mais n'exécute RIEN de réel.
+# Poser CONCIERGE_MODE=live n'autorise QU'UNE action réelle : l'émission d'un code promo
+# (aucun argent ne sort du compte — c'est une remise sur un futur séjour, nominative,
+# à usage unique et plafonnée). Remboursement / intervention prestataire / service restent
+# toujours de simples propositions, quel que soit le mode.
+CONCIERGE_MODE=shadow
+# Plafond d'un geste promo, en euros. Défaut 50 si absent, borné à 200 même si mal saisi.
+# Un dépassement n'est jamais écrêté en silence : il escalade vers Vincent.
+CONCIERGE_MAX_PROMO_EUR=50
+# Kill-switch d'urgence : "1" ou "true" → le concierge répond ok:true/disabled et ne fait rien.
+CONCIERGE_DISABLED=

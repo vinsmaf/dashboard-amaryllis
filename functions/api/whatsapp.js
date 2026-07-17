@@ -21,6 +21,7 @@
 //   4. Loggue chaque échange en D1 (table whatsapp_conversations)
 
 import { callLLM } from "./_llm.js";
+import { resolveGuestContext, contextSummary } from "./_guestContext.js";
 
 const json = (d, s = 200) => new Response(JSON.stringify(d), {
   status: s, headers: { "Content-Type": "application/json" },
@@ -355,8 +356,15 @@ export async function onRequestPost(context) {
     return json({ ok: true, note: "message vide ou non traité (type non supporté)" });
   }
 
-  // Détection du bien
-  const bien  = detectBien(userMessage);
+  // ── Détection du bien ──
+  // BUG corrigé le 2026-07-17 (I-10) : on ne devinait le bien QUE par mots-clés dans le
+  // message, avec "amaryllis" en défaut silencieux. Un voyageur à Nogent qui écrivait
+  // « le wifi ne marche pas » sans nommer son logement recevait donc le code wifi et
+  // l'adresse de la Villa Amaryllis. La réservation réelle rattachée à son numéro fait
+  // désormais autorité ; les mots-clés ne servent plus que de repli (voyageur OTA ou
+  // prospect, dont le numéro nous est inconnu).
+  const stay = await resolveGuestContext(env.revenue_manager, { phone: from });
+  const bien = stay.booking?.bien_id || detectBien(userMessage);
 
   // RM-18 : si le message trahit de l'irritation/réclamation → alerte hôte immédiate,
   // en parallèle (waitUntil) pour ne pas retarder la réponse du bot.
@@ -367,7 +375,16 @@ export async function onRequestPost(context) {
 
   const guide = await fetchGuide(env, bien, new URL(request.url).origin);
 
+  // Contexte du séjour réel : le bot savait répondre sur un logement, jamais à QUI il parlait.
+  // Injecté seulement si le voyageur est identifié (résa directe rattachée à son numéro) —
+  // sinon on ne dit rien plutôt que d'inventer.
+  const stayContext = stay.booking
+    ? `\n\nCONTEXTE DU VOYAGEUR (fiable, issu de nos réservations) :\n${contextSummary(stay)}\n`
+      + `Tu peux t'adresser à lui par son prénom et te référer à ses dates. N'invente aucune autre information le concernant.`
+    : "";
+
   const systemPrompt = buildSystemPrompt(guide, bien)
+    + stayContext
     + (isVoice ? "\n\n[Transcription d'un message vocal — formulation possible approximative, prends en compte le sens global.]" : "");
 
   // Appel LLM
