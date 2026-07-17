@@ -88,4 +88,44 @@ describe('get-availability · feed dégradé', () => {
     expect(d.degraded).toBe(true)
     expect(put).not.toHaveBeenCalled()
   })
+
+  it("feed qui RÉPOND avec un VCALENDAR valide mais dont le format VEVENT a changé → degraded, pas de cache (2026-07-18)", async () => {
+    // Le cas subtil que le degraded 'muet' NE couvrait PAS : le feed a des VEVENT, mais le
+    // parseur n'en tire aucune nuit (DTSTART/DTEND dans un format que le regex ne reconnaît plus).
+    // Sans ce garde-fou : blockedDates amputé des résas Airbnb, servi comme « libre » → surbooking.
+    const VEVENT_FORMAT_CASSE =
+      'BEGIN:VCALENDAR\nBEGIN:VEVENT\nDTSTART:2026-08-01T14:00:00Z\nDTEND:2026-08-03T10:00:00Z\nEND:VEVENT\nEND:VCALENDAR'
+    vi.stubGlobal('fetch', vi.fn(async (url) =>
+      String(url).includes('airbnb')
+        ? new Response(VEVENT_FORMAT_CASSE, { status: 200 })      // 200, VCALENDAR ok, mais 0 nuit parsée
+        : new Response(ICS('20260901', '20260902'), { status: 200 }),
+    ))
+    const put = vi.fn(async () => {})
+    const res = await onRequest(ctx(makeEnv(put)))
+    const d = await res.json()
+
+    expect(d.sources.airbnb.ok).toBe(true)        // le feed a bien répondu (VCALENDAR présent)
+    expect(d.sources.airbnb.count).toBe(0)        // mais 0 nuit extraite
+    expect(d.sources.airbnb.suspect).toBe(true)   // ← détecté comme parser mort
+    expect(d.degraded).toBe(true)                 // → le re-check pré-paiement refusera de conclure
+    expect(put).not.toHaveBeenCalled()            // jamais figé 6h
+  })
+
+  it("feed légitimement VIDE (0 VEVENT, bien sans résa ce canal) → NON dégradé, mis en cache", async () => {
+    // Ne pas confondre « parser mort » avec « aucune réservation » : un feed sans VEVENT est normal.
+    vi.stubGlobal('fetch', vi.fn(async (url) =>
+      String(url).includes('airbnb')
+        ? new Response('BEGIN:VCALENDAR\nVERSION:2.0\nEND:VCALENDAR', { status: 200 }) // vide légitime
+        : new Response(ICS('20260901', '20260902'), { status: 200 }),
+    ))
+    const put = vi.fn(async () => {})
+    const res = await onRequest(ctx(makeEnv(put)))
+    const d = await res.json()
+
+    expect(d.sources.airbnb.ok).toBe(true)
+    expect(d.sources.airbnb.suspect).toBe(false)  // pas de VEVENT → pas suspect
+    expect(d.degraded).toBe(false)                // sinon on bloquerait la vente à tort
+    expect(d.blockedDates).toContain('2026-09-01')
+    expect(put).toHaveBeenCalledTimes(1)          // résultat sain → cache légitime
+  })
 })

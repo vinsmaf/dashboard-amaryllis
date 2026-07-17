@@ -1,6 +1,8 @@
 // Cloudflare Pages Function — /api/get-availability?bienId=X[&bookingUrl=...]
 // env vars accessed via context.env (set in CF Pages dashboard)
 
+import { feedSuspect } from "../../src/utils/icalHealth.js";
+
 function icalBienMap(env) {
   return {
     airbnb: {
@@ -217,13 +219,21 @@ export async function onRequest(context) {
 
   const merged = new Set([...airbnbBlocked, ...bookingBlocked, ...directBlocked]);
 
-  // ⚠️ Une source CONFIGURÉE qui échoue (feed injoignable, réponse non-iCal, format changé)
-  // retombe sur un Set VIDE ci-dessus : ses dates réservées disparaissent purement et simplement
-  // de blockedDates. Le résultat reste un 200 parfaitement normal — « aucune date bloquée » est
-  // indistinguable de « tout est libre ». `degraded` rend cette différence lisible.
+  // ⚠️ Une source CONFIGURÉE qui échoue retombe sur un Set VIDE ci-dessus : ses dates réservées
+  // disparaissent de blockedDates, et « aucune date bloquée » devient indistinguable de « tout
+  // est libre » (200 normal → surbooking, Stripe LIVE). `degraded` rend la différence lisible.
+  // Deux modes de panne, tous deux couverts :
+  //  1. feed MUET (injoignable / non-iCal) → `!text` (fix DISPO-001).
+  //  2. feed qui RÉPOND mais dont le format des VEVENT a changé → le parseur n'en tire aucune
+  //     nuit alors que des VEVENT existent (`feedSuspect`, ajouté 2026-07-18). Sans ça, un
+  //     changement de format Airbnb/Booking afficherait « tout libre » en silence.
+  // Un feed SANS aucun VEVENT reste NON dégradé (bien légitimement sans résa sur ce canal).
   // (Le Worker ical-sync alerte déjà Vincent quand un feed tombe, mais ça ne protège PAS ce
   // chemin-ci : le site continuerait à vendre pendant l'incident.)
-  const degraded = (!!airbnbUrl && !airbnbText) || (!!bookingUrl && !bookingText);
+  const airbnbSuspect  = feedSuspect(airbnbText,  airbnbBlocked.size);
+  const bookingSuspect = feedSuspect(bookingText, bookingBlocked.size);
+  const degraded = (!!airbnbUrl && !airbnbText) || (!!bookingUrl && !bookingText)
+                   || airbnbSuspect || bookingSuspect;
 
   const result = {
     blockedDates: Array.from(merged).sort(),
@@ -231,8 +241,8 @@ export async function onRequest(context) {
     // vue incomplète (cf. PublicSite.jsx, anti double-résa).
     degraded,
     sources: {
-      airbnb:  { ok: !!airbnbText,  count: airbnbBlocked.size },
-      booking: { ok: !!bookingText, count: bookingBlocked.size, fromParam: !maps.booking[bienId] && !!bookingUrl },
+      airbnb:  { ok: !!airbnbText,  count: airbnbBlocked.size,  suspect: airbnbSuspect },
+      booking: { ok: !!bookingText, count: bookingBlocked.size, suspect: bookingSuspect, fromParam: !maps.booking[bienId] && !!bookingUrl },
       direct:  { ok: true,          count: directBlocked.size },
     },
   };
