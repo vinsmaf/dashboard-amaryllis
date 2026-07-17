@@ -18,6 +18,7 @@ import AnalyticsTab from "./tabs/AnalyticsTab.jsx";
 import MinNightsConfig from "./tabs/MinNightsConfig.jsx";
 import Pilotage from "./tabs/Pilotage.jsx";
 import NetRevParTab from "./tabs/NetRevParTab.jsx";
+import CoutOtaTab from "./tabs/CoutOtaTab.jsx";
 import CalendrierTarifs from "./tabs/CalendrierTarifs.jsx";
 import Beds24Admin from "./tabs/Beds24Admin.jsx";
 import LivretQR from "./tabs/LivretQR.jsx";
@@ -1377,6 +1378,7 @@ export default function App() {
         { id: "charges",    icon: "💰", label: "Charges" },
         { id: "pilotage",   icon: "💼", label: "Pilotage" },
         { id: "net-revpar", icon: "📉", label: "Net RevPAR" },
+        { id: "cout-ota",   icon: "💸", label: "Coût réel OTA" },
         { id: "cautions",   icon: "🔒", label: "Cautions" },
         { id: "stripe-reco", icon: "🏦", label: "Rapprochement Stripe" },
       ],
@@ -1625,6 +1627,7 @@ export default function App() {
             {tab === "charges" && <Charges />}
             {tab === "pilotage" && <Pilotage />}
             {tab === "net-revpar" && <NetRevParTab hist={hist} biens={biens} />}
+            {tab === "cout-ota" && <CoutOtaTab />}
             {tab === "historique" && <Historique />}
             {tab === "revenue"  && <RevenueManagerPro />}
             {tab === "tarifs" && <Tarifs />}
