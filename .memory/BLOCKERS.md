@@ -4,6 +4,13 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
+## En cours → ✅ terminé le 2026-07-17 (suite) — I-04 corrigé (données vivantes) + I-03 livré (P&L par séjour)
+- **Tâche** : chantiers innovation, traités "un par un" (consigne Vincent) — cette session : correction I-04 puis livraison I-03.
+- **Étape finale** : I-04 corrigé et vérifié en prod (`5db4f88`) — commission OTA calculée sur les réservations vivantes du Sheet au lieu du seed `REVENUS_CANAL_2025` (qui sous-estimait Booking de ~21%). I-03 conçu, codé, testé (16 tests), déployé et vérifié en prod (`0214662`) — nouvel endpoint `/api/pnl-sejour` + onglet admin 🧮 « P&L par séjour ».
+- **Prochaine action** : Vincent a choisi de s'arrêter ici. Reprendre au prochain "on continue les chantiers innovation" — proposer I-01 (le plus exécutable, aucun blocage data, s'appuie sur la marge de contribution I-03) en premier ; I-02 et I-07 restent bloqués (audience locale / factures eau-élec non centralisées).
+- **Fichiers ouverts** : aucun — tout committé et déployé (`5db4f88`, `0214662`).
+- **Contexte critique** : `src/config/fraisMenage.js` est désormais la source unique du coût ménage (remplace la const locale dans `PublicSite.jsx`) — toute future correction de tarif ménage doit passer par ce fichier, pas par `PublicSite.jsx`. Doctrine FAIT/ESTIMÉ (I-04, réutilisée par I-03) : ne jamais mélanger un coût variable direct (fait) avec une allocation de charge fixe (hypothèse, curseur, off par défaut).
+
 ## En cours → ✅ terminé le 2026-07-16 — Audit fiabilité/vitesse synchro résas (24 agents) : 10 fixes déployés
 
 > Demandé par Vincent ("comment peut-on fiabiliser/accélérer la synchro résa/annulation ?"), traité en 2 temps : audit multi-agents (24 agents, vérification adversariale — la vérif a corrigé plusieurs "fixes rapides" proposés à tort, ex. une piste Nogent visait le mauvais endpoint) puis implémentation un par un avec vérification live à chaque étape (demande explicite Vincent : "vérifie bien que rien ne s'est cassé"). Détail complet des 6 ADR dédiés (`ADR-SYNC-AUDIT-*`) + `.memory/FLUX-RESAS.md` réécrit pour refléter l'état réel.
