@@ -1,37 +1,107 @@
 /**
  * Prestataires — extrait de src/App.jsx (refactor 2026, batch B/5).
+ *
+ * 2026-07-17 (I-10, prérequis) : migré de localStorage vers D1 (/api/prestataires).
+ * Motif : les contacts n'existaient que dans CE navigateur (perte au moindre vidage de
+ * cache, invisibles depuis une autre machine) et le backend ne les voyait pas — ce qui
+ * rendait impossible toute action serveur les impliquant (concierge IA, alerte ménage
+ * généralisée, interventions automatiques).
+ *
+ * L'ancien localStorage n'est JAMAIS supprimé : il reste un filet de sécurité, et la
+ * migration est déclenchée explicitement par l'utilisateur (jamais en silence).
  */
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { PRESTATAIRES_KEY, PREST_BIEN_LABELS, PREST_CATEGORIES } from "../App.jsx";
-import { useAppData } from "../AppDataContext.jsx";
+import { adminFetch } from "../lib/apiFetch.js";
+
+const EMPTY_FORM = { nom: "", tel: "", email: "", categorie: "menage", biens: [], notes: "" };
+
+function readLegacyLocal() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(PRESTATAIRES_KEY) || "[]");
+    return Array.isArray(raw) ? raw.filter((c) => c?.nom) : [];
+  } catch { return []; }
+}
 
 export default function Prestataires() {
-  const { biens } = useAppData();
-  const [contacts, setContacts] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(PRESTATAIRES_KEY) || "[]"); } catch { return []; }
-  });
-  const [form, setForm] = useState({ nom: "", tel: "", email: "", categorie: "menage", biens: [], notes: "" });
-  const [editing, setEditing] = useState(null); // id en cours de modification
+  const [contacts, setContacts] = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState(null);
+  const [legacy, setLegacy]     = useState([]);      // contacts encore dans ce navigateur
+  const [migrating, setMigrating] = useState(false);
+  const [migrateMsg, setMigrateMsg] = useState(null);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [editing, setEditing] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
   const [filterCat, setFilterCat] = useState("all");
   const [filterBien, setFilterBien] = useState("all");
 
-  const save = (list) => {
-    setContacts(list);
-    try { localStorage.setItem(PRESTATAIRES_KEY, JSON.stringify(list)); } catch {}
+  const load = useCallback(async () => {
+    try {
+      const r = await adminFetch("/api/prestataires");
+      const d = await r.json();
+      if (!d.ok) throw new Error(d.error || `HTTP ${r.status}`);
+      setContacts(d.prestataires || []);
+      setError(null);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+    setLegacy(readLegacyLocal());
+  }, [load]);
+
+  const migrate = async () => {
+    setMigrating(true);
+    setMigrateMsg(null);
+    try {
+      const r = await adminFetch("/api/prestataires", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ import: legacy }),
+      });
+      const d = await r.json();
+      if (!d.ok) throw new Error(d.error || `HTTP ${r.status}`);
+      setMigrateMsg(
+        `✅ ${d.imported} contact${d.imported !== 1 ? "s" : ""} importé${d.imported !== 1 ? "s" : ""}` +
+        (d.skipped ? ` · ${d.skipped} ignoré${d.skipped !== 1 ? "s" : ""} (déjà en base)` : "")
+      );
+      await load();
+    } catch (e) {
+      setMigrateMsg(`⚠️ Import échoué — ${e.message}. Tes contacts restent intacts dans ce navigateur.`);
+    } finally {
+      setMigrating(false);
+    }
   };
 
-  const submit = () => {
+  const submit = async () => {
     if (!form.nom.trim()) return;
-    if (editing !== null) {
-      save(contacts.map(c => c.id === editing ? { ...c, ...form } : c));
-      setEditing(null);
-    } else {
-      save([...contacts, { ...form, id: Date.now(), createdAt: new Date().toISOString() }]);
+    try {
+      if (editing !== null) {
+        await adminFetch(`/api/prestataires?id=${encodeURIComponent(editing)}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        });
+        setEditing(null);
+      } else {
+        await adminFetch("/api/prestataires", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        });
+      }
+      setForm(EMPTY_FORM);
+      setShowForm(false);
+      await load();
+    } catch (e) {
+      setError(e.message);
     }
-    setForm({ nom: "", tel: "", email: "", categorie: "menage", biens: [], notes: "" });
-    setShowForm(false);
   };
 
   const edit = (c) => {
@@ -41,9 +111,14 @@ export default function Prestataires() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const del = (id) => {
+  const del = async (id) => {
     if (!confirm("Supprimer ce contact ?")) return;
-    save(contacts.filter(c => c.id !== id));
+    try {
+      await adminFetch(`/api/prestataires?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+      await load();
+    } catch (e) {
+      setError(e.message);
+    }
   };
 
   const toggleBien = (bienId) => {
@@ -70,6 +145,11 @@ export default function Prestataires() {
     fontFamily: "var(--font-mono)", boxSizing: "border-box",
   };
 
+  // Proposer la migration tant qu'il reste des contacts locaux non repris en base.
+  // On compare par nom : si tous les noms locaux existent déjà en base, c'est fait.
+  const baseNames = new Set(contacts.map((c) => (c.nom || "").toLowerCase().trim()));
+  const notMigrated = legacy.filter((c) => !baseNames.has((c.nom || "").toLowerCase().trim()));
+
   return (
     <div style={{ padding: "24px 28px", maxWidth: 900, margin: "0 auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
@@ -78,12 +158,40 @@ export default function Prestataires() {
           <div style={{ fontSize: 22, fontWeight: 700, color: "var(--admin-fg)" }}>Carnet de prestataires</div>
         </div>
         <button
-          onClick={() => { setEditing(null); setForm({ nom: "", tel: "", email: "", categorie: "menage", biens: [], notes: "" }); setShowForm(s => !s); }}
+          onClick={() => { setEditing(null); setForm(EMPTY_FORM); setShowForm(s => !s); }}
           style={{ background: "#0e3b3a", color: "#fff", border: "none", borderRadius: 8, padding: "10px 18px", fontSize: 12, fontWeight: 600, cursor: "pointer", letterSpacing: "0.04em" }}
         >
           {showForm && editing === null ? "Annuler" : "+ Ajouter un contact"}
         </button>
       </div>
+
+      {/* ── Bandeau migration : contacts encore prisonniers de ce navigateur ── */}
+      {notMigrated.length > 0 && (
+        <div style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.3)", borderRadius: 10, padding: "14px 16px", marginBottom: 20 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--admin-fg)", marginBottom: 4 }}>
+            📦 {notMigrated.length} contact{notMigrated.length !== 1 ? "s" : ""} encore stocké{notMigrated.length !== 1 ? "s" : ""} dans ce navigateur
+          </div>
+          <div style={{ fontSize: 12, color: MUTED, marginBottom: 10, lineHeight: 1.5 }}>
+            Ils n'existent que sur cet appareil : vider le cache ou changer de machine les perdrait,
+            et le serveur ne peut pas les utiliser. Les importer les sauvegarde et permet aux
+            automatisations de les joindre. <strong>Rien n'est supprimé de ce navigateur.</strong>
+          </div>
+          <button
+            onClick={migrate}
+            disabled={migrating}
+            style={{ background: "#f59e0b", color: "#0f172a", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 12, fontWeight: 700, cursor: migrating ? "wait" : "pointer" }}
+          >
+            {migrating ? "Import…" : `Importer les ${notMigrated.length} contacts`}
+          </button>
+          {migrateMsg && <div style={{ fontSize: 12, color: MUTED, marginTop: 8 }}>{migrateMsg}</div>}
+        </div>
+      )}
+
+      {error && (
+        <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 10, padding: "12px 16px", marginBottom: 20, fontSize: 12, color: "#ef4444" }}>
+          ⚠️ {error}
+        </div>
+      )}
 
       {/* ── Formulaire ajout/édition ── */}
       {showForm && (
@@ -160,7 +268,9 @@ export default function Prestataires() {
       </div>
 
       {/* ── Grille contacts ── */}
-      {filtered.length === 0 ? (
+      {loading ? (
+        <div style={{ textAlign: "center", color: MUTED, padding: "60px 0", fontSize: 14 }}>Chargement…</div>
+      ) : filtered.length === 0 ? (
         <div style={{ textAlign: "center", color: MUTED, padding: "60px 0", fontSize: 14 }}>
           {contacts.length === 0 ? "Aucun prestataire enregistré. Commencez par ajouter un contact." : "Aucun résultat pour ces filtres."}
         </div>
