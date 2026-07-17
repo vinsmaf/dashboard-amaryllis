@@ -18,15 +18,23 @@ import { verifyBearer } from "./_adminauth.js";
 // 15-35s+ par appel, déclenchée automatiquement à CHAQUE ouverture du dashboard (App.jsx
 // autoSyncDone, aucun debounce). Volume cumulé épuise le quota Apps Script du compte
 // (déjà corrigé une fois côté GAS le jour même — fetchNameCols_, commit 44479b3 — mais le vrai
-// problème est le VOLUME d'appels, pas seulement leur coût unitaire). Stale-while-revalidate
-// identique à /api/revenue-summary (même KV CROSS_BRAIN_KV) : sert le cache immédiatement même
-// expiré (sous HARD_TTL), rafraîchit en tâche de fond dès que SOFT_TTL est dépassé. Si l'appel
-// Apps Script échoue (quota épuisé) ET qu'un cache existe (même hors HARD_TTL), on sert quand
-// même ce cache plutôt que de remonter l'erreur — c'est ce qui empêchait le fallback "⚠ Seed
-// local" côté client de ne jamais se déclencher qu'au tout premier appel à froid.
+// problème est le VOLUME d'appels, pas seulement leur coût unitaire). Sert le cache immédiatement
+// même expiré (sous HARD_TTL). Si l'appel Apps Script échoue (quota épuisé) ET qu'un cache existe
+// (même hors HARD_TTL), on sert quand même ce cache plutôt que de remonter l'erreur — c'est ce qui
+// empêchait le fallback "⚠ Seed local" côté client de ne jamais se déclencher qu'au tout premier
+// appel à froid.
+//
+// ⚠️ 2026-07-17 — PAS de stale-while-revalidate ici, contrairement à /api/revenue-summary.
+// Le refresh en tâche de fond a été RETIRÉ après mesure en prod : `read` dure ~32s, or Cloudflare
+// annule les tâches waitUntil qui dépassent le budget post-réponse (« waitUntil() tasks did not
+// complete within the allowed time... and have been cancelled », 0 succès sur 6 tentatives
+// observées). Il consommait donc du quota Apps Script sans jamais rafraîchir quoi que ce soit,
+// et le cache pouvait mentir jusqu'à 24h (incident CACHE-001, docs/ERREURS-LOG.md).
+// La fraîcheur vient désormais de l'INVALIDATION À L'ÉCRITURE (WRITE_ACTIONS + purgeReadCache).
+// NB : le pattern reste valable dans revenue-summary.js, dont le calcul est bien plus court.
 const READ_CACHE_KEY = "cache:sheets-read:v1";
-const READ_SOFT_TTL_MS = 3 * 60 * 1000;   // au-delà : servir le cache mais rafraîchir en fond
-const READ_HARD_TTL_MS = 24 * 60 * 60 * 1000; // au-delà (et refresh en fond jamais retenté avec succès) : calcul synchrone
+const READ_SOFT_TTL_MS = 3 * 60 * 1000;   // au-delà : le cache est marqué STALE (mais reste servi)
+const READ_HARD_TTL_MS = 24 * 60 * 60 * 1000; // au-delà : recalcul synchrone (~32s) — filet ultime
 
 async function fetchReadLive(scriptUrl) {
   const res = await fetch(scriptUrl, {
@@ -94,19 +102,23 @@ async function handleReadAction(scriptUrl, env, context) {
   const ageMin = cached ? Math.round(age / 60000) : null;
 
   if (cached && age < READ_HARD_TTL_MS) {
-    if (age > READ_SOFT_TTL_MS) {
-      // Tentative de refresh en fond : elle ABOUTIT rarement (~32s vs budget waitUntil).
-      // On la garde — elle réussit quand Apps Script répond vite — mais on ne compte plus
-      // dessus : l'invalidation à l'écriture est désormais le vrai garant de fraîcheur.
-      context.waitUntil(
-        refreshReadCache(scriptUrl, env).catch((e) => {
-          console.error(JSON.stringify({
-            level: "warn", fn: "sheets-proxy", msg: "refresh cache en fond échoué",
-            cache_age_min: ageMin, error: String(e?.message || e), ts: new Date().toISOString(),
-          }));
-        })
-      );
-    }
+    // PAS de refresh en tâche de fond ici — retiré le 2026-07-17 après mesure en production.
+    //
+    // Preuve (wrangler pages deployment tail, message de la runtime Cloudflare elle-même) :
+    //   « waitUntil() tasks did not complete within the allowed time after invocation end
+    //     and have been cancelled. »
+    // La tâche est ANNULÉE, pas en erreur : aucune exception n'est levée, donc le `.catch()`
+    // qu'on avait mis pour logger l'échec ne se déclenchait JAMAIS. C'était une illusion de
+    // sécurité — on croyait surveiller un mécanisme qui, en réalité, n'aboutissait jamais
+    // (0 succès sur 6 tentatives observées ; l'action `read` dure ~32s).
+    //
+    // Le garder coûtait sans rien rapporter : un appel Apps Script de 32s à CHAQUE lecture
+    // périmée, tué avant d'écrire quoi que ce soit — pure consommation d'un quota déjà
+    // épuisé une fois (LEARNINGS 2026-07-15).
+    //
+    // La fraîcheur est désormais assurée par l'INVALIDATION À L'ÉCRITURE (WRITE_ACTIONS +
+    // action purgeReadCache), qui suit les vrais changements. `X-Cache-Age-Min` rend l'âge
+    // visible pour que personne ne redécouvre ce piège à l'aveugle.
     return json(cached.data, 200, {
       "X-Cache": age > READ_SOFT_TTL_MS ? "STALE" : "HIT",
       "X-Cache-Age-Min": String(ageMin),
