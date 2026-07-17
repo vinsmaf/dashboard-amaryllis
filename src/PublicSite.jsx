@@ -16,6 +16,7 @@ import { ssGet, ssSet } from "./lib/safeStorage.js";
 import MaillageCluster from "./components/seo/MaillageCluster.jsx";
 import NewsletterForm from "./NewsletterForm.jsx";
 import { BIENS as CANON, isMartinique as isMartiniqueCanon } from "./data/biens.js";
+import { FRAIS_MENAGE } from "./config/fraisMenage.js";
 import { GUIDES_INDEX } from "./data/guidesIndex.js";
 
 // Noms canoniques des biens pour le maillage interne SEO ("villa" = Amaryllis + Iguana uniquement).
@@ -156,15 +157,7 @@ function getMinNights(bienId, checkinDate) {
   return bienCfg.default ?? fallback;
 }
 
-const FRAIS_MENAGE = {
-  nogent:     45,
-  amaryllis:  180,
-  geko:       70,
-  schoelcher: 70,
-  zandoli:    70,
-  mabouya:    50,
-  iguana:     0,
-};
+// FRAIS_MENAGE : source unique dans src/config/fraisMenage.js (partagé avec le P&L par séjour I-03).
 
 // Voyageurs inclus dans le prix de base — au-delà : supplément
 const BASE_GUESTS      = { amaryllis: 6, zandoli: 4 };   // inclus dans le tarif de base
