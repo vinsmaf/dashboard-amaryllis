@@ -21,8 +21,58 @@
 | I-06 | La note 4,79★ comme actif chiffré | 📋 à cadrer |
 | I-07 | Sur-occupation détectée par les données existantes | 📋 à cadrer |
 | I-08 | Simulateur de bascule para-hôtelière | 📋 à cadrer |
-| I-09 | Runbook de délégation auto-mesuré | 📋 à cadrer |
-| I-10 | Concierge IA qui AGIT (pas qui répond) | 📋 à cadrer |
+| I-09 | Runbook de délégation auto-mesuré | ✅ **livré 2026-07-17** (`dc1b28d`) |
+| I-10 | Concierge IA qui AGIT (pas qui répond) | ✅ **livré 2026-07-17** en shadow (`e7ccc17` + `b674d43`) — reste à basculer en live |
+
+---
+
+## ✅ Livré le 2026-07-17 — I-09 & I-10 (Vincent : « on essait de faire 9 et 10 »)
+
+### I-09 — Runbook de délégation (`dc1b28d`)
+`/api/delegation-stats` + `src/utils/delegation.js` (20 tests) + panneau « 🧍 Dépendance
+opérationnelle » dans `AgentsKanban.jsx`. Agrège 9 traces d'acte manuel déjà loguées.
+
+**Premier verdict sur données réelles (2026-07-17) — à re-vérifier dans 4 semaines :**
+- **317 actes manuels / 8 semaines · 39 cette semaine · tendance PLATE (-7%)** → la
+  délégation ne progresse pas. C'est le fait le plus important de la mesure.
+- **194 (61%) = cocher des actions agents « fait »** — le geste dominant n'est PAS de
+  l'opérationnel voyageur, c'est du suivi de backlog. Automatisable/supprimable sans IA.
+- 36 bugs triés · 35 posts approuvés (le gate escalade au lieu de trancher) · 24 leçons
+  agents (Vincent corrige encore les agents) · 16 prix RM **tous « validés », zéro corrigé**
+  → si ça se confirme, la validation RM est un rituel, pas une décision → candidat n°1.
+- `config_edits` (édition des prix journaliers) : table créée à la 1re édition post-déploiement.
+  L'historique antérieur est structurellement absent → **317 est un plancher, pas un total**.
+
+**Décision Vincent** : logger les éditions de prix (fait, `site-config.js`, fail-open +
+waitUntil, pas de diff — un GET Apps Script par écriture épuiserait le quota, cf. incident 07-15).
+
+### I-10 — Concierge (`e7ccc17` prérequis + `b674d43` cœur)
+**Prérequis livré** : carnet prestataires migré localStorage → D1 (`/api/prestataires`).
+C'était le blocage matériel n°1 — sans numéro accessible au serveur, aucun agent ne peut
+joindre personne. Migration non destructive (bandeau + bouton, dédup, localStorage conservé).
+
+**Bug production corrigé au passage** : le bot WhatsApp ne liait jamais numéro → réservation ;
+il devinait le bien par mots-clés avec `"amaryllis"` en défaut silencieux → un voyageur Nogent
+recevait le wifi/adresse de la Villa Amaryllis. `resolveGuestContext()` fait désormais autorité.
+
+**Garde-fous (décision Vincent, cohérente avec RM advisory / agents-execute / social shadow)** :
+- `CONCIERGE_MODE=shadow` **par défaut** · kill-switch `CONCIERGE_DISABLED`
+- **Une seule action live : le code promo** (zéro argent sortant, nominatif, `max_uses:1`,
+  plafond 50€ borné à 200€, réversible). Refund/intervention/service = proposés → ntfy.
+- Le LLM ne décide rien : `decideAction()` (23 tests dont adversariaux) tranche.
+- Dépassement de plafond → escalade **sans écrêter en silence**.
+- Pas de tool-calling : absent du projet, casserait la cascade 7 providers de `_llm.js`.
+
+**⏭️ Prochaine étape I-10 (décision de Vincent, pas automatique)** : après une période
+d'observation en shadow (lire `concierge_log` : quelles actions auraient été prises, étaient-elles
+justes ?), poser `CONCIERGE_MODE=live` en variable Cloudflare Pages. Ne PAS élargir au refund
+sans que le promo ait fait ses preuves.
+
+**Reste ouvert (non fait, assumé)** : mémoire conversationnelle WhatsApp (stateless), WhatsApp
+sortant (helper non exporté + templates Meta hors fenêtre 24h), chaînage WhatsApp→réclamation,
+refund sans annulation (`cancel-booking.js:211` force `status='cancelled'`), `iguana` absent de
+`service-checkout` (6 biens/7), incohérence late checkout 50€ (`guides/*.json`) vs 80€
+(`_emailTemplateFields.js`).
 
 ---
 
