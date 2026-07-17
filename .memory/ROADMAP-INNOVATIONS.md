@@ -16,7 +16,7 @@
 | I-01 | Enchère inversée sur le direct | 📋 à cadrer |
 | I-02 | Vendre le temps mort au marché local | 📋 à cadrer |
 | I-03 | P&L par séjour (pas CA par séjour) | 📋 à cadrer |
-| I-04 | Le vrai loyer payé aux OTA (€/an + point de bascule) | 📋 à cadrer |
+| I-04 | Le vrai loyer payé aux OTA (€/an + point de bascule) | ✅ **livré 2026-07-18** (`3e11cad`) |
 | I-05 | Marché secondaire des réservations | 📋 à cadrer |
 | I-06 | La note 4,79★ comme actif chiffré | 📋 à cadrer |
 | I-07 | Sur-occupation détectée par les données existantes | 📋 à cadrer |
