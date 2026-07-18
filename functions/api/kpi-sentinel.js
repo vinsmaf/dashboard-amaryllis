@@ -18,13 +18,17 @@
  *   8. Pipeline éditorial vide (<3 posts drafted/approved dans 14j) (🟡)
  *   9. Conversion funnel (30j) en baisse >30% vs semaine précédente (🟡) — arch-monitoring
  *      Snapshot quotidien GA4 (conversion_snapshots), garde anti-bruit si volume faible.
+ *  10. Maillon faible du tunnel — begin_checkout→add_payment_info ou add_payment_info→purchase
+ *      en baisse >30% vs 7j (🟡) — rituel "1 action de 5 min/jour" (demande Vincent 2026-07-18).
+ *      Complète le signal 9 (vue globale) par un diagnostic PAR ÉTAPE + PAR BIEN quand possible,
+ *      pour désigner un point précis à corriger plutôt qu'un ratio composite.
  *
  * D1 binding : revenue_manager · Secrets : POSTSTAY_SECRET · NTFY_TOPIC
  */
 
 import { clog, timer } from './_log.js'
 import { DDL_SUGGESTION_ACKS, DDL_CONVERSION_SNAPSHOTS } from './_schema.js'
-import { detectConversionDrop } from '../../src/utils/conversionDrift.js'
+import { detectConversionDrop, worstStepDrop, findWorstBienForStep } from '../../src/utils/conversionDrift.js'
 
 const BIENS_BOOKABLES = ['amaryllis', 'zandoli', 'geko', 'mabouya', 'schoelcher', 'nogent']
 
@@ -349,6 +353,12 @@ export async function onRequestGet({ request, env }) {
   // (conversionDrift.js), sinon un jour calme fausserait le %.
   try {
     await db.prepare(DDL_CONVERSION_SNAPSHOTS).run()
+    // Migration idempotente (pattern direct_bookings, stripe-webhook.js) : signal 10
+    // (2026-07-18) a besoin des étapes internes du tunnel, absentes du schéma d'origine
+    // (qui ne couvrait que view_item→purchase, signal 9).
+    for (const col of ['begin_checkout INTEGER', 'add_payment_info INTEGER']) {
+      try { await db.prepare(`ALTER TABLE conversion_snapshots ADD COLUMN ${col}`).run() } catch { /* colonne déjà présente */ }
+    }
 
     const analytics = await fetch(`${siteUrl}/api/analytics`, {
       headers: { 'User-Agent': 'amaryllis-kpi-sentinel' },
@@ -362,15 +372,16 @@ export async function onRequestGet({ request, env }) {
       const revenueCents = Math.round((analytics.revenue?.[0]?.totalRevenue || 0) * 100)
 
       await db.prepare(
-        `INSERT INTO conversion_snapshots (snapshot_date, sessions, view_item, purchase, revenue_cents, calculated_at)
-         VALUES (?,?,?,?,?,?)
+        `INSERT INTO conversion_snapshots (snapshot_date, sessions, view_item, purchase, revenue_cents, calculated_at, begin_checkout, add_payment_info)
+         VALUES (?,?,?,?,?,?,?,?)
          ON CONFLICT(snapshot_date) DO UPDATE SET
            sessions=excluded.sessions, view_item=excluded.view_item, purchase=excluded.purchase,
-           revenue_cents=excluded.revenue_cents, calculated_at=excluded.calculated_at`
-      ).bind(today, sessions, f.view_item || 0, f.purchase || 0, revenueCents, Math.floor(Date.now() / 1000)).run()
+           revenue_cents=excluded.revenue_cents, calculated_at=excluded.calculated_at,
+           begin_checkout=excluded.begin_checkout, add_payment_info=excluded.add_payment_info`
+      ).bind(today, sessions, f.view_item || 0, f.purchase || 0, revenueCents, Math.floor(Date.now() / 1000), f.begin_checkout || 0, f.add_payment_info || 0).run()
 
       const prevSnap = await db.prepare(
-        `SELECT view_item, purchase FROM conversion_snapshots WHERE snapshot_date = ?`
+        `SELECT view_item, purchase, begin_checkout, add_payment_info FROM conversion_snapshots WHERE snapshot_date = ?`
       ).bind(ago7).first().catch(() => null)
 
       if (prevSnap) {
@@ -385,6 +396,31 @@ export async function onRequestGet({ request, env }) {
             detail: `${drop.dropPct}% vs il y a 7j (${(drop.currentRate * 100).toFixed(1)}% → était ${(drop.previousRate * 100).toFixed(1)}%)`,
             suggestion: `Vérifier tunnel de résa (prix affichés, Stripe, tracking GA4) — npm run funnel pour le détail`,
             id: ackId('conversion-funnel', today),
+          })
+        }
+
+        // ── 10. Maillon faible du tunnel — rituel "1 action/j" (2026-07-18) ────
+        // prevSnap.begin_checkout/add_payment_info valent `null` pour tout snapshot
+        // écrit avant cette migration (colonnes fraîchement ajoutées) — worstStepDrop
+        // les traite comme 0, sous le seuil minVolume, donc pas de faux signal le
+        // temps que 7j d'historique s'accumulent avec les nouvelles colonnes.
+        const stepDrop = worstStepDrop(
+          { beginCheckout: f.begin_checkout || 0, addPaymentInfo: f.add_payment_info || 0, purchase: f.purchase || 0 },
+          { beginCheckout: prevSnap.begin_checkout || 0, addPaymentInfo: prevSnap.add_payment_info || 0, purchase: prevSnap.purchase || 0 }
+        )
+        if (stepDrop) {
+          // Best-effort : désigne le bien le plus en cause sur CE maillon, si le volume
+          // par bien est suffisant (funnelByBien peut être vide/partiel, cf. analytics.js).
+          const worstBien = findWorstBienForStep(analytics.funnelByBien, stepDrop.step)
+          const bienNote = worstBien ? ` — surtout ${nomBien(worstBien)}` : ''
+          anomalies.push({
+            level: 'yellow',
+            signal: 'Tunnel — maillon faible',
+            detail: `${stepDrop.label} : ${stepDrop.dropPct}% vs il y a 7j (${(stepDrop.currentRate * 100).toFixed(1)}% → était ${(stepDrop.previousRate * 100).toFixed(1)}%)${bienNote}`,
+            suggestion: stepDrop.step === 'bc_to_api'
+              ? `Vérifier le formulaire de résa (dates/prix affichés, étape technique avant paiement)${bienNote}`
+              : `Vérifier l'écran de paiement (Stripe, 3DS, message d'erreur CB)${bienNote}`,
+            id: ackId('tunnel-maillon-faible', today),
           })
         }
       }
