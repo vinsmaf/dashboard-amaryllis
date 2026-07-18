@@ -3323,18 +3323,13 @@ function useAvailBadge(bienId) {
         const today = new Date(); today.setHours(0, 0, 0, 0);
         const ds = (d) => d.toISOString().slice(0, 10);
 
-        // Cherche le prochain créneau libre de 7 nuits consécutives dans les 90 jours
-        let nextFree = null, streakStart = null, streak = 0;
-        for (let i = 0; i <= 90; i++) {
-          const d = new Date(today); d.setDate(today.getDate() + i);
-          if (!blocked.has(ds(d))) {
-            if (streak === 0) streakStart = d;
-            streak++;
-            if (streak >= 7 && !nextFree) nextFree = streakStart;
-          } else {
-            streak = 0; streakStart = null;
-          }
-        }
+        // Prochain créneau RÉELLEMENT réservable — respecte le séjour minimum réel du bien
+        // (pas un seuil de 7 nuits arbitraire : un bien à min-stay 2-3 nuits comme Mabouya
+        // se voyait annoncer "libre" des semaines trop tard, alors que le calendrier
+        // au-dessous proposait déjà un séjour valide — bug trouvé en vérifiant le live
+        // 2026-07-18, cause probable de la chute de conversion sur ce bien).
+        const nextWindow = nextAvailWindow(data.blockedDates, bienId);
+        const nextFree = nextWindow ? new Date(nextWindow.checkin + "T00:00:00") : null;
 
         // Compter les jours bloqués dans les 30 prochains jours
         let blocked30 = 0;
