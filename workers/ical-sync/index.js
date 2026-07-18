@@ -3900,6 +3900,15 @@ export default {
         const data = await res.json().catch(() => ({}));
         console.log(`[send-veille-recap] ✓ sent=${data.ok ?? "?"} biens=${data.biens ?? "?"} signaux=${data.signaux ?? "?"}`);
       } catch (e) { console.error("[send-veille-recap] Cron error:", e.message); }
+
+      // Digest hebdo RM — même contrainte de séquencement que send-veille-recap ci-dessus :
+      // doit lire les recos APRÈS que rm-auto-update?scan=1 les ait fraîchement recalculées.
+      try {
+        const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+        const res = await fetch(`${siteUrl}/api/rm-price-digest?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`);
+        const data = await res.json().catch(() => ({}));
+        console.log(`[rm-price-digest] ✓ scanned=${data.scanned ?? "?"} significant=${data.significant ?? "?"} sent=${data.sent ?? "?"}`);
+      } catch (e) { console.error("[rm-price-digest] Cron error:", e.message); }
       })());
 
     } else if (cron === "0 1 1 * *") {

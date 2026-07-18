@@ -3,7 +3,7 @@
 // sans accès repo live (impossible depuis un Worker) ni appel API externe (pas de nouveau secret).
 // Régénérer manuellement (node scripts/generate-feature-digest.mjs) quand le digest semble périmé —
 // un oubli dégrade juste la fraîcheur du signal, ne casse jamais le build (fichier committé).
-// Dernière génération : 2026-07-17
+// Dernière génération : 2026-07-18
 
 export const ENDPOINTS_DIGEST = [
   "/api/admin-auth (admin-auth.js) — Vérifie le mot de passe admin côté serveur (jamais exposé dans le bundle JS).",
@@ -77,6 +77,7 @@ export const ENDPOINTS_DIGEST = [
   "/api/rm-dashboard (rm-dashboard.js) — Main dashboard data for the Revenue Manager module",
   "/api/rm-init (rm-init.js) — Initializes the Revenue Manager database (creates tables + seeds data)",
   "/api/rm-overrides (rm-overrides.js) — Manual price/min_stay/block overrides for specific dates",
+  "/api/rm-price-digest (rm-price-digest.js) — Digest hebdo RM : parmi les 2500+ recommandations stockées (~14 mois glissants ×",
   "/api/rm-properties (rm-properties.js) — Property settings: list, get, update",
   "/api/send-guest-email (send-guest-email.js) — crm-010/016 — Envoi générique d'un email voyageur depuis un template HTML.",
   "/api/send-j1-acces (send-j1-acces.js) — Cron J-1 : envoie le code d'accès réel aux voyageurs arrivant demain.",
