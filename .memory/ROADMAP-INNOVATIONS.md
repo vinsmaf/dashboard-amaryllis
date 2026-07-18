@@ -23,6 +23,8 @@
 | I-08 | Simulateur de bascule para-hôtelière | 📋 à cadrer |
 | I-09 | Runbook de délégation auto-mesuré | ✅ **livré 2026-07-17** (`dc1b28d`) |
 | I-10 | Concierge IA qui AGIT (pas qui répond) | ✅ **livré 2026-07-17** en shadow (`e7ccc17` + `b674d43`) — reste à basculer en live |
+| I-11 | Backlog IA — fermeture autonome du sous-ensemble vérifiable | ✅ **livré 2026-07-18** (`9b5d3e6`+`b57e2f6`) — cf. `ADR-BACKLOG-AUTOVERIFY-001` dans `.memory/ADR.md` |
+| I-12 | Marque blanche de la plateforme entière (vendre à un opérateur) | 💭 **en mémoire, pas cadrée** — discussion Claude/Vincent 2026-07-18, aucun build |
 
 ---
 
@@ -269,6 +271,33 @@ refund sans annulation (`cancel-booking.js:211` force `status='cancelled'`), `ig
 - ⚠️ Risque réputationnel : une erreur d'agent face à un voyageur se voit dans les avis (→ dégrade I-06).
 
 **Filtre valeurs** : ✅✅ #2 (« ça tourne sans toi » = le cœur du cap 2028) · ⚠️ #4 (argent réel + relation client → garde-fous stricts, montée en autonomie progressive).
+
+---
+
+## I-12 · Marque blanche de la plateforme entière — vendre à un opérateur
+
+**Contexte** : pas un chantier revenu pour Amaryllis — une question méta sur ce que vaut la plateforme elle-même. Vincent : « si on devait développer quelque chose que tout le monde a besoin et qui n'existe pas réellement actuellement, tu dirais quoi ? »
+
+**Idée** : vendre/licencier toute la plateforme (dashboard admin + ~28 agents IA + RM + concierge gouverné) en marque blanche à d'autres hosts indépendants — accès admin avec **abonnement ou achat unique**.
+
+**Pourquoi c'est rare** : le marché hospitality tech se range en deux cases, toutes les deux mauvaises. *Dumb & safe* : channel managers classiques (Smoobu/Hostaway/Lodgify) — pas d'agents IA, pas d'automatisation réelle. *Smart & scary* : outils IA qui changent les prix ou publient tout seuls sans garde-fou visible, que les hosts n'activent pas par méfiance légitime. Personne n'a industrialisé le milieu : des agents qui **agissent** vraiment (pricing, concierge, contenu, réconciliation) mais où l'argent et l'irréversible remontent toujours à un humain — exactement le pattern rodé en prod sur Amaryllis depuis plus d'un an (`concierge.js` `decideAction()`, `agent-drafts`, RM advisory-only, modes shadow/live, `agent_lessons`).
+
+**Ancrage réel** : le système n'est pas une idée — il tourne déjà en prod sur 7 biens réels, testé contre de l'argent réel et de vrais voyageurs, avec les leçons douloureuses déjà encaissées (footguns documentés dans ce fichier même) que personne d'autre n'a encore apprises.
+
+**Discussion tranchée le 2026-07-18 (Claude/Vincent, pas encore challengée en détail)** :
+- Vincent a contesté à raison le réflexe initial de Claude (« nouveau chantier = distraction », MM-22) : le critère réel de MM-22 est le **coût en temps marginal**, pas l'étiquette « nouveau ». Une chose vraiment automatisée ne consomme pas le temps qu'il protège.
+- Verdict Claude sur les 2 formats proposés : **ni l'abonnement ni l'achat unique ne sont réellement zéro-touch en l'état** :
+  - *Abonnement* → support/ops récurrents par client = l'inverse de la délégation totale 2028.
+  - *Achat unique* → pas d'ops récurrentes, mais un produit non maintenu casse (Beds24/Stripe cassent leur API plusieurs fois par an, vécu sur le seul usage Amaryllis) ; et il faut d'abord construire le multi-tenant (mois de travail, pas un export) avant la première vente.
+- **Format qui passerait vraiment le test « automatisé »** : une vente unique de la plateforme entière à un opérateur/acquéreur qui reprend l'exploitation — pas des abonnements à N clients supportés par Vincent.
+- **Test de validation avant tout build** : parler à 3-5 hosts indépendants (pas concurrents directs), montrer l'admin, voir si un acompte/LOI sort spontanément — signal réel avant d'investir du temps d'ingénierie multi-tenant.
+- **Invalidants qui changeraient le calcul** : (a) un host/opérateur déjà identifié prêt à payer, (b) un partenaire technique qui porterait l'exploitation à la place de Vincent (equity/royalties). Dans ces deux cas le risque temps change et ça devient jouable maintenant.
+
+**Statut** : idée gardée en mémoire, **PAS challengée en détail par Vincent**, **PAS cadrée techniquement**, **PAS lancée**. Vincent : « ok on garde ça en mémoire on reviendra dessus » (2026-07-18). Ne pas relancer sans qu'il y revienne.
+
+**Lien avec l'existant** : proche de la tâche #156 (« Packager le moteur de résa comme widget vendable ») mais scope beaucoup plus large (toute la plateforme, pas juste le moteur de résa) — clarifier avec Vincent lequel des deux il vise vraiment le jour où il relance le sujet.
+
+**Filtre valeurs** : ⚠️ discussion non résolue — Vincent conteste MM-22 appliqué mécaniquement ; le point de friction réel identifié est l'absence de format vraiment zéro-touch parmi les 2 proposés, pas le principe de départ.
 
 ---
 
