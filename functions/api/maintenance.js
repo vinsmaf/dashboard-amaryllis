@@ -18,10 +18,17 @@ const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, header
 const VALID_STATUS   = ["a_planifier", "planifie", "fait"];
 const VALID_CATEGORY = ["clim", "piscine", "jacuzzi", "jardin", "plomberie", "electricite", "structure", "qualite", "autre"];
 
+// Photos : même convention que sign-contract.js (dataURL JPEG compressée côté client,
+// ~300-400Ko, cf. compressImage() dans MaintenanceTab.jsx). Vidéos : jamais uploadées dans
+// ce stack (doctrine multimédia du projet — externaliser au-delà de quelques Mo), juste un
+// lien externe (Google Photos, WhatsApp, etc.) stocké tel quel.
+const MAX_PHOTOS = 4;
+const MAX_PHOTO_BYTES = 400_000;
+
 // db.exec() (D1) découpe l'entrée par saut de ligne : un template literal multi-lignes
 // classique casse la requête en fragments invalides. Toujours construire le DDL en une
 // seule ligne (concaténation), comme client-errors.js / voyageur-feedback.js.
-async function initTable(db) {
+export async function initTable(db) {
   await db.exec(
     "CREATE TABLE IF NOT EXISTS maintenance (" +
     "id TEXT PRIMARY KEY," +
@@ -41,6 +48,21 @@ async function initTable(db) {
   );
   await db.exec("CREATE INDEX IF NOT EXISTS idx_maint_status ON maintenance(status)");
   await db.exec("CREATE INDEX IF NOT EXISTS idx_maint_bien ON maintenance(bien_id)");
+  // Ajoutées 2026-07-18 (reco Resp. Logistique) — ALTER guardé pour les tables déjà existantes.
+  try { await db.prepare("ALTER TABLE maintenance ADD COLUMN photos TEXT").run(); } catch { /* déjà présente */ }
+  try { await db.prepare("ALTER TABLE maintenance ADD COLUMN video_url TEXT").run(); } catch { /* déjà présente */ }
+}
+
+function validatePhotos(photos) {
+  if (photos === undefined) return { ok: true, value: undefined };
+  if (photos === null) return { ok: true, value: null };
+  if (!Array.isArray(photos)) return { ok: false, error: "photos doit être un tableau" };
+  if (photos.length > MAX_PHOTOS) return { ok: false, error: `Maximum ${MAX_PHOTOS} photos` };
+  if (photos.some((p) => typeof p !== "string" || !p.startsWith("data:image/")))
+    return { ok: false, error: "Format photo invalide" };
+  if (photos.some((p) => p.length > MAX_PHOTO_BYTES))
+    return { ok: false, error: "Une photo dépasse la taille maximale" };
+  return { ok: true, value: photos.length ? JSON.stringify(photos) : null };
 }
 
 export async function onRequest({ request, env }) {
@@ -79,10 +101,13 @@ export async function onRequest({ request, env }) {
     try { body = await request.json(); } catch {}
     if (!body.titre?.trim()) return json({ error: "titre requis" }, 400);
 
+    const photosCheck = validatePhotos(body.photos);
+    if (!photosCheck.ok) return json({ error: photosCheck.error }, 400);
+
     const id = "maint-" + Date.now() + "-" + Math.random().toString(36).slice(2, 6);
     await db.prepare(
-      "INSERT INTO maintenance (id,bien_id,category,titre,prestataire,cost,status,scheduled_at,done_at,next_due_at,notes) " +
-      "VALUES (?,?,?,?,?,?,?,?,?,?,?)"
+      "INSERT INTO maintenance (id,bien_id,category,titre,prestataire,cost,status,scheduled_at,done_at,next_due_at,notes,photos,video_url) " +
+      "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
     ).bind(
       id,
       body.bien_id || "tous",
@@ -95,6 +120,8 @@ export async function onRequest({ request, env }) {
       body.done_at || null,
       body.next_due_at || null,
       body.notes || "",
+      photosCheck.value ?? null,
+      body.video_url || null,
     ).run();
     return json({ ok: true, id });
   }
@@ -119,6 +146,12 @@ export async function onRequest({ request, env }) {
     if (body.done_at !== undefined)      { sets.push("done_at=?");      binds.push(body.done_at || null); }
     if (body.next_due_at !== undefined)  { sets.push("next_due_at=?");  binds.push(body.next_due_at || null); }
     if (body.notes !== undefined)        { sets.push("notes=?");        binds.push(body.notes); }
+    if (body.video_url !== undefined)    { sets.push("video_url=?");    binds.push(body.video_url || null); }
+    if (body.photos !== undefined) {
+      const photosCheck = validatePhotos(body.photos);
+      if (!photosCheck.ok) return json({ error: photosCheck.error }, 400);
+      sets.push("photos=?"); binds.push(photosCheck.value ?? null);
+    }
     if (!sets.length) return json({ error: "rien à modifier" }, 400);
 
     sets.push("updated_at=unixepoch()");

@@ -29,7 +29,40 @@ const ST_MAP = Object.fromEntries(STATUS.map(s => [s.id, s]));
 const EMPTY_FORM = {
   bien_id: "", category: "clim", titre: "", prestataire: "",
   cost: "", status: "a_planifier", scheduled_at: "", done_at: "", next_due_at: "", notes: "",
+  photos: [], video_url: "",
 };
+
+// Photos — mêmes réglages que EtatDesLieux.jsx (compression client, dataURL JPEG).
+const MAX_PHOTOS = 4;
+const MAX_DIM = 1280;
+function compressImage(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Lecture du fichier impossible"));
+    reader.onload = () => {
+      img.onerror = () => reject(new Error("Image invalide"));
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > MAX_DIM || height > MAX_DIM) {
+          const ratio = Math.min(MAX_DIM / width, MAX_DIM / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width; canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", 0.75));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+function parsePhotos(raw) {
+  if (!raw) return [];
+  try { const p = JSON.parse(raw); return Array.isArray(p) ? p : []; } catch { return []; }
+}
 
 // Cadence par défaut pour les catégories récurrentes — sert à suggérer la
 // prochaine échéance en un clic (clim tous les 6 mois, piscine tous les 15 jours).
@@ -71,6 +104,8 @@ export default function MaintenanceTab() {
   const [editId,     setEditId] = useState(null);
   const [saving,     setSaving] = useState(false);
   const [err,        setErr]    = useState(null);
+  const [drawing,    setDrawing] = useState(false);
+  const [processingPhoto, setProcessingPhoto] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -136,8 +171,34 @@ export default function MaintenanceTab() {
     } catch (e) { window.alert("Erreur : " + e.message); }
   }
 
+  async function addPhotos(fileList) {
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
+    const room = MAX_PHOTOS - form.photos.length;
+    if (room <= 0) { setErr(`Maximum ${MAX_PHOTOS} photos.`); return; }
+    setProcessingPhoto(true); setErr(null);
+    try {
+      const compressed = await Promise.all(files.slice(0, room).map(compressImage));
+      setForm(f => ({ ...f, photos: [...f.photos, ...compressed] }));
+    } catch (e) { setErr(e.message || "Erreur lors du traitement d'une photo."); }
+    setProcessingPhoto(false);
+  }
+  function removePhoto(i) {
+    setForm(f => ({ ...f, photos: f.photos.filter((_, idx) => idx !== i) }));
+  }
+
+  async function drawQualityCheck() {
+    setDrawing(true);
+    try {
+      const d = await fetchJSON("/api/quality-check-draw", { method: "POST" });
+      if (d.drawn) await load();
+      else window.alert("Aucun bien éligible pour l'instant (tous déjà contrôlés récemment ou en cours).");
+    } catch (e) { window.alert("Erreur : " + e.message); }
+    setDrawing(false);
+  }
+
   function openEdit(rec) {
-    setForm({ ...EMPTY_FORM, ...rec, cost: rec.cost ? String(rec.cost) : "" });
+    setForm({ ...EMPTY_FORM, ...rec, cost: rec.cost ? String(rec.cost) : "", photos: parsePhotos(rec.photos), video_url: rec.video_url || "" });
     setEditId(rec.id);
     setShowForm(true);
   }
@@ -179,9 +240,14 @@ export default function MaintenanceTab() {
           <h2 style={{ margin: 0, fontSize: 17, color: "#f1f5f9" }}>🛠️ Maintenance préventive</h2>
           <p style={{ margin: "3px 0 0", fontSize: 11, color: "#64748b" }}>Suivi des interventions récurrentes — clim, piscine, jardin…</p>
         </div>
-        <button onClick={() => { setShowForm(s => !s); setEditId(null); setForm(EMPTY_FORM); }} style={btn("#0ea5e9")}>
-          + Nouvelle entrée
-        </button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={drawQualityCheck} disabled={drawing} title="Tire un bien au hasard pour un contrôle qualité surprise" style={{ ...btn(drawing ? "#334155" : "#22c55e") }}>
+            {drawing ? "Tirage…" : "🎲 Contrôle qualité"}
+          </button>
+          <button onClick={() => { setShowForm(s => !s); setEditId(null); setForm(EMPTY_FORM); }} style={btn("#0ea5e9")}>
+            + Nouvelle entrée
+          </button>
+        </div>
       </div>
 
       {/* ── KPIs ────────────────────────────────────────────────────────── */}
@@ -268,6 +334,29 @@ export default function MaintenanceTab() {
               <label style={lbl}>Notes</label>
               <textarea style={{ ...inp, minHeight: 60, resize: "vertical" }} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Observations, référence prestataire, devis…" />
             </div>
+            <div style={{ gridColumn: mob ? "" : "span 2" }}>
+              <label style={lbl}>Photos ({form.photos.length}/{MAX_PHOTOS})</label>
+              {form.photos.length > 0 && (
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
+                  {form.photos.map((p, i) => (
+                    <div key={i} style={{ position: "relative" }}>
+                      <img src={p} alt="" style={{ width: 60, height: 60, objectFit: "cover", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)" }} />
+                      <button type="button" onClick={() => removePhoto(i)} style={{ position: "absolute", top: -6, right: -6, width: 18, height: 18, borderRadius: "50%", border: "none", background: "#ef4444", color: "#fff", fontSize: 11, cursor: "pointer", lineHeight: "18px", padding: 0 }}>×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {form.photos.length < MAX_PHOTOS && (
+                <label style={{ ...btn("#334155"), display: "inline-flex", alignItems: "center", background: "transparent", border: "1px dashed rgba(255,255,255,0.2)", color: "#94a3b8", cursor: "pointer" }}>
+                  {processingPhoto ? "Traitement…" : "📷 Ajouter des photos"}
+                  <input type="file" accept="image/*" multiple capture="environment" style={{ display: "none" }} onChange={e => { addPhotos(e.target.files); e.target.value = ""; }} disabled={processingPhoto} />
+                </label>
+              )}
+            </div>
+            <div style={{ gridColumn: mob ? "" : "span 2" }}>
+              <label style={lbl}>Vidéo (lien externe)</label>
+              <input style={inp} value={form.video_url} onChange={e => setForm(f => ({ ...f, video_url: e.target.value }))} placeholder="Lien Google Photos, WhatsApp, YouTube non listé…" />
+            </div>
           </div>
           {err && <div style={{ color: "#ef4444", fontSize: 11, marginTop: 8 }}>{err}</div>}
           <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
@@ -353,6 +442,17 @@ export default function MaintenanceTab() {
                       {rec.next_due_at && <span style={{ fontSize: 11, color: "#64748b" }}>🔄 Prochaine : {fmtDate(rec.next_due_at)}</span>}
                     </div>
                     {rec.notes && <div style={{ fontSize: 11, color: "#64748b", marginTop: 6, fontStyle: "italic" }}>{rec.notes}</div>}
+                    {(() => {
+                      const photos = parsePhotos(rec.photos);
+                      return (photos.length > 0 || rec.video_url) && (
+                        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 8 }}>
+                          {photos.map((p, i) => <img key={i} src={p} alt="" style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 6, border: "1px solid rgba(255,255,255,0.1)" }} />)}
+                          {rec.video_url && (
+                            <a href={rec.video_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: "#0ea5e9", textDecoration: "none" }}>🎥 Vidéo</a>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Actions */}

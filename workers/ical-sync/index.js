@@ -3888,6 +3888,16 @@ export default {
             console.log(`[rapport-business] ✓ notified=${data.notified ?? "?"} provider=${data.provider ?? "?"}`);
           } catch (e) { console.error("[rapport-business] Cron error:", e.message); }
         })(),
+        // Contrôle qualité aléatoire (reco Resp. Logistique, 2026-07-18) : tire un bien
+        // au hasard, crée une entrée maintenance category='qualite' avec checklist.
+        (async () => {
+          try {
+            const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+            const res = await fetch(`${siteUrl}/api/quality-check-draw?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`);
+            const data = await res.json().catch(() => ({}));
+            console.log(`[quality-check-draw] ✓ drawn=${data.drawn ?? "aucun"}`);
+          } catch (e) { console.error("[quality-check-draw] Cron error:", e.message); }
+        })(),
       ]);
       // veille-003 : rapport hebdo veille concurrentielle — SÉQUENCÉ après le Promise.all
       // ci-dessus (pas dedans) car il doit lire rm_market_signals APRÈS que rm-auto-update

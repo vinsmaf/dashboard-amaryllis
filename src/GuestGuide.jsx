@@ -2,6 +2,37 @@ import { useState, useEffect } from 'react';
 import TvScreen from './TvScreen.jsx';
 import { parseTvParams, buildSlides } from './utils/tvScreen.js';
 import { getReviewUrl, isGoogleReview } from './data/googleReview.js';
+import { shouldShowDirectInvite } from './utils/directInvite.js';
+
+// Invitation directe voyageurs OTA (reco Service Client, 2026-07-18) — code -15% généré
+// via /api/promo-codes le 2026-07-18, valable 365j (tous biens, max_uses 999). Renouveler
+// avant expiration (~2027-07-18) : POST /api/promo-codes {type:"percent",value:15,...}.
+const DIRECT_INVITE_CODE = 'AMARYL-FF98';
+
+/* ─── Invitation directe (voyageurs OTA uniquement — canal livret, jamais email proxy) ── */
+function OtaDirectInvite({ bienNom, accent }) {
+  const subject = encodeURIComponent(`Mon séjour à ${bienNom || 'Amaryllis'}`);
+  const body = encodeURIComponent(`Bonjour,\n\nQu'est-ce qui vous a manqué à ${bienNom || 'ce logement'} pendant votre séjour ?\n\n`);
+  return (
+    <div style={{ margin: '16px 16px 0', background: `linear-gradient(135deg, ${accent}18, ${accent}08)`, border: `1px solid ${accent}40`, borderRadius: 14, padding: '16px 18px' }}>
+      <div style={{ fontSize: 11, color: accent, fontWeight: 700, letterSpacing: .5, marginBottom: 8 }}>💬 VOTRE AVIS COMPTE</div>
+      <p style={{ margin: '0 0 12px', fontSize: 14, color: '#e2e8f0', lineHeight: 1.6 }}>
+        Qu'est-ce qui vous a manqué à {bienNom || 'ce logement'} ? Dites-le-nous directement.
+      </p>
+      <a href={`mailto:contact@villamaryllis.com?subject=${subject}&body=${body}`} style={{ display: 'inline-block', fontSize: 13, color: accent, fontWeight: 700, textDecoration: 'none', marginBottom: 14 }}>
+        ✉️ Nous écrire →
+      </a>
+      <div style={{ borderTop: `1px solid ${accent}25`, paddingTop: 12 }}>
+        <p style={{ margin: '0 0 8px', fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
+          Pour votre prochain séjour, réservez en direct et économisez 15% :
+        </p>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(0,0,0,0.3)', borderRadius: 8, padding: '6px 12px' }}>
+          <code style={{ fontSize: 15, fontWeight: 800, color: accent, letterSpacing: 1 }}>{DIRECT_INVITE_CODE}</code>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /* ─── Palette par logement ─────────────────────────────────────── */
 const PROP_COLORS = {
@@ -153,14 +184,15 @@ export default function GuestGuide() {
       .finally(() => setLoading(false));
   }, [propertyId]);
 
-  // Mode TV sans prénom explicite → récupère la résa en cours (dates + prénom si dispo).
+  // Récupère la résa en cours (dates + prénom + canal direct/ota) — utilisé pour compléter
+  // le mode TV sans prénom explicite ET pour l'invitation directe voyageurs OTA (livret).
   useEffect(() => {
-    if (!tvParams.tv || tvParams.guest) return;
+    if (tvParams.guest) return; // déjà fourni explicitement par l'URL, pas besoin de deviner
     fetch(`/api/tv-context?p=${propertyId}`)
       .then(r => r.json())
-      .then(d => { if (d && (d.guest || d.du)) setAutoCtx(d); })
+      .then(d => { if (d && (d.guest || d.du || d.source)) setAutoCtx(d); })
       .catch(() => {});
-  }, [propertyId, tvParams.tv, tvParams.guest]);
+  }, [propertyId, tvParams.guest]);
 
   if (loading) return (
     <div style={{ minHeight: '100vh', background: dark, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -240,6 +272,8 @@ export default function GuestGuide() {
           </div>
         </div>
       )}
+
+      {shouldShowDirectInvite(autoCtx) && <OtaDirectInvite bienNom={guide.property_name} accent={accent} />}
 
       {/* ══ CARTE RAPIDE : WiFi + Adresse ═══════════════════════ */}
       <div style={{ margin: '12px 16px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
