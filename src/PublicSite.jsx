@@ -8754,7 +8754,7 @@ function DevisGroupePaiement() {
             )}
             {data.payment.acompteUrl && (
               <a href={data.payment.acompteUrl} style={{ display: "block", background: "#fff", border: "2px solid #0e3b3a", color: "#0e3b3a", borderRadius: 10, padding: "18px 20px", textDecoration: "none" }}>
-                <div style={{ fontSize: 16, fontWeight: 800 }}>Payer {data.payment.acompte}€ maintenant (acompte 30%) →</div>
+                <div style={{ fontSize: 16, fontWeight: 800 }}>Payer {data.payment.acompte}€ maintenant (acompte {Math.round((data.payment.acompte / data.total) * 100)}%) →</div>
                 <div style={{ fontSize: 12, opacity: 0.85, marginTop: 3, lineHeight: 1.5 }}>Solde de {data.payment.solde}€ : un lien de paiement vous sera envoyé automatiquement par email 30 jours avant l'arrivée.</div>
               </a>
             )}
