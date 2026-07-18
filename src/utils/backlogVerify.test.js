@@ -3,6 +3,8 @@ import {
   isAllowedPath,
   extractJsonArray,
   normalizeClassification,
+  hasSupportingKeywords,
+  applyKeywordGuard,
   parseHtmlMeta,
   evaluateLiveMeta,
   evaluateGa4Count,
@@ -96,6 +98,58 @@ describe("normalizeClassification", () => {
     expect(normalizeClassification([{ checkable: true }])).toEqual([]);
     expect(normalizeClassification(null)).toEqual([]);
     expect(normalizeClassification("pas un tableau")).toEqual([]);
+  });
+});
+
+describe("hasSupportingKeywords", () => {
+  it("rejette un item Core Web Vitals classé à tort en live_meta (bug réel vu en prod, traf-051)", () => {
+    const text = "Optimiser les pages de propriétés pour améliorer les scores Core Web Vitals (LCP < 2.5s, CLS < 0.1, INP < 200ms)";
+    expect(hasSupportingKeywords(text, "live_meta", { path: "/amaryllis" })).toBe(false);
+  });
+
+  it("accepte un live_meta réellement à propos de meta/title/SEO", () => {
+    const text = "Compléter GuideArlet avec balisage SEO : title, meta, H1-H3, schema LocalBusiness";
+    expect(hasSupportingKeywords(text, "live_meta", { path: "/amaryllis" })).toBe(true);
+  });
+
+  it("accepte un ga4_event si le nom d'event apparaît dans le texte", () => {
+    const text = "Ajouter event view_item_list sur la homepage";
+    expect(hasSupportingKeywords(text, "ga4_event", { eventName: "view_item_list" })).toBe(true);
+  });
+
+  it("rejette un ga4_event si le nom d'event n'apparaît nulle part", () => {
+    const text = "Mettre en place des indicateurs de performance clés pour les actions marketing";
+    expect(hasSupportingKeywords(text, "ga4_event", { eventName: "view_item_list" })).toBe(false);
+  });
+
+  it("accepte un jsonld_schema si le schemaType ou le mot json-ld apparaît", () => {
+    expect(hasSupportingKeywords("Ajouter JSON-LD VacationRental dans les pages prérendues", "jsonld_schema", { path: "/amaryllis", schemaType: "VacationRental" })).toBe(true);
+    expect(hasSupportingKeywords("Enrichir le schema FAQPage complet", "jsonld_schema", { path: "/amaryllis", schemaType: "FAQPage" })).toBe(true);
+  });
+
+  it("rejette un jsonld_schema sans aucun appui textuel", () => {
+    expect(hasSupportingKeywords("Créer des packages promotionnels basse saison", "jsonld_schema", { path: "/amaryllis", schemaType: "VacationRental" })).toBe(false);
+  });
+});
+
+describe("applyKeywordGuard", () => {
+  it("rétrograde en checkable:false une classification sans appui textuel, laisse les autres intactes", () => {
+    const itemsById = new Map([
+      ["traf-051", "Optimiser les pages de propriétés pour améliorer les scores Core Web Vitals (LCP < 2.5s, CLS < 0.1, INP < 200ms)"],
+      ["seo-002", "Compléter GuideArlet avec balisage SEO : title, meta, H1-H3, schema LocalBusiness"],
+    ]);
+    const classified = [
+      { id: "traf-051", checkable: true, checkType: "live_meta", params: { path: "/amaryllis" } },
+      { id: "seo-002", checkable: true, checkType: "live_meta", params: { path: "/amaryllis" } },
+    ];
+    const out = applyKeywordGuard(classified, itemsById);
+    expect(out[0]).toEqual({ id: "traf-051", checkable: false, checkType: null, params: null });
+    expect(out[1]).toEqual({ id: "seo-002", checkable: true, checkType: "live_meta", params: { path: "/amaryllis" } });
+  });
+
+  it("laisse passer les entrées déjà checkable:false sans y toucher", () => {
+    const out = applyKeywordGuard([{ id: "x-1", checkable: false, checkType: null, params: null }], new Map());
+    expect(out).toEqual([{ id: "x-1", checkable: false, checkType: null, params: null }]);
   });
 });
 

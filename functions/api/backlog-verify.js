@@ -34,6 +34,7 @@ import { getAccessToken, runReportSafe, parseReport } from "./_ga4.js";
 import {
   extractJsonArray,
   normalizeClassification,
+  applyKeywordGuard,
   parseHtmlMeta,
   evaluateLiveMeta,
   evaluateGa4Count,
@@ -153,7 +154,9 @@ export async function onRequest(context) {
     timeoutMs: 25000,
   }).catch((e) => ({ ok: false, text: "", errors: [e.message] }));
 
-  const classification = normalizeClassification(extractJsonArray(llm.text) || []);
+  const itemsById = new Map(items.map((it) => [it.id, it.action]));
+  const rawClassification = normalizeClassification(extractJsonArray(llm.text) || []);
+  const classification = applyKeywordGuard(rawClassification, itemsById);
   const byId = new Map(classification.map((c) => [c.id, c]));
   const checkable = items
     .map((it) => ({ ...it, cls: byId.get(it.id) }))

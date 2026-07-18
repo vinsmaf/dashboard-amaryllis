@@ -61,6 +61,36 @@ export function normalizeClassification(raw) {
     });
 }
 
+// ── Garde sémantique : le checkType proposé par le LLM doit être étayé par des
+// mots-clés dans le texte RÉEL de l'item — sinon on ne lui fait pas confiance.
+// Vu en prod (2026-07-18) : un item "Core Web Vitals / LCP / CLS / INP" classé à
+// tort en live_meta parce qu'il citait une page — aucun lien réel avec le
+// title/meta de cette page. Le LLM propose, cette garde déterministe dispose.
+const LIVE_META_KEYWORDS = /\b(meta|title|titre|description|balise|seo)\b/i;
+
+export function hasSupportingKeywords(actionText, checkType, params) {
+  const text = (actionText || "").toLowerCase();
+  if (checkType === "ga4_event") return text.includes(params.eventName.toLowerCase());
+  if (checkType === "live_meta") return LIVE_META_KEYWORDS.test(actionText || "");
+  if (checkType === "jsonld_schema") {
+    return text.includes(params.schemaType.toLowerCase()) || /json-?ld|schema/i.test(actionText || "");
+  }
+  return false;
+}
+
+// itemsById : Map<id, actionText>. Rétrograde en checkable:false toute entrée
+// dont le checkType n'a aucun appui textuel dans l'item d'origine.
+export function applyKeywordGuard(classified, itemsById) {
+  return classified.map((c) => {
+    if (!c.checkable) return c;
+    const actionText = itemsById.get(c.id) || "";
+    if (!hasSupportingKeywords(actionText, c.checkType, c.params)) {
+      return { id: c.id, checkable: false, checkType: null, params: null };
+    }
+    return c;
+  });
+}
+
 // ── Parsing HTML minimal (titre + meta description) ────────────────────────
 export function parseHtmlMeta(html) {
   if (!html) return { title: "", description: "" };
