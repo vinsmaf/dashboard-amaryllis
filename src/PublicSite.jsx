@@ -2869,11 +2869,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
                     ⚠ Séjour minimum : {minNights} nuits pour ce bien
                   </div>
                 )}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-                  <button onClick={() => generateDevis({ bien, checkin, checkout, nights, rawTotal, discountRate, discountAmount, fraisMenage, extraGuestSuppl, extraGuests, petSuppl, nbPets, total, depositAmt })}
-                    style={{ background: "transparent", border: `1px solid ${SAND}`, color: MUTED, borderRadius: 8, padding: "10px 16px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Jost', sans-serif", letterSpacing: "0.04em" }}>
-                    📄 Devis PDF
-                  </button>
+                <div style={{ display: "flex", justifyContent: "center" }}>
                   <button
                     onClick={() => {
                       if (belowMin) return;
@@ -2884,8 +2880,17 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
                       try { sessionStorage.setItem("pending_purchase", JSON.stringify({ value: total, bien_id: bien.id, niveau_tarifaire: niveauTarifaire(bien, checkin), items: ckItems })); } catch { /* */ }
                       setStep(2);
                     }}
-                    style={{ background: belowMin ? SAND : CORAL, color: "#fff", border: "none", padding: "14px 30px", borderRadius: 8, fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase", cursor: belowMin ? "not-allowed" : "pointer", boxShadow: belowMin ? "none" : "0 4px 20px rgba(196,114,84,0.35)", opacity: belowMin ? 0.6 : 1, whiteSpace: "nowrap" }}
+                    style={{ background: belowMin ? SAND : CORAL, color: "#fff", border: "none", padding: "14px 30px", borderRadius: 8, fontFamily: "'Jost', sans-serif", fontWeight: 600, fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase", cursor: belowMin ? "not-allowed" : "pointer", boxShadow: belowMin ? "none" : "0 4px 20px rgba(196,114,84,0.35)", opacity: belowMin ? 0.6 : 1, whiteSpace: "nowrap", width: "100%", maxWidth: 360 }}
                   >{belowMin ? "Continuer →" : `Continuer · ${total}€ →`}</button>
+                </div>
+                {/* Devis PDF — volontairement à distance du CTA principal (ne doit jamais lui faire
+                    concurrence visuelle ni spatiale, cf. reco 2026-07-18 : Amaryllis ne gardait que
+                    10,5% des visiteurs entre choix de dates et clic réservation, vs 83% sur Géko). */}
+                <div style={{ textAlign: "center", marginTop: 16 }}>
+                  <button onClick={() => generateDevis({ bien, checkin, checkout, nights, rawTotal, discountRate, discountAmount, fraisMenage, extraGuestSuppl, extraGuests, petSuppl, nbPets, total, depositAmt })}
+                    style={{ background: "none", border: "none", color: MUTED, fontSize: 11, fontWeight: 500, cursor: "pointer", fontFamily: "'Jost', sans-serif", letterSpacing: "0.03em", textDecoration: "underline", textUnderlineOffset: 3 }}>
+                    Besoin d'un devis PDF avant de réserver ?
+                  </button>
                 </div>
               </>
             ) : (
