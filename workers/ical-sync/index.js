@@ -3932,6 +3932,18 @@ export default {
           }
         })(),
         (async () => {
+          // Garde-fou 2026-07-18 : détecte la dérive rm_seasonal_profiles vs SEED_DAILY_PRICES
+          // (cadence mensuelle suffisante — les deux couches ne bougent pas au jour le jour).
+          try {
+            const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+            const res = await fetch(`${siteUrl}/api/rm-seed-drift?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`);
+            const data = await res.json().catch(() => ({}));
+            console.log(`[rm-seed-drift] ✓ checked=${data.checked ?? "?"} drifted=${data.drifted ?? "?"}`);
+          } catch (e) {
+            console.error("[rm-seed-drift] Cron error:", e.message);
+          }
+        })(),
+        (async () => {
           // Rapport mensuel SLA Exploitation (maintenance + stock) — log-036. Calcule le
           // mois calendaire qui vient de se terminer (défaut de l'endpoint si ?month= absent).
           try {

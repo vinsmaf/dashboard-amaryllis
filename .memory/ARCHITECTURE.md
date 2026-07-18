@@ -1,6 +1,6 @@
 # 🗺️ ARCHITECTURE — Locatif (villamaryllis.com)
 
-> **Date :** 2026-07-17 · **Statut :** carte de l'état actuel, à maintenir (pas un historique).
+> **Date :** 2026-07-18 · **Statut :** carte de l'état actuel, à maintenir (pas un historique).
 > But : ne plus jamais re-déduire le système depuis le code. Quand l'archi change, on met à jour ICI.
 > **Pointeurs :** état courant volatil → `.memory/CONTEXT.md` · décisions → `.memory/ADR.md` + `DECISIONS.md` ·
 > leçons → `.memory/LEARNINGS.md` · blocages → `.memory/BLOCKERS.md` · rappel par domaine → `.memory/RECALL.md` ·
@@ -376,7 +376,7 @@ flowchart TD
 | `0 12 * * *` | 12h UTC / 8h MTQ | `runEditorialReseed` (30j) + `runEditorialDraftGen` (drafts J+2 → gate) |
 | `0 13 * * *` | 13h UTC / 9h MTQ | `charge-balance` (soldes 2× J-30 — migré cron-job.org 7798126) · **`docs-refresh` → `rag-ingest`** (2026-07-04, snapshot factuel quotidien SEO+pricing → D1 `docs_snapshots` → réingestion RAG immédiate) |
 | `0 6 * * 1` | lundi 6h UTC | rapport hebdo · prix-recap · RAG ingest · agents-execute + digest · token health check · SEO report · bug-triage · **agents-triage** · memory-distill · guide-write · rm-auto-update?scan=1 · veille-zone-scan · rapport-business · `send-veille-recap` (SÉQUENCÉ après rm-auto-update/veille-zone-scan) · **`rm-price-digest` (2026-07-18, SÉQUENCÉ après rm-auto-update, même contrainte fraîcheur — isole les écarts prix RM ≥12% vs prix live sur 30j, push ntfy, silence si 0 écart)** |
-| `0 1 1 * *` | 1er du mois 1h UTC | export comptable CSV · article SEO long-tail · rappel rotation tokens · `runReviewRefresh` (import avis Apify) → **`runReviewDrafts`** (2026-07-08, enchaîné auto : classification+brouillon LLM sur les nouveaux avis, `action=draft`, jamais rebranché avant) → alerte ntfy+email si ≥1 avis escaladé (`notifyEscalatedReviews`) · `seasonal-update`→`seasonal_memory` |
+| `0 1 1 * *` | 1er du mois 1h UTC | export comptable CSV · article SEO long-tail · rappel rotation tokens · `runReviewRefresh` (import avis Apify) → **`runReviewDrafts`** (2026-07-08, enchaîné auto : classification+brouillon LLM sur les nouveaux avis, `action=draft`, jamais rebranché avant) → alerte ntfy+email si ≥1 avis escaladé (`notifyEscalatedReviews`) · `seasonal-update`→`seasonal_memory` · **`rm-seed-drift`** (2026-07-18, garde-fou : compare `rm_seasonal_profiles.base_price_override` à la moyenne réelle `SEED_DAILY_PRICES` sur la fenêtre de chaque profil, flag ≥15%, écrit en `client_errors` + ntfy) |
 | `0 20 * * 7` | dimanche 20h UTC / 16h MTQ | **`runAccountability`** — accountability hebdo, prépare la Réunion Générale du lundi 11h (ajouté à cette table 2026-07-06, cron confirmé présent dans `wrangler.toml`) |
 
 **Total vérifié 2026-07-15 : 8 crons dans `wrangler.toml`** (`*/10 * * * *`, `0 9 * * *`, `0 11 * * 1`, `0 12 * * *`, `0 13 * * *`, `0 6 * * 1`, `0 1 1 * *`, `0 20 * * 7`) — cohérent avec §3. Compte inchangé depuis le 2026-07-06 (l'enrichissement Airbnb est passé PAR un cron dédié `0 * * * *` dans la même journée du 07-15 avant d'être replié dans `*/10`, sans jamais rester déployé comme 9ᵉ entrée — corrigé ici après qu'un audit ait détecté l'incohérence entre cette doc et `wrangler.toml`/le code réels).

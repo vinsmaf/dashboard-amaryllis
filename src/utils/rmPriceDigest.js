@@ -8,6 +8,7 @@
 // prix n'est modifié ici, seul le signal "regarde ça" est produit.
 
 import { getBien } from "../data/biens.js";
+import { SEED_DAILY_PRICES } from "../seedPrices.js";
 
 const round0 = (n) => Math.round(Number(n) || 0);
 
@@ -18,12 +19,21 @@ function safeParseFlags(raw) {
 
 /**
  * Résout le prix RÉELLEMENT affiché pour bienId à une date — même règle de résolution
- * que le site public (PublicSite.jsx) : dailyPricesMap[date] ?? bien.prix (fallback).
- * `dailyPricesByBien` : { [bienId]: { "YYYY-MM-DD": prix } }.
+ * que le site public (`loadDailyPrices()` dans PublicSite.jsx, PAS juste bien.prix) :
+ * override serveur (site-config) ?? seed calibré (SEED_DAILY_PRICES) ?? bien.prix (dernier filet).
+ *
+ * ⚠️ Piège vécu 2026-07-18 : ce module ignorait `SEED_DAILY_PRICES` et comparait les recos RM
+ * au prix flat bien.prix (280€ pour Amaryllis) — alors que le vrai prix affiché aux visiteurs
+ * suit un calendrier saisonnier déjà calibré (ex. 430€ mi-août, pas 280€). Résultat : un écart
+ * de "+121%" annoncé à Vincent qui était en réalité +26% une fois comparé au bon prix. Toujours
+ * comparer une reco à CE calcul, jamais à bien.prix seul — cf. CLAUDE.md §1bis.
+ * `dailyPricesByBien` : { [bienId]: { "YYYY-MM-DD": prix } } — overrides serveur (site-config).
  */
 export function resolveLivePrice(bienId, date, dailyPricesByBien) {
-  const daily = dailyPricesByBien?.[bienId]?.[date];
-  if (daily != null) return Number(daily);
+  const override = dailyPricesByBien?.[bienId]?.[date];
+  if (override != null) return Number(override);
+  const seedPrice = SEED_DAILY_PRICES?.[bienId]?.[date];
+  if (seedPrice != null) return Number(seedPrice);
   const bien = getBien(bienId);
   return bien ? bien.prix : null;
 }
