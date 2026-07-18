@@ -2,17 +2,16 @@
 
 > Location de vacances directe, sans commission OTA. Conciergerie haut de gamme. Réservation en ligne : villamaryllis.com
 
-Amaryllis Locations gère 7 logements de vacances en France : 6 en Martinique (Sainte-Luce, Schœlcher) et 1 à Nogent-sur-Marne (Île-de-France). Réservation directe sur le site officiel — économisez -15 % vs Airbnb, paiement sécurisé Stripe, annulation flexible. Tous les logements sont équipés (WiFi, linge, cuisine), certains avec piscine privée et vue mer.
+Amaryllis Locations gère 6 logements de vacances en France : 5 en Martinique (Sainte-Luce, Schœlcher) et 1 à Nogent-sur-Marne (Île-de-France). Réservation directe sur le site officiel — économisez -15 % vs Airbnb, paiement sécurisé Stripe, annulation flexible. Tous les logements sont équipés (WiFi, linge, cuisine), certains avec piscine privée et vue mer.
 
 ## Logements disponibles
 
-- [Villa Amaryllis](https://villamaryllis.com/amaryllis): Villa 8 personnes, piscine privée, vue mer, 3 chambres, 280 €/nuit — Sainte-Luce, Martinique 97228. Idéale groupes familles.
-- [Villa Iguana](https://villamaryllis.com/iguana): Villa 6 personnes, piscine, 2 chambres, 180 €/nuit — Sainte-Luce, Martinique 97228.
-- [Zandoli](https://villamaryllis.com/zandoli): Logement 5 personnes, 2 chambres, 110 €/nuit — Sainte-Luce, Martinique 97228.
-- [Géko](https://villamaryllis.com/geko): Cocon 4 personnes, 1 chambre, 110 €/nuit — Sainte-Luce, Martinique 97228.
-- [Mabouya](https://villamaryllis.com/mabouya): Studio 2 personnes, 70 €/nuit — Sainte-Luce, Martinique 97228. Le logement le plus accessible.
-- [Bellevue Schœlcher](https://villamaryllis.com/schoelcher): Appartement 2 personnes, 90 €/nuit — Schœlcher, Martinique 97233.
-- [Appartement Nogent-sur-Marne](https://villamaryllis.com/nogent): Appartement 2 personnes, 90 €/nuit — Nogent-sur-Marne, Île-de-France 94130.
+- [Villa Amaryllis](https://villamaryllis.com/amaryllis): Villa Amaryllis à Sainte-Luce : piscine à débordement, vue Caraïbes 180°, 3 chambres, 8 personnes. Dès 280€/nuit en direct, sans frais Airbnb.
+- [Zandoli](https://villamaryllis.com/zandoli): Zandoli à Sainte-Luce : piscine privative à cascade, mezzanine, jardin tropical. 5 personnes. Dès 110€/nuit en réservation directe.
+- [Géko](https://villamaryllis.com/geko): Cocon Géko à Sainte-Luce : piscine privative à cascade, jardin tropical, sur les hauteurs. 4 personnes. Dès 110€/nuit en réservation directe.
+- [Mabouya](https://villamaryllis.com/mabouya): Mabouya à Sainte-Luce : seul jacuzzi privatif vue mer de la résidence. Idéal couple, terrasse privée, plages à 7 min. Dès 70€/nuit.
+- [Bellevue Schœlcher](https://villamaryllis.com/schoelcher): Appartement Bellevue à Schœlcher : vue sur la baie de Fort-de-France, 2 personnes, à 10 min du centre. Réservation directe dès 90€/nuit.
+- [Appartement Nogent-sur-Marne](https://villamaryllis.com/nogent): Appartement de standing à Nogent-sur-Marne : jardin privatif, home cinéma, bord de Marne. RER A, Paris en 20 min. Dès 90€/nuit en direct.
 
 ## Guides destination Martinique
 
