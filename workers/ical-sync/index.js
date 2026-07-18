@@ -3452,6 +3452,24 @@ async function runAgentsTriage(env) {
   } catch (e) { console.error("[agents-triage] erreur:", e.message); }
 }
 
+// 🤖 Vérification autonome du backlog agents IA — ferme les items dont la
+// revendication est un fait technique numériquement vérifiable (meta SEO, event
+// GA4, schema JSON-LD), voir functions/api/backlog-verify.js. Le reste (photo,
+// vidéo, jugement humain) reste manuel — jamais deviné. Silence si 0 fermé.
+async function runBacklogVerify(env) {
+  const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+  const secret = env.POSTSTAY_SECRET || "";
+  if (!secret) { console.log("[backlog-verify] POSTSTAY_SECRET absent — skip"); return; }
+  try {
+    const r = await fetch(`${siteUrl}/api/backlog-verify?secret=${encodeURIComponent(secret)}`);
+    const d = await r.json().catch(() => ({}));
+    if (!d.ok) { console.log("[backlog-verify] indisponible:", JSON.stringify(d).slice(0, 200)); return; }
+    console.log(`[backlog-verify] ✓ ${d.summary || ""}`);
+    if (!d.closed) return; // pas de bruit si rien fermé cette semaine
+    await sendWhatsApp(env, `🤖 Backlog auto-vérifié : ${d.closed} item(s) fermé(s) sans intervention (meta SEO / event GA4 / schema JSON-LD confirmés en prod).\n→ admin / onglet Agents pour le détail.`);
+  } catch (e) { console.error("[backlog-verify] erreur:", e.message); }
+}
+
 // ── Newsletter : séquence J+7 (offre abonné) ─────────────────────────────────
 async function runNewsletterSequence(env) {
   const db = env.revenue_manager;
@@ -3854,6 +3872,7 @@ export default {
         runSeoReport(env), // 📈 rapport SEO hebdo (Search Console) par email
         runBugTriage(env), // 🐞 triage hebdo des bugs captés en prod → backlog + digest
         runAgentsTriage(env), // 🧹 triage hebdo backlog agents IA → bloque outils bannis/faits contredits/doublons
+        runBacklogVerify(env), // 🤖 I-11 — ferme les items backlog vérifiables numériquement (meta SEO/GA4/JSON-LD)
         runMemoryDistill(env), // 🧠 B2 — distille l'expérience du réseau en apprentissages durables
         runQABatch(env, QA_WEEKLY, "qa_session:weekly", "hebdo"), // 🔍 QA hebdo (flux, endpoints, tracking, emails, agents)
         runGuideWrite(env), // 📝 réécriture prose d'accueil guides D1 (welcome_message + tagline)
