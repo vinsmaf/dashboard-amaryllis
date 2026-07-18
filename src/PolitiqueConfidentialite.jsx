@@ -260,6 +260,7 @@ export default function PolitiqueConfidentialite() {
             <li><strong style={{ fontWeight: 500, color: NAVY }}>Cloudflare, Inc.</strong> — Clauses Contractuelles Types (SCCs) · <a href="https://www.cloudflare.com/gdpr/introduction/" target="_blank" rel="noopener noreferrer" style={{ color: CORAL }}>détails</a></li>
             <li><strong style={{ fontWeight: 500, color: NAVY }}>Google LLC</strong> (Analytics, Places API) — Clauses Contractuelles Types · <a href="https://business.safety.google/gdpr/" target="_blank" rel="noopener noreferrer" style={{ color: CORAL }}>détails</a></li>
             <li><strong style={{ fontWeight: 500, color: NAVY }}>Stripe, Inc.</strong> — Clauses Contractuelles Types · <a href="https://stripe.com/fr/legal/dpa" target="_blank" rel="noopener noreferrer" style={{ color: CORAL }}>détails</a></li>
+            <li><strong style={{ fontWeight: 500, color: NAVY }}>Beds24 Ltd</strong> (gestion des réservations, Nogent-sur-Marne) — Contrat de sous-traitance · <a href="https://www.beds24.com/dataprocessingagreement.html" target="_blank" rel="noopener noreferrer" style={{ color: CORAL }}>détails</a></li>
           </ul>
         </Section>
 
