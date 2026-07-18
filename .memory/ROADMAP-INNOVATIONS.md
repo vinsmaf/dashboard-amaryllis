@@ -13,7 +13,7 @@
 
 | # | Chantier | Statut |
 |---|---|---|
-| I-01 | Enchère inversée sur le direct | 📋 à cadrer |
+| I-01 | Enchère inversée sur le direct | ✅ **cadré 2026-07-18, en attente de go** — design hybride validé, pas d'implémentation avant que Vincent le redemande explicitement |
 | I-02 | Vendre le temps mort au marché local | 📋 à cadrer |
 | I-03 | P&L par séjour (pas CA par séjour) | ✅ **livré 2026-07-17** (`0214662`) |
 | I-04 | Le vrai loyer payé aux OTA (€/an + point de bascule) | ✅ **livré 2026-07-18** (`3e11cad`) |
@@ -86,12 +86,14 @@ refund sans annulation (`cancel-booking.js:211` force `status='cancelled'`), `ig
 
 **Ancrage réel** : le RM calcule déjà des recos par date (`/api/rm-recommendations`, `calcDateReco`), connaît l'occupation forward 30/90j (`rm_kpi_snapshots`) et le vacancy_risk. La brique de décision « cette date vaut-elle X ? » existe donc déjà en grande partie.
 
-**Questions ouvertes** :
-- Seuil d'acceptation auto vs advisory ? (⚠️ **RM = advisory only** — règle absolue : le RM ne change jamais un prix seul. Une acceptation automatique d'enchère est-elle une violation de cette règle, ou un cas distinct parce que Vincent aurait fixé le plancher à l'avance ? **À trancher explicitement avec Vincent avant toute implémentation.**)
-- Plancher par bien/saison, stocké où ?
-- Risque de cannibalisation du plein tarif (un voyageur prêt à payer 280€ tente 180€) → limiter à quelles dates (lead time court, vacancy_risk élevé) ?
+**Questions ouvertes — TRANCHÉES le 2026-07-18** (Vincent : « à garder mais pas mettre en place de suite ») :
+- **Seuil d'acceptation** : design **hybride** retenu (proposé par Claude, pas encore challengé par Vincent en détail — à reconfirmer avant de coder). Vincent fixe à l'avance un **plancher** (€ ou % du prix affiché, ex. 70%) + une **fenêtre de dates éligibles** (lead time court ≤14j, ou `vacancy_risk` élevé déjà calculé par le RM) par bien/saison. Offre dans le plancher+fenêtre → acceptée **instantanément** (paiement + résa confirmée comme une résa directe classique). Offre hors fenêtre (trop basse, ou date à forte demande) → mise en attente, validation manuelle. **Ne viole pas "RM=advisory only"** : ce n'est pas le RM qui décide d'un prix, c'est Vincent qui fixe un plancher figé à l'avance (comme un prix minimum de vente) et le système applique une règle mécanique déjà posée par lui.
+- **Plancher stocké où** : pas encore spécifié techniquement (probablement un nouveau champ par `rm_seasonal_profiles`/property, à cadrer au moment de coder).
+- **Anti-cannibalisation** : la fenêtre de dates (lead time court / vacancy_risk élevé, déjà calculé par le RM) est le garde-fou — sur une date qui se vend déjà bien, le CTA « faites votre prix » n'apparaît simplement pas.
 
-**Filtre valeurs** : ✅ #2 (tourne sans lui si auto) · ⚠️ dépend de la réponse à la question RM ci-dessus.
+**Statut** : cadrage validé par Claude, **PAS challengé en détail par Vincent**, **PAS implémenté**. Ne pas coder avant que Vincent redemande explicitement de reprendre ce chantier — cf. `.memory/BLOCKERS.md` "En cours".
+
+**Filtre valeurs** : ✅ #2 (tourne sans lui si auto, dans les limites qu'il a posées).
 
 ---
 
