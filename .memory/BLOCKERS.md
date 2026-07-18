@@ -4,12 +4,15 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
-## En cours → ✅ terminé le 2026-07-17 (suite) — I-04 corrigé (données vivantes) + I-03 livré (P&L par séjour)
-- **Tâche** : chantiers innovation, traités "un par un" (consigne Vincent) — cette session : correction I-04 puis livraison I-03.
-- **Étape finale** : I-04 corrigé et vérifié en prod (`5db4f88`) — commission OTA calculée sur les réservations vivantes du Sheet au lieu du seed `REVENUS_CANAL_2025` (qui sous-estimait Booking de ~21%). I-03 conçu, codé, testé (16 tests), déployé et vérifié en prod (`0214662`) — nouvel endpoint `/api/pnl-sejour` + onglet admin 🧮 « P&L par séjour ».
-- **Prochaine action** : Vincent a choisi de s'arrêter ici. Reprendre au prochain "on continue les chantiers innovation" — proposer I-01 (le plus exécutable, aucun blocage data, s'appuie sur la marge de contribution I-03) en premier ; I-02 et I-07 restent bloqués (audience locale / factures eau-élec non centralisées).
-- **Fichiers ouverts** : aucun — tout committé et déployé (`5db4f88`, `0214662`).
-- **Contexte critique** : `src/config/fraisMenage.js` est désormais la source unique du coût ménage (remplace la const locale dans `PublicSite.jsx`) — toute future correction de tarif ménage doit passer par ce fichier, pas par `PublicSite.jsx`. Doctrine FAIT/ESTIMÉ (I-04, réutilisée par I-03) : ne jamais mélanger un coût variable direct (fait) avec une allocation de charge fixe (hypothèse, curseur, off par défaut).
+## En cours → ✅ terminé le 2026-07-18 — Garde-fous RM (seed↔RM) + triage exécutable des recos agents
+- **Tâche** : 2 fils distincts cette session. (1) Garde-fous permanents après une erreur de diagnostic sur le pricing Amaryllis (cf. ADR-RM-SEED-DRIFT-001). (2) Triage des ~49 recos agents "à planifier" → 5 implémentées, 2 déjà-faites corrigées en D1, 1 déprioritisée par Vincent (cf. ADR-AGENTS-RECOS-BATCH-001).
+- **I-01 (chantiers innovation) reste EN PAUSE, sans réponse** : proposé de reprendre par I-01 (enchère inversée), une question bloquante a été posée (auto-accept vs advisory vs hybride pour l'acceptation d'une offre — touche à la règle absolue "RM ne change jamais un prix seul") via AskUserQuestion — **Vincent n'a pas répondu**, a redirigé vers le triage des recos agents à la place. **Ne pas re-proposer I-01 sans que Vincent y revienne explicitement** ("on continue les chantiers innovation" était la phrase de reprise attendue, "on continue" seul a été utilisé pour autre chose — signal que la phrase de reprise n'est pas un identifiant fiable, se fier au contenu de la demande).
+- **Fichiers ouverts** : aucun — tout committé et déployé (`19c8631`, `ac53b9e`).
+- **Contexte critique** : `resolveLivePrice()` (`src/utils/rmPriceDigest.js`) inclut désormais `SEED_DAILY_PRICES` — toute future logique qui compare un prix RM au "prix réel" doit passer par cette fonction, jamais comparer directement à `bien.prix`. Le code promo `AMARYL-FF98` (-15%, invitation directe OTA) expire le ~2027-07-18 (AGENDA). Le TaskList persistant du harness contient des dizaines d'entrées `[completed]` non fiables (couvrant des sessions bien antérieures) — ne jamais s'y fier comme source de vérité sur l'état du code, toujours grep/vérifier en live.
+
+## 🟡 2026-07-18 — `parity-check.js` : le scrape Firecrawl des fiches Booking.com échoue la majorité du temps
+- **Constat** : en vérifiant la reco agent #8 (déjà construite depuis le 10/07, pas un nouveau chantier), `parity_checks` en D1 montre `ota_price_cents` NULL sur la quasi-totalité des lignes récentes — 1 seule alerte réussie à ce jour (Amaryllis 2026-07-24, +40%). Le contrôle tourne bien chaque jour (cron Worker) et pose `direct_price_cents` correctement, mais la comparaison n'aboutit presque jamais faute de prix OTA extrait.
+- **Débloque** : diagnostiquer pourquoi le scrape échoue (structure de page Booking.com changée ? sélecteur Firecrawl obsolète ? rate-limit ?) — pas fait ici, hors scope de la vérification demandée. Chantier à part si Vincent le priorise.
 
 ## En cours → ✅ terminé le 2026-07-16 — Audit fiabilité/vitesse synchro résas (24 agents) : 10 fixes déployés
 
