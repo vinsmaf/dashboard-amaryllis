@@ -296,6 +296,7 @@ All server-side logic lives in `functions/api/` (Cloudflare Pages Functions form
 | `/api/social-draft` | POST | `social-draft.js` | Analyse d'un verdict de répondeur social — reçoit un texte libre (commentaire groupe FB), retourne `{lead, confidence, lang, reply?}` via l'agent voix grounded. Auth `?secret`. |
 | `/api/social-poll` | GET | `social-poll.js` | Détecteur de leads SANS webhook (mode dev, aucun App Review) — lit les commentaires récents FB Page + IG, détecte les vrais leads « location Martinique », rédige une réponse via agent, push ntfy. Dédup D1. |
 | `/api/social-webhook` | GET/POST | `social-webhook.js` | Bot social auto-répondeur — GET vérifie `hub.challenge` Meta, POST reçoit les événements commentaires, tri LLM (vrai lead ?), répond en public + DM avec lien site. Modes shadow/live, anti-boucle, kill-switch `SOCIAL_BOT_DISABLED`. |
+| `/api/meta-ads-campaign` | GET/POST | `meta-ads-campaign.js` | Prépare/crée (Marketing API) les campagnes Meta Ads depuis `src/config/metaCampaignBrief.js` (source unique éditable — audiences/copy/budget). **Toujours `status:"PAUSED"`** — aucune dépense possible depuis cet endpoint ; l'activation reste un geste manuel de Vincent dans Ads Manager, jamais déclenché par ce code ni par Claude. GET ou POST sans `confirm:true` = aperçu seul (résout intérêts/régions, ne crée rien). POST `{campaign, confirm:true}` = création réelle (idempotente par nom). Auth Bearer admin uniquement. |
 
 **Utilitaire interne**
 
