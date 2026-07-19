@@ -70,6 +70,15 @@ export const CAMPAIGNS = {
         creative: {
           landingUrl: "https://villamaryllis.com/amaryllis",
           imageUrl: "https://villamaryllis.com/photos/amaryllis/01.webp",
+          // Carrousel narratif (2026-07-19, sélection sur photos réelles) : golden hour →
+          // nocturne → piscine plein jour → salon intérieur → cocktail lifestyle.
+          images: [
+            "https://villamaryllis.com/photos/amaryllis/01.webp",
+            "https://villamaryllis.com/photos/amaryllis/02.webp",
+            "https://villamaryllis.com/photos/amaryllis/10.webp",
+            "https://villamaryllis.com/photos/amaryllis/14.webp",
+            "https://villamaryllis.com/photos/amaryllis/09.webp",
+          ],
           primaryText: "Une villa privée, une piscine, et la Martinique pour horizon. À vous seuls, jusqu'à 8. Réservez en direct — sans frais Airbnb. ☀️",
           title: "Votre villa privée en Martinique",
           description: "4,79★ · 97 avis vérifiés",
@@ -95,7 +104,15 @@ export const CAMPAIGNS = {
         },
         creative: {
           landingUrl: "https://villamaryllis.com/mabouya",
-          imageUrl: "https://villamaryllis.com/photos/mabouya/13.webp",
+          imageUrl: "https://villamaryllis.com/photos/mabouya/07.webp",
+          // Carrousel romantique (2026-07-19) : jacuzzi coucher de soleil → terrasse dressée
+          // + jacuzzi → jardin + studio illuminé → dîner intime à deux.
+          images: [
+            "https://villamaryllis.com/photos/mabouya/07.webp",
+            "https://villamaryllis.com/photos/mabouya/02.webp",
+            "https://villamaryllis.com/photos/mabouya/03.webp",
+            "https://villamaryllis.com/photos/mabouya/08.webp",
+          ],
           primaryText: "Un jacuzzi privatif, un jardin, et juste vous deux. La parenthèse romantique se vit en Martinique. Dès 82 €/nuit, en direct. 💛",
           title: "Parenthèse à deux en Martinique",
           description: "Jardin & jacuzzi privatif",
@@ -119,6 +136,15 @@ export const CAMPAIGNS = {
         creative: {
           landingUrl: "https://villamaryllis.com/geko",
           imageUrl: "https://villamaryllis.com/photos/geko/01.webp",
+          // Carrousel (2026-07-19) : piscine illuminée de nuit → lounge + piscine + champagne →
+          // piscine & jardin de roses → plateau champagne/fruits flottant → salon intérieur.
+          images: [
+            "https://villamaryllis.com/photos/geko/01.webp",
+            "https://villamaryllis.com/photos/geko/02.webp",
+            "https://villamaryllis.com/photos/geko/22.webp",
+            "https://villamaryllis.com/photos/geko/04.webp",
+            "https://villamaryllis.com/photos/geko/08.webp",
+          ],
           primaryText: "Un cocon avec piscine à cascade, sur les hauteurs de Sainte-Luce. L'évasion express en Martinique. Dès 110 €/nuit, en direct.",
           title: "Évasion express en Martinique",
           description: "Piscine à cascade · dès 110 €/nuit",

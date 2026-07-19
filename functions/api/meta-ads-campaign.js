@@ -55,6 +55,11 @@ async function graphPost(path, token, body) {
   return r.json();
 }
 
+async function graphDelete(id, token) {
+  const r = await fetch(`https://graph.facebook.com/${GV}/${id}?access_token=${token}`, { method: "DELETE" });
+  return r.json();
+}
+
 // Un intérêt français se traduit souvent en anglais côté Meta ("Location de vacances" →
 // "Vacation rental") SANS aucun mot en commun — une comparaison de chaînes ne peut pas
 // juger une traduction. On ne filtre donc PAS le rang 0 ici ; à la place on remonte les
@@ -125,6 +130,13 @@ async function findExistingCreatives(token) {
   return r?.data || [];
 }
 
+// Ads existantes sous la campagne — sans dédup côté ads, chaque relance recréerait des
+// annonces en doublon (le moteur crée toujours une ad). Sert aussi au mode refresh.
+async function findExistingAds(campaignId, token) {
+  const r = await graphGet(`${campaignId}/ads?fields=id,name&limit=100`, token);
+  return r?.data || [];
+}
+
 async function buildPlan(campaignKey, env) {
   const token = env.META_PAGE_TOKEN;
   const pageId = env.META_PAGE_ID;
@@ -157,9 +169,10 @@ async function buildPlan(campaignKey, env) {
   };
 }
 
-async function createCampaign(campaignKey, env) {
+async function createCampaign(campaignKey, env, opts = {}) {
   const token = env.META_PAGE_TOKEN;
   const campaign = CAMPAIGNS[campaignKey];
+  const refresh = opts.refresh === true; // remplace créative+annonce existantes (ex. image simple → carrousel)
   const plan = await buildPlan(campaignKey, env);
   if (plan.error) return json({ ok: false, error: plan.error }, 400);
 
@@ -181,6 +194,7 @@ async function createCampaign(campaignKey, env) {
 
   const existingAdSets = await findExistingAdSets(campaignId, token);
   const existingCreatives = await findExistingCreatives(token);
+  const existingAds = await findExistingAds(campaignId, token);
 
   const results = [];
   for (const a of plan.adsets) {
@@ -194,24 +208,37 @@ async function createCampaign(campaignKey, env) {
       adsetId = adsetRes.id;
     }
 
-    let creativeId = existingCreatives.find((x) => x.name === a.creativePayload.name)?.id;
+    const adsetConfig = campaign.adsets.find((x) => x.key === a.key);
+    const adName = buildAdPayload(adsetConfig, adsetId, "x").name;
+    let existingAd = existingAds.find((x) => x.name === adName);
+    let existingCr = existingCreatives.find((x) => x.name === a.creativePayload.name);
+
+    // Refresh : supprimer l'ancienne annonce PUIS sa créative (une créative rattachée à une
+    // ad vivante ne peut pas être supprimée), pour forcer la recréation avec le nouveau
+    // payload (carrousel). Sans refresh, on réutilise l'existant (idempotent).
+    let refreshed = false;
+    if (refresh) {
+      if (existingAd) { await graphDelete(existingAd.id, token); existingAd = null; refreshed = true; }
+      if (existingCr) { await graphDelete(existingCr.id, token); existingCr = null; refreshed = true; }
+    }
+
+    let creativeId = existingCr?.id;
     if (!creativeId) {
       const creativeRes = await graphPost(`${AD_ACCOUNT_ID}/adcreatives`, token, a.creativePayload);
       if (creativeRes.error) { results.push({ key: a.key, adsetId, error: `créative`, detail: creativeRes.error, payloadSent: a.creativePayload }); continue; }
       creativeId = creativeRes.id;
     }
 
-    const adsetConfig = campaign.adsets.find((x) => x.key === a.key);
-    const adPayload = buildAdPayload(adsetConfig, adsetId, creativeId);
-    const adRes = await graphPost(`${AD_ACCOUNT_ID}/ads`, token, adPayload);
-    results.push({
-      key: a.key,
-      adsetId,
-      creativeId,
-      adId: adRes.id || null,
-      error: adRes.error ? "ad" : null,
-      detail: adRes.error || undefined,
-    });
+    let adId = existingAd?.id;
+    if (!adId) {
+      const adPayload = buildAdPayload(adsetConfig, adsetId, creativeId);
+      const adRes = await graphPost(`${AD_ACCOUNT_ID}/ads`, token, adPayload);
+      if (adRes.error) { results.push({ key: a.key, adsetId, creativeId, error: "ad", detail: adRes.error }); continue; }
+      adId = adRes.id;
+    }
+
+    const cardCount = a.creativePayload.object_story_spec?.link_data?.child_attachments?.length || 1;
+    results.push({ key: a.key, adsetId, creativeId, adId, refreshed, format: cardCount > 1 ? `carrousel ${cardCount} photos` : "image simple" });
   }
 
   return json({
@@ -259,5 +286,7 @@ export async function onRequestPost({ request, env }) {
     const plan = await buildPlan(campaignKey, env);
     return json({ ...plan, note: "Aperçu seul (confirm:true manquant) — rien créé." });
   }
-  return createCampaign(campaignKey, env);
+  // refreshCreatives:true → remplace les créatives/annonces existantes (ex. passer d'une
+  // image simple à un carrousel). Sans ce flag, la création reste purement idempotente.
+  return createCampaign(campaignKey, env, { refresh: body.refreshCreatives === true });
 }

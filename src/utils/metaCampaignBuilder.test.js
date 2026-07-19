@@ -136,6 +136,35 @@ describe("buildCreativePayload", () => {
     expect(p.object_story_spec.link_data.message).toContain("villa privée");
     expect(p.object_story_spec.link_data.call_to_action.type).toBe("LEARN_MORE");
   });
+
+  it("produit un carrousel (child_attachments) quand plusieurs images, dans l'ordre du brief", () => {
+    const ad = {
+      name: "X",
+      creative: {
+        landingUrl: "https://ex.com/x",
+        images: ["https://ex.com/a.webp", "https://ex.com/b.webp", "https://ex.com/c.webp"],
+        primaryText: "txt", title: "T", description: "D", cta: "LEARN_MORE",
+      },
+    };
+    const p = buildCreativePayload(ad, "page_1");
+    const ld = p.object_story_spec.link_data;
+    expect(ld.child_attachments).toHaveLength(3);
+    expect(ld.child_attachments.map((c) => c.picture)).toEqual(["https://ex.com/a.webp", "https://ex.com/b.webp", "https://ex.com/c.webp"]);
+    expect(ld.child_attachments[0]).toMatchObject({ link: "https://ex.com/x", name: "T", description: "D" });
+    // Ordre narratif préservé (Meta ne réordonne pas), pas d'end card auto.
+    expect(ld.multi_share_optimized).toBe(false);
+    expect(ld.multi_share_end_card).toBe(false);
+    // En mode carrousel, pas de picture unique au niveau link_data.
+    expect(ld.picture).toBeUndefined();
+  });
+
+  it("reste en image simple quand une seule image (via images[] ou imageUrl)", () => {
+    const single = { name: "Y", creative: { landingUrl: "https://ex.com/y", imageUrl: "https://ex.com/solo.webp", primaryText: "t", title: "T", description: "D", cta: "LEARN_MORE" } };
+    const p = buildCreativePayload(single, "page_1");
+    const ld = p.object_story_spec.link_data;
+    expect(ld.picture).toBe("https://ex.com/solo.webp");
+    expect(ld.child_attachments).toBeUndefined();
+  });
 });
 
 describe("buildAdPayload", () => {

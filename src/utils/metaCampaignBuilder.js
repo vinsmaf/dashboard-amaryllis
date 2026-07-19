@@ -116,19 +116,34 @@ export function buildAdSetPayload(adset, campaignId, targeting) {
 
 export function buildCreativePayload(adset, pageId) {
   const cr = adset.creative;
+  // Plusieurs images → carrousel Meta (child_attachments) ; une seule → image simple.
+  // Chaque photo est déjà publique sur villamaryllis.com, donc `picture` (URL) suffit —
+  // pas besoin d'uploader un image_hash. L'ordre du tableau est l'ordre des cartes :
+  // `multi_share_optimized:false` empêche Meta de le réordonner (on garde le fil narratif
+  // accroche → variété choisi à la main).
+  const images = Array.isArray(cr.images) && cr.images.length ? cr.images : [cr.imageUrl];
+  const link_data = {
+    message: cr.primaryText,
+    link: cr.landingUrl,
+    call_to_action: { type: cr.cta, value: { link: cr.landingUrl } },
+  };
+  if (images.length > 1) {
+    link_data.child_attachments = images.map((picture) => ({
+      link: cr.landingUrl,
+      picture,
+      name: cr.title,
+      description: cr.description,
+    }));
+    link_data.multi_share_optimized = false;
+    link_data.multi_share_end_card = false;
+  } else {
+    link_data.name = cr.title;
+    link_data.description = cr.description;
+    link_data.picture = images[0];
+  }
   return {
     name: `${adset.name} — créa`,
-    object_story_spec: {
-      page_id: pageId,
-      link_data: {
-        message: cr.primaryText,
-        link: cr.landingUrl,
-        name: cr.title,
-        description: cr.description,
-        picture: cr.imageUrl,
-        call_to_action: { type: cr.cta, value: { link: cr.landingUrl } },
-      },
-    },
+    object_story_spec: { page_id: pageId, link_data },
   };
 }
 
