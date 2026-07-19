@@ -341,6 +341,50 @@ async function debugSearch(env, q, type) {
   return { query: q, type: t, results: r?.data || r };
 }
 
+// Lecture "vivante" des ad sets d'une campagne, restreinte aux noms du brief (même allowlist
+// que pruneParasiteAdSets) — utilisée par l'agent d'exécution budget pub (brique 3) pour savoir
+// sur quel ad set agir. Ne retourne JAMAIS un objet hors brief.
+export async function getLiveAdSets(env, campaignKey) {
+  const token = env.META_PAGE_TOKEN;
+  if (!token) return { error: "META_PAGE_TOKEN non configuré" };
+  const campaign = CAMPAIGNS[campaignKey];
+  if (!campaign) return { error: `Campagne inconnue : ${campaignKey}` };
+  const camp = await findExistingCampaign(campaign.name, token);
+  if (!camp) return { error: `Campagne "${campaign.name}" introuvable côté Meta` };
+  const keyByName = new Map(campaign.adsets.map((a) => [a.name, a.key]));
+  const asRes = await graphGet(`${camp.id}/adsets?fields=id,name,effective_status,daily_budget&limit=100`, token);
+  const adsets = (asRes?.data || [])
+    .filter((a) => keyByName.has(a.name))
+    .map((a) => ({
+      id: a.id,
+      key: keyByName.get(a.name),
+      name: a.name,
+      effective_status: a.effective_status,
+      daily_budget_cents: a.daily_budget ? Number(a.daily_budget) : null,
+    }));
+  return { campaignId: camp.id, adsets };
+}
+
+// Met un ad set en pause — action DÉFENSIVE (réduit/coupe une dépense EN COURS), jamais
+// l'inverse. Aucune fonction de ce fichier ne réactive un ad set : c'est la garantie
+// structurelle que l'agent budget pub (brique 3) ne peut PAS déclencher une dépense nouvelle,
+// seulement la réduire — l'activation reste un geste manuel de Vincent dans Ads Manager.
+export async function pauseAdSet(env, adsetId) {
+  const token = env.META_PAGE_TOKEN;
+  if (!token) return { ok: false, error: "META_PAGE_TOKEN non configuré" };
+  const r = await graphPost(adsetId, token, { status: "PAUSED" });
+  return { ok: !r.error, error: r.error || null };
+}
+
+// Ajuste le budget journalier d'un ad set déjà connu du brief — ne crée rien, ne réactive rien.
+// L'appelant (ad-budget-execute.js) plafonne newBudgetCents au plafond CAC du bien avant appel.
+export async function setAdSetBudgetCents(env, adsetId, cents) {
+  const token = env.META_PAGE_TOKEN;
+  if (!token) return { ok: false, error: "META_PAGE_TOKEN non configuré" };
+  const r = await graphPost(adsetId, token, { daily_budget: Math.round(cents) });
+  return { ok: !r.error, error: r.error || null };
+}
+
 export async function onRequestGet({ request, env }) {
   const auth = await verifyBearer(request, env);
   if (!auth.ok) return json({ error: "Non autorisé" }, 401);

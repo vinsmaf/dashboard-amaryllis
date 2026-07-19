@@ -110,6 +110,7 @@ export const ENDPOINTS_DIGEST = [
 ];
 
 export const ADMIN_TABS_DIGEST = [
+  "AdBudgetTab",
   "AdminChatTab",
   "AnalyticsTab",
   "ApprobationsTab",

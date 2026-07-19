@@ -95,3 +95,33 @@ export function evaluateAdset(perf, ceiling, canComputeRoas) {
   else { verdict = "cut"; note = `CAC réel ${realCac}€ AU-DESSUS du plafond ${ceiling}€ → réduire ou couper (on paie plus cher que la commission évitée).`; }
   return { verdict, realCac, ceiling, margin: ceiling - realCac, note };
 }
+
+// EXÉCUTION (brique 3) : traduit un verdict + l'état live d'un ad set en action concrète.
+// Pure, testable, aucun appel réseau. Garde-fou dur encodé ICI (pas seulement en doc) :
+//   - "cut" sur un ad set ACTIF → pause (jamais de suppression, toujours réversible).
+//   - "scale" sur un ad set ACTIF → +20% de budget, plafonné au budget mensuel/30 du bien.
+//   - Tout le reste (hold/idle/collecting/unmapped, ou ad set non-ACTIF) → aucune action.
+// Il n'existe VOLONTAIREMENT aucune branche qui retourne "resume"/"activate" : activer un ad
+// set en pause déclenche une dépense NOUVELLE (règle absolue jamais contournable) — cette
+// fonction ne peut structurellement pas le faire, quel que soit le verdict en entrée.
+export function planExecutionAction({ verdict, isActive, currentBudgetCents, perBienDailyCeilingCents }) {
+  if (!isActive) {
+    return { action: "none", note: "Ad set non actif — rien à ajuster (l'activation reste un geste manuel)." };
+  }
+  if (verdict === "cut") {
+    return { action: "pause", note: "CAC au-dessus du plafond → mise en pause défensive." };
+  }
+  if (verdict === "scale" && currentBudgetCents != null && perBienDailyCeilingCents != null) {
+    const proposed = Math.round(currentBudgetCents * 1.2);
+    const capped = Math.min(proposed, perBienDailyCeilingCents);
+    if (capped <= currentBudgetCents) {
+      return { action: "none", note: "Déjà au plafond du bien — pas d'augmentation possible." };
+    }
+    return {
+      action: "increase_budget",
+      newBudgetCents: capped,
+      note: `Budget augmenté de ${currentBudgetCents}c à ${capped}c (plafond bien ${perBienDailyCeilingCents}c).`,
+    };
+  }
+  return { action: "none", note: "Verdict ne déclenche aucune action (hold/idle/collecting/unmapped)." };
+}

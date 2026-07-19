@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { cacCeiling, planByBien, allocateBudget, evaluateAdset, DEFAULTS } from "./adBudgetAgent.js";
+import { cacCeiling, planByBien, allocateBudget, evaluateAdset, planExecutionAction, DEFAULTS } from "./adBudgetAgent.js";
 
 describe("cacCeiling", () => {
   it("Amaryllis (280€/nuit) → ~81€ de CAC max (colle au modèle RM-08 ~50-80€)", () => {
@@ -70,6 +70,45 @@ describe("evaluateAdset", () => {
 
   it("idle quand aucune dépense", () => {
     expect(evaluateAdset({ spend: 0, purchases: 0 }, 80, true).verdict).toBe("idle");
+  });
+});
+
+describe("planExecutionAction", () => {
+  it("ne fait RIEN sur un ad set non actif, quel que soit le verdict — jamais d'activation", () => {
+    // Garde-fou brique 3 : même un verdict "scale" ne doit jamais réveiller un ad set en pause.
+    for (const verdict of ["scale", "cut", "hold", "idle"]) {
+      const r = planExecutionAction({ verdict, isActive: false, currentBudgetCents: 500, perBienDailyCeilingCents: 2000 });
+      expect(r.action).toBe("none");
+    }
+  });
+
+  it("pause un ad set actif au verdict cut", () => {
+    const r = planExecutionAction({ verdict: "cut", isActive: true, currentBudgetCents: 1000, perBienDailyCeilingCents: 3000 });
+    expect(r.action).toBe("pause");
+  });
+
+  it("augmente le budget de 20% sur un ad set actif au verdict scale, plafonné au bien", () => {
+    const r = planExecutionAction({ verdict: "scale", isActive: true, currentBudgetCents: 1000, perBienDailyCeilingCents: 3000 });
+    expect(r.action).toBe("increase_budget");
+    expect(r.newBudgetCents).toBe(1200); // +20%, sous le plafond 3000
+  });
+
+  it("plafonne l'augmentation au budget mensuel/30 du bien — ne dépasse jamais", () => {
+    const r = planExecutionAction({ verdict: "scale", isActive: true, currentBudgetCents: 2900, perBienDailyCeilingCents: 3000 });
+    expect(r.action).toBe("increase_budget");
+    expect(r.newBudgetCents).toBe(3000); // 2900×1.2=3480, capé à 3000
+  });
+
+  it("n'augmente pas si déjà au plafond du bien", () => {
+    const r = planExecutionAction({ verdict: "scale", isActive: true, currentBudgetCents: 3000, perBienDailyCeilingCents: 3000 });
+    expect(r.action).toBe("none");
+  });
+
+  it("hold/idle/collecting/unmapped → aucune action sur un ad set actif", () => {
+    for (const verdict of ["hold", "idle", "collecting", "unmapped"]) {
+      const r = planExecutionAction({ verdict, isActive: true, currentBudgetCents: 1000, perBienDailyCeilingCents: 3000 });
+      expect(r.action).toBe("none");
+    }
   });
 });
 

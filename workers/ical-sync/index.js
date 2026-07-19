@@ -4025,6 +4025,16 @@ export default {
         } catch (e) {
           console.error("[kpi-sentinel] Cron error:", e.message);
         }
+        // ── Agent budget pub (brique 3, shadow par défaut — cf. AD_AGENT_MODE) ──────────────────────
+        try {
+          const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+          const adBudgetRes = await fetch(`${siteUrl}/api/ad-budget-execute?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`);
+          const adBudgetData = await adBudgetRes.json().catch(() => ({}));
+          const nActions = (adBudgetData.decisions || []).filter((d) => d.action !== "none").length;
+          console.log(`[ad-budget-execute] ✓ mode=${adBudgetData.mode ?? "?"} actions=${nActions}`);
+        } catch (e) {
+          console.error("[ad-budget-execute] Cron error:", e.message);
+        }
         // ── Refresh modèles LLM (AI-Ops) — en premier pour que les agents utilisent les meilleurs modèles ──
         try {
           const siteUrl = env.SITE_URL || "https://villamaryllis.com";
