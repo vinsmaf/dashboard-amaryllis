@@ -45,7 +45,10 @@ const DOM_EXCLUSIONS = ["Martinique", "Guadeloupe", "French Guiana", "Réunion",
 
 export const CAMPAIGNS = {
   c1_tofu: {
-    name: "C1 — TOFU Découverte",
+    // Renommée côté Meta par Vincent le 2026-07-19 (« C1 — TOFU Découverte » → « Amaryllis
+    // campagnes »). Le nom ici doit rester identique au libellé réel dans Ads Manager, sinon
+    // findExistingCampaign ne retrouve plus la campagne (idempotence + prune/status cassés).
+    name: "Amaryllis campagnes",
     objective: "OUTCOME_TRAFFIC",
     adsets: [
       {
