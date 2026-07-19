@@ -13,6 +13,13 @@ export function buildCampaignPayload(campaign) {
   };
 }
 
+// Meta type ses entités géo différemment selon l'endroit (un DOM peut remonter comme
+// "region" ou comme "country" selon l'API) — on range chaque exclusion résolue dans le
+// bon seau plutôt que de supposer "regions" partout (supposition fausse une fois : la
+// vraie Martinique remontait ailleurs, seule "Petite Martinique", île de Grenade sans
+// rapport, matchait le seau "region").
+const GEO_TYPE_TO_BUCKET = { region: "regions", country: "countries", city: "cities", zip: "zips" };
+
 export function buildTargeting(adset, resolvedInterests, resolvedRegions) {
   const targeting = {
     geo_locations: { countries: adset.targeting.countries },
@@ -20,12 +27,59 @@ export function buildTargeting(adset, resolvedInterests, resolvedRegions) {
     age_max: adset.targeting.ageMax,
   };
   if (resolvedRegions?.length) {
-    targeting.excluded_geo_locations = { regions: resolvedRegions.map((r) => ({ key: r.key, name: r.name })) };
+    const excluded = {};
+    for (const r of resolvedRegions) {
+      const bucket = GEO_TYPE_TO_BUCKET[r.type] || "regions";
+      (excluded[bucket] ||= []).push({ key: r.key, name: r.name });
+    }
+    targeting.excluded_geo_locations = excluded;
   }
   if (resolvedInterests?.length) {
     targeting.interests = resolvedInterests.map((i) => ({ id: i.id, name: i.name }));
   }
   return targeting;
+}
+
+// Normalise pour comparaison floue : minuscules + accents retirés.
+export function normalizeName(s) {
+  const NFD_COMBINING_MIN = 0x0300;
+  const NFD_COMBINING_MAX = 0x036f;
+  return (s || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .split("")
+    .filter((ch) => {
+      const code = ch.codePointAt(0);
+      return !(code >= NFD_COMBINING_MIN && code <= NFD_COMBINING_MAX);
+    })
+    .join("");
+}
+
+// Un résultat de recherche floue Meta peut renvoyer un match plausible mais faux
+// (ex. "Caraïbes" → "Airline", "Martinique" → "Petite Martinique" — île de Grenade).
+// Deux modes : "exact" (comparaison stricte, pour les lieux — la précision géo compte)
+// et "loose" (chevauchement de mots ≥4 lettres, pour les intérêts — assez strict pour
+// rejeter "Caraïbes"/"Airline" qui ne partagent aucun mot, assez souple pour accepter
+// des libellés reformulés par Meta).
+export function isPlausibleMatch(query, candidateName, mode = "loose") {
+  const q = normalizeName(query);
+  const c = normalizeName(candidateName);
+  if (!q || !c) return false;
+  if (mode === "exact") {
+    return q.replace(/[^a-z0-9]/g, "") === c.replace(/[^a-z0-9]/g, "");
+  }
+  const words = (s) => new Set(s.split(/[^a-z0-9]+/).filter((w) => w.length >= 4));
+  const wq = words(q);
+  const wc = words(c);
+  for (const w of wq) if (wc.has(w)) return true;
+  return false;
+}
+
+// Choisit le meilleur candidat parmi une liste de résultats de recherche Meta — le
+// premier dont le nom passe le test de plausibilité, jamais juste le premier résultat
+// brut (ce qui a produit les faux positifs ci-dessus).
+export function pickBestMatch(query, candidates, mode = "loose") {
+  return (candidates || []).find((c) => isPlausibleMatch(query, c.name, mode)) || null;
 }
 
 export function buildAdSetPayload(adset, campaignId, targeting) {

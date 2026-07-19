@@ -28,6 +28,7 @@ import {
   buildCreativePayload,
   buildAdPayload,
   checkResolution,
+  pickBestMatch,
 } from "../../src/utils/metaCampaignBuilder.js";
 
 const GV = "v25.0";
@@ -54,20 +55,34 @@ async function graphPost(path, token, body) {
   return r.json();
 }
 
+// Un intérêt français se traduit souvent en anglais côté Meta ("Location de vacances" →
+// "Vacation rental") SANS aucun mot en commun — une comparaison de chaînes ne peut pas
+// juger une traduction. On ne filtre donc PAS le rang 0 ici ; à la place on remonte les
+// candidats suivants en clair (`alternates`) pour qu'un humain (Vincent ou Claude en
+// review) repère un mauvais match d'un coup d'œil — c'est comme ça que "Caraïbes" →
+// "Airline" a été repéré en prod, pas par un algorithme.
 async function resolveInterest(name, token) {
-  const r = await graphGet(`search?type=adinterest&q=${encodeURIComponent(name)}&limit=1`, token);
-  const hit = r?.data?.[0];
-  return hit ? { id: hit.id, name: hit.name, matchedName: name } : null;
+  const r = await graphGet(`search?type=adinterest&q=${encodeURIComponent(name)}&limit=6`, token);
+  const data = r?.data || [];
+  const hit = data[0];
+  if (!hit) return null;
+  return {
+    id: hit.id,
+    name: hit.name,
+    matchedName: name,
+    alternates: data.slice(1).map((d) => d.name),
+  };
 }
 
+// Les DOM (Martinique, Guadeloupe, ...) peuvent être typés "region" OU "country" selon
+// l'entité Meta — on cherche large (sans filtrer par type) et on exige un match EXACT
+// (mode "exact", précision géo > rappel) : contrairement aux intérêts, un nom de lieu
+// n'a pas de problème de traduction, donc l'exiger exact élimine directement les faux
+// positifs du type "Martinique" → "Petite Martinique" (île de Grenade sans rapport).
 async function resolveRegion(name, token) {
-  const locationTypes = encodeURIComponent(JSON.stringify(["region"]));
-  const r = await graphGet(
-    `search?type=adgeolocation&location_types=${locationTypes}&q=${encodeURIComponent(name)}&limit=1`,
-    token
-  );
-  const hit = r?.data?.[0];
-  return hit ? { key: hit.key, name: hit.name, matchedName: name } : null;
+  const r = await graphGet(`search?type=adgeolocation&q=${encodeURIComponent(name)}&limit=10`, token);
+  const hit = pickBestMatch(name, r?.data, "exact");
+  return hit ? { key: hit.key, name: hit.name, type: hit.type, matchedName: name } : null;
 }
 
 async function resolveAdSetTargeting(adset, token) {
@@ -79,6 +94,10 @@ async function resolveAdSetTargeting(adset, token) {
   const regionCheck = checkResolution(adset.targeting.excludedRegions || [], regions);
   return {
     targeting: buildTargeting(adset, interests, regions),
+    // Nom choisi + alternatives Meta pour chaque intérêt — à relire avant confirm:true,
+    // aucun filtre automatique ne protège contre un mauvais rang 0 ici (cf. commentaire
+    // resolveInterest).
+    interestMatches: interests.map((i) => ({ query: i.matchedName, chosen: i.name, alternates: i.alternates })),
     warnings: [
       ...(interestCheck.complete ? [] : [`Intérêts non résolus (${adset.key}) : ${interestCheck.missing.join(", ")}`]),
       ...(regionCheck.complete ? [] : [`Régions non résolues (${adset.key}) : ${regionCheck.missing.join(", ")}`]),
@@ -106,11 +125,12 @@ async function buildPlan(campaignKey, env) {
       adsets.push({ key: adset.key, name: adset.name, skipped: true, reason: "enabled:false dans le brief" });
       continue;
     }
-    const { targeting, warnings } = await resolveAdSetTargeting(adset, token);
+    const { targeting, warnings, interestMatches } = await resolveAdSetTargeting(adset, token);
     adsets.push({
       key: adset.key,
       adsetPayload: buildAdSetPayload(adset, existing?.id || "<campaign_id à créer>", targeting),
       creativePayload: buildCreativePayload(adset, pageId),
+      interestMatches,
       warnings,
     });
   }
@@ -171,11 +191,26 @@ async function createCampaign(campaignKey, env) {
   });
 }
 
+// Recherche brute (lecture seule) pour vérifier à la main qu'un terme du brief matche
+// bien la BONNE entité Meta avant de l'ajouter à metaCampaignBrief.js — utile pour
+// maintenir le brief dans le temps sans deviner à l'aveugle. ?debug=search&q=...&type=adinterest|adgeolocation
+async function debugSearch(env, q, type) {
+  const token = env.META_PAGE_TOKEN;
+  if (!token) return { error: "META_PAGE_TOKEN non configuré" };
+  const t = type === "adgeolocation" ? "adgeolocation" : "adinterest";
+  const r = await graphGet(`search?type=${t}&q=${encodeURIComponent(q)}&limit=10`, token);
+  return { query: q, type: t, results: r?.data || r };
+}
+
 export async function onRequestGet({ request, env }) {
   const auth = await verifyBearer(request, env);
   if (!auth.ok) return json({ error: "Non autorisé" }, 401);
 
   const url = new URL(request.url);
+  if (url.searchParams.get("debug") === "search") {
+    const out = await debugSearch(env, url.searchParams.get("q") || "", url.searchParams.get("type"));
+    return json(out);
+  }
   const campaignKey = url.searchParams.get("campaign") || "c1_tofu";
   const plan = await buildPlan(campaignKey, env);
   return json(plan);

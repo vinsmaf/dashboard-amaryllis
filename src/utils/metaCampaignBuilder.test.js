@@ -6,6 +6,9 @@ import {
   buildCreativePayload,
   buildAdPayload,
   checkResolution,
+  normalizeName,
+  isPlausibleMatch,
+  pickBestMatch,
 } from "./metaCampaignBuilder.js";
 import { CAMPAIGNS } from "../config/metaCampaignBrief.js";
 
@@ -32,10 +35,69 @@ describe("buildTargeting", () => {
 
   it("ajoute les intérêts et exclusions régionales résolus", () => {
     const interests = [{ id: "123", name: "Martinique", matchedName: "Martinique" }];
-    const regions = [{ key: "R1", name: "Martinique", matchedName: "Martinique" }];
+    const regions = [{ key: "R1", name: "Martinique", type: "region", matchedName: "Martinique" }];
     const t = buildTargeting(a1, interests, regions);
     expect(t.interests).toEqual([{ id: "123", name: "Martinique" }]);
     expect(t.excluded_geo_locations).toEqual({ regions: [{ key: "R1", name: "Martinique" }] });
+  });
+
+  it("range une exclusion géo typée 'country' dans le bon seau, pas dans 'regions'", () => {
+    // Un DOM peut remonter côté Meta comme entité de type country, pas region — vécu en
+    // prod le 2026-07-19 (Martinique renvoyée hors du seau "region" attendu).
+    const regions = [{ key: "C1", name: "Martinique", type: "country", matchedName: "Martinique" }];
+    const t = buildTargeting(a1, [], regions);
+    expect(t.excluded_geo_locations).toEqual({ countries: [{ key: "C1", name: "Martinique" }] });
+  });
+});
+
+describe("normalizeName", () => {
+  it("retire les accents et met en minuscules", () => {
+    expect(normalizeName("Caraïbes")).toBe("caraibes");
+    expect(normalizeName("Antilles françaises")).toBe("antilles francaises");
+  });
+});
+
+describe("isPlausibleMatch", () => {
+  it("rejette un faux positif réel constaté en prod (Caraïbes → Airline)", () => {
+    expect(isPlausibleMatch("Caraïbes", "Airline", "loose")).toBe(false);
+  });
+
+  it("rejette le faux positif géo réel constaté en prod (Martinique → Petite Martinique)", () => {
+    // Petite Martinique = île de Grenade, sans rapport avec le DOM français.
+    expect(isPlausibleMatch("Martinique", "Petite Martinique", "exact")).toBe(false);
+  });
+
+  it("accepte un match exact malgré la casse/accents", () => {
+    expect(isPlausibleMatch("martinique", "Martinique", "exact")).toBe(true);
+  });
+
+  it("accepte en mode loose un mot partagé même reformulé", () => {
+    expect(isPlausibleMatch("Jacuzzi", "Jacuzzi / Bain à remous", "loose")).toBe(true);
+  });
+
+  it("mode loose ne couvre PAS la traduction FR→EN sans mot commun — limite connue", () => {
+    // "Location de vacances" → "Vacation rental" est une BONNE traduction sans aucun mot
+    // littéralement partagé — une comparaison de chaînes ne peut pas juger la sémantique
+    // inter-langue. D'où le choix de ne PAS filtrer les intérêts avec ce mode dans
+    // l'endpoint (seules les régions, même alphabet/mêmes noms propres, s'y prêtent).
+    expect(isPlausibleMatch("Location de vacances", "Vacation rental", "loose")).toBe(false);
+  });
+});
+
+describe("pickBestMatch", () => {
+  it("saute le rang 0 s'il est implausible et prend le suivant qui matche", () => {
+    const candidates = [
+      { name: "Airline" },
+      { name: "Caribbean" },
+      { name: "Caraïbes (région)" },
+    ];
+    const best = pickBestMatch("Caraïbes", candidates, "loose");
+    expect(best.name).toBe("Caraïbes (région)");
+  });
+
+  it("retourne null si aucun candidat n'est plausible (mieux vaut rien qu'un mauvais match)", () => {
+    const best = pickBestMatch("Caraïbes", [{ name: "Airline" }, { name: "Banking" }], "loose");
+    expect(best).toBeNull();
   });
 });
 
