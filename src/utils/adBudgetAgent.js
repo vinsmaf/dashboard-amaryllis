@@ -98,18 +98,25 @@ export function evaluateAdset(perf, ceiling, canComputeRoas) {
 
 // EXÉCUTION (brique 3) : traduit un verdict + l'état live d'un ad set en action concrète.
 // Pure, testable, aucun appel réseau. Garde-fou dur encodé ICI (pas seulement en doc) :
-//   - "cut" sur un ad set ACTIF → pause (jamais de suppression, toujours réversible).
+//   - "cut" sur un ad set ACTIF → baisse graduelle -25% (gestion à la baisse) ; si le budget
+//     résultant passe sous le plancher (minBudgetCents), on pause plutôt que garder un ad set
+//     ridicule. Un ad set durablement non rentable décroît donc jour après jour jusqu'à la pause.
 //   - "scale" sur un ad set ACTIF → +20% de budget, plafonné au budget mensuel/30 du bien.
 //   - Tout le reste (hold/idle/collecting/unmapped, ou ad set non-ACTIF) → aucune action.
 // Il n'existe VOLONTAIREMENT aucune branche qui retourne "resume"/"activate" : activer un ad
 // set en pause déclenche une dépense NOUVELLE (règle absolue jamais contournable) — cette
 // fonction ne peut structurellement pas le faire, quel que soit le verdict en entrée.
-export function planExecutionAction({ verdict, isActive, currentBudgetCents, perBienDailyCeilingCents }) {
+export function planExecutionAction({ verdict, isActive, currentBudgetCents, perBienDailyCeilingCents, minBudgetCents = 300 }) {
   if (!isActive) {
     return { action: "none", note: "Ad set non actif — rien à ajuster (l'activation reste un geste manuel)." };
   }
   if (verdict === "cut") {
-    return { action: "pause", note: "CAC au-dessus du plafond → mise en pause défensive." };
+    const cur = currentBudgetCents || 0;
+    const reduced = Math.round(cur * 0.75);
+    if (reduced < minBudgetCents) {
+      return { action: "pause", note: `CAC au-dessus du plafond et budget déjà bas (${cur}c) → pause défensive.` };
+    }
+    return { action: "decrease_budget", newBudgetCents: reduced, note: `CAC au-dessus du plafond → budget réduit de ${cur}c à ${reduced}c (-25%).` };
   }
   if (verdict === "scale" && currentBudgetCents != null && perBienDailyCeilingCents != null) {
     const proposed = Math.round(currentBudgetCents * 1.2);
@@ -124,4 +131,36 @@ export function planExecutionAction({ verdict, isActive, currentBudgetCents, per
     };
   }
   return { action: "none", note: "Verdict ne déclenche aucune action (hold/idle/collecting/unmapped)." };
+}
+
+// PLAFOND GLOBAL DUR (demande explicite Vincent 2026-07-19) : la somme des budgets journaliers
+// des ad sets ACTIFS après application des décisions ne dépasse JAMAIS monthlyCapCents/30. Ne
+// rabote QUE les hausses (increase_budget) — les baisses/pauses restent intégrales (elles ne
+// peuvent que réduire la dépense, jamais la faire dépasser). Déterministe : traite les hausses
+// dans l'ordre reçu, chacune limitée au headroom global restant. `items` = [{ currentBudgetCents,
+// isActive, decision }]. Retourne les décisions ajustées (même ordre), avec `cappedByGlobal`.
+export function enforceGlobalMonthlyCap(items, monthlyCapCents) {
+  const dailyCap = monthlyCapCents / 30;
+  // Budget journalier de départ = ce que chaque ad set actif consommera SANS les hausses encore
+  // appliquées (pause→0, decrease→nouveau, increase/none/hold→budget actuel).
+  const dailyOf = (it) => {
+    if (!it.isActive) return 0;
+    const a = it.decision.action;
+    if (a === "pause") return 0;
+    if (a === "decrease_budget") return it.decision.newBudgetCents || 0;
+    return it.currentBudgetCents || 0;
+  };
+  let total = items.reduce((s, it) => s + dailyOf(it), 0);
+  return items.map((it) => {
+    if (it.decision.action !== "increase_budget") return { ...it.decision };
+    const current = it.currentBudgetCents || 0;
+    const wanted = it.decision.newBudgetCents;
+    const headroom = dailyCap - total; // place restante avant le plafond global
+    const finalNew = Math.min(wanted, current + Math.max(0, headroom));
+    if (finalNew <= current) {
+      return { action: "none", cappedByGlobal: true, note: `Hausse annulée — plafond global ${Math.round(monthlyCapCents / 100)}€/mois atteint.` };
+    }
+    total += finalNew - current;
+    return { ...it.decision, newBudgetCents: finalNew, cappedByGlobal: finalNew < wanted };
+  });
 }

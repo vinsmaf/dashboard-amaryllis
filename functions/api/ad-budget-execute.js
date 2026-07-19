@@ -31,7 +31,7 @@
 import { verifyBearer } from "./_adminauth.js";
 import { CAMPAIGNS } from "../../src/config/metaCampaignBrief.js";
 import { getBien } from "../../src/data/biens.js";
-import { allocateBudget, cacCeiling, evaluateAdset, planExecutionAction } from "../../src/utils/adBudgetAgent.js";
+import { allocateBudget, cacCeiling, evaluateAdset, planExecutionAction, enforceGlobalMonthlyCap } from "../../src/utils/adBudgetAgent.js";
 import { parseInsights, measurementHealth, aggregateInsights } from "../../src/utils/metaAdsInsights.js";
 import { getLiveAdSets, pauseAdSet, setAdSetBudgetCents } from "./meta-ads-campaign.js";
 import { fetchGoogleAdsInsights } from "./_googleAds.js";
@@ -133,8 +133,9 @@ export async function onRequestGet({ request, env }) {
   const insightsRows = parseInsights(await fetchAdsetInsights(env, adsetIds, datePreset));
   const health = measurementHealth(aggregateInsights(insightsRows));
 
-  const decisions = [];
-  for (const adset of live.adsets) {
+  // Passe 1 — décision par ad set (planExecutionAction), SANS exécuter : on a besoin de toutes
+  // les décisions avant d'appliquer le plafond GLOBAL (qui raisonne sur la somme).
+  const perAdset = live.adsets.map((adset) => {
     const bienId = BIEN_BY_ADSET_KEY[adset.key] || null;
     const bien = bienId ? getBien(bienId) : null;
     const ceiling = bien ? cacCeiling(bien) : null;
@@ -142,23 +143,40 @@ export async function onRequestGet({ request, env }) {
     const evalResult = ceiling != null
       ? evaluateAdset(perf, ceiling, health.canComputeRoas)
       : { verdict: "unmapped", note: "Ad set non rattaché à un bien connu — pas de plafond CAC applicable." };
-
     const perBienMonthly = bienId ? monthlyByBien.get(bienId) : null;
     const perBienDailyCeilingCents = perBienMonthly != null ? Math.round((perBienMonthly / 30) * 100) : null;
-
     const decision = planExecutionAction({
       verdict: evalResult.verdict,
       isActive: adset.effective_status === "ACTIVE",
       currentBudgetCents: adset.daily_budget_cents,
       perBienDailyCeilingCents,
     });
+    return { adset, bienId, ceiling, evalResult, decision };
+  });
+
+  // Passe 2 — PLAFOND GLOBAL DUR : rabote les hausses pour que la somme des budgets mensuels
+  // des ad sets actifs ne dépasse jamais budgetMax (600€ par défaut). Ne touche pas les baisses.
+  const capped = enforceGlobalMonthlyCap(
+    perAdset.map((p) => ({
+      currentBudgetCents: p.adset.daily_budget_cents,
+      isActive: p.adset.effective_status === "ACTIVE",
+      decision: p.decision,
+    })),
+    budgetMax * 100
+  );
+
+  // Passe 3 — exécution (live uniquement) + trace D1.
+  const decisions = [];
+  for (let i = 0; i < perAdset.length; i++) {
+    const { adset, bienId, ceiling, evalResult } = perAdset[i];
+    const decision = capped[i];
 
     let executed = false;
     let execError = null;
     if (mode === "live" && decision.action === "pause") {
       const r = await pauseAdSet(env, adset.id);
       executed = r.ok; execError = r.error;
-    } else if (mode === "live" && decision.action === "increase_budget") {
+    } else if (mode === "live" && (decision.action === "increase_budget" || decision.action === "decrease_budget")) {
       const r = await setAdSetBudgetCents(env, adset.id, decision.newBudgetCents);
       executed = r.ok; execError = r.error;
     }
@@ -174,9 +192,10 @@ export async function onRequestGet({ request, env }) {
       action: decision.action,
       oldBudgetCents: adset.daily_budget_cents,
       newBudgetCents: decision.newBudgetCents ?? null,
+      cappedByGlobal: decision.cappedByGlobal || false,
       mode,
       executed,
-      note: decision.note + (execError ? ` | ERREUR: ${JSON.stringify(execError)}` : ""),
+      note: (decision.note || "") + (execError ? ` | ERREUR: ${JSON.stringify(execError)}` : ""),
     };
     decisions.push(row);
 
