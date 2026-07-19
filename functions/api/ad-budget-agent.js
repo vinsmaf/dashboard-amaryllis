@@ -21,6 +21,7 @@ import { CAMPAIGNS, AD_ACCOUNT_ID } from "../../src/config/metaCampaignBrief.js"
 import { ALL_BIENS, getBien } from "../../src/data/biens.js";
 import { parseInsights, measurementHealth, aggregateInsights } from "../../src/utils/metaAdsInsights.js";
 import { cacCeiling, allocateBudget, evaluateAdset } from "../../src/utils/adBudgetAgent.js";
+import { fetchGoogleAdsInsights } from "./_googleAds.js";
 
 const GV = "v25.0";
 const WINDOWS = { "7d": "last_7d", "30d": "last_30d", "14d": "last_14d", "90d": "last_90d", maximum: "maximum" };
@@ -70,8 +71,8 @@ export async function onRequestGet({ request, env }) {
     // 1) VISION BUDGET — toujours dispo, ne dépend d'aucune donnée live.
     const plan = allocateBudget(budgetMax);
 
-    // 2) ARBITRAGE — seulement si on a un token + des perfs. Sans, on le dit honnêtement.
-    let measurement = { available: false, note: "META_PAGE_TOKEN absent — arbitrage indisponible, seule la vision budget est calculée." };
+    // 2) ARBITRAGE Meta — seulement si on a un token + des perfs. Sans, on le dit honnêtement.
+    let meta = { available: false, note: "META_PAGE_TOKEN absent — arbitrage Meta indisponible." };
     const token = env.META_PAGE_TOKEN;
     if (token) {
       const res = await graphGet(
@@ -79,7 +80,7 @@ export async function onRequestGet({ request, env }) {
         token
       );
       if (res.error) {
-        measurement = { available: false, error: res.error };
+        meta = { available: false, error: res.error };
       } else {
         const rows = parseInsights(res.data);
         const totals = aggregateInsights(rows);
@@ -93,9 +94,14 @@ export async function onRequestGet({ request, env }) {
             : { verdict: "unmapped", note: "Ad set non rattaché à un bien connu — pas de plafond CAC applicable." };
           return { adset: r.name, bienId, spend: r.spend, purchases: r.purchases, revenue: r.revenue, ...evalResult };
         });
-        measurement = { available: true, window: datePreset, health, totals, adsets };
+        meta = { available: true, window: datePreset, health, totals, adsets };
       }
     }
+
+    // 2b) Google Ads — lecture best-effort via le helper partagé. Échoue proprement (message
+    // lisible) tant que l'accès Basic n'est pas validé ou que le compte n'est pas connecté en
+    // OAuth ("Connecter Google Ads"). Le reste de l'agent reste utilisable sans.
+    const googleAds = await fetchGoogleAdsInsights(env, env.revenue_manager, url.searchParams.get("window"));
 
     return json({
       advisory: true,
@@ -103,7 +109,7 @@ export async function onRequestGet({ request, env }) {
       budgetMax,
       generated_at: new Date().toISOString(),
       visionBudget: plan,
-      measurement,
+      measurement: { meta, googleAds },
     });
   } catch (e) {
     return json({ ok: false, error: { message: `${e.name}: ${e.message}` } }, 200);

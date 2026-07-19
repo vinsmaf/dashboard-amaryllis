@@ -17,12 +17,17 @@
 
 export const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
 export const CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.events";
+// Google Ads API : scope adwords en lecture (l'agent budget pub ne fait que du reporting,
+// aucun mutate). Nécessite que l'API Google Ads soit activée dans le projet Google Cloud
+// du GOOGLE_OAUTH_CLIENT_ID + un developer token approuvé (Basic) côté MCC.
+export const GOOGLEADS_SCOPE = "https://www.googleapis.com/auth/adwords";
 // "openid email" est ajouté systématiquement (peu importe le provider) pour pouvoir
 // afficher quel compte Google est connecté, via l'endpoint userinfo standard.
 const IDENTITY_SCOPES = "openid email";
 export const SCOPES_BY_PROVIDER = {
   gmail: GMAIL_SCOPE,
   calendar: CALENDAR_SCOPE,
+  googleads: GOOGLEADS_SCOPE,
 };
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
