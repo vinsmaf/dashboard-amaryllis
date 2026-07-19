@@ -37,7 +37,11 @@ export function buildTargeting(adset, resolvedInterests, resolvedRegions) {
     const excluded = {};
     for (const r of resolvedRegions) {
       const bucket = GEO_TYPE_TO_BUCKET[r.type] || "regions";
-      (excluded[bucket] ||= []).push({ key: r.key, name: r.name });
+      // "countries" veut une liste de codes ISO en TEXTE SIMPLE ("MQ"), pas des objets
+      // {key,name} — contrairement à regions/cities. Erreur réelle rencontrée en prod
+      // sans cette distinction : "(#100) Country Code must be a string".
+      const entry = bucket === "countries" ? r.key : { key: r.key, name: r.name };
+      (excluded[bucket] ||= []).push(entry);
     }
     targeting.excluded_geo_locations = excluded;
   }

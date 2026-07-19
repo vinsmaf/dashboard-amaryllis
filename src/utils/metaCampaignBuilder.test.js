@@ -48,12 +48,14 @@ describe("buildTargeting", () => {
     expect(t.excluded_geo_locations).toEqual({ regions: [{ key: "R1", name: "Martinique" }] });
   });
 
-  it("range une exclusion géo typée 'country' dans le bon seau, pas dans 'regions'", () => {
+  it("range une exclusion géo typée 'country' dans le bon seau, en code ISO simple (pas un objet)", () => {
     // Un DOM peut remonter côté Meta comme entité de type country, pas region — vécu en
-    // prod le 2026-07-19 (Martinique renvoyée hors du seau "region" attendu).
-    const regions = [{ key: "C1", name: "Martinique", type: "country", matchedName: "Martinique" }];
+    // prod le 2026-07-19 (Martinique renvoyée hors du seau "region" attendu). Et le seau
+    // "countries" veut du texte brut ("MQ"), pas {key,name} — 2e bug réel rencontré à la
+    // 1ère création réelle : "(#100) Country Code must be a string".
+    const regions = [{ key: "MQ", name: "Martinique", type: "country", matchedName: "Martinique" }];
     const t = buildTargeting(a1, [], regions);
-    expect(t.excluded_geo_locations).toEqual({ countries: [{ key: "C1", name: "Martinique" }] });
+    expect(t.excluded_geo_locations).toEqual({ countries: ["MQ"] });
   });
 });
 
