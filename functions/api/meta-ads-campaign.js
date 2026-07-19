@@ -256,6 +256,36 @@ async function createCampaign(campaignKey, env, opts = {}) {
 
 // Recherche brute (lecture seule) pour vérifier à la main qu'un terme du brief matche
 // bien la BONNE entité Meta avant de l'ajouter à metaCampaignBrief.js — utile pour
+// Lit l'état RÉEL de diffusion côté Meta (effective_status = agrège campagne+adset+ad+compte —
+// le seul champ qui dit si ça tourne vraiment). ?debug=status&campaign=c1_tofu. Réutilisable
+// par l'onglet Budget Pub pour afficher "campagne ACTIVE, N ad sets actifs".
+async function debugStatus(env, campaignKey) {
+  const token = env.META_PAGE_TOKEN;
+  if (!token) return { error: "META_PAGE_TOKEN non configuré" };
+  const campaign = CAMPAIGNS[campaignKey];
+  if (!campaign) return { error: `Campagne inconnue : ${campaignKey}` };
+
+  const camp = await findExistingCampaign(campaign.name, token);
+  if (!camp) return { error: `Campagne "${campaign.name}" introuvable côté Meta` };
+
+  const campDetail = await graphGet(`${camp.id}?fields=name,effective_status,status`, token);
+  const asRes = await graphGet(`${camp.id}/adsets?fields=name,effective_status,status,daily_budget&limit=100`, token);
+  const adRes = await graphGet(`${camp.id}/ads?fields=name,effective_status,configured_status&limit=100`, token);
+
+  const adsets = (asRes?.data || []).map((a) => ({
+    name: a.name,
+    effective_status: a.effective_status,
+    daily_budget_eur: a.daily_budget ? Number(a.daily_budget) / 100 : null,
+  }));
+  const ads = (adRes?.data || []).map((a) => ({ name: a.name, effective_status: a.effective_status }));
+
+  return {
+    campaign: { name: campDetail?.name, effective_status: campDetail?.effective_status },
+    adsets,
+    ads,
+  };
+}
+
 // maintenir le brief dans le temps sans deviner à l'aveugle. ?debug=search&q=...&type=adinterest|adgeolocation
 async function debugSearch(env, q, type) {
   const token = env.META_PAGE_TOKEN;
@@ -272,6 +302,10 @@ export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
   if (url.searchParams.get("debug") === "search") {
     const out = await debugSearch(env, url.searchParams.get("q") || "", url.searchParams.get("type"));
+    return json(out);
+  }
+  if (url.searchParams.get("debug") === "status") {
+    const out = await debugStatus(env, url.searchParams.get("campaign") || "c1_tofu");
     return json(out);
   }
   const campaignKey = url.searchParams.get("campaign") || "c1_tofu";
