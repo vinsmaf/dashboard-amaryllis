@@ -57,7 +57,7 @@ export async function onRequestGet({ request, env }) {
     const nameField = level === "adset" ? "adset_name,adset_id" : "campaign_name,campaign_id";
     const fields = `${nameField},spend,impressions,clicks,ctr,cpc,actions,action_values`;
     const res = await graphGet(
-      `${AD_ACCOUNT_ID}/insights?level=${level}&date_preset=${datePreset}&fields=${encodeURIComponent(fields)}&time_increment=all&limit=200`,
+      `${AD_ACCOUNT_ID}/insights?level=${level}&date_preset=${datePreset}&fields=${encodeURIComponent(fields)}&time_increment=all_days&limit=200`,
       token
     );
     if (res.error) return json({ ok: false, error: res.error }, 200);
