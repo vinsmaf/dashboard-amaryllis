@@ -4,6 +4,16 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
+## En cours → chantier AGENT BUDGET PUB (2026-07-19) — briques 1+2 faites, 1b + 3 en attente
+- **Tâche** : agent qui pilote en permanence le budget pub Google+Meta (plafond 600€/mois évolutif), advisory-first. Cf. `ADR-AD-BUDGET-AGENT-001`.
+- **Fait & déployé & vérifié live** : brique 1 MESURE (`meta-ads-insights.js` + `metaAdsInsights.js`), brique 2 DÉCISION advisory (`ad-budget-agent.js` + `adBudgetAgent.js` — vision budget par bien : Amaryllis 335€/Zandoli 132€/Géko 132€/reste 0€). 15 tests. Commits `5ec9095`→`d223dbb`.
+- **Prochaine action (reprise)** : (a) **brique 3 = exécution auto plafonnée opt-in** (applique les budgets dans la limite 600€ + kill-switch) — PAS commencée, session dédiée car touche la dépense réelle. (b) **brique 1b = Google Ads auto** : bloquée sur la validation Google de l'accès Basic (voir 🟡 ci-dessous).
+- **Contexte critique** : l'agent est **advisory strict** (règle absolue : jamais dépenser à la place). Modèle = CAC plafond PAR BIEN = `prix×nuits×(0.16−0.015)×0.5` (RM-08), seuil viable 30€ → seuls Amaryllis/Zandoli/Géko éligibles. `measurementHealth` interdit d'arbitrer sur le ROAS tant que le tracking purchase ne remonte pas (mode `traffic_only`). Meta campagnes toujours PAUSED (activation = Vincent) + 2 ciblages à corriger (Vacances→"Holiday village", Couples→le film).
+
+## 🟡 2026-07-19 — Google Ads API : accès Basic soumis, en attente review Google (~5 j ouvrés)
+- **État** : MCC "Villamaryllis Locations" (**142-194-6270**) créé + compte Ads (**226-428-3778**) lié + accepté · developer token créé (statut **"Accès Explorer"** = test only, ne lit PAS le vrai compte) · **demande d'accès Basic soumise** le 2026-07-19 (formulaire `new_token_application` + PDF de design `~/Desktop/google-ads-api-tool-design.pdf`). Tracking conversion Google Ads (import GA4 `purchase`) déjà en Principale (vérifié 07-12).
+- **Débloque** : validation Google de l'accès **Basic** (~5 j, cf. AGENDA ~2026-07-26). ⚠️ Le champ "Google Cloud project number" (champ 2 du formulaire) restait à remplir par Vincent au moment de la clôture — vérifier qu'il a bien pu soumettre (sinon le compléter). Une fois Basic accordé : coder l'intégration API Google Ads (OAuth Ads + lecture perfs → brique 1b), stocker developer token + credentials en **secrets Cloudflare** (jamais en clair). Vincent a explicitement choisi l'automatisation API plutôt que la saisie manuelle.
+
 ## En cours → ✅ terminé le 2026-07-18 — GEO : audit visibilité IA + llms.txt auto-généré + blocage Cloudflare trouvé
 - **Tâche** : Vincent a demandé "comment apparaître dans les recherches/recos ChatGPT/Perplexity/autres IA" puis "vérifies et mets tout en place au mieux". Audit de l'existant (déjà solide) → 2 corrections livrées + 1 blocage critique trouvé et documenté (hors périmètre code).
 - **Fait** : `scripts/generate-llms-txt.mjs` génère `public/llms.txt` depuis `src/data/biens.js` au build (corrige au passage Iguana listée à tort comme réservable). Testé (700/700), buildé, committé (`4655520`, `6511d83`), déployé, vérifié en live. `CLAUDE.md` mis à jour (consommateurs biens.js + footgun #8 GEO).
@@ -506,8 +516,7 @@
 - ⚠️ **Workflow d'analyse** (`wf_b3a6734a-492`, 5 analystes) **interrompu avant synthèse** → relançable. ⚠️ Airbnb = brut host ≠ Booking = total guest (~15% d'écart) → CA inter-canal à manier avec prudence. Bails longs termes (Iguana Joël, Zandoli MAUI) gonflent le CA direct.
 
 ## 🔴 Actions humaines (hors dashboard) en attente
-- 🔴 **Compte Meta Ads TOUJOURS BLOQUÉ (2026-06-23)** : partenaire frauduleux "Businesss Meta" (ID 111553584645188) + carte Amex hack. Pas de campagne Meta possible avant le 28/06. UTM Meta fix reporté. Campagne Canada uniquement sur Google Ads pour l'instant.
-- 🟡 **"Businesss Meta" (ID 111553584645188)** — partenaire frauduleux encore dans Business Manager. Supprimer le **2026-06-28** (AGENDA). Path : Settings → Partners → « ... » → « Remove from business portfolio ».
+- ✅ **Compte Meta Ads DÉBLOQUÉ (2026-07-19)** : partenaire frauduleux "Businesss Meta" (ID 111553584645188) retiré par Vincent, confirmé. Vérifié en direct côté code : token System User permanent actif (`ads_management`/`ads_read`/`whatsapp_business_management` inclus), Page + IG connectés. Reste à confirmer par Vincent : vrai numéro WhatsApp ajouté / App Review 5 permissions / WA lié à la Page (cf. AGENDA). Reprise des campagnes = décision/action Vincent, jamais Claude.
 - 🟡 **Carte Amex ···· 1000 à retirer** de Meta après que le solde pending €3.33 soit réglé (~2026-06-21, AGENDA).
 - **C2 MOFU Retargeting** : à recréer de zéro. Vérifier d'abord que `purchase` remonte dans GA4/Meta (AGENDA 2026-06-28).
 - 🟡 **Remboursement dépenses frauduleuses** : Meta Business Support — Meta rembourse parfois. Période hack Jun 15-18 = ~€33. Jun 7-11 = légitime.
