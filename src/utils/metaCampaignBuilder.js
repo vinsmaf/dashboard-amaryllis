@@ -10,6 +10,13 @@ export function buildCampaignPayload(campaign) {
     objective: campaign.objective,
     status: "PAUSED",
     special_ad_categories: [],
+    // false = ABO stricte : chaque ad set garde son propre budget fixe, Meta ne redistribue
+    // RIEN entre eux — nécessaire pour comparer les angles A1/A2/A3 à budget égal avant de
+    // passer en CBO une fois un gagnant identifié (cf. logique déjà actée dans le brief).
+    // Erreur réelle rencontrée en prod sans ce champ : "Invalid parameter" (code 100,
+    // subcode 4834011) — Meta l'exige explicitement dès qu'on n'utilise pas de budget au
+    // niveau de la campagne.
+    is_adset_budget_sharing_enabled: false,
   };
 }
 

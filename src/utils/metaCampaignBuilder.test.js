@@ -21,6 +21,13 @@ describe("buildCampaignPayload", () => {
     expect(p.objective).toBe("OUTCOME_TRAFFIC");
     expect(p.special_ad_categories).toEqual([]);
   });
+
+  it("désactive le partage de budget entre ad sets (ABO stricte, requis par Meta)", () => {
+    // Erreur réelle rencontrée en prod sans ce champ : code 100 / subcode 4834011
+    // ("Invalid parameter" — Meta exige un booléen explicite ici).
+    const p = buildCampaignPayload(CAMPAIGNS.c1_tofu);
+    expect(p.is_adset_budget_sharing_enabled).toBe(false);
+  });
 });
 
 describe("buildTargeting", () => {
