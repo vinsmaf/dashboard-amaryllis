@@ -25,6 +25,7 @@
 // Auth : Bearer ADMIN_PASSWORD (même mécanisme que contacts.js)
 
 import { verifyBearer } from "./_adminauth.js";
+import { canArmAutoDebit, balanceEurosFromCents, soldeDueDate } from "../../src/utils/soldeSchedule.js";
 
 const CORS = {
   "Content-Type": "application/json",
@@ -107,10 +108,21 @@ export async function onRequestPost(context) {
                   : type === "solde"   ? "Solde restant"
                   : "Paiement intégral";
 
+  // ── Débit automatique du solde : décidé ICI car il change la description affichée ────────
+  // (cf. bloc plus bas qui pose customer_creation/setup_future_usage sur le Payment Link).
+  const autoDebitSolde = canArmAutoDebit({ type, soldeCents: soldeAmount, checkin });
+  const soldeEuros     = autoDebitSolde ? balanceEurosFromCents(soldeAmount) : 0;
+  const soldeDue       = autoDebitSolde ? soldeDueDate(checkin) : "";
+
   // ── Description du produit affichée sur la page Stripe ───────────────────
   const nightsStr = nights ? ` · ${nights} nuit${nights > 1 ? "s" : ""}` : "";
   const productName = `${resolvedBienNom}`;
-  const productDesc = `${typeLabel} — ${fmt(checkin)} → ${fmt(checkout)}${nightsStr}${voyageur ? ` · ${voyageur}` : ""}`;
+  // Consentement explicite au prélèvement futur, EN PLUS de la mention native Stripe affichée
+  // par setup_future_usage — le payeur voit le montant et la date exacts avant de payer.
+  const soldeNotice = autoDebitSolde
+    ? ` · Solde de ${soldeEuros} € prélevé automatiquement sur cette carte le ${fmt(soldeDue)}`
+    : "";
+  const productDesc = `${typeLabel} — ${fmt(checkin)} → ${fmt(checkout)}${nightsStr}${voyageur ? ` · ${voyageur}` : ""}${soldeNotice}`;
 
   // ── 1. Créer le Product Stripe (one-time) ────────────────────────────────
   let productId;
@@ -207,6 +219,27 @@ export async function onRequestPost(context) {
   // Pré-remplir l'email si fourni
   if (email) {
     plBody.set("customer_creation", "always");
+  }
+
+  // ── Débit AUTOMATIQUE du solde (acompte en 2 fois) ────────────────────────
+  // Aligne les devis sur le rail déjà éprouvé des résas du tunnel : carte enregistrée à
+  // l'acompte → stripe-webhook.storePaymentSchedule() insère dans `payment_schedule` →
+  // charge-balance.js prélève le solde off-session à `due_date`. Aucun lien à cliquer, donc
+  // plus de solde qui s'évapore ni d'auto-annulation à J-15 faute de paiement.
+  // Le webhook n'arme le schedule QUE si pi.metadata.pay_plan === "2x" ET que le PI porte
+  // `customer` + `payment_method` — d'où customer_creation:always (obligatoire même sans email
+  // fourni : sans Customer, la carte n'est pas réutilisable) + setup_future_usage:off_session.
+  // Stripe affiche alors nativement au payeur que sa carte sera conservée (consentement + SCA).
+  if (autoDebitSolde) {
+    plBody.set("customer_creation", "always");
+    plBody.set("payment_intent_data[setup_future_usage]", "off_session");
+    plBody.set("payment_intent_data[metadata][pay_plan]", "2x");
+    // ⚠️ payment_schedule.balance_amount est en EUROS (charge-balance fait ×100 avant Stripe),
+    // alors que soldeAmount est en CENTIMES ici → conversion obligatoire (sinon débit ×100).
+    plBody.set("payment_intent_data[metadata][balance_amount]", String(soldeEuros));
+    plBody.set("payment_intent_data[metadata][due_date]", soldeDue);
+    // bien_nom de payment_schedule (alertes ntfy en cas d'échec) : le webhook lit bienNom ?? logements.
+    plBody.set("payment_intent_data[metadata][bienNom]", resolvedBienNom);
   }
 
   let link;

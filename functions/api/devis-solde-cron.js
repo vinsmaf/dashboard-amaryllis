@@ -121,6 +121,23 @@ export async function onRequest(context) {
     const d = daysUntil(row.checkin);
     if (d === null) continue;
 
+    // ── Devis en DÉBIT AUTOMATIQUE : ce cron ne doit rien faire ───────────────────────────
+    // Depuis 2026-07-19, un lien d'acompte enregistre la carte (create-payment-link.js →
+    // setup_future_usage) et le webhook arme une ligne `payment_schedule` : c'est charge-balance.js
+    // qui prélèvera le solde off-session. Sans ce skip on cumulerait DEUX encaissements du même
+    // solde (lien envoyé ici + prélèvement auto), et pire : l'auto-annulation J-15 tuerait un
+    // séjour dont le solde est en réalité programmé. Le rapprochement se fait sur bien_id+checkin
+    // (payment_schedule ne stocke pas l'id du devis).
+    try {
+      const auto = await db.prepare(
+        "SELECT 1 FROM payment_schedule WHERE bien_id=? AND checkin=? AND status IN ('pending','paid') LIMIT 1"
+      ).bind(row.bien_id || "", row.checkin || "").first();
+      if (auto) {
+        actions.push({ id: row.id, action: "skip_debit_auto", days: d });
+        continue;
+      }
+    } catch { /* table absente / lecture KO → on garde le comportement historique (lien+relances) */ }
+
     // ── J-30 : envoyer le lien de solde ──
     if (row.status === "acompte_paye" && d <= 30) {
       if (dry) { actions.push({ id: row.id, action: "envoyer_solde", days: d, montant: row.solde }); continue; }
