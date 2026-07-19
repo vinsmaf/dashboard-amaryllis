@@ -334,7 +334,7 @@ flowchart TD
 
 ## 11. Données & infra
 
-- **Source unique des faits biens** : `src/data/biens.js` (module pur, 3 runtimes). **4 consommateurs** : `functions/[slug].js` (SEO runtime), `scripts/prerender.mjs` (SEO build), `functions/api/_biens.js` (grounding agents), `src/PublicSite.jsx` (front). **Jamais coder un fait en dur ailleurs.** Nomenclature stricte : seuls Amaryllis & Iguana = « villas » ; Iguana `bookable:false`.
+- **Source unique des faits biens** : `src/data/biens.js` (module pur, 3 runtimes). **5 consommateurs** : `functions/[slug].js` (SEO runtime), `scripts/prerender.mjs` (SEO build), `functions/api/_biens.js` (grounding agents), `src/PublicSite.jsx` (front), `scripts/generate-llms-txt.mjs` (génère `public/llms.txt` au build, GEO — nouveau 2026-07-18, filtre `bookable:true`). **Jamais coder un fait en dur ailleurs.** Nomenclature stricte : seuls Amaryllis & Iguana = « villas » ; Iguana `bookable:false`.
 - **Pont Google Sheets** : `sheets-proxy.js` → Apps Script → Sheet ID `1xuhU0KraEMxF9NAWO5MKEt23JI_V8mnNnWktzHy6q2U`. ⚠️ **POST direct interdit** (Apps Script supprime le body au redirect) → écriture en GET paginé chunked (`importAllReservations`). Scripts autonomes `REVENUS_AUTO_2026.gs` / `_2027.gs` (trigger 15 min).
 - **CSP** : `public/_headers` (centralisé sur `/*`). Tout domaine tracking/tiers DOIT y être ajouté sinon silencieusement bloqué (vérifié par `audit-invariants.mjs` INV4).
 - **Tracking** : GA4 `G-N9BM709ZBL` (`index.html`, Consent Mode v2) + Meta Pixel `1648064656415946` client (`metaPixel.js`, consent-gated) + CAPI server (`_metaCapi.js` via `stripe-webhook.js`, dédup `event_id=pi.id`).
@@ -406,7 +406,7 @@ flowchart TD
 ## 13. Pièges & invariants clés
 
 1. **DOUBLE SOURCE SEO (piège n°1)** — pour les 7 biens + slugs guides interceptés, `functions/[slug].js` ÉCRASE le prerender au runtime. Éditer un title/desc UNIQUEMENT dans `prerender.mjs` n'a AUCUN effet en prod. Vérité = la Function (+ `src/data/biens.js` pour les faits). Vérif live obligatoire (curl).
-2. **Source unique biens** — `src/data/biens.js`, 4 consommateurs. Jamais de fait en dur ailleurs. Nomenclature : seuls Amaryllis & Iguana = villas ; Iguana `bookable:false`.
+2. **Source unique biens** — `src/data/biens.js`, 5 consommateurs (dont `scripts/generate-llms-txt.mjs` depuis 2026-07-18). Jamais de fait en dur ailleurs. Nomenclature : seuls Amaryllis & Iguana = villas ; Iguana `bookable:false`.
 3. **Miroirs logique pure GAS/Worker** — `pricing.js`, `coherenceRules.js`, `resaDedup.js`, `occupancy.js`, `rmOccupancyAdjust.js` dupliqués inline dans Apps Script + Worker (pas d'import Node) → **drift silencieux** si oublié.
 4. **Prix tunnel calculé CLIENT** — le serveur ne valide pas le montant exact (seul `priceGuard` advisory, jamais bloquant car promos -99%). Garde-fou = humain. Seul `service-checkout` valide serveur.
 5. **Invariant ROAS 2×** — `purchase` remonte le `full_total` UNE seule fois (acompte) ; `charge-balance` n'émet AUCUN event. Casser ça sous-compte le ROAS ~70%. `transaction_id = pi.id` pour dédup GA4/CAPI.
