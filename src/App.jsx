@@ -43,6 +43,7 @@ import EditorialCalendarTab from "./tabs/EditorialCalendarTab.jsx";
 import EditorialPhotosTab from "./tabs/EditorialPhotosTab.jsx";
 import EditorialVideosTab from "./tabs/EditorialVideosTab.jsx";
 import CroissanceTab from "./tabs/CroissanceTab.jsx";
+import AdBudgetTab from "./tabs/AdBudgetTab.jsx";
 import SEOAuditTab from "./tabs/SEOAuditTab.jsx";
 import AvisTab from "./tabs/AvisTab.jsx";
 import CrmTab from "./tabs/CrmTab.jsx";
@@ -1412,6 +1413,7 @@ export default function App() {
         { id: "videos-pub",   icon: "🎥", label: "Vidéos publiables" },
         { id: "seo-audit",    icon: "🔍", label: "SEO Audit" },
         { id: "croissance",   icon: "📈", label: "Croissance audience" },
+        { id: "budget-pub",   icon: "💰", label: "Budget Pub" },
       ],
     },
     {
@@ -1656,6 +1658,7 @@ export default function App() {
             {tab === "photos-pub"    && <EditorialPhotosTab />}
             {tab === "videos-pub"    && <EditorialVideosTab />}
             {tab === "croissance"    && <CroissanceTab />}
+            {tab === "budget-pub"    && <AdBudgetTab />}
             {tab === "seo-audit"     && <SEOAuditTab />}
             {tab === "chat-admin"    && <AdminChatTab />}
             {tab === "orchestrateur" && <OrchestratorTab />}
