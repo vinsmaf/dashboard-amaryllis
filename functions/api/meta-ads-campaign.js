@@ -256,6 +256,43 @@ async function createCampaign(campaignKey, env, opts = {}) {
 
 // Recherche brute (lecture seule) pour vérifier à la main qu'un terme du brief matche
 // bien la BONNE entité Meta avant de l'ajouter à metaCampaignBrief.js — utile pour
+// Supprime les ad sets "parasites" d'une campagne = tout ad set dont le nom ne figure PAS dans
+// le brief (CAMPAIGNS[key].adsets[].name). Garde-fou dur : filtre par nom EXACT du brief, donc
+// A1/A2/A3/A4 (noms curés) sont protégés — seuls tombent les orphelins (doublons d'anciens tests,
+// ad sets auto-générés type "C1 — TOFU Découverte - -"). Dry-run par défaut ; confirm:true pour
+// supprimer réellement. Irréversible côté Meta (supprime aussi les annonces des ad sets visés).
+async function pruneParasiteAdSets(env, campaignKey, { confirm }) {
+  const token = env.META_PAGE_TOKEN;
+  if (!token) return json({ ok: false, error: "META_PAGE_TOKEN non configuré" }, 400);
+  const campaign = CAMPAIGNS[campaignKey];
+  if (!campaign) return json({ ok: false, error: `Campagne inconnue : ${campaignKey}` }, 400);
+
+  const camp = await findExistingCampaign(campaign.name, token);
+  if (!camp) return json({ ok: false, error: `Campagne "${campaign.name}" introuvable côté Meta` }, 404);
+
+  const validNames = new Set(campaign.adsets.map((a) => a.name));
+  const asRes = await graphGet(`${camp.id}/adsets?fields=name,effective_status,daily_budget&limit=100`, token);
+  const all = asRes?.data || [];
+  const eur = (b) => (b ? Number(b) / 100 : null);
+  const parasites = all.filter((a) => !validNames.has(a.name));
+  const kept = all.filter((a) => validNames.has(a.name)).map((a) => ({ id: a.id, name: a.name, effective_status: a.effective_status, daily_budget_eur: eur(a.daily_budget) }));
+
+  if (!confirm) {
+    return json({
+      ok: true, dryRun: true,
+      wouldDelete: parasites.map((a) => ({ id: a.id, name: a.name, effective_status: a.effective_status, daily_budget_eur: eur(a.daily_budget) })),
+      wouldKeep: kept,
+      note: "Aperçu — rien supprimé. Renvoyer avec confirm:true pour supprimer.",
+    });
+  }
+  const deleted = [];
+  for (const p of parasites) {
+    const r = await graphDelete(p.id, token);
+    deleted.push({ id: p.id, name: p.name, ok: !r.error, error: r.error || null });
+  }
+  return json({ ok: true, deleted, kept });
+}
+
 // Lit l'état RÉEL de diffusion côté Meta (effective_status = agrège campagne+adset+ad+compte —
 // le seul champ qui dit si ça tourne vraiment). ?debug=status&campaign=c1_tofu. Réutilisable
 // par l'onglet Budget Pub pour afficher "campagne ACTIVE, N ad sets actifs".
@@ -321,6 +358,9 @@ export async function onRequestPost({ request, env }) {
   try { body = await request.json(); } catch { return json({ error: "Body JSON invalide" }, 400); }
 
   const campaignKey = body.campaign || "c1_tofu";
+  if (body.action === "prune") {
+    return pruneParasiteAdSets(env, campaignKey, { confirm: body.confirm === true });
+  }
   if (body.confirm !== true) {
     const plan = await buildPlan(campaignKey, env);
     return json({ ...plan, note: "Aperçu seul (confirm:true manquant) — rien créé." });
