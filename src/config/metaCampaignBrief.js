@@ -32,7 +32,11 @@
 export const AD_ACCOUNT_ID = "act_853205825762332";
 
 // Résidents des DOM = pas des touristes, exclus des audiences froides "rêve Martinique".
-const DOM_EXCLUSIONS = ["Martinique", "Guadeloupe", "Guyane française", "La Réunion", "Mayotte"];
+// Noms EXACTS vérifiés via ?debug=search&type=adgeolocation (2026-07-19) — chaque DOM est
+// typé "country" côté Meta, pas "region" (d'où le 1er essai qui excluait par erreur "Petite
+// Martinique", une île de Grenade sans rapport). "French Guiana" et "Réunion" (pas "La
+// Réunion") sont les libellés réels Meta, pas une traduction littérale du français.
+const DOM_EXCLUSIONS = ["Martinique", "Guadeloupe", "French Guiana", "Réunion", "Mayotte"];
 
 export const CAMPAIGNS = {
   c1_tofu: {
@@ -49,10 +53,13 @@ export const CAMPAIGNS = {
           excludedRegions: DOM_EXCLUSIONS,
           ageMin: 30,
           ageMax: 60,
+          // Vérifiés un par un via ?debug=search (2026-07-19) — "Antilles françaises",
+          // "Voyage de luxe" et "Villa (hébergement)" ne matchent AUCUN intérêt Meta (recherche
+          // vide) ; "Caraïbes" matchait à tort "Airline" (Meta n'indexe pas bien le français ici,
+          // "Caribbean" fonctionne) ; "Plongée avec tuba" ne matche rien mais "Snorkeling" oui.
           interests: [
-            "Martinique", "Antilles françaises", "Caraïbes", "Vacances (voyage)",
-            "Location de vacances", "Tourisme", "Voyage de luxe", "Villa (hébergement)",
-            "Plongée avec tuba", "Plage",
+            "Martinique", "Caribbean", "Vacances", "Location de vacances",
+            "Tourisme", "Plage", "Snorkeling",
           ],
         },
         creative: {
@@ -74,9 +81,11 @@ export const CAMPAIGNS = {
           excludedRegions: DOM_EXCLUSIONS,
           ageMin: 28,
           ageMax: 55,
+          // "Lune de miel", "Voyage de noces", "Week-end en amoureux" : aucun match Meta
+          // (même en anglais "Honeymoon" — résultats hors-sujet). L'angle romantique reste
+          // bien couvert par Romantisme/Couples/Jacuzzi, vérifiés.
           interests: [
-            "Lune de miel", "Voyage de noces", "Romantisme", "Couples",
-            "Week-end en amoureux", "Jacuzzi", "Martinique", "Caraïbes",
+            "Romantisme", "Couples", "Jacuzzi", "Martinique", "Caribbean",
           ],
         },
         creative: {
@@ -99,8 +108,7 @@ export const CAMPAIGNS = {
           ageMin: 25,
           ageMax: 60,
           interests: [
-            "Martinique", "Antilles françaises", "Caraïbes", "Vacances (voyage)",
-            "Location de vacances", "Tourisme", "Plage",
+            "Martinique", "Caribbean", "Vacances", "Location de vacances", "Tourisme", "Plage",
           ],
         },
         creative: {
@@ -122,9 +130,11 @@ export const CAMPAIGNS = {
           excludedRegions: DOM_EXCLUSIONS,
           ageMin: 30,
           ageMax: 55,
+          // Désactivée (enabled:false) mais vérifiée quand même pour qu'elle soit prête si
+          // activée plus tard. "Vacances en famille"/"Voyage en groupe"/"Grande famille" ne
+          // matchent rien (même en anglais direct) ; "Réunion de famille"→"Family reunion" OK.
           interests: [
-            "Vacances en famille", "Voyage en groupe", "Réunion de famille",
-            "Grande famille", "Martinique",
+            "Martinique", "Family reunion", "Family", "Vacances",
           ],
         },
         creative: {
