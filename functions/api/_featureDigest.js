@@ -3,7 +3,7 @@
 // sans accès repo live (impossible depuis un Worker) ni appel API externe (pas de nouveau secret).
 // Régénérer manuellement (node scripts/generate-feature-digest.mjs) quand le digest semble périmé —
 // un oubli dégrade juste la fraîcheur du signal, ne casse jamais le build (fichier committé).
-// Dernière génération : 2026-07-18
+// Dernière génération : 2026-07-19
 
 export const ENDPOINTS_DIGEST = [
   "/api/admin-auth (admin-auth.js) — Vérifie le mot de passe admin côté serveur (jamais exposé dans le bundle JS).",
@@ -23,6 +23,7 @@ export const ENDPOINTS_DIGEST = [
   "/api/ai-summary (ai-summary.js) — Proxy sécurisé vers l'API Anthropic — clé jamais exposée au navigateur",
   "/api/airbnb-test (airbnb-test.js) — Test READ-ONLY : authentification Airbnb + lecture des prix actuels",
   "/api/analytics (analytics.js) — Proxy vers Google Analytics Data API v1beta (GA4)",
+  "/api/backlog-verify (backlog-verify.js) — I-11 — Vérificateur autonome du backlog agent_actions (\"la machine tourne seule\").",
   "/api/beds24-bookings (beds24-bookings.js) — Proxy sécurisé vers l'API Beds24 V2 — token jamais exposé au navigateur",
   "/api/beds24-create (beds24-create.js) — Crée une réservation Beds24 V2 directement via API (remplace l'iframe).",
   "/api/beds24-manage (beds24-manage.js) — Actions : find | confirm | cancel (publiques, tunnel voyageur) | restoreGuest (admin)",
