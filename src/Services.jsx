@@ -6,9 +6,22 @@ import SEOMeta from "./SEOMeta.jsx";
 const NAVY = "#0e3b3a", CORAL = "#c47254", GOLD = "#c9a673", IVORY = "#faf5e9", SAND = "#e0d4bc", TEXT = "#3a3530", MUTED = "#7a6b5a";
 const NAMES = { amaryllis: "Villa Amaryllis", zandoli: "Zandoli", geko: "Géko", mabouya: "Mabouya", schoelcher: "Appartement Bellevue", nogent: "Appartement Nogent" };
 
+function fmtDate(iso) {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-");
+  return d && m ? `${d}/${m}` : iso;
+}
+
 export default function Services() {
   const bien = window.location.pathname.split("/services/")[1]?.replace(/\/$/, "").toLowerCase() || "amaryllis";
-  const paid = new URLSearchParams(window.location.search).get("paid") === "1";
+  const params = new URLSearchParams(window.location.search);
+  const paid = params.get("paid") === "1";
+  // Personnalisation optionnelle (lien envoyé à un voyageur précis, ex. depuis l'admin) —
+  // ?nom=Stéphane+Alves&checkin=2026-07-14&checkout=2026-07-20. Sans ces params, la page
+  // reste le catalogue générique existant (comportement inchangé).
+  const guestNom = params.get("nom") || "";
+  const guestCheckin = params.get("checkin") || "";
+  const guestCheckout = params.get("checkout") || "";
   const [extras, setExtras] = useState(null);
   const [busy, setBusy] = useState(null);
   const [err, setErr] = useState(null);
@@ -48,9 +61,24 @@ export default function Services() {
       <main style={{ maxWidth: 560, margin: "0 auto", padding: "28px 20px 60px" }}>
         <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: ".3em", textTransform: "uppercase", color: CORAL, margin: "0 0 8px" }}>Pendant votre séjour</p>
         <h1 style={{ fontWeight: 300, fontSize: 30, color: NAVY, margin: "0 0 6px", lineHeight: 1.1 }}>Services &amp; extras</h1>
-        <p style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: 19, color: MUTED, margin: "0 0 24px" }}>
-          Offrez-vous un petit plus — réglez en ligne en quelques secondes.
-        </p>
+
+        {guestNom ? (
+          <div style={{ background: "#fff", border: `1px solid ${SAND}`, borderRadius: 14, padding: "16px 18px", margin: "12px 0 24px" }}>
+            <p style={{ margin: 0, fontSize: 15, color: TEXT }}>
+              Bonjour <strong>{guestNom}</strong>,
+              {guestCheckin && guestCheckout && (
+                <> votre séjour du <strong>{fmtDate(guestCheckin)}</strong> au <strong>{fmtDate(guestCheckout)}</strong>.</>
+              )}
+            </p>
+            <p style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: 17, color: MUTED, margin: "6px 0 0" }}>
+              Offrez-vous un petit plus — réglez en ligne en quelques secondes.
+            </p>
+          </div>
+        ) : (
+          <p style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: 19, color: MUTED, margin: "0 0 24px" }}>
+            Offrez-vous un petit plus — réglez en ligne en quelques secondes.
+          </p>
+        )}
 
         {paid && (
           <div style={{ background: "#ecfdf5", border: "1px solid #a7f3d0", color: "#065f46", borderRadius: 12, padding: "14px 16px", marginBottom: 20, fontSize: 14 }}>
