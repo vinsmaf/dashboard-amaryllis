@@ -111,6 +111,20 @@ async function findExistingCampaign(name, token) {
   return (r?.data || []).find((c) => c.name === name) || null;
 }
 
+// Même logique pour les ad sets (sous la campagne) et les créatives (niveau compte) — sans
+// ça, chaque nouvelle tentative après un fix créerait des doublons PAUSED orphelins au lieu
+// de reprendre là où la précédente s'était arrêtée (vécu : 5 itérations de correctifs avant
+// que la création complète passe).
+async function findExistingAdSets(campaignId, token) {
+  const r = await graphGet(`${campaignId}/adsets?fields=id,name,status&limit=100`, token);
+  return r?.data || [];
+}
+
+async function findExistingCreatives(token) {
+  const r = await graphGet(`${AD_ACCOUNT_ID}/adcreatives?fields=id,name&limit=200`, token);
+  return r?.data || [];
+}
+
 async function buildPlan(campaignKey, env) {
   const token = env.META_PAGE_TOKEN;
   const pageId = env.META_PAGE_ID;
@@ -165,23 +179,35 @@ async function createCampaign(campaignKey, env) {
     campaignId = created.id;
   }
 
+  const existingAdSets = await findExistingAdSets(campaignId, token);
+  const existingCreatives = await findExistingCreatives(token);
+
   const results = [];
   for (const a of plan.adsets) {
     if (a.skipped) { results.push(a); continue; }
-    const adsetBody = { ...a.adsetPayload, campaign_id: campaignId };
-    const adsetRes = await graphPost(`${AD_ACCOUNT_ID}/adsets`, token, adsetBody);
-    if (adsetRes.error) { results.push({ key: a.key, error: `adset`, detail: adsetRes.error, payloadSent: adsetBody }); continue; }
 
-    const creativeRes = await graphPost(`${AD_ACCOUNT_ID}/adcreatives`, token, a.creativePayload);
-    if (creativeRes.error) { results.push({ key: a.key, adsetId: adsetRes.id, error: `créative`, detail: creativeRes.error, payloadSent: a.creativePayload }); continue; }
+    let adsetId = existingAdSets.find((x) => x.name === a.adsetPayload.name)?.id;
+    if (!adsetId) {
+      const adsetBody = { ...a.adsetPayload, campaign_id: campaignId };
+      const adsetRes = await graphPost(`${AD_ACCOUNT_ID}/adsets`, token, adsetBody);
+      if (adsetRes.error) { results.push({ key: a.key, error: `adset`, detail: adsetRes.error, payloadSent: adsetBody }); continue; }
+      adsetId = adsetRes.id;
+    }
+
+    let creativeId = existingCreatives.find((x) => x.name === a.creativePayload.name)?.id;
+    if (!creativeId) {
+      const creativeRes = await graphPost(`${AD_ACCOUNT_ID}/adcreatives`, token, a.creativePayload);
+      if (creativeRes.error) { results.push({ key: a.key, adsetId, error: `créative`, detail: creativeRes.error, payloadSent: a.creativePayload }); continue; }
+      creativeId = creativeRes.id;
+    }
 
     const adsetConfig = campaign.adsets.find((x) => x.key === a.key);
-    const adPayload = buildAdPayload(adsetConfig, adsetRes.id, creativeRes.id);
+    const adPayload = buildAdPayload(adsetConfig, adsetId, creativeId);
     const adRes = await graphPost(`${AD_ACCOUNT_ID}/ads`, token, adPayload);
     results.push({
       key: a.key,
-      adsetId: adsetRes.id,
-      creativeId: creativeRes.id,
+      adsetId,
+      creativeId,
       adId: adRes.id || null,
       error: adRes.error ? "ad" : null,
       detail: adRes.error || undefined,
