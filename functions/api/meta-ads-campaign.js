@@ -158,7 +158,10 @@ async function createCampaign(campaignKey, env) {
   let campaignId = plan.existingCampaign?.id;
   if (!campaignId) {
     const created = await graphPost(`${AD_ACCOUNT_ID}/campaigns`, token, plan.campaignPayload);
-    if (created.error) return json({ ok: false, step: "campaign", error: created.error.message }, 422);
+    // Meta ne renvoie pas grand-chose avec juste .message ("Invalid parameter" ne dit pas
+    // QUEL paramètre) — on remonte l'objet erreur complet (error_subcode/error_user_msg/
+    // fbtrace_id), bien plus parlant pour diagnostiquer.
+    if (created.error) return json({ ok: false, step: "campaign", error: created.error, payloadSent: plan.campaignPayload }, 422);
     campaignId = created.id;
   }
 
@@ -167,19 +170,21 @@ async function createCampaign(campaignKey, env) {
     if (a.skipped) { results.push(a); continue; }
     const adsetBody = { ...a.adsetPayload, campaign_id: campaignId };
     const adsetRes = await graphPost(`${AD_ACCOUNT_ID}/adsets`, token, adsetBody);
-    if (adsetRes.error) { results.push({ key: a.key, error: `adset : ${adsetRes.error.message}` }); continue; }
+    if (adsetRes.error) { results.push({ key: a.key, error: `adset`, detail: adsetRes.error, payloadSent: adsetBody }); continue; }
 
     const creativeRes = await graphPost(`${AD_ACCOUNT_ID}/adcreatives`, token, a.creativePayload);
-    if (creativeRes.error) { results.push({ key: a.key, adsetId: adsetRes.id, error: `créative : ${creativeRes.error.message}` }); continue; }
+    if (creativeRes.error) { results.push({ key: a.key, adsetId: adsetRes.id, error: `créative`, detail: creativeRes.error, payloadSent: a.creativePayload }); continue; }
 
     const adsetConfig = campaign.adsets.find((x) => x.key === a.key);
-    const adRes = await graphPost(`${AD_ACCOUNT_ID}/ads`, token, buildAdPayload(adsetConfig, adsetRes.id, creativeRes.id));
+    const adPayload = buildAdPayload(adsetConfig, adsetRes.id, creativeRes.id);
+    const adRes = await graphPost(`${AD_ACCOUNT_ID}/ads`, token, adPayload);
     results.push({
       key: a.key,
       adsetId: adsetRes.id,
       creativeId: creativeRes.id,
       adId: adRes.id || null,
-      error: adRes.error ? `ad : ${adRes.error.message}` : null,
+      error: adRes.error ? "ad" : null,
+      detail: adRes.error || undefined,
     });
   }
 
