@@ -33,11 +33,13 @@ export function buildTargeting(adset, resolvedInterests, resolvedRegions) {
     age_min: adset.targeting.ageMin,
     age_max: adset.targeting.ageMax,
     // Meta exige ce champ explicitement (erreur réelle en prod sans lui : code 100,
-    // subcode 1870227, "Advantage Audience Flag Required"). 1 = autorise Meta à étendre
-    // l'audience au-delà des intérêts choisis s'il pense trouver du volume — choisi plutôt
-    // que 0 (strict) vu le budget très serré (3€/j/ad set) : mieux vaut laisser l'algo
-    // chercher du volume que rester bloqué en apprentissage limité sur un ciblage étroit.
-    targeting_automation: { advantage_audience: 1 },
+    // subcode 1870227, "Advantage Audience Flag Required"). 0 = ciblage strict — testé à 1
+    // (extension auto) d'abord, mais Meta impose alors un âge quasi-ouvert (min ≤25 ET
+    // max ≥65, subcodes 1870188/1870189) qui aurait écrasé les tranches d'âge volontaires
+    // par bien (30-60 Amaryllis, 28-55 Mabouya pour cibler les couples). Le budget ayant
+    // été relevé à 10€/j/ad set entre-temps (haut de la fourchette viable), l'intérêt de
+    // l'extension pesait moins que celui de garder ce ciblage démographique délibéré.
+    targeting_automation: { advantage_audience: 0 },
   };
   if (resolvedRegions?.length) {
     const excluded = {};

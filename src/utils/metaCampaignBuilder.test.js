@@ -40,11 +40,12 @@ describe("buildTargeting", () => {
     expect(t.excluded_geo_locations).toBeUndefined();
   });
 
-  it("active l'Advantage Audience de Meta (requis, sinon Meta rejette la création)", () => {
-    // Erreur réelle en prod sans ce champ : code 100 / subcode 1870227
-    // ("Advantage Audience Flag Required").
+  it("désactive l'Advantage Audience de Meta (ciblage strict, préserve les tranches d'âge par bien)", () => {
+    // Champ requis explicitement (sans lui : code 100/subcode 1870227). Testé à 1 (extension
+    // auto) d'abord, mais Meta impose alors un âge quasi-ouvert (min ≤25 ET max ≥65,
+    // subcodes 1870188/1870189) qui écraserait le ciblage démographique volontaire par bien.
     const t = buildTargeting(a1, [], []);
-    expect(t.targeting_automation).toEqual({ advantage_audience: 1 });
+    expect(t.targeting_automation).toEqual({ advantage_audience: 0 });
   });
 
   it("ajoute les intérêts et exclusions régionales résolus", () => {
