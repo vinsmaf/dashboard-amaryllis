@@ -345,6 +345,12 @@ export async function onRequestGet({ request, env }) {
     const out = await debugStatus(env, url.searchParams.get("campaign") || "c1_tofu");
     return json(out);
   }
+  if (url.searchParams.get("debug") === "list") {
+    const token = env.META_PAGE_TOKEN;
+    if (!token) return json({ error: "META_PAGE_TOKEN non configuré" });
+    const r = await graphGet(`${AD_ACCOUNT_ID}/campaigns?fields=id,name,effective_status,created_time&limit=200`, token);
+    return json({ campaigns: (r?.data || []).map((c) => ({ id: c.id, name: c.name, effective_status: c.effective_status, created_time: c.created_time })), error: r?.error || null });
+  }
   const campaignKey = url.searchParams.get("campaign") || "c1_tofu";
   const plan = await buildPlan(campaignKey, env);
   return json(plan);
