@@ -287,8 +287,17 @@ async function pruneParasiteAdSets(env, campaignKey, { confirm }) {
   }
   const deleted = [];
   for (const p of parasites) {
+    // Meta refuse DELETE sur un ad set dont une annonce a une créative cassée (post FB
+    // supprimé → error_subcode 2446289 "Ad Creative Is Incomplete"). Contournement : purger
+    // d'abord les annonces enfants, puis l'ad set devient supprimable.
+    const adsRes = await graphGet(`${p.id}/ads?fields=id&limit=100`, token);
+    let adsDeleted = 0;
+    for (const ad of adsRes?.data || []) {
+      const ra = await graphDelete(ad.id, token);
+      if (!ra.error) adsDeleted++;
+    }
     const r = await graphDelete(p.id, token);
-    deleted.push({ id: p.id, name: p.name, ok: !r.error, error: r.error || null });
+    deleted.push({ id: p.id, name: p.name, adsDeleted, ok: !r.error, error: r.error || null });
   }
   return json({ ok: true, deleted, kept });
 }
