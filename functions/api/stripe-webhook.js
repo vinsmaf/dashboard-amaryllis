@@ -879,8 +879,16 @@ export async function onRequestPost(context) {
       const db = env.revenue_manager;
       if (db && devisId) {
         try {
-          await db.prepare("UPDATE devis_paiements SET status=? WHERE id=?")
-            .bind(type === "acompte" ? "acompte_paye" : "solde_paye", devisId).run();
+          // Backfill email : Stripe Checkout collecte TOUJOURS l'email du payeur pour le reçu
+          // (session.customer_details.email), même quand create-payment-link.js a été appelé
+          // sans `email` (cas vécu : devis groupé créé hors DevisEditor.jsx, qui ne connaît pas
+          // le flux multi-biens "groupe" — la ligne devis_paiements est alors insérée avec
+          // email="" et le restait pour toujours, car ce endpoint ne touchait QUE `status`).
+          // CASE WHEN : ne jamais écraser un email déjà présent (saisi à la création du lien).
+          const stripeEmail = session.customer_details?.email || meta.email || "";
+          await db.prepare(
+            "UPDATE devis_paiements SET status=?, email = CASE WHEN (email IS NULL OR email = '') THEN ? ELSE email END WHERE id=?"
+          ).bind(type === "acompte" ? "acompte_paye" : "solde_paye", stripeEmail, devisId).run();
         } catch (e) { console.warn("[webhook] devis_paiements update:", e.message); }
       }
       // SEC audit Fable 5 2026-07-09, Lot 4 : bienNom/voyageur échappés avant injection HTML.

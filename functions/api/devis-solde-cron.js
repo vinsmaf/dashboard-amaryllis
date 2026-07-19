@@ -148,8 +148,20 @@ export async function onRequest(context) {
     }
 
     // ── J-15 : annulation auto + alerte hôte ──
+    // ⚠️ Si l'email voyageur est manquant, le solde n'a jamais pu lui être réclamé (le lien
+    // de solde/les relances J-30/J-25/J-20 échouent silencieusement, cf. sendMail → !to).
+    // Annuler automatiquement un séjour dont l'ACOMPTE EST DÉJÀ ENCAISSÉ serait trop dangereux
+    // (bug vécu : devis groupé Cambier, email vide → auto-annulé à tort, solde 4012€ perdu tant
+    // que non rattrapé à la main). On escalade à la place, tant que l'email n'est pas corrigé.
     if (row.status === "solde_attente" && d <= 15) {
-      if (dry) { actions.push({ id: row.id, action: "annuler", days: d }); continue; }
+      const emailMissing = !row.email || !row.email.includes("@");
+      if (dry) { actions.push({ id: row.id, action: emailMissing ? "escalade_email_manquant" : "annuler", days: d }); continue; }
+      if (emailMissing) {
+        await sendMail(env, hostEmail, `🚨 Solde à relancer À LA MAIN (email manquant) — ${row.bien_id} ${fmtDate(row.checkin)}`,
+          `<div style="font-family:sans-serif"><h3>Devis NON annulé — email voyageur manquant</h3><p>${row.bien_id} · ${row.voyageur || "?"} · ${fmtDate(row.checkin)} → ${fmtDate(row.checkout)}<br>Solde dû : ${eur(row.solde)}.<br>Aucun email enregistré sur ce devis (${row.id}) → les relances automatiques n'ont jamais pu partir. Relancer le voyageur manuellement (WhatsApp/téléphone) puis corriger l'email en base.</p></div>`);
+        actions.push({ id: row.id, action: "escalade_email_manquant", days: d });
+        continue;
+      }
       await db.prepare("UPDATE devis_paiements SET status='annule' WHERE id=?").bind(row.id).run();
       await sendMail(env, hostEmail, `⚠️ Devis annulé (solde impayé) — ${row.bien_id} ${fmtDate(row.checkin)}`,
         `<div style="font-family:sans-serif"><h3>Devis annulé — solde non réglé à J-15</h3><p>${row.bien_id} · ${row.voyageur || "?"} · ${fmtDate(row.checkin)} → ${fmtDate(row.checkout)}<br>Solde impayé : ${eur(row.solde)}.<br>👉 Pense à rouvrir les dates à la vente (Airbnb/Booking/Beds24).</p></div>`);
