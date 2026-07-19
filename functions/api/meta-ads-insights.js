@@ -26,42 +26,49 @@ function json(data, status = 200) {
 
 async function graphGet(path, token) {
   const sep = path.includes("?") ? "&" : "?";
-  const r = await fetch(`https://graph.facebook.com/${GV}/${path}${sep}access_token=${token}`);
-  return r.json();
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 12000);
+  try {
+    const r = await fetch(`https://graph.facebook.com/${GV}/${path}${sep}access_token=${token}`, { signal: ctrl.signal });
+    const text = await r.text();
+    try { return JSON.parse(text); }
+    catch { return { error: { message: `Réponse Graph non-JSON (HTTP ${r.status})`, body: text.slice(0, 300) } }; }
+  } catch (e) {
+    return { error: { message: `Appel Graph échoué : ${e.name} ${e.message}` } };
+  } finally {
+    clearTimeout(t);
+  }
 }
 
 const WINDOWS = { "7d": "last_7d", "30d": "last_30d", "14d": "last_14d", "90d": "last_90d", maximum: "maximum" };
 
 export async function onRequestGet({ request, env }) {
-  const auth = await verifyBearer(request, env);
-  if (!auth.ok) return json({ error: "Non autorisé" }, 401);
+  try {
+    const auth = await verifyBearer(request, env);
+    if (!auth.ok) return json({ error: "Non autorisé" }, 401);
 
-  const token = env.META_PAGE_TOKEN;
-  if (!token) return json({ error: "META_PAGE_TOKEN non configuré" }, 503);
+    const token = env.META_PAGE_TOKEN;
+    if (!token) return json({ error: "META_PAGE_TOKEN non configuré" }, 503);
 
-  const url = new URL(request.url);
-  const datePreset = WINDOWS[url.searchParams.get("window")] || "last_30d";
-  const level = url.searchParams.get("level") === "adset" ? "adset" : "campaign";
+    const url = new URL(request.url);
+    const datePreset = WINDOWS[url.searchParams.get("window")] || "last_30d";
+    const level = url.searchParams.get("level") === "adset" ? "adset" : "campaign";
 
-  const nameField = level === "adset" ? "adset_name,adset_id" : "campaign_name,campaign_id";
-  const fields = `${nameField},spend,impressions,clicks,ctr,cpc,actions,action_values`;
-  const res = await graphGet(
-    `${AD_ACCOUNT_ID}/insights?level=${level}&date_preset=${datePreset}&fields=${fields}&time_increment=all&limit=200`,
-    token
-  );
-  if (res.error) return json({ ok: false, error: res.error }, 502);
+    const nameField = level === "adset" ? "adset_name,adset_id" : "campaign_name,campaign_id";
+    const fields = `${nameField},spend,impressions,clicks,ctr,cpc,actions,action_values`;
+    const res = await graphGet(
+      `${AD_ACCOUNT_ID}/insights?level=${level}&date_preset=${datePreset}&fields=${encodeURIComponent(fields)}&time_increment=all&limit=200`,
+      token
+    );
+    if (res.error) return json({ ok: false, error: res.error }, 200);
 
-  const rows = parseInsights(res.data);
-  const totals = aggregateInsights(rows);
-  const health = measurementHealth(totals);
+    const rows = parseInsights(res.data);
+    const totals = aggregateInsights(rows);
+    const health = measurementHealth(totals);
 
-  return json({
-    ok: true,
-    window: datePreset,
-    level,
-    generated_at: new Date().toISOString(),
-    health,
-    totals,
-    rows,
-  });
+    return json({ ok: true, window: datePreset, level, generated_at: new Date().toISOString(), health, totals, rows });
+  } catch (e) {
+    // Jamais crasher en 502 muet — remonter l'erreur exploitable.
+    return json({ ok: false, error: { message: `${e.name}: ${e.message}` } }, 200);
+  }
 }
