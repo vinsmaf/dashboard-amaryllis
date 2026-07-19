@@ -57,6 +57,25 @@ function chooseModel(avail, tier) {
   return null;
 }
 
+// ── Candidats gratuits INCONNUS du RANK (2026-07-18, aligné sur patrimoine-dashboard) ───────
+// RANK est une whitelist : un nouveau modèle gratuit d'une famille jamais référencée (kimi, glm,
+// nemotron-4, …) n'était JAMAIS essayé. Ici : pour les providers free-tier, on repère le plus
+// gros modèle chat qui ne matche AUCUNE sous-chaîne du RANK et on l'ajoute en FALLBACK d'array
+// (_llm.js essaie chaque élément dans l'ordre) sur medium/smart. ADDITIF : le modèle classé
+// reste premier, rien n'est retiré, le health check de buildPlan couvre la cascade.
+const FREE_PROVIDERS = new Set(["groq", "cerebras", "mistral", "gemini", "openrouter"]); // deepseek exclu : payant
+const NOISE = /\bbase\b|fp[48]|awq|gguf|gptq|int[48]|\b[0-6](\.\d+)?b\b/i; // base/quantisés/mini <7B
+const sizeOf = (id) => { const m = String(id).match(/(\d+)b\b/i); return m ? Number(m[1]) : 0; };
+const RANK_ALL = [...new Set(TIERS.flatMap(t => RANK[t]))];
+function freshFreeCandidates(p, avail) {
+  if (!FREE_PROVIDERS.has(p)) return [];
+  return (avail || [])
+    .filter(isChat)
+    .filter(id => !NOISE.test(id) && !RANK_ALL.some(s => id.includes(s)))
+    .sort((a, b) => sizeOf(b) - sizeOf(a))
+    .slice(0, 1);
+}
+
 // ── D1 store (table ai_ops) ─────────────────────────────────────────────────
 async function ensure(env) {
   await env.revenue_manager.prepare(
@@ -100,6 +119,13 @@ async function buildPlan(env) {
     const avail = Array.isArray(discovery[p]) ? discovery[p] : [];
     const pick = {};
     for (const tier of TIERS) pick[tier] = chooseModel(avail, tier) || MODELS[p]?.[tier];
+    // Fallback candidat gratuit inconnu du RANK — ajouté en fin d'array sur medium/smart
+    // (jamais fast : un modèle inconnu peut être lent, fast doit rester prévisible).
+    const fresh = freshFreeCandidates(p, avail);
+    if (fresh.length) for (const tier of ["medium", "smart"]) {
+      const cur = Array.isArray(pick[tier]) ? pick[tier] : (pick[tier] ? [pick[tier]] : []);
+      pick[tier] = [...cur, ...fresh.filter(id => !cur.includes(id))];
+    }
     models[p] = pick;
   }
 
