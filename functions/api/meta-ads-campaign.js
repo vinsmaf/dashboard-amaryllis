@@ -206,6 +206,11 @@ async function createCampaign(campaignKey, env, opts = {}) {
       const adsetRes = await graphPost(`${AD_ACCOUNT_ID}/adsets`, token, adsetBody);
       if (adsetRes.error) { results.push({ key: a.key, error: `adset`, detail: adsetRes.error, payloadSent: adsetBody }); continue; }
       adsetId = adsetRes.id;
+    } else {
+      // Ad set déjà existant : re-synchroniser son budget sur le brief (l'idempotence ne mettait
+      // jamais à jour le daily_budget d'un ad set créé — un changement de budget dans le brief
+      // restait sans effet). Idempotent, l'ad set reste PAUSED (aucune dépense déclenchée).
+      await graphPost(adsetId, token, { daily_budget: a.adsetPayload.daily_budget });
     }
 
     const adsetConfig = campaign.adsets.find((x) => x.key === a.key);

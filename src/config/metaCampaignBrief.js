@@ -88,7 +88,7 @@ export const CAMPAIGNS = {
       {
         key: "a2_mabouya",
         name: "A2 — Studio Mabouya, parenthèse à deux",
-        enabled: true,
+        enabled: false, // 🚫 coupé 2026-07-19 (agent budget pub) : commission Booking évitée ~20€/résa < seuil viable 30€ (RM-08) → le payant y coûte plus cher que ce qu'il évite. Ne pas activer.
         dailyBudgetCents: 1000, // 10€/j (relevé 2026-07-19, était 3€/j)
         targeting: {
           countries: ["FR"],
@@ -123,7 +123,7 @@ export const CAMPAIGNS = {
         key: "a3_geko",
         name: "A3 — Géko, évasion express Sud Martinique",
         enabled: true, // promu — meilleur funnel on-site des biens testables (83%, cf. note en tête de fichier)
-        dailyBudgetCents: 1000, // 10€/j (relevé 2026-07-19, était 3€/j)
+        dailyBudgetCents: 500, // 5€/j (ajusté 2026-07-19 par l'agent budget pub : plafond CAC Géko ~32€ → ~132€/mois recommandé vs 300€ à 10€/j ; Amaryllis, plafond 81€, garde le gros budget)
         targeting: {
           countries: ["FR"],
           excludedRegions: DOM_EXCLUSIONS,
