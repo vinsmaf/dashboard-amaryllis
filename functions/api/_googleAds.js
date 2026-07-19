@@ -6,7 +6,7 @@
 import { getValidAccessToken } from "./_googleOAuth.js";
 import { buildGaql, parseGoogleAdsStream, aggregateGoogleAds, googleAdsHealth, GAQL_RANGES } from "../../src/utils/googleAdsInsights.js";
 
-const GADS_VERSION = "v18";
+const GADS_VERSION = "v21"; // version courante Google Ads API (v18 sunset ; MAJ 2026-07-19)
 const normId = (v) => String(v || "").replace(/[^0-9]/g, "");
 
 export async function fetchGoogleAdsInsights(env, db, windowKey) {
