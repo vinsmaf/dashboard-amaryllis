@@ -27,7 +27,12 @@
 //   comme un test au même titre que les 2 autres.
 // - Offre Groupe : repoussée en A4 (enabled:false) — aucune donnée réelle derrière cet angle
 //   (jamais lancé), alors que Géko a un vrai signal positif. Priorité au signal connu avant
-//   d'ouvrir un 4e front non testé (budget C1 inchangé : 9€/j sur 3 ad sets actifs).
+//   d'ouvrir un 4e front non testé.
+// - Budget relevé le 2026-07-19 (demande explicite Vincent) : 10€/j par ad set actif (haut de
+//   la fourchette "5-10€/j minimum viable" du brief de juin) — 30€/j total sur A1+A2+A3
+//   (~900€/mois), contre 9€/j initialement. Cohérent avec l'activation d'Advantage Audience
+//   (cf. buildTargeting) : plus de budget = plus de marge pour que l'algo sorte de
+//   l'apprentissage limité.
 
 export const AD_ACCOUNT_ID = "act_853205825762332";
 
@@ -47,7 +52,7 @@ export const CAMPAIGNS = {
         key: "a1_amaryllis",
         name: "A1 — Villa Amaryllis, le rêve premium",
         enabled: true,
-        dailyBudgetCents: 300, // 3€/j
+        dailyBudgetCents: 1000, // 10€/j (relevé 2026-07-19, était 3€/j)
         targeting: {
           countries: ["FR"],
           excludedRegions: DOM_EXCLUSIONS,
@@ -75,7 +80,7 @@ export const CAMPAIGNS = {
         key: "a2_mabouya",
         name: "A2 — Studio Mabouya, parenthèse à deux",
         enabled: true,
-        dailyBudgetCents: 300,
+        dailyBudgetCents: 1000, // 10€/j (relevé 2026-07-19, était 3€/j)
         targeting: {
           countries: ["FR"],
           excludedRegions: DOM_EXCLUSIONS,
@@ -101,7 +106,7 @@ export const CAMPAIGNS = {
         key: "a3_geko",
         name: "A3 — Géko, évasion express Sud Martinique",
         enabled: true, // promu — meilleur funnel on-site des biens testables (83%, cf. note en tête de fichier)
-        dailyBudgetCents: 300,
+        dailyBudgetCents: 1000, // 10€/j (relevé 2026-07-19, était 3€/j)
         targeting: {
           countries: ["FR"],
           excludedRegions: DOM_EXCLUSIONS,
@@ -124,7 +129,7 @@ export const CAMPAIGNS = {
         key: "a4_groupe",
         name: "A4 — Offre Groupe, toute la tribu",
         enabled: false, // aucune donnée réelle derrière cet angle (jamais lancé) — après A1/A2/A3, pas avant
-        dailyBudgetCents: 300,
+        dailyBudgetCents: 1000, // 10€/j (relevé 2026-07-19, était 3€/j)
         targeting: {
           countries: ["FR"],
           excludedRegions: DOM_EXCLUSIONS,

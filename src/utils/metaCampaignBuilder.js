@@ -32,6 +32,12 @@ export function buildTargeting(adset, resolvedInterests, resolvedRegions) {
     geo_locations: { countries: adset.targeting.countries },
     age_min: adset.targeting.ageMin,
     age_max: adset.targeting.ageMax,
+    // Meta exige ce champ explicitement (erreur réelle en prod sans lui : code 100,
+    // subcode 1870227, "Advantage Audience Flag Required"). 1 = autorise Meta à étendre
+    // l'audience au-delà des intérêts choisis s'il pense trouver du volume — choisi plutôt
+    // que 0 (strict) vu le budget très serré (3€/j/ad set) : mieux vaut laisser l'algo
+    // chercher du volume que rester bloqué en apprentissage limité sur un ciblage étroit.
+    targeting_automation: { advantage_audience: 1 },
   };
   if (resolvedRegions?.length) {
     const excluded = {};

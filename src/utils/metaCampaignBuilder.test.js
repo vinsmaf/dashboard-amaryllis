@@ -40,6 +40,13 @@ describe("buildTargeting", () => {
     expect(t.excluded_geo_locations).toBeUndefined();
   });
 
+  it("active l'Advantage Audience de Meta (requis, sinon Meta rejette la création)", () => {
+    // Erreur réelle en prod sans ce champ : code 100 / subcode 1870227
+    // ("Advantage Audience Flag Required").
+    const t = buildTargeting(a1, [], []);
+    expect(t.targeting_automation).toEqual({ advantage_audience: 1 });
+  });
+
   it("ajoute les intérêts et exclusions régionales résolus", () => {
     const interests = [{ id: "123", name: "Martinique", matchedName: "Martinique" }];
     const regions = [{ key: "R1", name: "Martinique", type: "region", matchedName: "Martinique" }];
@@ -115,7 +122,7 @@ describe("buildAdSetPayload", () => {
     const p = buildAdSetPayload(a1, "cmp_123", { geo_locations: { countries: ["FR"] } });
     expect(p.status).toBe("PAUSED");
     expect(p.campaign_id).toBe("cmp_123");
-    expect(p.daily_budget).toBe(300);
+    expect(p.daily_budget).toBe(1000);
     expect(p.optimization_goal).toBe("LANDING_PAGE_VIEWS");
   });
 });
