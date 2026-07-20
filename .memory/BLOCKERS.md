@@ -10,9 +10,9 @@
 - **Reste 2 fils ouverts (non bloquants)** : (a) **passage `AD_AGENT_MODE=live`** — décision de Vincent après avoir vu tourner le shadow quelques jours (lire `ad_budget_actions`). (b) **couper la campagne Google "Canada"** (155€/mois, marché lointain) — question géo posée à Vincent, en attente de sa réponse (manuel dans Google Ads, pas d'écriture API).
 - **Contexte critique** : même en `live`, l'agent ne peut PAS activer un ad set en pause / créer une campagne / dépasser 600€ (impossible par construction). Google Ads = lecture seule (aucune primitive mutate). Le "0 conversion Google" est de la **variance sur échantillon minuscule**, pas un bug (tracking sain des 2 côtés depuis 02/06) → NE PAS reproposer "réparer le tracking Google".
 
-## ✅ 2026-07-19 — Google Ads API : OPÉRATIONNEL (branché, lit les données réelles) · 🟡 tracking conversion à creuser
+## ✅ 2026-07-19 — Google Ads API : OPÉRATIONNEL (branché, lit les données réelles) · tracking conversion élucidé
 - **RÉSOLU le 2026-07-19 (soir)** : API activée (projet Cloud **739205709562**), OAuth `googleads` connecté, `/api/google-ads-insights` (API **v21** — v18 était sunset→404) lit les **8 campagnes réelles** (508,91€/30j). **L'accès Basic n'était PAS bloquant** pour la lecture (Explorer + OAuth suffisent). Onglet admin **Budget Pub** (`AdBudgetTab`, Marketing) affiche Meta + Google + vision budget par bien.
-- **🟡 NOUVEAU POINT à creuser (prochaine session)** : `health:traffic_only` = **508,91€ dépensés / 30j pour 0 conversion trackée** sur Google Ads → soit ça ne convertit pas, soit le tracking (import GA4 'Achat' en Principale) a un souci d'attribution. L'agent refuse d'arbitrer le ROAS tant que muet. À investiguer.
+- **✅ RÉSOLU** — checkpoint 2026-07-19 a tranché : tracking sain des 2 côtés depuis 02/06 (lien GA4↔Ads + import purchase Principale), vrai diagnostic = échantillon minuscule (6 achats/30j), PAS un bug. Ne pas reproposer réparer le tracking Google.
 - **État (historique de la mise en place)** : MCC "Villamaryllis Locations" (**142-194-6270**) créé + compte Ads (**226-428-3778**) lié + accepté · developer token créé (statut **"Accès Explorer"** = test only, ne lit PAS le vrai compte) · **demande d'accès Basic soumise** le 2026-07-19 (formulaire `new_token_application` + PDF de design `~/Desktop/google-ads-api-tool-design.pdf`). Tracking conversion Google Ads (import GA4 `purchase`) déjà en Principale (vérifié 07-12).
 - **Débloque** : validation Google de l'accès **Basic** (~5 j, cf. AGENDA ~2026-07-26). ⚠️ Le champ "Google Cloud project number" (champ 2 du formulaire) restait à remplir par Vincent au moment de la clôture — vérifier qu'il a bien pu soumettre (sinon le compléter). Une fois Basic accordé : coder l'intégration API Google Ads (OAuth Ads + lecture perfs → brique 1b), stocker developer token + credentials en **secrets Cloudflare** (jamais en clair). Vincent a explicitement choisi l'automatisation API plutôt que la saisie manuelle.
 
@@ -29,9 +29,10 @@
 - **Je n'ai PAS pu vérifier/modifier ce réglage moi-même** : le token API `CLOUDFLARE_API_TOKEN` disponible est scopé à la purge de cache uniquement (401 sur `/zones/{id}/bot_management` et `/settings/security_level`) — et modifier un réglage de sécurité reste de toute façon une action que je ne dois jamais faire moi-même, même avec permission.
 - **Débloque** : Vincent doit aller dans le dashboard Cloudflare (zone villamaryllis.com) → **Security → Bots** → chercher un toggle "AI Scrapers and Crawlers" / "Block AI Bots" et le désactiver (ou passer en "Allow"). Si absent de cet écran, vérifier **Security → WAF → Managed rules / Custom rules** pour une règle qui matche ces user-agents. Une fois changé, revérifier avec les mêmes commandes `curl -A "..."` ci-dessus (ou redemander à Claude de revérifier).
 
-## 🟡 2026-07-18 — 3 éléments non committés antérieurs à cette session, disposition inconnue
+## ✅ 2026-07-18 → fermé 2026-07-20 — 3 éléments non committés antérieurs à cette session, disposition inconnue
 - **Constat** : au démarrage de cette session, `git status` montrait déjà `functions/api/ai-ops.js` modifié (+26 lignes, ajout de candidats gratuits hors RANK pour l'auto-discovery LLM, commentaire "aligné sur patrimoine-dashboard", daté 07-18), `src/data/imageVariants.json` modifié (1 ligne), et un dossier non suivi `_vincent-os-v6-delivery/` (5 fichiers .md, horodatés 09/07 — audit + plan "Vincent OS unifié" + prompts de délégation locatif/patrimoine, probablement lié aux travaux Fable 5 mentionnés dans l'échange sur le second cerveau). Rien de tout ça n'a été touché ni committé par cette session — statut à clarifier avec Vincent (fini et à committer ? brouillon à jeter ? travail d'une autre instance en cours ?).
 - **Débloque** : demander à Vincent s'il veut que ces 3 éléments soient committés, revus, ou laissés tels quels.
+- **✅ Preuve trouvée 2026-07-20** : `git status --short` sur `functions/api/ai-ops.js` et `src/data/imageVariants.json` = propre (aucune modif locale, donc committé ou annulé) ; `_vincent-os-v6-delivery/` n'existe plus sur le disque. Les 3 éléments sont clarifiés/résorbés.
 
 ## En cours → ✅ terminé le 2026-07-18 — Near-miss pricing Schœlcher + idée I-12 (marque blanche)
 - **Tâche** : suite du fil pricing — Vincent avait dit "ok go" sur un test "+15%" Schœlcher que Claude avait recommandé en citant l'ADR YTD (87€, `/api/revenue-summary`). Avant d'écrire un override, vérification de la couche seed (`SEED_DAILY_PRICES`) + du live `/api/site-config?type=prices` a montré que le prix EFFECTIF proche (juil-26 août) était déjà 128-154€ — la reco initiale était fondée sur le mauvais chiffre (moyenne YTD, pas le prix réellement affiché). **Aucun override écrit.** Vincent a confirmé que la baisse fin août-septembre (override 20-25€ sous le seed) est volontaire ("septembre très peu de demandes") — pas un bug.
@@ -97,18 +98,20 @@
 ## 🔴 2026-07-16 — `CLAUDE_SECRET` trouvé en clair dans `.memory/FLUX-RESAS.md`, committé en git depuis plusieurs commits
 > Découvert en réécrivant `FLUX-RESAS.md` (P3 de l'audit synchro) — un exemple de commande bash contenait `SECRET="0e091781cd..."` en dur. Retiré du fichier actuel (remplacé par `grep .dev.vars`), mais **l'historique git le contient toujours** (5 commits touchant ce fichier). **Débloque** : décision de Vincent — (1) faire tourner (rotation) `CLAUDE_SECRET` sur Cloudflare Pages + `.dev.vars` (rapide, proposé mais pas fait seul), et/ou (2) purger l'historique git (`git filter-repo`/BFG — opération plus lourde, destructive, à ne pas faire sans validation explicite).
 
-## 🔴 2026-07-15 (nuit) — Audit complet site+dashboard (8 agents parallèles) : 3 failles sécurité actives + 1 bug conversion silencieux site-wide
+## ✅ 2026-07-15 (nuit) → fermé 2026-07-20 — Audit complet site+dashboard (8 agents parallèles) : 3 failles sécurité actives + 1 bug conversion silencieux site-wide
 > Demandé par Vincent avant de dormir ("audit complet et total... pour demain matin"). 8 audits read-only en parallèle (QA fonctionnel, infra, sécurité, SEO, données D1, finances, design, complétude admin) + mes propres checks (secrets/lint/tests). Détail complet + tous les findings mineurs → rapport Artifact + `docs/_audits/AUDIT-COMPLET-2026-07-15.md`. Ici : uniquement ce qui nécessite une décision/action de Vincent.
+> **✅ RÉSOLU (items sécu/conversion majeurs)** — `beds24-manage.js` verifyBearer (L6+L192) + vérif paiement Stripe (L112) ; `tv-context.js:110` fuite prénom/dates fermée ; `src/index.css:78` overflow-x:clip ; `PublicSite.jsx` openBien() ne casse plus l'attribution GA4/Meta. 3 sous-items restants (EN, Nogent totaux, politique annulation) restent 🟡 ouverts.
 
 **Sécurité — à traiter en premier, touche le tunnel de paiement réel (donc PAS corrigé cette nuit sans pouvoir tester avec toi) :**
 - `functions/api/beds24-manage.js` action `confirm` : aucune vérification de paiement Stripe — 2 requêtes publiques (`beds24-create` puis `beds24-manage confirm`) suffisent à confirmer une résa Nogent gratuite qui bloque les vraies dates.
 - Même fichier, action `cancel` : aucune vérification de propriété (IDOR) — un `bookingId` valide (obtenu via l'action `find`) suffit à annuler n'importe quelle résa Nogent réelle et payée.
 - `functions/api/tv-context.js` : fuite sans auth du prénom + dates du séjour en cours, **confirmée exploitable en live cette nuit** (`?p=nogent` a renvoyé le vrai prénom d'un vrai voyageur présent). RGPD + risque "détection de logement vacant".
 - **Débloque** : session dédiée avec toi pour patcher + tester une vraie réservation Nogent avant de déployer (risque de casser le tunnel de paiement si fait à la légère).
+- **✅ Preuve trouvée 2026-07-20 — les 3 failles sécurité sont corrigées** : `functions/api/beds24-manage.js` (commentaire "audit 2026-07-15") vérifie désormais le PaymentIntent Stripe réel avant `confirm` (L97-125) et exige `email`+`lastName` matchés sur une fenêtre 6h avant `cancel` (L127-150, fix IDOR) ; `functions/api/tv-context.js` (commentaire "Sécurité (audit 2026-07-15)") n'accepte plus que les requêtes avec un `Referer` `villamaryllis.com/bienvenue` (L110-127). Les points "Conversion/argent" ci-dessous restent à vérifier un par un.
 
 **Conversion/argent — bugs de code réels, pas juste des constats :**
-- `src/PublicSite.jsx` `openBien()` (~L9301) appelle `openDetail(null)` qui réinitialise l'URL vers `/` et le `<title>` vers celui de la home à CHAQUE ouverture du récap réservation, sur TOUTES les fiches biens — casse l'attribution GA4/Meta par bien (impacte directement le checkpoint ROAS du 19/07 déjà prévu dans AGENDA) et fait perdre la progression si le voyageur rafraîchit. Fix identifié : ne pas appeler `openDetail(null)` depuis `openBien()`, juste fermer l'overlay localement.
-- `src/index.css:72-75` `overflow-x:hidden` sur `<body>` casse silencieusement le header sticky sur TOUT le site (mesuré : `top:-301px` au scroll au lieu de `0`) — le CTA réservation disparaît dès qu'on scroll sur une fiche bien. Fix identifié : `overflow-x:clip` au lieu de `hidden`, ou déplacer sur un wrapper.
+- ✅ **Fermé, vérifié 2026-07-20** — `src/PublicSite.jsx` `openBien()` (~L9301) appelle `openDetail(null)` qui réinitialise l'URL vers `/` et le `<title>` vers celui de la home à CHAQUE ouverture du récap réservation, sur TOUTES les fiches biens — casse l'attribution GA4/Meta par bien (impacte directement le checkpoint ROAS du 19/07 déjà prévu dans AGENDA) et fait perdre la progression si le voyageur rafraîchit. Fix identifié : ne pas appeler `openDetail(null)` depuis `openBien()`, juste fermer l'overlay localement. **Preuve** : `openBien()` (L9766) utilise désormais `setDetailBien(null)` avec un commentaire explicite "SANS passer par openDetail(null) ... trouvé par audit 2026-07-15".
+- ✅ **Fermé, vérifié 2026-07-20** — `src/index.css:72-75` `overflow-x:hidden` sur `<body>` casse silencieusement le header sticky sur TOUT le site (mesuré : `top:-301px` au scroll au lieu de `0`) — le CTA réservation disparaît dès qu'on scroll sur une fiche bien. Fix identifié : `overflow-x:clip` au lieu de `hidden`, ou déplacer sur un wrapper. **Preuve** : `src/index.css:78` = `overflow-x: clip;`.
 - Bouton WhatsApp flottant n'apparaît JAMAIS sur les fiches biens chargées directement (`/amaryllis` etc. — donc tout visiteur venant de Google/pub/réseaux), seulement après scroll sur la home. `PublicSite.jsx` ~L10360.
 - Nogent affiche 3 totaux différents pour le même séjour (145€ dans le header vs 135€ dans la modale ET sur le bouton payer) — écart de 10€, à re-tester sur d'autres dates/biens pour voir l'ampleur.
 - Politique d'annulation contradictoire dans le MÊME flow de réservation (Amaryllis) : "7 jours" affiché en step 1, "J-14" (le vrai) affiché juste en dessous et en step 2 — risque de litige voyageur.
@@ -184,8 +187,9 @@
 ## 🟡 2026-07-12 — Boutons flottants FAQ+chat chevauchent la ligne stats sur iPhone SE (pré-existant, mineur)
 > Trouvé pendant qa-004 : sur 375px (iPhone SE), avant tout scroll, les boutons "?" et chat recouvrent partiellement la fin de la ligne stats ("3,5 sdb") des fiches biens. Rien de bloquant (aucun clic empêché), esthétique seulement. Signalé à Vincent avec 2 pistes (apparition différée après scroll, ou réduction de taille sur mobile) — pas encore tranché. **Débloque** : décision de Vincent sur la piste à suivre, si il veut la traiter.
 
-## 🔴 2026-07-13 — Résa directe annulée continue de bloquer ses dates sur Airbnb/Booking (iCal export)
+## ✅ 2026-07-13 → fermé 2026-07-20 — Résa directe annulée continue de bloquer ses dates sur Airbnb/Booking (iCal export)
 > Trouvé pendant la clôture du tag pollinisation CROSS-LEARNINGS (vérification code, pas supposition). `cancel-booking.js` ne supprime jamais la ligne `direct_bookings`, il pose `status='cancelled'` (row conservée, comme prévu). Mais `functions/api/ical-export.js` et `functions/api/ical/[file].js` — le flux iCal envoyé à Airbnb/Booking.com pour bloquer les dates déjà prises (anti-double-booking) — **lisent `direct_bookings` SANS filtrer `status`**. Contrairement à `direct-bookings.js` (Planning admin) et `rapport-business.js` qui filtrent bien `(status IS NULL OR status != 'cancelled')` (tâche #46 "Exclure les résas annulées des lectures critiques", marquée complétée — mais visiblement pas exhaustive sur TOUS les consommateurs). Conséquence concrète : une résa directe annulée reste bloquée à vie sur Airbnb/Booking.com → dates réellement libres jamais reproposées aux OTA → perte de revenu silencieuse. `tv-context.js` (écran TV) et `morning-brief.js` (brief ntfy) ont le même trou, impact mineur/cosmétique seulement. **Débloque** : ajouter `AND (status IS NULL OR status != 'cancelled')` aux 2 requêtes SQL de `ical-export.js`/`ical/[file].js` (fix mécanique, 1 ligne par fichier, même pattern que `direct-bookings.js`) — pas encore fait, en attente d'arbitrage Vincent.
+> **✅ Preuve trouvée 2026-07-20** : `functions/api/ical-export.js:76` et `functions/api/ical/[file].js:64` contiennent désormais tous les deux `AND (status IS NULL OR status != 'cancelled')`. Le fix décrit ci-dessus est en place.
 
 ## 🟡 2026-07-12 — Bail Iguana (Joël Bailleul) : risque de requalification judiciaire en bail meublé
 > Vincent a fourni les 3 vrais contrats Rentila (PDF) après correction du loyer 3400€→1800€/mois.
@@ -243,7 +247,7 @@
 - **Audit Google Ads en direct** (Claude in Chrome, compte réel) : 6 campagnes actives (2 non documentées : Zandoli, Amaryllis — confirmées faites avec Claude, jamais journalisées), Géko active alors que notée "en veille", doublon "Groupe d'annonces 2" nettoyé (supprimé définitivement, vide depuis sa création). 30j : 24 154 impr., 895 clics, 417€ dépensés.
 - **Triage backlog `agent_actions`** (43 items en attente) : 2 déjà traitées (`cpw-112` Mabouya déjà conforme, `cpw-108` non actionnable → noyau réel enrichi séparément), 5 bloquées avec notes explicatives (`arch-063`/`rep-012`/`rep-011` génériques ou hors-mandat, `cm-071`/`cm-075` doublons de `cm-063`), 2 implémentées (`media-038` préchargement lightbox, `log-034` catégorie "qualite" maintenance — aucune fiche bien éditable n'existe, réutilisé le système existant plutôt qu'en construire une neuve).
 - 🟡 **`sc-013`** (docs de référence propriétaires/clients) laissée en l'état — Vincent : "je ne sais pas trop", scope à préciser avant toute action.
-- 🟡 **GA4 "Paid Search" toujours 0 achat attribué** (224 sessions/30j réelles, mais les 7 achats du funnel tombent en Direct/Unassigned) — trop tôt pour trancher résidu pré-fix (08/07) vs vrai trou résiduel. Checkpoint 2026-07-19 (AGENDA) tranchera.
+- **✅ RÉSOLU** — checkpoint 2026-07-19 a tranché : tracking sain des 2 côtés depuis 02/06 (lien GA4↔Ads + import purchase Principale), vrai diagnostic = échantillon minuscule (6 achats/30j), PAS un bug. Ne pas reproposer réparer le tracking Google.
 - **Gap mémoire résolu** : la découverte des 3 faits Ads non documentés a révélé que les sessions Google Ads 100% UI (sans commit) ne laissent aucune trace si l'entrée `ITERATIONS_LOG.md` n'est pas écrite en temps réel — nouvelle leçon dans `learnings/TRACKING-ANALYTICS-ADS.md` + `learnings/AUTOMATION-NAVIGATEUR.md`.
 
 ## En cours → ✅ terminé le 2026-07-10 — Chantier B1/B2 revenue-summary + zoom galerie + backlog PWA guide-sejour
@@ -408,23 +412,11 @@
 ## ✅ Géko Ads — doublon supprimé, campagne réactivée (2026-07-11)
 - **Statut** : "Groupe d'annonces 2" (0 impr./0€ depuis sa création) supprimé définitivement dans Google Ads — ne reste que "Groupe d'annonces 1" (832 impr., 12,31€). Vincent confirme que la campagne a été réactivée directement avec Claude (pas de trace mémoire trouvée — cf. LEARNINGS METHODOLOGIE-PROCESS.md, session Ads UI-only jamais journalisée).
 - **Audit compte complet fait le même jour** (vérifié en direct dans Google Ads, pas juste mémoire) : **6 campagnes actives** au total, pas 3 — 2 non documentées jusqu'ici (`Zandoli - Appartement Martinique 5p`, `Amaryllis - Villa Martinique 8p`, confirmées par Vincent comme faites avec Claude). 30j glissants : 24 154 impr., 895 clics, 417€ dépensés, CPC moy. 0,47€. Détail par campagne dans ITERATIONS_LOG 2026-07-11.
-- 🟡 **Reste ouvert** : GA4 montre 224 sessions/30j sur le canal "Paid Search" mais **0 achat attribué à ce canal** (les 7 achats du funnel tombent en Direct/Unassigned) — trop tôt pour trancher si c'est du résidu pré-fix attribution (08/07) ou un vrai trou. Checkpoint 2026-07-19 (AGENDA) tranchera.
-
-## En cours → ✅ terminé le 2026-06-30 (Veille concurrentielle RM — sélection + import 18 concurrents)
-
-## En cours → ✅ terminé le 2026-06-30 (Cerveau AGENDA cleanup + UI note d'impact agents)
-
-## En cours → ✅ terminé le 2026-06-29 (Header SEO + conversion + iguana noindex + aggregateRating home)
-
-## En cours → ✅ terminé le 2026-06-29 (Audit prod ultracode 24 findings + session tracking + LLM)
-
-## En cours → ✅ terminé le 2026-06-29 (Session tracking + LLM + backlog agents)
+- **✅ RÉSOLU** — checkpoint 2026-07-19 a tranché : tracking sain des 2 côtés depuis 02/06 (lien GA4↔Ads + import purchase Principale), vrai diagnostic = échantillon minuscule (6 achats/30j), PAS un bug. Ne pas reproposer réparer le tracking Google.
 
 ## 🟡 Perf pubs — GA4 purchase confirmé, bascule stratégie d'enchères pas encore faite
 - **Statut** : fix `event_callback` (29/06) + fix attribution `b40ba06` (08/07) déployés. **Vérifié 2026-07-11** : GA4 funnel remonte bien `purchase: 7` events / `totalRevenue: 3881€` sur la fenêtre — le tracking fonctionne. Google Ads `amaryllis (web) purchase` non revérifié côté UI Ads (pas d'accès direct depuis ce repo).
 - **Ce qui débloque** : Vincent bascule les campagnes Google en "Maximiser les conversions" + Meta en "Purchase" quand il juge le volume suffisant (7 events = encore peu pour du smart bidding fiable, envisager d'attendre un peu plus de données). Checkpoint ROAS déjà prévu 2026-07-19 (AGENDA).
-
-## En cours → ✅ terminé le 2026-06-27 (Session pipeline sécurité réservations — 4 gaps comblés)
 
 ## 🟡 Annulation directe Stripe = toujours manuelle
 - **Statut** : pas de détection auto possible (pas d'iCal pour les résas Stripe)
@@ -436,48 +428,14 @@
 - **Action Vincent** : dès réception des emails TA → transmettre les 6 URLs à Claude → mise à jour `TRIPADVISOR_REVIEW` dans `functions/api/send-poststay.js` → redéploiement.
 - **En attendant** : le bloc TripAdvisor est dans les emails post-séjour mais les liens sont des placeholders (ne fonctionnent pas). Les emails partent quand même (bloc non-critique).
 
-## ✅ 2026-06-26 — Session Apple Business Connect — résidence Amaryllis configurée — détail complet : `.memory/ITERATIONS_LOG.md`
-
 ## 🟡 Apple Business Connect — validation org en attente (soumise 26/06/2026)
 - **Statut** : dossier soumis avec justificatifs (Kbis + enregistrement DNS TXT). Délai ≤5j ouvrés.
 - **Ce qui débloque** : email de confirmation Apple → création des 6 emplacements restants.
 - **Date limite estimée** : ~2026-07-03 (5j ouvrés).
 
-## ✅ 2026-06-26 — Session RM plancher CalendrierTarifs — fix complet server+UI — détail complet : `.memory/ITERATIONS_LOG.md`
-
-## ✅ 2026-06-26 — Session revenus — corrections chirurgicales Sheet « revenus locatifs 2026 » — détail complet : `.memory/ITERATIONS_LOG.md`
-
-## ✅ Schœlcher direct juillet — 2585.71€ → 1600€ (Éléonore BEVON uniquement, 2026-06-26)
-
-## ✅ 2026-06-25 — Session UI visuelle — nav 8→6 groupes + 5 améliorations visuelles admin — détail complet : `.memory/ITERATIONS_LOG.md`
-
-## ✅ 2026-06-24 — Session dashboard UX — Charges Évolution + Pilotage consolidation + ROI pub — détail complet : `.memory/ITERATIONS_LOG.md`
-
-## ✅ 2026-06-24 — Feature contacts : base guest_contacts WhatsApp+Sheet + onglet — détail complet : `.memory/ITERATIONS_LOG.md`
-
-## ✅ 2026-06-24 — Incident deploy agent : drift réparé + garde anti-agent + division instances — détail complet : `.memory/ITERATIONS_LOG.md`
-
-## ✅ 2026-06-23 — Session CRM : Phase 0/1 + 1ère campagne réelle — détail complet : `.memory/ITERATIONS_LOG.md`
-
-## ✅ 2026-06-23 — Session articles SEO : portage + maillage + optimisations — détail complet : `.memory/ITERATIONS_LOG.md`
-
-## ✅ 2026-06-23 — Session backlog agents 61-76 + data-056/060 — détail complet : `.memory/ITERATIONS_LOG.md`
-
-## ✅ 2026-06-23 — Session guides : 4 gaps résolus + 11 guides 404 corrigés + Gmail drafts — détail complet : `.memory/ITERATIONS_LOG.md`
-
 ## 🟡 Draft Gmail Sabina DiscoverCars — échec 1er appel create_draft
 - 🟡 Le 1er appel `create_draft` pour Sabina a retourné une erreur tool. Le draft Ilina a réussi (`id: r-7175489248125367124`). Adresse Ilina déduite (`ilina.beskina@discovercars.com`) — non confirmée.
 - **Débloque** : Vincent vérifie dans Gmail Brouillons. Si draft Sabina absent → créer manuellement (To: `sabina.maliseva@discovercars.com`, Sujet: `Re: Special Offer 2 — Amaryllis Locations`, corps : statut Special Offer 2 / 80% commission / prochaine étape). Vérifier aussi l'adresse Ilina avant envoi.
-
-## ✅ 2026-06-23 — Session Pubs — campagne Google Ads Canada LIVE, Meta toujours bloqué — détail complet : `.memory/ITERATIONS_LOG.md`
-
-## ✅ 2026-06-23 — Session reels tous biens — GekoReel + 5 nouveaux déployés — détail complet : `.memory/ITERATIONS_LOG.md`
-
-## ✅ 2026-06-23 — Session immersification guides — 20 guides déployés — détail complet : `.memory/ITERATIONS_LOG.md`
-
-## ✅ 2026-06-22 — Session affiliate GYG + nav fixes + widget embed — détail complet : `.memory/ITERATIONS_LOG.md`
-
-## ✅ 2026-06-22 — Session git sync + CI fix + spam + gate rewrite — détail complet : `.memory/ITERATIONS_LOG.md`
 
 ## 🟡 Email "différence main/prod" — source non confirmée
 - 🟡 Vincent signale un email à chaque deploy "comme quoi il y a une différence entre le main et la prod". Recherche exhaustive (Worker, scripts, fonctions, crons) = **aucun code custom trouvé**.
@@ -486,16 +444,8 @@
 
 ---
 
-## ✅ 2026-06-21 — Session organisation société d'agents + crons — détail complet : `.memory/ITERATIONS_LOG.md`
-
-## ✅ 2026-06-21 — Session sync permanent main=prod + couche monitoring live — détail complet : `.memory/ITERATIONS_LOG.md`
-
-## ✅ 2026-06-21 — Session calendrier compact + auto-scroll + Leaflet ESM — détail complet : `.memory/ITERATIONS_LOG.md`
-
 ## ✅ META_PAGE_TOKEN — migration System User token permanent (fait, vérifié 2026-07-06)
 - ✅ **Preuve trouvée en consolidation hebdo** : commit `6c4dee95` (2026-06-20) "chore: supprimer meta-token-exchange.js (temporaire — post-BV System User token en place)" — `functions/api/meta-token-exchange.js` n'existe plus dans le repo. Migration System User token confirmée effectuée.
-
-## ✅ 2026-06-20 — Session sécurité : 3 trous fermés + 2 bugs CSP + audit multimédia — détail complet : `.memory/ITERATIONS_LOG.md`
 
 ## 🟡 Config page Facebook — éléments en attente
 - 🟡 **CTA "Book now" URL non vérifiée** : le bouton existe sur la page en vue visiteur, mais l'URL de destination n'a pas été confirmée/éditée (session interrompue). → En vue visiteur : hover bouton → crayon → vérifier que cible = `villamaryllis.com`. Si besoin : Page Settings → Buttons.
@@ -613,6 +563,33 @@
 ---
 
 ## ✅ Archivé (levé — gardé pour traçabilité, 1 ligne chacun)
+- En cours → ✅ terminé le 2026-06-30 (Veille concurrentielle RM — sélection + import 18 concurrents)
+- En cours → ✅ terminé le 2026-06-30 (Cerveau AGENDA cleanup + UI note d'impact agents)
+- En cours → ✅ terminé le 2026-06-29 (Header SEO + conversion + iguana noindex + aggregateRating home)
+- En cours → ✅ terminé le 2026-06-29 (Audit prod ultracode 24 findings + session tracking + LLM)
+- En cours → ✅ terminé le 2026-06-29 (Session tracking + LLM + backlog agents)
+- En cours → ✅ terminé le 2026-06-27 (Session pipeline sécurité réservations — 4 gaps comblés)
+- ✅ 2026-06-26 — Session Apple Business Connect — résidence Amaryllis configurée — détail complet : `.memory/ITERATIONS_LOG.md`
+- ✅ 2026-06-26 — Session RM plancher CalendrierTarifs — fix complet server+UI — détail complet : `.memory/ITERATIONS_LOG.md`
+- ✅ 2026-06-26 — Session revenus — corrections chirurgicales Sheet « revenus locatifs 2026 » — détail complet : `.memory/ITERATIONS_LOG.md`
+- ✅ Schœlcher direct juillet — 2585.71€ → 1600€ (Éléonore BEVON uniquement, 2026-06-26)
+- ✅ 2026-06-25 — Session UI visuelle — nav 8→6 groupes + 5 améliorations visuelles admin — détail complet : `.memory/ITERATIONS_LOG.md`
+- ✅ 2026-06-24 — Session dashboard UX — Charges Évolution + Pilotage consolidation + ROI pub — détail complet : `.memory/ITERATIONS_LOG.md`
+- ✅ 2026-06-24 — Feature contacts : base guest_contacts WhatsApp+Sheet + onglet — détail complet : `.memory/ITERATIONS_LOG.md`
+- ✅ 2026-06-24 — Incident deploy agent : drift réparé + garde anti-agent + division instances — détail complet : `.memory/ITERATIONS_LOG.md`
+- ✅ 2026-06-23 — Session CRM : Phase 0/1 + 1ère campagne réelle — détail complet : `.memory/ITERATIONS_LOG.md`
+- ✅ 2026-06-23 — Session articles SEO : portage + maillage + optimisations — détail complet : `.memory/ITERATIONS_LOG.md`
+- ✅ 2026-06-23 — Session backlog agents 61-76 + data-056/060 — détail complet : `.memory/ITERATIONS_LOG.md`
+- ✅ 2026-06-23 — Session guides : 4 gaps résolus + 11 guides 404 corrigés + Gmail drafts — détail complet : `.memory/ITERATIONS_LOG.md`
+- ✅ 2026-06-23 — Session Pubs — campagne Google Ads Canada LIVE, Meta toujours bloqué — détail complet : `.memory/ITERATIONS_LOG.md`
+- ✅ 2026-06-23 — Session reels tous biens — GekoReel + 5 nouveaux déployés — détail complet : `.memory/ITERATIONS_LOG.md`
+- ✅ 2026-06-23 — Session immersification guides — 20 guides déployés — détail complet : `.memory/ITERATIONS_LOG.md`
+- ✅ 2026-06-22 — Session affiliate GYG + nav fixes + widget embed — détail complet : `.memory/ITERATIONS_LOG.md`
+- ✅ 2026-06-22 — Session git sync + CI fix + spam + gate rewrite — détail complet : `.memory/ITERATIONS_LOG.md`
+- ✅ 2026-06-21 — Session organisation société d'agents + crons — détail complet : `.memory/ITERATIONS_LOG.md`
+- ✅ 2026-06-21 — Session sync permanent main=prod + couche monitoring live — détail complet : `.memory/ITERATIONS_LOG.md`
+- ✅ 2026-06-21 — Session calendrier compact + auto-scroll + Leaflet ESM — détail complet : `.memory/ITERATIONS_LOG.md`
+- ✅ 2026-06-20 — Session sécurité : 3 trous fermés + 2 bugs CSP + audit multimédia — détail complet : `.memory/ITERATIONS_LOG.md`
 - ✅ **Sécurité #1-3 fermés** (2026-06-20) : manage-deposit gate Bearer+CORS, social gate Bearer|secret, beds24 cache private. ADR-SEC-001.
 - ✅ **CSP #8-9 débloqués** (2026-06-20) : api.open-meteo.com (météo /explorer) + unpkg style-src (CSS Leaflet). ADR-CSP-001.
 - ✅ **Tracking purchase LEVÉ** (2026-06-20) : 4 purchases trackées 2 894€. Reste : attribution (3/4 en "Unassigned"). Source vive = `npm run funnel`.
