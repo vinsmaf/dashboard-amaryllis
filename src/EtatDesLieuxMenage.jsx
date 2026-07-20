@@ -1,30 +1,19 @@
-// Page publique /etat-des-lieux — le voyageur photographie l'état du logement
-// à l'arrivée ou au départ (sc-023). Accessible via lien dans les emails J-1
-// arrivée (send-j1-acces.js) et J-1 départ (send-pre-depart.js) :
-// /etat-des-lieux?bien=amaryllis&type=entree&checkin=2026-08-01&checkout=2026-08-05&voyageur=...&email=...
+// Page publique /etat-des-lieux-menage — outil dédié au personnel de ménage de
+// l'Appartement Nogent (Nesrine / La Fine Conciergerie). Contrairement à
+// /etat-des-lieux (voyageur, lien personnalisé par résa envoyé par email), celle-ci
+// est un lien FIXE à mettre en favori — pas de token de résa, utilisable à tout
+// moment (avant/après chaque ménage). Mêmes photos que côté voyageur + un champ
+// Remarques libre (fuite, casse, oubli voyageur, matériel manquant...).
 import { useState, useRef } from "react";
 import { compressImage } from "./utils/compressImage.js";
 
-const BIEN_LABELS = {
-  amaryllis: "Villa Amaryllis", zandoli: "Zandoli", iguana: "Villa Iguana",
-  geko: "Géko", mabouya: "Mabouya", schoelcher: "Bellevue Schœlcher", nogent: "Appartement Nogent",
-};
-
 const MAX_PHOTOS = 8;
+const MAX_REMARQUES = 2000;
 
-export default function EtatDesLieux() {
-  const params = new URLSearchParams(window.location.search);
-  const bienId    = params.get("bien") || "";
-  const type      = params.get("type") === "sortie" ? "etat_lieux_sortie" : "etat_lieux_entree";
-  const isSortie  = type === "etat_lieux_sortie";
-  const checkin   = params.get("checkin") || "";
-  const checkout  = params.get("checkout") || "";
-  const voyageur  = params.get("voyageur") || "";
-  const email     = params.get("email") || "";
-  const bienNom   = BIEN_LABELS[bienId] || bienId || "votre logement";
-
-  const [nom, setNom] = useState(voyageur);
-  const [photos, setPhotos] = useState([]); // [{ url, preview }]
+export default function EtatDesLieuxMenage() {
+  const [nom, setNom] = useState("");
+  const [remarques, setRemarques] = useState("");
+  const [photos, setPhotos] = useState([]);
   const [processing, setProcessing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
@@ -33,7 +22,7 @@ export default function EtatDesLieux() {
 
   async function handleFiles(e) {
     const files = Array.from(e.target.files || []);
-    e.target.value = ""; // permet de reprendre la même photo si besoin
+    e.target.value = "";
     if (!files.length) return;
     const room = MAX_PHOTOS - photos.length;
     if (room <= 0) { setError(`Maximum ${MAX_PHOTOS} photos.`); return; }
@@ -56,7 +45,10 @@ export default function EtatDesLieux() {
   async function submit(e) {
     e.preventDefault();
     if (nom.trim().length < 2) { setError("Merci d'indiquer votre nom."); return; }
-    if (photos.length < 1) { setError("Ajoutez au moins une photo."); return; }
+    if (photos.length < 1 && !remarques.trim()) {
+      setError("Ajoutez au moins une photo ou une remarque.");
+      return;
+    }
     setSubmitting(true);
     setError("");
     try {
@@ -64,8 +56,9 @@ export default function EtatDesLieux() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          bienId, bienNom, checkin, checkout, voyageur: voyageur || nom.trim(), email,
-          nom: nom.trim(), type, photos,
+          bienId: "nogent", bienNom: "Appartement Nogent",
+          nom: nom.trim(), type: "etat_lieux_menage", photos,
+          remarques: remarques.trim().slice(0, MAX_REMARQUES),
         }),
       });
       const data = await res.json();
@@ -86,6 +79,7 @@ export default function EtatDesLieux() {
     sub:   { fontSize: 14, color: "#7a6a5a", marginBottom: 28, lineHeight: 1.6 },
     label: { display: "block", fontSize: 13, fontWeight: 600, color: "#3a2a1a", marginBottom: 6 },
     input: { width: "100%", padding: "10px 14px", borderRadius: 8, border: "1.5px solid #d4c8b8", fontSize: 14, color: "#1a0a00", background: "#faf8f5", outline: "none", boxSizing: "border-box" },
+    textarea: { width: "100%", padding: "10px 14px", borderRadius: 8, border: "1.5px solid #d4c8b8", fontSize: 14, color: "#1a0a00", background: "#faf8f5", outline: "none", boxSizing: "border-box", minHeight: 110, resize: "vertical", fontFamily: "inherit" },
     row:   { marginBottom: 18 },
     btn:   { width: "100%", padding: "13px 0", background: "#0e3b3a", color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer", marginTop: 8 },
     btnSecondary: { width: "100%", padding: "13px 0", background: "#fff", color: "#0e3b3a", border: "1.5px solid #0e3b3a", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: "pointer" },
@@ -96,26 +90,22 @@ export default function EtatDesLieux() {
     thumbRemove: { position: "absolute", top: 4, right: 4, width: 22, height: 22, borderRadius: "50%", background: "rgba(0,0,0,0.6)", color: "#fff", border: "none", fontSize: 13, lineHeight: 1, cursor: "pointer" },
   };
 
-  if (!bienId) {
-    return (
-      <div style={s.page}>
-        <div style={s.card}>
-          <h1 style={s.h1}>Lien incomplet</h1>
-          <p style={s.sub}>Ce lien ne contient pas les informations nécessaires. Contactez-nous si le problème persiste.</p>
-        </div>
-      </div>
-    );
-  }
-
   if (sent) {
     return (
       <div style={s.page}>
         <div style={s.card}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>✅</div>
-          <h1 style={s.h1}>État des lieux enregistré</h1>
+          <h1 style={s.h1}>État des lieux envoyé</h1>
           <p style={{ ...s.sub, marginBottom: 0 }}>
-            Merci {nom.trim().split(" ")[0]}, vos {photos.length} photo{photos.length > 1 ? "s" : ""} {isSortie ? "de départ ont" : "d'arrivée ont"} bien été transmises. {isSortie ? "Bon retour !" : "Excellent séjour à vous !"}
+            Merci {nom.trim().split(" ")[0]}, c'est bien transmis à Vincent.
           </p>
+          <button
+            type="button"
+            style={{ ...s.btnSecondary, marginTop: 20 }}
+            onClick={() => { setSent(false); setNom(nom); setRemarques(""); setPhotos([]); setError(""); }}
+          >
+            Faire un nouvel état des lieux
+          </button>
         </div>
       </div>
     );
@@ -125,12 +115,10 @@ export default function EtatDesLieux() {
     <div style={s.page}>
       <div style={s.card}>
         <div style={s.logo}>Amaryllis Locations</div>
-        <h1 style={s.h1}>État des lieux — {isSortie ? "départ" : "arrivée"}</h1>
+        <h1 style={s.h1}>État des lieux — Ménage</h1>
         <p style={s.sub}>
-          {bienNom}{checkin && checkout ? ` · ${checkin} → ${checkout}` : ""}<br />
-          {isSortie
-            ? "Photographiez le logement avant de partir — cela protège votre caution en cas de doute sur l'état des lieux."
-            : "Photographiez le logement à votre arrivée — cela vous protège en cas de doute sur l'état des lieux au départ."}
+          Appartement Nogent<br />
+          Photographiez ce que vous constatez (dégât, oubli, matériel manquant…) et ajoutez une remarque si besoin. Vincent reçoit tout immédiatement.
         </p>
 
         {error && <div style={s.err}>{error}</div>}
@@ -138,13 +126,11 @@ export default function EtatDesLieux() {
         <form onSubmit={submit} noValidate>
           <div style={s.row}>
             <label style={s.label}>Votre nom <span style={{ color: "#e84a4a" }}>*</span></label>
-            <input style={s.input} value={nom} onChange={e => setNom(e.target.value)} placeholder="Marie Dupont" />
+            <input style={s.input} value={nom} onChange={e => setNom(e.target.value)} placeholder="Nesrine" />
           </div>
 
           <div style={s.row}>
-            <label style={s.label}>
-              Photos ({photos.length}/{MAX_PHOTOS}) <span style={{ color: "#e84a4a" }}>*</span>
-            </label>
+            <label style={s.label}>Photos ({photos.length}/{MAX_PHOTOS})</label>
             {photos.length > 0 && (
               <div style={s.grid}>
                 {photos.map((p, i) => (
@@ -169,6 +155,15 @@ export default function EtatDesLieux() {
                 </button>
               </>
             )}
+          </div>
+
+          <div style={s.row}>
+            <label style={s.label}>Remarques</label>
+            <textarea
+              style={s.textarea} value={remarques} maxLength={MAX_REMARQUES}
+              onChange={e => setRemarques(e.target.value)}
+              placeholder="Ex : robinet salle de bain qui fuit, télécommande clim manquante, tache sur le canapé…"
+            />
           </div>
 
           <button style={s.btn} type="submit" disabled={submitting || processing}>
