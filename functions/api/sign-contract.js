@@ -115,7 +115,9 @@ export async function onRequestPost(context) {
         headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           from: resendFrom(env),
-          to: [(env.NOTIFICATION_EMAIL || "contact@villamaryllis.com").split(",")[0].trim()],
+          to: isMenage
+            ? [(env.NOTIFICATION_EMAIL || "contact@villamaryllis.com").split(",")[0].trim(), "lafineconciergerie@gmail.com"]
+            : [(env.NOTIFICATION_EMAIL || "contact@villamaryllis.com").split(",")[0].trim()],
           subject,
           html: `<div style="font-family:sans-serif"><h3>${etapeLabel || "Contrat de location signé"}</h3><p><strong>${bienNom || bienId}</strong><br>Signataire : ${nom.trim()}${voyageur || email ? `<br>Voyageur : ${voyageur || "—"} · ${email || "—"}` : ""}${checkin && checkout ? `<br>Séjour : ${checkin} → ${checkout}` : ""}<br>IP : ${ip}</p>${remarquesHtml}${photosHtml}</div>`,
         }),
