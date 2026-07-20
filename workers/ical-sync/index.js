@@ -109,6 +109,13 @@ const NOMS = {
   nogent:     "Appartement Nogent",
 };
 
+// Iguana = bail long (Joël Bailleul, 1800€/mois), jamais sur le marché locatif → toute
+// alerte/snapshot d'OCCUPATION doit l'exclure (0% y est structurellement garanti et n'a
+// aucun sens). Scope volontairement limité à l'occupation : NOMS reste inchangé pour ses
+// 8 autres usages (labels email, gap/yield pricing déjà protégés par leurs propres facteurs
+// à 0, etc.) — cf. DEFAULT_EXCLUDED_BIENS (functions/api/editorial-calendar.js), même logique.
+const OCCUPANCY_EXCLUDED_BIENS = new Set(["iguana"]);
+
 // Plancher absolu = minimums PRIX_LIMITS (App.jsx). Miroir de src/App.jsx PRIX_LIMITS.
 // Utilisé si D1 price_min non configuré. Les remises gap/yield ne descendent jamais sous ces seuils.
 const SITE_PRIX_CENTS = {
@@ -1061,12 +1068,38 @@ async function runWeeklyReport(env, allEvents) {
 // ── Alertes sous-occupation ──────────────────────────────────────────────────
 // Persiste l'occupation forward (30j/90j) par bien dans rm_kpi_snapshots → le RM "voit"
 // enfin l'occupation réelle. Mirroir de src/utils/occupancy.js (garder synchro). Advisory only.
+// Nogent tourne EXCLUSIVEMENT sur Beds24 (jamais Airbnb/Booking iCal, cf. CLAUDE.md "Beds24 =
+// Nogent UNIQUEMENT") — sans cette fonction, `allAvailEvents` (source unique de l'occupation
+// réelle pour snapshot/alertes/gap-pricing/yield-pricing) ne contient JAMAIS ses résas, donc
+// Nogent affiche structurellement 0% quelle que soit la réalité (bug trouvé 2026-07-20 : alerte
+// sous-occupation annonçant Nogent à 0% alors qu'il est presque plein). Même logique que
+// `fetchBeds24Blocked` (functions/api/get-availability.js) : arrivalFrom=J-30 (couvre les
+// séjours en cours), exclut seulement "cancelled" — un blocage propriétaire (status "black")
+// compte comme indisponible, cohérent avec parseICSAvailability côté Airbnb/Booking.
+async function fetchBeds24AvailEvents(env) {
+  const token = env.BEDS24_TOKEN;
+  if (!token) return [];
+  try {
+    const since = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+    const qp = new URLSearchParams({ propId: "158192", arrivalFrom: since, numId: "200" });
+    const res = await fetch(`https://beds24.com/api/v2/bookings?${qp}`, { headers: { token } });
+    const data = await res.json();
+    if (!data.success || !Array.isArray(data.data)) return [];
+    return data.data
+      .filter(b => b.status !== "cancelled" && b.arrival && b.departure)
+      .map(b => ({ bienId: "nogent", checkin: b.arrival, checkout: b.departure }));
+  } catch (e) {
+    console.error("[beds24-avail]", e.message);
+    return [];
+  }
+}
+
 async function runOccupancySnapshot(env, allEvents) {
   if (!env.revenue_manager) { console.log("[occupancy] pas de binding D1 — skip"); return; }
   const db = env.revenue_manager;
   const todayStr = today();
   const activeBiens = new Set(Object.keys(getAirbnbUrls(env)));
-  Object.keys(NOMS).forEach((id) => activeBiens.add(id)); // inclut nogent (Beds24)
+  Object.keys(NOMS).forEach((id) => { if (!OCCUPANCY_EXCLUDED_BIENS.has(id)) activeBiens.add(id); }); // inclut nogent (Beds24), exclut iguana (bail long)
 
   function nightsBooked(bienId, fromStr, toStr) {
     let n = 0;
@@ -1122,8 +1155,9 @@ async function runOccupancyAlerts(env, allEvents) {
     }
   }
 
-  // Biens actifs (dans Airbnb ou Booking URLs)
+  // Biens actifs (Airbnb/Booking URLs + Nogent via Beds24, hors Iguana bail long)
   const activeBiens = new Set(Object.keys(getAirbnbUrls(env)));
+  Object.keys(NOMS).forEach((id) => { if (!OCCUPANCY_EXCLUDED_BIENS.has(id)) activeBiens.add(id); });
 
   // Alertes 0 résa dans 14j pour biens actifs
   const zeroAlerts = [];
@@ -1135,6 +1169,7 @@ async function runOccupancyAlerts(env, allEvents) {
   const hasUrgent = zeroAlerts.length > 0;
 
   const alerts = Object.entries(NOMS).filter(([id]) => {
+    if (OCCUPANCY_EXCLUDED_BIENS.has(id)) return false; // Iguana : bail long, jamais sur le marché
     const pct = ((byProp[id] || 0) / 30) * 100;
     return pct < 40; // seuil 40%
   });
@@ -1919,6 +1954,18 @@ async function runSync(env) {
     allAvailEvents.push(...directs);
     console.log(`[direct-bookings] ${directs.length} résa(s) directe(s) ajoutée(s) au push Sheets`);
   }
+
+  // Nogent (Beds24 exclusivement) → SEULEMENT allAvailEvents (occupation réelle : snapshot,
+  // alertes sous-occupation, gap/yield pricing). PAS allEvents : Nogent a déjà son propre
+  // pipeline Sheet/notifications (Beds24Admin.jsx + webhook temps réel) — l'ajouter ici aussi
+  // dupliquerait ses lignes dans "Toutes les Réservations".
+  try {
+    const beds24Events = await fetchBeds24AvailEvents(env);
+    if (beds24Events.length > 0) {
+      allAvailEvents.push(...beds24Events);
+      console.log(`[beds24-avail] ${beds24Events.length} résa(s) Nogent ajoutée(s) à l'occupation réelle`);
+    }
+  } catch (e) { console.error("[beds24-avail]", e.message); }
 
   if (annulations.length > 0) await sendCancellations(env, annulations);
   if (nouvelles.length > 0) await sendNouvellesResas(env, nouvelles);
