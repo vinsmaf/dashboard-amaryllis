@@ -1595,8 +1595,10 @@ function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) 
     if (paymentIntent?.status === "succeeded") {
       paymentDoneRef.current = true;
       await confirmBeds24(bookingIdRef.current, paymentIntent.id);
-      // Stocker pi dans pending_purchase pour que Merci.jsx fire l'event avec retry
-      // (failsafe : si page-unload tue le beacon gtag inline ci-dessous)
+      // Contexte pour Merci.jsx : Meta Pixel client + tracking A/B s'y déclenchent (1×/pi).
+      // GA4 purchase n'est envoyé QUE côté serveur par stripe-webhook.js — un double tir
+      // client+serveur doublait chaque conversion dans GA4/Google Ads (pas de dédup possible
+      // côté GA4, contrairement à Meta qui déduplique pixel+CAPI via eventID). cf. ADR-GA4-DEDUP-001.
       try {
         const existing = JSON.parse(sessionStorage.getItem("pending_purchase") || "{}");
         sessionStorage.setItem("pending_purchase", JSON.stringify({
@@ -1608,27 +1610,7 @@ function Beds24Modal({ bien, checkin, checkout, dailyPricesMap = {}, onClose }) 
           items: [{ item_id: bien.id, item_name: bien.nom, price: bien.prix, quantity: nights || 1 }],
         }));
       } catch { /* */ }
-      let _gaDeferred1 = false;
-      if (window.gtag) {
-        const guardKey = `ga_purchase_fired_${paymentIntent.id}`;
-        if (!ssGet(guardKey)) {
-          _gaDeferred1 = true;
-          let _done1 = false;
-          // tracked=true → event envoyé → on pose guardKey pour que Merci.jsx skip
-          // tracked=false → timeout sans callback → redirect sans guardKey → Merci.jsx peut retenter
-          const _go1 = (tracked) => { if (!_done1) { _done1 = true; if (tracked) ssSet(guardKey, "1"); window.location.href = "/merci"; } };
-          window.gtag("event", "purchase", {
-            transaction_id: paymentIntent.id, currency: "EUR", value: amount,
-            bien_id: bien.id, niveau_tarifaire: niveauTarifaire(bien, localCheckin),
-            property_category: propCategory(bien.id), lead_time_days: leadTimeDays(localCheckin),
-            items: [{ item_id: bien.id, item_name: bien.nom, price: bien.prix, quantity: nights || 1 }],
-            event_callback: () => _go1(true),
-          });
-          mpTrack("Purchase", { value: amount, currency: "EUR", eventID: paymentIntent.id, content_ids: [bien.id], content_type: "product" });
-          setTimeout(() => _go1(false), 800);
-        }
-      }
-      if (!_gaDeferred1) window.location.href = "/merci";
+      window.location.href = "/merci";
     }
     setPaying(false);
   }
@@ -2559,7 +2541,8 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
     if (error) { setPayError(error.message); setPaying(false); return; }
     // No redirect needed (non-3DS card) → proceed to deposit step or finish
     if (paymentIntent?.status === "succeeded") {
-      // Mettre à jour pending_purchase avec pi pour fallback Merci.jsx (race page-unload)
+      // Contexte pour Merci.jsx (Meta Pixel client + tracking A/B, 1×/pi) — GA4 purchase
+      // n'est envoyé QUE côté serveur (stripe-webhook.js), cf. ADR-GA4-DEDUP-001.
       try {
         const existing = JSON.parse(sessionStorage.getItem("pending_purchase") || "{}");
         sessionStorage.setItem("pending_purchase", JSON.stringify({
@@ -2571,27 +2554,6 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
           items: [{ item_id: bien.id, item_name: bien.nom, price: bien.prix, quantity: nights }],
         }));
       } catch { /* */ }
-      let _gaDeferred2 = false;
-      if (window.gtag) {
-        const guardKey = `ga_purchase_fired_${paymentIntent.id}`;
-        if (!ssGet(guardKey)) {
-          _gaDeferred2 = true;
-          let _done2 = false;
-          const _go2 = (tracked) => { if (!_done2) { _done2 = true; if (tracked) ssSet(guardKey, "1"); window.location.href = "/merci"; } };
-          window.gtag("event", "purchase", {
-            transaction_id: paymentIntent.id,
-            currency: "EUR",
-            value: total,
-            bien_id: bien.id,
-            niveau_tarifaire: niveauTarifaire(bien, checkin),
-            property_category: propCategory(bien.id), lead_time_days: leadTimeDays(checkin),
-            items: [{ item_id: bien.id, item_name: bien.nom, price: bien.prix, quantity: nights }],
-            event_callback: () => _go2(true),
-          });
-          mpTrack("Purchase", { value: total, currency: "EUR", eventID: paymentIntent.id, content_ids: [bien.id], content_type: "product" });
-          setTimeout(() => _go2(false), 800);
-        }
-      }
       // Notifier l'hôte des upsells sélectionnés
       const selectedUpsells = getUpsells(bien.id).filter(u => upsells[u.id]);
       if (selectedUpsells.length > 0) {
@@ -2609,7 +2571,7 @@ function BookingModal({ bien, blockedDates, loadingAvail, onClose, initialChecki
         }).catch(() => {}); // fire-and-forget
       }
       // Paiement réussi → confirmation. La caution est gérée automatiquement avant l'arrivée.
-      if (!_gaDeferred2) window.location.href = "/merci";
+      window.location.href = "/merci";
     }
     setPaying(false);
   }
@@ -6871,26 +6833,15 @@ function GroupPaymentModal({ biens, checkin, checkout, guests, nights, total, on
         body: JSON.stringify({ nom: `${form.prenom} ${form.nom}`.trim(), email: form.email, tel: form.tel, bien: `GROUPE : ${logementsLabel}`, source: "reservation-groupe",
           message: `🚨 RÉSA GROUPÉE PAYÉE (${paymentIntent.id}) — BLOQUER les calendriers Airbnb/Booking de : ${biens.map(b => b.nom).join(", ")}\nDates : ${checkin} → ${checkout} (${nights} nuits)\nVoyageurs : ${guests}\nTotal payé : ${total}€` }),
       }).catch(() => {});
-      // Failsafe : si le beacon inline ci-dessous meurt au unload, Merci.jsx refire avec le même eventID.
+      // Contexte pour Merci.jsx (Meta Pixel client + tracking A/B, 1×/pi) — GA4 purchase
+      // n'est envoyé QUE côté serveur (stripe-webhook.js), cf. ADR-GA4-DEDUP-001.
       try {
         ssSet("pending_purchase", JSON.stringify({
           pi: paymentIntent.id, value: total,
           items: (biens || []).map(b => ({ item_id: b.id, item_name: b.nom, price: b.prix, quantity: nights || 1 })),
         }));
       } catch { /* */ }
-      let _gaDeferred3 = false;
-      if (window.gtag) {
-        const guardKey = `ga_purchase_fired_${paymentIntent.id}`;
-        if (!ssGet(guardKey)) {
-          _gaDeferred3 = true;
-          let _done3 = false;
-          const _go3 = (tracked) => { if (!_done3) { _done3 = true; if (tracked) ssSet(guardKey, "1"); window.location.href = "/merci"; } };
-          try { window.gtag("event", "purchase", { transaction_id: paymentIntent.id, currency: "EUR", value: total, bien_id: biens?.[0]?.id, niveau_tarifaire: niveauTarifaire(biens?.[0], checkin), property_category: propCategory(biens?.[0]?.id), lead_time_days: leadTimeDays(checkin), items: (biens || []).map(b => ({ item_id: b.id, item_name: b.nom, price: b.prix, quantity: nights || 1 })), event_callback: () => _go3(true) }); } catch { _go3(false); }
-          mpTrack("Purchase", { value: total, currency: "EUR", eventID: paymentIntent.id, content_ids: (biens || []).map(b => b.id), content_type: "product" });
-          setTimeout(() => _go3(false), 800);
-        }
-      }
-      if (!_gaDeferred3) window.location.href = "/merci";
+      window.location.href = "/merci";
       return;
     }
     setPaying(false);

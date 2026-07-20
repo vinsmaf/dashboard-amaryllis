@@ -77,11 +77,14 @@ export default function MerciPage() {
     }
   }, [depositDone]);
 
-  // Purchase event : couvre DEUX cas :
-  //   1. Paiement 3DS → Stripe redirige vers /merci?payment_intent=pi_xxx (paymentRedirected=true)
-  //   2. Paiement non-3DS → navigation directe à /merci, pending_purchase contient le pi
-  // ⚠️ gtag est chargé de façon ASYNCHRONE → on attend qu'il soit prêt (retry max ~10s).
-  // Guard key (sessionStorage) évite le double-fire si l'inline handler a déjà réussi.
+  // Purchase : GA4 est envoyé UNIQUEMENT côté serveur par stripe-webhook.js (source unique et
+  // fiable — se déclenche même si ce navigateur ferme l'onglet avant d'arriver ici). Avant
+  // 2026-07-20, ce useEffect envoyait AUSSI un gtag('purchase') côté client → chaque résa était
+  // comptée 2× dans GA4/Google Ads (GA4 n'a pas de dédup client/serveur par transaction_id,
+  // contrairement à Meta qui déduplique pixel+CAPI via eventID). cf. ADR-GA4-DEDUP-001.
+  // Ce useEffect ne fait donc plus que le Meta Pixel client + le tracking A/B, guardés 1×/pi.
+  // Couvre DEUX cas : 1) paiement 3DS → redirect Stripe avec ?payment_intent=pi_xxx,
+  // 2) paiement non-3DS → navigation directe, pending_purchase contient le pi.
   useEffect(() => {
     if (depositDone) return;
 
@@ -89,43 +92,30 @@ export default function MerciPage() {
     const status = params.get("redirect_status");
     if (paymentRedirected && status && status !== "succeeded") return; // 3DS échoué
 
-    // Contexte stocké avant la redirection (montant RÉEL + bien + items + pi non-3DS)
     let ctx = {};
     try { ctx = JSON.parse(ssGet("pending_purchase", "{}") || "{}"); } catch { /* */ }
 
-    // PI disponible : depuis l'URL (3DS) ou depuis le contexte stocké (non-3DS)
     const effectivePi = pi || ctx.pi;
     if (!effectivePi) return; // pas de paiement à tracker
 
     if (ctx.bien_id) setBienId(ctx.bien_id);
-    const guardKey = `ga_purchase_fired_${effectivePi}`;
-    if (ssGet(guardKey)) { ssRemove("pending_purchase"); return; } // déjà firé inline
+    const guardKey = `client_purchase_fired_${effectivePi}`;
+    if (ssGet(guardKey)) { ssRemove("pending_purchase"); return; } // déjà firé
+    ssSet(guardKey, "1");
 
     const value = Number(ctx.value || ctx.amount || ssGet("deposit_amt") || 0);
 
-    let tries = 0;
-    const fire = () => {
-      if (!window.gtag) { if (tries++ < 25) { setTimeout(fire, 400); } return; } // attend gtag (max ~10s)
-      ssSet(guardKey, "1");
-      const payload = { transaction_id: effectivePi, currency: "EUR", value };
-      if (ctx.bien_id) payload.bien_id = ctx.bien_id;
-      if (ctx.niveau_tarifaire) payload.niveau_tarifaire = ctx.niveau_tarifaire;
-      if (Array.isArray(ctx.items)) payload.items = ctx.items;
-      try { window.gtag("event", "purchase", payload); } catch { /* */ }
-      // event_id = payment_intent_id → déduplication avec la CAPI serveur (stripe-webhook.js)
-      try { mpTrack("Purchase", { value, currency: "EUR", eventID: effectivePi, ...(ctx.bien_id ? { content_ids: [ctx.bien_id], content_type: "product" } : {}) }); } catch { /* */ }
-      // RM-15 : conversion FINALE (résa confirmée = métrique primaire du playbook) attribuée
-      // aux tests A/B où l'user est RÉELLEMENT exposé (cookie présent → pas de fausse attribution).
-      // step:"purchase" distingue ces conversions des events clic/scroll. Guardé par guardKey → 1×/pi.
-      try {
-        const variants = listActiveVariants();
-        Object.keys(variants).forEach(testName =>
-          trackConversion(testName, { step: "purchase", transaction_id: effectivePi, value })
-        );
-      } catch { /* */ }
-      ssRemove("pending_purchase");
-    };
-    fire();
+    // event_id = payment_intent_id → déduplication avec la CAPI serveur (stripe-webhook.js)
+    try { mpTrack("Purchase", { value, currency: "EUR", eventID: effectivePi, ...(ctx.bien_id ? { content_ids: [ctx.bien_id], content_type: "product" } : {}) }); } catch { /* */ }
+    // RM-15 : conversion FINALE (résa confirmée = métrique primaire du playbook) attribuée
+    // aux tests A/B où l'user est RÉELLEMENT exposé (cookie présent → pas de fausse attribution).
+    try {
+      const variants = listActiveVariants();
+      Object.keys(variants).forEach(testName =>
+        trackConversion(testName, { step: "purchase", transaction_id: effectivePi, value })
+      );
+    } catch { /* */ }
+    ssRemove("pending_purchase");
   }, []);
 
   if (showDepositForm) {
