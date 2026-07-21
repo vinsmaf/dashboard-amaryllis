@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { cacCeiling, planByBien, allocateBudget, evaluateAdset, planExecutionAction, enforceGlobalMonthlyCap, DEFAULTS } from "./adBudgetAgent.js";
+import { cacCeiling, planByBien, allocateBudget, evaluateAdset, planExecutionAction, enforceGlobalMonthlyCap, bienIdFromGoogleCampaignName, DEFAULTS } from "./adBudgetAgent.js";
 
 describe("cacCeiling", () => {
   it("Amaryllis (280€/nuit) → ~81€ de CAC max (colle au modèle RM-08 ~50-80€)", () => {
@@ -198,5 +198,26 @@ describe("DEFAULTS", () => {
     expect(DEFAULTS.bookingRate).toBe(0.16);
     // Surcharge : une commission plus basse baisse le plafond.
     expect(cacCeiling({ prix: 280 }, { bookingRate: 0.10 })).toBeLessThan(cacCeiling({ prix: 280 }));
+  });
+});
+
+describe("bienIdFromGoogleCampaignName", () => {
+  it("matche un nom de campagne contenant l'id du bien", () => {
+    expect(bienIdFromGoogleCampaignName("Villa Amaryllis")).toBe("amaryllis");
+    expect(bienIdFromGoogleCampaignName("location villa amaryllis luxe vue mer piscine")).toBe("amaryllis");
+  });
+
+  it("matche indépendamment des accents/casse (Géko vs geko)", () => {
+    expect(bienIdFromGoogleCampaignName("Géko-France")).toBe("geko");
+    expect(bienIdFromGoogleCampaignName("GEKO promo été")).toBe("geko");
+  });
+
+  it("retourne null pour une campagne multi-biens ou géographique sans bien identifiable", () => {
+    expect(bienIdFromGoogleCampaignName("C1 — Offre Groupe Sainte-Luce")).toBeNull();
+    expect(bienIdFromGoogleCampaignName("Canada")).toBeNull();
+  });
+
+  it("ne matche jamais Iguana (bail long, exclu même si le nom apparaît)", () => {
+    expect(bienIdFromGoogleCampaignName("Villa Iguana promo")).toBeNull();
   });
 });

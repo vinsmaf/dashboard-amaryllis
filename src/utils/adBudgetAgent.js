@@ -72,6 +72,19 @@ export function allocateBudget(monthlyMax, opts = {}) {
   };
 }
 
+// Mappe un nom de campagne Google Ads → bienId, par correspondance sur l'id du bien
+// (normalisé : minuscules + accents retirés) dans le nom de campagne. Même sémantique que
+// bienIdFromAdset côté Meta : null si aucun bien ne matche (ex. "C1 — Offre Groupe Sainte-Luce",
+// "Canada" — campagnes multi-biens ou géographiques, pas de plafond CAC applicable dessus).
+function normalizeText(s) {
+  return (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+}
+export function bienIdFromGoogleCampaignName(campaignName, biens = ALL_BIENS) {
+  const norm = normalizeText(campaignName);
+  const match = biens.find((b) => b.bookable !== false && norm.includes(normalizeText(b.id)));
+  return match ? match.id : null;
+}
+
 // ARBITRAGE : verdict d'une campagne/ad set face au CAC plafond de son bien.
 // canComputeRoas vient du bloc `health` de meta-ads-insights : si le tracking conversion ne
 // remonte pas, on NE JUGE PAS la rentabilité (on laisse collecter), on ne coupe pas à l'aveugle.

@@ -20,7 +20,7 @@ import { verifyBearer } from "./_adminauth.js";
 import { CAMPAIGNS, AD_ACCOUNT_ID } from "../../src/config/metaCampaignBrief.js";
 import { ALL_BIENS, getBien } from "../../src/data/biens.js";
 import { parseInsights, measurementHealth, aggregateInsights } from "../../src/utils/metaAdsInsights.js";
-import { cacCeiling, allocateBudget, evaluateAdset } from "../../src/utils/adBudgetAgent.js";
+import { cacCeiling, allocateBudget, evaluateAdset, bienIdFromGoogleCampaignName } from "../../src/utils/adBudgetAgent.js";
 import { fetchGoogleAdsInsights } from "./_googleAds.js";
 
 const GV = "v25.0";
@@ -101,7 +101,21 @@ export async function onRequestGet({ request, env }) {
     // 2b) Google Ads — lecture best-effort via le helper partagé. Échoue proprement (message
     // lisible) tant que l'accès Basic n'est pas validé ou que le compte n'est pas connecté en
     // OAuth ("Connecter Google Ads"). Le reste de l'agent reste utilisable sans.
+    // Une fois les KPIs récupérés, on les fait passer par le MÊME moteur de décision (CAC
+    // plafond par bien) que Meta — même modèle RM-08, même verdict scale/hold/cut, pour que
+    // l'agent juge les 2 canaux payants de façon uniforme (2026-07-21, suite accès Basic accordé).
     const googleAds = await fetchGoogleAdsInsights(env, env.revenue_manager, url.searchParams.get("window"));
+    if (googleAds.ok && Array.isArray(googleAds.rows)) {
+      googleAds.campaigns = googleAds.rows.map((r) => {
+        const bienId = bienIdFromGoogleCampaignName(r.name);
+        const bien = bienId ? getBien(bienId) : null;
+        const ceiling = bien ? cacCeiling(bien) : null;
+        const evalResult = ceiling != null
+          ? evaluateAdset(r, ceiling, googleAds.health.canComputeRoas)
+          : { verdict: "unmapped", note: "Campagne non rattachée à un bien connu (multi-biens/géo) — pas de plafond CAC applicable." };
+        return { campaign: r.name, bienId, spend: r.spend, purchases: r.purchases, revenue: r.revenue, ...evalResult };
+      });
+    }
 
     return json({
       advisory: true,
