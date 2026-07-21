@@ -41,6 +41,21 @@ async function graphGet(path, token) {
 }
 
 const WINDOWS = { "7d": "last_7d", "30d": "last_30d", "14d": "last_14d", "90d": "last_90d", maximum: "maximum" };
+const WINDOW_DAYS = { "7d": 7, "30d": 30, "14d": 14, "90d": 90 };
+const isoDate = (d) => d.toISOString().slice(0, 10);
+
+// 2026-07-21 : `date_preset` sert des insights PÉRIMÉS sur ce compte (spend figé à 0,03€
+// alors qu'Ads Manager montrait 13,48€ dépensés le jour même) — un `time_range` explicite
+// contourne le problème (vérifié en direct). Devenu le comportement PAR DÉFAUT : calculé depuis
+// `window` (ou surchargeable via ?since=&until= pour du debug ciblé). `date_preset` gardé en
+// filet uniquement pour "maximum" (pas de borne "since" raisonnable à calculer).
+function computeRange(windowKey) {
+  const days = WINDOW_DAYS[windowKey];
+  if (!days) return null;
+  const now = new Date();
+  const since = new Date(now.getTime() - days * 86400000);
+  return { since: isoDate(since), until: isoDate(now) };
+}
 
 export async function onRequestGet({ request, env }) {
   try {
@@ -51,14 +66,15 @@ export async function onRequestGet({ request, env }) {
     if (!token) return json({ error: "META_PAGE_TOKEN non configuré" }, 503);
 
     const url = new URL(request.url);
-    const datePreset = WINDOWS[url.searchParams.get("window")] || "last_30d";
+    const windowKey = url.searchParams.get("window") || "30d";
+    const datePreset = WINDOWS[windowKey] || "last_30d";
     const level = url.searchParams.get("level") === "adset" ? "adset" : "campaign";
-    // Diagnostic 2026-07-21 : date_preset semble servir un résultat Graph API périmé sur ce
-    // compte (spend figé alors qu'Ads Manager montre une vraie dépense). ?since=&until= (YYYY-
-    // MM-DD) force un time_range explicite à la place — à garder si ça contourne le problème.
-    const since = url.searchParams.get("since");
-    const until = url.searchParams.get("until");
-    const useTimeRange = since && until;
+    const explicitSince = url.searchParams.get("since");
+    const explicitUntil = url.searchParams.get("until");
+    const computed = explicitSince && explicitUntil ? null : computeRange(windowKey);
+    const since = explicitSince || computed?.since;
+    const until = explicitUntil || computed?.until;
+    const useTimeRange = Boolean(since && until);
     const rangeParam = useTimeRange
       ? `time_range=${encodeURIComponent(JSON.stringify({ since, until }))}`
       : `date_preset=${datePreset}`;

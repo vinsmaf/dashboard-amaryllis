@@ -25,6 +25,16 @@ import { fetchGoogleAdsInsights } from "./_googleAds.js";
 
 const GV = "v25.0";
 const WINDOWS = { "7d": "last_7d", "30d": "last_30d", "14d": "last_14d", "90d": "last_90d", maximum: "maximum" };
+const WINDOW_DAYS = { "7d": 7, "30d": 30, "14d": 14, "90d": 90 };
+// 2026-07-21 : même fix que meta-ads-insights.js — date_preset sert des insights périmés sur
+// ce compte, time_range explicite est correct (vérifié en direct, cf. ADR-META-INSIGHTS-STALE).
+function computeRange(windowKey) {
+  const days = WINDOW_DAYS[windowKey];
+  if (!days) return null;
+  const now = new Date();
+  const since = new Date(now.getTime() - days * 86400000);
+  return { since: since.toISOString().slice(0, 10), until: now.toISOString().slice(0, 10) };
+}
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data, null, 2), { status, headers: { "Content-Type": "application/json" } });
@@ -66,7 +76,12 @@ export async function onRequestGet({ request, env }) {
 
     const url = new URL(request.url);
     const budgetMax = Math.min(5000, Math.max(100, parseInt(url.searchParams.get("budget"), 10) || 600));
-    const datePreset = WINDOWS[url.searchParams.get("window")] || "last_30d";
+    const windowKey = url.searchParams.get("window") || "30d";
+    const datePreset = WINDOWS[windowKey] || "last_30d";
+    const range = computeRange(windowKey);
+    const rangeParam = range
+      ? `time_range=${encodeURIComponent(JSON.stringify(range))}`
+      : `date_preset=${datePreset}`;
 
     // 1) VISION BUDGET — toujours dispo, ne dépend d'aucune donnée live.
     const plan = allocateBudget(budgetMax);
@@ -76,7 +91,7 @@ export async function onRequestGet({ request, env }) {
     const token = env.META_PAGE_TOKEN;
     if (token) {
       const res = await graphGet(
-        `${AD_ACCOUNT_ID}/insights?level=adset&date_preset=${datePreset}&fields=${encodeURIComponent("adset_name,adset_id,spend,impressions,clicks,actions,action_values")}&time_increment=all_days&limit=200`,
+        `${AD_ACCOUNT_ID}/insights?level=adset&${rangeParam}&fields=${encodeURIComponent("adset_name,adset_id,spend,impressions,clicks,actions,action_values")}&time_increment=all_days&limit=200`,
         token
       );
       if (res.error) {
@@ -94,7 +109,7 @@ export async function onRequestGet({ request, env }) {
             : { verdict: "unmapped", note: "Ad set non rattaché à un bien connu — pas de plafond CAC applicable." };
           return { adset: r.name, bienId, spend: r.spend, purchases: r.purchases, revenue: r.revenue, ...evalResult };
         });
-        meta = { available: true, window: datePreset, health, totals, adsets };
+        meta = { available: true, window: range ? `${range.since}..${range.until}` : datePreset, health, totals, adsets };
       }
     }
 
