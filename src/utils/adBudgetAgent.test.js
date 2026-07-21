@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { cacCeiling, planByBien, allocateBudget, evaluateAdset, planExecutionAction, enforceGlobalMonthlyCap, bienIdFromGoogleCampaignName, DEFAULTS } from "./adBudgetAgent.js";
+import { cacCeiling, planByBien, allocateBudget, evaluateAdset, planExecutionAction, enforceGlobalMonthlyCap, bienIdFromGoogleCampaignName, multiBienPoolCeiling, GOOGLE_CAMPAIGN_POOLS, DEFAULTS } from "./adBudgetAgent.js";
 
 describe("cacCeiling", () => {
   it("Amaryllis (280€/nuit) → ~81€ de CAC max (colle au modèle RM-08 ~50-80€)", () => {
@@ -219,5 +219,27 @@ describe("bienIdFromGoogleCampaignName", () => {
 
   it("ne matche jamais Iguana (bail long, exclu même si le nom apparaît)", () => {
     expect(bienIdFromGoogleCampaignName("Villa Iguana promo")).toBeNull();
+  });
+});
+
+describe("multiBienPoolCeiling", () => {
+  it("moyenne les plafonds des SEULS biens worthPaid (Amaryllis 81 + Zandoli 32 + Géko 32) / 3", () => {
+    expect(multiBienPoolCeiling()).toBe(48); // (81+32+32)/3 = 48.33 → 48
+  });
+
+  it("n'inclut PAS Mabouya/Schœlcher/Nogent (non worthPaid) — ne dilue pas le plafond vers le bas", () => {
+    const pool = multiBienPoolCeiling();
+    const mabouya = cacCeiling({ prix: 70 });
+    expect(pool).toBeGreaterThan(mabouya); // le pool reste centré sur les gros tickets
+  });
+});
+
+describe("GOOGLE_CAMPAIGN_POOLS", () => {
+  it("contient 'Canada - Villa Martinique' (campagne audience → pool multi-biens)", () => {
+    expect(GOOGLE_CAMPAIGN_POOLS.has("Canada - Villa Martinique")).toBe(true);
+  });
+
+  it("ne contient PAS une campagne bien-mappée (évite un double traitement)", () => {
+    expect(GOOGLE_CAMPAIGN_POOLS.has("Villa Amaryllis")).toBe(false);
   });
 });

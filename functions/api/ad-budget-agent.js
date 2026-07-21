@@ -20,7 +20,7 @@ import { verifyBearer } from "./_adminauth.js";
 import { CAMPAIGNS, AD_ACCOUNT_ID } from "../../src/config/metaCampaignBrief.js";
 import { ALL_BIENS, getBien } from "../../src/data/biens.js";
 import { parseInsights, measurementHealth, aggregateInsights } from "../../src/utils/metaAdsInsights.js";
-import { cacCeiling, allocateBudget, evaluateAdset, bienIdFromGoogleCampaignName } from "../../src/utils/adBudgetAgent.js";
+import { cacCeiling, allocateBudget, evaluateAdset, bienIdFromGoogleCampaignName, GOOGLE_CAMPAIGN_POOLS, multiBienPoolCeiling } from "../../src/utils/adBudgetAgent.js";
 import { fetchGoogleAdsInsights } from "./_googleAds.js";
 
 const GV = "v25.0";
@@ -108,12 +108,17 @@ export async function onRequestGet({ request, env }) {
     if (googleAds.ok && Array.isArray(googleAds.rows)) {
       googleAds.campaigns = googleAds.rows.map((r) => {
         const bienId = bienIdFromGoogleCampaignName(r.name);
+        const isPool = !bienId && GOOGLE_CAMPAIGN_POOLS.has(r.name);
         const bien = bienId ? getBien(bienId) : null;
-        const ceiling = bien ? cacCeiling(bien) : null;
+        const ceiling = bien ? cacCeiling(bien) : isPool ? multiBienPoolCeiling() : null;
         const evalResult = ceiling != null
           ? evaluateAdset(r, ceiling, googleAds.health.canComputeRoas)
           : { verdict: "unmapped", note: "Campagne non rattachée à un bien connu (multi-biens/géo) — pas de plafond CAC applicable." };
-        return { campaign: r.name, bienId, spend: r.spend, purchases: r.purchases, revenue: r.revenue, ...evalResult };
+        return {
+          campaign: r.name, bienId, spend: r.spend, purchases: r.purchases, revenue: r.revenue,
+          ...(isPool ? { pool: true, poolBiens: ["amaryllis", "zandoli", "geko"] } : {}),
+          ...evalResult,
+        };
       });
     }
 

@@ -74,8 +74,10 @@ export function allocateBudget(monthlyMax, opts = {}) {
 
 // Mappe un nom de campagne Google Ads → bienId, par correspondance sur l'id du bien
 // (normalisé : minuscules + accents retirés) dans le nom de campagne. Même sémantique que
-// bienIdFromAdset côté Meta : null si aucun bien ne matche (ex. "C1 — Offre Groupe Sainte-Luce",
-// "Canada" — campagnes multi-biens ou géographiques, pas de plafond CAC applicable dessus).
+// bienIdFromAdset côté Meta : null si aucun bien ne matche (ex. "C1 — Offre Groupe Sainte-Luce"
+// — offre combinant plusieurs villas à la fois, pas encore couverte par un plafond dédié).
+// Les campagnes ciblant une AUDIENCE plutôt qu'un bien précis (ex. "Canada - Villa Martinique")
+// ne matchent pas ici — voir GOOGLE_CAMPAIGN_POOLS ci-dessous pour leur traitement dédié.
 function normalizeText(s) {
   return (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 }
@@ -83,6 +85,29 @@ export function bienIdFromGoogleCampaignName(campaignName, biens = ALL_BIENS) {
   const norm = normalizeText(campaignName);
   const match = biens.find((b) => b.bookable !== false && norm.includes(normalizeText(b.id)));
   return match ? match.id : null;
+}
+
+// Registre EXPLICITE (pas une heuristique de mots-clés fragile) des campagnes Google Ads qui
+// ciblent une AUDIENCE plutôt qu'un bien précis, mais qui convertissent bien vers un bien
+// premium — ex. "Canada - Villa Martinique" : beaucoup de Canadiens viennent en Martinique,
+// la campagne ne nomme aucune villa mais peut légitimement générer une résa Amaryllis/Zandoli/
+// Géko. Mise à jour à la main si une nouvelle campagne de ce type est créée (~8 campagnes au
+// total, un registre explicite reste plus fiable qu'un pattern-matching qui pourrait un jour
+// mal classer une campagne réellement multi-biens comme "Offre Groupe" — cas différent, panier
+// combiné plusieurs villas EN MÊME TEMPS, pas encore couvert ici, cf. note dans l'endpoint).
+export const GOOGLE_CAMPAIGN_POOLS = new Set(["Canada - Villa Martinique"]);
+
+// Plafond CAC "pool" pour une campagne multi-biens : moyenne simple des plafonds des SEULS
+// biens worthPaid (Amaryllis/Zandoli/Géko) — pas tous les biens Martinique. Inclure Mabouya/
+// Schœlcher diluerait le plafond vers le bas et ferait apparaître "cut" à tort une campagne qui
+// convertit en réalité sur les gros tickets : leur commission évitée est structurellement trop
+// mince pour avoir justifié du paid dans le modèle RM-08, donc ils ne doivent pas peser dans la
+// moyenne. Hypothèse assumée : chaque bien éligible a une chance a priori égale de convertir
+// (pas de pondération par probabilité observée — donnée non disponible à ce jour).
+export function multiBienPoolCeiling(opts = {}) {
+  const eligible = planByBien(opts).filter((p) => p.worthPaid);
+  if (!eligible.length) return 0;
+  return Math.round(eligible.reduce((s, p) => s + p.cacCeiling, 0) / eligible.length);
 }
 
 // ARBITRAGE : verdict d'une campagne/ad set face au CAC plafond de son bien.
