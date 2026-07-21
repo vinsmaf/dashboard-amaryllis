@@ -53,11 +53,20 @@ export async function onRequestGet({ request, env }) {
     const url = new URL(request.url);
     const datePreset = WINDOWS[url.searchParams.get("window")] || "last_30d";
     const level = url.searchParams.get("level") === "adset" ? "adset" : "campaign";
+    // Diagnostic 2026-07-21 : date_preset semble servir un résultat Graph API périmé sur ce
+    // compte (spend figé alors qu'Ads Manager montre une vraie dépense). ?since=&until= (YYYY-
+    // MM-DD) force un time_range explicite à la place — à garder si ça contourne le problème.
+    const since = url.searchParams.get("since");
+    const until = url.searchParams.get("until");
+    const useTimeRange = since && until;
+    const rangeParam = useTimeRange
+      ? `time_range=${encodeURIComponent(JSON.stringify({ since, until }))}`
+      : `date_preset=${datePreset}`;
 
     const nameField = level === "adset" ? "adset_name,adset_id" : "campaign_name,campaign_id";
     const fields = `${nameField},spend,impressions,clicks,ctr,cpc,actions,action_values`;
     const res = await graphGet(
-      `${AD_ACCOUNT_ID}/insights?level=${level}&date_preset=${datePreset}&fields=${encodeURIComponent(fields)}&time_increment=all_days&limit=200`,
+      `${AD_ACCOUNT_ID}/insights?level=${level}&${rangeParam}&fields=${encodeURIComponent(fields)}&time_increment=all_days&limit=200`,
       token
     );
     if (res.error) return json({ ok: false, error: res.error }, 200);
@@ -66,7 +75,7 @@ export async function onRequestGet({ request, env }) {
     const totals = aggregateInsights(rows);
     const health = measurementHealth(totals);
 
-    return json({ ok: true, window: datePreset, level, generated_at: new Date().toISOString(), health, totals, rows });
+    return json({ ok: true, window: useTimeRange ? `${since}..${until}` : datePreset, level, generated_at: new Date().toISOString(), health, totals, rows });
   } catch (e) {
     // Jamais crasher en 502 muet — remonter l'erreur exploitable.
     return json({ ok: false, error: { message: `${e.name}: ${e.message}` } }, 200);
