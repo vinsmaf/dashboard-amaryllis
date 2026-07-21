@@ -21,9 +21,11 @@
 | **Apple Business Connect** | ⬜ à faire (local-002) | businessconnect.apple.com | gratuit ; visibilité Apple Plans/Siri |
 | **Bing Places** | ⬜ à faire | bingplaces.com | gratuit ; import possible depuis GBP |
 | **TripAdvisor** | ⬜ à faire (local-003) | tripadvisor.com/Owners | créer la/les fiche(s) ; lien avis post-séjour |
-| **PagesJaunes** | ⬜ à faire | pagesjaunes.fr (espace pro) | annuaire FR de référence |
+| **PagesJaunes** | 🟡 en cours (2026-07-21) | pagesjaunes.fr (espace pro) | annuaire FR de référence |
 | **Yelp** | ⬜ optionnel | biz.yelp.fr | moins clé en FR mais citation utile |
-| **Annuaires tourisme MQ** | ⬜ à faire | GuideMartinique, ATR Martinique, Petit Futé | citations locales ciblées |
+| **Petit Futé** | 🟡 en cours (2026-07-21) | espace pro annonceur | citation locale ciblée |
+| **GuideMartinique** | ❌ annulé (2026-07-21) | — | Vincent a abandonné — pas de fiche self-service viable |
+| **ATR Martinique** | ❌ annulé (2026-07-21) | — | Vincent a abandonné (probablement adhésion payante requise) |
 
 ## Bonnes pratiques
 - Même **nom exact** partout : « Amaryllis Locations » (pas « Villa Amaryllis Locations » ni variantes).
