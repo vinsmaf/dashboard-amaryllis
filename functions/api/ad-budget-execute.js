@@ -59,7 +59,19 @@ async function verifyAuth(request, env) {
   return verifyBearer(request, env);
 }
 
-async function fetchAdsetInsights(env, adsetIds, datePreset) {
+const WINDOW_DAYS = { "7d": 7, "30d": 30 };
+// 2026-07-21 : date_preset sert des insights PÉRIMÉS sur ce compte (spend figé alors qu'Ads
+// Manager montrait une vraie dépense le jour même, vérifié en direct) — time_range explicite
+// contourne le problème (même fix que meta-ads-insights.js/ad-budget-agent.js).
+function computeRangeParam(windowKey, datePreset) {
+  const days = WINDOW_DAYS[windowKey];
+  if (!days) return `date_preset=${datePreset}`;
+  const now = new Date();
+  const since = new Date(now.getTime() - days * 86400000);
+  return `time_range=${encodeURIComponent(JSON.stringify({ since: since.toISOString().slice(0, 10), until: now.toISOString().slice(0, 10) }))}`;
+}
+
+async function fetchAdsetInsights(env, adsetIds, rangeParam) {
   const token = env.META_PAGE_TOKEN;
   if (!token || !adsetIds.length) return [];
   const filtering = encodeURIComponent(JSON.stringify([{ field: "adset.id", operator: "IN", value: adsetIds }]));
@@ -68,7 +80,7 @@ async function fetchAdsetInsights(env, adsetIds, datePreset) {
   const t = setTimeout(() => ctrl.abort(), 12000);
   try {
     const r = await fetch(
-      `https://graph.facebook.com/${GV}/${AD_ACCOUNT_ID}/insights?level=adset&date_preset=${datePreset}&filtering=${filtering}&fields=${fields}&time_increment=all_days&limit=200&access_token=${token}`,
+      `https://graph.facebook.com/${GV}/${AD_ACCOUNT_ID}/insights?level=adset&${rangeParam}&filtering=${filtering}&fields=${fields}&time_increment=all_days&limit=200&access_token=${token}`,
       { signal: ctrl.signal }
     );
     const j = await r.json();
@@ -115,7 +127,9 @@ export async function onRequestGet({ request, env }) {
   const dry = url.searchParams.get("dry") === "1";
   const mode = dry ? "shadow" : (env.AD_AGENT_MODE === "live" ? "live" : "shadow");
   const budgetMax = Math.min(5000, Math.max(100, parseInt(url.searchParams.get("budget"), 10) || 600));
-  const datePreset = { "7d": "last_7d", "30d": "last_30d" }[url.searchParams.get("window")] || "last_30d";
+  const windowKey = url.searchParams.get("window") || "30d";
+  const datePreset = { "7d": "last_7d", "30d": "last_30d" }[windowKey] || "last_30d";
+  const rangeParam = computeRangeParam(windowKey, datePreset);
 
   const db = env.revenue_manager;
   if (db) await ensureTable(db);
@@ -130,7 +144,7 @@ export async function onRequestGet({ request, env }) {
 
   // 3) Perfs Meta sur la fenêtre, uniquement pour les ad sets connus.
   const adsetIds = live.adsets.map((a) => a.id);
-  const insightsRows = parseInsights(await fetchAdsetInsights(env, adsetIds, datePreset));
+  const insightsRows = parseInsights(await fetchAdsetInsights(env, adsetIds, rangeParam));
   const health = measurementHealth(aggregateInsights(insightsRows));
 
   // Passe 1 — décision par ad set (planExecutionAction), SANS exécuter : on a besoin de toutes
@@ -214,7 +228,7 @@ export async function onRequestGet({ request, env }) {
     mode,
     disclaimer: "L'agent peut mettre en pause ou augmenter un budget DÉJÀ actif, jamais activer un ad set ni créer une dépense nouvelle — ça reste ton clic.",
     budgetMax,
-    window: datePreset,
+    window: rangeParam,
     health,
     decisions,
     googleAds: {
