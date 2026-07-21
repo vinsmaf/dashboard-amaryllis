@@ -61,7 +61,7 @@ function bienIdFromAdset(adsetName) {
   for (const camp of Object.values(CAMPAIGNS)) {
     for (const a of camp.adsets || []) {
       if (a.name === adsetName) {
-        const seg = (a.creative?.landingUrl || "").split("/").filter(Boolean).pop();
+        const seg = (a.creative?.landingUrl || "").split("?")[0].split("/").filter(Boolean).pop();
         return ALL_BIENS.some((b) => b.id === seg) ? seg : null;
       }
     }

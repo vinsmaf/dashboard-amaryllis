@@ -71,7 +71,7 @@ export const CAMPAIGNS = {
           ],
         },
         creative: {
-          landingUrl: "https://villamaryllis.com/amaryllis",
+          landingUrl: "https://villamaryllis.com/amaryllis?utm_source=facebook&utm_medium=paid_social&utm_campaign=a1_amaryllis",
           imageUrl: "https://villamaryllis.com/photos/amaryllis/01.webp",
           // Carrousel narratif (2026-07-19, sélection sur photos réelles) : golden hour →
           // nocturne → piscine plein jour → salon intérieur → cocktail lifestyle.
@@ -106,7 +106,7 @@ export const CAMPAIGNS = {
           ],
         },
         creative: {
-          landingUrl: "https://villamaryllis.com/mabouya",
+          landingUrl: "https://villamaryllis.com/mabouya?utm_source=facebook&utm_medium=paid_social&utm_campaign=a2_mabouya",
           imageUrl: "https://villamaryllis.com/photos/mabouya/07.webp",
           // Carrousel romantique (2026-07-19) : jacuzzi coucher de soleil → terrasse dressée
           // + jacuzzi → jardin + studio illuminé → dîner intime à deux.
@@ -137,7 +137,7 @@ export const CAMPAIGNS = {
           ],
         },
         creative: {
-          landingUrl: "https://villamaryllis.com/geko",
+          landingUrl: "https://villamaryllis.com/geko?utm_source=facebook&utm_medium=paid_social&utm_campaign=a3_geko",
           imageUrl: "https://villamaryllis.com/photos/geko/01.webp",
           // Carrousel (2026-07-19) : piscine illuminée de nuit → lounge + piscine + champagne →
           // piscine & jardin de roses → plateau champagne/fruits flottant → salon intérieur.
@@ -172,7 +172,7 @@ export const CAMPAIGNS = {
           ],
         },
         creative: {
-          landingUrl: "https://villamaryllis.com/location-groupe-sainte-luce",
+          landingUrl: "https://villamaryllis.com/location-groupe-sainte-luce?utm_source=facebook&utm_medium=paid_social&utm_campaign=a4_groupe",
           imageUrl: "https://villamaryllis.com/photos/amaryllis/02.webp",
           primaryText: "Toute la tribu, une seule adresse. Réunissez jusqu'à 11 proches dans une résidence privée à Sainte-Luce. Un seul paiement. ☀️",
           title: "Toute la tribu en Martinique",

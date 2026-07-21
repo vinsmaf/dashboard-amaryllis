@@ -132,7 +132,7 @@ describe("buildCreativePayload", () => {
   it("mappe le copy du brief sur object_story_spec.link_data", () => {
     const p = buildCreativePayload(a1, "page_1");
     expect(p.object_story_spec.page_id).toBe("page_1");
-    expect(p.object_story_spec.link_data.link).toBe("https://villamaryllis.com/amaryllis");
+    expect(p.object_story_spec.link_data.link).toBe("https://villamaryllis.com/amaryllis?utm_source=facebook&utm_medium=paid_social&utm_campaign=a1_amaryllis");
     expect(p.object_story_spec.link_data.message).toContain("villa privée");
     expect(p.object_story_spec.link_data.call_to_action.type).toBe("LEARN_MORE");
   });

@@ -43,7 +43,7 @@ const CAMPAIGN_KEY = "c1_tofu"; // seule campagne gérée par l'agent pour l'ins
 // bien unique (offre transverse) → pas de plafond CAC applicable, jamais d'action dessus.
 const BIEN_BY_ADSET_KEY = Object.fromEntries(
   Object.values(CAMPAIGNS).flatMap((c) => c.adsets || []).map((a) => {
-    const seg = (a.creative?.landingUrl || "").split("/").filter(Boolean).pop();
+    const seg = (a.creative?.landingUrl || "").split("?")[0].split("/").filter(Boolean).pop();
     return [a.key, seg];
   })
 );
