@@ -349,7 +349,7 @@ Deploy separately: `wrangler deploy` from project root.
 
 ### Data Sources
 
-All financial data flows from a single Google Sheets file (ID: `1xuhU0KraEMxF9NAWO5MKEt23JI_V8mnNnWktzHy6q2U`). The bridge is a Google Apps Script deployed as a web app — its URL is stored as `APPS_SCRIPT_URL`. The source for the Apps Script is `SCRIPT_SHEETS.gs`.
+All financial data flows from a single Google Sheets file (ID: `1xuhU0KraEMxF9NAWO5MKEt23JI_V8mnNnWktzHy6q2U`). The bridge is a Google Apps Script deployed as a web app — its URL is stored as `APPS_SCRIPT_URL`. The source for the Apps Script is `appscript/SCRIPT_SHEETS.js` (see §2 below — the old root-level `SCRIPT_SHEETS.gs` was a dead duplicate, removed 2026-07-21).
 
 Data loading in `App.jsx`:
 1. On mount, calls `syncFromSheets` → POSTs to `/api/sheets-proxy` → Apps Script reads Sheets and returns JSON
