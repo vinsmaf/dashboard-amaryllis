@@ -254,6 +254,47 @@ async function createCampaign(campaignKey, env, opts = {}) {
   });
 }
 
+// Met à jour le LIEN d'une créative existante SANS jamais toucher au statut de l'annonce
+// (contrairement à refreshCreatives:true qui supprime+recrée l'annonce et la remet PAUSED,
+// coupant la diffusion). Une créative Meta est immuable (impossible d'éditer son link_data.link
+// une fois créée) — on en crée donc une NOUVELLE (POST /adcreatives, gratuit, aucun effet tant
+// qu'elle n'est pas attachée), puis on POST sur l'annonce EXISTANTE juste { creative:
+// {creative_id} } pour la faire pointer vers la nouvelle créative. L'annonce reste ACTIVE si
+// elle l'était — zéro coupure de diffusion. 2026-07-21 : ajouté pour pousser les UTM sans
+// interrompre A1/A3. `dryRun:true` décrit le plan sans rien écrire.
+async function swapCreativeLink(env, campaignKey, { dryRun = false } = {}) {
+  const token = env.META_PAGE_TOKEN;
+  const campaign = CAMPAIGNS[campaignKey];
+  if (!campaign) return json({ ok: false, error: `Campagne inconnue : ${campaignKey}` }, 400);
+  const plan = await buildPlan(campaignKey, env);
+  if (plan.error) return json({ ok: false, error: plan.error }, 400);
+  if (!plan.existingCampaign) return json({ ok: false, error: `Campagne "${campaign.name}" introuvable côté Meta` }, 404);
+
+  const existingAds = await findExistingAds(plan.existingCampaign.id, token);
+  const results = [];
+  for (const a of plan.adsets) {
+    if (a.skipped) { results.push(a); continue; }
+    const adsetConfig = campaign.adsets.find((x) => x.key === a.key);
+    const adName = `${adsetConfig.name} — annonce`;
+    const existingAd = existingAds.find((x) => x.name === adName);
+    if (!existingAd) {
+      results.push({ key: a.key, skipped: true, reason: "Aucune annonce existante — utiliser la création normale (confirm:true sans action)." });
+      continue;
+    }
+    const newLink = a.creativePayload.object_story_spec?.link_data?.link;
+    if (dryRun) {
+      results.push({ key: a.key, adId: existingAd.id, newLink, note: "Aperçu — rien écrit." });
+      continue;
+    }
+    const creativeRes = await graphPost(`${AD_ACCOUNT_ID}/adcreatives`, token, a.creativePayload);
+    if (creativeRes.error) { results.push({ key: a.key, adId: existingAd.id, error: "créative", detail: creativeRes.error }); continue; }
+    const swapRes = await graphPost(existingAd.id, token, { creative: { creative_id: creativeRes.id } });
+    if (swapRes.error) { results.push({ key: a.key, adId: existingAd.id, error: "swap", detail: swapRes.error }); continue; }
+    results.push({ key: a.key, adId: existingAd.id, newCreativeId: creativeRes.id, newLink, note: "Lien mis à jour — statut de l'annonce inchangé, diffusion non interrompue." });
+  }
+  return json({ ok: true, dryRun, campaignId: plan.existingCampaign.id, results });
+}
+
 // Recherche brute (lecture seule) pour vérifier à la main qu'un terme du brief matche
 // bien la BONNE entité Meta avant de l'ajouter à metaCampaignBrief.js — utile pour
 // Supprime les ad sets "parasites" d'une campagne = tout ad set dont le nom ne figure PAS dans
@@ -419,6 +460,9 @@ export async function onRequestPost({ request, env }) {
   const campaignKey = body.campaign || "c1_tofu";
   if (body.action === "prune") {
     return pruneParasiteAdSets(env, campaignKey, { confirm: body.confirm === true });
+  }
+  if (body.action === "swapCreativeLink") {
+    return swapCreativeLink(env, campaignKey, { dryRun: body.confirm !== true });
   }
   if (body.confirm !== true) {
     const plan = await buildPlan(campaignKey, env);
