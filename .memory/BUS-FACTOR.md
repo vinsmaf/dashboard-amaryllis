@@ -59,7 +59,8 @@
 - `scripts/deploy-pages.sh` (374 lignes) — complexe mais chaque garde-fou est commenté avec sa
   raison + son ADR, lisible linéairement. Contre-exemple de complexité opaque.
 
-## Action immédiate proposée (zéro risque, en attente du feu vert Vincent)
-Supprimer `SCRIPT_SHEETS.gs` (racine) — fichier mort déjà documenté comme dangereux, aucun usage,
-`rm` simple. Les 3 autres fixes (digests externalisés, dump schéma D1, éclatement crons) sont des
-chantiers, pas des quick wins — à cadrer un par un si Vincent veut les prendre.
+## Action immédiate — ✅ FAITE le 2026-07-21
+`SCRIPT_SHEETS.gs` (racine) supprimé (commit `e74761a`), 766 tests verts, ligne CLAUDE.md
+contradictoire corrigée au passage. Les 3 autres fixes (digests externalisés, dump schéma D1,
+éclatement crons) restent des chantiers, pas des quick wins — à cadrer un par un si Vincent veut
+les prendre.
