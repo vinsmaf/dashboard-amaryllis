@@ -1,6 +1,6 @@
 # 🗺️ ARCHITECTURE — Locatif (villamaryllis.com)
 
-> **Date :** 2026-07-19 · **Statut :** carte de l'état actuel, à maintenir (pas un historique).
+> **Date :** 2026-07-20 · **Statut :** carte de l'état actuel, à maintenir (pas un historique).
 > But : ne plus jamais re-déduire le système depuis le code. Quand l'archi change, on met à jour ICI.
 > **Pointeurs :** état courant volatil → `.memory/CONTEXT.md` · décisions → `.memory/ADR.md` + `DECISIONS.md` ·
 > leçons → `.memory/LEARNINGS.md` · blocages → `.memory/BLOCKERS.md` · rappel par domaine → `.memory/RECALL.md` ·
@@ -194,7 +194,7 @@ flowchart TD
 - **Promo** : `validatePromo` → `GET /api/promo-codes?validate` (rateLimit, D1 `promo_codes`).
 - **Paiement 2×** : éligible si total ≥ 800€ ET arrivée > 35j ; acompte 30% maintenant (Customer obligatoire), solde J-30 via `charge-balance.js`. `purchase` remonte le **full_total UNE seule fois** (invariant ROAS).
 - **Alerte hôte fiable** : `notify-booking.js` (front, `keepalive:true` obligatoire) insère `host_notified=1` → le webhook ne re-notifie pas (dédup atomique).
-- **Signature de contrat « maison »** : `sign-contract.js` (POST, CORS villamaryllis.com) — signature manuscrite (PNG dataURL ≤300 ko) + nom + acceptation, horodatée avec **IP + User-Agent** (valeur probante simple, **pas eIDAS**) → table D1 `contracts_signed`. Phase cpw-101/C3.
+- **Signature de contrat « maison »** : `sign-contract.js` (POST, CORS villamaryllis.com) — signature manuscrite (PNG dataURL ≤300 ko) + nom + acceptation, horodatée avec **IP + User-Agent** (valeur probante simple, **pas eIDAS**) → table D1 `contracts_signed`. Phase cpw-101/C3. **Même endpoint, 3 variantes par `type`** : `contract` (défaut, signature requise) · `etat_lieux_entree`/`etat_lieux_sortie` (`/etat-des-lieux?bien=&type=&checkin=&checkout=&voyageur=&email=`, `src/EtatDesLieux.jsx`, lien envoyé par email J-1 arrivée/départ, photos obligatoires) · `etat_lieux_menage` (`/etat-des-lieux-menage`, `src/EtatDesLieuxMenage.jsx`, 2026-07-20, `ADR-ETAT-LIEUX-MENAGE-001`) — lien **fixe** sans token pour le personnel de ménage (Nogent, `bienId` codé en dur), photos OU remarques libres (2000c) requis, email alerte envoyé à Vincent **+ `lafineconciergerie@gmail.com`** (Nesrine). Compression photo partagée : `src/utils/compressImage.js`.
 
 ---
 
