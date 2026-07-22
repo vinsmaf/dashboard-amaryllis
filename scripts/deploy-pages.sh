@@ -365,6 +365,9 @@ if [[ "${SKIP_BUG_CHECKS:-0}" != "1" ]]; then
   #     Déterministe + NON BLOQUANT (exit 0 toujours). SKIP_AUDIT=1 pour désactiver.
   if [[ "${SKIP_AUDIT:-0}" != "1" ]]; then
     node scripts/audit-invariants.mjs || echo "   ⚠️  audit invariants ignoré (erreur non bloquante)"
+    # 1c. Dérive des digests miroir du fleet (PLAYBOOK/FISCAL/VINCENT bakés dans agents-run.js
+    #     vs ~/.claude/memory). NON BLOQUANT — signale seulement si une source a bougé sans re-tampon.
+    node scripts/check-digests.mjs || echo "   ⚠️  check-digests ignoré (erreur non bloquante)"
   fi
   # 2. Crawl visuel de la prod, en arrière-plan (ne ralentit pas le déploiement)
   if command -v node >/dev/null 2>&1; then

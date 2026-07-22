@@ -16,6 +16,7 @@
     "test:fn": "node scripts/test-function.mjs",
     "postinstall": "git config core.hooksPath .githooks || true",
     "visual-review": "node scripts/visual-review.mjs",
+    "check-digests": "node scripts/check-digests.mjs",
     "funnel": "node scripts/funnel.mjs",
     "deploy:script": "clasp push --force",
     "deploy:worker": "wrangler deploy",
