@@ -87,8 +87,10 @@ const SYSTEM_PROMPT =
   `chiffres réels fournis. INTERDITS ABSOLUS (ne les propose jamais) : acheter des abonnés, faux ` +
   `engagement/bots, follow-unfollow, boost payant/sponsorisation (c'est la décision de Vincent, pas la tienne). ` +
   `Ne recommande RIEN pour une plateforme dont l'état n'est pas "measurable" (ex. not_configured / pending_access) ` +
-  `sauf pour dire, en 1 action, comment la rendre mesurable.\n\n` +
-  `Réponds STRICTEMENT en JSON : {"recos":[{"platform":"facebook|instagram|youtube|gbp","priority":"high|med|low",` +
+  `sauf pour dire, en 1 action, comment la rendre mesurable. Utilise les vrais identifiants fournis ` +
+  `(champ "identifiant"), n'invente JAMAIS un @handle.\n\n` +
+  `Rédige TOUT en FRANÇAIS (diagnostics et actions). Réponds STRICTEMENT en JSON : ` +
+  `{"recos":[{"platform":"facebook|instagram|youtube|gbp","priority":"high|med|low",` +
   `"diagnosis":"1 phrase sur l'écart à la cible","actions":["3 actions organiques max, concrètes"]}],` +
   `"focus_platform":"la plateforme n°1 à travailler","one_liner":"synthèse en 1 phrase"}`;
 

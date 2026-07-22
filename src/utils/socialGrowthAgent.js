@@ -34,6 +34,7 @@ export function buildGrowthFacts(platforms = [], engagement = {}, cadence = {}, 
     plateformes: platforms.map((p) => ({
       plateforme: p.platform,
       label: PLATFORM_LABELS[p.platform] || p.platform,
+      identifiant: p.extra?.username || p.extra?.name || null, // vrai handle/nom → l'agent ne l'invente pas
       etat: p.health,
       abonnes: p.current ?? null,
       croissance_30j_abs: p.growth?.delta_30d ?? null,
