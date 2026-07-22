@@ -1725,7 +1725,7 @@ Si verdict=reject : "improved_blocks": null`;
                 ).bind(draftId, body.calendar_id).run();
               } catch {}
             }
-          } catch (e) {}
+          } catch (e) { console.error(`[fleet:${agent.id}] échec insert agent_draft (draft LLM perdu) : ${e?.message || e}`) }
         }
       }
 
@@ -1927,7 +1927,7 @@ Si verdict=reject : "improved_blocks": null`;
         last_reservation: lastReservation,
         last_reservation_by_property: lastReservationByProperty,
       }), { expirationTtl: 7 * 24 * 3600 });
-    } catch { /* fail-soft */ }
+    } catch (e) { console.error(`[agents-run] échec write cross:locatif:signals (pont cross-fleet muet → patrimoine ne recevra pas les signaux locatif) : ${e?.message || e}`) }
   }
 
   // ── Alerte ntfy réactive si actions critiques fraîches (< 5 min) ──────────
