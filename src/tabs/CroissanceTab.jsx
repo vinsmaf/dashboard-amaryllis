@@ -48,6 +48,10 @@ export default function CroissanceTab() {
   const [days, setDays]           = useState(30);
   const [genStatus, setGenStatus] = useState("idle"); // idle | gen | ok | err
   const [genMsg, setGenMsg]       = useState("");
+  // Social Growth Manager (brique 1 mesure + brique 2 dernier rapport de l'agent)
+  const [sgm, setSgm]             = useState(null);   // /api/social-insights?dry=1
+  const [sgmReport, setSgmReport] = useState(null);   // /api/social-growth-agent?latest=1
+  const [sgmRun, setSgmRun]       = useState("idle"); // idle | run | err (rafraîchir l'analyse)
 
   // Count temps réel
   useEffect(() => {
@@ -64,6 +68,25 @@ export default function CroissanceTab() {
       .then(d => { if (!d.ok) setInsErr(d.error || "Erreur API"); else setInsights(d); })
       .catch(e => setInsErr(e.message));
   }, [days]);
+
+  // Social Growth Manager : mesure 4 plateformes (dry, aucune écriture) + dernier rapport de l'agent
+  useEffect(() => {
+    adminFetch("/api/social-insights?dry=1").then(r => r.json()).then(d => { if (d.ok) setSgm(d); }).catch(() => {});
+    adminFetch("/api/social-growth-agent?latest=1").then(r => r.json()).then(d => { if (d.ok) setSgmReport(d); }).catch(() => {});
+  }, []);
+
+  // Rafraîchir l'analyse = relance l'agent (LLM, ~15-20s) et récupère le nouveau rapport
+  const runGrowthAgent = async () => {
+    setSgmRun("run");
+    try {
+      const r = await adminFetch("/api/social-growth-agent");
+      const d = await r.json();
+      if (!d.ok) throw new Error(d.error || "Analyse échouée");
+      const l = await (await adminFetch("/api/social-growth-agent?latest=1")).json();
+      if (l.ok) setSgmReport(l);
+      setSgmRun("idle");
+    } catch { setSgmRun("err"); }
+  };
 
   // Génère un draft "post-concours du mois" qui apparaîtra dans Approbations
   const generateConcours = async () => {
@@ -121,7 +144,7 @@ Channels : ig + fb`;
             📈 Croissance audience
           </div>
           <div style={{ fontSize: 12, color: "#64748b" }}>
-            Pilotage followers Facebook + Instagram, génération automatique de concours, tactiques d'engagement.
+            Objectif de croissance des abonnés (FB · Instagram · YouTube · GBP), recos de l'agent, concours et tactiques d'engagement.
           </div>
         </div>
         {/* Sélecteur période historique */}
@@ -133,6 +156,51 @@ Channels : ig + fb`;
           ))}
         </div>
       </div>
+
+      {/* ═════ Social Growth Manager — objectif de croissance (4 plateformes) ═════ */}
+      {sgm && (
+        <div style={{ background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.22)", borderRadius: 13, padding: "14px 16px", marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "#e2e8f0" }}>🎯 Objectif de croissance · +{sgm.target_pct}%/mois par plateforme</div>
+              <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>
+                Agent responsable réseaux · advisory (recommande, ne publie/dépense rien) · snapshot quotidien
+              </div>
+            </div>
+            <button
+              onClick={runGrowthAgent}
+              disabled={sgmRun === "run"}
+              style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(99,102,241,0.4)", background: sgmRun === "run" ? "rgba(99,102,241,0.1)" : "rgba(99,102,241,0.18)", color: "#c7d2fe", fontSize: 11, fontWeight: 600, cursor: sgmRun === "run" ? "wait" : "pointer" }}
+            >
+              {sgmRun === "run" ? "Analyse en cours…" : sgmRun === "err" ? "⚠ Réessayer" : "🔄 Rafraîchir l'analyse"}
+            </button>
+          </div>
+
+          {/* Tuiles par plateforme */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(155px, 1fr))", gap: 10 }}>
+            {sgm.platforms.map(p => <GrowthTile key={p.platform} p={p} />)}
+          </div>
+
+          {/* Recos du dernier rapport de l'agent */}
+          {sgmReport?.report && (
+            <div style={{ marginTop: 14, borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 12 }}>
+              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 8 }}>
+                🧠 Recos de l'agent {sgmReport.report.focus_platform ? <>· focus <b style={{ color: "#c7d2fe" }}>{sgmReport.report.focus_platform}</b></> : null}
+                {sgmReport.created_at ? <span style={{ color: "#475569" }}> · {new Date(sgmReport.created_at * 1000).toLocaleDateString("fr-FR")}</span> : null}
+              </div>
+              {sgmReport.report.one_liner && <div style={{ fontSize: 12, color: "#cbd5e1", fontStyle: "italic", marginBottom: 10 }}>« {sgmReport.report.one_liner} »</div>}
+              <div style={{ display: "grid", gap: 8 }}>
+                {(sgmReport.report.recos || []).map((r, i) => <RecoCard key={i} r={r} />)}
+              </div>
+            </div>
+          )}
+          {sgmReport && !sgmReport.report && (
+            <div style={{ marginTop: 12, fontSize: 11, color: "#64748b" }}>
+              Aucune analyse encore générée — clique « Rafraîchir l'analyse » (ou attends le digest de lundi).
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ═════ KPIs + évolution ═════ */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
@@ -396,6 +464,74 @@ function KPI({ label, value, icon, color, sub }) {
         {value === null || value === undefined ? "—" : typeof value === "number" ? value.toLocaleString("fr-FR") : value}
       </div>
       {sub && <div style={{ fontSize: 10, color: "#475569", marginTop: 3 }}>{sub}</div>}
+    </div>
+  );
+}
+
+// ── Social Growth Manager : tuile plateforme + carte reco ────────────────────
+const PLATFORM_EMOJI = { facebook: "📘", instagram: "📸", youtube: "▶️", gbp: "🗺️" };
+const VERDICT_META = {
+  ahead:    { label: "au-dessus", color: "#10b981" },
+  on_track: { label: "dans la marge", color: "#3b82f6" },
+  behind:   { label: "sous l'objectif", color: "#ef4444" },
+  no_data:  { label: "historique en cours", color: "#64748b" },
+};
+const HEALTH_META = {
+  not_configured: { label: "à configurer", color: "#f59e0b" },
+  pending_access: { label: "accès en attente", color: "#f59e0b" },
+  error:          { label: "erreur API", color: "#ef4444" },
+};
+
+function GrowthTile({ p }) {
+  const measurable = p.health === "measurable";
+  const v = VERDICT_META[p.verdict] || VERDICT_META.no_data;
+  const h = HEALTH_META[p.health];
+  const pct = p.growth?.growth_30d_pct;
+  return (
+    <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 11, padding: "11px 13px" }}>
+      <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 6 }}>
+        {PLATFORM_EMOJI[p.platform] || "•"} {p.label}
+      </div>
+      {measurable ? (
+        <>
+          <div style={{ fontSize: 24, fontWeight: 800, color: "#e2e8f0", letterSpacing: "-0.5px" }}>
+            {p.current != null ? p.current.toLocaleString("fr-FR") : "—"}
+          </div>
+          <div style={{ fontSize: 10, color: "#475569", marginBottom: 8 }}>abonnés</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            {pct != null && (
+              <span style={{ fontSize: 11, fontWeight: 700, color: pct >= 0 ? "#10b981" : "#ef4444" }}>
+                {pct >= 0 ? "+" : ""}{pct}%<span style={{ fontWeight: 400, color: "#64748b" }}>/mois</span>
+              </span>
+            )}
+            <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 5, background: v.color + "22", color: v.color }}>{v.label}</span>
+          </div>
+          {p.needed_monthly != null && p.verdict !== "ahead" && (
+            <div style={{ fontSize: 10, color: "#64748b", marginTop: 6 }}>cible : +{p.needed_monthly} ce mois</div>
+          )}
+        </>
+      ) : (
+        <>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "#64748b", marginTop: 4 }}>—</div>
+          <div style={{ display: "inline-block", fontSize: 9, fontWeight: 700, padding: "3px 7px", borderRadius: 5, background: (h?.color || "#64748b") + "22", color: h?.color || "#64748b", marginTop: 8 }}>
+            {h?.label || p.health}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function RecoCard({ r }) {
+  const pr = { high: { e: "🔴", c: "#ef4444" }, med: { e: "🟡", c: "#f59e0b" }, low: { e: "🟢", c: "#10b981" } }[r.priority] || { e: "•", c: "#64748b" };
+  return (
+    <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderLeft: `2px solid ${pr.c}`, borderRadius: 8, padding: "9px 11px" }}>
+      <div style={{ fontSize: 11.5, fontWeight: 600, color: "#e2e8f0", marginBottom: 5 }}>
+        {pr.e} {PLATFORM_EMOJI[r.platform] || ""} {(r.platform || "").charAt(0).toUpperCase() + (r.platform || "").slice(1)} — <span style={{ fontWeight: 400, color: "#94a3b8" }}>{r.diagnosis}</span>
+      </div>
+      <ul style={{ margin: 0, paddingLeft: 16, display: "grid", gap: 3 }}>
+        {(r.actions || []).map((a, i) => <li key={i} style={{ fontSize: 11, color: "#cbd5e1", lineHeight: 1.4 }}>{a}</li>)}
+      </ul>
     </div>
   );
 }

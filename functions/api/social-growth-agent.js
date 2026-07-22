@@ -103,6 +103,19 @@ export async function onRequestGet({ request, env }) {
   const db = env.revenue_manager;
   if (!db) return json({ error: "D1 (revenue_manager) non lié" }, 500);
 
+  // Lecture rapide du dernier rapport stocké (pour l'UI) — aucun appel LLM.
+  if (url.searchParams.get("latest") === "1") {
+    try {
+      const row = await db
+        .prepare("SELECT created_at, report FROM social_growth_reports ORDER BY created_at DESC LIMIT 1")
+        .first();
+      if (!row) return json({ ok: true, report: null });
+      return json({ ok: true, created_at: row.created_at, report: JSON.parse(row.report) });
+    } catch {
+      return json({ ok: true, report: null }); // table pas encore créée / rapport absent
+    }
+  }
+
   const dry = url.searchParams.get("dry") === "1";
   const origin = env.SITE_URL || url.origin;
   const targetPct = parseFloat(env.SOCIAL_GROWTH_TARGET_PCT || "5") || 5;
