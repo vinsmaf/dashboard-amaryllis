@@ -4125,6 +4125,16 @@ export default {
         } catch (e) {
           console.error("[ad-budget-execute] Cron error:", e.message);
         }
+        // ── Social Growth Manager, brique 1 : snapshot quotidien des abonnés (FB/IG/YouTube) ─────────
+        try {
+          const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+          const sgRes = await fetch(`${siteUrl}/api/social-insights?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`);
+          const sgData = await sgRes.json().catch(() => ({}));
+          const meas = (sgData.platforms || []).filter((p) => p.health === "measurable").length;
+          console.log(`[social-insights] ✓ abonnés total=${sgData.summary?.total_followers ?? "?"} · plateformes mesurées=${meas} · Δ30j=${sgData.summary?.total_delta_30d ?? "?"}`);
+        } catch (e) {
+          console.error("[social-insights] Cron error:", e.message);
+        }
         // ── Refresh modèles LLM (AI-Ops) — en premier pour que les agents utilisent les meilleurs modèles ──
         try {
           const siteUrl = env.SITE_URL || "https://villamaryllis.com";

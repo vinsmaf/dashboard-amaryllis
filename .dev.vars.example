@@ -73,3 +73,14 @@ CONCIERGE_MODE=shadow
 CONCIERGE_MAX_PROMO_EUR=50
 # Kill-switch d'urgence : "1" ou "true" → le concierge répond ok:true/disabled et ne fait rien.
 CONCIERGE_DISABLED=
+
+# ── Social Growth Manager (croissance abonnés réseaux — /api/social-insights) ────────────────
+# FB + Instagram : mesurés via META_PAGE_TOKEN/META_PAGE_ID/META_IG_ACCOUNT_ID (déjà en place).
+# YouTube : renseigner l'ID de chaîne (UC…) OU le handle (@amaryllislocations) pour mesurer les abonnés.
+YOUTUBE_CHANNEL_ID=
+# Clé YouTube Data API v3. Peut réutiliser GOOGLE_PLACES_API_KEY si l'API YouTube y est activée.
+YOUTUBE_API_KEY=
+# Cible de croissance mensuelle des abonnés, en % (défaut 5). S'applique à chaque plateforme.
+SOCIAL_GROWTH_TARGET_PCT=5
+# Google Business Profile : "1" quand l'accès API Business Profile est accordé (sinon plateforme en pending_access).
+GBP_API_ENABLED=
