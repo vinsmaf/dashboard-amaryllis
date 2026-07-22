@@ -189,7 +189,12 @@ export async function onRequestGet({ request, env }) {
   };
 
   if (dry) {
-    return json({ ok: true, dry: true, digest, report, would_schedule: planned.slots });
+    return json({
+      ok: true, dry: true, digest, report,
+      would_schedule: planned.slots,
+      would_schedule_dropped: planned.dropped, // diagnostic : pourquoi une entrée du content_plan a été écartée
+      raw_content_plan: llmRaw?.content_plan ?? null, // diagnostic : ce que le LLM a réellement renvoyé (avant validation)
+    });
   }
 
   // Persiste le rapport (historique + source de l'UI).
