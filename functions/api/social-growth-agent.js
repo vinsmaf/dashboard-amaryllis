@@ -98,9 +98,12 @@ const SYSTEM_PROMPT =
   `"focus_platform":"la plateforme n°1 à travailler","one_liner":"synthèse en 1 phrase",` +
   `"content_plan":[{"bien":"amaryllis|zandoli|geko|mabouya|schoelcher","format":"reel|carrousel|post",` +
   `"theme":"inspiration|preuve|detail|reve|conversion|lifestyle|info","angle":"idée de post concrète orientée gain d'abonnés","cta":"appel à s'abonner"}]}. ` +
-  `Le content_plan = 1 à 2 posts CONCRETS à AJOUTER au calendrier éditorial pour la plateforme la plus en retard ` +
+  `Le content_plan = 1 à 2 posts CONCRETS à AJOUTER au calendrier éditorial pour la plateforme focus ` +
   `(ils passeront par le gate qualité avant toute publication). Choisis un bien réel de la liste, un format, et un ` +
-  `angle qui donne envie de s'abonner. Laisse content_plan VIDE si aucune plateforme mesurable n'est en retard.`;
+  `angle qui donne envie de s'abonner. IMPORTANT : propose ces 1-2 posts DÈS QU'au moins une plateforme mesurable ` +
+  `n'est pas déjà "ahead" — Y COMPRIS si son verdict est "no_data" (l'historique se construit, mais l'objectif ` +
+  `est de faire croître dès maintenant). content_plan VIDE UNIQUEMENT si TOUTES les plateformes mesurables sont ` +
+  `déjà au-dessus de la cible.`;
 
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
