@@ -34,6 +34,22 @@ async function graphPost(path, token, body) {
   return r.json();
 }
 
+async function graphDelete(id, token) {
+  const r = await fetch(`https://graph.facebook.com/${GV}/${id}?access_token=${token}`, { method: "DELETE" });
+  return r.json();
+}
+
+// Supprime un post FB (ou média IG) par son ID. Capacité admin (nettoyer un doublon / post raté).
+// Bearer admin obligatoire (géré par le routeur). Un ID FB de page = "pageId_postId".
+async function handleDeletePost(env, { postId }) {
+  const token = env.META_PAGE_TOKEN;
+  if (!token) return json({ error: "META_PAGE_TOKEN non configuré" }, 503);
+  if (!postId) return json({ error: "postId requis" }, 400);
+  const res = await graphDelete(postId, token);
+  if (res.error) return json({ ok: false, postId, error: res.error }, 200);
+  return json({ ok: res.success === true || res.success === undefined, postId, result: res });
+}
+
 // GET /api/social?action=status
 async function handleStatus(env) {
   const token   = env.META_PAGE_TOKEN;
@@ -403,6 +419,7 @@ export async function onRequestPost({ request, env }) {
   if (body.action === "publish_reel") return handlePublishReel(env, body);
   if (body.action === "publish_container") return handlePublishContainer(env, body);
   if (body.action === "update-profile-pic") return handleUpdateProfilePic(env, body);
+  if (body.action === "delete_post") return handleDeletePost(env, body);
   return json({ error: "action inconnue" }, 400);
 }
 
