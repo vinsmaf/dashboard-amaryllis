@@ -2924,7 +2924,7 @@ async function runEditorialRetry(env) {
   try {
     // Entrées failed dans les 24 dernières heures avec draft ayant < 3 tentatives
     const { results } = await db.prepare(`
-      SELECT ec.id, ec.draft_id, ec.bien_id, ec.updated_at,
+      SELECT ec.id, ec.draft_id, ec.bien_id, ec.updated_at, ec.result as cal_result,
              CAST(json_extract(ad.result, '$.retry_count') AS INTEGER) as retry_count
       FROM editorial_calendar ec
       LEFT JOIN agent_drafts ad ON ad.id = ec.draft_id
@@ -2934,8 +2934,25 @@ async function runEditorialRetry(env) {
 
     let retried = 0;
     for (const e of (results || [])) {
+      // Garde-fou (2026-07-22) : un fact-check FACTUEL bloquant (`blocked:true`, ex. "Pas de
+      // clapotis sur les hauteurs") n'est PAS corrigeable en réessayant le même contenu — le
+      // ressusciter en boucle bloquait la file d'auto-publish (l'entrée reprenait toujours la
+      // tête, oscillant failed↔approved sans jamais aboutir). On l'archive directement.
+      let factBlocked = false;
+      try { factBlocked = JSON.parse(e.cal_result || "{}")?.result?.blocked === true; } catch { /* result non-JSON */ }
+      if (factBlocked) {
+        await db.prepare("UPDATE editorial_calendar SET status='archived', updated_at=? WHERE id=?").bind(now, e.id).run();
+        console.log(`[editorial-retry] entry ${e.id} (${e.bien_id}) — fact-check factuel bloquant → archivé (pas de retry, non corrigeable)`);
+        continue;
+      }
       const retryCount = (e.retry_count || 0);
-      if (retryCount >= 3) { console.log(`[editorial-retry] entry ${e.id} — max tentatives atteint (${retryCount}), skip`); continue; }
+      if (retryCount >= 3) {
+        // Plafond atteint : archiver pour de bon plutôt que laisser l'entrée en 'failed' (où elle
+        // serait re-scannée à chaque run) — elle ne doit plus jamais revenir dans la file.
+        await db.prepare("UPDATE editorial_calendar SET status='archived', updated_at=? WHERE id=?").bind(now, e.id).run();
+        console.log(`[editorial-retry] entry ${e.id} — max tentatives atteint (${retryCount}) → archivé`);
+        continue;
+      }
       // Incrémenter retry_count dans le result du draft
       const newCount = retryCount + 1;
       await db.prepare("UPDATE editorial_calendar SET status='approved', updated_at=? WHERE id=?").bind(now, e.id).run();
