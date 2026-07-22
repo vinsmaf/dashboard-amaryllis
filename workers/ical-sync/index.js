@@ -3966,6 +3966,15 @@ export default {
         runMemoryDistill(env), // 🧠 B2 — distille l'expérience du réseau en apprentissages durables
         runQABatch(env, QA_WEEKLY, "qa_session:weekly", "hebdo"), // 🔍 QA hebdo (flux, endpoints, tracking, emails, agents)
         runGuideWrite(env), // 📝 réécriture prose d'accueil guides D1 (welcome_message + tagline)
+        // 📱 Social Growth Manager, brique 2 : digest hebdo croissance abonnés + recos organiques (advisory)
+        (async () => {
+          try {
+            const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+            const res = await fetch(`${siteUrl}/api/social-growth-agent?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`);
+            const data = await res.json().catch(() => ({}));
+            console.log(`[social-growth-agent] ✓ recos=${data.recos ?? 0} focus=${data.focus ?? "?"} ntfy=${data.sent ?? false}`);
+          } catch (e) { console.error("[social-growth-agent] Cron error:", e.message); }
+        })(),
         (async () => {
           try {
             const siteUrl = env.SITE_URL || "https://villamaryllis.com";
