@@ -192,6 +192,16 @@ Channels : ig + fb`;
               <div style={{ display: "grid", gap: 8 }}>
                 {(sgmReport.report.recos || []).map((r, i) => <RecoCard key={i} r={r} />)}
               </div>
+              {(sgmReport.report.content_scheduled || []).length > 0 && (
+                <div style={{ marginTop: 10, fontSize: 11, color: "#94a3b8" }}>
+                  📅 <b style={{ color: "#c7d2fe" }}>{sgmReport.report.content_scheduled.length} post{sgmReport.report.content_scheduled.length > 1 ? "s" : ""} ajouté{sgmReport.report.content_scheduled.length > 1 ? "s" : ""} au calendrier éditorial</b> (statut « planned » → passe par le gate qualité avant publication) :
+                  <ul style={{ margin: "5px 0 0", paddingLeft: 16 }}>
+                    {sgmReport.report.content_scheduled.map((c, i) => (
+                      <li key={i} style={{ color: "#cbd5e1", lineHeight: 1.4 }}>{c.date} · {c.bien_id} · {c.format} — {c.angle}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
           {sgmReport && !sgmReport.report && (

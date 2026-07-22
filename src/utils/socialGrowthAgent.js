@@ -83,6 +83,41 @@ export function sanitizeRecos(raw, knownPlatforms = []) {
   return { recos: clean.slice(0, 4), dropped };
 }
 
+// ── Passerelle vers le calendrier éditorial (l'agent ne se contente pas de conseiller : il ALIMENTE) ──
+// Le content_plan du LLM devient des entrées PLANNED du calendrier → elles suivent le pipeline existant
+// (draft-gen → gate qualité → approbation → publication). Jamais insérées 'approved' : le gate reste le garde-fou.
+export const EDITORIAL_THEMES = ["inspiration", "preuve", "detail", "reve", "conversion", "lifestyle", "info"];
+export const EDITORIAL_FORMATS = ["reel", "carrousel", "post"]; // pas 'story' : hors du rail d'auto-publication feed
+
+// Valide le plan de contenu LLM et l'assigne à des créneaux (dates) LIBRES et futurs. Déterministe :
+// candidateDates (futures, ordonnées) + occupied (dates déjà prises) sont passés → aucun Date.now ici.
+export function planEditorialSlots(contentPlan, { candidateDates = [], occupied = new Set(), knownBiens = new Set(), maxNew = 2 } = {}) {
+  const items = Array.isArray(contentPlan) ? contentPlan : [];
+  const used = new Set(occupied);
+  const slots = [];
+  const dropped = [];
+
+  for (const c of items) {
+    if (slots.length >= maxNew) break;
+    const bien = String(c?.bien || "").toLowerCase();
+    const format = EDITORIAL_FORMATS.includes(c?.format) ? c.format : null;
+    const theme = EDITORIAL_THEMES.includes(c?.theme) ? c.theme : "lifestyle";
+    const angle = String(c?.angle || "").trim();
+    const cta = (String(c?.cta || "").trim() || "S'abonner").slice(0, 60);
+
+    if (!knownBiens.has(bien)) { dropped.push({ bien, reason: "bien inconnu" }); continue; }
+    if (!format)              { dropped.push({ bien, reason: "format invalide" }); continue; }
+    if (!angle)               { dropped.push({ bien, reason: "angle vide" }); continue; }
+    if (isBannedTactic(angle) || isBannedTactic(cta)) { dropped.push({ bien, reason: "tactique bannie" }); continue; }
+
+    const date = candidateDates.find((d) => !used.has(d));
+    if (!date) { dropped.push({ bien, reason: "aucun créneau libre" }); break; }
+    used.add(date);
+    slots.push({ bien_id: bien, format, theme, cta, angle, brief: `croissance — ${angle}`.slice(0, 300), scheduled_ymd: date });
+  }
+  return { slots, dropped };
+}
+
 // Formate le digest ntfy à partir des faits + recos nettoyées. Déterministe (pas de LLM).
 export function assembleDigest(facts, recos) {
   const emoji = { high: "🔴", med: "🟡", low: "🟢" };

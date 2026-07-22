@@ -13,7 +13,8 @@
 
 import { verifyBearer } from "./_adminauth.js";
 import { callLLM } from "./_llm.js";
-import { buildGrowthFacts, sanitizeRecos, assembleDigest } from "../../src/utils/socialGrowthAgent.js";
+import { buildGrowthFacts, sanitizeRecos, assembleDigest, planEditorialSlots } from "../../src/utils/socialGrowthAgent.js";
+import { ALL_BIENS } from "../../src/data/biens.js";
 
 const json = (d, s = 200) =>
   new Response(JSON.stringify(d, null, 2), {
@@ -59,15 +60,17 @@ async function fetchEngagement(origin, env) {
 // Cadence éditoriale à venir (14 j) par format — l'agent raisonne sur ce qui est déjà planifié.
 async function fetchCadence(origin, env) {
   const out = { reel: 0, carrousel: 0, post: 0, total: 0 };
+  const occupied = new Set(); // dates YMD déjà planifiées → l'agent n'empile pas dessus
   try {
     const r = await fetch(`${origin}/api/editorial-calendar?secret=${secretQS(env)}`);
     const d = await r.json();
     const entries = d?.entries || [];
     const now = Math.floor(Date.now() / 1000);
-    const horizon = now + 14 * 86400;
+    const horizon = now + 20 * 86400;
     for (const e of entries) {
       const ts = Number(e.scheduled_at || 0);
       if (ts < now || ts > horizon) continue;
+      occupied.add(new Date(ts * 1000).toISOString().slice(0, 10));
       const fmt = String(e.format || e.theme || "post").toLowerCase();
       if (fmt.includes("reel")) out.reel++;
       else if (fmt.includes("carrousel") || fmt.includes("carousel")) out.carrousel++;
@@ -75,7 +78,7 @@ async function fetchCadence(origin, env) {
       out.total++;
     }
   } catch { /* cadence vide si l'appel échoue */ }
-  return out;
+  return { cadence: out, occupied };
 }
 
 const SYSTEM_PROMPT =
@@ -92,7 +95,12 @@ const SYSTEM_PROMPT =
   `Rédige TOUT en FRANÇAIS (diagnostics et actions). Réponds STRICTEMENT en JSON : ` +
   `{"recos":[{"platform":"facebook|instagram|youtube|gbp","priority":"high|med|low",` +
   `"diagnosis":"1 phrase sur l'écart à la cible","actions":["3 actions organiques max, concrètes"]}],` +
-  `"focus_platform":"la plateforme n°1 à travailler","one_liner":"synthèse en 1 phrase"}`;
+  `"focus_platform":"la plateforme n°1 à travailler","one_liner":"synthèse en 1 phrase",` +
+  `"content_plan":[{"bien":"amaryllis|zandoli|geko|mabouya|schoelcher","format":"reel|carrousel|post",` +
+  `"theme":"inspiration|preuve|detail|reve|conversion|lifestyle|info","angle":"idée de post concrète orientée gain d'abonnés","cta":"appel à s'abonner"}]}. ` +
+  `Le content_plan = 1 à 2 posts CONCRETS à AJOUTER au calendrier éditorial pour la plateforme la plus en retard ` +
+  `(ils passeront par le gate qualité avant toute publication). Choisis un bien réel de la liste, un format, et un ` +
+  `angle qui donne envie de s'abonner. Laisse content_plan VIDE si aucune plateforme mesurable n'est en retard.`;
 
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
@@ -120,7 +128,7 @@ export async function onRequestGet({ request, env }) {
   const origin = env.SITE_URL || url.origin;
   const targetPct = parseFloat(env.SOCIAL_GROWTH_TARGET_PCT || "5") || 5;
 
-  const [platforms, engagement, cadence] = await Promise.all([
+  const [platforms, engagement, editorial] = await Promise.all([
     fetchPlatforms(origin, env),
     fetchEngagement(origin, env),
     fetchCadence(origin, env),
@@ -128,7 +136,7 @@ export async function onRequestGet({ request, env }) {
 
   if (!platforms.length) return json({ ok: false, error: "aucune donnée plateforme (social-insights indisponible)" }, 502);
 
-  const facts = buildGrowthFacts(platforms, engagement, cadence, targetPct);
+  const facts = buildGrowthFacts(platforms, engagement, editorial.cadence, targetPct);
   const knownPlatforms = platforms.map((p) => p.platform);
 
   // Synthèse LLM (JSON strict) — cascade multi-provider via callLLM.
@@ -151,6 +159,20 @@ export async function onRequestGet({ request, env }) {
 
   const sanitized = sanitizeRecos(llmRaw || {}, knownPlatforms);
   const digest = assembleDigest(facts, sanitized);
+
+  // Passerelle éditoriale : le content_plan de l'agent → entrées PLANNED du calendrier (elles passent
+  // par le gate qualité avant toute publication). Capé, dédupliqué sur créneaux libres. Kill-switch env.
+  const scheduleOff = env.SOCIAL_GROWTH_SCHEDULE === "0" || env.SOCIAL_GROWTH_SCHEDULE === "false";
+  const maxSchedule = Math.max(0, parseInt(env.SOCIAL_GROWTH_MAX_SCHEDULE || "2", 10) || 0);
+  const bookableBiens = new Set(ALL_BIENS.filter((b) => b.bookable).map((b) => b.id));
+  const candidateDates = [];
+  for (let d = 3; d <= 17; d++) { // J+3 (laisse le lead J-2 au draft-gen) → J+17
+    candidateDates.push(new Date(Date.now() + d * 86400000).toISOString().slice(0, 10));
+  }
+  const planned = (scheduleOff || maxSchedule === 0)
+    ? { slots: [], dropped: [] }
+    : planEditorialSlots(llmRaw?.content_plan, { candidateDates, occupied: editorial.occupied, knownBiens: bookableBiens, maxNew: maxSchedule });
+
   const report = {
     generated_at: new Date().toISOString().slice(0, 16).replace("T", " "),
     target_pct: targetPct,
@@ -159,11 +181,12 @@ export async function onRequestGet({ request, env }) {
     one_liner: String(llmRaw?.one_liner || "").slice(0, 300) || null,
     recos: sanitized.recos,
     dropped: sanitized.dropped,
+    content_scheduled: planned.slots.map((s) => ({ bien_id: s.bien_id, format: s.format, date: s.scheduled_ymd, angle: s.angle })),
     llm_error: llmError,
   };
 
   if (dry) {
-    return json({ ok: true, dry: true, digest, report });
+    return json({ ok: true, dry: true, digest, report, would_schedule: planned.slots });
   }
 
   // Persiste le rapport (historique + source de l'UI).
@@ -175,6 +198,21 @@ export async function onRequestGet({ request, env }) {
     .prepare("INSERT INTO social_growth_reports (created_at, report) VALUES (?, ?)")
     .bind(Math.floor(Date.now() / 1000), JSON.stringify(report))
     .run();
+
+  // Insère les posts planifiés dans le calendrier éditorial (status 'planned' → gate qualité avant publication).
+  let scheduled = 0;
+  for (const s of planned.slots) {
+    const ts = Math.floor(new Date(`${s.scheduled_ymd}T12:00:00Z`).getTime() / 1000);
+    const photoUrl = `https://villamaryllis.com/photos/${s.bien_id}/01.webp`;
+    try {
+      await db.prepare(`
+        INSERT INTO editorial_calendar
+          (scheduled_at, platform, publish_hour, bien_id, theme, variante, format, photo_url, cta, brief, status, created_at, updated_at)
+        VALUES (?, 'both', 'FB 12h00 · IG 18h30', ?, ?, ?, ?, ?, ?, ?, 'planned', unixepoch(), unixepoch())
+      `).bind(ts, s.bien_id, s.theme, s.angle.slice(0, 120), s.format, photoUrl, s.cta, `${s.brief} · source:growth-agent`).run();
+      scheduled++;
+    } catch { /* conflit/erreur → on saute cette entrée */ }
+  }
 
   // Push ntfy — anti-fatigue : uniquement s'il y a des recos actionnables.
   let sent = false;
@@ -196,5 +234,5 @@ export async function onRequestGet({ request, env }) {
     } catch { /* ntfy best-effort */ }
   }
 
-  return json({ ok: true, sent, recos: sanitized.recos.length, dropped: sanitized.dropped.length, focus: report.focus_platform, llm_error: llmError });
+  return json({ ok: true, sent, recos: sanitized.recos.length, scheduled, dropped: sanitized.dropped.length, focus: report.focus_platform, llm_error: llmError });
 }

@@ -4,6 +4,7 @@ import {
   buildGrowthFacts,
   sanitizeRecos,
   assembleDigest,
+  planEditorialSlots,
 } from "./socialGrowthAgent.js";
 
 describe("isBannedTactic", () => {
@@ -92,6 +93,71 @@ describe("sanitizeRecos — garde-fous honnêteté", () => {
     expect(sanitizeRecos(null, known).recos).toEqual([]);
     expect(sanitizeRecos({}, known).recos).toEqual([]);
     expect(sanitizeRecos({ recos: "pas un tableau" }, known).recos).toEqual([]);
+  });
+});
+
+describe("planEditorialSlots — passerelle vers le calendrier éditorial", () => {
+  const known = new Set(["amaryllis", "zandoli", "geko"]);
+  const dates = ["2026-07-25", "2026-07-26", "2026-07-27", "2026-07-28"];
+
+  it("transforme un plan valide en créneaux datés libres", () => {
+    const { slots } = planEditorialSlots(
+      [{ bien: "zandoli", format: "reel", theme: "lifestyle", angle: "vue mer au réveil", cta: "S'abonner" }],
+      { candidateDates: dates, occupied: new Set(), knownBiens: known, maxNew: 2 },
+    );
+    expect(slots).toHaveLength(1);
+    expect(slots[0]).toMatchObject({ bien_id: "zandoli", format: "reel", theme: "lifestyle", scheduled_ymd: "2026-07-25" });
+    expect(slots[0].brief).toContain("croissance —");
+  });
+
+  it("saute les dates déjà occupées (n'empile pas sur l'existant)", () => {
+    const { slots } = planEditorialSlots(
+      [{ bien: "geko", format: "post", theme: "info", angle: "astuce locale" }],
+      { candidateDates: dates, occupied: new Set(["2026-07-25", "2026-07-26"]), knownBiens: known, maxNew: 2 },
+    );
+    expect(slots[0].scheduled_ymd).toBe("2026-07-27");
+  });
+
+  it("respecte le cap maxNew et n'assigne pas deux fois la même date", () => {
+    const plan = [
+      { bien: "amaryllis", format: "reel", angle: "a1" },
+      { bien: "zandoli", format: "reel", angle: "a2" },
+      { bien: "geko", format: "reel", angle: "a3" },
+    ];
+    const { slots } = planEditorialSlots(plan, { candidateDates: dates, knownBiens: known, maxNew: 2 });
+    expect(slots).toHaveLength(2);
+    expect(new Set(slots.map((s) => s.scheduled_ymd)).size).toBe(2);
+  });
+
+  it("écarte bien inconnu / format invalide / angle vide / tactique bannie", () => {
+    const { slots, dropped } = planEditorialSlots(
+      [
+        { bien: "tiktokville", format: "reel", angle: "x" },
+        { bien: "amaryllis", format: "tiktok", angle: "x" },
+        { bien: "zandoli", format: "reel", angle: "" },
+        { bien: "geko", format: "reel", angle: "acheter des abonnés pas cher" },
+      ],
+      { candidateDates: dates, knownBiens: known, maxNew: 5 },
+    );
+    expect(slots).toHaveLength(0);
+    expect(dropped.map((d) => d.reason)).toEqual(
+      expect.arrayContaining(["bien inconnu", "format invalide", "angle vide", "tactique bannie"]),
+    );
+  });
+
+  it("theme invalide → 'lifestyle' par défaut ; null-safe sur entrée absente", () => {
+    const { slots } = planEditorialSlots([{ bien: "geko", format: "post", theme: "n'importe quoi", angle: "ok" }], { candidateDates: dates, knownBiens: known });
+    expect(slots[0].theme).toBe("lifestyle");
+    expect(planEditorialSlots(null, { candidateDates: dates, knownBiens: known }).slots).toEqual([]);
+  });
+
+  it("s'arrête proprement quand plus aucune date n'est libre", () => {
+    const { slots, dropped } = planEditorialSlots(
+      [{ bien: "geko", format: "reel", angle: "a" }],
+      { candidateDates: ["2026-07-25"], occupied: new Set(["2026-07-25"]), knownBiens: known, maxNew: 2 },
+    );
+    expect(slots).toHaveLength(0);
+    expect(dropped.some((d) => d.reason === "aucun créneau libre")).toBe(true);
   });
 });
 

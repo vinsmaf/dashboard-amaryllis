@@ -82,5 +82,9 @@ YOUTUBE_CHANNEL_ID=
 YOUTUBE_API_KEY=
 # Cible de croissance mensuelle des abonnés, en % (défaut 5). S'applique à chaque plateforme.
 SOCIAL_GROWTH_TARGET_PCT=5
+# Nb max de posts que l'agent AJOUTE au calendrier éditorial par run (défaut 2). Entrées 'planned' → gate qualité.
+SOCIAL_GROWTH_MAX_SCHEDULE=2
+# Kill-switch de la passerelle éditoriale : "0" → l'agent recommande mais n'ajoute plus rien au calendrier.
+SOCIAL_GROWTH_SCHEDULE=
 # Google Business Profile : "1" quand l'accès API Business Profile est accordé (sinon plateforme en pending_access).
 GBP_API_ENABLED=
