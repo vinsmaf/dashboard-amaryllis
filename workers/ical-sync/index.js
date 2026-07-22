@@ -3146,33 +3146,68 @@ async function runEditorialAutoPublish(env) {
 
     console.log(`[editorial-publish] ${dueEntries.length} draft(s) à publier`);
     const ntfyTopic = env.NTFY_TOPIC || "amaryllis-alertes-7r4k9";
+    // Plafond de tentatives : au-delà, l'entrée passe `failed` pour ne PLUS bloquer la file.
+    // Cause du blocage (trouvé 2026-07-22) : la publication d'un reel IG (upload vidéo + polling
+    // encodage Meta) pouvait timeout/pendre → l'ancien code tombait dans le catch SANS rien
+    // persister → l'entrée restait `approved`. Comme l'auto-publish reprend TOUJOURS la plus
+    // ancienne entrée `approved` (sort ASC, slice 0,1), la même entrée était reprise à chaque run
+    // → boucle infinie → tous les posts suivants (dont de simples carrousels) coincés derrière.
+    const MAX_ATTEMPTS = 3;
     for (const e of dueEntries) {
       if (!e.draft_id) {
         console.warn(`[editorial-publish] entry ${e.id} sans draft_id`);
         continue;
       }
+      // Compteur porté par le `result` de l'entrée — incrémenté à CHAQUE tentative, y compris
+      // en cas de timeout/throw (sinon le compteur ne monterait jamais et la file resterait bloquée).
+      let attempts = 0;
+      try { attempts = (JSON.parse(e.result || "{}").attempts || 0); } catch { /* result non-JSON */ }
+      attempts += 1;
+
+      let pubData = null;
       try {
-        const pubRes = await fetch(`${siteUrl}/api/agent-drafts?id=${e.draft_id}&action=publish&secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
-          method: "PATCH",
-        });
-        const pubData = await pubRes.json();
-        const newStatus = pubData.ok ? "published" : (pubData.retry ? "approved" : "failed");
-        await fetch(`${siteUrl}/api/editorial-calendar?id=${e.id}&secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: newStatus, result: JSON.stringify(pubData) }),
-        }).catch(() => {});
-        console.log(`[editorial-publish] entry ${e.id} → ${newStatus}`);
-        // Ntfy sur échec définitif (pas sur retry IG en cours)
-        if (!pubData.ok && !pubData.retry) {
-          await fetch(`https://ntfy.sh/${ntfyTopic}`, {
-            method: "POST",
-            headers: { "Content-Type": "text/plain", "Title": `❌ Post échoué — ${e.bien_id || "?"}`, "Priority": "high", "Tags": "x,rotating_light" },
-            body: `Entry #${e.id} draft #${e.draft_id} → ${JSON.stringify(pubData.result?.error || pubData.error || "?").slice(0, 120)}`,
-          }).catch(() => {});
+        // Timeout DUR : un reel qui pend ne doit pas immobiliser tout le run cron (ni tuer les
+        // tâches suivantes de la branche */10). 25s suffisent pour une image ; un reel lent
+        // dépasse et sera compté comme une tentative ratée → converge vers `failed`.
+        const ctrl = new AbortController();
+        const to = setTimeout(() => ctrl.abort(), 25000);
+        try {
+          const pubRes = await fetch(`${siteUrl}/api/agent-drafts?id=${e.draft_id}&action=publish&secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
+            method: "PATCH",
+            signal: ctrl.signal,
+          });
+          pubData = await pubRes.json();
+        } finally {
+          clearTimeout(to);
         }
       } catch (err) {
-        console.error(`[editorial-publish] erreur entry ${e.id}:`, err.message);
+        console.error(`[editorial-publish] tentative ${attempts}/${MAX_ATTEMPTS} entry ${e.id} erreur:`, err.message);
+        pubData = { ok: false, retry: true, error: `fetch: ${err.name} ${err.message}` };
+      }
+
+      // Décision : publié ? sinon, encore des tentatives dispo → reste `approved` (réessai) ;
+      // plafond atteint → `failed` (débloque la file, la suivante pourra sortir).
+      let newStatus;
+      if (pubData.ok) newStatus = "published";
+      else if (attempts >= MAX_ATTEMPTS) newStatus = "failed";
+      else newStatus = "approved";
+
+      // Toujours persister {..., attempts} pour que le compteur survive au prochain run.
+      const resultToStore = JSON.stringify({ ...pubData, attempts });
+      await fetch(`${siteUrl}/api/editorial-calendar?id=${e.id}&secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus, result: resultToStore }),
+      }).catch(() => {});
+      console.log(`[editorial-publish] entry ${e.id} → ${newStatus} (tentative ${attempts}/${MAX_ATTEMPTS})`);
+
+      // Ntfy sur échec DÉFINITIF uniquement (plafond atteint) — pas sur un simple réessai en cours.
+      if (newStatus === "failed") {
+        await fetch(`https://ntfy.sh/${ntfyTopic}`, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain", "Title": `❌ Post abandonné après ${attempts} essais — ${e.bien_id || "?"}`, "Priority": "high", "Tags": "x,rotating_light" },
+          body: `Entry #${e.id} draft #${e.draft_id} (${e.format || "?"}) → ${JSON.stringify(pubData.result?.error || pubData.error || "?").slice(0, 120)}`,
+        }).catch(() => {});
       }
     }
   } catch (e) {
