@@ -225,6 +225,9 @@ if (typeof document !== "undefined" && !document.getElementById("__site_styles")
     .skeleton { background: linear-gradient(90deg,#e8e0d4 25%,var(--c-cream) 50%,#e8e0d4 75%); background-size:800px 100%; animation:shimmer 1.4s infinite linear; border-radius:6px; }
     @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
     @keyframes lb-fadein { from { opacity:0; transform:scale(0.97); } to { opacity:1; transform:scale(1); } }
+    @keyframes lb-slide-next { from { opacity:0; transform:translateX(5%) scale(0.985); } to { opacity:1; transform:translateX(0) scale(1); } }
+    @keyframes lb-slide-prev { from { opacity:0; transform:translateX(-5%) scale(0.985); } to { opacity:1; transform:translateX(0) scale(1); } }
+    @media (prefers-reduced-motion: reduce) { .lb-photo { animation: none !important; } }
     @keyframes slideInRight { from { opacity:0; clip-path:inset(0); transform:translateX(28px); } to { opacity:1; transform:translateX(0); } }
     @keyframes slideInLeft  { from { opacity:0; clip-path:inset(0); transform:translateX(-28px); } to { opacity:1; transform:translateX(0); } }
     @keyframes floatLeaf { 0%,100% { transform:translateY(0) rotate(-3deg); } 50% { transform:translateY(-12px) rotate(3deg); } }
@@ -3866,6 +3869,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
   const { t, lang } = useLang();
   const [photoIdx, setPhotoIdx] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const slideDirRef = useRef(0); // sens de la dernière navigation lightbox (-1 prev, +1 next, 0 ouverture) → transition directionnelle
   const [zoomScale, setZoomScale] = useState(1);
   const [zoomPan, setZoomPan] = useState({ x: 0, y: 0 });
   const [zoomInteracting, setZoomInteracting] = useState(false); // désactive la transition CSS pendant pinch/pan actif
@@ -4171,8 +4175,11 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
   const calTotal  = calRawTotal - calDiscountAmount + calFrais;
   const calBelowMin = calNights > 0 && calNights < getMinNights(bien.id, calCheckin);
 
-  const goPrev = useCallback(() => setPhotoIdx(i => (i - 1 + photos.length) % photos.length), [photos.length]);
-  const goNext = useCallback(() => setPhotoIdx(i => (i + 1) % photos.length), [photos.length]);
+  const goPrev = useCallback(() => { slideDirRef.current = -1; setPhotoIdx(i => (i - 1 + photos.length) % photos.length); }, [photos.length]);
+  const goNext = useCallback(() => { slideDirRef.current = 1; setPhotoIdx(i => (i + 1) % photos.length); }, [photos.length]);
+
+  // À la fermeture de la lightbox, on remet la direction à 0 → la réouverture rejoue le zoom-in (pas un slide résiduel)
+  useEffect(() => { if (!lightboxOpen) slideDirRef.current = 0; }, [lightboxOpen]);
 
   useEffect(() => {
     const fn = () => setIsMobile(window.innerWidth < 768);
@@ -4263,6 +4270,7 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
           {photos[photoIdx] && (
             <img
               key={photoIdx}
+              className="lb-photo"
               src={photos[photoIdx]}
               alt={`${bien.nom} — ${bien.lieu} — photo ${photoIdx + 1}`}
               onClick={e => e.stopPropagation()}
@@ -4274,7 +4282,10 @@ function PropertyDetail({ bien, onClose, onBook, blockedDates = [], loadingAvail
               onTouchEnd={onImgTouchEnd}
               style={{
                 maxWidth: "100%", maxHeight: "100%", objectFit: "contain", display: "block", userSelect: "none",
-                animation: zoomScale === 1 ? "lb-fadein 0.22s ease" : "none",
+                animation: zoomScale !== 1 ? "none"
+                  : slideDirRef.current === 1 ? "lb-slide-next 0.3s cubic-bezier(0.16,1,0.3,1)"
+                  : slideDirRef.current === -1 ? "lb-slide-prev 0.3s cubic-bezier(0.16,1,0.3,1)"
+                  : "lb-fadein 0.22s ease",
                 transform: `scale(${zoomScale}) translate(${zoomPan.x}px, ${zoomPan.y}px)`,
                 transformOrigin: "center center",
                 transition: zoomInteracting ? "none" : "transform 0.15s ease-out",
