@@ -90,7 +90,10 @@ export const EDITORIAL_THEMES = ["inspiration", "preuve", "detail", "reve", "con
 export const EDITORIAL_FORMATS = ["reel", "carrousel", "post"]; // pas 'story' : hors du rail d'auto-publication feed
 
 // Valide le plan de contenu LLM et l'assigne à des créneaux (dates) LIBRES et futurs. Déterministe :
-// candidateDates (futures, ordonnées) + occupied (dates déjà prises) sont passés → aucun Date.now ici.
+// candidateDates (futures, ordonnées) + occupied sont passés → aucun Date.now ici.
+// occupied : Set de clés "bien|YYYY-MM-DD" déjà prises. Le conflit à éviter est un DOUBLON sur le
+// MÊME bien le MÊME jour — le calendrier programme ~1 post/jour PAR BIEN (rotation sur 7 biens), donc
+// bloquer une journée entière dès qu'un bien y publie viderait toute la fenêtre de créneaux disponibles.
 export function planEditorialSlots(contentPlan, { candidateDates = [], occupied = new Set(), knownBiens = new Set(), maxNew = 2 } = {}) {
   const items = Array.isArray(contentPlan) ? contentPlan : [];
   const used = new Set(occupied);
@@ -110,9 +113,9 @@ export function planEditorialSlots(contentPlan, { candidateDates = [], occupied 
     if (!angle)               { dropped.push({ bien, reason: "angle vide" }); continue; }
     if (isBannedTactic(angle) || isBannedTactic(cta)) { dropped.push({ bien, reason: "tactique bannie" }); continue; }
 
-    const date = candidateDates.find((d) => !used.has(d));
-    if (!date) { dropped.push({ bien, reason: "aucun créneau libre" }); break; }
-    used.add(date);
+    const date = candidateDates.find((d) => !used.has(`${bien}|${d}`));
+    if (!date) { dropped.push({ bien, reason: "aucun créneau libre pour ce bien" }); continue; }
+    used.add(`${bien}|${date}`);
     slots.push({ bien_id: bien, format, theme, cta, angle, brief: `croissance — ${angle}`.slice(0, 300), scheduled_ymd: date });
   }
   return { slots, dropped };

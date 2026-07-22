@@ -110,15 +110,23 @@ describe("planEditorialSlots — passerelle vers le calendrier éditorial", () =
     expect(slots[0].brief).toContain("croissance —");
   });
 
-  it("saute les dates déjà occupées (n'empile pas sur l'existant)", () => {
+  it("saute les dates déjà occupées PAR CE BIEN (n'empile pas 2 posts du même bien le même jour)", () => {
     const { slots } = planEditorialSlots(
       [{ bien: "geko", format: "post", theme: "info", angle: "astuce locale" }],
-      { candidateDates: dates, occupied: new Set(["2026-07-25", "2026-07-26"]), knownBiens: known, maxNew: 2 },
+      { candidateDates: dates, occupied: new Set(["geko|2026-07-25", "geko|2026-07-26"]), knownBiens: known, maxNew: 2 },
     );
     expect(slots[0].scheduled_ymd).toBe("2026-07-27");
   });
 
-  it("respecte le cap maxNew et n'assigne pas deux fois la même date", () => {
+  it("un jour déjà occupé par un AUTRE bien reste dispo (~1 post/jour/bien, pas 1 post/jour global)", () => {
+    const { slots } = planEditorialSlots(
+      [{ bien: "geko", format: "post", angle: "astuce locale" }],
+      { candidateDates: dates, occupied: new Set(["amaryllis|2026-07-25", "zandoli|2026-07-25"]), knownBiens: known, maxNew: 2 },
+    );
+    expect(slots[0].scheduled_ymd).toBe("2026-07-25"); // libre pour geko, même si amaryllis/zandoli y publient déjà
+  });
+
+  it("respecte le cap maxNew et n'assigne pas deux fois le même bien+date", () => {
     const plan = [
       { bien: "amaryllis", format: "reel", angle: "a1" },
       { bien: "zandoli", format: "reel", angle: "a2" },
@@ -126,7 +134,7 @@ describe("planEditorialSlots — passerelle vers le calendrier éditorial", () =
     ];
     const { slots } = planEditorialSlots(plan, { candidateDates: dates, knownBiens: known, maxNew: 2 });
     expect(slots).toHaveLength(2);
-    expect(new Set(slots.map((s) => s.scheduled_ymd)).size).toBe(2);
+    expect(new Set(slots.map((s) => `${s.bien_id}|${s.scheduled_ymd}`)).size).toBe(2);
   });
 
   it("écarte bien inconnu / format invalide / angle vide / tactique bannie", () => {
@@ -151,13 +159,17 @@ describe("planEditorialSlots — passerelle vers le calendrier éditorial", () =
     expect(planEditorialSlots(null, { candidateDates: dates, knownBiens: known }).slots).toEqual([]);
   });
 
-  it("s'arrête proprement quand plus aucune date n'est libre", () => {
+  it("s'arrête proprement quand plus aucune date n'est libre POUR CE BIEN, sans bloquer les items suivants", () => {
     const { slots, dropped } = planEditorialSlots(
-      [{ bien: "geko", format: "reel", angle: "a" }],
-      { candidateDates: ["2026-07-25"], occupied: new Set(["2026-07-25"]), knownBiens: known, maxNew: 2 },
+      [
+        { bien: "geko", format: "reel", angle: "a" },
+        { bien: "zandoli", format: "reel", angle: "b" },
+      ],
+      { candidateDates: ["2026-07-25"], occupied: new Set(["geko|2026-07-25"]), knownBiens: known, maxNew: 2 },
     );
-    expect(slots).toHaveLength(0);
-    expect(dropped.some((d) => d.reason === "aucun créneau libre")).toBe(true);
+    expect(slots).toHaveLength(1);
+    expect(slots[0].bien_id).toBe("zandoli"); // geko n'a pas de créneau, mais zandoli continue d'être traité
+    expect(dropped.some((d) => d.reason === "aucun créneau libre pour ce bien" && d.bien === "geko")).toBe(true);
   });
 });
 

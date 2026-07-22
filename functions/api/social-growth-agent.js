@@ -60,7 +60,10 @@ async function fetchEngagement(origin, env) {
 // Cadence éditoriale à venir (14 j) par format — l'agent raisonne sur ce qui est déjà planifié.
 async function fetchCadence(origin, env) {
   const out = { reel: 0, carrousel: 0, post: 0, total: 0 };
-  const occupied = new Set(); // dates YMD déjà planifiées → l'agent n'empile pas dessus
+  // Clés "bien|YYYY-MM-DD" déjà planifiées → l'agent n'empile pas 2 posts du MÊME bien le même jour.
+  // Le calendrier programme ~1 post/jour PAR BIEN (rotation sur 7 biens) : bloquer la journée entière
+  // dès qu'UN bien y publie viderait toute la fenêtre de créneaux (bug vécu 2026-07-22).
+  const occupied = new Set();
   try {
     const r = await fetch(`${origin}/api/editorial-calendar?secret=${secretQS(env)}`);
     const d = await r.json();
@@ -70,7 +73,8 @@ async function fetchCadence(origin, env) {
     for (const e of entries) {
       const ts = Number(e.scheduled_at || 0);
       if (ts < now || ts > horizon) continue;
-      occupied.add(new Date(ts * 1000).toISOString().slice(0, 10));
+      const ymd = new Date(ts * 1000).toISOString().slice(0, 10);
+      if (e.bien_id) occupied.add(`${String(e.bien_id).toLowerCase()}|${ymd}`);
       const fmt = String(e.format || e.theme || "post").toLowerCase();
       if (fmt.includes("reel")) out.reel++;
       else if (fmt.includes("carrousel") || fmt.includes("carousel")) out.carrousel++;
