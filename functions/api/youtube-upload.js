@@ -40,13 +40,16 @@ export async function onRequestGet({ request, env }) {
   // check passe sur l'ANCIENNE build (vécu 2026-07-23 : upload testé sur la version d'avant le
   // défaut "privé" → vidéo publiée en public). Toujours attendre la capacité NOUVELLE, pas une
   // réponse 200. Ajouter ici un identifiant à chaque évolution du contrat de cet endpoint.
-  const capabilities = ["status", "privacyStatus", "mp4-validation", "delete"];
+  const capabilities = ["status", "privacyStatus", "mp4-validation", "delete", "autopublish-flag"];
+  // État d'activation de l'auto-publication YouTube, LISIBLE sans effet de bord : permet de
+  // vérifier que le secret YOUTUBE_AUTOPUBLISH est bien pris en compte sans publier de vidéo.
+  const autopublish = env.YOUTUBE_AUTOPUBLISH === "1" || env.YOUTUBE_AUTOPUBLISH === "true";
 
   try {
     await getValidAccessToken(env, env.revenue_manager, "youtube");
-    return json({ ok: true, connected: true, capabilities });
+    return json({ ok: true, connected: true, autopublish, capabilities });
   } catch (e) {
-    return json({ ok: true, connected: false, capabilities, reason: String(e.message || e) });
+    return json({ ok: true, connected: false, autopublish, capabilities, reason: String(e.message || e) });
   }
 }
 
