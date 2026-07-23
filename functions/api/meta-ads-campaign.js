@@ -262,6 +262,71 @@ async function createCampaign(campaignKey, env, opts = {}) {
 // {creative_id} } pour la faire pointer vers la nouvelle créative. L'annonce reste ACTIVE si
 // elle l'était — zéro coupure de diffusion. 2026-07-21 : ajouté pour pousser les UTM sans
 // interrompre A1/A3. `dryRun:true` décrit le plan sans rien écrire.
+// AUDIT LECTURE SEULE des liens RÉELLEMENT diffusés. Indispensable : le brief (`metaCampaignBrief.js`)
+// dit ce qu'on VEUT, pas ce qui tourne — une créative Meta est immuable, donc tant qu'un
+// `swapCreativeLink` n'a pas été appliqué, l'annonce garde son ancien lien SANS UTM, et le trafic
+// payant se déguise en "Organic Social"/"Referral" dans GA4 (constaté 2026-07-23 : 348 vues de page
+// Meta pour 6 sessions `paid_social` seulement). N'écrit RIEN.
+async function auditCreativeLinks(env, campaignKey) {
+  const token = env.META_PAGE_TOKEN;
+  if (!token) return json({ ok: false, error: "META_PAGE_TOKEN non configuré" }, 400);
+  const campaign = CAMPAIGNS[campaignKey];
+  if (!campaign) return json({ ok: false, error: `Campagne inconnue : ${campaignKey}` }, 400);
+
+  const camp = await findExistingCampaign(campaign.name, token);
+  if (!camp) return json({ ok: false, error: `Campagne "${campaign.name}" introuvable côté Meta` }, 404);
+
+  // Les liens vivent dans la créative de chaque annonce (link_data.link, ou child_attachments pour un carrousel).
+  const adsRes = await graphGet(
+    `${camp.id}/ads?fields=id,name,effective_status,creative{id,object_story_spec,effective_object_story_id}&limit=100`,
+    token,
+  );
+  if (adsRes.error) return json({ ok: false, error: adsRes.error.message || "Graph error" }, 502);
+
+  const audit = [];
+  for (const ad of adsRes.data || []) {
+    const ld = ad.creative?.object_story_spec?.link_data;
+    const links = [];
+    if (ld?.link) links.push(ld.link);
+    for (const c of ld?.child_attachments || []) if (c.link) links.push(c.link);
+
+    const withUtm = links.filter((l) => l.includes("utm_source=") && l.includes("utm_medium=paid_social"));
+    audit.push({
+      ad: ad.name,
+      adId: ad.id,
+      status: ad.effective_status,
+      creativeId: ad.creative?.id || null,
+      links,
+      linksTotal: links.length,
+      linksTaggedUtm: withUtm.length,
+      ok: links.length > 0 && withUtm.length === links.length,
+      diagnostic: links.length === 0
+        ? "Aucun lien lisible (créative sans link_data — vérifier manuellement)"
+        : withUtm.length === 0
+          ? "❌ AUCUN lien taggé UTM → ce trafic payant n'est PAS attribuable dans GA4"
+          : withUtm.length < links.length
+            ? `⚠️ Partiel : ${withUtm.length}/${links.length} liens taggés`
+            : "✅ Tous les liens portent les UTM paid_social",
+    });
+  }
+
+  const broken = audit.filter((a) => !a.ok);
+  return json({
+    ok: true,
+    readOnly: true,
+    campaign: campaign.name,
+    campaignId: camp.id,
+    adsAudited: audit.length,
+    adsWithoutUtm: broken.length,
+    verdict: audit.length === 0
+      ? "Aucune annonce trouvée dans cette campagne"
+      : broken.length === 0
+        ? "✅ Toutes les annonces portent les UTM — l'attribution Meta est correcte"
+        : `❌ ${broken.length}/${audit.length} annonce(s) sans UTM complet → lancer action:"swapCreativeLink" avec confirm:true`,
+    audit,
+  });
+}
+
 async function swapCreativeLink(env, campaignKey, { dryRun = false } = {}) {
   const token = env.META_PAGE_TOKEN;
   const campaign = CAMPAIGNS[campaignKey];
@@ -460,6 +525,9 @@ export async function onRequestPost({ request, env }) {
   const campaignKey = body.campaign || "c1_tofu";
   if (body.action === "prune") {
     return pruneParasiteAdSets(env, campaignKey, { confirm: body.confirm === true });
+  }
+  if (body.action === "auditLinks") {
+    return auditCreativeLinks(env, campaignKey); // lecture seule — n'écrit jamais
   }
   if (body.action === "swapCreativeLink") {
     return swapCreativeLink(env, campaignKey, { dryRun: body.confirm !== true });
