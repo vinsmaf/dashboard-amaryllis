@@ -11,6 +11,14 @@
 //   revenue_manager         — binding D1
 //   BEDS24_REFRESH_SECRET   — clé cron (à créer dans Cloudflare)
 //   NTFY_TOPIC              — push si refresh réussi ou alerte (optionnel)
+//
+// POST ?action=setToken (2026-07-23) : dépose un token frais directement en D1, Bearer admin
+// requis. Nécessaire pour remplacer un token existant — getActiveBeds24Token() lit D1 EN
+// PRIORITÉ sur env.BEDS24_TOKEN, donc changer le seul secret Cloudflare ne suffit pas tant
+// que la ligne D1 n'a pas expiré (jusqu'à ~60j). Le token ne transite QUE par cet appel
+// (fait par Vincent lui-même, jamais par Claude) — jamais lu/reproduit dans la réponse.
+
+import { verifyBearer } from "./_adminauth.js";
 
 const THRESHOLD_DAYS = 30; // on rafraîchit quand il reste < 30 jours
 
@@ -152,6 +160,61 @@ function json(data, status = 200) {
 
 export async function onRequestOptions() {
   return new Response(null, {
-    headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, OPTIONS" },
+    headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, OPTIONS, POST" },
   });
+}
+
+// POST ?action=setToken — dépose directement un token (issu de l'échange d'un invite code
+// Beds24, write:bookings) en D1, en écrasant toute ligne existante. Seul moyen de faire
+// primer un nouveau token sur celui déjà en D1 (cf. commentaire d'en-tête). Bearer admin
+// obligatoire — jamais appelé par Claude, uniquement par Vincent depuis son terminal.
+export async function onRequestPost(context) {
+  const { request, env } = context;
+  const url = new URL(request.url);
+  if (url.searchParams.get("action") !== "setToken") {
+    return json({ error: "action inconnue (attendu ?action=setToken)" }, 400);
+  }
+
+  const auth = await verifyBearer(request, env);
+  if (!auth.ok) return json({ error: "Non autorisé" }, 401);
+
+  const db = env.revenue_manager;
+  if (!db) return json({ error: "D1 non configuré" }, 503);
+
+  let body;
+  try { body = await request.json(); } catch { return json({ error: "JSON invalide" }, 400); }
+  const token = String(body.token || "").trim();
+  if (!token) return json({ error: "Champ requis : token" }, 400);
+
+  // Valide le token auprès de Beds24 avant de l'adopter — jamais stocker une valeur invalide.
+  let details;
+  try {
+    const res = await fetch("https://beds24.com/api/v2/authentication/details", {
+      headers: { token },
+      signal: AbortSignal.timeout(8000),
+    });
+    details = await res.json();
+  } catch (e) {
+    return json({ error: `Vérification Beds24 échouée : ${e.message}` }, 502);
+  }
+  if (!details.validToken) return json({ error: "Token rejeté par Beds24 (invalide)", raw: details }, 400);
+
+  const expiresIn = details.token?.expiresIn ?? 60 * 86400;
+  const scopes = details.token?.scopes || null;
+  const now = Math.floor(Date.now() / 1000);
+  const expiresAt = now + expiresIn;
+
+  try {
+    await ensureTokenTable(db);
+    await db.prepare(`
+      INSERT INTO beds24_tokens (id, token, expires_at, refreshed_at)
+      VALUES (1, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET token=excluded.token, expires_at=excluded.expires_at, refreshed_at=excluded.refreshed_at
+    `).bind(token, expiresAt, now).run();
+  } catch (e) {
+    return json({ error: `Écriture D1 échouée : ${e.message}` }, 500);
+  }
+
+  // Jamais renvoyer le token dans la réponse — seulement sa validité et ses scopes.
+  return json({ ok: true, action: "setToken", scopes, expiresInDays: Math.round(expiresIn / 86400) });
 }

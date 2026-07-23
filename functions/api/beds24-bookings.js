@@ -56,7 +56,11 @@ export async function onRequestGet(context) {
       });
       const data = await res.json();
       if (data.validToken) {
-        return json({ ok: true, propId: PROP_ID, expiresIn: data.token?.expiresIn });
+        // scopes : déjà dans la réponse Beds24 mais jamais exposée jusqu'ici — nécessaire
+        // pour savoir si le token a l'écriture (write:bookings) sans regénérer un diagnostic
+        // temporaire à chaque fois (cf. BLOCKERS 2026-07-17, token lecture-seule non détecté
+        // avant qu'un vrai bouton d'écriture échoue).
+        return json({ ok: true, propId: PROP_ID, expiresIn: data.token?.expiresIn, scopes: data.token?.scopes || data.scopes || null });
       }
       return json({ ok: false, error: "Token invalide", raw: data }, 400);
     } catch (err) {
