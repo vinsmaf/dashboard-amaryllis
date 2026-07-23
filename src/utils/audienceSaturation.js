@@ -21,6 +21,9 @@ export const SEGMENT_LABELS = {
   engaged_audience: "Audience engagée",
   new_audience: "Nouvelles audiences",
   new_customers: "Nouveaux clients",
+  // Meta ne ventile réellement par segment que sur les campagnes Advantage+ ; ailleurs il
+  // renvoie littéralement "unknown". Le dire, plutôt que d'afficher un segment fantôme.
+  unknown: "Segment non ventilé par Meta",
 };
 
 // Segments qui connaissent DÉJÀ la marque : c'est là que la sur-répétition coûte le plus cher,
@@ -98,6 +101,10 @@ export function auditAudienceFrequency(rows = []) {
   let note;
   if (!segments.length) {
     note = "Aucune donnée par segment d'audience — répartition indisponible sur cette fenêtre.";
+  } else if (segments.every((s) => s.segment === "unknown")) {
+    note = `Meta ne ventile pas ce compte par segment d'audience (il renvoie "unknown") : cette répartition n'existe que sur les campagnes Advantage+. ` +
+      `La répétition globale reste lisible (${segments.map((s) => s.frequency).filter((f) => f != null).join(" / ")}), mais impossible de distinguer nouvelles audiences et clients existants — ` +
+      `or c'est sur les clients existants que la sur-répétition coûte le plus cher.`;
   } else if (!satures.length) {
     note = `Aucun segment au-dessus d'une répétition de ${FREQ_MAX} : la pression publicitaire est saine, rien à couper ici.`;
   } else {

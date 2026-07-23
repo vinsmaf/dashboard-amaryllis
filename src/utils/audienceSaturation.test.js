@@ -95,3 +95,16 @@ describe("auditAudienceFrequency", () => {
     expect(a.segments).toHaveLength(0);
   });
 });
+
+describe("compte sans ventilation Advantage+ (cas réel villamaryllis)", () => {
+  it("Meta renvoie \"unknown\" → on le dit au lieu d'afficher un segment fantôme", () => {
+    const a = auditAudienceFrequency([
+      { segment: "unknown", spend: 39.31, reach: 18000, impressions: 21420 },
+      { segment: "unknown", spend: 0.03, reach: 2, impressions: 3 },
+    ]);
+    expect(a.satures).toBe(0);
+    expect(a.segments[0].label).toBe("Segment non ventilé par Meta");
+    expect(a.note).toMatch(/Advantage\+/);
+    expect(a.note).toMatch(/clients existants/); // rappelle où se concentre le vrai gaspillage
+  });
+});
