@@ -348,6 +348,33 @@ async function handlePublishReel(env, { caption, videoUrl, coverUrl, channels = 
     }
   }
 
+  // ── YouTube Shorts ────────────────────────────────────────────────────────
+  // Le MP4 des Reels est déjà vertical → YouTube le classe automatiquement en Short.
+  // Délègue à /api/youtube-upload (OAuth provider "youtube" + validation vidéo stricte).
+  // privacyStatus EXPLICITE : "public" en publication réelle, "private" en dry-run — l'upload
+  // étant privé par défaut, un dry-run ne peut jamais exposer la chaîne (incident YOUTUBE-001).
+  if (channels.includes("yt") || channels.includes("youtube")) {
+    try {
+      const origin = new URL(env.PAGES_URL || "https://villamaryllis.com").origin;
+      const ytRes = await fetch(`${origin}/api/youtube-upload?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          videoUrl,
+          title: caption ? caption.split("\n")[0].slice(0, 100) : "Villa Amaryllis — Martinique",
+          description: caption || "",
+          privacyStatus: dryRun ? "private" : "public",
+        }),
+      });
+      const ytData = await ytRes.json().catch(() => ({}));
+      results.yt = ytData.ok
+        ? { ok: !dryRun, id: ytData.videoId, url: ytData.url, dryRun: !!dryRun }
+        : { error: ytData.error || `HTTP ${ytRes.status}` };
+    } catch (e) {
+      results.yt = { error: e.message };
+    }
+  }
+
   const hasSuccess = Object.values(results).some(r => r.ok);
   return json({ results, ok: hasSuccess }, hasSuccess ? 200 : 422);
 }

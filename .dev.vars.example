@@ -90,3 +90,6 @@ SOCIAL_GROWTH_SCHEDULE=
 GBP_API_ENABLED=
 # YouTube upload de Shorts (agent réseaux) — kill-switch : "1" → l'upload répond disabled sans rien publier.
 YOUTUBE_UPLOAD_DISABLED=
+# YouTube dans l'auto-publication des Reels : OPT-IN. "1" → chaque Reel publié part AUSSI en Short.
+# Sans ce flag, YouTube n'est jamais ajouté automatiquement (pas d'élargissement silencieux de canal).
+YOUTUBE_AUTOPUBLISH=

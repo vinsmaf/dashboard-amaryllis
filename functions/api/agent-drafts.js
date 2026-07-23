@@ -157,8 +157,13 @@ async function executeDraft(env, draft) {
     // payload: { caption, videoUrl, coverUrl, channels, igContainerId? }
     if (!payload.videoUrl) return { ok: false, error: "videoUrl manquant — rendre la vidéo d'abord" };
     const channels = Array.isArray(payload.channels) && payload.channels.length
-      ? payload.channels
+      ? [...payload.channels]
       : ["ig", "fb"];
+    // YouTube Shorts : OPT-IN explicite (YOUTUBE_AUTOPUBLISH=1). Sans ce flag, activer YouTube
+    // ferait publier en silence sur un nouveau canal public à chaque Reel — exactement le type
+    // d'élargissement qu'on ne fait jamais par défaut. Le MP4 vertical est déjà compatible Short.
+    const ytOn = env.YOUTUBE_AUTOPUBLISH === "1" || env.YOUTUBE_AUTOPUBLISH === "true";
+    if (ytOn && !channels.includes("yt") && !channels.includes("youtube")) channels.push("yt");
     const origin = new URL(env.PAGES_URL || "https://dashboard-amaryllis.pages.dev").origin;
     const r = await fetch(`${origin}/api/social?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`, {
       method: "POST",
