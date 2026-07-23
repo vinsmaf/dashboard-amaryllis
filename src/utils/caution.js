@@ -7,8 +7,12 @@
 
 // Montant de caution pré-autorisé par bien (€). Valeurs = DEPOSIT_AMOUNTS (src/PublicSite.jsx),
 // soit ce qui a réellement été pré-autorisé en prod (Antoine / Anaïs sur Zandoli = 500€).
+// amaryllis 1500→1000€ (2026-07-23) : la caution dépassait le total du séjour minimum (1120€,
+// 280€×4 nuits) et s'affiche en clair juste avant le CTA paiement — funnel dates→checkout mesuré
+// à 8,8% vs 64,3% pour geko (caution 500€). Alignée sur schoelcher (2e palier), sous le seuil du
+// séjour mini. À revalider sur le funnel des 2-3 prochaines semaines (voir ADR).
 export const CAUTION_AMOUNTS = {
-  amaryllis:  1500,
+  amaryllis:  1000,
   zandoli:    500,
   iguana:     500,
   geko:       500,

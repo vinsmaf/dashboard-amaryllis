@@ -264,7 +264,7 @@ const WA_NUMBER = "33610880772";
 const WA_MSG_DEFAULT = encodeURIComponent("Bonjour, je souhaite obtenir des informations sur une location Amaryllis.");
 
 const DEPOSIT_AMOUNTS = {
-  amaryllis: 1500,
+  amaryllis: 1000, // 1500→1000€ le 2026-07-23 : dépassait le total du séjour minimum, voir src/utils/caution.js
   zandoli:   500,
   iguana:    500,
   geko:      500,
@@ -315,7 +315,7 @@ const BIENS = [
         { label: "Règlement", texte: "Villa non-fumeur. Événements, fiestas et réceptions interdits. Seuls les voyageurs inscrits sur la réservation sont autorisés." },
         { label: "Capacité", texte: "6 voyageurs inclus dans le tarif de base. Possibilité d'accueillir jusqu'à 8 personnes avec un supplément de 50 € par voyageur supplémentaire par nuit." },
         { label: "Animaux", texte: "Bienvenus, jusqu'à 2 maximum — supplément 40 € par séjour." },
-        { label: "Dépôt de garantie", texte: "1 500 € en cas de dommages constatés après le départ." },
+        { label: "Dépôt de garantie", texte: "1 000 € en cas de dommages constatés après le départ." },
         { label: "Transport", texte: "Une voiture automatique est recommandée pour profiter pleinement de la région.", lien: <LienAffilie partenaire="discoverCars" utmContent="homepage-amaryllis-transport" /> },
         { label: "Ménage", texte: "La villa est nettoyée et désinfectée en profondeur entre chaque séjour." },
         { label: "Support", texte: "Notre équipe est joignable 24h/24 en cas d'urgence ou de besoin particulier." },

@@ -3,7 +3,7 @@ import { CAUTION_AMOUNTS, cautionAmountFor, placeDateFor, PLACE_DAYS_BEFORE, dec
 
 describe("cautionAmountFor", () => {
   it("retourne le montant pré-autorisé en prod par bien", () => {
-    expect(cautionAmountFor("amaryllis")).toBe(1500);
+    expect(cautionAmountFor("amaryllis")).toBe(1000); // 1500→1000 le 2026-07-23 (funnel dates→checkout)
     expect(cautionAmountFor("schoelcher")).toBe(1000);
     expect(cautionAmountFor("zandoli")).toBe(500); // = ce qui a réellement été bloqué (Antoine/Anaïs)
     expect(cautionAmountFor("nogent")).toBe(500);
