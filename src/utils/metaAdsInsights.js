@@ -62,7 +62,7 @@ export function normalizeInsightRow(row, opts = {}) {
   const revenue = sumActions(row.action_values, PURCHASE_TYPES);
   // Dimensions de ventilation (présentes uniquement si ?breakdown= est demandé). Sans elles, toutes
   // les lignes d'un breakdown retomberaient sur le même `name` et seraient indistinguables.
-  const breakdown = [row.publisher_platform, row.platform_position, row.impression_device, row.country]
+  const breakdown = [row.publisher_platform, row.platform_position, row.impression_device, row.country, row.user_segment_key]
     .filter(Boolean).join(" · ") || null;
 
   return {
@@ -71,6 +71,9 @@ export function normalizeInsightRow(row, opts = {}) {
     ...(breakdown ? { breakdown } : {}),
     ...(row.publisher_platform ? { publisherPlatform: row.publisher_platform } : {}),
     ...(row.platform_position ? { platformPosition: row.platform_position } : {}),
+    // Segment d'audience (nouvelles audiences / clients existants…) — présent uniquement avec
+    // ?breakdown=audience. Alimente l'audit de sur-répétition (`src/utils/audienceSaturation.js`).
+    ...(row.user_segment_key ? { userSegment: row.user_segment_key } : {}),
     spend: Number(spend.toFixed(2)),
     // ── MÉTRIQUES DE PILOTAGE (doctrine Vincent 2026-07-23) ─────────────────
     reach,

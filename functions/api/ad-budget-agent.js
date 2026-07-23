@@ -21,6 +21,7 @@ import { CAMPAIGNS, AD_ACCOUNT_ID } from "../../src/config/metaCampaignBrief.js"
 import { ALL_BIENS, getBien } from "../../src/data/biens.js";
 import { parseInsights, measurementHealth, aggregateInsights } from "../../src/utils/metaAdsInsights.js";
 import { MEASUREMENT_TIERS, financeKpis, declaredAttribution } from "../../src/utils/adFinanceKpis.js";
+import { auditAudienceFrequency } from "../../src/utils/audienceSaturation.js";
 import { cacCeiling, allocateBudget, evaluateAdset, bienIdFromGoogleCampaignName, GOOGLE_CAMPAIGN_POOLS, multiBienPoolCeiling } from "../../src/utils/adBudgetAgent.js";
 import { fetchGoogleAdsInsights } from "./_googleAds.js";
 
@@ -168,7 +169,24 @@ export async function onRequestGet({ request, env }) {
             : { verdict: "unmapped", note: "Ad set non rattaché à un bien connu — pas de plafond CAC applicable." };
           return { adset: r.name, bienId, spend: r.spend, purchases: r.purchases, revenue: r.revenue, ...evalResult };
         });
-        meta = { available: true, window: range ? `${range.since}..${range.until}` : datePreset, health, totals, adsets };
+        // Sur-répétition par segment d'audience : au-delà de 10 expositions sur la fenêtre, on
+        // repaye pour ré-exposer des gens déjà largement touchés → budget récupérable.
+        let saturation = null;
+        const segRes = await graphGet(
+          `${AD_ACCOUNT_ID}/insights?level=account&${rangeParam}&fields=${encodeURIComponent("spend,impressions,reach")}&breakdowns=user_segment_key&time_increment=all_days&limit=50`,
+          token
+        );
+        if (segRes.error) {
+          saturation = { available: false, error: segRes.error.message || String(segRes.error),
+            note: "Ventilation par segment d'audience indisponible sur ce compte (elle n'existe que sur certains types de campagnes)." };
+        } else {
+          saturation = { available: true, ...auditAudienceFrequency((segRes.data || []).map((r) => ({
+            segment: r.user_segment_key, spend: Number(r.spend) || 0,
+            impressions: Number(r.impressions) || 0, reach: Number(r.reach) || 0,
+          }))) };
+        }
+
+        meta = { available: true, window: range ? `${range.since}..${range.until}` : datePreset, health, totals, adsets, saturation };
       }
     }
 

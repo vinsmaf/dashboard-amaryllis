@@ -17,6 +17,7 @@
 import { verifyBearer } from "./_adminauth.js";
 import { AD_ACCOUNT_ID } from "../../src/config/metaCampaignBrief.js";
 import { parseInsights, aggregateInsights, measurementHealth } from "../../src/utils/metaAdsInsights.js";
+import { auditAudienceFrequency } from "../../src/utils/audienceSaturation.js";
 
 const GV = "v25.0";
 
@@ -94,7 +95,10 @@ export async function onRequestGet({ request, env }) {
     // avec un CPC à 0,08 € (anormalement bas). Les liens portaient bien les UTM (audité) → l'écart ne
     // vient PAS de l'attribution mais probablement de placements à très faible intention
     // (Audience Network / Reels). Lecture seule, ne modifie aucune campagne.
-    const BREAKDOWNS = { placement: "publisher_platform,platform_position", device: "impression_device", country: "country" };
+    // `audience` = « Répartition → Par segment d'audience » d'Ads Manager : c'est là qu'on lit la
+    // RÉPÉTITION par type d'audience, et donc la sur-pression sur les gens qui connaissent déjà
+    // la marque (règle : au-delà de 10 expositions/30 j, on paye pour rien).
+    const BREAKDOWNS = { placement: "publisher_platform,platform_position", device: "impression_device", country: "country", audience: "user_segment_key" };
     const breakdown = BREAKDOWNS[url.searchParams.get("breakdown")] || null;
     const breakdownParam = breakdown ? `&breakdowns=${encodeURIComponent(breakdown)}` : "";
 
@@ -109,9 +113,15 @@ export async function onRequestGet({ request, env }) {
     const totals = aggregateInsights(rows, { assumedCvr });
     const health = measurementHealth(totals);
 
+    // Audit de sur-répétition — uniquement pertinent sur la ventilation par segment d'audience.
+    const saturation = url.searchParams.get("breakdown") === "audience"
+      ? auditAudienceFrequency(rows.map((r) => ({ segment: r.userSegment, spend: r.spend, impressions: r.impressions, reach: r.reach })))
+      : undefined;
+
     return json({
       ok: true, window: useTimeRange ? `${since}..${until}` : datePreset, level,
       attribution: "7d_click", generated_at: new Date().toISOString(), health, totals, rows,
+      ...(saturation ? { saturation } : {}),
     });
   } catch (e) {
     // Jamais crasher en 502 muet — remonter l'erreur exploitable.

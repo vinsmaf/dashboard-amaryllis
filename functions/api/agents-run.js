@@ -75,6 +75,11 @@ MÉTRIQUES — CE QU'ON REGARDE À LA PLACE (niveau 1 assaini)
 • PAS l'attribution "vue" (1d_view) → 7 JOURS CLIC seulement. La vue crédite la pub de gens qui auraient acheté de toute façon.
 • PAS les impressions → la COUVERTURE UNIQUE (personnes réellement touchées), à combiner avec la répétition pour lire la pression publicitaire sur une audience.
 • PAS le nombre de clics brut : un clic seul ne dit rien. Ce qui décide, c'est son COÛT rapporté à une conversion.
+PRESSION PUBLICITAIRE — LA COUPE LA PLUS RENTABLE (règle Meta, doctrine Vincent 2026-07-23)
+• Lire la RÉPÉTITION sur 30 j PAR SEGMENT D'AUDIENCE (Ads Manager → Campagnes → Répartition → Par segment d'audience ; côté API `/api/meta-ads-insights?breakdown=audience`).
+• Au-delà d'une répétition de 10 sur les CLIENTS EXISTANTS, c'est contre-productif : ces gens connaissent déjà la marque et ont vu la pub plus de 10 fois en un mois. 5 à 10 suffit largement.
+• Un segment saturé = du budget récupérable SANS perte de performance. C'est la première coupe à proposer, avant toute autre optimisation : on ne perd rien, on réalloue.
+• C'est la même chose que le CPMR qui grimpe (CPMR = CPM × répétition) — la répétition dit POURQUOI, le CPMR dit COMBIEN ça coûte.
 PRODUCTION CRÉATIVE — RÈGLE 30/20/50 (doctrine Vincent, 2026-07-23)
 • 30% NOUVEAU CONCEPT : angle/promesse/offre jamais exploités.
 • 20% ITÉRATION MINEURE : même concept, on ne change que le hook, le CTA ou la durée.
