@@ -35,11 +35,18 @@ export async function onRequestGet({ request, env }) {
   const { ok: bearerOk } = await verifyBearer(request, env);
   if (!secretOk && !bearerOk) return json({ error: "Non autorisé" }, 401);
 
+  // `capabilities` = marqueur de VERSION déployée. Vérifier un déploiement en attendant une
+  // réponse générique ne prouve RIEN : le même endpoint existait avant le changement, donc le
+  // check passe sur l'ANCIENNE build (vécu 2026-07-23 : upload testé sur la version d'avant le
+  // défaut "privé" → vidéo publiée en public). Toujours attendre la capacité NOUVELLE, pas une
+  // réponse 200. Ajouter ici un identifiant à chaque évolution du contrat de cet endpoint.
+  const capabilities = ["status", "privacyStatus", "mp4-validation", "delete"];
+
   try {
     await getValidAccessToken(env, env.revenue_manager, "youtube");
-    return json({ ok: true, connected: true });
+    return json({ ok: true, connected: true, capabilities });
   } catch (e) {
-    return json({ ok: true, connected: false, reason: String(e.message || e) });
+    return json({ ok: true, connected: false, capabilities, reason: String(e.message || e) });
   }
 }
 

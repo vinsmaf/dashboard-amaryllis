@@ -4,6 +4,15 @@
 > **Règle** : à chaque erreur commise, ajouter une entrée ici (symptôme → cause → solution → garde-fou).
 > Lire ce fichier **au début de chaque session** (en plus de `PROJECT_MEMORY.md` + `CLAUDE.md`).
 
+## 🚀 DÉPLOIEMENT — Vérifier une mise en ligne avec un marqueur qui existait DÉJÀ = tester l'ancienne build
+
+**DEPLOY-VERIF-001 (2026-07-23)** — Un correctif « défaut PRIVÉ » sur `youtube-upload.js` a été poussé, puis testé 35 s plus tard… **sur la build précédente**. Résultat : la vidéo de test est partie en **PUBLIC** sur la chaîne, exactement ce que le correctif devait empêcher.
+- **Symptôme** : le code committé dit `privacyStatus: "private"` par défaut, la réponse d'API dit `ok:true`, et pourtant YouTube Studio affiche **Visibilité : Publique**. Écart total entre le code lu et le comportement réel.
+- **Cause** : la boucle d'attente du déploiement sortait dès que `GET ?status=1` répondait. Or `?status=1` avait été déployé **9 minutes plus tôt** (commit précédent) — il répondait donc déjà. Le signal « c'est déployé » était **satisfait par l'ancienne version**. Un déploiement CI Pages prend ~3 min ; le test a tourné à +35 s.
+- **⚠️ Le piège** : on croit vérifier « la nouvelle version est en ligne » alors qu'on vérifie seulement « l'endpoint répond ». Tout marqueur **antérieur** au changement testé donne un faux positif — et le test s'exécute contre l'ancien code, en silence.
+- **Solution** : l'endpoint expose désormais `capabilities: [...]` dans `?status=1`. On attend la **capacité nouvellement ajoutée** (ex. `"privacyStatus"`), jamais un simple 200. Chaque évolution du contrat ajoute son identifiant.
+- **Garde-fou / leçon** : **pour vérifier un déploiement, attendre un marqueur qui N'EXISTE QUE dans la nouvelle version** (capability, hash de bundle, numéro de version). Corollaire déjà connu du repo : le hash local ≠ hash CI (build-info horodaté) — donc comparer un hash local ne marche pas non plus. Et : **ne jamais valider un changement de sécurité par une action à effet de bord réel** (ici, publier une vraie vidéo) tant que la mise en ligne n'est pas prouvée.
+
 ## ▶️ YOUTUBE — Un test a publié une vraie vidéo (HTML uploadé comme "vidéo") sur la chaîne
 
 **YOUTUBE-001 (2026-07-23)** — En voulant seulement *tester si la connexion OAuth YouTube fonctionnait*, un POST sur `/api/youtube-upload` avec une URL MP4 volontairement inexistante a **publié une vidéo publique** ("probe", `C1a_etdfe1Y`) sur la chaîne d'Amaryllis.
