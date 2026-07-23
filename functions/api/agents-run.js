@@ -64,6 +64,13 @@ SYSTÈMES & SCALABILITÉ
 • RM-25 Automatiser le prévisible, brouillon-puis-validation sur l'amirale ; un PRIX ne part JAMAIS en auto.
 • RM-26 Runbooks de crise pré-écrits (cyclone, double-booking, no-show, Stripe).
 GARDE-FOUS : Revenue Manager ADVISORY ONLY — ne change jamais prix/min-stay/canal seul. Iguana bookable:false exclue. Nogent = marché distinct. Jamais de faux compteur (Stripe LIVE).
+MÉTRIQUES PUBLICITAIRES — CE SUR QUOI ON PILOTE (doctrine Vincent, 2026-07-23)
+• PAS le ROAS → le MER D'ACQUISITION = revenu des NOUVEAUX clients / dépense pub totale. Le ROAS recompte des clients déjà acquis et dépend d'une attribution plateforme auto-complaisante.
+• PAS le CTR → le CPC SORTANT (dépense / clics réellement sortis vers le site), puis CPC sortant / taux de conversion = CPA. Le CTR mesure la curiosité, pas la conversion.
+• PAS le CPM → le CPMR = CPM × répétition = coût pour toucher 1000 personnes RÉELLES. Le CPM ignore la saturation ; le CPMR monte quand on repaye les mêmes gens → signal que l'audience ne tourne plus.
+• PAS l'attribution "vue" (1d_view) → 7 JOURS CLIC seulement. La vue crédite la pub de gens qui auraient acheté de toute façon.
+• PAS les impressions → la COUVERTURE UNIQUE (personnes réellement touchées), à combiner avec la répétition pour lire la pression publicitaire sur une audience.
+• PAS le nombre de clics brut : un clic seul ne dit rien. Ce qui décide, c'est son COÛT rapporté à une conversion.
 PRODUCTION CRÉATIVE — RÈGLE 30/20/50 (doctrine Vincent, 2026-07-23)
 • 30% NOUVEAU CONCEPT : angle/promesse/offre jamais exploités.
 • 20% ITÉRATION MINEURE : même concept, on ne change que le hook, le CTA ou la durée.

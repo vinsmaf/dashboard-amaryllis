@@ -80,7 +80,14 @@ export async function onRequestGet({ request, env }) {
       : `date_preset=${datePreset}`;
 
     const nameField = level === "adset" ? "adset_name,adset_id" : "campaign_name,campaign_id";
-    const fields = `${nameField},spend,impressions,clicks,ctr,cpc,actions,action_values`;
+    // `reach` + `outbound_clicks` = les deux champs qui rendent le pilotage honnête : couverture
+    // unique (vs impressions qui recomptent) et clic réellement sorti vers le site (vs clic global).
+    const fields = `${nameField},spend,impressions,reach,clicks,outbound_clicks,ctr,cpc,actions,action_values`;
+
+    // Attribution 7 jours CLIC uniquement. Le défaut Meta ajoute `1d_view` : une simple vue non
+    // cliquée se voit alors créditée d'une résa, ce qui gonfle artificiellement les résultats avec
+    // des gens qui auraient réservé de toute façon. On ne compte que ce qui a vraiment été cliqué.
+    const attributionParam = `&action_attribution_windows=${encodeURIComponent(JSON.stringify(["7d_click"]))}`;
 
     // ?breakdown=placement — ventile la dépense par plateforme/position de diffusion.
     // Diagnostic ajouté 2026-07-23 : Meta déclarait 348 vues de page pour 6 sessions GA4 seulement,
@@ -92,16 +99,20 @@ export async function onRequestGet({ request, env }) {
     const breakdownParam = breakdown ? `&breakdowns=${encodeURIComponent(breakdown)}` : "";
 
     const res = await graphGet(
-      `${AD_ACCOUNT_ID}/insights?level=${level}&${rangeParam}&fields=${encodeURIComponent(fields)}${breakdownParam}&time_increment=all_days&limit=200`,
+      `${AD_ACCOUNT_ID}/insights?level=${level}&${rangeParam}&fields=${encodeURIComponent(fields)}${breakdownParam}${attributionParam}&time_increment=all_days&limit=200`,
       token
     );
     if (res.error) return json({ ok: false, error: res.error }, 200);
 
-    const rows = parseInsights(res.data);
-    const totals = aggregateInsights(rows);
+    const assumedCvr = Number(env.META_ASSUMED_CVR) > 0 ? Number(env.META_ASSUMED_CVR) : undefined;
+    const rows = parseInsights(res.data, { assumedCvr });
+    const totals = aggregateInsights(rows, { assumedCvr });
     const health = measurementHealth(totals);
 
-    return json({ ok: true, window: useTimeRange ? `${since}..${until}` : datePreset, level, generated_at: new Date().toISOString(), health, totals, rows });
+    return json({
+      ok: true, window: useTimeRange ? `${since}..${until}` : datePreset, level,
+      attribution: "7d_click", generated_at: new Date().toISOString(), health, totals, rows,
+    });
   } catch (e) {
     // Jamais crasher en 502 muet — remonter l'erreur exploitable.
     return json({ ok: false, error: { message: `${e.name}: ${e.message}` } }, 200);

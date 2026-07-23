@@ -19,7 +19,7 @@
 import { verifyBearer } from "./_adminauth.js";
 import { CAMPAIGNS, AD_ACCOUNT_ID } from "../../src/config/metaCampaignBrief.js";
 import { ALL_BIENS, getBien } from "../../src/data/biens.js";
-import { parseInsights, measurementHealth, aggregateInsights } from "../../src/utils/metaAdsInsights.js";
+import { parseInsights, measurementHealth, aggregateInsights, acquisitionMer } from "../../src/utils/metaAdsInsights.js";
 import { cacCeiling, allocateBudget, evaluateAdset, bienIdFromGoogleCampaignName, GOOGLE_CAMPAIGN_POOLS, multiBienPoolCeiling } from "../../src/utils/adBudgetAgent.js";
 import { fetchGoogleAdsInsights } from "./_googleAds.js";
 
@@ -34,6 +34,31 @@ function computeRange(windowKey) {
   const now = new Date();
   const since = new Date(now.getTime() - days * 86400000);
   return { since: since.toISOString().slice(0, 10), until: now.toISOString().slice(0, 10) };
+}
+
+// Revenu des NOUVEAUX clients sur la fenêtre : une résa ne compte que si cet email n'avait
+// jamais réservé avant. C'est le numérateur du MER d'acquisition — un client fidèle qui
+// re-réserve n'est PAS une acquisition, et le compter gonflerait la performance de la pub.
+async function sumNewCustomerRevenue(db, range) {
+  if (!db || !range?.since || !range?.until) return null;
+  const from = Math.floor(new Date(`${range.since}T00:00:00Z`).getTime() / 1000);
+  const to = Math.floor(new Date(`${range.until}T23:59:59Z`).getTime() / 1000);
+  try {
+    const row = await db.prepare(`
+      SELECT COALESCE(SUM(b.total), 0) AS revenue, COUNT(*) AS bookings
+      FROM direct_bookings b
+      WHERE b.created_at BETWEEN ? AND ?
+        AND COALESCE(b.status, 'confirmed') != 'cancelled'
+        AND b.email IS NOT NULL AND b.email != ''
+        AND NOT EXISTS (
+          SELECT 1 FROM direct_bookings p
+          WHERE LOWER(p.email) = LOWER(b.email) AND p.created_at < b.created_at
+        )
+    `).bind(from, to).first();
+    return { revenue: Number(row?.revenue) || 0, bookings: Number(row?.bookings) || 0 };
+  } catch {
+    return null; // table/colonne absente → on l'annonce comme non mesurable, jamais un faux 0.
+  }
 }
 
 function json(data, status = 200) {
@@ -86,6 +111,10 @@ export async function onRequestGet({ request, env }) {
     // 1) VISION BUDGET — toujours dispo, ne dépend d'aucune donnée live.
     const plan = allocateBudget(budgetMax);
 
+    // 1b) MER D'ACQUISITION — le revenu des NOUVEAUX clients vient de NOTRE base, pas de Meta :
+    // aucune fenêtre d'attribution à négocier, aucun double-comptage de clients déjà acquis.
+    const newCustomerRevenue = await sumNewCustomerRevenue(env.revenue_manager, range);
+
     // 2) ARBITRAGE Meta — seulement si on a un token + des perfs. Sans, on le dit honnêtement.
     let meta = { available: false, note: "META_PAGE_TOKEN absent — arbitrage Meta indisponible." };
     const token = env.META_PAGE_TOKEN;
@@ -137,12 +166,24 @@ export async function onRequestGet({ request, env }) {
       });
     }
 
+    // MER d'acquisition tous canaux payants confondus : c'est le juge de paix du budget pub,
+    // à préférer au ROAS plateforme (qui ne voit que son propre canal et s'auto-attribue).
+    const totalAdSpend = (meta.totals?.spend || 0) + (googleAds?.totals?.spend || 0);
+    const mer = newCustomerRevenue
+      ? {
+          ...acquisitionMer({ newCustomerRevenue: newCustomerRevenue.revenue, adSpend: totalAdSpend }),
+          newCustomerBookings: newCustomerRevenue.bookings,
+          note: "Revenu des résas directes de NOUVEAUX clients (1re résa pour cet email) / dépense pub Meta+Google. Les résas OTA ne sont pas comptées : elles ne sont pas attribuables à la pub.",
+        }
+      : { mer: null, verdict: "non_mesurable", note: "direct_bookings illisible sur la fenêtre — MER non calculable." };
+
     return json({
       advisory: true,
       disclaimer: "Recommandations seulement. Aucun budget modifié, aucune dépense déclenchée. L'application reste manuelle.",
       budgetMax,
       generated_at: new Date().toISOString(),
       visionBudget: plan,
+      acquisitionMer: mer,
       measurement: { meta, googleAds },
     });
   } catch (e) {
