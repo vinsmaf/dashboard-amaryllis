@@ -147,6 +147,29 @@
 
 ---
 
+## 2026-07-23 (soir) — 4 doctrines métier dictées par Vincent, traduites en code testé
+
+**Quoi** — Vincent a dicté 4 règles de gestion (production créative, métriques pub, 3 niveaux de mesure, coût d'une remise). Chacune est devenue un module pur testé + une doctrine injectée dans le `PLAYBOOK_DIGEST` des agents concernés.
+
+| Doctrine | Module | Tests | Commit | État |
+|---|---|---|---|---|
+| Mix créatif 30/20/50 | `src/utils/contentMix.js` | 19 | `18531b1` | ✅ en prod, vérifié live |
+| Métriques pub assainies (MER, CPMR, CPC sortant, 7 j clic) | `src/utils/metaAdsInsights.js` | +10 | `3376965` | ✅ en prod, vérifié live |
+| 3 niveaux de mesure + questionnaire post-achat | `src/utils/adFinanceKpis.js` + `functions/api/attribution-survey.js` | 16 | `cb62a9a` | ✅ en prod, vérifié live |
+| Fix rate limiter du questionnaire | — | — | `d2865f5` | ✅ en prod, testé de bout en bout |
+| Répétition par segment d'audience | `src/utils/audienceSaturation.js` | 13 | `b02e774` | 🔴 poussé, PAS déployé |
+| Coût réel d'une remise | `src/utils/promoCost.js` | 13 | `cecadcb` | 🔴 poussé, PAS déployé |
+
+**Pourquoi ces choix** — La règle 30/20/50 est calculée en code et **imposée** au prompt : demander à un LLM de résister à son propre biais de nouveauté ne marche pas. Le CAC est délibérément *blended* : un CAC par canal supposerait une attribution fiable, ce que toute la doctrine refuse de croire — d'où le niveau 3 déclaratif pour ventiler.
+
+**Ce qui a été trouvé en chemin**
+- **Bug réel** : `rateLimit()` renvoie `{ok}`, je lisais `rl.allowed` → **100 % des réponses au questionnaire partaient en 429**. Invisible aux tests et à un déploiement vert ; sorti par un clic réel dans le navigateur. Vérifié qu'aucun autre endpoint ne fait la même erreur.
+- **Faille de raisonnement attrapée par un test** : ma chaîne de verdicts financiers testait `LTV/CAC >= 3` avant le MER → un LTV flatteur masquait une trésorerie négative. Corrigé par un verdict `payback_differe` distinct.
+- **Chiffres réels obtenus** : marge de contribution directe 93,4 % · CPC sortant Meta 0,09 € · répétition 1,16 (pas de saturation) · MER 4,98 sur 3 clients.
+
+**Fin de session** — 🔴 la CI GitHub ne déploie plus (prod `d2865f5` vs origin `cecadcb`), `gh` n'est plus authentifié donc le run n'a pas pu être lu. Le garde ADR-DEPLOY-001 a refusé le déploiement direct par agent — non contourné, c'est son rôle.
+
+
 ## 2026-06-18 (session 26) — Bug CPA canal (fix 3 couches) + Audit CRO ultracode (8 chantiers)
 - **CPA bug fix** : `parseICS` capturait les numéros de référence Booking.com (12-15 chiffres) comme montant → CPA 62G€ dans CpaCanalTab. Fix 3 couches : cap 50k€ dans `Planning.jsx` + `workers/ical-sync/index.js`, cap 100k€ dans `CpaCanalTab.jsx`, migration startup `App.jsx`. GAS `fixMontantsAberrants_` → `{fixed:0}` (Sheet propre, pollution localStorage uniquement). → ADR-CPA-BUG-001.
 - **CRO ultracode audit** : workflow 9 dimensions (66 agents, 50 findings confirmés) → Vincent choisit 8 quick wins. Implémentés en 1 session : (1) récap prix mobile sticky, (2) argument -15% vs Airbnb, (3) preuve sociale dans le tunnel, (5) early/late check-in checkboxes, (6) avis Google étendus (Zandoli/Géko/Mabouya), (7) CTA verbe+prix above-the-fold, (9) bouton step 1 dynamique, (10) filmstrip universel toutes fiches. → ADR-CRO-QW-001.

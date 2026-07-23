@@ -4,6 +4,20 @@
 > 🔴 bloquant fort · 🟡 contourné / dette latente · ✅ levé (gardé un temps pour traçabilité).
 > _Consolidé le 2026-06-20 : ✅ levés dispersés regroupés dans `## Archivé`._
 
+## En cours → ✅ terminé le 2026-07-23 (soir) — 3 doctrines métier codées, 2 commits en attente de déploiement
+- **Tâche** : traduire 4 doctrines dictées par Vincent en code testé + doctrine d'agents (mix créatif 30/20/50 · métriques pub · 3 niveaux de mesure · coût réel d'une remise · règle de répétition Meta).
+- **Étape** : tout est codé, testé (894 tests verts) et committé. `18531b1`, `3376965`, `cb62a9a`, `d2865f5` **sont en prod et vérifiés en live**. `b02e774` + `cecadcb` **sont poussés mais PAS déployés** (CI bloquée, cf. 🔴 ci-dessus).
+- **Prochaine action** : déployer les 2 commits en attente (`I_DEPLOY_CONSCIOUSLY=1 npm run deploy:pages` côté Vincent), puis **sonder le compte Meta réel** avec `GET /api/meta-ads-insights?window=30d&breakdown=audience` (Bearer admin) pour confirmer que le breakdown `user_segment_key` existe bien sur ce compte — c'est la seule inconnue restante du chantier.
+- **Contexte critique** : (a) la répétition globale du compte est ≈ **1,16** sur 30 j → **aucune saturation aujourd'hui**, la règle est un garde-fou pour la montée en budget, pas une économie immédiate ; ne pas promettre « des milliers d'euros ». (b) Le niveau 3 (questionnaire) est en prod à **0 réponse** : il devient exploitable à 20 réponses, avant ça toute ventilation est du bruit. (c) Le verdict `rentable` du niveau 2 repose sur **3 nouveaux clients** — échantillon minuscule, et le CAC est *blended* par construction (il ne dit pas que la pub a produit ces 3 clients).
+
+## 🔴 CI GitHub ne déploie plus — 2 commits bloqués (2026-07-23, fin de session)
+- **Symptôme** : `git push origin main` ne déclenche plus de déploiement. Prod figée sur **`d2865f5`** alors qu'`origin/main` est sur **`cecadcb`**. Deux commits jamais mis en ligne : `b02e774` (audit de sur-répétition par segment d'audience) et `cecadcb` (module coût réel d'une remise). Constaté sur ~50 min de polling, alors que les 4 déploiements précédents de la même session passaient en ~3 min.
+- **Ce qui a été exclu** : tests verts en local (894), `npm run build` + prerender OK, rien d'anormal dans le diff. Impossible de lire le run : **`gh` n'est plus authentifié** (`HTTP 401: Bad credentials` sur `vinsmaf/dashboard-amaryllis`) → cause CI non diagnostiquée.
+- **Piège évité** : `npm run deploy:pages` refuse volontairement un déploiement direct par un agent (garde ADR-DEPLOY-001, anti-drift prod≠origin vécu le 24/06). **Ne pas le contourner avec `I_DEPLOY_CONSCIOUSLY=1`** — ce flag est réservé à un humain, c'est écrit dans le message du script.
+- **Ce qui débloque** (action Vincent) : (a) re-authentifier `gh` (`gh auth login`) pour que la prochaine session puisse lire le run et diagnostiquer ; (b) en attendant, déployer à la main : `I_DEPLOY_CONSCIOUSLY=1 npm run deploy:pages`.
+- **Impact fonctionnel** : le reste de la session EST en ligne (30/20/50, niveaux 1+2 de la mesure pub, questionnaire post-achat + son fix). Seuls l'audit de répétition et le module promo attendent. Aucun risque en prod, juste du code non livré.
+- **Statut** : 🔴 bloquant pour toute livraison suivante.
+
 ## 🟡 Sync AGENDA → KV bloqué par Cloudflare Access (2026-07-23)
 - **Symptôme** : l'étape 4c de `/cloture-session` (`POST patrimoine-dashboard.pages.dev/api/agenda-sync`) renvoie un **302 vers `cloudflareaccess.com/cdn-cgi/access/login`**, puis 404. Le `Authorization: Bearer CRON_SECRET` n'est jamais évalué : Cloudflare **Access** intercepte la requête avant l'application.
 - **Piège** : `curl` sort en code 0 et l'`&& echo "✅ synced"` du runbook s'affiche quand même → **faux positif**. Ne jamais conclure au succès sans lire le corps/status réel (même famille que DEPLOY-VERIF-001 : un signal générique ne prouve rien).
@@ -11,7 +25,7 @@
 - **Ce qui débloque** (action Vincent, côté compte Cloudflare) : soit exclure `/api/agenda-sync` de la policy Access, soit créer un **Service Token** Access et l'envoyer via `CF-Access-Client-Id`/`CF-Access-Client-Secret` en plus du Bearer. Alternative sans config : appeler l'endpoint depuis le dashboard patrimoine (session Access déjà ouverte dans son navigateur).
 - **Statut** : 🟡 contourné (AGENDA.md local à jour, seul le push KV manque).
 
-## En cours → ✅ terminé le 2026-07-23 — Social Growth Manager complet (mesure→décision→contenu→impact) + YouTube branché
+## ✅ terminé le 2026-07-23 (matin) — Social Growth Manager complet (mesure→décision→contenu→impact) + YouTube branché
 - **Agent réseaux livré en 3 briques + boucle de feedback** (`ADR-SGM-001`, `ADR-SGM-002`) : snapshot abonnés quotidien 4 plateformes (`social-insights`, cron 9h) · recos LLM hebdo advisory (`social-growth-agent`, cron lundi 6h, digest ntfy) · **passerelle éditoriale** (le `content_plan` devient des entrées `planned` du calendrier → gate qualité) · **impact loop** (`social-impact`, delta abonnés J+2 vs J-2, isole les posts de l'agent) réinjecté dans le prompt pour qu'il apprenne. UI : onglet 📈 Croissance audience (tuiles 4 plateformes + recos + impact).
 - **YouTube** (`ADR-YT-001`) : mesure abonnés OK (0 abonnés, 2 vidéos — chaîne `UC76I8BM3dCr5zgFAHt-q2oA`) · OAuth provider `youtube` · upload Shorts (réutilise le MP4 vertical des Reels) · canal `yt` dans `handlePublishReel` · **`YOUTUBE_AUTOPUBLISH=1` ACTIVÉ par Vincent** (`autopublish: true` vérifié en prod).
 - **⚠️ 2 incidents de MA part, corrigés + documentés** (`docs/ERREURS-LOG.md` YOUTUBE-001 et DEPLOY-VERIF-001) : (1) probe avec URL bidon → SPA renvoie du HTML en 200 → **vidéo publiée** ; (2) correctif « privé par défaut » testé **avant qu'il soit déployé** (marqueur d'attente pré-existant) → **2ᵉ vidéo publique**. Les deux supprimées par Vincent. Garde-fous posés : validation Content-Type+taille+signature `ftyp`, `privacyStatus` privé par défaut, `capabilities[]` pour vérifier un déploiement.

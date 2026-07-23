@@ -6,6 +6,16 @@
 > elle route juste vers le bon sous-fichier ci-dessous.
 > Le journal d'erreurs exhaustif reste `../docs/ERREURS-LOG.md`.
 
+## 2026-07-23 — Doctrines métier codées (mix créatif, mesure pub, promo)
+
+- **Une règle anti-biais ne peut PAS vivre dans le prompt du LLM.** La discipline 30/20/50 corrige un biais (« on sur-investit dans le neuf ») que le modèle partage avec l'humain. Lui demander de s'en souvenir, c'est demander au biais de se surveiller lui-même. La règle doit être **calculée en code** sur l'historique réel, et **imposée** au prompt. Vaut pour toute doctrine qui contredit un réflexe naturel du modèle.
+- **Une « itération » répétée à l'identique EST une duplication.** En codant le 30/20/50, la 1ʳᵉ version tirait l'élément à varier depuis un hash du seul `concept_id` → itérer 2× le même concept donnait 2× la même consigne. Corrigé en indexant aussi sur le rang d'itération. Leçon : quand une règle dit « varie UN élément », vérifier que deux applications successives ne produisent pas la même sortie.
+- **Un test bien écrit attrape une faille de RAISONNEMENT, pas juste un bug.** Le test « MER < 1 → non rentable » a échoué parce que ma chaîne de verdicts testait `LTV/CAC >= 3` en premier : un LTV flatteur écrasait une trésorerie négative. Corrigé par un verdict dédié `payback_differe`. Écrire le test AVANT de faire passer le code aurait donné le même résultat plus vite.
+- **Vérifier le contrat de retour d'un helper partagé, ne pas le supposer.** `rateLimit()` renvoie `{ok}` ; j'ai lu `rl.allowed` → `undefined` → **tout POST du questionnaire repartait en 429**. Ni les tests (aucun ne couvrait ce chemin) ni un déploiement vert ne pouvaient le voir. C'est le **clic réel dans le navigateur** qui l'a sorti. Corollaire : sur un endpoint public tout neuf, faire au moins un aller-retour réel avant de le déclarer livré.
+- **Sonder le vrai compte plutôt que supposer un nom d'API.** Pour le breakdown Meta « segment d'audience », j'ai construit la logique pure d'abord (indépendante du nom du champ), puis prévu de sonder le compte réel. Le déploiement a bloqué avant la sonde → le nom `user_segment_key` reste **non vérifié**. Ne pas le tenir pour acquis à la reprise.
+- **Chiffrer une doctrine avec les VRAIS chiffres change la conclusion.** La règle « une promo de -20 % coûte -33 % » suppose une marge de 60 %. Sur la marge de contribution directe réelle d'Amaryllis (**93,4 %**, `/api/pnl-sejour`), -15 % ne comprime que 16 %. Le risque réel n'est donc pas arithmétique ici mais comportemental/algorithmique. Toujours passer une règle générale dans les données du projet avant d'en tirer une reco.
+
+
 ## → Voir [`learnings/INDEX.md`](./learnings/INDEX.md)
 
 | Thème | Fichier |
