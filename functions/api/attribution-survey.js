@@ -48,7 +48,7 @@ export async function onRequestPost({ request, env }) {
 
   const ip = request.headers.get("CF-Connecting-IP") || "unknown";
   const rl = await rateLimit(db, { key: `attrib-survey:${ip}`, limit: 10, windowSec: 3600 });
-  if (!rl.allowed) return json({ error: "Trop de requêtes" }, 429);
+  if (!rl.ok) return json({ error: "Trop de requêtes" }, 429);
 
   let body;
   try { body = await request.json(); } catch { return json({ error: "JSON invalide" }, 400); }
