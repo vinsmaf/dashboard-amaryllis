@@ -52,6 +52,7 @@ export default function CroissanceTab() {
   const [sgm, setSgm]             = useState(null);   // /api/social-insights?dry=1
   const [sgmReport, setSgmReport] = useState(null);   // /api/social-growth-agent?latest=1
   const [sgmRun, setSgmRun]       = useState("idle"); // idle | run | err (rafraîchir l'analyse)
+  const [impact, setImpact]       = useState(null);   // /api/social-impact (delta abonnés par post)
 
   // Count temps réel
   useEffect(() => {
@@ -73,6 +74,7 @@ export default function CroissanceTab() {
   useEffect(() => {
     adminFetch("/api/social-insights?dry=1").then(r => r.json()).then(d => { if (d.ok) setSgm(d); }).catch(() => {});
     adminFetch("/api/social-growth-agent?latest=1").then(r => r.json()).then(d => { if (d.ok) setSgmReport(d); }).catch(() => {});
+    adminFetch("/api/social-impact").then(r => r.json()).then(d => { if (d.ok) setImpact(d); }).catch(() => {});
   }, []);
 
   // Rafraîchir l'analyse = relance l'agent (LLM, ~15-20s) et récupère le nouveau rapport
@@ -207,6 +209,20 @@ Channels : ig + fb`;
           {sgmReport && !sgmReport.report && (
             <div style={{ marginTop: 12, fontSize: 11, color: "#64748b" }}>
               Aucune analyse encore générée — clique « Rafraîchir l'analyse » (ou attends le digest de lundi).
+            </div>
+          )}
+
+          {/* Boucle de feedback : les posts de l'agent ont-ils fait gagner des abonnés ? */}
+          {impact && (impact.summary?.count > 0) && (
+            <div style={{ marginTop: 14, borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 12 }}>
+              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 8 }}>
+                📊 Impact sur les abonnés (Δ moyen J+2 vs J-2 par post publié)
+                {impact.note && <span style={{ color: "#f59e0b" }}> · {impact.note}</span>}
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <ImpactStat label="Tous les posts" s={impact.summary} />
+                <ImpactStat label="Posts de l'agent" s={impact.growth_agent} accent />
+              </div>
             </div>
           )}
         </div>
@@ -542,6 +558,25 @@ function RecoCard({ r }) {
       <ul style={{ margin: 0, paddingLeft: 16, display: "grid", gap: 3 }}>
         {(r.actions || []).map((a, i) => <li key={i} style={{ fontSize: 11, color: "#cbd5e1", lineHeight: 1.4 }}>{a}</li>)}
       </ul>
+    </div>
+  );
+}
+
+function ImpactStat({ label, s, accent }) {
+  const avg = s?.avgDelta;
+  const measured = s?.completeCount ?? 0;
+  const pos = typeof avg === "number" && avg >= 0;
+  const color = avg == null ? "#64748b" : pos ? "#10b981" : "#ef4444";
+  return (
+    <div style={{ background: accent ? "rgba(99,102,241,0.08)" : "rgba(255,255,255,0.03)", border: `1px solid ${accent ? "rgba(99,102,241,0.25)" : "rgba(255,255,255,0.07)"}`, borderRadius: 10, padding: "10px 12px" }}>
+      <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 5 }}>{label}</div>
+      <div style={{ fontSize: 20, fontWeight: 800, color }}>
+        {avg == null ? "—" : `${avg >= 0 ? "+" : ""}${avg}`}<span style={{ fontSize: 11, fontWeight: 400, color: "#64748b" }}> abonnés/post</span>
+      </div>
+      <div style={{ fontSize: 10, color: "#475569", marginTop: 3 }}>
+        {measured > 0 ? `${measured} post${measured > 1 ? "s" : ""} mesuré${measured > 1 ? "s" : ""}` : "aucun post encore mesurable"}
+        {s?.incompleteCount > 0 ? ` · ${s.incompleteCount} en attente` : ""}
+      </div>
     </div>
   );
 }

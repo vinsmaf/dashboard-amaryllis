@@ -57,6 +57,23 @@ async function fetchEngagement(origin, env) {
   } catch { return {}; }
 }
 
+// Impact des posts déjà publiés sur les abonnés (boucle de feedback) — l'agent apprend ce qui marche.
+async function fetchImpact(origin, env) {
+  try {
+    const r = await fetch(`${origin}/api/social-impact?secret=${secretQS(env)}`);
+    const d = await r.json();
+    if (!d?.ok) return null;
+    // On ne garde que l'essentiel pour le prompt : moyennes + meilleur/pire post mesuré.
+    return {
+      posts_agent_mesures: d.growth_agent?.completeCount ?? 0,
+      abonnes_gagnes_par_post_agent: d.growth_agent?.avgDelta ?? null,
+      abonnes_gagnes_par_post_tous: d.summary?.avgDelta ?? null,
+      meilleur_post: d.summary?.best ? { bien: d.summary.best.bien_id, format: d.summary.best.format, delta: d.summary.best.delta } : null,
+      pire_post: d.summary?.worst ? { bien: d.summary.worst.bien_id, format: d.summary.worst.format, delta: d.summary.worst.delta } : null,
+    };
+  } catch { return null; }
+}
+
 // Cadence éditoriale à venir (14 j) par format — l'agent raisonne sur ce qui est déjà planifié.
 async function fetchCadence(origin, env) {
   const out = { reel: 0, carrousel: 0, post: 0, total: 0 };
@@ -104,7 +121,9 @@ const SYSTEM_PROMPT =
   `"theme":"inspiration|preuve|detail|reve|conversion|lifestyle|info","angle":"idée de post concrète orientée gain d'abonnés","cta":"appel à s'abonner"}]}. ` +
   `Le content_plan = 1 à 2 posts CONCRETS à AJOUTER au calendrier éditorial pour la plateforme focus ` +
   `(ils passeront par le gate qualité avant toute publication). Choisis un bien réel de la liste, un format, et un ` +
-  `angle qui donne envie de s'abonner. IMPORTANT : propose ces 1-2 posts DÈS QU'au moins une plateforme mesurable ` +
+  `angle qui donne envie de s'abonner. Si le champ "impact_posts_passes" est présent, PRIVILÉGIE les ` +
+  `formats/biens qui ont fait gagner le plus d'abonnés (meilleur_post) et évite ceux qui en ont fait perdre. ` +
+  `IMPORTANT : propose ces 1-2 posts DÈS QU'au moins une plateforme mesurable ` +
   `n'est pas déjà "ahead" — Y COMPRIS si son verdict est "no_data" (l'historique se construit, mais l'objectif ` +
   `est de faire croître dès maintenant). content_plan VIDE UNIQUEMENT si TOUTES les plateformes mesurables sont ` +
   `déjà au-dessus de la cible.`;
@@ -135,15 +154,17 @@ export async function onRequestGet({ request, env }) {
   const origin = env.SITE_URL || url.origin;
   const targetPct = parseFloat(env.SOCIAL_GROWTH_TARGET_PCT || "5") || 5;
 
-  const [platforms, engagement, editorial] = await Promise.all([
+  const [platforms, engagement, editorial, impact] = await Promise.all([
     fetchPlatforms(origin, env),
     fetchEngagement(origin, env),
     fetchCadence(origin, env),
+    fetchImpact(origin, env),
   ]);
 
   if (!platforms.length) return json({ ok: false, error: "aucune donnée plateforme (social-insights indisponible)" }, 502);
 
   const facts = buildGrowthFacts(platforms, engagement, editorial.cadence, targetPct);
+  if (impact) facts.impact_posts_passes = impact; // boucle de feedback : ce qui a marché → biaise le content_plan
   const knownPlatforms = platforms.map((p) => p.platform);
 
   // Synthèse LLM (JSON strict) — cascade multi-provider via callLLM.
