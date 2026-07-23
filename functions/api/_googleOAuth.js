@@ -21,9 +21,12 @@ export const CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.events";
 // aucun mutate). Nécessite que l'API Google Ads soit activée dans le projet Google Cloud
 // du GOOGLE_OAUTH_CLIENT_ID + un developer token approuvé (Basic) côté MCC.
 export const GOOGLEADS_SCOPE = "https://www.googleapis.com/auth/adwords";
-// YouTube : upload de vidéos (Shorts). Nécessite YouTube Data API v3 activée dans le projet
-// Google Cloud du GOOGLE_OAUTH_CLIENT_ID (déjà activée pour la mesure d'abonnés).
-export const YOUTUBE_SCOPE = "https://www.googleapis.com/auth/youtube.upload";
+// YouTube : upload de vidéos (Shorts) + gestion (suppression d'une publication erronée).
+// Nécessite YouTube Data API v3 activée dans le projet Google Cloud du GOOGLE_OAUTH_CLIENT_ID.
+// `youtube.upload` seul est INSERT-ONLY : impossible de supprimer une vidéo publiée par erreur
+// (vécu 2026-07-23, incident YOUTUBE-001). `youtube.force-ssl` ajoute la suppression/mise à jour —
+// indispensable pour qu'un agent qui publie puisse aussi RÉPARER.
+export const YOUTUBE_SCOPE = "https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.force-ssl";
 // "openid email" est ajouté systématiquement (peu importe le provider) pour pouvoir
 // afficher quel compte Google est connecté, via l'endpoint userinfo standard.
 const IDENTITY_SCOPES = "openid email";

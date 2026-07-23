@@ -43,6 +43,42 @@ export async function onRequestGet({ request, env }) {
   }
 }
 
+// DELETE ?videoId=xxx — supprime une vidéo de la chaîne (réparation d'une publication erronée).
+// Nécessite le scope youtube.force-ssl : un token obtenu AVANT l'ajout de ce scope (donc avec
+// youtube.upload seul, insert-only) renverra 403 — il faut alors recliquer "Connecter YouTube".
+export async function onRequestDelete({ request, env }) {
+  const url = new URL(request.url);
+  const secretOk = env.POSTSTAY_SECRET && url.searchParams.get("secret") === env.POSTSTAY_SECRET;
+  const { ok: bearerOk } = await verifyBearer(request, env);
+  if (!secretOk && !bearerOk) return json({ error: "Non autorisé" }, 401);
+
+  const videoId = String(url.searchParams.get("videoId") || "").trim();
+  if (!videoId) return json({ error: "videoId requis" }, 400);
+
+  let accessToken;
+  try {
+    accessToken = await getValidAccessToken(env, env.revenue_manager, "youtube");
+  } catch (e) {
+    return json({ error: String(e.message || e) }, 409);
+  }
+
+  const res = await fetch(`https://www.googleapis.com/youtube/v3/videos?id=${encodeURIComponent(videoId)}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (res.status === 204) return json({ ok: true, deleted: videoId });
+
+  const detail = await res.text().catch(() => "");
+  return json({
+    ok: false,
+    status: res.status,
+    error: res.status === 403
+      ? "Scope insuffisant : le token actuel est insert-only (youtube.upload). Recliquer « Connecter YouTube » pour accorder la suppression."
+      : `Suppression refusée (${res.status})`,
+    detail: detail.slice(0, 400),
+  }, res.status === 403 ? 403 : 502);
+}
+
 export async function onRequestPost({ request, env }) {
   const url = new URL(request.url);
   const secretOk = env.POSTSTAY_SECRET && url.searchParams.get("secret") === env.POSTSTAY_SECRET;
