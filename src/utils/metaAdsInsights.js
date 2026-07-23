@@ -47,9 +47,17 @@ export function normalizeInsightRow(row) {
   const linkClicks = firstAction(row.actions, "link_click");
   const purchases = sumActions(row.actions, PURCHASE_TYPES);
   const revenue = sumActions(row.action_values, PURCHASE_TYPES);
+  // Dimensions de ventilation (présentes uniquement si ?breakdown= est demandé). Sans elles, toutes
+  // les lignes d'un breakdown retomberaient sur le même `name` et seraient indistinguables.
+  const breakdown = [row.publisher_platform, row.platform_position, row.impression_device, row.country]
+    .filter(Boolean).join(" · ") || null;
+
   return {
     name: row.campaign_name || row.adset_name || row.account_name || "—",
     id: row.campaign_id || row.adset_id || null,
+    ...(breakdown ? { breakdown } : {}),
+    ...(row.publisher_platform ? { publisherPlatform: row.publisher_platform } : {}),
+    ...(row.platform_position ? { platformPosition: row.platform_position } : {}),
     spend: Number(spend.toFixed(2)),
     impressions,
     clicks,

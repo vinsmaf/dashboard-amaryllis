@@ -81,8 +81,18 @@ export async function onRequestGet({ request, env }) {
 
     const nameField = level === "adset" ? "adset_name,adset_id" : "campaign_name,campaign_id";
     const fields = `${nameField},spend,impressions,clicks,ctr,cpc,actions,action_values`;
+
+    // ?breakdown=placement — ventile la dépense par plateforme/position de diffusion.
+    // Diagnostic ajouté 2026-07-23 : Meta déclarait 348 vues de page pour 6 sessions GA4 seulement,
+    // avec un CPC à 0,08 € (anormalement bas). Les liens portaient bien les UTM (audité) → l'écart ne
+    // vient PAS de l'attribution mais probablement de placements à très faible intention
+    // (Audience Network / Reels). Lecture seule, ne modifie aucune campagne.
+    const BREAKDOWNS = { placement: "publisher_platform,platform_position", device: "impression_device", country: "country" };
+    const breakdown = BREAKDOWNS[url.searchParams.get("breakdown")] || null;
+    const breakdownParam = breakdown ? `&breakdowns=${encodeURIComponent(breakdown)}` : "";
+
     const res = await graphGet(
-      `${AD_ACCOUNT_ID}/insights?level=${level}&${rangeParam}&fields=${encodeURIComponent(fields)}&time_increment=all_days&limit=200`,
+      `${AD_ACCOUNT_ID}/insights?level=${level}&${rangeParam}&fields=${encodeURIComponent(fields)}${breakdownParam}&time_increment=all_days&limit=200`,
       token
     );
     if (res.error) return json({ ok: false, error: res.error }, 200);
