@@ -4,6 +4,27 @@
 > Décisions d'archi détaillées (specs complets) → `../docs/superpowers/specs/README.md` (ADR-001→010). Ici = log curaté de session.
 > **Archive mensuelle** : les décisions antérieures au mois courant vivent dans `.memory/archive/ADR-YYYY-MM.md`. Archive actuelle : [`archive/ADR-2026-06.md`](./archive/ADR-2026-06.md) (114 entrées, juin 2026).
 
+## ADR-SGM-001 — Social Growth Manager : 3 briques (mesure → décision → contenu), calquées sur l'agent pub (2026-07-23)
+1. **Choix** — Construire un « responsable réseaux » en 3 briques séparées : MESURE (`social-insights`, snapshot abonnés/jour en D1), DÉCISION (`social-growth-agent`, recos LLM advisory), CONTENU (passerelle qui insère des posts `planned` dans `editorial_calendar`).
+2. **Alternatives refusées** — (a) Un agent de la fleet générique `agents-run` : rejeté, la fleet produit du texte, pas du pilotage chiffré redevable. (b) Un seul endpoint monolithique : rejeté, on perd la lisibilité mesure/décision et la possibilité de couper une brique.
+3. **Conséquences** — L'agent ALIMENTE le calendrier (≤2 posts/run, `SOCIAL_GROWTH_MAX_SCHEDULE`), mais toujours en statut `planned` → le **gate qualité existant reste le seul juge** avant publication. Kill-switch `SOCIAL_GROWTH_SCHEDULE=0`. Cible `SOCIAL_GROWTH_TARGET_PCT` (défaut 5%/mois).
+4. **Périmètre** — `functions/api/social-insights.js`, `social-growth-agent.js`, `src/utils/socialGrowth.js`, `socialGrowthAgent.js`, `src/tabs/CroissanceTab.jsx`, Worker crons 9h + lundi 6h.
+5. **Statut** — Acté et en prod (FB 339 · IG 1055 mesurés, 2 posts réellement programmés le 26/07 et 31/07).
+
+## ADR-SGM-002 — Boucle de feedback : l'agent apprend par le delta d'ABONNÉS, pas par le trafic (2026-07-23)
+1. **Choix** — Mesurer l'impact de chaque post publié par le delta d'abonnés (FB+IG) J+1..J+2 vs J-2..J-1, et **isoler** les posts issus de l'agent (marqueur `source:growth-agent` dans `brief`) pour juger sa performance vs la planification manuelle.
+2. **Alternatives refusées** — Réutiliser `agents-impact` (delta sessions GA4) : rejeté, il mesure le TRAFIC ; l'objectif fixé par Vincent est la croissance des ABONNÉS. Les deux boucles coexistent, symétriques.
+3. **Conséquences** — L'impact est réinjecté dans les faits du LLM (`impact_posts_passes`) → l'agent privilégie les formats/biens qui gagnent des abonnés. Deltas fiables seulement après ~30j d'historique (1 point/jour).
+4. **Périmètre** — `functions/api/social-impact.js`, `src/utils/socialImpact.js` (8 tests), `social-growth-agent.js`, `CroissanceTab.jsx`.
+5. **Statut** — Acté, en prod (31 posts analysés, deltas à 0 tant que l'historique abonnés fait 1 jour — comportement honnête assumé).
+
+## ADR-YT-001 — YouTube : publication autonome, mais opt-in explicite et privé par défaut (2026-07-23)
+1. **Choix** — Intégrer YouTube (OAuth provider `youtube`, upload resumable de Shorts réutilisant le MP4 vertical des Reels) et le brancher comme canal `yt` dans `handlePublishReel` — donc au MÊME point d'entrée que ig/fb, héritant du gate.
+2. **Alternatives refusées** — (a) Ajouter `yt` aux canaux par défaut : rejeté, élargir en silence vers un nouveau canal public est précisément ce qu'on ne fait jamais → flag `YOUTUBE_AUTOPUBLISH` (défaut OFF, **activé par Vincent le 2026-07-23**). (b) Chemin de publication YouTube parallèle : rejeté, contournerait le gate.
+3. **Conséquences** — `privacyStatus` **privé par DÉFAUT** ; « public » doit être explicite (le pipeline le passe après le gate). Scope élargi à `youtube.force-ssl` pour que l'agent puisse SUPPRIMER une publication erronée — mais le token de Vincent délivré avant ce changement reste insert-only tant qu'il ne reconnecte pas.
+4. **Périmètre** — `functions/api/youtube-upload.js`, `_googleOAuth.js`, `social.js`, `agent-drafts.js`, `CroissanceTab.jsx`.
+5. **Statut** — Acté, `autopublish: true` vérifié en prod. ⚠️ Le RENDU d'un Reel converti en Short n'a jamais été jugé par un humain.
+
 ## ADR-SYNC-AUDIT-CANCEL-SHEET-001 · 2026-07-16 · Toute annulation (4 canaux) doit désormais atteindre le Sheet — upsert status="Annulé" pour Direct, GET paginé réparé pour Airbnb/Booking
 
 1. **Choix** : `cancel-booking.js` (Direct/Stripe) pousse désormais un upsert `status="Annulé"` vers `/api/sheets-proxy` (PAS un delete — cohérent avec le mécanisme déjà en place pour Beds24) + déclenche le rebuild revenus idempotent. `sendCancellations()` (Worker, Airbnb/Booking) route désormais via `/api/sheets-proxy` (GET paginé, `forwardChunked`) au lieu d'un POST direct vers `APPS_SCRIPT_URL`, et `cancelReservations_` (Apps Script) déclare enfin `LBL2ID` dans sa propre portée + accepte le format dual-mode (tableau direct ou `{data:"[...]"}`).
