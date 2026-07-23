@@ -25,6 +25,13 @@
 4. **Périmètre** — `functions/api/youtube-upload.js`, `_googleOAuth.js`, `social.js`, `agent-drafts.js`, `CroissanceTab.jsx`.
 5. **Statut** — Acté, `autopublish: true` vérifié en prod. ⚠️ Le RENDU d'un Reel converti en Short n'a jamais été jugé par un humain.
 
+## ADR-FLEET-SILENT-WRITES-001 — 2 écritures muettes du fleet rendues observables (pollinisation depuis patrimoine) (2026-07-22)
+1. **Choix** — Suite à un fix côté `patrimoine-dashboard` (write KV terminal du fleet sorti d'un `.catch(()=>{})` silencieux), vérification du même risque ici. Architecture différente (D1 par-agent, pas de single-write terminal), donc pas de risque de "perdre tout le run" — mais 2 catchs muets réels trouvés dans `agents-run.js` et rendus observables (`console.error`, pas d'alerte ntfy — volume ne le justifie pas) : (a) `INSERT agent_drafts` en `catch(e){}` NU → un draft éditorial (contenu LLM) perdu sans trace ; (b) `CROSS_BRAIN_KV.put('cross:locatif:signals')` → le pont cross-fleet qui nourrit le patrimoine, mort silencieuse possible en cas d'échec durable.
+2. **Alternatives refusées** — Chercher un single-write terminal comme côté patrimoine (n'existe pas ici, l'hypothèse initiale de la pollinisation était partiellement fausse — corrigée avant d'agir). Ajouter une alerte ntfy sur ces 2 catchs : rejeté, volume/impact trop faible pour justifier un canal d'alerte dédié (contrairement au write KV patrimoine qui perdait 22 agents d'un coup).
+3. **Conséquences** — Aucune (fix de fiabilité pur, comportement fonctionnel inchangé). Le pont `cross:locatif:signals` reste le seul canal qui nourrit le patrimoine côté signaux — à surveiller si jamais un souci de synchro cross-fleet apparaît, les logs diront désormais pourquoi.
+4. **Périmètre** — `functions/api/agents-run.js` (2 lignes).
+5. **Statut** — Acté, testé (795 tests verts), déployé (commit en tête Production CF, `dashboard-amaryllis`).
+
 ## ADR-SYNC-AUDIT-CANCEL-SHEET-001 · 2026-07-16 · Toute annulation (4 canaux) doit désormais atteindre le Sheet — upsert status="Annulé" pour Direct, GET paginé réparé pour Airbnb/Booking
 
 1. **Choix** : `cancel-booking.js` (Direct/Stripe) pousse désormais un upsert `status="Annulé"` vers `/api/sheets-proxy` (PAS un delete — cohérent avec le mécanisme déjà en place pour Beds24) + déclenche le rebuild revenus idempotent. `sendCancellations()` (Worker, Airbnb/Booking) route désormais via `/api/sheets-proxy` (GET paginé, `forwardChunked`) au lieu d'un POST direct vers `APPS_SCRIPT_URL`, et `cancelReservations_` (Apps Script) déclare enfin `LBL2ID` dans sa propre portée + accepte le format dual-mode (tableau direct ou `{data:"[...]"}`).
