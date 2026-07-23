@@ -4,6 +4,16 @@
 > **Règle** : à chaque erreur commise, ajouter une entrée ici (symptôme → cause → solution → garde-fou).
 > Lire ce fichier **au début de chaque session** (en plus de `PROJECT_MEMORY.md` + `CLAUDE.md`).
 
+## ▶️ YOUTUBE — Un test a publié une vraie vidéo (HTML uploadé comme "vidéo") sur la chaîne
+
+**YOUTUBE-001 (2026-07-23)** — En voulant seulement *tester si la connexion OAuth YouTube fonctionnait*, un POST sur `/api/youtube-upload` avec une URL MP4 volontairement inexistante a **publié une vidéo publique** ("probe", `C1a_etdfe1Y`) sur la chaîne d'Amaryllis.
+- **Symptôme** : `HTTP 200 {"ok":true,"videoId":"C1a_etdfe1Y"}` — succès complet, là où on attendait une erreur « MP4 introuvable ».
+- **Cause racine** : `https://villamaryllis.com/__inexistant__.mp4` **ne renvoie pas 404**. Le site est une **SPA** : le fallback sert `index.html` avec un **code 200**. Le garde `if (!vid.ok)` était donc satisfait, `bytes.byteLength` non nul (le HTML), et ce HTML a été envoyé à l'API YouTube — **qui l'accepte** et crée une vidéo (corrompue, mais publique).
+- **⚠️ Le piège** : `res.ok` ne prouve RIEN sur la nature du contenu. Sur un site SPA, **toute URL inexistante répond 200 + HTML**. Un test « inoffensif » sur une URL bidon peut donc déclencher une action réelle et irréversible côté plateforme externe.
+- **Second piège** : le scope accordé est `youtube.upload` (**insertion seule**) → **impossible de supprimer la vidéo par API** ; suppression manuelle obligatoire dans YouTube Studio.
+- **Solution (déployée)** : `youtube-upload.js` valide désormais **trois** choses avant tout upload — (1) `Content-Type` commence par `video/` (ou `application/octet-stream`), (2) taille ≥ 50 Ko, (3) **signature MP4** réelle (boîte `ftyp` aux octets 4..8). Sinon → **422, upload refusé**.
+- **Garde-fou / leçon** : **ne jamais "sonder" un endpoint qui a un effet de bord externe avec des données bidon.** Pour tester une connexion OAuth, ajouter un mode `?status=1` en lecture seule — jamais déclencher le chemin d'écriture. Et sur une SPA, `res.ok` n'est jamais une preuve d'existence de fichier : valider le **type** et la **signature** du contenu.
+
 ## 📊 CACHE — Le dashboard a affiché des chiffres périmés pendant 17,5 h, sans le dire
 
 **CACHE-001 (2026-07-17)** — Le cache KV de `sheets-proxy` (`action:"read"`) est resté figé 17,5 h sur des données obsolètes.

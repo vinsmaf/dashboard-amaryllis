@@ -26,6 +26,23 @@ const json = (d, s = 200) =>
 // Catégorie 19 = "Travel & Events" (la plus pertinente pour de la location saisonnière).
 const CATEGORY_TRAVEL = "19";
 
+// GET ?status=1 — vérifie UNIQUEMENT que la chaîne est connectée (lecture seule).
+// Existe pour ne plus jamais avoir à "sonder" la connexion en déclenchant le chemin d'upload
+// (incident YOUTUBE-001 du 2026-07-23 : un probe avec une URL bidon a publié une vraie vidéo).
+export async function onRequestGet({ request, env }) {
+  const url = new URL(request.url);
+  const secretOk = env.POSTSTAY_SECRET && url.searchParams.get("secret") === env.POSTSTAY_SECRET;
+  const { ok: bearerOk } = await verifyBearer(request, env);
+  if (!secretOk && !bearerOk) return json({ error: "Non autorisé" }, 401);
+
+  try {
+    await getValidAccessToken(env, env.revenue_manager, "youtube");
+    return json({ ok: true, connected: true });
+  } catch (e) {
+    return json({ ok: true, connected: false, reason: String(e.message || e) });
+  }
+}
+
 export async function onRequestPost({ request, env }) {
   const url = new URL(request.url);
   const secretOk = env.POSTSTAY_SECRET && url.searchParams.get("secret") === env.POSTSTAY_SECRET;
@@ -54,10 +71,33 @@ export async function onRequestPost({ request, env }) {
   }
 
   // 2. Récupère le MP4 (R2 / URL publique).
+  // ⚠️ GARDE-FOU CRITIQUE (incident 2026-07-23) : une URL inexistante sur villamaryllis.com ne
+  // renvoie PAS 404 — le site est une SPA, le fallback sert index.html en 200. Sans vérifier le
+  // Content-Type, on envoie du HTML à YouTube… qui l'accepte et publie une vidéo corrompue
+  // PUBLIQUE sur la chaîne. `res.ok` ne suffit donc JAMAIS : il faut valider le type réel.
   const vid = await fetch(videoUrl);
   if (!vid.ok) return json({ error: `MP4 introuvable (${vid.status}) : ${videoUrl}` }, 502);
+
+  const ctype = (vid.headers.get("content-type") || "").toLowerCase();
+  if (!ctype.startsWith("video/") && ctype !== "application/octet-stream") {
+    return json({
+      error: "La ressource n'est pas une vidéo — upload refusé",
+      detail: `Content-Type reçu : "${ctype || "(absent)"}" pour ${videoUrl}. Une URL inexistante sur une SPA renvoie du HTML en 200.`,
+    }, 422);
+  }
+
   const bytes = await vid.arrayBuffer();
   if (!bytes.byteLength) return json({ error: "MP4 vide" }, 502);
+  // Un vrai MP4 fait au minimum quelques dizaines de Ko — en dessous, c'est une page d'erreur.
+  if (bytes.byteLength < 50_000) {
+    return json({ error: `Fichier trop petit pour une vidéo (${bytes.byteLength} octets) — upload refusé` }, 422);
+  }
+  // Signature MP4 : les boîtes ISO-BMFF ont "ftyp" aux octets 4..8.
+  const head = new Uint8Array(bytes.slice(0, 12));
+  const ftyp = String.fromCharCode(head[4], head[5], head[6], head[7]);
+  if (ftyp !== "ftyp") {
+    return json({ error: "Le fichier n'a pas une signature MP4 valide (boîte 'ftyp' absente) — upload refusé" }, 422);
+  }
 
   const metadata = {
     snippet: {
