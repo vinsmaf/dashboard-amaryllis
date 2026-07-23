@@ -12,6 +12,8 @@
 import { useState, useEffect } from "react";
 import { adminFetch } from "../lib/apiFetch.js";
 
+const adminToken = () => sessionStorage.getItem("ldb_tok") || "";
+
 // ── Sparkline SVG ─────────────────────────────────────────────────────────────
 function Sparkline({ series, color, width = 120, height = 36 }) {
   const vals = (series || []).map(p => p.value).filter(v => typeof v === "number");
@@ -169,13 +171,22 @@ Channels : ig + fb`;
                 Agent responsable réseaux · advisory (recommande, ne publie/dépense rien) · snapshot quotidien
               </div>
             </div>
-            <button
-              onClick={runGrowthAgent}
-              disabled={sgmRun === "run"}
-              style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(99,102,241,0.4)", background: sgmRun === "run" ? "rgba(99,102,241,0.1)" : "rgba(99,102,241,0.18)", color: "#c7d2fe", fontSize: 11, fontWeight: 600, cursor: sgmRun === "run" ? "wait" : "pointer" }}
-            >
-              {sgmRun === "run" ? "Analyse en cours…" : sgmRun === "err" ? "⚠ Réessayer" : "🔄 Rafraîchir l'analyse"}
-            </button>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              <button
+                onClick={() => { window.location.href = `/api/gmail-oauth-start?provider=youtube&token=${encodeURIComponent(adminToken())}`; }}
+                title="Autorise la publication de Shorts sur ta chaîne YouTube (tu cliques 'Autoriser' chez Google)"
+                style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(255,0,0,0.35)", background: "rgba(255,0,0,0.10)", color: "#fca5a5", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
+              >
+                ▶️ Connecter YouTube
+              </button>
+              <button
+                onClick={runGrowthAgent}
+                disabled={sgmRun === "run"}
+                style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid rgba(99,102,241,0.4)", background: sgmRun === "run" ? "rgba(99,102,241,0.1)" : "rgba(99,102,241,0.18)", color: "#c7d2fe", fontSize: 11, fontWeight: 600, cursor: sgmRun === "run" ? "wait" : "pointer" }}
+              >
+                {sgmRun === "run" ? "Analyse en cours…" : sgmRun === "err" ? "⚠ Réessayer" : "🔄 Rafraîchir l'analyse"}
+              </button>
+            </div>
           </div>
 
           {/* Tuiles par plateforme */}

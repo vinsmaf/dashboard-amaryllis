@@ -21,6 +21,9 @@ export const CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.events";
 // aucun mutate). Nécessite que l'API Google Ads soit activée dans le projet Google Cloud
 // du GOOGLE_OAUTH_CLIENT_ID + un developer token approuvé (Basic) côté MCC.
 export const GOOGLEADS_SCOPE = "https://www.googleapis.com/auth/adwords";
+// YouTube : upload de vidéos (Shorts). Nécessite YouTube Data API v3 activée dans le projet
+// Google Cloud du GOOGLE_OAUTH_CLIENT_ID (déjà activée pour la mesure d'abonnés).
+export const YOUTUBE_SCOPE = "https://www.googleapis.com/auth/youtube.upload";
 // "openid email" est ajouté systématiquement (peu importe le provider) pour pouvoir
 // afficher quel compte Google est connecté, via l'endpoint userinfo standard.
 const IDENTITY_SCOPES = "openid email";
@@ -28,6 +31,7 @@ export const SCOPES_BY_PROVIDER = {
   gmail: GMAIL_SCOPE,
   calendar: CALENDAR_SCOPE,
   googleads: GOOGLEADS_SCOPE,
+  youtube: YOUTUBE_SCOPE,
 };
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";

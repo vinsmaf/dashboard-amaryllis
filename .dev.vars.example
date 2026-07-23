@@ -88,3 +88,5 @@ SOCIAL_GROWTH_MAX_SCHEDULE=2
 SOCIAL_GROWTH_SCHEDULE=
 # Google Business Profile : "1" quand l'accès API Business Profile est accordé (sinon plateforme en pending_access).
 GBP_API_ENABLED=
+# YouTube upload de Shorts (agent réseaux) — kill-switch : "1" → l'upload répond disabled sans rien publier.
+YOUTUBE_UPLOAD_DISABLED=
