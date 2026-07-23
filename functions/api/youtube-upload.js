@@ -143,7 +143,10 @@ export async function onRequestPost({ request, env }) {
       categoryId: CATEGORY_TRAVEL,
     },
     status: {
-      privacyStatus: "public",
+      // DÉFAUT PRUDENT : "private". Publier publiquement doit être un choix EXPLICITE de l'appelant
+      // (le pipeline éditorial passe "public" après le gate qualité) — même doctrine que
+      // CONCIERGE_MODE=shadow / AD_AGENT_MODE=shadow. Un appel nu ne peut pas exposer la chaîne.
+      privacyStatus: ["public", "unlisted", "private"].includes(body.privacyStatus) ? body.privacyStatus : "private",
       selfDeclaredMadeForKids: false, // obligatoire depuis COPPA
     },
   };
