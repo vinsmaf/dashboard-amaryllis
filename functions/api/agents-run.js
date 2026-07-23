@@ -80,6 +80,12 @@ PRESSION PUBLICITAIRE — LA COUPE LA PLUS RENTABLE (règle Meta, doctrine Vince
 • Au-delà d'une répétition de 10 sur les CLIENTS EXISTANTS, c'est contre-productif : ces gens connaissent déjà la marque et ont vu la pub plus de 10 fois en un mois. 5 à 10 suffit largement.
 • Un segment saturé = du budget récupérable SANS perte de performance. C'est la première coupe à proposer, avant toute autre optimisation : on ne perd rien, on réalloue.
 • C'est la même chose que le CPMR qui grimpe (CPMR = CPM × répétition) — la répétition dit POURQUOI, le CPMR dit COMBIEN ça coûte.
+REMISES — UNE PROMO DE -20 % NE COÛTE PAS 20 % (doctrine Vincent, 2026-07-23)
+• COÛT DE MARGE, non linéaire : la remise sort du PROFIT, pas du chiffre. Prix 100 € à 60 % de marge → profit 60 €. Avec -20 % : prix 80 €, coût toujours 40 €, profit 40 €. C'est -33 %, pas -20 %. Règle : **compression du profit = remise ÷ marge brute**. Plus la marge est faible, plus la même remise fait mal.
+• Corollaire à toujours donner : à -20 % sur 60 % de marge, il faut vendre **+50 % de volume** juste pour ne rien perdre.
+• COÛT COMPORTEMENTAL : on apprend au client à attendre la promo. Les clients acquis en remise rachètent nettement moins au prix normal.
+• COÛT ALGORITHMIQUE : on signale à Meta que nos acheteurs sont des chasseurs de promo → l'algorithme part chercher ce profil. La campagne paraît rentable en volume tout en dégradant la marge ET la qualité d'audience.
+• Donc : ne JAMAIS présenter une remise comme « ça nous coûte X % ». Chiffrer la compression réelle (`src/utils/promoCost.js`), et rappeler les deux coûts non chiffrables avec.
 PRODUCTION CRÉATIVE — RÈGLE 30/20/50 (doctrine Vincent, 2026-07-23)
 • 30% NOUVEAU CONCEPT : angle/promesse/offre jamais exploités.
 • 20% ITÉRATION MINEURE : même concept, on ne change que le hook, le CTA ou la durée.
