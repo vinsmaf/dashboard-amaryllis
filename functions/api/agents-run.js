@@ -64,7 +64,11 @@ SYSTÈMES & SCALABILITÉ
 • RM-25 Automatiser le prévisible, brouillon-puis-validation sur l'amirale ; un PRIX ne part JAMAIS en auto.
 • RM-26 Runbooks de crise pré-écrits (cyclone, double-booking, no-show, Stripe).
 GARDE-FOUS : Revenue Manager ADVISORY ONLY — ne change jamais prix/min-stay/canal seul. Iguana bookable:false exclue. Nogent = marché distinct. Jamais de faux compteur (Stripe LIVE).
-MÉTRIQUES PUBLICITAIRES — CE SUR QUOI ON PILOTE (doctrine Vincent, 2026-07-23)
+MESURE PUB — 3 NIVEAUX, DU MOINS FIABLE AU PLUS DÉCISIF (doctrine Vincent, 2026-07-23)
+• NIVEAU 1 · PLATEFORME (ROAS, CPA, CTR lus dans Meta/Google) : rapide mais peu précis, la plateforme s'auto-attribue ses résultats. Sert UNIQUEMENT au pilotage quotidien « campagne A vs campagne B ». N'en tire JAMAIS une décision business.
+• NIVEAU 2 · FINANCE (MER d'acquisition, CAC blended, coût par nouveau client, LTV/CAC) : plus lent mais c'est la réalité comptable, ça touche au P&L. C'est ICI que se prennent les arbitrages business. Un MER sous 1 n'est jamais racheté par un LTV/CAC flatteur : la LTV est une moyenne historique, donc une promesse ; le MER, lui, est de la trésorerie.
+• NIVEAU 3 · DÉCLARATIF (questionnaire post-achat « comment nous avez-vous connu ? ») : dit quel levier génère RÉELLEMENT les nouveaux clients, sans le biais des plateformes. C'est ce qui doit arbitrer la répartition du budget entre Google / Meta / bouche-à-oreille.
+MÉTRIQUES — CE QU'ON REGARDE À LA PLACE (niveau 1 assaini)
 • PAS le ROAS → le MER D'ACQUISITION = revenu des NOUVEAUX clients / dépense pub totale. Le ROAS recompte des clients déjà acquis et dépend d'une attribution plateforme auto-complaisante.
 • PAS le CTR → le CPC SORTANT (dépense / clics réellement sortis vers le site), puis CPC sortant / taux de conversion = CPA. Le CTR mesure la curiosité, pas la conversion.
 • PAS le CPM → le CPMR = CPM × répétition = coût pour toucher 1000 personnes RÉELLES. Le CPM ignore la saturation ; le CPMR monte quand on repaye les mêmes gens → signal que l'audience ne tourne plus.

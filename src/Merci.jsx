@@ -36,6 +36,10 @@ export default function MerciPage() {
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState("");
   const [bienId, setBienId] = useState("");
+  // Questionnaire post-achat (niveau 3 de la mesure pub) : la seule attribution qu'aucune
+  // plateforme ne peut biaiser. Posée ici parce que c'est le seul moment où le voyageur est
+  // encore présent et vient de vivre son parcours d'achat.
+  const [surveyDone, setSurveyDone] = useState(false);
 
   // Payment redirected via 3DS + deposit pending → mount deposit form
   const showDepositForm = paymentRedirected && depositCs && !depositDone;
@@ -203,6 +207,50 @@ export default function MerciPage() {
             🔒 Dépôt de garantie bloqué · Libéré automatiquement après votre séjour
           </p>
         )}
+
+        {/* Questionnaire post-achat — attribution déclarative (niveau 3) */}
+        <div style={{ background: "rgba(30,58,95,0.04)", border: "1px solid rgba(30,58,95,0.15)", borderRadius: 12, padding: "20px 24px", marginBottom: 16, textAlign: "left" }}>
+          <div style={{ fontWeight: 700, color: NAVY, fontSize: 15, marginBottom: 6 }}>Une dernière question ?</div>
+          {surveyDone ? (
+            <p style={{ color: MUTED, fontSize: 13, margin: 0, lineHeight: 1.6 }}>Merci, c'est noté — ça nous aide vraiment.</p>
+          ) : (
+            <>
+              <p style={{ color: MUTED, fontSize: 13, lineHeight: 1.6, margin: "0 0 14px" }}>
+                Comment nous avez-vous connus ? Un seul clic, et ça nous aide beaucoup.
+              </p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {[
+                  ["google", "Google"], ["instagram", "Instagram"], ["facebook", "Facebook"],
+                  ["airbnb", "Airbnb"], ["booking", "Booking"], ["bouche-a-oreille", "Bouche-à-oreille"],
+                  ["deja-client", "Déjà venu"], ["autre", "Autre"],
+                ].map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => {
+                      setSurveyDone(true); // optimiste : la réponse ne conditionne rien pour le voyageur
+                      fetch("/api/attribution-survey", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          source: value,
+                          booking_ref: params.get("payment_intent") || ssGet("pending_purchase_pi") || null,
+                          bien_id: bienId || depositBien || null,
+                        }),
+                      }).catch(() => { /* best-effort : ne jamais gêner la confirmation */ });
+                    }}
+                    style={{
+                      background: "#fff", border: "1px solid var(--c-sand)", borderRadius: 999,
+                      padding: "8px 14px", fontSize: 13, color: NAVY, cursor: "pointer", minHeight: 36,
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
 
         {/* Avis Google */}
         <div style={{ background: "rgba(200,85,61,0.04)", border: "1px solid rgba(200,85,61,0.15)", borderRadius: 12, padding: "20px 24px", marginBottom: 16, textAlign: "left" }}>

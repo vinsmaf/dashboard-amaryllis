@@ -19,7 +19,8 @@
 import { verifyBearer } from "./_adminauth.js";
 import { CAMPAIGNS, AD_ACCOUNT_ID } from "../../src/config/metaCampaignBrief.js";
 import { ALL_BIENS, getBien } from "../../src/data/biens.js";
-import { parseInsights, measurementHealth, aggregateInsights, acquisitionMer } from "../../src/utils/metaAdsInsights.js";
+import { parseInsights, measurementHealth, aggregateInsights } from "../../src/utils/metaAdsInsights.js";
+import { MEASUREMENT_TIERS, financeKpis, declaredAttribution } from "../../src/utils/adFinanceKpis.js";
 import { cacCeiling, allocateBudget, evaluateAdset, bienIdFromGoogleCampaignName, GOOGLE_CAMPAIGN_POOLS, multiBienPoolCeiling } from "../../src/utils/adBudgetAgent.js";
 import { fetchGoogleAdsInsights } from "./_googleAds.js";
 
@@ -36,15 +37,17 @@ function computeRange(windowKey) {
   return { since: since.toISOString().slice(0, 10), until: now.toISOString().slice(0, 10) };
 }
 
-// Revenu des NOUVEAUX clients sur la fenêtre : une résa ne compte que si cet email n'avait
-// jamais réservé avant. C'est le numérateur du MER d'acquisition — un client fidèle qui
-// re-réserve n'est PAS une acquisition, et le compter gonflerait la performance de la pub.
-async function sumNewCustomerRevenue(db, range) {
+// NIVEAU 2 — chiffres FINANCIERS, lus dans notre base, jamais dans une plateforme.
+// Un « nouveau client » = un email dont c'est la 1re résa. Un fidèle qui revient n'est PAS une
+// acquisition : le compter gonflerait mécaniquement la performance attribuée à la pub.
+// LTV = revenu moyen encaissé par client sur TOUT l'historique (pas sur la fenêtre).
+async function financeInputs(db, range) {
   if (!db || !range?.since || !range?.until) return null;
   const from = Math.floor(new Date(`${range.since}T00:00:00Z`).getTime() / 1000);
   const to = Math.floor(new Date(`${range.until}T23:59:59Z`).getTime() / 1000);
+  const ALIVE = "COALESCE(status, 'confirmed') != 'cancelled' AND email IS NOT NULL AND email != ''";
   try {
-    const row = await db.prepare(`
+    const nouveaux = await db.prepare(`
       SELECT COALESCE(SUM(b.total), 0) AS revenue, COUNT(*) AS bookings
       FROM direct_bookings b
       WHERE b.created_at BETWEEN ? AND ?
@@ -55,9 +58,34 @@ async function sumNewCustomerRevenue(db, range) {
           WHERE LOWER(p.email) = LOWER(b.email) AND p.created_at < b.created_at
         )
     `).bind(from, to).first();
-    return { revenue: Number(row?.revenue) || 0, bookings: Number(row?.bookings) || 0 };
+
+    const vie = await db.prepare(`
+      SELECT COALESCE(SUM(total), 0) AS revenue, COUNT(DISTINCT LOWER(email)) AS customers
+      FROM direct_bookings WHERE ${ALIVE}
+    `).first();
+
+    return {
+      newCustomers: Number(nouveaux?.bookings) || 0,
+      newCustomerRevenue: Number(nouveaux?.revenue) || 0,
+      lifetimeRevenue: Number(vie?.revenue) || 0,
+      lifetimeCustomers: Number(vie?.customers) || 0,
+    };
   } catch {
-    return null; // table/colonne absente → on l'annonce comme non mesurable, jamais un faux 0.
+    return null; // table/colonne absente → annoncé comme non mesurable, jamais un faux 0.
+  }
+}
+
+// NIVEAU 3 — ce que les clients DÉCLARENT (questionnaire post-achat sur /merci).
+async function declaredSources(db, days = 365) {
+  if (!db) return null;
+  try {
+    const since = Math.floor(Date.now() / 1000) - days * 86400;
+    const { results } = await db.prepare(
+      "SELECT source, COUNT(*) AS count FROM attribution_survey WHERE created_at >= ? GROUP BY source"
+    ).bind(since).all();
+    return declaredAttribution(results || []);
+  } catch {
+    return null; // questionnaire pas encore déployé / aucune réponse
   }
 }
 
@@ -111,16 +139,18 @@ export async function onRequestGet({ request, env }) {
     // 1) VISION BUDGET — toujours dispo, ne dépend d'aucune donnée live.
     const plan = allocateBudget(budgetMax);
 
-    // 1b) MER D'ACQUISITION — le revenu des NOUVEAUX clients vient de NOTRE base, pas de Meta :
-    // aucune fenêtre d'attribution à négocier, aucun double-comptage de clients déjà acquis.
-    const newCustomerRevenue = await sumNewCustomerRevenue(env.revenue_manager, range);
+    // 1b) NIVEAUX 2 et 3 de la mesure — lus dans notre base, jamais dans une plateforme.
+    const [fin, declare] = await Promise.all([
+      financeInputs(env.revenue_manager, range),
+      declaredSources(env.revenue_manager),
+    ]);
 
     // 2) ARBITRAGE Meta — seulement si on a un token + des perfs. Sans, on le dit honnêtement.
     let meta = { available: false, note: "META_PAGE_TOKEN absent — arbitrage Meta indisponible." };
     const token = env.META_PAGE_TOKEN;
     if (token) {
       const res = await graphGet(
-        `${AD_ACCOUNT_ID}/insights?level=adset&${rangeParam}&fields=${encodeURIComponent("adset_name,adset_id,spend,impressions,clicks,actions,action_values")}&time_increment=all_days&limit=200`,
+        `${AD_ACCOUNT_ID}/insights?level=adset&${rangeParam}&fields=${encodeURIComponent("adset_name,adset_id,spend,impressions,reach,clicks,outbound_clicks,actions,action_values")}&action_attribution_windows=${encodeURIComponent(JSON.stringify(["7d_click"]))}&time_increment=all_days&limit=200`,
         token
       );
       if (res.error) {
@@ -166,16 +196,16 @@ export async function onRequestGet({ request, env }) {
       });
     }
 
-    // MER d'acquisition tous canaux payants confondus : c'est le juge de paix du budget pub,
-    // à préférer au ROAS plateforme (qui ne voit que son propre canal et s'auto-attribue).
     const totalAdSpend = (meta.totals?.spend || 0) + (googleAds?.totals?.spend || 0);
-    const mer = newCustomerRevenue
+
+    // NIVEAU 2 — la réalité comptable. C'est SUR CE NIVEAU que l'arbitrage business se fait :
+    // le niveau 1 (plateforme) ne sert qu'à comparer deux campagnes entre elles au quotidien.
+    const finance = fin
       ? {
-          ...acquisitionMer({ newCustomerRevenue: newCustomerRevenue.revenue, adSpend: totalAdSpend }),
-          newCustomerBookings: newCustomerRevenue.bookings,
-          note: "Revenu des résas directes de NOUVEAUX clients (1re résa pour cet email) / dépense pub Meta+Google. Les résas OTA ne sont pas comptées : elles ne sont pas attribuables à la pub.",
+          ...financeKpis({ adSpend: totalAdSpend, ...fin }),
+          source: "direct_bookings (D1) — résas directes uniquement ; les résas OTA ne sont pas attribuables à la pub.",
         }
-      : { mer: null, verdict: "non_mesurable", note: "direct_bookings illisible sur la fenêtre — MER non calculable." };
+      : { verdict: "non_mesurable", note: "direct_bookings illisible sur la fenêtre — KPIs financiers non calculables." };
 
     return json({
       advisory: true,
@@ -183,7 +213,11 @@ export async function onRequestGet({ request, env }) {
       budgetMax,
       generated_at: new Date().toISOString(),
       visionBudget: plan,
-      acquisitionMer: mer,
+      // Les 3 niveaux, du moins fiable au plus décisif — dans cet ordre volontairement.
+      niveau1_plateforme: { ...MEASUREMENT_TIERS.plateforme, meta, googleAds },
+      niveau2_finance: { ...MEASUREMENT_TIERS.finance, ...finance },
+      niveau3_declaratif: { ...MEASUREMENT_TIERS.declaratif, ...(declare || { total: 0, exploitable: false, note: "Aucune réponse au questionnaire post-achat pour l'instant." }) },
+      // Conservé pour les consommateurs existants (UI, ad-budget-execute).
       measurement: { meta, googleAds },
     });
   } catch (e) {
