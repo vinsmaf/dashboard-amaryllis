@@ -14,6 +14,7 @@
 import { verifyBearer } from "./_adminauth.js";
 import { callLLM } from "./_llm.js";
 import { buildGrowthFacts, sanitizeRecos, assembleDigest, planEditorialSlots } from "../../src/utils/socialGrowthAgent.js";
+import { computeMixRatios, nextVariationType, pickConceptToIterate, buildMixInstruction } from "../../src/utils/contentMix.js";
 import { ALL_BIENS } from "../../src/data/biens.js";
 
 const json = (d, s = 200) =>
@@ -58,20 +59,57 @@ async function fetchEngagement(origin, env) {
 }
 
 // Impact des posts déjà publiés sur les abonnés (boucle de feedback) — l'agent apprend ce qui marche.
+// Retourne `digest` (résumé compact pour le prompt) + `byId` (delta par publication, gardé HORS du
+// prompt : il sert à classer les concepts à ré-itérer, pas à être lu par le LLM).
 async function fetchImpact(origin, env) {
   try {
     const r = await fetch(`${origin}/api/social-impact?secret=${secretQS(env)}`);
     const d = await r.json();
     if (!d?.ok) return null;
-    // On ne garde que l'essentiel pour le prompt : moyennes + meilleur/pire post mesuré.
+    const byId = new Map();
+    for (const p of d.publications || []) {
+      if (typeof p?.delta === "number") byId.set(Number(p.id), p.delta);
+    }
     return {
-      posts_agent_mesures: d.growth_agent?.completeCount ?? 0,
-      abonnes_gagnes_par_post_agent: d.growth_agent?.avgDelta ?? null,
-      abonnes_gagnes_par_post_tous: d.summary?.avgDelta ?? null,
-      meilleur_post: d.summary?.best ? { bien: d.summary.best.bien_id, format: d.summary.best.format, delta: d.summary.best.delta } : null,
-      pire_post: d.summary?.worst ? { bien: d.summary.worst.bien_id, format: d.summary.worst.format, delta: d.summary.worst.delta } : null,
+      digest: {
+        posts_agent_mesures: d.growth_agent?.completeCount ?? 0,
+        abonnes_gagnes_par_post_agent: d.growth_agent?.avgDelta ?? null,
+        abonnes_gagnes_par_post_tous: d.summary?.avgDelta ?? null,
+        meilleur_post: d.summary?.best ? { bien: d.summary.best.bien_id, format: d.summary.best.format, delta: d.summary.best.delta } : null,
+        pire_post: d.summary?.worst ? { bien: d.summary.worst.bien_id, format: d.summary.worst.format, delta: d.summary.worst.delta } : null,
+      },
+      byId,
     };
   } catch { return null; }
+}
+
+// État de la discipline 50/20/30 : historique classifié récent + concepts ré-itérables (classés
+// par impact abonnés mesuré). Lecture D1 directe — le calendrier est déjà dans cette base.
+async function fetchMixState(db, impactById) {
+  const history = [], concepts = [];
+  try {
+    const { results: rows } = await db.prepare(`
+      SELECT id, bien_id, theme, variante, variation_type, concept_id, created_at
+      FROM editorial_calendar
+      WHERE variation_type IS NOT NULL
+      ORDER BY created_at DESC LIMIT 20
+    `).all();
+    const seen = new Set();
+    for (const r of rows || []) {
+      history.push({ variation_type: r.variation_type });
+      if (!r.concept_id || seen.has(r.concept_id)) continue;
+      seen.add(r.concept_id);
+      concepts.push({
+        concept_id: r.concept_id,
+        bien_id: r.bien_id,
+        theme: r.theme,
+        angle: r.variante || r.theme,
+        impactDelta: impactById?.has(Number(r.id)) ? impactById.get(Number(r.id)) : null,
+        createdAt: Number(r.created_at) || 0,
+      });
+    }
+  } catch { /* colonnes absentes (migration pas encore passée) → démarrage à froid */ }
+  return { history, concepts };
 }
 
 // Cadence éditoriale à venir (14 j) par format — l'agent raisonne sur ce qui est déjà planifié.
@@ -164,8 +202,18 @@ export async function onRequestGet({ request, env }) {
   if (!platforms.length) return json({ ok: false, error: "aucune donnée plateforme (social-insights indisponible)" }, 502);
 
   const facts = buildGrowthFacts(platforms, engagement, editorial.cadence, targetPct);
-  if (impact) facts.impact_posts_passes = impact; // boucle de feedback : ce qui a marché → biaise le content_plan
+  if (impact) facts.impact_posts_passes = impact.digest; // boucle de feedback : ce qui a marché → biaise le content_plan
   const knownPlatforms = platforms.map((p) => p.platform);
+
+  // Discipline 50/20/30 : le mix n'est PAS laissé au jugement du LLM (il dérive vers le neuf) —
+  // on calcule le type sous-représenté sur l'historique réel et on le lui impose.
+  const mix = await fetchMixState(db, impact?.byId);
+  const mixRatios = computeMixRatios(mix.history);
+  const wantedType = nextVariationType(mix.history);
+  const iterateOn = wantedType === "new_concept" ? null : pickConceptToIterate(mix.concepts);
+  // Une itération sans concept à itérer n'existe pas : on retombe sur du neuf (cf. buildMixInstruction).
+  const variationType = iterateOn ? wantedType : "new_concept";
+  const mixInstruction = buildMixInstruction(wantedType, iterateOn, mixRatios);
 
   // Synthèse LLM (JSON strict) — cascade multi-provider via callLLM.
   let llmRaw = null, llmError = null;
@@ -176,7 +224,7 @@ export async function onRequestGet({ request, env }) {
       responseFormat: { type: "json_object" },
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: `Faits (chiffres réels) :\n${JSON.stringify(facts, null, 2)}\n\nProduis le JSON de recommandations.` },
+        { role: "user", content: `Faits (chiffres réels) :\n${JSON.stringify(facts, null, 2)}\n\nDISCIPLINE DE PRODUCTION (contrainte, pas suggestion) :\n${mixInstruction}\n\nProduis le JSON de recommandations.` },
       ],
     });
     if (llm?.ok && llm.text) llmRaw = JSON.parse(llm.text);
@@ -210,6 +258,12 @@ export async function onRequestGet({ request, env }) {
     recos: sanitized.recos,
     dropped: sanitized.dropped,
     content_scheduled: planned.slots.map((s) => ({ bien_id: s.bien_id, format: s.format, date: s.scheduled_ymd, angle: s.angle })),
+    content_mix: {
+      historique: mixRatios.counts,
+      total_classifie: mixRatios.total,
+      type_demande: variationType,
+      itere_sur: iterateOn ? { concept_id: iterateOn.concept_id, angle: iterateOn.angle, impact: iterateOn.impactDelta } : null,
+    },
     llm_error: llmError,
   };
 
@@ -238,11 +292,13 @@ export async function onRequestGet({ request, env }) {
     const ts = Math.floor(new Date(`${s.scheduled_ymd}T12:00:00Z`).getTime() / 1000);
     const photoUrl = `https://villamaryllis.com/photos/${s.bien_id}/01.webp`;
     try {
+      // Une itération garde le concept_id du concept d'origine ; un nouveau concept en ouvre un.
+      const conceptId = variationType === "new_concept" ? crypto.randomUUID() : iterateOn.concept_id;
       await db.prepare(`
         INSERT INTO editorial_calendar
-          (scheduled_at, platform, publish_hour, bien_id, theme, variante, format, photo_url, cta, brief, status, created_at, updated_at)
-        VALUES (?, 'both', 'FB 12h00 · IG 18h30', ?, ?, ?, ?, ?, ?, ?, 'planned', unixepoch(), unixepoch())
-      `).bind(ts, s.bien_id, s.theme, s.angle.slice(0, 120), s.format, photoUrl, s.cta, `${s.brief} · source:growth-agent`).run();
+          (scheduled_at, platform, publish_hour, bien_id, theme, variante, format, photo_url, cta, brief, status, variation_type, concept_id, created_at, updated_at)
+        VALUES (?, 'both', 'FB 12h00 · IG 18h30', ?, ?, ?, ?, ?, ?, ?, 'planned', ?, ?, unixepoch(), unixepoch())
+      `).bind(ts, s.bien_id, s.theme, s.angle.slice(0, 120), s.format, photoUrl, s.cta, `${s.brief} · source:growth-agent`, variationType, conceptId).run();
       scheduled++;
     } catch { /* conflit/erreur → on saute cette entrée */ }
   }

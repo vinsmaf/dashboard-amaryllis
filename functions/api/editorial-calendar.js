@@ -17,6 +17,7 @@
 // public : la charte éditoriale n'expose rien de confidentiel.
 
 import { verifyBearer } from "./_adminauth.js";
+import { computeMixRatios, nextVariationType, pickConceptToIterate, buildMixInstruction } from "../../src/utils/contentMix.js";
 
 async function checkWriteAuth(request, env) {
   if (!env.ADMIN_PASSWORD && !env.ADMIN_PWD && !env.POSTSTAY_SECRET) return true; // dev, rien de configuré
@@ -60,8 +61,17 @@ CREATE INDEX IF NOT EXISTS idx_cal_status    ON editorial_calendar(status);
 CREATE INDEX IF NOT EXISTS idx_cal_bien      ON editorial_calendar(bien_id);
 `;
 
+// Discipline 50/20/30 (src/utils/contentMix.js) : `variation_type` dit si le contenu est un
+// nouveau concept ou une itération, `concept_id` rattache toutes les itérations d'un même concept.
+// Migration idempotente (colonnes nullables) — le contenu antérieur reste NULL et est ignoré du calcul.
+const MIGRATIONS = [
+  "ALTER TABLE editorial_calendar ADD COLUMN variation_type TEXT",
+  "ALTER TABLE editorial_calendar ADD COLUMN concept_id TEXT",
+];
+
 async function ensureTable(db) {
   try { for (const s of DDL.split(";").filter(Boolean)) await db.prepare(s).run(); } catch {}
+  for (const m of MIGRATIONS) { try { await db.prepare(m).run(); } catch {} }
 }
 
 // ── Plan canonique 30 jours (sera adapté à la date de départ) ──────────────
@@ -178,6 +188,50 @@ function unixToYMD(ts) {
   return new Date(ts * 1000).toISOString().slice(0, 10);
 }
 
+// Contexte de la discipline 50/20/30 pour le seeding : historique classifié + concepts ré-itérables.
+// L'impact abonnés (best-effort) permet de ré-itérer ce qui a PROUVÉ, pas le dernier post publié ;
+// s'il est indisponible, `pickConceptToIterate` retombe proprement sur la récence.
+async function loadMixContext(env, db) {
+  const history = [], concepts = [];
+  const impactById = new Map();
+  try {
+    const origin = env.SITE_URL || "https://villamaryllis.com";
+    const r = await fetch(`${origin}/api/social-impact?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`);
+    const d = await r.json();
+    for (const p of d?.publications || []) {
+      if (typeof p?.delta === "number") impactById.set(Number(p.id), p.delta);
+    }
+  } catch { /* impact indisponible → sélection par récence */ }
+
+  try {
+    const { results } = await db.prepare(`
+      SELECT id, bien_id, theme, variante, variation_type, concept_id, created_at
+      FROM editorial_calendar
+      WHERE variation_type IS NOT NULL
+      ORDER BY created_at DESC LIMIT 40
+    `).all();
+    const seen = new Set();
+    for (const r of results || []) {
+      history.push({ variation_type: r.variation_type });
+      if (!r.concept_id || seen.has(r.concept_id)) continue;
+      seen.add(r.concept_id);
+      concepts.push({
+        concept_id: r.concept_id,
+        bien_id: r.bien_id,
+        theme: r.theme,
+        angle: r.variante || r.theme,
+        impactDelta: impactById.has(Number(r.id)) ? impactById.get(Number(r.id)) : null,
+        createdAt: Number(r.created_at) || 0,
+      });
+    }
+  } catch { /* colonnes absentes → démarrage à froid */ }
+  return { history, concepts };
+}
+
+// Un même concept ne peut pas être ré-itéré plus de 2× dans une seule vague de 30 jours :
+// au-delà, la « variation » devient de la duplication mécanique (le contraire de la règle).
+const MAX_ITERATIONS_PER_CONCEPT_PER_RUN = 2;
+
 async function handleSeed30Days(env, db, body) {
   const startDate = body.start_date || new Date().toISOString().slice(0, 10);
   const startTs   = dateToUnix(startDate);
@@ -205,6 +259,11 @@ async function handleSeed30Days(env, db, body) {
   let inserted = 0, skipped = 0;
   const entries = [];
 
+  // Discipline 50/20/30 : le type de chaque contenu est décidé par l'écart au mix cible, pas au fil de l'eau.
+  const mix = await loadMixContext(env, db);
+  const usedInRun = new Map();
+  const mixCounts = { new_concept: 0, minor_iteration: 0, major_iteration: 0 };
+
   for (let i = 0; i < 30; i++) {
     const ts   = startTs + i * 86400;
     const date = unixToYMD(ts);
@@ -220,21 +279,42 @@ async function handleSeed30Days(env, db, body) {
     const variante  = VARIANTES[tpl.theme][weekIdx % 4];
     const photoNum  = String((i % 12) + 1).padStart(2, "0");
     const photoUrl  = `https://villamaryllis.com/photos/${bienId}/${photoNum}.webp`;
-    const brief     = `${tpl.theme} ${variante.split(" ")[0]} — ${bienId} — format ${tpl.format}`;
+
+    const wanted = nextVariationType(mix.history);
+    // Pool des concepts encore ré-itérables dans cette vague (anti-duplication mécanique).
+    const pool = mix.concepts.filter(
+      (c) => (usedInRun.get(c.concept_id) || 0) < MAX_ITERATIONS_PER_CONCEPT_PER_RUN
+    );
+    const iterateOn = wanted === "new_concept" ? null : pickConceptToIterate(pool);
+    const variationType = iterateOn ? wanted : "new_concept";
+    const conceptId = iterateOn ? iterateOn.concept_id : crypto.randomUUID();
+    const iterIdx = usedInRun.get(conceptId) || 0;
+    const mixInstruction = buildMixInstruction(wanted, iterateOn, computeMixRatios(mix.history), iterIdx);
+
+    const brief = `${tpl.theme} ${variante.split(" ")[0]} — ${bienId} — format ${tpl.format}\n${mixInstruction}`;
 
     try {
       await db.prepare(`
         INSERT INTO editorial_calendar
-          (scheduled_at, platform, publish_hour, bien_id, theme, variante, format, photo_url, cta, brief, status, created_at, updated_at)
-        VALUES (?, 'both', ?, ?, ?, ?, ?, ?, ?, ?, 'planned', unixepoch(), unixepoch())
-      `).bind(ts, `FB ${tpl.fb} · IG ${tpl.ig}`, bienId, tpl.theme, variante, tpl.format, photoUrl, tpl.cta, brief).run();
+          (scheduled_at, platform, publish_hour, bien_id, theme, variante, format, photo_url, cta, brief, status, variation_type, concept_id, created_at, updated_at)
+        VALUES (?, 'both', ?, ?, ?, ?, ?, ?, ?, ?, 'planned', ?, ?, unixepoch(), unixepoch())
+      `).bind(ts, `FB ${tpl.fb} · IG ${tpl.ig}`, bienId, tpl.theme, variante, tpl.format, photoUrl, tpl.cta, brief, variationType, conceptId).run();
       inserted++;
-      entries.push({ date, bien_id: bienId, theme: tpl.theme, variante, format: tpl.format });
+      entries.push({ date, bien_id: bienId, theme: tpl.theme, variante, format: tpl.format, variation_type: variationType });
+
+      // Alimente l'état pour la décision suivante (le mix se calcule au fil de la vague).
+      mix.history.unshift({ variation_type: variationType });
+      mixCounts[variationType]++;
+      usedInRun.set(conceptId, iterIdx + 1);
+      if (!iterateOn) {
+        mix.concepts.unshift({ concept_id: conceptId, bien_id: bienId, theme: tpl.theme, angle: variante, impactDelta: null, createdAt: ts });
+      }
     } catch (e) {}
   }
 
   return json({
     ok: true, inserted, skipped,
+    content_mix: mixCounts,
     excluded_biens: [...excludedSet],
     excluded_reason: {
       manual: [...excludedManual],

@@ -64,6 +64,11 @@ SYSTÈMES & SCALABILITÉ
 • RM-25 Automatiser le prévisible, brouillon-puis-validation sur l'amirale ; un PRIX ne part JAMAIS en auto.
 • RM-26 Runbooks de crise pré-écrits (cyclone, double-booking, no-show, Stripe).
 GARDE-FOUS : Revenue Manager ADVISORY ONLY — ne change jamais prix/min-stay/canal seul. Iguana bookable:false exclue. Nogent = marché distinct. Jamais de faux compteur (Stripe LIVE).
+PRODUCTION CRÉATIVE — RÈGLE 30/20/50 (doctrine Vincent, 2026-07-23)
+• 30% NOUVEAU CONCEPT : angle/promesse/offre jamais exploités.
+• 20% ITÉRATION MINEURE : même concept, on ne change que le hook, le CTA ou la durée.
+• 50% ITÉRATION MAJEURE : même concept, angle, offre et promesse ; on ne fait varier QU'UN élément majeur (décor, narrateur/avatar, ou format vidéo↔statique). Ce n'est ni une duplication ni un nouveau concept.
+• L'erreur quasi universelle est de sur-investir dans le neuf et de sous-exploiter ce qui marche déjà : re-décliner un contenu gagnant paraît inconfortable, c'est pourtant ce qui produit la performance. Quand une consigne « DISCIPLINE DE PRODUCTION » accompagne un brief, elle prime sur ton instinct de nouveauté.
 `;
 
 // ── Spécialistes fiscaux (ADR-BRAIN-003) : grounding sur le contexte fiscal UNIFIÉ ──

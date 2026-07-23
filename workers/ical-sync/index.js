@@ -2583,7 +2583,7 @@ async function generateReelDraft(env, entry, siteUrl) {
   // 1. Caption LLM via /api/llm-generate (cascade résiliente — /api/ai-summary dépend
   //    d'ANTHROPIC_API_KEY absente en prod → échouait systématiquement, silencieusement).
   const captionPrompt = `Tu es le community manager d'Amaryllis Locations (conciergerie Martinique). Rédige un caption Instagram Reel pour "${bienName}", thème "${theme}"${variante ? `, angle "${variante}"` : ""}.
-
+${entry.brief ? `\nDISCIPLINE DE PRODUCTION (contrainte, pas suggestion) :\n${entry.brief}\n` : ""}
 Structure OBLIGATOIRE (5 blocs séparés par \\n\\n) :
 1. HOOK (1 ligne sensorielle stop-scroll — pas de question)
 2. DESCRIPTION (2-3 lignes immersives, vue/lumière/ambiance)
@@ -2815,7 +2815,10 @@ async function runEditorialDraftGen(env) {
       const absPhotoUrl = relPhotoUrl.startsWith("http") ? relPhotoUrl : `https://villamaryllis.com${relPhotoUrl}`;
 
       // Brief enrichi → community-manager — imageUrl OBLIGATOIRE et EXACTE (pas d'invention)
-      const brief = `BRIEF CALENDRIER ÉDITORIAL — date=${new Date(e.scheduled_at*1000).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})}, bien=${e.bien_id}, thème=${e.theme}, variante=${e.variante}, format=${e.format}, CTA="${e.cta}".
+      // La consigne 50/20/30 est portée par e.brief (posée à la planification) — sans ça, la règle
+      // resterait en base sans jamais atteindre le modèle qui rédige.
+      const disciplineLine = e.brief ? `\nDISCIPLINE DE PRODUCTION (contrainte, pas suggestion) :\n${e.brief}` : "";
+      const brief = `BRIEF CALENDRIER ÉDITORIAL — date=${new Date(e.scheduled_at*1000).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})}, bien=${e.bien_id}, thème=${e.theme}, variante=${e.variante}, format=${e.format}, CTA="${e.cta}".${disciplineLine}
 RÈGLE ABSOLUE : le champ imageUrl du draft DOIT être EXACTEMENT "${absPhotoUrl}". Ne pas inventer d'autre URL. Ne pas modifier ce chemin. Utiliser cette URL telle quelle.
 Génère UN draft social_post avec cette imageUrl exacte.`;
       const beforeGen = Math.floor(Date.now() / 1000);
