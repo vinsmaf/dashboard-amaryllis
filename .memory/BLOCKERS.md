@@ -178,7 +178,38 @@
 - **Données** : Ines Dali corrigée (1124€ net, 06→20/07) · nouvelle résa Nogent 20-24/07 288€ net espèces (400 brut −40 ménage −20% conciergerie).
 - **Résidus non bloquants** (voir frictions ci-dessous) : token Beds24 read-only · concierge en shadow · prestataires pas encore importés côté Vincent · chantier lecture Sheet 32s.
 
-## 🔴 2026-07-17 — `BEDS24_TOKEN` est READ-ONLY + `BEDS24_REFRESH_TOKEN` invalide → aucune écriture Beds24 possible (et création de résa Nogent en danger)
+## ✅ 2026-07-17 → LEVÉ le 2026-07-24 — `BEDS24_TOKEN` read-only → écriture Beds24 restaurée
+
+> **Levé.** `GET /api/beds24-bookings?test=1` renvoie désormais `write:bookings`,
+> `write:bookings-personal`, `write:bookings-financial` (+ les 7 scopes lecture). Le token
+> write-capable issu de l'échange invite-code, posé par Vincent dans les variables Cloudflare
+> Pages via le **dashboard web** (pas `wrangler`), est bien actif en prod.
+>
+> **Ce qui a fait perdre ~2h et qui doit servir la prochaine fois** : une variable Cloudflare
+> Pages modifiée n'est prise en compte qu'**après un nouveau déploiement**. Vrai pour une clé
+> DÉJÀ existante, vrai via `wrangler pages secret put` COMME via le dashboard web. Entre-temps
+> l'endpoint continue de servir l'ANCIENNE valeur → on croit la valeur fausse alors qu'elle
+> n'est simplement pas encore chargée. **Toujours redéployer puis re-tester avant de conclure
+> qu'un secret est invalide.** (Confirmé 3× le même jour.)
+>
+> 🟡 **Résidu à surveiller — durabilité.** Le token actif est celui de l'échange invite-code :
+> `expiresIn ≈ 24h` (constaté 84 731 s le 24/07 vers 13h UTC). Il faut donc un chemin de
+> renouvellement **automatique** avant son expiration, sinon retour à la case départ :
+> - `POST /api/beds24-refresh?action=fromRefreshToken` (mint depuis `env.BEDS24_REFRESH_TOKEN`,
+>   aucun input, déclenchable côté serveur) → `401 Token not valid` au 24/07, **mais testé
+>   AVANT le redéploiement** qui charge la nouvelle valeur du secret → à re-tester après deploy.
+> - `GET /api/beds24-refresh` (rotation historique via `authentication/refresh`, se déclenche
+>   car `daysLeft=1 ≤ 30`) → échouait en **502 opaque** : Cloudflare remplace les 502/503/504
+>   par sa propre page HTML et masquait le message Beds24. Corrigé en 500 (commit `b8707da`,
+>   même piège que `beds24-manage.js:restoreGuest`, déjà documenté mais pas appliqué ici).
+>
+> **Données** : Ines Dali était déjà corrigée côté Sheet (1124€ net, 06→20/07) — le « Bloqué/0€ »
+> restant dans Beds24 est **cosmétique, sans impact revenus**. Résas Nogent encore en `Bloqué`/0€
+> côté Beds24 : `89292637` (Nicolas MBANDJOCK, 06/07→27/07 — à réconcilier avec la ligne Sheet
+> 20→27/07 400€, écart de dates à élucider avec Vincent), `90320673` (08→10/08), `85955305`,
+> `86526693`.
+
+<details><summary>Historique du blocage (2026-07-17 → 07-24)</summary>
 
 > **Cause racine PROUVÉE** (session 2026-07-17, via endpoint diag temporaire `authentication/details`, depuis supprimé) : le token Beds24 renvoie `scopes: [read:bookings, read:bookings-personal, read:bookings-financial, read:inventory, read:properties, read:accounts, read:channels]` — **7 scopes, tous en lecture, ZÉRO écriture**. Le `restoreGuest` de Vincent (bouton « 🔧 Réparer ») échouait donc quel que soit le payload/la méthode (PUT comme POST) — ce n'était jamais un bug de code. La résa Ines Dali reste affichée « Bloqué/0€ » côté Beds24 (sans impact dashboard/revenus : corrigée côté Sheet).
 
@@ -192,6 +223,13 @@
 > 🔴 **Reste bloquant** : `getActiveBeds24Token()` (utilisé par `beds24-bookings.js`/`beds24-manage.js`/`beds24-refresh.js`) lit **D1 en priorité** sur l'env var — la ligne D1 existante (ancien token lecture-seule, encore valide ~90j) continue donc de gagner tant qu'elle n'est pas remplacée. Nouvelle action créée pour ça : `POST /api/beds24-refresh?action=setToken` (Bearer admin, commit `ad92bc3`) — valide le token auprès de Beds24 puis l'écrit en D1, jamais renvoyé en clair. **3 tentatives d'exécution par Vincent en terminal ont toutes échoué** (confusions `read -s`/substitution de variable propres à zsh, rien à voir avec le code) → pivoté vers la méthode **Cloudflare Dashboard → D1 → base `revenue_manager` → Console SQL** (INSERT direct dans `beds24_tokens`, formulaire web classique, évite les pièges terminal) — **pas encore tentée**, c'est la prochaine étape à la reprise.
 > **Vérification live disponible** (sans toucher au token) : `GET /api/beds24-bookings?test=1` (Bearer admin) expose désormais `scopes` (commit `ad92bc3`) — état constaté 24/07 : toujours les 7 scopes lecture seule, `write:bookings` absent. Le test réel d'écriture (restoreGuest sur Jean-Marc Balderacchi, séjour déjà terminé donc sans risque) a aussi été tenté et a échoué avec la même cause.
 > **Reprise** : donner à Vincent le bloc SQL `INSERT INTO beds24_tokens ... ON CONFLICT...` (déjà rédigé, voir historique session 2026-07-23/24) à coller dans la Console D1 du dashboard Cloudflare. Une fois fait, revérifier `?test=1` — si `write:bookings` apparaît, retester restoreGuest, puis (seulement après confirmation) traiter le dossier Ines Dali (montant final à reconfirmer auprès de Vincent, cf. ADR-BEDS24-RESTOREGUEST-001).
+>
+> ⚠️ **Épilogue (24/07)** : la voie D1/Console SQL n'a finalement PAS été nécessaire, et le
+> diagnostic « token toujours read-only » de cette section était **faux** — c'était le retard de
+> propagation des variables Cloudflare Pages (voir en tête de section). La table `beds24_tokens`
+> était de toute façon vide/absente, donc `getActiveBeds24Token()` retombait bien sur l'env var.
+
+</details>
 
 ## 🟡 2026-07-15 — 12 jours sans paiement Stripe direct (03/07→15/07) : signal business à surveiller, pas un bug
 > Diagnostic complet fait (cf ADR-STRIPE-BALANCE-DIAGNOSTIC-001) : le compte Stripe est sain, ce n'est pas un problème technique. Mais 12 jours sans une seule nouvelle résa payée en direct reste un vrai creux (avant le paiement de Gwenaelle Decloux le jour même de l'investigation). **Débloque** : si ce creux se reproduit/s'installe, croiser avec le funnel GA4 (`npm run funnel`) et les campagnes Ads — pourrait indiquer un problème de conversion plutôt qu'une simple fluctuation normale. Pas d'action immédiate requise, juste à garder en tête au prochain point Stripe/revenus.

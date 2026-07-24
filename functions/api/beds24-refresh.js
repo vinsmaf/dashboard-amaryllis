@@ -15,9 +15,13 @@
 // Auth : ?secret=BEDS24_REFRESH_SECRET (stocké comme secret Cloudflare)
 //
 // Secrets requis :
-//   BEDS24_TOKEN            — token initial (Cloudflare Pages secret)
+//   BEDS24_REFRESH_TOKEN    — long durée, SEULE source d'un token frais (cf. mintFromRefreshToken)
+//   BEDS24_TOKEN            — token courant, filet si la ligne D1 est absente/périmée
 //   revenue_manager         — binding D1
-//   BEDS24_REFRESH_SECRET   — clé cron (à créer dans Cloudflare)
+//   BEDS24_REFRESH_SECRET   — clé cron. ⚠️ NON configurée en prod au 2026-07-24 : le bloc
+//                             d'auth du GET est conditionnel (`if (refreshSecret)`), donc
+//                             l'endpoint est ouvert. Il ne divulgue aucun token, mais
+//                             n'importe qui peut déclencher une rotation. À créer.
 //   NTFY_TOPIC              — push si refresh réussi ou alerte (optionnel)
 //
 // POST ?action=setToken (2026-07-23) : dépose un token frais directement en D1, Bearer admin
@@ -56,87 +60,61 @@ export async function onRequestGet(context) {
   const db = env.revenue_manager;
   if (!db) return json({ error: "D1 non configuré" }, 503);
 
-  // ── Obtenir le token actif (D1 > env) ────────────────────────────────────
-  const currentToken = await getActiveBeds24Token(env, db);
-  if (!currentToken) return json({ error: "BEDS24_TOKEN manquant" }, 503);
-
   try {
     await ensureTokenTable(db);
 
-    // ── 1. Vérifier l'expiration ──────────────────────────────────────────
-    const detailsRes = await fetch("https://beds24.com/api/v2/authentication/details", {
-      headers: { token: currentToken },
-      signal: AbortSignal.timeout(8000),
-    });
-    const details = await detailsRes.json();
+    // ── 1. Combien de temps reste-t-il au token actif (D1 > env) ? ────────
+    // Un token absent ou déjà invalide ne fait PAS échouer la rotation : on repart du
+    // refreshToken. Avant (2026-07-24), un `return` sur `!validToken` créait un blocage
+    // définitif — le seul moment où on a besoin de renouveler est justement celui où le
+    // token ne vaut plus rien.
+    const currentToken = await getActiveBeds24Token(env, db);
+    let daysLeft = null;
 
-    if (!details.validToken) {
-      return json({ ok: false, error: "Token actuel invalide", raw: details }, 400);
-    }
-
-    const expiresIn = details.token?.expiresIn ?? null;
-    const daysLeft = expiresIn !== null ? Math.round(expiresIn / 86400) : null;
-
-    // ── 2. Pas besoin de rafraîchir encore ───────────────────────────────
-    if (daysLeft !== null && daysLeft > THRESHOLD_DAYS) {
-      return json({
-        ok: true,
-        action: "skipped",
-        daysLeft,
-        message: `Token valide encore ${daysLeft}j — refresh pas nécessaire (seuil ${THRESHOLD_DAYS}j)`,
+    if (currentToken) {
+      const detailsRes = await fetch("https://beds24.com/api/v2/authentication/details", {
+        headers: { token: currentToken },
+        signal: AbortSignal.timeout(8000),
       });
+      const details = await detailsRes.json();
+      const expiresIn = details.validToken ? (details.token?.expiresIn ?? null) : null;
+      daysLeft = expiresIn !== null ? Math.round(expiresIn / 86400) : null;
+
+      // ── 2. Encore assez de marge → rien à faire ────────────────────────
+      if (daysLeft !== null && daysLeft > THRESHOLD_DAYS) {
+        return json({
+          ok: true,
+          action: "skipped",
+          daysLeft,
+          message: `Token valide encore ${daysLeft}j — refresh pas nécessaire (seuil ${THRESHOLD_DAYS}j)`,
+        });
+      }
     }
 
-    // ── 3. Appel refresh Beds24 V2 ────────────────────────────────────────
-    const refreshRes = await fetch("https://beds24.com/api/v2/authentication/refresh", {
-      method: "GET",
-      headers: { token: currentToken },
-      signal: AbortSignal.timeout(8000),
-    });
-
-    // 500, jamais 502 : Cloudflare remplace les 502/503/504 par SA page d'erreur HTML avant
-    // qu'elles n'atteignent l'appelant, ce qui masque le diagnostic Beds24 (même piège que
-    // beds24-manage.js:restoreGuest). Vécu 2026-07-24 : refresh KO renvoyait un 502 opaque.
-    if (!refreshRes.ok) {
-      const errText = await refreshRes.text();
-      return json({ ok: false, error: `Beds24 refresh HTTP ${refreshRes.status}`, detail: errText.slice(0, 200) }, 500);
+    // ── 3. Renouveler depuis le refreshToken ──────────────────────────────
+    const minted = await mintFromRefreshToken(env, db);
+    if (minted.error) {
+      console.error("[beds24-refresh] rotation échouée", minted.error);
+      return json({ ok: false, daysLeft, ...minted }, minted.status || 500);
     }
 
-    const refreshData = await refreshRes.json();
-    const newToken = refreshData.token?.token ?? refreshData.refreshToken ?? null;
-    const newExpiresIn = refreshData.token?.expiresIn ?? null;
+    console.log(`[beds24-refresh] Token renouvelé — expire dans ${minted.expiresInDays}j`);
 
-    if (!newToken) {
-      return json({ ok: false, error: "Refresh OK mais pas de nouveau token dans la réponse", raw: refreshData }, 500);
-    }
-
-    // ── 4. Stocker en D1 ──────────────────────────────────────────────────
-    const expiresAt = Math.floor(Date.now() / 1000) + (newExpiresIn ?? 60 * 86400);
-    const now       = Math.floor(Date.now() / 1000);
-
-    // Upsert : on garde toujours 1 seule ligne (id=1)
-    await db.prepare(`
-      INSERT INTO beds24_tokens (id, token, expires_at, refreshed_at)
-      VALUES (1, ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET token=excluded.token, expires_at=excluded.expires_at, refreshed_at=excluded.refreshed_at
-    `).bind(newToken, expiresAt, now).run();
-
-    console.log(`[beds24-refresh] Token renouvelé — expire dans ${Math.round((expiresAt - now) / 86400)}j`);
-
-    // ── 5. Alerte ntfy ────────────────────────────────────────────────────
+    // ── 4. Alerte ntfy ────────────────────────────────────────────────────
     if (env.NTFY_TOPIC) {
       await fetch(`https://ntfy.sh/${env.NTFY_TOPIC}`, {
         method: "POST",
         headers: { "Content-Type": "text/plain; charset=utf-8", "Title": "🔑 Beds24 token renouvelé", "Tags": "key,refresh", "Priority": "low" },
-        body: `Nouveau token actif — expire dans ${Math.round((expiresAt - now) / 86400)} jours`,
+        body: `Nouveau token actif — expire dans ${minted.expiresInDays} jours`,
       }).catch(() => {});
     }
 
     return json({
       ok: true,
       action: "refreshed",
-      daysLeft: daysLeft,
-      newExpiresIn: Math.round((expiresAt - now) / 86400),
+      daysLeft,
+      newExpiresIn: minted.expiresInDays,
+      scopes: minted.scopes,
       message: "Token Beds24 renouvelé et stocké en D1",
     });
 
@@ -214,6 +192,32 @@ async function validateAndStore(db, token) {
   return { ok: true, scopes, expiresInDays: Math.round(expiresIn / 86400) };
 }
 
+// Forge un token frais depuis env.BEDS24_REFRESH_TOKEN et le stocke en D1.
+// ⚠️ SEUL chemin de renouvellement qui fonctionne sur ce compte : Beds24 répond
+// `500 Could not process request` sur /authentication/refresh (constaté en direct le
+// 2026-07-24 avec un token pourtant valide et write-capable), alors que
+// /authentication/token + header refreshToken marche — c'est déjà l'appel que fait
+// beds24-create.js. Aucun credential ne transite par la requête entrante : la valeur
+// vient du secret Cloudflare, donc l'appel est déclenchable côté serveur (cron).
+async function mintFromRefreshToken(env, db) {
+  const refreshToken = env.BEDS24_REFRESH_TOKEN;
+  if (!refreshToken) return { error: "BEDS24_REFRESH_TOKEN manquant", status: 503 };
+
+  let fresh;
+  try {
+    const res = await fetch("https://beds24.com/api/v2/authentication/token", {
+      headers: { refreshToken },
+      signal: AbortSignal.timeout(8000),
+    });
+    fresh = await res.json();
+  } catch (e) {
+    return { error: `Échange refreshToken échoué : ${e.message}`, status: 500 };
+  }
+  if (!fresh.token) return { error: "refreshToken invalide ou expiré", raw: fresh, status: 400 };
+
+  return validateAndStore(db, fresh.token);
+}
+
 export async function onRequestPost(context) {
   const { request, env } = context;
   const url = new URL(request.url);
@@ -233,21 +237,7 @@ export async function onRequestPost(context) {
   // sans qu'il faille refaire tout l'échange invite-code. Même mécanisme que
   // beds24-create.js:getAccessToken. Aucun input requis, donc déclenchable côté serveur.
   if (action === "fromRefreshToken") {
-    const refreshToken = env.BEDS24_REFRESH_TOKEN;
-    if (!refreshToken) return json({ error: "BEDS24_REFRESH_TOKEN manquant" }, 503);
-    let fresh;
-    try {
-      const res = await fetch("https://beds24.com/api/v2/authentication/token", {
-        headers: { refreshToken },
-        signal: AbortSignal.timeout(8000),
-      });
-      fresh = await res.json();
-    } catch (e) {
-      return json({ error: `Échange refreshToken échoué : ${e.message}` }, 502);
-    }
-    if (!fresh.token) return json({ error: "refreshToken invalide ou expiré", raw: fresh }, 400);
-
-    const result = await validateAndStore(db, fresh.token);
+    const result = await mintFromRefreshToken(env, db);
     if (result.error) return json(result, result.status || 500);
     return json({ ok: true, action: "fromRefreshToken", scopes: result.scopes, expiresInDays: result.expiresInDays });
   }
