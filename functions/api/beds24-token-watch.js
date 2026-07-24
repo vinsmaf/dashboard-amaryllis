@@ -18,7 +18,14 @@ const json = (d, s = 200) => new Response(JSON.stringify(d), {
   headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
 });
 
-const ALERT_THRESHOLD_DAYS = 7; // alerte si < 7 jours
+// Seuil en HEURES, pas en jours (changé le 2026-07-24). Le token Beds24 issu d'un échange
+// invite-code ne vit que 24h et est renouvelé chaque matin par le cron 9h : un seuil de 7
+// JOURS aurait déclenché un email TOUS les jours sur un token pourtant parfaitement sain —
+// et une alerte quotidienne qui crie au loup finit ignorée, donc pire que pas d'alerte.
+// 12h = « la rotation n'a pas réussi depuis au moins un cycle » : c'est le seul vrai signal
+// de panne. Reste correct si un token longue durée revient un jour (1440h ≫ 12h, jamais
+// d'alerte tant qu'il est sain).
+const ALERT_THRESHOLD_HOURS = 12;
 
 function buildAlertHtml({ expiresInDays, expiresAt, tokenPreview }) {
   const urgency = expiresInDays <= 2 ? "🔴 URGENT" : expiresInDays <= 4 ? "🟠 IMPORTANT" : "🟡 Avertissement";
@@ -113,50 +120,64 @@ export async function onRequestGet(context) {
     return json({ ok: false, alert: true, error: "Token invalide", details });
   }
 
-  // ── Calculer les jours restants ───────────────────────────────────────────
-  // expiryDate est au format ISO ou timestamp selon la version Beds24
-  const expiry = details.expiryDate || details.expiresAt || details.expire;
-  if (!expiry) {
-    return json({ ok: true, alert: false, warning: "expiryDate absent dans la réponse Beds24", details });
+  // ── Calculer le temps restant ─────────────────────────────────────────────
+  // ⚠️ Beds24 renvoie `token.expiresIn` (secondes), PAS `expiryDate` — vérifié en direct le
+  // 2026-07-24 : `{"token":{"ownerId":46819,"expiresIn":85726,…}}`. Ce watch cherchait
+  // uniquement expiryDate/expiresAt/expire, sortait donc systématiquement sur
+  // « expiryDate absent » et n'a JAMAIS pu alerter avant expiration (seul le cas
+  // `!validToken` ci-dessus fonctionnait, c.-à-d. quand il est déjà trop tard).
+  const expiresInSec = Number(details.token?.expiresIn ?? details.expiresIn ?? NaN);
+  const legacyExpiry = details.expiryDate || details.expiresAt || details.expire;
+
+  let expiresMs;
+  if (Number.isFinite(expiresInSec)) {
+    expiresMs = Date.now() + expiresInSec * 1000;
+  } else if (legacyExpiry) {
+    expiresMs = typeof legacyExpiry === "number" ? legacyExpiry * 1000 : new Date(legacyExpiry).getTime();
+  }
+  if (!Number.isFinite(expiresMs)) {
+    return json({ ok: true, alert: false, warning: "Expiration absente de la réponse Beds24", details });
   }
 
-  const expiresMs    = typeof expiry === "number" ? expiry * 1000 : new Date(expiry).getTime();
-  const nowMs        = Date.now();
-  const expiresInMs  = expiresMs - nowMs;
-  const expiresInDays = Math.floor(expiresInMs / (1000 * 60 * 60 * 24));
-  const expiresAt    = new Date(expiresMs).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
-  const tokenPreview = token.slice(0, 8) + "…";
+  const nowMs         = Date.now();
+  const expiresInMs   = expiresMs - nowMs;
+  const expiresInHours = Math.floor(expiresInMs / (1000 * 60 * 60));
+  const expiresInDays  = Math.floor(expiresInMs / (1000 * 60 * 60 * 24));
+  const expiresAt     = new Date(expiresMs).toLocaleString("fr-FR", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  const tokenPreview  = token.slice(0, 8) + "…";
 
   // ── Envoyer alerte si < seuil ─────────────────────────────────────────────
   let alertSent = false;
-  if (expiresInDays < ALERT_THRESHOLD_DAYS) {
+  if (expiresInHours < ALERT_THRESHOLD_HOURS) {
     try {
-      const urgencyLabel = expiresInDays <= 2 ? "🔴 URGENT" : expiresInDays <= 4 ? "🟠" : "🟡";
+      const urgencyLabel = expiresInHours <= 4 ? "🔴 URGENT" : "🟠";
+      const reste = expiresInHours >= 24 ? `${expiresInDays}j` : `${Math.max(0, expiresInHours)}h`;
       const r = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           from: resendFrom(env),
           to: notifTo,
-          subject: `${urgencyLabel} Token Beds24 expire dans ${expiresInDays}j — action requise`,
+          subject: `${urgencyLabel} Token Beds24 expire dans ${reste} — la rotation quotidienne a échoué`,
           html: buildAlertHtml({ expiresInDays, expiresAt, tokenPreview }),
         }),
       });
       alertSent = r.ok;
     } catch (err) {
-      return json({ ok: true, alert: false, error: `Email failed: ${err.message}`, expiresInDays });
+      return json({ ok: true, alert: false, error: `Email failed: ${err.message}`, expiresInHours });
     }
   }
 
   return json({
     ok: true,
     alert: alertSent,
+    expiresInHours,
     expiresInDays,
     expiresAt,
-    threshold: ALERT_THRESHOLD_DAYS,
-    status: expiresInDays < ALERT_THRESHOLD_DAYS
-      ? `⚠️ Expire dans ${expiresInDays}j — alerte ${alertSent ? "envoyée" : "échouée"}`
-      : `✅ Token valide (${expiresInDays}j restants)`,
+    thresholdHours: ALERT_THRESHOLD_HOURS,
+    status: expiresInHours < ALERT_THRESHOLD_HOURS
+      ? `⚠️ Expire dans ${expiresInHours}h — alerte ${alertSent ? "envoyée" : "échouée"}`
+      : `✅ Token valide (${expiresInHours}h restantes)`,
   });
 }
 
