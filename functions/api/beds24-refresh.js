@@ -94,9 +94,12 @@ export async function onRequestGet(context) {
       signal: AbortSignal.timeout(8000),
     });
 
+    // 500, jamais 502 : Cloudflare remplace les 502/503/504 par SA page d'erreur HTML avant
+    // qu'elles n'atteignent l'appelant, ce qui masque le diagnostic Beds24 (même piège que
+    // beds24-manage.js:restoreGuest). Vécu 2026-07-24 : refresh KO renvoyait un 502 opaque.
     if (!refreshRes.ok) {
       const errText = await refreshRes.text();
-      return json({ ok: false, error: `Beds24 refresh HTTP ${refreshRes.status}`, detail: errText.slice(0, 200) }, 502);
+      return json({ ok: false, error: `Beds24 refresh HTTP ${refreshRes.status}`, detail: errText.slice(0, 200) }, 500);
     }
 
     const refreshData = await refreshRes.json();
@@ -104,7 +107,7 @@ export async function onRequestGet(context) {
     const newExpiresIn = refreshData.token?.expiresIn ?? null;
 
     if (!newToken) {
-      return json({ ok: false, error: "Refresh OK mais pas de nouveau token dans la réponse", raw: refreshData }, 502);
+      return json({ ok: false, error: "Refresh OK mais pas de nouveau token dans la réponse", raw: refreshData }, 500);
     }
 
     // ── 4. Stocker en D1 ──────────────────────────────────────────────────
