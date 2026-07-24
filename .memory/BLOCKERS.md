@@ -178,7 +178,32 @@
 - **Données** : Ines Dali corrigée (1124€ net, 06→20/07) · nouvelle résa Nogent 20-24/07 288€ net espèces (400 brut −40 ménage −20% conciergerie).
 - **Résidus non bloquants** (voir frictions ci-dessous) : token Beds24 read-only · concierge en shadow · prestataires pas encore importés côté Vincent · chantier lecture Sheet 32s.
 
-## 🔴 2026-07-24 — NE PAS mettre à jour `BEDS24_TOKEN` du Worker : l'annulation auto ne filtre pas le canal
+## ✅ 2026-07-24 — Annulation auto Beds24 : filtre de canal posé (le Worker peut recevoir un token d'écriture)
+
+> **Résolu le jour même.** Filtre ajouté : l'annulation automatique ne touche QUE les résas
+> dont `referer === "direct"` — la valeur qu'écrit `functions/api/beds24-create.js`, donc
+> uniquement notre tunnel. Décision de Vincent, mot pour mot : « le token ne doit toucher
+> qu'aux réservations qui viennent de notre côté, pas celles ajoutées sur Beds24 ou ailleurs ».
+> Égalité **stricte**, pas un `includes` : « Louer Premium » (compte Beds24 de Vincent, ses
+> saisies manuelles) est exclu au même titre que les OTA.
+>
+> Logique pure + 18 tests : `src/utils/beds24Cancel.js`. ⚠️ **Miroir manuel** dans
+> `workers/ical-sync/index.js` (`runCancelUnpaidBeds24Bookings`) — le Worker n'importe aucun
+> module ES. Garder les deux synchronisés.
+>
+> **Ce que le filtre a évité** (mesuré en live avant correction) : sur les 15 résas Nogent de
+> mai→déc 2026, seules 2 valeurs de `referer` existent — `Booking.com` (10) et `Louer Premium`
+> (5). **Aucune n'a `direct`**, et les 6 au statut `new` étaient TOUTES des Booking.com. Un
+> token capable d'écrire aurait donc annulé de vraies réservations payantes ~4h après leur
+> arrivée, avec 100% de faux positifs. Seul le token en lecture seule l'avait empêché.
+>
+> 🟡 Reste à faire côté Vincent quand il le souhaite : mettre à jour `BEDS24_TOKEN` du Worker
+> `amaryllis-ical-sync` (secret distinct de celui de Pages). Désormais sans danger. Noter que
+> ce token-là n'a PAS de rotation automatique — à re-poser à la main s'il expire.
+
+<details><summary>Analyse d'origine (le risque, avant correction)</summary>
+
+### NE PAS mettre à jour `BEDS24_TOKEN` du Worker : l'annulation auto ne filtre pas le canal
 
 > **Mine désamorcée uniquement par accident.** Le Worker `amaryllis-ical-sync` a son PROPRE
 > secret `BEDS24_TOKEN` (distinct de celui de Pages), encore l'ancien en lecture seule.
@@ -195,6 +220,8 @@
 > **Débloque** : ajouter un filtre de canal (n'annuler que ce qui vient du tunnel direct) AVANT
 > de toucher au secret du Worker. Proposé à Vincent le 2026-07-24, en attente de son go —
 > c'est un changement de comportement sur de vraies réservations, pas une correction évidente.
+
+</details>
 
 ## ✅ 2026-07-17 → LEVÉ le 2026-07-24 — `BEDS24_TOKEN` read-only → écriture Beds24 restaurée
 

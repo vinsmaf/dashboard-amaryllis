@@ -2080,10 +2080,23 @@ async function runCancelUnpaidBeds24Bookings(env) {
     const data = await res.json();
     if (!data.success || !Array.isArray(data.data)) return;
 
+    // ⚠️ MIROIR de src/utils/beds24Cancel.js (isOwnFunnelBooking + bookingAgeHours) —
+    // le Worker n'importe aucun module ES. Toute modification ici doit être répercutée
+    // là-bas, et inversement (18 tests vitest).
     const now = Date.now();
     const candidates = data.data.filter(b => {
       if (b.status !== "new") return false; // garder: confirmed, cancelled, etc.
-      // bookingTime format : "2026-05-22 14:35:00" ou ISO
+
+      // Garde-fou canal (2026-07-24, demande explicite de Vincent) : n'annuler QUE ce qui
+      // vient de notre tunnel — jamais une résa saisie sur Beds24 ou arrivée d'une OTA.
+      // Sans ce filtre, les Booking.com de Nogent (elles aussi en status "new") étaient
+      // candidates : le 24/07, les 6 résas "new" étaient TOUTES des Booking.com et aucune
+      // ne venait du tunnel. Seul le token en lecture seule a évité le désastre.
+      // Égalité stricte : "Louer Premium" (compte Beds24 de Vincent, saisies manuelles)
+      // ne doit pas passer non plus.
+      if (String(b.referer ?? "").trim().toLowerCase() !== "direct") return false;
+
+      // bookingTime format : "2026-05-22 14:35:00" (UTC implicite)
       const created = b.bookingTime ? new Date(b.bookingTime.replace(" ", "T") + "Z").getTime() : 0;
       if (!created) return false;
       const ageHours = (now - created) / 3600000;
@@ -4122,6 +4135,18 @@ export default {
           console.log(`[beds24-refresh] ✓ action=${rotData.action ?? "?"} reste=${rotData.newExpiresIn ?? rotData.daysLeft ?? "?"}j${rotData.ok === false ? ` ERREUR=${rotData.error}` : ""}`);
         } catch (e) {
           console.error("[beds24-refresh] Cron error:", e.message);
+        }
+        // ── Filet de sécurité : alerte email si le token approche de l'expiration ─────────────────────
+        // Volontairement APRÈS la rotation ci-dessus : si celle-ci a réussi, il reste ~24h et
+        // rien n'est envoyé ; si elle a échoué en silence, cette alerte est le seul signal.
+        // Rebranché ici le 2026-07-24 (n'avait plus de planificateur depuis le 07-12).
+        try {
+          const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+          const watchRes = await fetch(`${siteUrl}/api/beds24-token-watch?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`);
+          const watchData = await watchRes.json().catch(() => ({}));
+          console.log(`[beds24-token-watch] ✓ ${JSON.stringify(watchData).slice(0, 160)}`);
+        } catch (e) {
+          console.error("[beds24-token-watch] Cron error:", e.message);
         }
         // ── Brief matinal locatif (5h Martinique) ─────────────────────────────────────────────────────
         try {

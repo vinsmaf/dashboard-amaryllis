@@ -393,7 +393,7 @@ flowchart TD
 ⚠️ **Le compte cron-job.org est PARTAGÉ avec patrimoine-dashboard** (même clé API, même login Vincent) : les jobs qui y restent (`7760750` push-cron patrimoine, `7994015` intraday-alert patrimoine, `7798246` morning-brief patrimoine — désactivé 2026-07-11, `7684358` weekly-brief patrimoine — désactivé 2026-07-11, `7994199` reminder-check patrimoine — désactivé) n'ont **rien à voir avec locatif**. Si un futur `GET /jobs` sur ce compte montre un job inattendu, vérifier côté patrimoine avant de supposer un lien avec ce repo.
 | — | lundi 9h | `/api/send-vacancy-alert` |
 | ~~—~~ | ~~9h UTC~~ | ~~`/api/beds24-refresh`~~ → **MIGRÉ dans le Worker `0 9 * * *` le 2026-07-24.** Cette ligne décrivait un job mort depuis le 07-12 : la rotation ne tournait donc plus du tout, ce qui n'avait pas été vu (le token statique restait valide ~90j et masquait le problème). |
-| — | 7h UTC | `/api/beds24-token-watch` (watch expiration token, alerte email Resend si <7j). ⚠️ **N'a lui non plus aucun planificateur** depuis le 07-12 — non migré : la rotation quotidienne rend cette alerte largement redondante, mais on n'a donc plus de filet si la rotation échoue en silence. À trancher. |
+| ~~—~~ | ~~7h UTC~~ | ~~`/api/beds24-token-watch`~~ → **MIGRÉ dans le Worker `0 9 * * *` le 2026-07-24**, juste APRÈS la rotation (et non plus avant) : si la rotation a réussi il reste ~24h et rien n'est envoyé ; si elle a échoué en silence, cette alerte email est le seul signal. Accepte désormais `POSTSTAY_SECRET`. |
 | — | quotidien ~8h | `/api/contacts-alert` (ntfy : leads >24h sans réponse, SLA) |
 | — | mensuel | `/api/contacts-purge` (DELETE, RGPD : purge contacts >2 ans, Bearer `PURGE_SECRET`) |
 

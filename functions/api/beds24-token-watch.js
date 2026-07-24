@@ -63,8 +63,12 @@ export async function onRequestGet(context) {
   const { env, request } = context;
 
   // ── Auth ──────────────────────────────────────────────────────────────────
+  // Accepte TOKEN_WATCH_SECRET (clé dédiée) OU POSTSTAY_SECRET (idiome serveur-à-serveur
+  // du Worker). Ajouté le 2026-07-24 en rebranchant ce watch dans le cron Worker 9h : il
+  // n'avait plus AUCUN planificateur depuis la mort des jobs cron-job.org du 07-12.
   const secret = new URL(request.url).searchParams.get("secret");
-  if (env.TOKEN_WATCH_SECRET && secret !== env.TOKEN_WATCH_SECRET) {
+  const accepted = [env.TOKEN_WATCH_SECRET, env.POSTSTAY_SECRET].filter(Boolean);
+  if (accepted.length && !accepted.includes(secret)) {
     return json({ error: "Non autorisé" }, 401);
   }
 
