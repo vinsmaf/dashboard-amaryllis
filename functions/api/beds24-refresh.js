@@ -1,4 +1,10 @@
 // Cloudflare Pages Function — GET /api/beds24-refresh
+// ⚠️ 2026-07-24 : après un `wrangler pages secret put` sur une clé DÉJÀ existante (pas
+// seulement une clé neuve, cf. RECALL), le déploiement Production déjà en ligne peut
+// continuer à servir l'ANCIENNE valeur tant qu'aucun nouveau déploiement n'a eu lieu.
+// Vérifié en direct : BEDS24_TOKEN mis à jour, `?test=1` restait sur les scopes lecture
+// seule jusqu'à ce commit (qui force un redeploy). Toujours re-tester après déploiement,
+// jamais supposer qu'un secret Cloudflare Pages est pris en compte immédiatement.
 // arch-009 : Rotation automatique du token Beds24 V2.
 // Vérifie l'expiration, rafraîchit si < 30 jours, stocke en D1.
 // beds24-bookings.js lit le token D1 en priorité (via getActiveBeds24Token).
