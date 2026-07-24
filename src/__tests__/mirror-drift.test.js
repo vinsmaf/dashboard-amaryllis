@@ -25,8 +25,15 @@
 // | rmOccupancyAdjust.js    | —                                            | — (rm-recommendations IMPORTE le src)|
 // | pricing.js              | — (aucun miroir runtime trouvé ; PublicSite  | —                                    |
 // |                         |    importe le module directement)            |                                      |
+// | beds24Cancel.js         | —                                            | index.js runCancelUnpaidBeds24Bookings|
+// |   (ajouté 2026-07-24)   |                                              |   → filtre `referer === "direct"`     |
 //
 // NON TESTABLES AUTOMATIQUEMENT (et pourquoi) :
+// - beds24Cancel.isOwnFunnelBooking : le miroir Worker n'est pas une fonction nommée mais
+//   une condition INLINE dans le .filter() de runCancelUnpaidBeds24Bookings → l'extraction
+//   par comptage d'accolades ne sait pas l'isoler. La logique src est couverte par
+//   src/utils/beds24Cancel.test.js (18 tests) ; la synchro du miroir reste manuelle.
+//   Si un jour le Worker en fait une fonction nommée, la brancher ici.
 // - dedupeReservations() : GAS ne déduplique pas via une fonction-liste mais via
 //   une map d'IDs traités persistée en feuille (readProcessed_/appendProcessed_,
 //   dépend de SpreadsheetApp) → pas de cœur pur extractible sans mock fragile.
