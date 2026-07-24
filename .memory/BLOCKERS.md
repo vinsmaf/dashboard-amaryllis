@@ -178,6 +178,24 @@
 - **Données** : Ines Dali corrigée (1124€ net, 06→20/07) · nouvelle résa Nogent 20-24/07 288€ net espèces (400 brut −40 ménage −20% conciergerie).
 - **Résidus non bloquants** (voir frictions ci-dessous) : token Beds24 read-only · concierge en shadow · prestataires pas encore importés côté Vincent · chantier lecture Sheet 32s.
 
+## 🔴 2026-07-24 — NE PAS mettre à jour `BEDS24_TOKEN` du Worker : l'annulation auto ne filtre pas le canal
+
+> **Mine désamorcée uniquement par accident.** Le Worker `amaryllis-ical-sync` a son PROPRE
+> secret `BEDS24_TOKEN` (distinct de celui de Pages), encore l'ancien en lecture seule.
+> `runCancelUnpaidBeds24Bookings` (cron `*/10`, `workers/ical-sync/index.js`) annule toute résa
+> Beds24 `status="new"` créée depuis ≥4h, modifiée dans les 48h, et absente de `direct_bookings`
+> (`beds24_booking_id`). Intention : nettoyer les paniers abandonnés du tunnel direct.
+> **Mais aucun filtre sur `referer`/canal** — or les résas **Booking.com de Nogent arrivent au
+> statut `new`** (6 dans cet état le 2026-07-24 : 88668743, 88883296, 88230804, 88126609,
+> 87715397, 86394874) et ne sont pas dans `direct_bookings` (pas de paiement Stripe).
+>
+> ⇒ Le jour où ce token saura écrire, **toute résa Booking.com Nogent serait auto-annulée ~4h
+> après son arrivée.** Le seul rempart aujourd'hui est que le token ne peut pas écrire.
+>
+> **Débloque** : ajouter un filtre de canal (n'annuler que ce qui vient du tunnel direct) AVANT
+> de toucher au secret du Worker. Proposé à Vincent le 2026-07-24, en attente de son go —
+> c'est un changement de comportement sur de vraies réservations, pas une correction évidente.
+
 ## ✅ 2026-07-17 → LEVÉ le 2026-07-24 — `BEDS24_TOKEN` read-only → écriture Beds24 restaurée
 
 > **Levé.** `GET /api/beds24-bookings?test=1` renvoie désormais `write:bookings`,
