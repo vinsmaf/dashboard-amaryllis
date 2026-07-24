@@ -5,6 +5,8 @@
 // Vérifié en direct : BEDS24_TOKEN mis à jour, `?test=1` restait sur les scopes lecture
 // seule jusqu'à ce commit (qui force un redeploy). Toujours re-tester après déploiement,
 // jamais supposer qu'un secret Cloudflare Pages est pris en compte immédiatement.
+// Confirmé une 2e fois le même jour : vaut aussi pour une édition via le dashboard web
+// (Settings → Environment variables → Edit), pas seulement `wrangler pages secret put`.
 // arch-009 : Rotation automatique du token Beds24 V2.
 // Vérifie l'expiration, rafraîchit si < 30 jours, stocke en D1.
 // beds24-bookings.js lit le token D1 en priorité (via getActiveBeds24Token).
