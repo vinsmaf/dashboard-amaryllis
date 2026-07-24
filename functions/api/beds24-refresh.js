@@ -170,29 +170,15 @@ export async function onRequestOptions() {
   });
 }
 
-// POST ?action=setToken — dépose directement un token (issu de l'échange d'un invite code
-// Beds24, write:bookings) en D1, en écrasant toute ligne existante. Seul moyen de faire
-// primer un nouveau token sur celui déjà en D1 (cf. commentaire d'en-tête). Bearer admin
-// obligatoire — jamais appelé par Claude, uniquement par Vincent depuis son terminal.
-export async function onRequestPost(context) {
-  const { request, env } = context;
-  const url = new URL(request.url);
-  if (url.searchParams.get("action") !== "setToken") {
-    return json({ error: "action inconnue (attendu ?action=setToken)" }, 400);
-  }
-
-  const auth = await verifyBearer(request, env);
-  if (!auth.ok) return json({ error: "Non autorisé" }, 401);
-
-  const db = env.revenue_manager;
-  if (!db) return json({ error: "D1 non configuré" }, 503);
-
-  let body;
-  try { body = await request.json(); } catch { return json({ error: "JSON invalide" }, 400); }
-  const token = String(body.token || "").trim();
-  if (!token) return json({ error: "Champ requis : token" }, 400);
-
-  // Valide le token auprès de Beds24 avant de l'adopter — jamais stocker une valeur invalide.
+// POST ?action=setToken — dépose un token (issu de l'échange manuel d'un invite code Beds24,
+// write:bookings) en D1, Bearer admin requis. Le token ne transite QUE par cet appel — jamais
+// lu/saisi par Claude. POST ?action=fromRefreshToken — mint un token depuis
+// env.BEDS24_REFRESH_TOKEN déjà configuré, sans aucun input : celui-ci peut être déclenché
+// côté serveur sans manipulation de credential par personne.
+//
+// Valide un token auprès de Beds24 puis l'écrit en D1 (upsert id=1). Jamais de token
+// invalide stocké. Ne renvoie que scopes + durée — jamais le token lui-même.
+async function validateAndStore(db, token) {
   let details;
   try {
     const res = await fetch("https://beds24.com/api/v2/authentication/details", {
@@ -201,9 +187,9 @@ export async function onRequestPost(context) {
     });
     details = await res.json();
   } catch (e) {
-    return json({ error: `Vérification Beds24 échouée : ${e.message}` }, 502);
+    return { error: `Vérification Beds24 échouée : ${e.message}`, status: 502 };
   }
-  if (!details.validToken) return json({ error: "Token rejeté par Beds24 (invalide)", raw: details }, 400);
+  if (!details.validToken) return { error: "Token rejeté par Beds24 (invalide)", raw: details, status: 400 };
 
   const expiresIn = details.token?.expiresIn ?? 60 * 86400;
   const scopes = details.token?.scopes || null;
@@ -218,9 +204,57 @@ export async function onRequestPost(context) {
       ON CONFLICT(id) DO UPDATE SET token=excluded.token, expires_at=excluded.expires_at, refreshed_at=excluded.refreshed_at
     `).bind(token, expiresAt, now).run();
   } catch (e) {
-    return json({ error: `Écriture D1 échouée : ${e.message}` }, 500);
+    return { error: `Écriture D1 échouée : ${e.message}`, status: 500 };
+  }
+  return { ok: true, scopes, expiresInDays: Math.round(expiresIn / 86400) };
+}
+
+export async function onRequestPost(context) {
+  const { request, env } = context;
+  const url = new URL(request.url);
+  const action = url.searchParams.get("action");
+  if (action !== "setToken" && action !== "fromRefreshToken") {
+    return json({ error: "action inconnue (attendu ?action=setToken ou ?action=fromRefreshToken)" }, 400);
   }
 
+  const auth = await verifyBearer(request, env);
+  if (!auth.ok) return json({ error: "Non autorisé" }, 401);
+
+  const db = env.revenue_manager;
+  if (!db) return json({ error: "D1 non configuré" }, 503);
+
+  // fromRefreshToken (2026-07-24) : mint un NOUVEAU token à partir de env.BEDS24_REFRESH_TOKEN
+  // (secret déjà en place, jamais lu/saisi ici) — utile quand le token court a expiré (24h)
+  // sans qu'il faille refaire tout l'échange invite-code. Même mécanisme que
+  // beds24-create.js:getAccessToken. Aucun input requis, donc déclenchable côté serveur.
+  if (action === "fromRefreshToken") {
+    const refreshToken = env.BEDS24_REFRESH_TOKEN;
+    if (!refreshToken) return json({ error: "BEDS24_REFRESH_TOKEN manquant" }, 503);
+    let fresh;
+    try {
+      const res = await fetch("https://beds24.com/api/v2/authentication/token", {
+        headers: { refreshToken },
+        signal: AbortSignal.timeout(8000),
+      });
+      fresh = await res.json();
+    } catch (e) {
+      return json({ error: `Échange refreshToken échoué : ${e.message}` }, 502);
+    }
+    if (!fresh.token) return json({ error: "refreshToken invalide ou expiré", raw: fresh }, 400);
+
+    const result = await validateAndStore(db, fresh.token);
+    if (result.error) return json(result, result.status || 500);
+    return json({ ok: true, action: "fromRefreshToken", scopes: result.scopes, expiresInDays: result.expiresInDays });
+  }
+
+  let body;
+  try { body = await request.json(); } catch { return json({ error: "JSON invalide" }, 400); }
+  const token = String(body.token || "").trim();
+  if (!token) return json({ error: "Champ requis : token" }, 400);
+
+  const result = await validateAndStore(db, token);
+  if (result.error) return json(result, result.status || 500);
+
   // Jamais renvoyer le token dans la réponse — seulement sa validité et ses scopes.
-  return json({ ok: true, action: "setToken", scopes, expiresInDays: Math.round(expiresIn / 86400) });
+  return json({ ok: true, action: "setToken", scopes: result.scopes, expiresInDays: result.expiresInDays });
 }
