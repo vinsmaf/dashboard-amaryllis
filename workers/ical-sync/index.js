@@ -4109,6 +4109,20 @@ export default {
       // 9h UTC chaque jour — brief matinal + audit + rappels + alertes + gap pricing + agents autonomes
       const { allEvents, allAvailEvents } = await runSync(env);
       ctx.waitUntil((async () => {
+        // ── Rotation du token Beds24 ─────────────────────────────────────────────────────────────────
+        // Le token issu d'un échange invite-code ne vit que 24h → sans rotation quotidienne,
+        // TOUT Beds24 (liste des résas, création de résa Nogent après paiement Stripe) tombe.
+        // Cette rotation était censée tourner sur cron-job.org, mais locatif n'y a plus AUCUN
+        // job actif depuis le 2026-07-12 : elle n'avait donc plus aucun planificateur (trouvé
+        // le 2026-07-24, en réparant l'accès en écriture). Rapatriée ici, avec les autres.
+        try {
+          const siteUrl = env.SITE_URL || "https://villamaryllis.com";
+          const rotRes = await fetch(`${siteUrl}/api/beds24-refresh?secret=${encodeURIComponent(env.POSTSTAY_SECRET || "")}`);
+          const rotData = await rotRes.json().catch(() => ({}));
+          console.log(`[beds24-refresh] ✓ action=${rotData.action ?? "?"} reste=${rotData.newExpiresIn ?? rotData.daysLeft ?? "?"}j${rotData.ok === false ? ` ERREUR=${rotData.error}` : ""}`);
+        } catch (e) {
+          console.error("[beds24-refresh] Cron error:", e.message);
+        }
         // ── Brief matinal locatif (5h Martinique) ─────────────────────────────────────────────────────
         try {
           const siteUrl = env.SITE_URL || "https://villamaryllis.com";

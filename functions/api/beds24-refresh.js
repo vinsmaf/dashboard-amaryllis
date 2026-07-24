@@ -49,12 +49,14 @@ export async function onRequestGet(context) {
   const { env, request } = context;
 
   // ── Auth secret ───────────────────────────────────────────────────────────
-  const refreshSecret = env.BEDS24_REFRESH_SECRET;
-  if (refreshSecret) {
-    const url = new URL(request.url);
-    if (url.searchParams.get("secret") !== refreshSecret) {
-      return json({ error: "Non autorisé" }, 401);
-    }
+  // Accepte BEDS24_REFRESH_SECRET (clé historique dédiée) OU POSTSTAY_SECRET (idiome
+  // serveur-à-serveur de tous les crons du Worker, cf. beds24-bookings.js). Sans ce 2e
+  // accepteur l'endpoint était de fait OUVERT : BEDS24_REFRESH_SECRET n'a jamais été créé
+  // en prod, donc le `if` ne s'armait jamais (constaté 2026-07-24).
+  const accepted = [env.BEDS24_REFRESH_SECRET, env.POSTSTAY_SECRET].filter(Boolean);
+  if (accepted.length) {
+    const provided = new URL(request.url).searchParams.get("secret");
+    if (!accepted.includes(provided)) return json({ error: "Non autorisé" }, 401);
   }
 
   const db = env.revenue_manager;
